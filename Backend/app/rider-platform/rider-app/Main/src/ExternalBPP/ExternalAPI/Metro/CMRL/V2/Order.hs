@@ -141,12 +141,16 @@ ticketAPI = Proxy
 
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => CMRLV2Config -> IntegratedBPPConfig -> FRFSTicketBooking -> [FRFSQuoteCategory] -> Maybe Text -> m ProviderOrder
 createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
+  logInfo $ "[CMRLV2:Order] Starting createOrder for bookingId: " <> booking.id.getId
   orderId <- case booking.bppOrderId of
     Just oid -> return oid
     Nothing -> getBppOrderId booking
+  logDebug $ "[CMRLV2:Order] OrderId: " <> orderId
   paymentTxnId <- booking.paymentTxnId & fromMaybeM (InternalError $ "Payment Transaction Id Missing")
+  logDebug $ "[CMRLV2:Order] PaymentTxnId: " <> paymentTxnId
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode)
+  logDebug $ "[CMRLV2:Order] From: " <> fromStation.code <> " -> To: " <> toStation.code
 
   now <- getCurrentTime
   let travelDatetime = T.pack $ formatTime defaultTimeLocale "%d%m%Y%H%M%S" now
@@ -162,11 +166,11 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
             bankTransactionRefNumber = paymentTxnId,
             merchantId = config.merchantId,
             ticketTypeId = config.ticketTypeId,
-            paymentMode = 102, -- UPI
+            paymentMode = 102,
             paymentChannelId = 0,
-            transTypeId = 100, -- Ticket order issued
-            zoneNumber = 20, -- Default zone
-            fareQuoteId = "" -- Will be populated from fare API if needed
+            transTypeId = 100,
+            zoneNumber = 20,
+            fareQuoteId = ""
           }
 
       ticketInfoPayload =
@@ -178,8 +182,8 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
             product_Id = T.pack $ show config.ticketTypeId,
             service_Id = "1",
             tkt_Fare = T.pack $ show totalFare,
-            validity = "100", -- Default validity in minutes
-            duration = "180", -- Default duration in minutes
+            validity = "100",
+            duration = "180",
             operatorData = operatorData
           }
 
@@ -210,8 +214,10 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
                 }
           }
 
-  -- Encrypt the payload
+  logDebug $ "[CMRLV2:Order] TotalFare: " <> show totalFare <> ", Quantity: " <> show totalTicketQuantity
+  logDebug $ "[CMRLV2:Order] Payload built, encrypting..."
   encryptedPayload <- encryptPayload config (encode payload)
+  logDebug $ "[CMRLV2:Order] Payload encrypted, calling CMRL API..."
 
   let eulerClient = \accessToken ->
         ET.client
@@ -222,24 +228,28 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
           (TicketReq encryptedPayload)
 
   encryptedResponse <- callCMRLV2API config eulerClient "generateTicket" ticketAPI
-
-  -- Decrypt the response
+  logDebug $ "[CMRLV2:Order] Received encrypted response, decrypting..."
   decryptedResponseBytes <- decryptPayload config encryptedResponse.response
+  logDebug "[CMRLV2:Order] Response decrypted, parsing..."
   ticketRes <- case eitherDecode decryptedResponseBytes :: Either String TicketRes of
-    Left err -> throwError $ InternalError $ "Failed to decode ticket response: " <> T.pack err
-    Right res -> return res
+    Left err -> do
+      logError $ "[CMRLV2:Order] Failed to decode ticket response: " <> T.pack err
+      throwError $ InternalError $ "Failed to decode ticket response: " <> T.pack err
+    Right res -> do
+      logDebug $ "[CMRLV2:Order] Parsed response - returnCode: " <> res.returnCode <> ", returnMessage: " <> res.returnMessage
+      return res
 
-  -- Check return code
-  when (ticketRes.returnCode /= "0") $
+  when (ticketRes.returnCode /= "0") $ do
+    logError $ "[CMRLV2:Order] Ticket generation failed: " <> ticketRes.returnMessage
     throwError $ InternalError $ "Ticket generation failed: " <> ticketRes.returnMessage
+
+  logInfo $ "[CMRLV2:Order] Ticket generation successful, tickets count: " <> show (length ticketRes.ticket_Response)
 
   tickets <-
     ticketRes.ticket_Response `forM` \ticketResp -> do
       let qrPayload = ticketResp.qR_Payload
-          -- Construct QR data as per CMRL format: #signature#svc#tktBlock#
           qrData = "#" <> qrPayload.qR_Signature <> "#" <> qrPayload.qR_SVC <> "#" <> qrPayload.qR_Tkt_Block <> "#"
 
-      -- Parse validity time
       validityTime <- case parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S" (T.unpack ticketResp.ticket_Validity_Time) of
         Just time -> return time
         Nothing -> throwError $ InternalError $ "Failed to parse ticket validity time: " <> ticketResp.ticket_Validity_Time
