@@ -207,7 +207,7 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
               , serviceTierName : ride.serviceTierName
   , isAirConditioned : ride.isAirConditioned
               , totalTime : show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min"
-              , vehicleModel : if (rideDetails.vehicleModel `DA.elem` ["", "Unkown"]) then fromMaybe (HU.getVariantRideType rideDetails.vehicleVariant) ride.serviceTierName else rideDetails.vehicleModel
+              , vehicleModel : if (rideDetails.vehicleModel `DA.elem` ["", "Unknown"]) then fromMaybe (HU.getVariantRideType rideDetails.vehicleVariant) ride.serviceTierName else rideDetails.vehicleModel
               , rideStartTimeUTC : fromMaybe "" ride.rideStartTime
               , providerName : ride.agencyName
               , providerType : maybe CTP.ONUS (\valueAdd -> if valueAdd then CTP.ONUS else CTP.OFFUS) ride.isValueAddNP -- get from API
