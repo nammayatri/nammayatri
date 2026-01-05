@@ -1132,3 +1132,33 @@ instance IsHTTPError GetUserTokenError where
     UserNotFound _ -> E400
 
 instance IsAPIError GetUserTokenError
+
+data EmailError
+  = InvalidEmailAddress
+  | EmailServiceUnavailable
+  | EmailRateLimitExceeded
+  | EmailConfigurationError
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''EmailError
+
+instance IsBaseError EmailError where
+  toMessage = \case
+    InvalidEmailAddress -> Just "The email address provided is invalid. Please check and try again."
+    EmailServiceUnavailable -> Just "Email service is temporarily unavailable. Please try again later."
+    EmailRateLimitExceeded -> Just "Too many email requests. Please wait a moment and try again."
+    EmailConfigurationError -> Just "Unable to send email due to a configuration issue. Please contact support."
+
+instance IsHTTPError EmailError where
+  toErrorCode = \case
+    InvalidEmailAddress -> "INVALID_EMAIL_ADDRESS"
+    EmailServiceUnavailable -> "EMAIL_SERVICE_UNAVAILABLE"
+    EmailRateLimitExceeded -> "EMAIL_RATE_LIMIT_EXCEEDED"
+    EmailConfigurationError -> "EMAIL_CONFIGURATION_ERROR"
+  toHttpCode = \case
+    InvalidEmailAddress -> E400
+    EmailServiceUnavailable -> E503
+    EmailRateLimitExceeded -> E429
+    EmailConfigurationError -> E500
+
+instance IsAPIError EmailError

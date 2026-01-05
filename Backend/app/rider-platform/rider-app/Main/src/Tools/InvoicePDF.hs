@@ -186,11 +186,18 @@ calculateTotalAmount bookings =
       computedPrice <- ride.computedPrice
       return $ fromIntegral computedPrice
 
+-- | Convert UTC time to IST (UTC+5:30) by adding 5 hours 30 minutes
+-- This follows the same pattern as showTimeIst in GWLink.hs
+utcToIST :: UTCTime -> UTCTime
+utcToIST = DT.addUTCTime (60 * 330) -- 330 minutes = 5 hours 30 minutes
+
 -- | Generate HTML invoice
 generateInvoiceHTML :: InvoiceData -> Text
 generateInvoiceHTML InvoiceData {..} =
-  let formattedStartDate = T.pack $ DT.formatTime DT.defaultTimeLocale "%b %-d" startDate
-      formattedEndDate = T.pack $ DT.formatTime DT.defaultTimeLocale "%b %-d, %Y" endDate
+  let startDateIST = utcToIST startDate
+      endDateIST = utcToIST endDate
+      formattedStartDate = T.pack $ DT.formatTime DT.defaultTimeLocale "%b %-d" startDateIST
+      formattedEndDate = T.pack $ DT.formatTime DT.defaultTimeLocale "%b %-d, %Y" endDateIST
       formattedAmount = maybe "N/A" (\amt -> T.pack $ printf "%.2f" (fromRational (getHighPrecMoney amt) :: Double)) totalAmount
       -- Escape all user-controlled data to prevent XSS
       safeCustomerName = escapeHtml customerName
@@ -237,7 +244,8 @@ generateInvoiceHTML InvoiceData {..} =
 -- | Generate ride card with date header for each ride
 generateRideCardWithDate :: DBAPI.BookingAPIEntity -> Text
 generateRideCardWithDate booking =
-  let dateHeader = T.pack $ DT.formatTime DT.defaultTimeLocale "%-d %b, %Y" booking.createdAt
+  let createdAtIST = utcToIST booking.createdAt
+      dateHeader = T.pack $ DT.formatTime DT.defaultTimeLocale "%-d %b, %Y" createdAtIST
    in T.concat
         [ "<div class='date-section'>",
           "<div class='date-header'>",
@@ -256,10 +264,13 @@ generateRideCard booking =
       mbRide = find (\ride -> ride.status == DRide.COMPLETED) booking.rideList
 
       -- Time formatting - use ride times if available, fallback to booking times
+      -- Convert to IST (UTC+5:30) for display
       pickupTime = fromMaybe booking.rideScheduledTime (mbRide >>= (.rideStartTime))
       dropTime = fromMaybe booking.updatedAt (mbRide >>= (.rideEndTime))
-      formattedPickupTime = T.pack $ DT.formatTime DT.defaultTimeLocale "%-I:%M %p" pickupTime
-      formattedDropTime = T.pack $ DT.formatTime DT.defaultTimeLocale "%-I:%M %p" dropTime
+      pickupTimeIST = utcToIST pickupTime
+      dropTimeIST = utcToIST dropTime
+      formattedPickupTime = T.pack $ DT.formatTime DT.defaultTimeLocale "%-I:%M %p" pickupTimeIST
+      formattedDropTime = T.pack $ DT.formatTime DT.defaultTimeLocale "%-I:%M %p" dropTimeIST
 
       -- Location details - build full address from LocationAPIEntity fields
       fromAddress = buildFullAddress booking.fromLocation

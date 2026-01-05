@@ -1080,9 +1080,26 @@ sendBusinessEmailVerification personId merchantId merchantOperatingCityId = do
 
   -- Send email with BOTH OTP and magic link
   withLogTag ("personId_" <> getId personId) $ do
-    L.runIO $ Email.sendBusinessVerificationEmail emailBusinessVerificationConfig [decryptedBusinessEmail] otp verificationToken
+    result <- withTryCatch "sendBusinessEmailVerification" $ L.runIO $ Email.sendBusinessVerificationEmail emailBusinessVerificationConfig [decryptedBusinessEmail] otp verificationToken
+    case result of
+      Left err -> throwError $ mapEmailError err
+      Right _ -> return ()
 
   return AP.Success
+
+-- | Maps exception error messages to user-readable EmailError types
+mapEmailError :: SomeException -> EmailError
+mapEmailError err =
+  let errStr = T.pack $ show err
+   in if T.isInfixOf "InvalidParameterValue" errStr || T.isInfixOf "MessageRejected" errStr
+        then InvalidEmailAddress
+        else
+          if T.isInfixOf "Throttling" errStr
+            then EmailRateLimitExceeded
+            else
+              if T.isInfixOf "MailFromDomainNotVerified" errStr || T.isInfixOf "ConfigurationSetDoesNotExist" errStr
+                then EmailConfigurationError
+                else EmailServiceUnavailable
 
 verifyBusinessEmail ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
@@ -1194,6 +1211,9 @@ resendBusinessEmailVerification personId _merchantId merchantOperatingCityId = d
 
   -- Send email with new OTP and magic link
   withLogTag ("personId_" <> getId personId) $ do
-    L.runIO $ Email.sendBusinessVerificationEmail emailBusinessVerificationConfig [decryptedBusinessEmail] newOtp newVerificationToken
+    result <- withTryCatch "resendBusinessEmailVerification" $ L.runIO $ Email.sendBusinessVerificationEmail emailBusinessVerificationConfig [decryptedBusinessEmail] newOtp newVerificationToken
+    case result of
+      Left err -> throwError $ mapEmailError err
+      Right _ -> return ()
 
   return AP.Success
