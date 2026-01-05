@@ -30,3 +30,6 @@ findByMerchantOpCityIdAndCategory merchantOpCityId category = do
     where_ $ specialLocationPriority ^. SpecialLocationPriorityMerchantOperatingCityId ==. val merchantOpCityId
     where_ $ specialLocationPriority ^. SpecialLocationPriorityCategory ==. val category
     return specialLocationPriority
+
+create :: SpecialLocationPriorityD.SpecialLocationPriority -> SqlDB ()
+create = Esq.create
