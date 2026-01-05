@@ -81,6 +81,7 @@ updateByPrimaryKey (Domain.Types.DriverRCAssociation.DriverRCAssociation {..}) =
       Se.Set Beam.consent consent,
       Se.Set Beam.consentTimestamp consentTimestamp,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
+      Se.Set Beam.errorMessage errorMessage,
       Se.Set Beam.isRcActive isRcActive,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
