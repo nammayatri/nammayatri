@@ -149,6 +149,7 @@ import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Types.SpecialLocationPriority as SLP
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
@@ -2300,7 +2301,9 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoAddress :: Text,
     gateInfoHasGeom :: Text,
     gateInfoCanQueueUpOnGate :: Text,
-    gateInfoType :: Text
+    gateInfoType :: Text,
+    pickupPriority :: Text,
+    dropPriority :: Text
   }
   deriving (Show)
 
@@ -2322,6 +2325,8 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "gate_info_has_geom"
       <*> r .: "gate_info_can_queue_up_on_gate"
       <*> r .: "gate_info_type"
+      <*> r .: "pickup_priority"
+      <*> r .: "drop_priority"
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -2349,7 +2354,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> V.imapM (makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity) v >>= (pure . V.toList)
 
-    makeSpecialLocation :: [(Text, FilePath)] -> [(Text, FilePath)] -> DMOC.MerchantOperatingCity -> Int -> SpecialLocationCSVRow -> Flow (Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))
+    makeSpecialLocation :: [(Text, FilePath)] -> [(Text, FilePath)] -> DMOC.MerchantOperatingCity -> Int -> SpecialLocationCSVRow -> Flow (Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int)
     makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       now <- getCurrentTime
       city :: Context.City <- readCSVField idx row.city "City"
@@ -2360,6 +2365,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       category :: Text <- cleanCSVField idx row.category "Category"
       let locationType :: Maybe SL.SpecialLocationType = readMaybeCSVField idx row.locationType "Location Type"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
+      pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
+      dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
       gateInfoId <- generateGUID
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
       gateInfoLat :: Double <- readCSVField idx row.gateInfoLat "Gate Info (latitude)"
@@ -2409,17 +2416,17 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 createdAt = now,
                 updatedAt = now
               }
-      return (city, locationName, (specialLocation, gateInfo))
+      return (city, locationName, (specialLocation, gateInfo), pickupPriority, dropPriority)
 
-    groupSpecialLocationAndGates :: [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))] -> [[(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))]]
+    groupSpecialLocationAndGates :: [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int)] -> [[(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int)]]
     groupSpecialLocationAndGates = DL.groupBy (\a b -> fst2 a == fst2 b) . DL.sortBy (compare `on` fst2)
       where
-        fst2 (c, l, _) = (c, l)
+        fst2 (c, l, _, _, _) = (c, l)
 
-    runValidationOnSpecialLocationAndGatesGroup :: DMOC.MerchantOperatingCity -> [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))] -> Flow ()
+    runValidationOnSpecialLocationAndGatesGroup :: DMOC.MerchantOperatingCity -> [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int)] -> Flow ()
     runValidationOnSpecialLocationAndGatesGroup _ [] = throwError $ InvalidRequest "Empty Special Location Group"
     runValidationOnSpecialLocationAndGatesGroup merchantOpCity (x : _) = do
-      let (city, _locationName, (specialLocation, _)) = x
+      let (city, _locationName, (specialLocation, _), pickupPriority, dropPriority) = x
       if city /= opCity
         then throwError $ InvalidRequest ("Can't process special location for different city: " <> show city <> ", please login with this city in dashboard")
         else do
@@ -2427,13 +2434,26 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           QSLP.findByMerchantOpCityIdAndCategory merchantOpCity.id.getId specialLocation.category
             >>= \case
               Just _ -> return ()
-              Nothing -> throwError $ InvalidRequest ("Special location priority does not exist for category: " <> specialLocation.category)
+              Nothing -> do
+                when (pickupPriority < 0 || dropPriority < 0) $ throwError $ InvalidRequest ("Pickup and Drop Priority must be greater than or equal to 0 for category: " <> specialLocation.category <> " and merchantOpCity: " <> merchantOpCity.id.getId)
+                priorityId <- generateGUID
+                let newPriority =
+                      SLP.SpecialLocationPriority
+                        { id = Id priorityId,
+                          merchantId = merchantOpCity.merchantId.getId,
+                          merchantOperatingCityId = merchantOpCity.id.getId,
+                          category = specialLocation.category,
+                          pickupPriority = pickupPriority,
+                          dropPriority = dropPriority
+                        }
+                void $ runTransaction $ QSLP.create newPriority
+                return ()
 
-    processSpecialLocationAndGatesGroup :: DMOC.MerchantOperatingCity -> [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))] -> Flow ()
+    processSpecialLocationAndGatesGroup :: DMOC.MerchantOperatingCity -> [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Int, Int)] -> Flow ()
     processSpecialLocationAndGatesGroup _ [] = throwError $ InvalidRequest "Empty Special Location Group"
     processSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates@(x : _) = do
       void $ runValidationOnSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates
-      let (_city, locationName, (specialLocation, _)) = x
+      let (_city, locationName, (specialLocation, _), _, _) = x
       specialLocationId <-
         QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId
           |<|>| QSL.findByLocationName locationName
@@ -2447,7 +2467,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
               Nothing -> generateGUID
       void $ runTransaction $ QSLG.create $ specialLocation {DSL.id = specialLocationId}
       mapM_
-        (\(_, _, (_, gateInfo)) -> runTransaction $ QGIG.create $ gateInfo {DGI.specialLocationId = specialLocationId})
+        (\(_, _, (_, gateInfo), _, _) -> runTransaction $ QGIG.create $ gateInfo {DGI.specialLocationId = specialLocationId})
         specialLocationAndGates
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
