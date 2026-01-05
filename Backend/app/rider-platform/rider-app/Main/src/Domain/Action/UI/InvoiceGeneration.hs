@@ -149,7 +149,7 @@ validateInvoiceRequest GenerateInvoiceReq {..} = do
   now <- getCurrentTime
 
   let (currentYear, _, _) = toGregorian $ DT.utctDay now
-      startYear = (\(y, _, _) -> y) $ toGregorian $ DT.utctDay startDate
+      _startYear = (\(y, _, _) -> y) $ toGregorian $ DT.utctDay startDate
       endYear = (\(y, _, _) -> y) $ toGregorian $ DT.utctDay endDate
 
       daysDiff = diffUTCTime endDate startDate
@@ -159,9 +159,11 @@ validateInvoiceRequest GenerateInvoiceReq {..} = do
   when (daysCount > 31) $
     throwError $ InvalidRequest "Date range cannot exceed 31 days"
 
-  -- Validate: Start date must be from current year
-  when (startYear /= currentYear) $
-    throwError $ InvalidRequest "Start date must be from current year"
+  -- Validate: Start date must not be more than 1 year in the past
+  let oneYearInSeconds = 365 * DT.nominalDay
+      timeSinceStart = diffUTCTime now startDate
+  when (timeSinceStart > oneYearInSeconds) $
+    throwError $ InvalidRequest "Start date cannot be more than 1 year in the past"
 
   -- Validate: End date must be from current year
   when (endYear /= currentYear) $

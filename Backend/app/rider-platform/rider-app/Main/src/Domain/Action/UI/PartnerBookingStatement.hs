@@ -83,7 +83,7 @@ postCorporateInvoiceData mbApiKey req = do
             outcomeCode = "400",
             responseMessage = "No completed ride found for the booking",
             partnerCustomerId = person.id.getId,
-            emailId = req.emailId,
+            emailId = fromMaybe "" req.emailId,
             mobileNumber = fromMaybe "" req.mobileNumber,
             bookingId = booking.id,
             bookingDatetime = bookingAPIEntity.createdAt,
@@ -95,22 +95,22 @@ postCorporateInvoiceData mbApiKey req = do
             paymentMode = [],
             billing =
               PBSAPI.InvoiceBilling
-                { itemAmount = Just 0,
-                  addonAmount = Just 0,
-                  discountAmount = Just 0,
-                  paymentAmount = Just 0,
+                { itemAmount = 0,
+                  addonAmount = 0,
+                  discountAmount = 0,
+                  paymentAmount = 0.0,
                   paymentAmountCurrencyName = Just paymentCurrency
                 },
             invoice =
               PBSAPI.InvoiceInvoice
                 { invoiceDatetime = Just bookingAPIEntity.createdAt,
-                  invoiceAmount = Just 0,
+                  invoiceAmount = 0,
                   invoiceAmountCurrencyName = Just paymentCurrency
                 }
           }
     Just ride -> do
-      let provider = Just "Namma Yatri"
-          paymentAmount = ride.computedPrice <|> (Just bookingAPIEntity.estimatedTotalFare)
+      let provider = "Namma Yatri"
+          paymentAmount = fromMaybe (toHighPrecMoney bookingAPIEntity.estimatedTotalFare) (toHighPrecMoney <$> ride.computedPrice)
           fromLocation = bookingAPIEntity.fromLocation
           toLocation = getToLocation bookingAPIEntity
           bookingDatetime = bookingAPIEntity.createdAt
@@ -119,17 +119,17 @@ postCorporateInvoiceData mbApiKey req = do
 
           itemEntry =
             PBSAPI.InvoiceItem
-              { itemId = Just ride.shortRideId.getShortId,
-                itemName = Just "Ride",
+              { itemId = ride.shortRideId.getShortId,
+                itemName = "Ride",
                 bookingType = bookingAPIEntity.vehicleCategory,
-                bookingClass = Just bookingAPIEntity.vehicleServiceTierType,
+                bookingClass = bookingAPIEntity.vehicleServiceTierType,
                 provider = provider,
-                providerCode = Just ride.vehicleNumber,
-                providerPriceCategory = Just (show ride.vehicleVariant),
-                serviceStartAddress = Just (formatAddress fromLocation),
+                providerCode = ride.vehicleNumber,
+                providerPriceCategory = show ride.vehicleVariant,
+                serviceStartAddress = formatAddress fromLocation,
                 serviceStartPincode = fromLocation.areaCode,
                 serviceStartDatetime = serviceStartDatetime,
-                serviceEndAddress = formatAddress <$> toLocation,
+                serviceEndAddress = fromMaybe "" (formatAddress <$> toLocation),
                 serviceEndPincode = toLocation >>= (.areaCode),
                 serviceEndDatetime = serviceEndDatetime
               }
@@ -137,33 +137,33 @@ postCorporateInvoiceData mbApiKey req = do
           personEntry =
             PBSAPI.InvoicePerson
               { personId = person.id.getId,
-                gender = Just (show person.gender),
-                firstName = person.firstName,
-                middleName = person.middleName,
-                lastName = person.lastName
+                gender = show person.gender,
+                firstName = fromMaybe "" person.firstName,
+                middleName = fromMaybe "" person.middleName,
+                lastName = fromMaybe "" person.lastName
               }
 
           unitPricingEntry =
             PBSAPI.InvoiceUnitPricing
-              { itemId = Just "ride",
+              { itemId = "ride",
                 personId = person.id.getId,
                 itemAmount = paymentAmount,
-                platformFee = Just 0,
-                discountAmount = Just 0,
-                priceMultipler = Just 1
+                platformFee = 0,
+                discountAmount = 0,
+                priceMultipler = 1
               }
 
           paymentModeEntry =
             PBSAPI.InvoicePaymentMode
-              { paymentMode = Just "CASH/UPI",
+              { paymentMode = "CASH/UPI",
                 amount = paymentAmount
               }
 
           billingEntry =
             PBSAPI.InvoiceBilling
               { itemAmount = paymentAmount,
-                addonAmount = Just 0,
-                discountAmount = Just 0,
+                addonAmount = 0,
+                discountAmount = 0,
                 paymentAmount = paymentAmount,
                 paymentAmountCurrencyName = Just paymentCurrency
               }
@@ -183,7 +183,7 @@ postCorporateInvoiceData mbApiKey req = do
             outcomeCode = "200",
             responseMessage = "Success",
             partnerCustomerId = person.id.getId,
-            emailId = req.emailId <|> email,
+            emailId = fromMaybe "" (req.emailId <|> email),
             mobileNumber = fromMaybe "" req.mobileNumber,
             bookingId = booking.id,
             bookingDatetime = bookingDatetime,
@@ -233,7 +233,7 @@ postCorporateBookingStatement mbApiKey req = do
             outcomeCode = "400",
             responseMessage = "Person not registered with the NammaYatri",
             mobileNumber = mobileNumber,
-            emailId = req.emailId,
+            emailId = fromMaybe "" req.emailId,
             partnerCustomerId = req.partnerCustomerId,
             item = []
           }
@@ -259,7 +259,7 @@ postCorporateBookingStatement mbApiKey req = do
             outcomeCode = "200",
             responseMessage = "Success",
             mobileNumber = mobileNumber,
-            emailId = req.emailId <|> email,
+            emailId = fromMaybe "" (req.emailId <|> email),
             partnerCustomerId = Just person.id.getId,
             item = items
           }
@@ -295,7 +295,7 @@ buildBookingItem _person bookingAPIEntity = do
       let provider = "Namma Yatri"
           providerCode = ride.vehicleNumber
           -- Get payment amount
-          paymentAmount = fromMaybe bookingAPIEntity.estimatedTotalFare ride.computedPrice
+          paymentAmount = fromMaybe (toHighPrecMoney bookingAPIEntity.estimatedTotalFare) (toHighPrecMoney <$> ride.computedPrice)
 
           -- Get addresses
           fromLocation = bookingAPIEntity.fromLocation
@@ -313,13 +313,13 @@ buildBookingItem _person bookingAPIEntity = do
               bookingType = bookingAPIEntity.vehicleCategory,
               provider = provider,
               providerCode = providerCode,
-              paymentAmount = Just paymentAmount,
+              paymentAmount = paymentAmount,
               paymentAmountCurrencyCode = show bookingAPIEntity.estimatedTotalFareWithCurrency.currency,
-              serviceStartAddress = formatAddress fromLocation,
+              serviceStartAddress = (formatAddress fromLocation),
               serviceStartPincode = fromLocation.areaCode,
               serviceStartDatetime = serviceStartDatetime,
-              serviceEndAddress = formatAddress <$> toLocation,
-              serviceEndPincode = toLocation >>= (.areaCode),
+              serviceEndAddress = fromMaybe "" (formatAddress <$> toLocation),
+              serviceEndPincode = (toLocation >>= (.areaCode)),
               serviceEndDatetime = serviceEndDatetime
             }
 
