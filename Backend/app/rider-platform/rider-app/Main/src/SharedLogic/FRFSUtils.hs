@@ -112,6 +112,7 @@ import qualified Storage.Queries.VendorSplitDetails as QVendorSplitDetails
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
+import qualified Tools.Wallet as TWallet
 
 mkTicketAPI :: DT.FRFSTicket -> APITypes.FRFSTicketAPI
 mkTicketAPI DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
@@ -858,7 +859,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
       createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall
+  let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall)
   mapM (DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq) orderResp
   where
     getPaymentIds = do

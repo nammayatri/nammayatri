@@ -117,6 +117,7 @@ types:
     status: StatusType
     derive: "Show"
 
+
 apis:
   - GET:
       endpoint: /multimodal/pass/availablePasses
@@ -206,3 +207,5 @@ apis:
         type: PassUploadProfilePictureReq
       response:
         type: APISuccess
+
+

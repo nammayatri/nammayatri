@@ -19,13 +19,15 @@ where
 
 import GHC.Base (Symbol)
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Wallet as Wallet
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.App (MandatoryQueryParam)
 import Kernel.Types.Id
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 
-type API (entityId :: Symbol) (notificationEntityId :: Symbol) entity notificationEntity notificationResp =
+type API (entityId :: Symbol) (notificationEntityId :: Symbol) entity notificationEntity notificationResp walletRechargeReq =
   "payment"
     :> ( Capture entityId (Id entity)
            :> "createOrder"
@@ -38,4 +40,11 @@ type API (entityId :: Symbol) (notificationEntityId :: Symbol) entity notificati
            :<|> Capture "notificationId" (Id notificationEntity)
            :> "notification"
            :> Get '[JSON] notificationResp
+           :<|> "wallet"
+           :> "recharge"
+           :> ReqBody '[JSON] walletRechargeReq
+           :> Post '[JSON] APISuccess
+           :<|> "wallet"
+           :> "balance"
+           :> Get '[JSON] Wallet.WalletBalanceData
        )

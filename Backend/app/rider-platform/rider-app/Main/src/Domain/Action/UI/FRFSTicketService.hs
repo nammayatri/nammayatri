@@ -85,6 +85,7 @@ import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 import qualified Tools.Payment as Payment
+import qualified Tools.Wallet as TWallet
 import qualified UrlShortner.Common as UrlShortner
 
 getFrfsRoutes ::
@@ -792,7 +793,8 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
       paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
       let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person booking.riderId
       let orderStatusCall = Payment.orderStatus booking.merchantId booking.merchantOperatingCityId Nothing (getPaymentType (integratedBppConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType) (Just person.id.getId) person.clientSdkVersion
-      paymentStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+          walletPostingCall = TWallet.walletPosting booking.merchantId booking.merchantOperatingCityId
+      paymentStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall (Just walletPostingCall)
       action (paymentBooking, paymentOrder, Just paymentStatusResponse)
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Maybe Spec.VehicleCategory -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]

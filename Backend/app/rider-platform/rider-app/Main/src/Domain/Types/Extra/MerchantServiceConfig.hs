@@ -47,6 +47,7 @@ data ServiceName
   | PayoutService Payout.PayoutService
   | MultiModalService MultiModal.MultiModalService
   | WalletService GW.WalletService
+  | JuspayWalletService Payment.PaymentService
   | MultiModalStaticDataService MultiModal.MultiModalService
   | InsuranceService Insurance.InsuranceService
   deriving stock (Eq, Ord, Generic)
@@ -74,6 +75,7 @@ instance Show ServiceName where
   show (PayoutService s) = "Payout_" <> show s
   show (MultiModalService s) = "MultiModal_" <> show s
   show (WalletService s) = "Wallet_" <> show s
+  show (JuspayWalletService s) = "JuspayWallet_" <> show s
   show (MultiModalStaticDataService s) = "MultiModalStaticData_" <> show s
   show (InsuranceService s) = "Insurance_" <> show s
 
@@ -158,6 +160,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Wallet_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (JuspayWalletService v1, r2)
+                 | r1 <- stripPrefix "JuspayWallet_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (MultiModalStaticDataService v1, r2)
                  | r1 <- stripPrefix "MultiModalStaticData_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -191,6 +197,7 @@ data ServiceConfigD (s :: UsageSafety)
   | PayoutServiceConfig !PayoutServiceConfig
   | MultiModalServiceConfig !MultiModal.MultiModalServiceConfig
   | WalletServiceConfig !GW.WalletServiceConfig
+  | JuspayWalletServiceConfig !PaymentServiceConfig
   | MultiModalStaticDataServiceConfig !MultiModal.MultiModalServiceConfig
   | InsuranceServiceConfig !Insurance.InsuranceConfig
   deriving (Generic, Eq)
@@ -225,6 +232,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (PayoutServiceConfig cfg) = "PayoutServiceConfig " <> show cfg
   show (MultiModalServiceConfig cfg) = "MultiModalServiceConfig " <> show cfg
   show (WalletServiceConfig cfg) = "WalletServiceConfig " <> show cfg
+  show (JuspayWalletServiceConfig cfg) = "JuspayWalletServiceConfig " <> show cfg
   show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
   show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg
 
@@ -248,5 +256,6 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (PayoutServiceConfig cfg) = "PayoutServiceConfig " <> show cfg
   show (MultiModalServiceConfig cfg) = "MultiModalServiceConfig " <> show cfg
   show (WalletServiceConfig cfg) = "WalletServiceConfig " <> show cfg
+  show (JuspayWalletServiceConfig cfg) = "JuspayWalletServiceConfig " <> show cfg
   show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
   show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg

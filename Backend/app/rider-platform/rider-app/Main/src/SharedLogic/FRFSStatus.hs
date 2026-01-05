@@ -72,6 +72,7 @@ import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 import qualified Tools.Payment as Payment
+import qualified Tools.Wallet as TWallet
 import qualified UrlShortner.Common as UrlShortner
 
 -- pass isMultiModalBooking = True in case of multimodal flow
@@ -387,7 +388,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
               }
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isMetroTestTransaction <- asks (.isMetroTestTransaction)
-      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) isMetroTestTransaction createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion)
+      let createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
+      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) isMetroTestTransaction createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion) (Just createWalletCall)
 
     createOrderCall merchantOperatingCityId booking mRoutingId sdkVersion = Payment.createOrder merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) mRoutingId sdkVersion
 

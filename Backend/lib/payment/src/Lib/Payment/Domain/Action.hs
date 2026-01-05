@@ -38,6 +38,11 @@ module Lib.Payment.Domain.Action
     buildOrderOffer,
     getOrderShortId,
     getTransactionStatus,
+    createWalletService,
+    walletPostingService,
+    walletBalanceService,
+    walletReversalService,
+    walletVerifyTxnService,
   )
 where
 
@@ -57,6 +62,10 @@ import qualified Kernel.External.Payout.Interface as PT
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
+import Kernel.External.Wallet as Wallet
+-- import qualified Tools.Wallet as TWallet
+
+import qualified Kernel.External.Wallet.Interface as WalletInterface
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value, isNothing)
 import qualified Kernel.Storage.Hedis as Redis
@@ -71,7 +80,9 @@ import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSpli
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
 import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
+import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
+import qualified Lib.Payment.Domain.Types.WalletRewardPosting as DWalletRewardPosting
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
@@ -79,7 +90,9 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrderSplit as QPaymentOrderS
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutTransaction as QPayoutTransaction
+import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
+import qualified Lib.Payment.Storage.Queries.WalletRewardPosting as QWalletRewardPosting
 
 data PaymentStatusResp
   = PaymentStatus
@@ -128,6 +141,10 @@ data PaymentStatusResp
         responseCode :: Maybe Text,
         responseMessage :: Maybe Text,
         notificationId :: Text
+      }
+  | WalletPaymentStatusResp
+      { walletStatus :: Maybe DWalletRewardPosting.WalletPostingStatus,
+        walletPostingId :: Maybe (Id DWalletRewardPosting.WalletRewardPosting)
       }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -430,8 +447,9 @@ createOrderService ::
   Bool ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
+  Maybe (Wallet.CreateWalletReq -> m Wallet.CreateWalletResp) ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall = do
+createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall mbCreateWalletCall = do
   logInfo $ "CreateOrderService: "
   -- Apply test- prefix if isTestTransaction is True and not already prefixed (idempotent)
   let updatedOrderShortId =
@@ -439,6 +457,10 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
           then "test-" <> createOrderRequest.orderShortId
           else createOrderRequest.orderShortId
       createOrderReq = (createOrderRequest :: Payment.CreateOrderReq) {Payment.orderShortId = updatedOrderShortId}
+  when (paymentServiceType == DOrder.Wallet) $ do
+    case mbCreateWalletCall of
+      Just createWalletCall -> do handleWalletOrder createWalletCall
+      Nothing -> throwError $ InternalError "Wallet creation call not found"
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
@@ -472,6 +494,50 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
       now <- getCurrentTime
       let buffer = secondsToNominalDiffTime 150 -- 2.5 mins of buffer
       return (order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED] && expiry < addUTCTime buffer now)
+
+    handleWalletOrder createWalletCall = do
+      now <- getCurrentTime
+      mbPersonWallet <- QPersonWallet.findByPersonId personId.getId
+      personWallet <-
+        case mbPersonWallet of
+          Just personWallet -> do
+            pure personWallet
+          Nothing -> do
+            let createWalletReq = Wallet.CreateWalletReq {customerId = personId.getId, createCashAccount = False, createPointsAccount = True, operationId = createOrderReq.orderShortId}
+            void $ createWalletService createWalletReq createWalletCall
+            personWalletId <- generateGUID
+            let personWallet =
+                  DPersonWallet.PersonWallet
+                    { id = personWalletId,
+                      cashAmount = HighPrecMoney {getHighPrecMoney = 0},
+                      cashFromPointsRedemption = HighPrecMoney {getHighPrecMoney = 0},
+                      expiredBalance = HighPrecMoney {getHighPrecMoney = 0},
+                      personId = personId.getId,
+                      pointsAmount = createOrderReq.amount,
+                      updatedAt = now,
+                      usableCashAmount = HighPrecMoney {getHighPrecMoney = 0},
+                      usablePointsAmount = HighPrecMoney {getHighPrecMoney = 0},
+                      merchantId = merchantId.getId,
+                      merchantOperatingCityId = mbMerchantOpCityId <&> (.getId),
+                      createdAt = now
+                    }
+            QPersonWallet.create personWallet
+            return personWallet
+      let walletRewardPosting =
+            DWalletRewardPosting.WalletRewardPosting
+              { id = Id createOrderReq.orderId,
+                shortId = ShortId createOrderReq.orderShortId,
+                walletId = personWallet.id,
+                pointsAmount = createOrderReq.amount,
+                cashAmount = HighPrecMoney {getHighPrecMoney = 0},
+                postingType = WalletInterface.GRANT,
+                status = DWalletRewardPosting.NEW,
+                createdAt = now,
+                updatedAt = now,
+                merchantId = merchantId.getId,
+                merchantOperatingCityId = mbMerchantOpCityId <&> (.getId)
+              }
+      QWalletRewardPosting.create walletRewardPosting
 
 buildSDKPayload :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayload)
 buildSDKPayload req order = do
@@ -692,10 +758,16 @@ orderStatusService ::
   Id Person ->
   Id DOrder.PaymentOrder ->
   (Payment.OrderStatusReq -> m Payment.OrderStatusResp) ->
+  Maybe (Wallet.WalletPostingReq -> m Wallet.WalletPostingResp) ->
   m PaymentStatusResp
-orderStatusService personId orderId orderStatusCall = do
+orderStatusService personId orderId orderStatusCall mbWalletPostingCall = do
   -- order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
+  when (order.paymentServiceType == Just DOrder.Wallet) $ do
+    case mbWalletPostingCall of
+      Just walletPostingCall -> handleWalletOrderStatus order walletPostingCall
+      Nothing -> throwError $ InternalError "Wallet posting call not found"
+
   unless (personId == order.personId) $ throwError NotAnExecutor
   let orderStatusReq = Payment.OrderStatusReq {orderShortId = order.shortId.getShortId}
   now <- getCurrentTime
@@ -749,7 +821,8 @@ orderStatusService personId orderId orderStatusCall = do
       maybe
         (updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
-            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing
+            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
+              updateOrderTransaction order orderTxn Nothing
         )
         transactionUUID
       mapM_ (void . upsertRefundStatus order) refunds
@@ -782,6 +855,25 @@ orderStatusService personId orderId orderStatusCall = do
             ..
           }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
+  where
+    handleWalletOrderStatus paymentOrder walletPostingCall = do
+      personWallet <- QPersonWallet.findByPersonId personId.getId >>= fromMaybeM (InternalError $ "Person wallet not found for personId: " <> show personId.getId)
+      mbWalletRewardPosting <- QWalletRewardPosting.findByWalletIdAndStatus personWallet.id DWalletRewardPosting.NEW
+      case paymentOrder.status of
+        Payment.CHARGED -> do
+          case mbWalletRewardPosting of
+            Just walletRewardPosting -> do
+              let walletPostingReq = Wallet.WalletPostingReq {customerId = personId.getId, postingType = walletRewardPosting.postingType, operationId = walletRewardPosting.shortId.getShortId, pointsAmount = round walletRewardPosting.pointsAmount.getHighPrecMoney :: Int}
+              walletPostingResp <- walletPostingService walletPostingReq walletPostingCall
+              case walletPostingResp.success of
+                True -> do
+                  QWalletRewardPosting.updateByPrimaryKey walletRewardPosting {DWalletRewardPosting.status = DWalletRewardPosting.SUCCESS}
+                False -> do
+                  QWalletRewardPosting.updateByPrimaryKey walletRewardPosting {DWalletRewardPosting.status = DWalletRewardPosting.FAILED}
+            Nothing -> do
+              logError $ "Wallet reward posting with status NEW not found for walletId: " <> show personWallet.id.getId
+        _ -> do
+          logError $ "Unexpected payment order status: " <> show paymentOrder.status
 
 data OrderTxn = OrderTxn
   { transactionUUID :: Maybe Text,
@@ -1387,3 +1479,60 @@ getTransactionStatus :: MonadFlow m => PaymentStatusResp -> m Payment.Transactio
 getTransactionStatus paymentStatusResp = case paymentStatusResp of
   PaymentStatus {..} -> pure status
   _ -> throwError $ InternalError "Transaction Status not found in response."
+
+---------------------  Wallet APIs ---------------------
+
+createWalletService :: (BeamFlow m r) => Wallet.CreateWalletReq -> (Wallet.CreateWalletReq -> m Wallet.CreateWalletResp) -> m Wallet.CreateWalletResp
+createWalletService createWalletReq createWalletCall = do
+  mbCreateWalletResp <- withTryCatch "createWalletService" (createWalletCall createWalletReq)
+  case mbCreateWalletResp of
+    Right createWalletResp -> do
+      case createWalletResp.success of
+        True -> do
+          return createWalletResp
+        False -> throwError $ InternalError $ "createWalletService failed with error: " <> show createWalletResp
+    Left err -> throwError $ InternalError $ "createWalletService failed with error: " <> show err
+
+walletPostingService :: (BeamFlow m r) => Wallet.WalletPostingReq -> (Wallet.WalletPostingReq -> m Wallet.WalletPostingResp) -> m Wallet.WalletPostingResp
+walletPostingService walletPostingReq walletPostingCall = do
+  mbWalletPostingResp <- withTryCatch "walletPostingService" (walletPostingCall walletPostingReq)
+  case mbWalletPostingResp of
+    Right walletPostingResp -> do
+      case walletPostingResp.success of
+        True -> do
+          return walletPostingResp
+        False -> throwError $ InternalError $ "walletPostingService failed with error: " <> show walletPostingResp
+    Left err -> throwError $ InternalError $ "walletPostingService failed with error: " <> show err
+
+walletBalanceService :: (BeamFlow m r) => Wallet.WalletBalanceReq -> (Wallet.WalletBalanceReq -> m Wallet.WalletBalanceResp) -> m Wallet.WalletBalanceResp
+walletBalanceService walletBalanceReq walletBalanceCall = do
+  mbWalletBalanceResp <- withTryCatch "walletBalanceService" (walletBalanceCall walletBalanceReq)
+  case mbWalletBalanceResp of
+    Right walletBalanceResp -> do
+      case walletBalanceResp.success of
+        True -> do
+          return walletBalanceResp
+        False -> throwError $ InternalError $ "walletBalanceService failed with error: " <> show walletBalanceResp
+    Left err -> throwError $ InternalError $ "walletBalanceService failed with error: " <> show err
+
+walletReversalService :: (BeamFlow m r) => Wallet.WalletReversalReq -> (Wallet.WalletReversalReq -> m Wallet.WalletReversalResp) -> m Wallet.WalletReversalResp
+walletReversalService walletReversalReq walletReversalCall = do
+  mbWalletReversalResp <- withTryCatch "walletReversalService" (walletReversalCall walletReversalReq)
+  case mbWalletReversalResp of
+    Right walletReversalResp -> do
+      case walletReversalResp.success of
+        True -> do
+          return walletReversalResp
+        False -> throwError $ InternalError $ "walletReversalService failed with error: " <> show walletReversalResp
+    Left err -> throwError $ InternalError $ "walletReversalService failed with error: " <> show err
+
+walletVerifyTxnService :: (BeamFlow m r) => Wallet.WalletVerifyTxnReq -> (Wallet.WalletVerifyTxnReq -> m Wallet.WalletVerifyTxnResp) -> m Wallet.WalletVerifyTxnResp
+walletVerifyTxnService walletVerifyTxnReq walletVerifyTxnCall = do
+  mbWalletVerifyTxnResp <- withTryCatch "walletVerifyTxnService" (walletVerifyTxnCall walletVerifyTxnReq)
+  case mbWalletVerifyTxnResp of
+    Right walletVerifyTxnResp -> do
+      case walletVerifyTxnResp.success of
+        True -> do
+          return walletVerifyTxnResp
+        False -> throwError $ InternalError $ "walletVerifyTxnService failed with error: " <> show walletVerifyTxnResp
+    Left err -> throwError $ InternalError $ "walletVerifyTxnService failed with error: " <> show err

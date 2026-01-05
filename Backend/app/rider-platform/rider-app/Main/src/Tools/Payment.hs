@@ -64,7 +64,8 @@ import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import Domain.Types.TicketPlace
 import qualified EulerHS.Language as L
 import Kernel.External.Payment.Interface as Reexport hiding
-  ( autoRefunds,
+  ( Wallet,
+    autoRefunds,
     cancelPaymentIntent,
     capturePaymentIntent,
     createCustomer,
@@ -187,6 +188,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
   where
     getPaymentServiceByType = \case
       Normal -> decidePaymentService (DMSC.PaymentService Payment.Juspay) clientSdkVersion
+      Wallet -> pure $ DMSC.JuspayWalletService Payment.Juspay
       BBPS -> pure $ DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> pure $ DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> pure $ DMSC.BusPaymentService Payment.Juspay
@@ -525,6 +527,7 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
@@ -558,6 +561,7 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
@@ -591,6 +595,7 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
@@ -628,6 +633,7 @@ getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServ
 
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
@@ -666,6 +672,7 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
@@ -699,6 +706,7 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay

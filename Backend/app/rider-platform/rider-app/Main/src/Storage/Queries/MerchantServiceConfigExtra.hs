@@ -151,6 +151,9 @@ getServiceNameConfigJSON = \case
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)
   Domain.WalletServiceConfig walletCfg -> case walletCfg of
     GW.GoogleWalletConfig cfg -> (Domain.WalletService GW.GoogleWallet, toJSON cfg)
+  Domain.JuspayWalletServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.JuspayWalletService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.JuspayWalletService Payment.Stripe, toJSON cfg)
   Domain.MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
     MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalStaticDataService MultiModal.GoogleTransit, toJSON cfg)
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalStaticDataService MultiModal.OTPTransit, toJSON cfg)

@@ -101,7 +101,7 @@ data PaymentOrderAPIEntity = PaymentOrderAPIEntity
 
 type PaymentOrder = PaymentOrderE 'AsEncrypted
 
-data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMultiModalBooking | FRFSPassPurchase | ParkingBooking
+data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMultiModalBooking | FRFSPassPurchase | ParkingBooking | Wallet
   deriving (Generic, Eq, Ord, FromJSON, ToJSON, Show, Read, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''PaymentServiceType)

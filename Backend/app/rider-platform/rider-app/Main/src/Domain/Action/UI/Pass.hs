@@ -82,6 +82,7 @@ import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import Tools.SMS as Sms hiding (Success)
+import qualified Tools.Wallet as TWallet
 
 defaultDashboardDeviceId :: Text
 defaultDashboardDeviceId = "dashboard-default-device-id"
@@ -320,7 +321,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just staticCustomerId) person.clientSdkVersion
         mbPaymentOrderValidity <- TPayment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         isMetroTestTransaction <- asks (.isMetroTestTransaction)
-        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall
+        let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
+        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall)
       else return Nothing
   QPurchasedPassPayment.create purchasedPassPayment
   return $

@@ -20,6 +20,7 @@ module API.UI.Payment
   )
 where
 
+import qualified API.Types.UI.Payment as PaymentAPI
 import qualified Data.Text
 import qualified Domain.Action.UI.Payment as DPayment
 import qualified Domain.Types.Merchant as Merchant
@@ -28,6 +29,8 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Wallet as Wallet
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -40,7 +43,7 @@ import Tools.Auth
 
 type API =
   TokenAuth
-    :> Payment.API "rideId" "rideId" DRide.Ride DRide.Ride Payment.CreateOrderResp
+    :> Payment.API "rideId" "rideId" DRide.Ride DRide.Ride Payment.CreateOrderResp PaymentAPI.WalletRechargeReq
 
 type S2SAPI =
   "s2s" :> "payment" :> Capture "orderId" (Id DOrder.PaymentOrder) :> Capture "customerId" (Id DP.Person) :> "status" :> Header "api-key" Data.Text.Text :> Get '[JSON] DPayment.PaymentStatusResp
@@ -51,6 +54,8 @@ handler authInfo =
     :<|> getStatus authInfo
     :<|> getOrder authInfo
     :<|> createOrder authInfo -- Fix properly
+    :<|> postWalletRecharge authInfo
+    :<|> getWalletBalance authInfo
 
 handlerS2S :: FlowServer S2SAPI
 handlerS2S = getStatusS2S
@@ -68,3 +73,9 @@ getStatusS2S :: Id DOrder.PaymentOrder -> Id DP.Person -> Maybe Data.Text.Text -
 getStatusS2S orderId personId mbApiKey = withFlowHandlerAPI $ do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound "Person not found")
   DPayment.getStatusS2S orderId personId person.merchantId mbApiKey
+
+postWalletRecharge :: (Id DP.Person, Id Merchant.Merchant) -> PaymentAPI.WalletRechargeReq -> FlowHandler APISuccess
+postWalletRecharge tokenDetails req = withFlowHandlerAPI $ DPayment.postWalletRecharge tokenDetails req
+
+getWalletBalance :: (Id DP.Person, Id Merchant.Merchant) -> FlowHandler Wallet.WalletBalanceData
+getWalletBalance tokenDetails = withFlowHandlerAPI $ DPayment.getWalletBalance tokenDetails

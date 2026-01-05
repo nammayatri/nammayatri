@@ -64,6 +64,7 @@ library
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.Types.UI.PartnerBookingStatementExtra
+      API.Types.UI.Payment
       API.UI
       API.UI.AadhaarVerification
       API.UI.AppInstalls
@@ -664,6 +665,7 @@ library
       Tools.SMS
       Tools.Streaming.Kafka
       Tools.Ticket
+      Tools.Wallet
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Customer

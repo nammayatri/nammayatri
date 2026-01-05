@@ -32,6 +32,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Types as Payment
+import Kernel.External.Wallet as Wallet
 import qualified Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -54,6 +55,7 @@ import qualified Storage.Queries.Person as QP
 import Tools.Auth
 import Tools.Error
 import qualified Tools.Payment as Payment
+import qualified Tools.Wallet as TWallet
 
 postBbpsSession ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -131,8 +133,9 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
       createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
+      createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.BBPS isMetroTestTransaction createOrderReq createOrderCall
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.BBPS isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall)
   case mCreateOrderRes of
     Just createOrderRes -> do
       QBBPS.create bbpsInfo
@@ -157,7 +160,8 @@ getBbpsGetOrderStatus (_, _) refIdTxt = do
     withPaymentStatusResponseHandler bbpsInfo person action = do
       let orderStatusCall = Payment.orderStatus bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
       let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person bbpsInfo.customerId
-      orderStatusResponse <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.cast bbpsInfo.refId) orderStatusCall
+          walletPostingCall = TWallet.walletPosting bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId
+      orderStatusResponse <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.cast bbpsInfo.refId) orderStatusCall (Just walletPostingCall)
       action orderStatusResponse
 
 postBbpsCrossCheckPayment :: API.Types.UI.BBPS.BBPSServerReq -> Environment.Flow API.Types.UI.BBPS.BBPSServerResp

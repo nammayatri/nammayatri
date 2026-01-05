@@ -97,6 +97,9 @@ getConfigJSON = \case
     CIT.Gemini cfg -> toJSON cfg
   Domain.DashCamServiceConfig dashcamCfg -> case dashcamCfg of
     DashcamInter.CautioConfig cfg -> toJSON cfg
+  Domain.JuspayWalletServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> toJSON cfg
+    Payment.StripeConfig cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -159,6 +162,9 @@ getServiceName = \case
     CIT.Gemini _ -> Domain.LLMChatCompletionService ChatCompletion.Types.Gemini
   Domain.DashCamServiceConfig dashcamCfg -> case dashcamCfg of
     DashcamInter.CautioConfig _ -> Domain.DashCamService Dashcam.Cautio
+  Domain.JuspayWalletServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> Domain.JuspayWalletService Payment.Juspay
+    Payment.StripeConfig _ -> Domain.JuspayWalletService Payment.Stripe
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -219,6 +225,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI -> Domain.LLMChatCompletionServiceConfig . CIT.AzureOpenAI <$> eitherValue configJSON
   Domain.LLMChatCompletionService ChatCompletion.Types.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> eitherValue configJSON
   Domain.DashCamService Dashcam.Cautio -> Domain.DashCamServiceConfig . DashcamInter.CautioConfig <$> eitherValue configJSON
+  Domain.JuspayWalletService paymentServiceName -> Domain.JuspayWalletServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of

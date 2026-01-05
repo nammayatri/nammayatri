@@ -87,6 +87,7 @@ import Tools.Error
 import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.SMS as Sms
+import qualified Tools.Wallet as Wallet
 
 --import Control.Monad.Extra (mapMaybeM)
 
@@ -352,7 +353,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_
       createOrderCall = Payment.createOrder merchantId merchantOpCity.id (Just placeId) Payment.Normal (Just person.id.getId) person.clientSdkVersion
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCity.id) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall
+  let createWalletCall = Wallet.createWallet merchantId merchantOpCity.id
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCity.id) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall)
   case mCreateOrderRes of
     Just createOrderRes -> return createOrderRes
     Nothing -> do
@@ -669,7 +671,8 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
           then do
             let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
                 orderStatusCall = Payment.orderStatus merchantId' merchantOperatingCityId (Just ticketPlaceId) Payment.Normal (Just person.id.getId) person.clientSdkVersion
-            paymentStatus <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.Id id.getId) orderStatusCall
+                walletPostingCall = Wallet.walletPosting merchantId' merchantOperatingCityId
+            paymentStatus <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.Id id.getId) orderStatusCall (Just walletPostingCall)
             mapM (mkRefundDetails shortId merchantId') paymentStatus.refunds
           else pure refunds
 
@@ -1221,7 +1224,9 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
     then do
       return ticketBooking'.status
     else do
-      paymentStatus <- DPayment.orderStatusService commonPersonId order.id orderStatusCall
+      let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (Kernel.Types.Id.cast <$> order.merchantOperatingCityId)
+          walletPostingCall = Wallet.walletPosting merchantId merchantOperatingCityId
+      paymentStatus <- DPayment.orderStatusService commonPersonId order.id orderStatusCall (Just walletPostingCall)
       case paymentStatus of
         DPayment.PaymentStatus {..} -> do
           when (status == Payment.CHARGED) $ do
