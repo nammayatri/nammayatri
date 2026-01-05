@@ -185,6 +185,8 @@ RiderConfig:
     subwayRestrictionEndTime: Maybe TimeOfDay
     nearbyBusRadiusBucketStep: Maybe Meters
     singleModeWalkSpeed: Maybe Double
+    kafkaTopicName: Text
+
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -235,6 +237,7 @@ RiderConfig:
     refundStatusUpdateRetries: Maybe Int
     sourceOfServiceTier: Maybe ServiceTierSource
     enableRideEndOffers: Maybe Bool
+    kafkaTopicName: Maybe Text
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -293,6 +296,7 @@ RiderConfig:
     refundStatusUpdateRetries: fromMaybe 5 refundStatusUpdateRetries|E
     sourceOfServiceTier: fromMaybe (Domain.Types.RiderConfig.NANDI) sourceOfServiceTier|E
     enableRideEndOffers: fromMaybe False enableRideEndOffers|E
+    kafkaTopicName: fromMaybe "gps-data" kafkaTopicName|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -343,6 +347,7 @@ RiderConfig:
     refundStatusUpdateRetries: Just refundStatusUpdateRetries|E
     sourceOfServiceTier: Just sourceOfServiceTier|E
     enableRideEndOffers: Just enableRideEndOffers|E
+    kafkaTopicName: Just kafkaTopicName|E
 
 
   default:
@@ -390,6 +395,7 @@ RiderConfig:
     distanceToNearestStopThreshold: "200"
     validateSetOnboardingVehicleRequest: "false"
     enableOnlinePaymentRide: "false"
+    kafkaTopicName: "'gps-data'"
   queries:
     findByMerchantOperatingCityId:
       kvFunction: findOneWithKV
