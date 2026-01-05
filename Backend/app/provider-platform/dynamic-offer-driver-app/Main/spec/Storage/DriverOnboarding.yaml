@@ -279,6 +279,7 @@ DriverRCAssociation:
     consent: Bool
     consentTimestamp: UTCTime
     isRcActive: Bool
+    errorMessage: Maybe Text
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey

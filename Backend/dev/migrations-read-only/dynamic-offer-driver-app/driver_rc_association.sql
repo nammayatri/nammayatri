@@ -13,3 +13,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_rc_association ADD COLUMN merchant_ope
 ALTER TABLE atlas_driver_offer_bpp.driver_rc_association ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_rc_association ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_rc_association ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_rc_association ADD COLUMN error_message text ;
