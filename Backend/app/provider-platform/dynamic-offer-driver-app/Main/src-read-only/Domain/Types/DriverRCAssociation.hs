@@ -18,6 +18,7 @@ data DriverRCAssociation = DriverRCAssociation
     consent :: Kernel.Prelude.Bool,
     consentTimestamp :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.DriverRCAssociation.DriverRCAssociation,
     isRcActive :: Kernel.Prelude.Bool,
     rcId :: Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate,

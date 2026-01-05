@@ -640,7 +640,9 @@ linkRCStatus :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity
 linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = runInMasterDbAndRedis $ do
   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
-  unless (rc.verificationStatus == Documents.VALID) $ throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
+  unless (rc.verificationStatus == Documents.VALID) $ do
+    DAQuery.updateRcErrorMessage driverId rc.id "Can't perform activate/inactivate operations on invalid RC!"
+    throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
   now <- getCurrentTime
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if req.isActivate
@@ -654,7 +656,9 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = run
 deactivateRC :: DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Id Person.Person -> Flow ()
 deactivateRC transporterConfig rc driverId = do
   activeAssociation <- DAQuery.findActiveAssociationByRC rc.id True >>= fromMaybeM ActiveRCNotFound
-  unless (activeAssociation.driverId == driverId) $ throwError (InvalidRequest "Driver can't deactivate RC which is not active with them")
+  unless (activeAssociation.driverId == driverId) $ do
+    DAQuery.updateRcErrorMessage driverId rc.id "Driver can't deactivate RC which is not active with them"
+    throwError (InvalidRequest "Driver can't deactivate RC which is not active with them")
   removeVehicle driverId
   DAQuery.deactivateRCForDriver False driverId rc.id
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount rc.fleetOwnerId driverId
@@ -673,10 +677,14 @@ validateRCActivation driverId transporterConfig rc = do
   case mAssoc of
     Just _ -> return ()
     Nothing -> do
-      unless (transporterConfig.allowDriverToUseFleetRcs == Just True) $ throwError (InvalidRequest "RC is not associated with the driver")
+      unless (transporterConfig.allowDriverToUseFleetRcs == Just True) $ do
+        DAQuery.updateRcErrorMessage driverId rc.id "RC is not associated with the driver"
+        throwError (InvalidRequest "RC is not associated with the driver")
       fleetDriverAssociation <- FDA.findByDriverId driverId True >>= fromMaybeM (InvalidRequest "RC is not linked with the driver.")
       let fleetOwnerId = fleetDriverAssociation.fleetOwnerId
-      unless (rc.fleetOwnerId == Just fleetOwnerId) $ throwError (InvalidRequest "RC does not belong to you or your fleet.")
+      unless (rc.fleetOwnerId == Just fleetOwnerId) $ do
+        DAQuery.updateRcErrorMessage driverId rc.id "RC does not belong to you or your fleet."
+        throwError (InvalidRequest "RC does not belong to you or your fleet.")
       createDriverRCAssociationIfPossible transporterConfig driverId rc
 
   -- check if rc is already active to other driver
@@ -708,19 +716,27 @@ validateRCActivation driverId transporterConfig rc = do
         Just lastRide -> do
           if (nominalDiffTimeToSeconds (diffUTCTime now lastRide.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False
             then deactivateFunc oldDriverId
-            else throwError RCActiveOnOtherAccount
+            else do
+              DAQuery.updateRcErrorMessage oldDriverId rc.id (show RCActiveOnOtherAccount)
+              throwError RCActiveOnOtherAccount
         Nothing -> do
           -- if driver didn't take any ride yet
           person <- Person.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
           if (nominalDiffTimeToSeconds (diffUTCTime now person.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False
             then deactivateFunc oldDriverId
-            else throwError RCActiveOnOtherAccount
+            else do
+              DAQuery.updateRcErrorMessage oldDriverId rc.id (show RCActiveOnOtherAccount)
+              throwError RCActiveOnOtherAccount
 
 activateRC :: DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()
 activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
   when (transporterConfig.requiresOnboardingInspection == Just True) $ do
-    unless driverInfo.enabled $ throwError (InvalidRequest "Driver is not enabled")
-    unless (fromMaybe False rc.approved) $ throwError (InvalidRequest "Vehicle is not approved")
+    unless driverInfo.enabled $ do
+      DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Driver is not enabled"
+      throwError (InvalidRequest "Driver is not enabled")
+    unless (fromMaybe False rc.approved) $ do
+      DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Vehicle is not approved"
+      throwError (InvalidRequest "Vehicle is not approved")
   deactivateCurrentRC transporterConfig driverInfo.driverId
   addVehicleToDriver
   DAQuery.activateRCForDriver driverInfo.driverId rc.id now
@@ -756,7 +772,9 @@ deleteRC (driverId, _, merchantOpCityId) DeleteRCReq {..} isOldFlow = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case (mAssoc, isOldFlow) of
     (Just assoc, False) -> do
-      when (assoc.driverId == driverId) $ throwError (InvalidRequest "Deactivate RC first to delete!")
+      when (assoc.driverId == driverId) $ do
+        DAQuery.updateRcErrorMessage driverId rc.id "Deactivate RC first to delete!"
+        throwError (InvalidRequest "Deactivate RC first to delete!")
     (Just _, True) -> deactivateRC transporterConfig rc driverId
     (_, _) -> return ()
   DAQuery.endAssociationForRC driverId rc.id
