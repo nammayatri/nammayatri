@@ -22,7 +22,11 @@ imports:
   UpsertSpecialLocationCsvReq: Dashboard.Common.Merchant
   APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
   SpecialLocation: Lib.Types.SpecialLocation
+  SpecialLocationFull: Lib.Queries.SpecialLocation
   UpsertSpecialLocationReq: Dashboard.Common.Merchant
+  IndianState: Kernel.Types.Beckn.Context
+  City: Kernel.Types.Beckn.Context
+  UpdateGeometryReq: Dashboard.Common.Merchant
   UpsertSpecialLocationReqT: Dashboard.Common.Merchant
   UpsertSpecialLocationGateReq: Dashboard.Common.Merchant
   UpsertSpecialLocationGateReqT: Dashboard.Common.Merchant
@@ -373,6 +377,29 @@ apis:
         endpoint: MerchantAPI UpsertSpecialLocationCsvEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_CSV
+  - GET: # GetMerchantConfigSpecialLocationList
+      endpoint: /config/specialLocation/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: SpecialLocationResp
+  - GET: # GetMerchantConfigGeometryList
+      endpoint: /config/geometry/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: GeometryResp
+  - PUT: # PutMerchantConfigGeometryUpdate
+      endpoint: /config/geometry/update
+      auth: ApiAuthV2
+      multipart:
+        type: UpdateGeometryReq
+      response:
+        type: APISuccess
   - POST: # UpsertSpecialLocationAPI
       endpoint: /specialLocation/upsert
       query:
@@ -960,6 +987,17 @@ types:
     - stopFcmSuppressCount: Maybe Int
     - scheduleBookingListEligibilityTags: Maybe [Text]
     - derive: "'HideSecrets"
+  SpecialLocationResp:
+    - recordType: Type
+    - type: [SpecialLocationFull]
+  GeometryResp:
+    - recordType: Type
+    - type: [GeometryAPIEntity]
+  GeometryAPIEntity:
+    - region: Text
+    - state: IndianState
+    - city: City
+    - geom: Maybe Text
 
 
 extraOperations:

@@ -52,6 +52,9 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigMerchantCreate,
     getMerchantConfigVehicleServiceTier,
     postMerchantConfigVehicleServiceTierUpdate,
+    getMerchantConfigSpecialLocationList,
+    getMerchantConfigGeometryList,
+    putMerchantConfigGeometryUpdate,
   )
 where
 
@@ -185,7 +188,8 @@ import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
 import qualified Storage.Queries.FareProduct as SQF
-import qualified Storage.Queries.Geometry as QGEO
+import qualified Storage.Queries.Geometry as QGeo
+import qualified Storage.Queries.GeometryGeom as QGEO
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.PayoutConfig as QPC
 import qualified Storage.Queries.Plan as QPlan
@@ -347,6 +351,13 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   CQTC.clearCache merchantOpCityId
   logTagInfo "dashboard -> postMerchantConfigCommonUpdate : " (show merchant.id)
   pure Success
+
+getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow [QSL.SpecialLocationFull]
+getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+
+  QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset
 
 postMerchantSchedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
 postMerchantSchedulerTrigger merchantShortId opCity req = do
@@ -2734,7 +2745,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- geometry
   mbGeometry <-
-    QGEO.findGeometryByStateAndCity req.city req.state >>= \case
+    QGeo.findGeometryByStateAndCity req.city req.state >>= \case
       Nothing -> do
         Just <$> buildGeometry
       _ -> return Nothing
@@ -2821,7 +2832,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   finally
     ( do
-        whenJust mbGeometry $ \geometry -> QGEO.create geometry
+        whenJust mbGeometry $ \geometry -> QGeo.create geometry
         whenJust mbNewMerchant $ \newMerchant -> QM.create newMerchant
         whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
         whenJust mbInteglligentPoolConfig $ \newIntelligentPoolConfig -> CQDIPC.create newIntelligentPoolConfig
@@ -3599,3 +3610,29 @@ applyVehicleServiceTierUpdate existing req =
       DVST.stopFcmSuppressCount = req.stopFcmSuppressCount <|> existing.stopFcmSuppressCount,
       DVST.scheduleBookingListEligibilityTags = req.scheduleBookingListEligibilityTags <|> existing.scheduleBookingListEligibilityTags
     }
+
+getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.GeometryResp
+getMerchantConfigGeometryList merchantShortId opCity mbLimit mbOffset = do
+  merchant <- findMerchantByShortId merchantShortId
+  void $ CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  geoms <- QGEO.findAllGeometries opCity mbLimit mbOffset
+  return $ map toResponse geoms
+  where
+    toResponse :: DGEO.Geometry -> Common.GeometryAPIEntity
+    toResponse geom =
+      Common.GeometryAPIEntity
+        { region = geom.region,
+          state = geom.state,
+          city = geom.city,
+          geom = geom.geom
+        }
+
+putMerchantConfigGeometryUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateGeometryReq -> Flow APISuccess
+putMerchantConfigGeometryUpdate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let cityParam = merchantOpCity.city
+      stateParam = merchantOpCity.state
+  newGeom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Not able to convert the given KML to PostGis geom")
+  QGEO.updateGeometry cityParam stateParam req.region (T.pack newGeom)
+  return Success

@@ -147,6 +147,29 @@ findFullSpecialLocationsByMerchantOperatingCityId' mocId = do
       return (specialLocation, F.getGeomGeoJSON)
   mapM makeFullSpecialLocation mbRes
 
+findAllSpecialLocationsWithGeoJSON ::
+  (Transactionable m) =>
+  Text ->
+  Maybe Int ->
+  Maybe Int ->
+  m [SpecialLocationFull]
+findAllSpecialLocationsWithGeoJSON mocId mbLimit mbOffset = do
+  mbRes <-
+    Esq.findAll $ do
+      specialLocation <- from $ table @SpecialLocationT
+      where_ $
+        ( specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
+            ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
+        )
+
+      orderBy [asc (specialLocation ^. SpecialLocationPriority)]
+
+      forM_ mbLimit (limit . fromIntegral)
+      forM_ mbOffset (offset . fromIntegral)
+
+      return (specialLocation, F.getGeomGeoJSON)
+  mapM makeFullSpecialLocation mbRes
+
 findSpecialLocationsWarriorByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> m [D.SpecialLocation]
 findSpecialLocationsWarriorByMerchantOperatingCityId mocId category = do
   Hedis.safeGet (specialLocationWarriorRedisKey category) >>= \case
