@@ -70,6 +70,7 @@ resetAuthToken config = do
   logInfo $ "[CMRLV2:Auth] Requesting new auth token from: " <> showBaseUrl config.networkHostUrl
   logDebug $ "[CMRLV2:Auth] Auth request - operatorNameId: " <> show config.operatorNameId <> ", merchantId: " <> config.merchantId <> ", username: " <> config.username
   password <- decrypt config.password
+  logDebug $ "[CMRLV2:Auth] Decrypted password: " <> password
   auth <-
     callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.operatorNameId config.username password "password" config.merchantId) "authCMRLV2" authAPI
       >>= fromEitherM (ExternalAPICallError (Just "CMRL_V2_AUTH_API") config.networkHostUrl)
