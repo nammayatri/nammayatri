@@ -26,7 +26,7 @@ types:
     outcomeCode: Text
     responseMessage: Text
     mobileNumber: Text
-    emailId: Maybe Text
+    emailId: Text
     partnerCustomerId: Maybe Text
     item: "[BookingStatementItem]"
     derive': Generic,Show,ToSchema
@@ -37,12 +37,12 @@ types:
     bookingType: Maybe VehicleCategory
     provider: Text
     providerCode: Text
-    paymentAmount: Maybe Money
+    paymentAmount: HighPrecMoney
     paymentAmountCurrencyCode: Text
     serviceStartAddress: Text
     serviceStartPincode: Maybe Text
     serviceStartDatetime: UTCTime
-    serviceEndAddress: Maybe Text
+    serviceEndAddress: Text
     serviceEndPincode: Maybe Text
     serviceEndDatetime: UTCTime
     derive': Generic,Show,ToSchema
@@ -59,7 +59,7 @@ types:
     outcomeCode: Text
     responseMessage: Text
     partnerCustomerId: Text
-    emailId: Maybe Text
+    emailId: Text
     mobileNumber: Text
     bookingId: Id Booking
     bookingDatetime: UTCTime
@@ -74,36 +74,36 @@ types:
     derive': Generic,Show,ToSchema
 
   InvoiceItem:
-    itemId: Maybe Text # Ride short ID
-    itemName: Maybe Text # Vehicle Model Name
+    itemId: Text # Ride short ID
+    itemName: Text # Vehicle Model Name
     bookingType: Maybe VehicleCategory
-    bookingClass: Maybe ServiceTierType
-    provider: Maybe Text # NammaYatri
-    providerCode: Maybe Text # Vehicle number
-    providerPriceCategory: Maybe Text # Vehicle Varaint if available
-    serviceStartAddress: Maybe Text
+    bookingClass: ServiceTierType
+    provider: Text # NammaYatri
+    providerCode: Text # Vehicle number
+    providerPriceCategory:  Text # Vehicle Varaint if available
+    serviceStartAddress:  Text
     serviceStartPincode: Maybe Text
     serviceStartDatetime: Maybe UTCTime
-    serviceEndAddress: Maybe Text
+    serviceEndAddress: Text
     serviceEndPincode: Maybe Text
     serviceEndDatetime: Maybe UTCTime
     derive': Generic,Show,ToSchema
 
   InvoicePerson:
     personId: Text
-    gender: Maybe Text
-    firstName: Maybe Text
-    middleName: Maybe Text
-    lastName: Maybe Text
+    gender: Text
+    firstName:  Text
+    middleName:  Text
+    lastName: Text
     derive': Generic,Show,ToSchema
 
   InvoiceUnitPricing:
-    itemId: Maybe Text # Ride short ID
+    itemId: Text # Ride short ID
     personId: Text
-    itemAmount: Maybe Money
-    platformFee: Maybe HighPrecMoney
-    discountAmount: Maybe HighPrecMoney
-    priceMultipler: Maybe Double
+    itemAmount: HighPrecMoney
+    platformFee: HighPrecMoney
+    discountAmount: HighPrecMoney
+    priceMultipler: Double
     derive': Generic,Show,ToSchema
 
   InvoiceGST:
@@ -115,21 +115,21 @@ types:
     derive': Generic,Show,ToSchema
 
   InvoicePaymentMode:
-    paymentMode: Maybe Text
-    amount: Maybe Money
+    paymentMode: Text
+    amount:  HighPrecMoney
     derive': Generic,Show,ToSchema
 
   InvoiceBilling:
-    itemAmount: Maybe Money
-    addonAmount: Maybe Money
-    discountAmount: Maybe Money
-    paymentAmount: Maybe Money
+    itemAmount:  HighPrecMoney
+    addonAmount:  HighPrecMoney
+    discountAmount:  HighPrecMoney
+    paymentAmount: HighPrecMoney
     paymentAmountCurrencyName: Maybe Text
     derive': Generic,Show,ToSchema
 
   InvoiceInvoice:
     invoiceDatetime: Maybe UTCTime
-    invoiceAmount: Maybe Money
+    invoiceAmount: HighPrecMoney
     invoiceAmountCurrencyName: Maybe Text
     derive': Generic,Show,ToSchema
 
