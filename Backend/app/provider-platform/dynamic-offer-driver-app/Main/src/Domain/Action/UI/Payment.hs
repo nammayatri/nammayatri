@@ -19,6 +19,8 @@ module Domain.Action.UI.Payment
     getOrder,
     juspayWebhookHandler,
     pdnNotificationStatus,
+    postWalletRecharge,
+    getWalletBalance,
   )
 where
 
@@ -56,11 +58,13 @@ import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import qualified Kernel.External.Payment.Types as Payment
 import Kernel.External.Types (SchedulerType, ServiceFlow)
+import qualified Kernel.External.Wallet as Wallet
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -196,7 +200,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
       paymentServiceName <- Payment.decidePaymentService serviceConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
-      paymentStatus <- DPayment.orderStatusService commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId))
+      paymentStatus <- DPayment.orderStatusService commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId)) Nothing
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
@@ -222,6 +226,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
           let driverFeeId = notification.driverFeeId
           driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
           processNotification driver.merchantOperatingCityId notification notificationStatus responseCode responseMessage driverFee driver False
+        _ -> throwError $ InternalError "Unknown Payment Status"
       return paymentStatus
 
 -- webhook ----------------------------------------------------------
@@ -808,3 +813,18 @@ getBatchId event = do
       shortId <- generateShortId
       Hedis.setExp (mkBatchIdKey event) shortId.getShortId (12 * 3600)
       return shortId.getShortId
+
+-- wallet recharge -----------------------------------------------------
+
+postWalletRecharge ::
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  () ->
+  Flow APISuccess
+postWalletRecharge _ _ = throwError $ InternalError "Wallet recharge API not implemented for provider platform"
+
+-- wallet balance -----------------------------------------------------
+
+getWalletBalance ::
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Flow Wallet.WalletBalanceData
+getWalletBalance _ = throwError $ InternalError "Wallet balance API not implemented for provider platform"

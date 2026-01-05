@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Domain.Action.UI.ParkingBooking (postMultimodalParkingBook, parkingBookingOrderStatusHandler) where
 
 import qualified API.Types.UI.ParkingBooking
@@ -22,6 +24,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.ParkingTransaction as QPT
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Payment as TPayment
+import qualified Tools.Wallet as TWallet
 
 postMultimodalParkingBook ::
   ( Kernel.Prelude.Maybe Data.Text.Text ->
@@ -95,7 +98,8 @@ postMultimodalParkingBook mbApiKey req = do
       commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person req.customerId
       createOrderCall = TPayment.createOrder person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking (Just req.customerId.getId) person.clientSdkVersion
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCityId) commonPersonId Nothing Nothing TPayment.ParkingBooking isMetroTestTransaction createOrderReq createOrderCall >>= fromMaybeM (InternalError "Failed to create payment order")
+  let createWalletCall = TWallet.createWallet person.merchantId merchantOpCityId
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCityId) commonPersonId Nothing Nothing TPayment.ParkingBooking isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) >>= fromMaybeM (InternalError "Failed to create payment order")
 
   paymentLink <- case orderResp.payment_links of
     Just links -> fromMaybeM (InternalError "Payment link not found") links.web

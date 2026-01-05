@@ -27,6 +27,8 @@ import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Wallet as Wallet
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.API as Payment
@@ -37,7 +39,7 @@ import Tools.Auth
 
 type API =
   TokenAuth
-    :> Payment.API "invoiceId" "notificationId" Invoice Notification Payment.NotificationStatusResp
+    :> Payment.API "invoiceId" "notificationId" Invoice Notification Payment.NotificationStatusResp ()
 
 handler :: FlowServer API
 handler authInfo =
@@ -45,6 +47,8 @@ handler authInfo =
     :<|> getStatus authInfo
     :<|> getOrder authInfo
     :<|> getNotificationStatus authInfo
+    :<|> postWalletRecharge authInfo
+    :<|> getWalletBalance authInfo
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Invoice -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails invoiceId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails invoiceId
@@ -58,3 +62,9 @@ getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDeta
 
 getNotificationStatus :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Notification -> FlowHandler Payment.NotificationStatusResp
 getNotificationStatus notificationId = withFlowHandlerAPI . DPayment.pdnNotificationStatus notificationId
+
+postWalletRecharge :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> () -> FlowHandler APISuccess
+postWalletRecharge tokenDetails _ = withFlowHandlerAPI $ DPayment.postWalletRecharge tokenDetails ()
+
+getWalletBalance :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Wallet.WalletBalanceData
+getWalletBalance tokenDetails = withFlowHandlerAPI $ DPayment.getWalletBalance tokenDetails

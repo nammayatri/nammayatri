@@ -1,0 +1,64 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  WalletPostingType: Kernel.External.Wallet.Interface
+
+PersonWallet:
+  tableName: person_wallet
+
+  fields:
+    id: Id PersonWallet
+    personId: Text
+    cashAmount: HighPrecMoney
+    pointsAmount: HighPrecMoney
+    expiredBalance: HighPrecMoney
+    usablePointsAmount: HighPrecMoney
+    usableCashAmount: HighPrecMoney
+    cashFromPointsRedemption: HighPrecMoney
+    merchantId : Text
+    merchantOperatingCityId : Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  queries:
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+WalletRewardPosting:
+  tableName: wallet_reward_posting
+
+  types:
+    WalletPostingStatus:
+      enum: "NEW, SUCCESS, FAILED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id WalletRewardPosting
+    shortId: ShortId WalletRewardPosting
+    walletId: Id PersonWallet
+    pointsAmount: HighPrecMoney
+    cashAmount: HighPrecMoney
+    postingType: WalletPostingType
+    status: WalletPostingStatus
+    merchantId : Text
+    merchantOperatingCityId : Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  queries:
+    findByWalletIdAndStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [walletId, status]
+    findAllByWalletId:
+      kvFunction: findAllWithKV
+      where: walletId
+
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <Lib.Payment.Domain.Types.WalletRewardPosting.WalletPostingStatus>

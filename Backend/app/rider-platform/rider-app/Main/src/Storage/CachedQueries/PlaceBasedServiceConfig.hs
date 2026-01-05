@@ -115,6 +115,9 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
   WalletServiceConfig walletCfg -> case walletCfg of
     GW.GoogleWalletConfig _ -> WalletService GW.GoogleWallet
+  JuspayWalletServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> JuspayWalletService Payment.Juspay
+    Payment.StripeConfig _ -> JuspayWalletService Payment.Stripe
   MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
     MultiModal.GoogleTransitConfig _ -> MultiModalStaticDataService MultiModal.GoogleTransit
     MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit

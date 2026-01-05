@@ -56,6 +56,7 @@ import Tools.Error
 import Tools.Metrics.BAPMetrics
 import qualified Tools.Notifications as TNotifications
 import qualified Tools.Payment as TPayment
+import qualified Tools.Wallet as TWallet
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
 
@@ -90,7 +91,10 @@ orderStatusHandler paymentService paymentOrder orderStatusCall = do
     60
     100
     ( do
-        orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
+        let walletPostingCall = case paymentOrder.merchantOperatingCityId of
+              Just merchantOperatingCityId -> Just $ TWallet.walletPosting (cast paymentOrder.merchantId) (cast merchantOperatingCityId)
+              Nothing -> Nothing
+        orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall walletPostingCall
         mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
         let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
         orderStatusHandlerWithRefunds paymentService paymentOrder updatedPaymentOrder orderStatusResponse
@@ -348,7 +352,8 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
   processRefund person paymentOrder paymentServiceType
   let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
       orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
-  paymentStatusResp <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
+      walletPostingCall = TWallet.walletPosting (cast paymentOrder.merchantId) merchantOperatingCityId
+  paymentStatusResp <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall (Just walletPostingCall)
   refundStatusHandler paymentOrder paymentServiceType
   return paymentStatusResp
   where

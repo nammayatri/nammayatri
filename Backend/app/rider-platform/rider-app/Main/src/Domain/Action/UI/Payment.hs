@@ -20,12 +20,16 @@ module Domain.Action.UI.Payment
     getOrder,
     juspayWebhookHandler,
     stripeWebhookHandler,
+    postWalletRecharge,
+    getWalletBalance,
   )
 where
 
+import qualified API.Types.UI.Payment as PaymentAPI
 import Control.Applicative ((<|>))
 import qualified Data.Text
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -38,10 +42,12 @@ import qualified Kernel.External.Payment.Interface.Stripe as Stripe
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Payment.Stripe.Webhook (RawByteString (..))
 import qualified Kernel.External.Payment.Types as Payment
+import qualified Kernel.External.Wallet as Wallet
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -49,7 +55,9 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
 import Servant (BasicAuthData)
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
@@ -64,6 +72,7 @@ import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Payment as Payment
+import qualified Tools.Wallet as TWallet
 
 -- create order -----------------------------------------------------
 
@@ -114,7 +123,8 @@ createOrder (personId, merchantId) rideId = do
       commonPersonId = cast @DP.Person @DPayment.Person personId
       createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal (Just person.id.getId) person.clientSdkVersion -- api call
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
+  let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
+  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
 
@@ -195,6 +205,7 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.JuspayWalletServiceConfig vsc) -> pure vsc
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getPaymentServiceByType = \case
@@ -205,7 +216,8 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
       Just Payment.FRFSMultiModalBooking -> DMSC.MultiModalPaymentService service
       Just Payment.FRFSPassPurchase -> DMSC.PassPaymentService service
       Just Payment.ParkingBooking -> DMSC.ParkingPaymentService service
-      Nothing -> DMSC.PaymentService service
+      Just DOrder.Wallet -> DMSC.JuspayWalletService service
+      _ -> DMSC.PaymentService service
 
 juspayWebhookHandler ::
   ShortId DM.Merchant ->
@@ -261,3 +273,99 @@ stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader 
   paymentServiceConfig <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Payment.Stripe
   let checkDuplicatedEvent _eventId = pure False -- FIXME
   Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent DPayment.stripeWebhookService mbSigHeader rawBytes
+
+----------------------------------------- wallet apis -----------------------------------------------------
+
+postWalletRecharge ::
+  (Id DP.Person, Id DM.Merchant) ->
+  PaymentAPI.WalletRechargeReq ->
+  Flow APISuccess
+postWalletRecharge (personId, merchantId) req = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound "personId")
+  walletRewardPostingId <- generateGUID
+  operationId <- generateShortId
+  personEmail <- mapM decrypt person.email
+  personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  let createOrderReq =
+        Payment.CreateOrderReq
+          { orderId = walletRewardPostingId,
+            orderShortId = operationId.getShortId,
+            amount = fromIntegral req.pointsAmount,
+            customerId = person.id.getId,
+            customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
+            customerPhone = personPhone,
+            customerFirstName = person.firstName,
+            customerLastName = person.lastName,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateFrequency = Nothing,
+            mandateEndDate = Nothing,
+            mandateStartDate = Nothing,
+            optionsGetUpiDeepLinks = Nothing,
+            metadataExpiryInMins = Nothing,
+            metadataGatewayReferenceId = Nothing,
+            splitSettlementDetails = Nothing,
+            basket = Nothing
+          }
+
+  let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
+      commonPersonId = cast @DP.Person @DPayment.Person personId
+      commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity person.merchantOperatingCityId
+      createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing DOrder.Wallet (Just person.id.getId) person.clientSdkVersion
+  mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing DOrder.Wallet
+  let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
+  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet createOrderReq createOrderCall (Just createWalletCall)
+  _ <- mbOrderResp & fromMaybeM (InternalError "Failed to create payment order")
+  return Success
+
+getWalletBalance ::
+  (Id DP.Person, Id DM.Merchant) ->
+  Flow Wallet.WalletBalanceData
+getWalletBalance (personId, merchantId) = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  personWallet <- QPersonWallet.findByPersonId personId.getId >>= fromMaybeM (InternalError $ "Person wallet not found for personId: " <> show personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  let walletBalanceReq = Wallet.WalletBalanceReq {customerId = personWallet.personId, requireHistory = Just True}
+      walletBalanceCall = TWallet.walletBalance merchantId merchantOperatingCityId
+  walletBalanceResp <- DPayment.walletBalanceService walletBalanceReq walletBalanceCall
+  case walletBalanceResp.success of
+    True -> do
+      now <- getCurrentTime
+      QPersonWallet.updateByPrimaryKey personWallet {DPersonWallet.pointsAmount = walletBalanceResp.walletData.pointsAmount, DPersonWallet.cashAmount = walletBalanceResp.walletData.cashAmount, DPersonWallet.expiredBalance = walletBalanceResp.walletData.expiredBalance, DPersonWallet.cashFromPointsRedemption = walletBalanceResp.walletData.cashFromPointsRedemption, DPersonWallet.usablePointsAmount = walletBalanceResp.walletData.usablePointsAmount, DPersonWallet.usableCashAmount = walletBalanceResp.walletData.usableCashAmount, DPersonWallet.updatedAt = now}
+      return walletBalanceResp.walletData
+    False -> throwError (InternalError $ "Failed to get wallet balance for personId: " <> show personId.getId)
+
+-- redeemWallet :: (PaymentBeamFlow.BeamFlow m r, MonadThrow m) => Id.Id DP.Person -> HighPrecMoney -> m (Maybe DWalletRewardPosting.WalletPostingStatus)
+-- redeemWallet personId pointsAmount = do
+--   personWallet <- QPersonWallet.findByPersonId personId.getId >>= fromMaybeM (InternalError $ "Person wallet not found for personId: " <> show personId.getId)
+--   walletRewardPosting <- QWalletRewardPosting.findByWalletIdAndStatus personWallet.id DWalletRewardPosting.NEW
+
+--   walletRewardPostingId <- generateGUID
+--   operationId <- generateShortId
+--   now <- getCurrentTime
+
+--   ------------- call payout service here ---------------
+
+--   -- payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchOpCity.getId)
+--   -- payoutServiceName <- Payout.decidePayoutService (DEMSC.PayoutService TPayout.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+--   -- let entityName = DPayment.BACKLOG
+--   --     createPayoutOrderCall = Payout.createPayoutOrder person.merchantId merchOpCity payoutServiceName (Just person.id.getId)
+--   --     createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid pendingAmount phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
+--   -- void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+
+--   let walletRewardPosting =
+--         DWalletRewardPosting.WalletRewardPosting
+--           { id = walletRewardPostingId,
+--             shortId = operationId,
+--             walletId = personWallet.id,
+--             pointsAmount = pointsAmount,
+--             cashAmount = HighPrecMoney {getHighPrecMoney = 0},
+--             postingType = WalletInterface.REDEEM,
+--             status = DWalletRewardPosting.NEW,
+--             createdAt = now,
+--             updatedAt = now,
+--             merchantId = "",
+--             merchantOperatingCityId = Nothing
+--           }
+--   QWalletRewardPosting.create walletRewardPosting
+--   return (Just DWalletRewardPosting.NEW)

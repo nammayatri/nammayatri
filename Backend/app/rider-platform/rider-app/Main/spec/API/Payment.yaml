@@ -23,6 +23,7 @@ types:
   AddTipRequest:
     recordType: NewType
     amount: PriceAPIEntity
+
 apis:
   - GET:
       endpoint: /payment/methods
