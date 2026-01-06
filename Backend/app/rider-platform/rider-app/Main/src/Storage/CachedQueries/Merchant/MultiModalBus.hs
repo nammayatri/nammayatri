@@ -53,9 +53,8 @@ withCrossAppRedisNew f = do
 instance FromJSON BusStopETA where
   parseJSON = withObject "BusStopETA" $ \v -> do
     stopCode <- v .: "stop_id"
-    arrivalTimestamp <- v .: "arrival_time" :: Parser Integer
+    arrivalTime <- v .: "arrival_time"
     etaSeconds <- v .:? "eta_seconds"
-    let arrivalTime = utcToIST $ posixSecondsToUTCTime $ realToFrac arrivalTimestamp
     return $ BusStopETA {..}
 
 instance ToJSON BusStopETA where
