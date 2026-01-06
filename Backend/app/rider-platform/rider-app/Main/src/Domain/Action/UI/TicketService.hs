@@ -918,7 +918,7 @@ postTicketBookingsVerify _ = processBookingService
                   let customerName = person.firstName <> ((" " <>) <$> person.lastName)
                       updateReq =
                         CallBPPInternal.UpdateFleetBookingInformationReq
-                          { id = bookingService.assignmentId,
+                          { id = Nothing,
                             bookingId = booking.id.getId,
                             serviceId = bookingService.id.getId,
                             ticketBookingShortId = booking.shortId.getShortId,
@@ -936,8 +936,8 @@ postTicketBookingsVerify _ = processBookingService
                             customerMobileNumber = mobileNumber,
                             customerName = customerName
                           }
-                  response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
-                  QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
+                  void $ CallBPPInternal.updateFleetBookingInformation merchant updateReq
+                -- QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
                 _ -> throwError (InvalidRequest "Need FleetOwner and Vehicle Number")
           _ -> pure ()
         QTicketBookingService.updateVerificationById DTB.Verified (bookingService.verificationCount + 1) bookingService.id
@@ -1091,7 +1091,7 @@ postTicketBookingsVerifyV2 _ = processBookingService
                     _ -> "MULTIPLE_VEHICLES_ASSIGNED"
                   updateReq =
                     CallBPPInternal.UpdateFleetBookingInformationReq
-                      { id = bookingService.assignmentId,
+                      { id = Nothing,
                         bookingId = booking.id.getId,
                         serviceId = bookingService.id.getId,
                         ticketBookingShortId = booking.shortId.getShortId,
@@ -1109,8 +1109,8 @@ postTicketBookingsVerifyV2 _ = processBookingService
                         customerMobileNumber = mobileNumber,
                         customerName = customerName
                       }
-              response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
-              QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
+              void $ CallBPPInternal.updateFleetBookingInformation merchant updateReq
+          -- QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
           _ -> pure ()
         QTicketBookingService.updateVerificationById DTB.Verified (bookingService.verificationCount + 1) bookingService.id
         createVerificationResp BookingSuccess (Just bookingService) (Just ticketServiceConfig) (Just booking)
@@ -1245,8 +1245,8 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
                                 customerMobileNumber = mobileNumber,
                                 customerName = customerName
                               }
-                      response <- CallBPPInternal.createFleetBookingInformation merchant createReq
-                      QTicketBookingService.updateAssignmentById (Just response.assignmentId) ticketBookingService.id
+                      void $ CallBPPInternal.createFleetBookingInformation merchant createReq
+                      -- QTicketBookingService.updateAssignmentById (Just response.assignmentId) ticketBookingService.id
                   )
                   ticketBookingServices
 
@@ -1476,8 +1476,8 @@ createDirectBookingForCash (personId, merchantId) mbRequestorId placeId req = do
                     customerMobileNumber = mobileNumber,
                     customerName = customerName
                   }
-          response <- CallBPPInternal.createFleetBookingInformation merchant createReq
-          QTicketBookingService.updateAssignmentById (Just response.assignmentId) service.id
+          void $ CallBPPInternal.createFleetBookingInformation merchant createReq
+    -- QTicketBookingService.updateAssignmentById (Just response.assignmentId) service.id
 
     completeSeatBookingProcessWithStatusUpdate personId' ticketBooking ticketBookingServices mbBlockExpiry visitDate = do
       -- Get booking service categories for seat management
@@ -1562,8 +1562,8 @@ postTicketBookingsCashCollect (mbPersonId, merchantId) _shortId@(Kernel.Types.Id
                     customerMobileNumber = mobileNumber,
                     customerName = customerName
                   }
-          response <- CallBPPInternal.createFleetBookingInformation merchant createReq
-          QTicketBookingService.updateAssignmentById (Just response.assignmentId) ticketBookingService.id
+          void $ CallBPPInternal.createFleetBookingInformation merchant createReq
+          -- QTicketBookingService.updateAssignmentById (Just response.assignmentId) ticketBookingService.id
       )
       ticketBookingServices
 
