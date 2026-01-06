@@ -353,3 +353,16 @@ ALTER TABLE atlas_app.ride ADD COLUMN billing_category text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN pickup_eta_logic_version integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN commission double precision ;
+
+
+------- SQL updates -------
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN pickup_speed_in_mps double precision ;
