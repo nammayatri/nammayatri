@@ -3606,6 +3606,7 @@
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/multi-cloud-setup-shared-kernel",
         "repo": "shared-kernel",
         "type": "github"
       }
