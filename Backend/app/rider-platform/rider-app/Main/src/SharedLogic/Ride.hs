@@ -121,10 +121,13 @@ calculatePickupETA ride booking driverLocation = do
     Nothing -> do
       logInfo $ "Cannot calculate pickup ETA: missing pickup speed for rideId: " <> ride.id.getId
       return (Nothing, distanceToPickup)
-    Just estimatedSpeedInMps -> do
-      if ride.status == NEW
-        then return $ ((Just $ ceiling (distanceToPickup / estimatedSpeedInMps / 60)), distanceToPickup)
-        else return (Nothing, distanceToPickup)
+    Just estimatedSpeedInMps
+      | estimatedSpeedInMps <= 0 -> do
+        logInfo $ "Cannot calculate pickup ETA: invalid speed for rideId: " <> ride.id.getId
+        return (Nothing, distanceToPickup)
+      | ride.status == NEW ->
+        return (Just $ ceiling (distanceToPickup / estimatedSpeedInMps / 60), distanceToPickup)
+      | otherwise -> return (Nothing, distanceToPickup)
 
 fetchPickupRoute ::
   ( ServiceFlow m r,
