@@ -647,6 +647,7 @@ library
       Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.FleetRcDailyStatsExtra
       Storage.Queries.Geometry
+      Storage.Queries.GeometryGeom
       Storage.Queries.HyperVergeVerificationExtra
       Storage.Queries.IdfyVerificationExtra
       Storage.Queries.ImageExtra

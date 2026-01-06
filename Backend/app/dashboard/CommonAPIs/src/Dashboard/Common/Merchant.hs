@@ -894,8 +894,27 @@ instance ToMultipart Tmp UpsertSpecialLocationCsvReq where
       )
 
 newtype APISuccessWithUnprocessedEntities = APISuccessWithUnprocessedEntities {unprocessedEntities :: [Kernel.Prelude.Text]}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateGeometryReq = UpdateGeometryReq {region :: Text, file :: Kernel.Prelude.FilePath}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateGeometryReq where
+  hideSecrets = identity
+
+instance FromMultipart Tmp UpdateGeometryReq where
+  fromMultipart form = do
+    region <- lookupInput "region" form
+    csvFile <- fmap fdPayload (lookupFile "file" form)
+    return $ UpdateGeometryReq region csvFile
+
+instance ToMultipart Tmp UpdateGeometryReq where
+  toMultipart form =
+    MultipartData
+      [Input "region" form.region]
+      [FileData "file" (T.pack form.file) "" (form.file)]
 
 ------------------------ WhiteList Operating City ------------------------
 
