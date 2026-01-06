@@ -63,6 +63,7 @@ getTicketStatus config booking = do
       logError "[CMRLV2:TicketStatus] BPP Order ID not found"
       throwError $ InternalError "BPP Order ID not found"
   logDebug $ "[CMRLV2:TicketStatus] BppOrderId: " <> bppOrderId
+  logDebug $ "[CMRLV2:TicketStatus] Request params - merchantOrderId: " <> bppOrderId <> ", operatorNameId: " <> T.pack (show config.operatorNameId) <> ", merchantId: " <> config.merchantId
 
   let eulerClient = \accessToken ->
         ET.client ticketStatusAPI bppOrderId (Just $ "Bearer " <> accessToken) config.operatorNameId config.merchantId

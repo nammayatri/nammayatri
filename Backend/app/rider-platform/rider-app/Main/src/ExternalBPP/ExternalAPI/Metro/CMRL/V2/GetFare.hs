@@ -68,6 +68,7 @@ getFare integrationBPPConfig config fareReq = do
       return cachedFares
     Nothing -> do
       logDebug $ "[CMRLV2:GetFare] Cache MISS for key: " <> cacheKey <> ", fetching from API"
+      logDebug $ "[CMRLV2:GetFare] Request payload: " <> T.pack (show fareReq)
       let eulerClient = \accessToken -> ET.client getFareAPI (Just $ "Bearer " <> accessToken) fareReq
       fareRes <- callCMRLV2API config eulerClient "getFare" getFareAPI
       logDebug $ "[CMRLV2:GetFare] API Response: statusCode=" <> show fareRes.statusCode <> ", message=" <> fareRes.message
