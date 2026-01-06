@@ -60,16 +60,26 @@ getPickupRoutes ::
 getPickupRoutes (personId, merchantId) entityId GetPickupRoutesReq {..} = do
   mocId <- Maps.getMerchantOperatingCityId personId Nothing
   merchantConfig <- QMSUC.findByMerchantOperatingCityId mocId >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
-  service <- getService merchantConfig
+  mbRide <- mapM (\rid -> QRide.findById rid >>= fromMaybeM (RideNotFound rid.getId)) rideId
+  service <- getService merchantConfig mbRide
   let req = Maps.GetRoutesReq {..}
-  Maps.getPickupRoutes merchantId mocId service entityId req
+  resp <- Maps.getPickupRoutes merchantId mocId service entityId req
+  whenJust mbRide $ \ride ->
+    when (fromMaybe 0 ride.pickupRouteCallCount == 0) $ do
+      let mbSpeed = do
+            routeInfo <- listToMaybe resp
+            dist <- routeInfo.distance
+            dur <- routeInfo.duration
+            guard (dur > 0)
+            pure $ fromIntegral dist / fromIntegral dur
+      QRide.updatePickupSpeedInMPS mbSpeed ride.id
+  return resp
   where
-    getService merchantConfig = do
-      case (rideId, merchantConfig.getFirstPickupRoute) of
-        (Just rid, Just firstPickupService) -> do
-          ride <- QRide.findById rid >>= fromMaybeM (RideNotFound rid.getId)
+    getService merchantConfig mbRide = do
+      case (mbRide, merchantConfig.getFirstPickupRoute) of
+        (Just ride, Just firstPickupService) -> do
           let pikcupRouteCalls = fromMaybe 0 (ride.pickupRouteCallCount)
-          QRide.updatePickupRouteCallCount (Just $ pikcupRouteCalls + 1) rid
+          QRide.updatePickupRouteCallCount (Just $ pikcupRouteCalls + 1) ride.id
           if pikcupRouteCalls == 0
             then return firstPickupService
             else return merchantConfig.getPickupRoutes
