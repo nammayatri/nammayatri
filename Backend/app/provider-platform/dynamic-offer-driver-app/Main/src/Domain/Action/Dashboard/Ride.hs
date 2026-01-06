@@ -46,6 +46,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.StopInformation as DSI
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -80,6 +81,7 @@ import qualified Storage.Queries.PersonExtra as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
+import qualified Storage.Queries.StopInformation as QSI
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified System.Environment as Se
@@ -369,7 +371,8 @@ rideInfo merchantId merchantOpCityId reqRideId = do
             else return Nothing
         Nothing -> return Nothing
     _ -> pure Nothing
-
+  stopInformationDomain <- runInReplica $ QSI.findAllByRideId ride.id
+  let stopInformation = Just $ mkStopInformation <$> stopInformationDomain
   pure
     Common.RideInfoRes
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
@@ -435,8 +438,21 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         estimatedReservedDuration = timeDiffInMinutes <$> booking.returnTime <*> (Just booking.startTime),
         isPetRide = Just ride.isPetRide,
         cancellationPenaltyAmount = ride.driverCancellationPenaltyAmount,
-        cancellationPenaltyWaivedReason = ride.driverCancellationPenaltyWaivedReason
+        cancellationPenaltyWaivedReason = ride.driverCancellationPenaltyWaivedReason,
+        stopInformation = stopInformation
       }
+
+mkStopInformation :: DSI.StopInformation -> Common.StopInformation
+mkStopInformation stopInfo =
+  Common.StopInformation
+    { stopId = stopInfo.id.getId,
+      stopLocId = stopInfo.stopLocId.getId,
+      stopOrder = stopInfo.stopOrder,
+      waitingTimeStart = stopInfo.waitingTimeStart,
+      waitingTimeEnd = stopInfo.waitingTimeEnd,
+      stopStartLatLng = stopInfo.stopStartLatLng,
+      stopEndLatLng = stopInfo.stopEndLatLng
+    }
 
 -- TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
 castTripCategory :: DTC.TripCategory -> Common.DeprecatedTripCategory
