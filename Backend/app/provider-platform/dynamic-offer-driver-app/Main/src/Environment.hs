@@ -24,6 +24,7 @@ import Domain.Types (GatewayAndRegistryService (..))
 import Domain.Types.External.LiveEKD
 import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude
+import Kernel.External.BapHostRedirect (BapHostRedirectMap)
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude (NominalDiffTime)
@@ -163,7 +164,8 @@ data AppCfg = AppCfg
     tsServiceConfig :: CPT.TSServiceConfig,
     inMemConfig :: KTC.InMemConfig,
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
-    noSignatureSubscribers :: [Text]
+    noSignatureSubscribers :: [Text],
+    bapHostRedirectMap :: BapHostRedirectMap
   }
   deriving (Generic, FromDhall)
 
@@ -277,7 +279,8 @@ data AppEnv = AppEnv
     inMemEnv :: KTC.InMemEnv,
     url :: Maybe Text,
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
-    noSignatureSubscribers :: [Text]
+    noSignatureSubscribers :: [Text],
+    bapHostRedirectMap :: BapHostRedirectMap
   }
   deriving (Generic)
 
