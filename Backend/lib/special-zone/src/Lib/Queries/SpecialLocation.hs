@@ -36,7 +36,8 @@ data SpecialLocationFull = SpecialLocationFull
     gatesInfo :: [GD.GateInfoFull],
     gates :: [D.GatesInfo], --TODO: deprecate this later
     geoJson :: Maybe Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    enabled :: Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
