@@ -416,8 +416,12 @@ Person:
       params: [passwordHash]
       where: id
 
+  extraIndexes:
+    - columns: [imeiNumberHash]
+
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
 
