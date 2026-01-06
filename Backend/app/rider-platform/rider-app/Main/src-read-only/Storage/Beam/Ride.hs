@@ -82,6 +82,7 @@ data RideT f = RideT
     paymentStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.PaymentStatus),
     pickupEtaLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pickupRouteCallCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    pickupSpeedInMPS :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     rideEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rideRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

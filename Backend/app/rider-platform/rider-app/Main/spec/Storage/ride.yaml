@@ -71,6 +71,7 @@ Ride:
     vehicleNumber: Text
     vehicleModel: Text
     vehicleColor: Maybe Text
+    pickupSpeedInMPS : Maybe Double
     cancellationChargesOnCancel : Maybe HighPrecMoney
     vehicleVariant: VehicleVariant|NoRelation
     vehicleServiceTierType: Maybe ServiceTierType
@@ -322,6 +323,10 @@ Ride:
     updateFeedbackSkipped:
       kvFunction: updateOneWithKV
       params: [feedbackSkipped]
+      where: id
+    updatePickupSpeedInMPS:
+      kvFunction: updateOneWithKV
+      params: [pickupSpeedInMPS]
       where: id
     updatePickupRouteCallCount:
       kvFunction: updateOneWithKV

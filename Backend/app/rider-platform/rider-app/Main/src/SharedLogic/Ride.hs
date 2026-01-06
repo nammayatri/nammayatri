@@ -23,8 +23,6 @@ import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified SharedLogic.PickupETA as PickupETA
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.PickupRoute as CQPickupRoute
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
@@ -37,7 +35,8 @@ data GetDriverLocResp = GetDriverLocResp
   { lat :: Double,
     lon :: Double,
     lastUpdate :: UTCTime,
-    pickupEtaInMinutes :: Maybe Int
+    pickupEtaInMinutes :: Maybe Int,
+    pickupDist :: Meters
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -73,17 +72,15 @@ getDriverLoc rideId = do
               lastUpdate = trackingLoc.updatedAt
             }
 
-  mbPickupEta <-
-    if ride.status == NEW
-      then calculatePickupETA ride booking res.currPoint
-      else return Nothing
+  (mbPickupEta, pickupDist) <- calculatePickupETA ride booking res.currPoint
 
   return $
     GetDriverLocResp
       { lat = res.currPoint.lat,
         lon = res.currPoint.lon,
         lastUpdate = res.lastUpdate,
-        pickupEtaInMinutes = mbPickupEta
+        pickupEtaInMinutes = mbPickupEta,
+        pickupDist = Meters $ round pickupDist
       }
 
 calculatePickupETA ::
@@ -94,59 +91,40 @@ calculatePickupETA ::
   SRide.Ride ->
   DB.Booking ->
   MapSearch.LatLong ->
-  m (Maybe Int)
+  m (Maybe Int, Double)
 calculatePickupETA ride booking driverLocation = do
-  riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  let mbEstimatedSpeed = do
-        estimatedDistance <- booking.estimatedDistance
-        estimatedDuration <- booking.estimatedDuration
-        let distanceInMeters = realToFrac $ (highPrecMetersToMeters $ distanceToHighPrecMeters estimatedDistance).getMeters
-        let durationInSeconds = realToFrac estimatedDuration.getSeconds
-        guard (durationInSeconds > 0)
-        return $ distanceInMeters / durationInSeconds
+  let mbEstimatedSpeed = ride.pickupSpeedInMPS
+  let pickupLocation = MapSearch.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+  mbCachedRoute <- CQPickupRoute.getPickupRouteFromCache ride.id
+  routePoints <- case mbCachedRoute of
+    Just cachedRoutePoints -> do
+      return cachedRoutePoints
+    Nothing -> do
+      logInfo $ "No cached route found, fetching route as fallback for rideId: " <> ride.id.getId
+      fetchedRoute <- fetchPickupRoute ride booking driverLocation pickupLocation
+      case fetchedRoute of
+        Just route -> do
+          CQPickupRoute.cachePickupRoute ride.id route
+          logInfo $ "Cached pickup route (fallback fetch) for rideId: " <> ride.id.getId
+          return route
+        Nothing -> do
+          logWarning $ "Failed to fetch route, will use straight-line distance for rideId: " <> ride.id.getId
+          return []
+
+  distanceToPickup <-
+    if null routePoints
+      then do
+        logWarning $ "No cached route found, using straight-line distance for rideId: " <> ride.id.getId
+        return $ realToFrac $ getHighPrecMeters $ CD.distanceBetweenInMeters driverLocation pickupLocation
+      else do return $ calculateDistanceAlongRoute driverLocation pickupLocation routePoints
   case mbEstimatedSpeed of
     Nothing -> do
-      logInfo $ "Cannot calculate pickup ETA: missing estimated Distance or Duration for rideId: " <> ride.id.getId
-      return Nothing
+      logInfo $ "Cannot calculate pickup ETA: missing pickup speed for rideId: " <> ride.id.getId
+      return (Nothing, distanceToPickup)
     Just estimatedSpeedInMps -> do
-      let pickupLocation = MapSearch.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-      mbCachedRoute <- CQPickupRoute.getPickupRouteFromCache ride.id
-      routePoints <- case mbCachedRoute of
-        Just cachedRoutePoints -> do
-          return cachedRoutePoints
-        Nothing -> do
-          logInfo $ "No cached route found, fetching route as fallback for rideId: " <> ride.id.getId
-          fetchedRoute <- fetchPickupRoute ride booking driverLocation pickupLocation
-          case fetchedRoute of
-            Just route -> do
-              CQPickupRoute.cachePickupRoute ride.id route
-              logInfo $ "Cached pickup route (fallback fetch) for rideId: " <> ride.id.getId
-              return route
-            Nothing -> do
-              logWarning $ "Failed to fetch route, will use straight-line distance for rideId: " <> ride.id.getId
-              return []
-
-      distanceToPickup <-
-        if null routePoints
-          then do
-            logWarning $ "No cached route found, using straight-line distance for rideId: " <> ride.id.getId
-            return $ realToFrac $ getHighPrecMeters $ CD.distanceBetweenInMeters driverLocation pickupLocation
-          else do return $ calculateDistanceAlongRoute driverLocation pickupLocation routePoints
-
-      mbEtaResp <-
-        PickupETA.getPickupETAFromModel
-          riderConfig.timeDiffFromUtc
-          estimatedSpeedInMps
-          distanceToPickup
-          ride.pickupEtaLogicVersion
-          booking.merchantOperatingCityId
-
-      case mbEtaResp of
-        Just (etaInMinutes, versionReturned) -> do
-          when (isNothing ride.pickupEtaLogicVersion) $ do
-            QRide.updatePickupEtaLogicVersion (Just versionReturned) ride.id
-          return $ Just etaInMinutes
-        Nothing -> return Nothing
+      if ride.status == NEW
+        then return $ ((Just $ ceiling (distanceToPickup / estimatedSpeedInMps / 60)), distanceToPickup)
+        else return (Nothing, distanceToPickup)
 
 fetchPickupRoute ::
   ( ServiceFlow m r,

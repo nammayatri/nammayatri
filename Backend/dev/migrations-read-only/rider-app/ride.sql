@@ -362,3 +362,7 @@ ALTER TABLE atlas_app.ride ADD COLUMN commission double precision ;
 
 ------- SQL updates -------
 
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN pickup_speed_in_mps double precision ;
