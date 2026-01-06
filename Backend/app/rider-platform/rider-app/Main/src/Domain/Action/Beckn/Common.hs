@@ -322,6 +322,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         trackingUrl = req.driverTrackingUrl,
         fare = Nothing,
         totalFare = Nothing,
+        pickupSpeedInMPS = Nothing,
         chargeableDistance = Nothing,
         traveledDistance = Nothing,
         driverArrivalTime = Nothing,
