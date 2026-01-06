@@ -97,8 +97,8 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
         CMRLV2GetFare.getFare integrationBPPConfig config' $
           CMRLV2GetFare.GetFareReq
             { operatorNameId = config'.operatorNameId,
-              fromStationId = startStopCode,
-              toStationId = endStopCode,
+              fromStationId = extractStationCode startStopCode,
+              toStationId = extractStationCode endStopCode,
               ticketTypeId = config'.ticketTypeId,
               merchantId = config'.merchantId,
               travelDatetime = travelDatetime,
@@ -186,6 +186,9 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       let startStopCode = firstFareRouteDetail.startStopCode
       let endStopCode = lastFareRouteDetail.endStopCode
       (routeCode, startStopCode, endStopCode)
+
+extractStationCode :: Text -> Text
+extractStationCode code = fromMaybe code $ listToMaybe $ drop 1 $ T.splitOn "|" code
 
 createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quoteCategories = do

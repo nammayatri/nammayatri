@@ -68,11 +68,12 @@ getAuthToken config = do
 resetAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLV2Config -> m Text
 resetAuthToken config = do
   logInfo $ "[CMRLV2:Auth] Requesting new auth token from: " <> showBaseUrl config.networkHostUrl
-  logDebug $ "[CMRLV2:Auth] Auth request - operatorNameId: " <> show config.operatorNameId <> ", merchantId: " <> config.merchantId <> ", username: " <> config.username
+  logDebug $ "[CMRLV2:Auth] Auth request - operatorNameId: " <> show config.operatorNameId <> ", merchantId: " <> config.merchantId <> ", username: " <> config.username <> ", password: " <> show config.password
   password <- decrypt config.password
-  logDebug $ "[CMRLV2:Auth] Decrypted password: " <> password
+  let authReq = AuthReq config.operatorNameId config.username password "password" config.merchantId
+  logDebug $ "[CMRLV2:Auth] Auth request payload: " <> show authReq
   auth <-
-    callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.operatorNameId config.username password "password" config.merchantId) "authCMRLV2" authAPI
+    callAPI config.networkHostUrl (ET.client authAPI authReq) "authCMRLV2" authAPI
       >>= fromEitherM (ExternalAPICallError (Just "CMRL_V2_AUTH_API") config.networkHostUrl)
   logInfo $ "[CMRLV2:Auth] Successfully obtained auth token, expires_in: " <> show auth.expires_in <> "s, key_index: " <> show auth.key_index
   Hedis.setExp (authTokenKey config.merchantId) auth.access_token (auth.expires_in)

@@ -40,6 +40,7 @@ pkcs5Unpad bs
 
 encryptPayload :: (MonadFlow m, EncFlow m r, MonadReader r m) => CMRLV2Config -> BL.ByteString -> m Text
 encryptPayload config payload = do
+  logDebug $ "[CMRLV2:Encrypt] Received payload, encrypting with key: " <> show config.encryptionKey
   encKey <- decrypt config.encryptionKey
   logDebug $ "[CMRLV2:Encrypt] Encryption key: " <> encKey
   let keyBytes = TE.encodeUtf8 encKey
@@ -67,6 +68,7 @@ encryptPayload config payload = do
 
 decryptPayload :: (MonadFlow m, EncFlow m r, MonadReader r m) => CMRLV2Config -> Text -> m BL.ByteString
 decryptPayload config encryptedText = do
+  logDebug $ "[CMRLV2:Decrypt] Received encrypted response, decrypting with key: " <> show config.encryptionKey
   encKey <- decrypt config.encryptionKey
   logDebug $ "[CMRLV2:Decrypt] Encryption key: " <> encKey
   let keyBytes = TE.encodeUtf8 encKey

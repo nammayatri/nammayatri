@@ -173,11 +173,13 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
             fareQuoteId = ""
           }
 
+      extractStationCode stationCode = fromMaybe stationCode $ listToMaybe $ drop 1 $ T.splitOn "|" stationCode
+
       ticketInfoPayload =
         TicketInfoPayload
           { grp_Size = T.pack $ show totalTicketQuantity,
-            src_Stn = fromStation.code,
-            dest_Stn = toStation.code,
+            src_Stn = extractStationCode fromStation.code,
+            dest_Stn = extractStationCode toStation.code,
             activation_Date = travelDatetime,
             product_Id = T.pack $ show config.ticketTypeId,
             service_Id = "1",
@@ -215,6 +217,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
           }
 
   logDebug $ "[CMRLV2:Order] TotalFare: " <> show totalFare <> ", Quantity: " <> show totalTicketQuantity
+  logDebug $ "[CMRLV2:Order] Payload JSON (before encryption): " <> T.pack (show payload)
   logDebug $ "[CMRLV2:Order] Payload built, encrypting..."
   encryptedPayload <- encryptPayload config (encode payload)
   logDebug $ "[CMRLV2:Order] Payload encrypted, calling CMRL API..."
