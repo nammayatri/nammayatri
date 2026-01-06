@@ -369,6 +369,12 @@ let driverFleetLocationListAPIRateLimitOptions =
 let noSignatureSubscribers =
       [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
 
+let bapHostRedirectMap =
+      [ { mapKey = "staging.localhost"
+        , mapValue = Some "http://localhost:8010"
+        }
+      ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -474,4 +480,5 @@ in  { esqDBCfg
     , inMemConfig
     , driverFleetLocationListAPIRateLimitOptions
     , noSignatureSubscribers
+    , bapHostRedirectMap
     }
