@@ -749,14 +749,18 @@ apis:
         personId: Text
         mobileNumber: Text
         mobileCountryCode: Text
+        role: Text
       response:
         type: FleetOwnerInfoRes
       helperApi:
         - GET:
-            endpoint: /{requestorId}/fleetOperatorInfo
+            endpoint: /fleetOperatorInfo
             auth: ApiAuthV2
-            params:
-              requestorId: Text
+            query:
+              personId: Text
+              mobileNumber: Text
+              mobileCountryCode: Text
+              role: Text
             response:
               type: FleetOwnerInfoRes
 

@@ -1773,10 +1773,18 @@ type GetDriverFleetOperatorInfo =
       :> QueryParam
            "personId"
            Kernel.Prelude.Text
+      :> QueryParam "role" Kernel.Prelude.Text
       :> Get '[JSON] FleetOwnerInfoRes
   )
 
-type GetDriverFleetOperatorInfoHelper = (Capture "requestorId" Kernel.Prelude.Text :> "fleetOperatorInfo" :> Get '[JSON] FleetOwnerInfoRes)
+type GetDriverFleetOperatorInfoHelper =
+  ( "fleetOperatorInfo" :> QueryParam "mobileCountryCode" Kernel.Prelude.Text :> QueryParam "mobileNumber" Kernel.Prelude.Text
+      :> QueryParam
+           "personId"
+           Kernel.Prelude.Text
+      :> QueryParam "role" Kernel.Prelude.Text
+      :> Get '[JSON] FleetOwnerInfoRes
+  )
 
 type PostDriverFleetSendJoiningOtp =
   ( "fleet" :> "sendJoiningOtp" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
@@ -2313,7 +2321,7 @@ data DriverAPIs = DriverAPIs
     postDriverFleetVehicleDriverRcStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> RCStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverUpdateFleetOwnerInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateFleetOwnerInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverFleetOwnerInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient FleetOwnerInfoRes,
-    getDriverFleetOperatorInfo :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetOwnerInfoRes,
+    getDriverFleetOperatorInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetOwnerInfoRes,
     postDriverFleetSendJoiningOtp :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes,
     postDriverFleetVerifyJoiningOtp :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> VerifyFleetJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverFleetRoutes :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient RouteAPIResp,

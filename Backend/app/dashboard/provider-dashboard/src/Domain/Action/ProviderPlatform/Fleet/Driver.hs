@@ -36,6 +36,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetVehicleDriverRcStatus,
     postDriverUpdateFleetOwnerInfo,
     getDriverFleetOwnerInfo,
+    getDriverFleetOperatorInfo,
     postDriverFleetSendJoiningOtp,
     postDriverFleetVerifyJoiningOtp,
     postDriverFleetLinkRCWithDriver,
@@ -59,7 +60,6 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getMbFleetOwnerAndRequestorIdMerchantBased,
     getDriverFleetBookings,
     getDriverFleetAssignments,
-    getDriverFleetOperatorInfo,
     postDriverFleetLocationList,
     postDriverFleetGetDriverDetails,
     postDriverFleetGetNearbyDriversV2,
@@ -106,11 +106,9 @@ import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
-import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
@@ -432,6 +430,11 @@ getDriverFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOwnerInfo) driverId
 
+getDriverFleetOperatorInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
+getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNumber mbPersonId mbRole = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) mbMobileCountryCode mbMobileNumber mbPersonId mbRole
+
 getDriverFleetStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Flow Common.DriverStatusRes
 getDriverFleetStatus merchantShortId opCity apiTokenInfo mbFleetOwnerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -548,23 +551,6 @@ getDriverFleetAssignments merchantShortId opCity apiTokenInfo limit offset from 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let memberPersonId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetAssignments) memberPersonId limit offset from to vehicleNo mainAssignmentId
-
-getDriverFleetOperatorInfo :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow Common.FleetOwnerInfoRes)
-getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNumber mbPersonId = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  merchantOpCity <- CQMOC.findByMerchantShortIdAndCity (ShortId merchantShortId.getShortId) opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-
-  person <- case (mbPersonId, mbMobileNumber) of
-    (Just pid, _) -> QP.findById (Id pid) >>= fromMaybeM (PersonNotFound pid)
-    (_, Just mobileNumber) -> do
-      let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) mbMobileCountryCode
-      QP.findByMobileNumber mobileNumber mobileCountryCode >>= fromMaybeM (PersonNotFound mobileNumber)
-    (Nothing, Nothing) ->
-      throwError $ InvalidRequest "Either personId or mobile number must be provided."
-  res <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) person.id.getId
-
-  pure
-    res {Common.approvedBy = person.approvedBy <&> getId}
 
 postDriverFleetLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.DriverLocationListReq -> Environment.Flow Common.DriverLocationListResp)
 postDriverFleetLocationList merchantShortId opCity apiTokenInfo req = do
