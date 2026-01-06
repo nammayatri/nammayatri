@@ -13,7 +13,12 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.Geometry where
+module Storage.Queries.Geometry
+  ( create,
+    findGeometryByStateAndCity,
+    findGeometriesContaining,
+  )
+where
 
 import Data.Either
 import qualified Database.Beam as B

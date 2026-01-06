@@ -538,6 +538,7 @@ library
       Storage.Queries.FRFSTicketBookingExtra
       Storage.Queries.FRFSTicketBookingPaymentExtra
       Storage.Queries.Geometry
+      Storage.Queries.GeometryGeom
       Storage.Queries.IntegratedBPPConfigExtra
       Storage.Queries.IssueExtra
       Storage.Queries.JourneyExtra

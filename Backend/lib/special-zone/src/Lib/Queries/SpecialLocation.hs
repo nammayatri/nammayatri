@@ -36,7 +36,8 @@ data SpecialLocationFull = SpecialLocationFull
     gatesInfo :: [GD.GateInfoFull],
     gates :: [D.GatesInfo], --TODO: deprecate this later
     geoJson :: Maybe Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    enabled :: Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -144,6 +145,29 @@ findFullSpecialLocationsByMerchantOperatingCityId' mocId = do
           &&. ( specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
                   ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
               )
+      return (specialLocation, F.getGeomGeoJSON)
+  mapM makeFullSpecialLocation mbRes
+
+findAllSpecialLocationsWithGeoJSON ::
+  (Transactionable m) =>
+  Text ->
+  Maybe Int ->
+  Maybe Int ->
+  m [SpecialLocationFull]
+findAllSpecialLocationsWithGeoJSON mocId mbLimit mbOffset = do
+  mbRes <-
+    Esq.findAll $ do
+      specialLocation <- from $ table @SpecialLocationT
+      where_ $
+        ( specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
+            ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
+        )
+
+      orderBy [asc (specialLocation ^. SpecialLocationPriority)]
+
+      forM_ mbLimit (limit . fromIntegral)
+      forM_ mbOffset (offset . fromIntegral)
+
       return (specialLocation, F.getGeomGeoJSON)
   mapM makeFullSpecialLocation mbRes
 
