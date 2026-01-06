@@ -19,7 +19,13 @@ module Storage.Queries.GeometryGeom
   )
 where
 
+import Data.Either (fromRight)
+import qualified Database.Beam as B
+import Database.Beam.Postgres
+import Database.Beam.Postgres.Syntax
+import qualified Database.Beam.Query as BQ
 import Domain.Types.Geometry
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -27,28 +33,64 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import qualified Sequelize as Se
-import qualified Storage.Beam.Geometry.GeometryGeom as BeamG
+import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.Geometry.Geometry as BeamG
+import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
 
+-- | Get geometry as GeoJSON text using ST_AsGeoJSON
+-- This converts the PostgreSQL geometry type to a Text representation
+getGeomAsGeoJSON :: BQ.QGenExpr context Postgres s (Maybe Text)
+getGeomAsGeoJSON = BQ.QExpr (\_ -> PgExpressionSyntax (emit "ST_AsGeoJSON(geom)"))
+
+-- | Find all geometries for a city with the geom column converted to GeoJSON text.
+-- Uses a raw Beam query with ST_AsGeoJSON to avoid type mismatch with PostgreSQL geometry type.
 findAllGeometries :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Maybe Int -> Maybe Int -> m [Geometry]
 findAllGeometries cityParam mbLimit mbOffset = do
-  let limit = fromMaybe 100 mbLimit
-      offset = fromMaybe 0 mbOffset
-  findAllWithOptionsKV [Se.Is BeamG.city $ Se.Eq cityParam] (Se.Desc BeamG.id) (Just limit) (Just offset)
+  let limitVal = fromMaybe 100 mbLimit
+      offsetVal = fromMaybe 0 mbOffset
+  dbConf <- getReplicaBeamConfig
+  result <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (fromIntegral limitVal) $
+            B.offset_ (fromIntegral offsetVal) $
+              B.orderBy_ (\(gId, _, _, _, _) -> B.desc_ gId) $
+                fmap
+                  ( \BeamG.GeometryT {..} ->
+                      (id, city, state, region, getGeomAsGeoJSON)
+                  )
+                  $ B.filter_' (\BeamG.GeometryT {..} -> B.sqlBool_ (city B.==. B.val_ cityParam)) $
+                    B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] result)
+
+-- | FromTType instance for the tuple result from the raw query
+instance FromTType' (Text, Context.City, Context.IndianState, Text, Maybe Text) Geometry where
+  fromTType' (gId, gCity, gState, gRegion, gGeom) = do
+    pure $
+      Just
+        Geometry
+          { id = Id gId,
+            city = gCity,
+            state = gState,
+            region = gRegion,
+            geom = gGeom
+          }
 
 updateGeometry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Context.IndianState -> Text -> Text -> m ()
 updateGeometry cityParam stateParam regionParam newGeom = do
   updateWithKV
-    [ Se.Set BeamG.geom (Just newGeom)
+    [ Se.Set BeamGeomG.geom (Just newGeom)
     ]
     [ Se.And
-        [ Se.Is BeamG.city (Se.Eq cityParam),
-          Se.Is BeamG.state (Se.Eq stateParam),
-          Se.Is BeamG.region (Se.Eq regionParam)
+        [ Se.Is BeamGeomG.city (Se.Eq cityParam),
+          Se.Is BeamGeomG.state (Se.Eq stateParam),
+          Se.Is BeamGeomG.region (Se.Eq regionParam)
         ]
     ]
 
-instance FromTType' BeamG.GeometryGeom Geometry where
-  fromTType' BeamG.GeometryGeomT {..} = do
+instance FromTType' BeamGeomG.GeometryGeom Geometry where
+  fromTType' BeamGeomG.GeometryGeomT {..} = do
     pure $
       Just
         Geometry
@@ -56,12 +98,12 @@ instance FromTType' BeamG.GeometryGeom Geometry where
             ..
           }
 
-instance ToTType' BeamG.GeometryGeom Geometry where
+instance ToTType' BeamGeomG.GeometryGeom Geometry where
   toTType' Geometry {..} =
-    BeamG.GeometryGeomT
-      { BeamG.id = getId id,
-        BeamG.region = region,
-        BeamG.state = state,
-        BeamG.city = city,
-        BeamG.geom = geom
+    BeamGeomG.GeometryGeomT
+      { BeamGeomG.id = getId id,
+        BeamGeomG.region = region,
+        BeamGeomG.state = state,
+        BeamGeomG.city = city,
+        BeamGeomG.geom = geom
       }
