@@ -433,7 +433,8 @@ data DriverInformationRes = DriverInformationRes
     rideRequestVolumeEnabled :: Maybe Bool,
     profilePhotoUploadedAt :: Maybe UTCTime,
     activeFleet :: Maybe FleetInfo,
-    onboardingAs :: Maybe DriverInfo.OnboardingAs
+    onboardingAs :: Maybe DriverInfo.OnboardingAs,
+    vehicleImageUploadedAt :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -514,7 +515,8 @@ data DriverEntityRes = DriverEntityRes
     isTTSEnabled :: Maybe Bool,
     isHighAccuracyLocationEnabled :: Maybe Bool,
     rideRequestVolumeEnabled :: Maybe Bool,
-    profilePhotoUploadedAt :: Maybe UTCTime
+    profilePhotoUploadedAt :: Maybe UTCTime,
+    vehicleImageUploadedAt :: Maybe UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -1070,9 +1072,16 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
   let maskedDeviceToken = maskText . (.getFCMRecipientToken) <$> person.deviceToken
   (mediaUrl, profilePhotoUploadedAt) <- case person.faceImageId of
     Just mediaId -> do
-      mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
+      mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist mediaId.getId)
       return (Just mediaEntry.url, Just mediaEntry.createdAt)
     Nothing -> return (Nothing, driverInfo.enabledAt)
+  vehicleImageUploadedAt <- case vehicleMB of
+    Just vehicle -> case vehicle.vehicleImageId of
+      Just vehicleImageId -> do
+        mediaEntry <- runInReplica $ MFQuery.findById vehicleImageId >>= fromMaybeM (FileDoNotExist vehicleImageId.getId)
+        return (Just mediaEntry.createdAt)
+      Nothing -> return Nothing
+    Nothing -> return Nothing
   aadhaarCardPhotoResp <- withTryCatch "fetchAndCacheAadhaarImage:buildDriverEntityRes" (fetchAndCacheAadhaarImage person driverInfo)
   let aadhaarCardPhoto = join (eitherToMaybe aadhaarCardPhotoResp)
   let rating =
