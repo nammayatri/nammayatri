@@ -18,6 +18,7 @@ let schedulerConfig =
       , metricsPort = +8056
       , hedisCfg = appCfg.hedisCfg
       , hedisClusterCfg = appCfg.hedisClusterCfg
+      , hedisSecondaryClusterCfg = appCfg.hedisSecondaryClusterCfg
       , hedisNonCriticalCfg = appCfg.hedisCfg
       , hedisNonCriticalClusterCfg = appCfg.hedisClusterCfg
       , hedisMigrationStage = False

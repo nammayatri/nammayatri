@@ -51,6 +51,7 @@ data SchedulerConfig = SchedulerConfig
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    hedisSecondaryClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
@@ -155,7 +156,8 @@ runSchedulerM schedulerConfig env action = do
             ConnectionConfigDriver
               { esqDBCfg = schedulerConfig.esqDBCfg,
                 esqDBReplicaCfg = schedulerConfig.esqDBReplicaCfg,
-                hedisClusterCfg = schedulerConfig.hedisClusterCfg
+                hedisClusterCfg = schedulerConfig.hedisClusterCfg,
+                hedisSecondaryClusterCfg = schedulerConfig.hedisSecondaryClusterCfg
               }
             env.kvConfigUpdateFrequency
         )

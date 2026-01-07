@@ -14,11 +14,13 @@
 
 module SharedLogic.External.LocationTrackingService.Flow where
 
+import qualified Data.Either as Either
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
 import Domain.Types.VehicleVariant
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess)
@@ -74,10 +76,9 @@ rideEnd rideId lat lon merchantId driverId mbNextRideId rideInfo = do
   logDebug $ "lts rideEnd: " <> show rideEndRes
   return rideEndRes
 
-nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> Maybe Text -> Maybe Text -> m [DriverLocation]
+nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, Forkable m) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> Maybe Text -> Maybe Text -> m [DriverLocation]
 nearBy lat lon onRide vt radius merchantId groupId groupId2 = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
   let req =
         NearByReq
           { lat,
@@ -89,12 +90,25 @@ nearBy lat lon onRide vt radius merchantId groupId groupId2 = do
             groupId,
             groupId2
           }
-  nearByRes <-
-    withShortRetry $
-      callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
-        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NEAR_BY_API") url)
-  logDebug $ "lts nearBy: " <> show nearByRes
-  return nearByRes
+  -- Call both APIs (primary and secondary cloud) concurrently and combine results
+  let callNearByAPI url = do
+        withShortRetry $
+          callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
+            >>= \case
+              Right locations -> pure locations
+              Left err -> do
+                logError $ "Failed to call nearBy API for url: " <> show url <> ", error: " <> show err
+                pure []
+
+  primaryAwaitable <- awaitableFork "primaryLTS" $ callNearByAPI ltsCfg.url
+  mbSecondaryAwaitable <- forM ltsCfg.secondaryUrl $ awaitableFork "secondaryLTS" . callNearByAPI
+
+  primaryResult <- Either.fromRight [] <$> L.await Nothing primaryAwaitable
+  secondaryResult <- maybe (pure []) (fmap (Either.fromRight []) . L.await Nothing) mbSecondaryAwaitable
+
+  let combinedLocations = primaryResult <> secondaryResult
+  logDebug $ "lts nearBy: " <> show combinedLocations
+  return combinedLocations
 
 rideDetails :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> DR.RideStatus -> Id DM.Merchant -> Id DP.Person -> Double -> Double -> Maybe Bool -> Maybe RideInfo -> m APISuccess
 rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide rideInfo = do

@@ -82,6 +82,17 @@ let rccfg =
       , connectReadOnly = True
       }
 
+let rccfgSecondary =
+      { connectHost = "localhost"
+      , connectPort = 30002
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
 let smsConfig =
       { sessionConfig = common.smsSessionConfig
       , credConfig =
@@ -321,7 +332,8 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.SendFeedbackPN, mapValue = True }
       ]
 
-let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
+let LocationTrackingeServiceConfig =
+      { url = "http://localhost:8081/", secondaryUrl = None Text }
 
 let VocaliticsConfig = { url = "http://0.0.0.0:8000/", token = "secret-key" }
 
@@ -369,6 +381,12 @@ let driverFleetLocationListAPIRateLimitOptions =
 let noSignatureSubscribers =
       [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
 
+let bapHostRedirectMap =
+      [ { mapKey = "staging.localhost"
+        , mapValue = Some "http://localhost:8010"
+        }
+      ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -376,6 +394,7 @@ in  { esqDBCfg
     , dashboardClickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
+    , hedisSecondaryClusterCfg = rccfgSecondary
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False
@@ -474,4 +493,5 @@ in  { esqDBCfg
     , inMemConfig
     , driverFleetLocationListAPIRateLimitOptions
     , noSignatureSubscribers
+    , bapHostRedirectMap
     }
