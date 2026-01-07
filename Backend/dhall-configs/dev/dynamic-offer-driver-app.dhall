@@ -82,6 +82,17 @@ let rccfg =
       , connectReadOnly = True
       }
 
+let rccfgSecondary =
+      { connectHost = "localhost"
+      , connectPort = 30002
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
 let smsConfig =
       { sessionConfig = common.smsSessionConfig
       , credConfig =
@@ -382,6 +393,7 @@ in  { esqDBCfg
     , dashboardClickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
+    , hedisSecondaryClusterCfg = rccfgSecondary
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False

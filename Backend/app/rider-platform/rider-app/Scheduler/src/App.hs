@@ -126,7 +126,8 @@ runRiderAppScheduler configModifier = do
             ConnectionConfigDriver
               { esqDBCfg = handlerCfg.appCfg.esqDBCfg,
                 esqDBReplicaCfg = handlerCfg.appCfg.esqDBReplicaCfg,
-                hedisClusterCfg = handlerCfg.appCfg.hedisClusterCfg
+                hedisClusterCfg = handlerCfg.appCfg.hedisClusterCfg,
+                hedisSecondaryClusterCfg = handlerCfg.appCfg.hedisSecondaryClusterCfg
               }
             handlerCfg.appCfg.kvConfigUpdateFrequency
         )

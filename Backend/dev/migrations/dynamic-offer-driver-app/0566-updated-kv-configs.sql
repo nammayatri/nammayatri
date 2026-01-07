@@ -58,7 +58,10 @@ SET config_value = '{
   "readFromMasterDb": [],
   "defaultShardMod": 128,
   "tableShardModRange": {},
-  "tableRedisKeyPrefix": {}
+  "tableRedisKeyPrefix": {},
+  "allTablesDisabled": true,
+  "enableSecondaryCloudRead": null,
+  "tablesForSecondaryCloudRead": null
 }'
 WHERE id ='kv_configs';
 

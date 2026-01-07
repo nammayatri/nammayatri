@@ -51,7 +51,8 @@ main = do
                 ConnectionConfigRider
                   { esqDBCfg = appCfg.esqDBCfg,
                     esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-                    hedisClusterCfg = appCfg.hedisClusterCfg
+                    hedisClusterCfg = appCfg.hedisClusterCfg,
+                    hedisSecondaryClusterCfg = appCfg.hedisClusterCfg
                   }
                 appCfg.kvConfigUpdateFrequency
             )
