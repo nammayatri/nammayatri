@@ -793,16 +793,18 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
                           else areaDetails
                   Nothing -> DL.filter (\detail -> detail.area == Default) allVendorSplitDetails
             unless (null vendorSplitDetails) $ do
-              let vendorAmounts = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue)) vendorSplitDetails
-                  vendorFees = DL.map (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now) vendorAmounts
-              case lastDriverFee of
-                Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFee merchantOpCityId vendorFees
-                _ -> QVF.createMany vendorFees
+              let vendorData = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue, vendor.maxVendorFeeAmount)) vendorSplitDetails
+                  -- Pass vendor fee along with its maxVendorFeeAmount limit for cumulative validation
+                  vendorFeesWithLimit = DL.map (\(vendorId, amount, maxLimit) -> (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now (vendorId, amount, maxLimit), maxLimit)) vendorData
+              unless (null vendorFeesWithLimit) $ do
+                case lastDriverFee of
+                  Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFeeWithMaxLimit merchantOpCityId vendorFeesWithLimit
+                  _ -> QVF.createManyWithMaxLimit vendorFeesWithLimit
 
         plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing currentVehicleCategory
         fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
         scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now
-    mkVendorFee driverFeeId now vendorAmount = DVF.VendorFee {amount = HighPrecMoney (snd vendorAmount), driverFeeId = driverFeeId, vendorId = fst vendorAmount, createdAt = now, updatedAt = now}
+    mkVendorFee driverFeeId now (vendorId, amount, _) = DVF.VendorFee {amount = HighPrecMoney amount, driverFeeId = driverFeeId, vendorId = vendorId, createdAt = now, updatedAt = now}
     isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge = do
       let notOnFreeTrial = not isOnFreeTrial
       if isSpecialZoneCharge

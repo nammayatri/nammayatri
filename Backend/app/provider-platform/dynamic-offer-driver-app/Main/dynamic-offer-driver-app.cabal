@@ -1424,7 +1424,6 @@ library
       Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
       Storage.Queries.OrphanInstances.VehicleRouteMapping
       Storage.Queries.OrphanInstances.VendorFee
-      Storage.Queries.OrphanInstances.VendorSplitDetails
       Storage.Queries.OrphanInstances.Volunteer
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay

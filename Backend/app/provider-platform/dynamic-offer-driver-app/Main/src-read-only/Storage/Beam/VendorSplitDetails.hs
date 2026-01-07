@@ -11,11 +11,13 @@ import qualified Domain.Types.VendorSplitDetails
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Lib.Types.SpecialLocation
 import Tools.Beam.UtilsTH
 
 data VendorSplitDetailsT f = VendorSplitDetailsT
   { area :: B.C f Lib.Types.SpecialLocation.Area,
+    maxVendorFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     merchantOperatingCityId :: B.C f Data.Text.Text,
     splitType :: B.C f Domain.Types.VendorSplitDetails.SplitType,
     splitValue :: B.C f Kernel.Prelude.Double,
