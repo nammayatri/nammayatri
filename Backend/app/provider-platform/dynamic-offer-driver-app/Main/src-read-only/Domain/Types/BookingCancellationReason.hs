@@ -31,6 +31,6 @@ data BookingCancellationReason = BookingCancellationReason
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data CancellationSource = ByUser | ByDriver | ByMerchant | ByAllocator | ByApplication deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CancellationSource = ByUser | ByDriver | ByMerchant | ByAllocator | ByApplication | ByFleetOwner deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationSource)
