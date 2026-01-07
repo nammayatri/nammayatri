@@ -20,6 +20,7 @@ import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.Exophone
 import Storage.Beam.Geometry as BeamG
+import Storage.Beam.Geometry.GeometryGeom as BeamGeomG
 import Storage.Beam.Person
 import Storage.Beam.Rating (RatingT, ratingTable)
 import Storage.Beam.Ride
@@ -30,6 +31,7 @@ atlasDB =
     `B.withDbModification` B.dbModification
       { exophone = exophoneTable,
         geometry = geometryTable,
+        geometryGeom = geometryGeomTable,
         booking = bookingTable,
         ride = rideTable,
         person = personTable,
@@ -40,6 +42,7 @@ atlasDB =
 data AtlasDB f = AtlasDB
   { exophone :: f (B.TableEntity ExophoneT),
     geometry :: f (B.TableEntity GeometryT),
+    geometryGeom :: f (B.TableEntity BeamGeomG.GeometryGeomT),
     booking :: f (B.TableEntity BookingT),
     ride :: f (B.TableEntity RideT),
     person :: f (B.TableEntity PersonT),
