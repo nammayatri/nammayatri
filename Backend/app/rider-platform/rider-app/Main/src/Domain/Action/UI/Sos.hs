@@ -343,7 +343,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
   when (fileSize > fromIntegral riderConfig.videoFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile payload
-  filePath <- createFilePath "/sos/" ("sos-" <> getId sosId) fileType fileExtension
+  filePath <- Storage.createFilePath "/sos/" ("sos-" <> getId sosId) fileType fileExtension
   mediaFileId <- generateGUID
   now <- getCurrentTime
   let fileUrl =
