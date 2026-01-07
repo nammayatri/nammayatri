@@ -88,6 +88,7 @@ data AppCfg = AppCfg
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    hedisSecondaryClusterCfg :: HedisCfg,
     ltsRedis :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
