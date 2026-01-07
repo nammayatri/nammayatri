@@ -18,6 +18,7 @@ apis:
         - volunteerId: Text
         - vendorId: Text
         - isActive: Bool
+        - place: Text
       response:
         type: VolunteerListRes
 
