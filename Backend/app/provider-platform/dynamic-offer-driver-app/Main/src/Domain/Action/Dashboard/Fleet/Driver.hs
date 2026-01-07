@@ -1817,10 +1817,26 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
 getDriverFleetOperatorInfo ::
   ShortId DM.Merchant ->
   Context.City ->
-  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Flow Common.FleetOwnerInfoRes
-getDriverFleetOperatorInfo merchantShortId opCity personId = do
-  getDriverFleetOwnerInfo merchantShortId opCity (Id personId)
+getDriverFleetOperatorInfo merchantShortId opCity mbPersonId mbMobileNumber mbMobileCountryCode mbRole = do
+  merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+
+  person <- case (mbPersonId, mbMobileNumber) of
+    (Just pid, _) -> QPerson.findById (Id pid) >>= fromMaybeM (PersonDoesNotExist pid)
+    (_, Just mobileNumber) -> do
+      let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) mbMobileCountryCode
+      mobileNumberHash <- getDbHash mobileNumber
+      role <- case mbRole of
+        Just roleText -> fromMaybeM (InvalidRequest "Invalid role") (readMaybe (T.unpack roleText) :: Maybe DP.Role)
+        Nothing -> pure DP.DRIVER
+      QPersonExtra.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash merchantOpCity.merchantId role >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+    (Nothing, Nothing) ->
+      throwError $ InvalidRequest "Either personId or mobile number must be provided."
+  getDriverFleetOwnerInfo merchantShortId opCity (cast @DP.Person @Common.Driver person.id)
 
 getDriverFleetOwnerInfo :: -- Deprecated, use getDriverFleetOperatorInfo
   ShortId DM.Merchant ->
