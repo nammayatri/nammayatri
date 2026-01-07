@@ -4,6 +4,7 @@
 
 module Storage.Queries.Sos where
 
+import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import qualified Domain.Types.Sos
 import qualified IssueManagement.Domain.Types.MediaFile
