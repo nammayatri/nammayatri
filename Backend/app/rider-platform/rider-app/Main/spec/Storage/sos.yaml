@@ -54,6 +54,9 @@ Sos:
     findByTicketId:
       kvFunction: findOneWithKV
       where: ticketId
+    findByPersonId:
+      kvFunction: findAllWithKV
+      where: personId
 
   beamType:
     mediaFiles: Maybe [Text]
