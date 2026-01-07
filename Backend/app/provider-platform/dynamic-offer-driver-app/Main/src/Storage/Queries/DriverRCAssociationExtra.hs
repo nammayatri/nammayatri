@@ -101,6 +101,9 @@ activateRCForDriver (Id driverId) (Id rcId) now = updateWithKV [Se.Set BeamDRCA.
 findLinkedByRCIdAndDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m (Maybe DriverRCAssociation)
 findLinkedByRCIdAndDriverId (Id driverId) (Id rcId) now = findOneWithKV [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
 
+updateRcErrorMessage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> Text -> m ()
+updateRcErrorMessage (Id driverId) (Id rcId) errorMessage = updateWithKV [Se.Set BeamDRCA.errorMessage (Just errorMessage)] [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.rcId $ Se.Eq rcId]]
+
 findLatestByRCIdAndDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Id Person -> m (Maybe DriverRCAssociation)
 findLatestByRCIdAndDriverId (Id rcId) (Id driverId) =
   findAllWithOptionsKV [Se.And [Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.driverId $ Se.Eq driverId]] (Se.Desc BeamDRCA.associatedTill) (Just 1) Nothing <&> listToMaybe
