@@ -4,7 +4,9 @@
 module ExternalBPP.ExternalAPI.Metro.CMRL.V2.Order where
 
 import Data.Aeson
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
 import qualified Data.UUID as UU
 import Domain.Types.Extra.IntegratedBPPConfig
@@ -240,7 +242,10 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
   logDebug $ "[CMRLV2:Order] TotalFare: " <> show totalFare <> ", Quantity: " <> show totalTicketQuantity
   logDebug $ "[CMRLV2:Order] Payload JSON (before encryption): " <> T.pack (show payload)
   logDebug $ "[CMRLV2:Order] Payload built, encrypting..."
-  encryptedPayload <- encryptPayload config (encode payload)
+  encKey <- decrypt config.encryptionKey
+  let payloadText = TE.decodeUtf8 $ BL.toStrict $ encode payload
+  encryptedPayload <- encryptPayload payloadText encKey
+  logDebug $ "[CMRLV2:Order] Encrypted Payload: " <> encryptedPayload
   logDebug $ "[CMRLV2:Order] Payload encrypted, calling CMRL API..."
 
   let eulerClient = \accessToken ->
@@ -253,9 +258,14 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
 
   encryptedResponse <- callCMRLV2API config eulerClient "generateTicket" ticketAPI
   logDebug $ "[CMRLV2:Order] Received encrypted response, decrypting..."
-  decryptedResponseBytes <- decryptPayload config encryptedResponse.response
+  decryptedResponseText <- case decryptPayload encryptedResponse.response encKey of
+    Left err -> do
+      logError $ "[CMRLV2:Order] Decryption failed: " <> T.pack err
+      throwError $ InternalError $ "Decryption failed: " <> T.pack err
+    Right txt -> return txt
   logDebug "[CMRLV2:Order] Response decrypted, parsing..."
-  ticketRes <- case eitherDecode decryptedResponseBytes :: Either String TicketRes of
+  logDebug $ "[CMRLV2:Order] Decrypted Response: " <> decryptedResponseText
+  ticketRes <- case eitherDecode (BL.fromStrict $ TE.encodeUtf8 decryptedResponseText) :: Either String TicketRes of
     Left err -> do
       logError $ "[CMRLV2:Order] Failed to decode ticket response: " <> T.pack err
       throwError $ InternalError $ "Failed to decode ticket response: " <> T.pack err
