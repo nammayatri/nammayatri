@@ -1,21 +1,25 @@
 module Storage.CachedQueries.Driver.DriverImage where
 
-import AWS.S3 as S3
 import Control.Monad
 import Data.Text (unpack)
 import Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id (Id, getId)
+import Kernel.Types.MonadGuid (MonadGuid)
+import Kernel.Utils.Common (MonadFlow)
+import qualified Storage.Flow as Storage
+import qualified Storage.Types as StorageTypes
 
 driverAadhaarImageKey :: Id Person -> Text
 driverAadhaarImageKey driverId = "Driver-Aadhaar-Image-Key:DriverId" <> getId driverId
 
-getDriverImageByDriverId :: (CacheFlow m r, HasField "s3Env" r (S3.S3Env m)) => Id Person -> Text -> m Text
+getDriverImageByDriverId :: (CacheFlow m r, CoreMetrics m, MonadFlow m, MonadGuid m, HasField "storageConfig" r StorageTypes.StorageConfig) => Id Person -> Text -> m Text
 getDriverImageByDriverId driverId s3Path =
   Hedis.safeGet (driverAadhaarImageKey driverId)
-    >>= maybe (cacheDriverImageByDriverId driverId /=<< S3.get (unpack s3Path)) pure
+    >>= maybe (cacheDriverImageByDriverId driverId /=<< Storage.get (unpack s3Path)) pure
 
 cacheDriverImageByDriverId :: (CacheFlow m r) => Id Person -> Text -> m ()
 cacheDriverImageByDriverId driverId base64Image = do

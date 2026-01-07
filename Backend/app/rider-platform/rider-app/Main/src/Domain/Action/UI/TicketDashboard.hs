@@ -1,7 +1,6 @@
 module Domain.Action.UI.TicketDashboard where
 
 import qualified API.Types.Dashboard.AppManagement.Tickets as Tickets
-import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (concatMapM)
 import Data.List (nubBy)
@@ -28,6 +27,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.IssueManagement ()
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.BusinessHour as QBusinessHour
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ServiceCategory as QServiceCategory
@@ -86,7 +86,7 @@ getTicketDashboardFile :: Text -> Environment.Flow MO.GetFileResponse
 getTicketDashboardFile fileId = do
   file <- MFQuery.findById (Id fileId) >>= fromMaybeM (InvalidRequest "No file found")
   filePath <- file.s3FilePath & fromMaybeM (FileDoNotExist fileId)
-  base64File <- S3.get $ T.unpack filePath
+  base64File <- Storage.get $ T.unpack filePath
   return $
     MO.GetFileResponse
       { fileBase64 = base64File,

@@ -14,7 +14,6 @@
 
 module Domain.Action.Internal.KnowYourDriver where
 
-import qualified AWS.S3 as S3
 import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Types.DocumentVerificationConfig as DTO
@@ -33,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Error
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -116,7 +116,7 @@ getDriverProfile withImages person = do
     Just mediaId -> do
       mediaEntry <- B.runInReplica $ QMF.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
       case mediaEntry.s3FilePath of
-        Just s3Path -> Just <$> S3.get (T.unpack s3Path)
+        Just s3Path -> Just <$> Storage.get (T.unpack s3Path)
         _ -> fetchLegacyProfileImage person.id
     Nothing -> do
       fetchLegacyProfileImage person.id
@@ -142,7 +142,7 @@ getDriverProfile withImages person = do
       }
   where
     fetchLegacyProfileImage personId =
-      ImageQuery.findByPersonIdImageTypeAndValidationStatus personId DTO.ProfilePhoto DImage.APPROVED >>= maybe (return Nothing) (\image -> S3.get (T.unpack (image.s3Path)) <&> Just)
+      ImageQuery.findByPersonIdImageTypeAndValidationStatus personId DTO.ProfilePhoto DImage.APPROVED >>= maybe (return Nothing) (\image -> Storage.get (T.unpack (image.s3Path)) <&> Just)
 
     nonZero Nothing = 1
     nonZero (Just a)
@@ -161,7 +161,7 @@ getDriverProfile withImages person = do
       mapM (QMF.findById) imagePaths
         >>= pure . catMaybes
         >>= pure . ((.url) <$>)
-        >>= mapM (S3.get . T.unpack . extractFilePath)
+        >>= mapM (Storage.get . T.unpack . extractFilePath)
 
     getTopFeedBackForDriver driverId = do
       ratings <- QRating.findTopRatingsForDriver driverId (Just 5)
