@@ -37,6 +37,7 @@ import qualified Storage.Queries.AadhaarOtpVerify as OtpVerifyQuery
 import qualified Storage.Queries.AadhaarVerification as QAV
 import qualified Storage.Queries.Person as Person
 import Storage.Types (FileType (..))
+import qualified Storage.Types as StorageTypes
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
 
@@ -123,7 +124,7 @@ verifyAadhaarOtp mbMerchant personId req = do
       pure res
     Nothing -> throwError TransactionIdNotFound
 
-uploadOriginalAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
+uploadOriginalAadhaarImage :: (HasField "storageConfig" r StorageTypes.StorageConfig, MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadOriginalAadhaarImage person image imageType = do
   orgImageFilePath <- Storage.createFilePath "/person-aadhaar-photo/" ("person-" <> person.id.getId) Image (parseImageExtension imageType)
   resultOrg <- withTryCatch "Storage:put:uploadOriginalAadhaarImage" $ Storage.put (unpack orgImageFilePath) image

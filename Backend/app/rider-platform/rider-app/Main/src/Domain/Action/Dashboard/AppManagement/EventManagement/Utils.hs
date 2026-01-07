@@ -16,7 +16,6 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Flow as Storage
 import qualified Storage.Queries.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.RiderConfig as QRC
-import Storage.Types (FileType (..))
 import System.IO (hFileSize)
 import Tools.Error
 
