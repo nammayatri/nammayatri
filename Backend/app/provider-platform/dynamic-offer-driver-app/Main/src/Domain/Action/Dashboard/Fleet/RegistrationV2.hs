@@ -372,7 +372,8 @@ buildFleetOwnerAuthReq merchantId' opCity Common.FleetOwnerLoginReqV2 {..} =
       identifierType = Just DP.MOBILENUMBER,
       email = Nothing,
       registrationLat = Nothing,
-      registrationLon = Nothing
+      registrationLon = Nothing,
+      otpChannel = Nothing
     }
 
 updateFleetOwnerInfo ::

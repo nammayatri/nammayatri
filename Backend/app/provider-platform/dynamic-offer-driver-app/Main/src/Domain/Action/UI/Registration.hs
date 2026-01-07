@@ -105,7 +105,8 @@ data AuthReq = AuthReq
     name :: Maybe Text,
     identifierType :: Maybe SP.IdentifierType,
     registrationLat :: Maybe Double,
-    registrationLon :: Maybe Double
+    registrationLon :: Maybe Double,
+    otpChannel :: Maybe SOTP.OTPChannel
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -216,17 +217,18 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       SP.MOBILENUMBER -> do
         countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
         mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for mobileNumber auth")
+        let otpChannel = fromMaybe SOTP.defaultOTPChannel req.otpChannel
         mobileNumberHash <- getDbHash mobileNumber
         person <-
           QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
             >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
-        return (person, SP.MOBILENUMBER)
+        return (person, otpChannel)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
           QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.DRIVER
             >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
-        return (person, SP.EMAIL)
+        return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
 
   checkSlidingWindowLimit (authHitsCountKey person)
@@ -239,7 +241,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
   QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId
   let otpCode = SR.authValueHash token
   whenNothing_ useFakeOtpM $ do
-    SOTP.sendOTPByIdentifierType
+    SOTP.sendOTP
       otpChannel
       otpCode
       person.id
