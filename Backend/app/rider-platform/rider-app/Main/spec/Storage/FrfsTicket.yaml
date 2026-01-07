@@ -276,6 +276,7 @@ FRFSQuoteCategory:
       title: Maybe Text
       description: Maybe Text
       tnc: Maybe Text
+      categoryOrder: Maybe Int
     price:
       currency: Maybe Currency
       price: HighPrecMoney
@@ -293,7 +294,7 @@ FRFSQuoteCategory:
     price: Kernel.Types.Common.mkPrice currency price|E
     offeredPrice: Kernel.Types.Common.mkPrice currency offeredPrice|E
     finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
-    categoryMeta: Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadata code title description tnc|E
+    categoryMeta: Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadata code title description tnc categoryOrder|E
     category: Kernel.Prelude.fromMaybe Domain.Types.FRFSQuoteCategoryType.ADULT category|E
     selectedQuantity: Kernel.Prelude.fromMaybe 0|I
 
@@ -306,6 +307,7 @@ FRFSQuoteCategory:
     title: (categoryMeta <&> (.title))|E
     description: (categoryMeta <&> (.description))|E
     tnc: (categoryMeta <&> (.tnc))|E
+    categoryOrder: (categoryMeta >>= (.categoryOrder))|E
     category: Kernel.Prelude.Just|I
     selectedQuantity: Kernel.Prelude.Just|I
 
@@ -315,14 +317,17 @@ FRFSQuoteCategory:
       title: Text
       description: Text
       tnc: Text
+      categoryOrder: Maybe Int
 
   queries:
     findById:
       kvFunction: findOneWithKV
       where: id
     findAllByQuoteId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: quoteId
+      orderBy: categoryOrder
+      orderType: Asc
     updateQuantityByQuoteCategoryId:
       kvFunction: updateWithKV
       params: [selectedQuantity, updatedAt]
@@ -1011,6 +1016,7 @@ FRFSTicketCategoryMetadataConfig:
     domainCategoryValue: OfferedValue
     merchantOperatingCityId: Id MerchantOperatingCity
     vehicleCategory: VehicleCategory
+    categoryOrder: Maybe Int
   constraints:
     id: PrimaryKey
 

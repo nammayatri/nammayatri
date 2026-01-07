@@ -15,6 +15,7 @@ import qualified Tools.Beam.UtilsTH
 
 data FRFSTicketCategoryMetadataConfig = FRFSTicketCategoryMetadataConfig
   { category :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType,
+    categoryOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     code :: Kernel.Prelude.Text,
     description :: Kernel.Prelude.Text,
     domainCategoryValue :: Domain.Types.FRFSQuoteCategorySpec.OfferedValue,

@@ -30,5 +30,11 @@ data FRFSQuoteCategory = FRFSQuoteCategory
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data QuoteCategoryMetadata = QuoteCategoryMetadata {code :: Kernel.Prelude.Text, description :: Kernel.Prelude.Text, title :: Kernel.Prelude.Text, tnc :: Kernel.Prelude.Text}
+data QuoteCategoryMetadata = QuoteCategoryMetadata
+  { categoryOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    code :: Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Text,
+    title :: Kernel.Prelude.Text,
+    tnc :: Kernel.Prelude.Text
+  }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

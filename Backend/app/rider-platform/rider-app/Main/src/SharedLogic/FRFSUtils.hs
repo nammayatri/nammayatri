@@ -1035,7 +1035,7 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
         [booking] -> do
           -- offer valid only for single mode booking (not handled for multimodal right now)
           quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
-          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
           mbOfferSKUProductId <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
           let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
               adultQuantity = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)

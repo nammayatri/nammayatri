@@ -1227,7 +1227,7 @@ createRecentLocationForMultimodal journey = do
       ( \leg acc -> do
           case leg.legPricingId of
             Just pricingId -> do
-              quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId (Id pricingId)
+              quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing (Id pricingId)
               let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
                   adultUnitPrice = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice.amount)
               return $ acc + fromMaybe 0 adultUnitPrice
@@ -1548,8 +1548,8 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
     mbBooking <- QFRFSTicketBooking.findBySearchId searchId
     whenJust mbBooking $ \booking -> do
       quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
-      oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
-      newQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
+      oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
+      newQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quoteId
       quantitySyncedQuoteCategories <-
         mergeQuoteCategoriesWithQuantitySelections
           ( map
@@ -1631,7 +1631,7 @@ getLegTierOptionsUtil journeyLeg enableSuburbanRoundTrip = do
   availableServiceTiers <-
     mapMaybeM
       ( \quote -> do
-          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
           return $ getServiceTierFromQuote quoteCategories quote
       )
       quotes
