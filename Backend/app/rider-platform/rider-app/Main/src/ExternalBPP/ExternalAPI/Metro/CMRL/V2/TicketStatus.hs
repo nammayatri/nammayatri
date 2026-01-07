@@ -10,13 +10,11 @@ import Domain.Types.FRFSTicketBooking
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.V2.Auth
 import ExternalBPP.ExternalAPI.Types
-import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.App
 import Kernel.Utils.Common
 import Servant hiding (throwError)
-import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import Tools.Error
 
 data QRPayloadStatus = QRPayloadStatus
@@ -24,7 +22,14 @@ data QRPayloadStatus = QRPayloadStatus
     qR_SVC :: T.Text,
     qR_Tkt_Block :: T.Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON)
+
+instance FromJSON QRPayloadStatus where
+  parseJSON = withObject "QRPayloadStatus" $ \v ->
+    QRPayloadStatus
+      <$> v .: "QR_Signature"
+      <*> v .: "QR_SVC"
+      <*> v .: "QR_Tkt_Block"
 
 data TicketStatusResult = TicketStatusResult
   { qR_Payload :: QRPayloadStatus,
@@ -35,14 +40,32 @@ data TicketStatusResult = TicketStatusResult
     interchange_Stations :: T.Text,
     platform_No :: T.Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON)
+
+instance FromJSON TicketStatusResult where
+  parseJSON = withObject "TicketStatusResult" $ \v ->
+    TicketStatusResult
+      <$> v .: "QR_Payload"
+      <*> v .: "QR_Tkt_Sl_No"
+      <*> v .: "QR_SHA256"
+      <*> v .: "Merchant_Order_Id"
+      <*> v .: "Interchange_Status"
+      <*> v .: "Interchange_Stations"
+      <*> v .: "Platform_No"
 
 data TicketStatusRes = TicketStatusRes
   { returnCode :: T.Text,
     returnMessage :: T.Text,
     ticket_Response :: [TicketStatusResult]
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON)
+
+instance FromJSON TicketStatusRes where
+  parseJSON = withObject "TicketStatusRes" $ \v ->
+    TicketStatusRes
+      <$> v .: "returnCode"
+      <*> v .: "returnMessage"
+      <*> v .: "Ticket_Response"
 
 type TicketStatusAPI =
   "api" :> "qr" :> "v1" :> "tickets" :> Capture "merchantOrderId" T.Text :> "status"
@@ -75,21 +98,22 @@ getTicketStatus config booking = do
     logError $ "[CMRLV2:TicketStatus] Ticket status fetch failed: " <> ticketStatusRes.returnMessage
     throwError $ InternalError $ "Ticket status fetch failed: " <> ticketStatusRes.returnMessage
 
-  tickets <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
-  logInfo $ "[CMRLV2:TicketStatus] Returning " <> show (length tickets) <> " tickets"
+  logInfo $ "[CMRLV2:TicketStatus] Returning " <> show (length ticketStatusRes.ticket_Response) <> " tickets from API response"
 
   return $
     map
-      ( \ticket ->
-          ProviderTicket
-            { ticketNumber = ticket.ticketNumber,
-              vehicleNumber = Nothing,
-              qrData = ticket.qrData,
-              qrStatus = T.pack $ show ticket.status,
-              qrValidity = ticket.validTill,
-              description = ticket.description,
-              qrRefreshAt = ticket.qrRefreshAt,
-              commencingHours = ticket.commencingHours
-            }
+      ( \ticketResp ->
+          let qrPayload = ticketResp.qR_Payload
+              qrData = "#" <> qrPayload.qR_Signature <> "#" <> qrPayload.qR_SVC <> "#" <> qrPayload.qR_Tkt_Block <> "#"
+           in ProviderTicket
+                { ticketNumber = ticketResp.qR_Tkt_Sl_No,
+                  vehicleNumber = Nothing,
+                  qrData = qrData,
+                  qrStatus = "ACTIVE",
+                  qrValidity = booking.validTill,
+                  description = Nothing,
+                  qrRefreshAt = Nothing,
+                  commencingHours = Nothing
+                }
       )
-      tickets
+      ticketStatusRes.ticket_Response

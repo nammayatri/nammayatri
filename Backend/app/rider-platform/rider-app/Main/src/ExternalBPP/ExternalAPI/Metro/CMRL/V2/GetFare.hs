@@ -5,7 +5,6 @@ module ExternalBPP.ExternalAPI.Metro.CMRL.V2.GetFare where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
-import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Text as T
 import Domain.Types.FRFSQuoteCategorySpec
@@ -34,18 +33,23 @@ data GetFareReq = GetFareReq
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data GetFareResult = GetFareResult
-  { fare :: Maybe HighPrecMoney,
-    discountedFare :: Maybe HighPrecMoney
+data GetFareItem = GetFareItem
+  { fromStationId :: T.Text,
+    toStationId :: T.Text,
+    fareBeforeDiscount :: Double,
+    discountAmount :: Double,
+    fareAfterDiscount :: Double,
+    cgst :: Double,
+    sgst :: Double,
+    finalFare :: Double,
+    fareValidTime :: T.Text,
+    fareQuotIdforOneTicket :: T.Text,
+    returnCode :: T.Text,
+    returnMsg :: T.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data GetFareRes = GetFareRes
-  { statusCode :: Int,
-    message :: T.Text,
-    result :: Maybe GetFareResult
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
+type GetFareRes = [GetFareItem]
 
 type GetFareAPI =
   "api" :> "qr" :> "v1" :> "fare" :> "getfare"
@@ -71,55 +75,61 @@ getFare integrationBPPConfig config fareReq = do
       logDebug $ "[CMRLV2:GetFare] Request payload: " <> T.pack (show fareReq)
       let eulerClient = \accessToken -> ET.client getFareAPI (Just $ "Bearer " <> accessToken) fareReq
       fareRes <- callCMRLV2API config eulerClient "getFare" getFareAPI
-      logDebug $ "[CMRLV2:GetFare] API Response: statusCode=" <> show fareRes.statusCode <> ", message=" <> fareRes.message
+      logDebug $ "[CMRLV2:GetFare] API Response: " <> T.pack (show fareRes)
       ticketCategoryMetadataConfig <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity ADULT (becknVehicleCategoryToFrfsVehicleCategory integrationBPPConfig.vehicleCategory) integrationBPPConfig.merchantOperatingCityId
       fares <-
-        case ((fareRes.result >>= (.discountedFare)) <|> (fareRes.result >>= (.fare))) of
-          Just amount -> do
-            let offeredPrice = amount
-                originalPrice =
-                  case (ticketCategoryMetadataConfig <&> (.domainCategoryValue)) of
-                    Just domainCategoryValue ->
-                      case domainCategoryValue of
-                        FixedAmount discountAmount -> offeredPrice + discountAmount
-                        Percentage discountPercentage -> HighPrecMoney $ offeredPrice.getHighPrecMoney / (1 - (toRational discountPercentage / 100))
-                    Nothing -> offeredPrice
-            return $
-              [ FRFSUtils.FRFSFare
-                  { categories =
-                      [ FRFSUtils.FRFSTicketCategory
-                          { category = ADULT,
-                            price =
-                              Price
-                                { amountInt = round originalPrice,
-                                  amount = originalPrice,
-                                  currency = INR
-                                },
-                            offeredPrice =
-                              Price
-                                { amountInt = round amount,
-                                  amount = amount,
-                                  currency = INR
-                                },
-                            eligibility = True
-                          }
-                      ],
-                    fareDetails = Nothing,
-                    farePolicyId = Nothing,
-                    vehicleServiceTier =
-                      FRFSUtils.FRFSVehicleServiceTier
-                        { serviceTierType = Spec.ORDINARY,
-                          serviceTierProviderCode = "ORDINARY",
-                          serviceTierShortName = "ORDINARY",
-                          serviceTierDescription = "ORDINARY",
-                          serviceTierLongName = "ORDINARY",
-                          isAirConditioned = Just False
-                        },
-                    fareQuoteType = Nothing
-                  }
-              ]
-          Nothing -> do
-            logDebug "[CMRLV2:GetFare] No fare found in response"
+        case fareRes of
+          (fareItem : _) -> do
+            if fareItem.returnCode == "0"
+              then do
+                let amount = HighPrecMoney $ toRational fareItem.finalFare
+                    offeredPrice = amount
+                    originalPrice =
+                      case (ticketCategoryMetadataConfig <&> (.domainCategoryValue)) of
+                        Just domainCategoryValue ->
+                          case domainCategoryValue of
+                            FixedAmount discountAmt -> offeredPrice + discountAmt
+                            Percentage discountPercentage -> HighPrecMoney $ offeredPrice.getHighPrecMoney / (1 - (toRational discountPercentage / 100))
+                        Nothing -> offeredPrice
+                return $
+                  [ FRFSUtils.FRFSFare
+                      { categories =
+                          [ FRFSUtils.FRFSTicketCategory
+                              { category = ADULT,
+                                price =
+                                  Price
+                                    { amountInt = round originalPrice,
+                                      amount = originalPrice,
+                                      currency = INR
+                                    },
+                                offeredPrice =
+                                  Price
+                                    { amountInt = round amount,
+                                      amount = amount,
+                                      currency = INR
+                                    },
+                                eligibility = True
+                              }
+                          ],
+                        fareDetails = Nothing,
+                        farePolicyId = Nothing,
+                        vehicleServiceTier =
+                          FRFSUtils.FRFSVehicleServiceTier
+                            { serviceTierType = Spec.ORDINARY,
+                              serviceTierProviderCode = "ORDINARY",
+                              serviceTierShortName = "ORDINARY",
+                              serviceTierDescription = "ORDINARY",
+                              serviceTierLongName = "ORDINARY",
+                              isAirConditioned = Just False
+                            },
+                        fareQuoteType = Nothing
+                      }
+                  ]
+              else do
+                logWarning $ "[CMRLV2:GetFare] API returned error: returnCode=" <> fareItem.returnCode <> ", returnMsg=" <> fareItem.returnMsg
+                return []
+          [] -> do
+            logDebug "[CMRLV2:GetFare] No fare found in response (empty array)"
             return []
       logInfo $ "[CMRLV2:GetFare] Caching fares, count: " <> show (length fares)
       Hedis.setExp cacheKey fares 86400
