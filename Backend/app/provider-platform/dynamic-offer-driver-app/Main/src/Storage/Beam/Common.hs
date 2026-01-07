@@ -37,6 +37,7 @@ import Storage.Beam.FleetOperatorDailyStats
 import Storage.Beam.FleetOwnerInformation
 import Storage.Beam.FleetRcDailyStats
 import Storage.Beam.Geometry
+import Storage.Beam.Geometry.GeometryGeom as BeamGeomG
 import Storage.Beam.IdfyVerification
 import Storage.Beam.Image
 import Storage.Beam.InterCityTravelCities
@@ -64,6 +65,7 @@ atlasDB =
     `B.withDbModification` B.dbModification
       { exophone = exophoneTable,
         geometry = geometryTable,
+        geometryGeom = geometryGeomTable,
         interCityTravelCities = interCityTravelCitiesTable,
         vehicle = vehicleTable,
         image = imageTable,
@@ -108,6 +110,7 @@ atlasDB =
 data AtlasDB f = AtlasDB
   { exophone :: f (B.TableEntity ExophoneT),
     geometry :: f (B.TableEntity GeometryT),
+    geometryGeom :: f (B.TableEntity BeamGeomG.GeometryGeomT),
     interCityTravelCities :: f (B.TableEntity InterCityTravelCitiesT),
     vehicle :: f (B.TableEntity VehicleT),
     image :: f (B.TableEntity ImageT),
