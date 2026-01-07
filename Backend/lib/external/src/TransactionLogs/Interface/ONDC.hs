@@ -15,7 +15,6 @@
 module TransactionLogs.Interface.ONDC where
 
 import qualified Data.Text as T
-import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import qualified TransactionLogs.Interface.Types as IT
