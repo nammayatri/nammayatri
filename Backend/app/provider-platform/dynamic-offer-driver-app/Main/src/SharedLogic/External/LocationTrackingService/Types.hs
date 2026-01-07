@@ -59,8 +59,9 @@ data NearByReq = NearByReq
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-newtype LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
-  { url :: BaseUrl
+data LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
+  { url :: BaseUrl,
+    secondaryUrl :: Maybe BaseUrl
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall)
 

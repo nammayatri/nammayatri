@@ -319,7 +319,8 @@ let superPositionConfig =
       , enableSuperPosition = False
       }
 
-let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
+let LocationTrackingeServiceConfig =
+      { url = "http://localhost:8081/", secondaryUrl = None Text }
 
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername

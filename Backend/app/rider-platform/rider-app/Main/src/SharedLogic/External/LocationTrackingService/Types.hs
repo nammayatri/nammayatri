@@ -82,8 +82,9 @@ instance FromJSON VehicleTrackingOnRouteReq where
 instance ToJSON VehicleTrackingOnRouteReq where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
-newtype LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
-  { url :: BaseUrl
+data LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
+  { url :: BaseUrl,
+    secondaryUrl :: Maybe BaseUrl
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall)
 
