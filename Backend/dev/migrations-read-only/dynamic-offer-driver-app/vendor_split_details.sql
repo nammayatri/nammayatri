@@ -9,3 +9,9 @@ ALTER TABLE atlas_driver_offer_bpp.vendor_split_details ADD COLUMN vendor_id tex
 ALTER TABLE atlas_driver_offer_bpp.vendor_split_details ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.vendor_split_details ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.vendor_split_details ADD PRIMARY KEY ( area, merchant_operating_city_id, vehicle_variant, vendor_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vendor_split_details ADD COLUMN max_vendor_fee_amount double precision ;

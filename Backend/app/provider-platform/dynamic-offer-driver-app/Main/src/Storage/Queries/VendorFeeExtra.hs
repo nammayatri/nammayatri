@@ -123,3 +123,39 @@ resetVendorFee merchantOpCityId vendorFees = do
             Se.Is Beam.vendorId $ Se.Eq vendorFee.vendorId
           ]
       ]
+
+-- Updates existing vendor fee by adding new amount, respecting maxVendorFeeAmount limit
+-- If oldVendorFeeAmount == limit: skip update. If oldVendorFeeAmount + newAmount > limit: cap at limit. Otherwise: add normally
+updateVendorFeeWithMaxLimit :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMC.MerchantOperatingCity -> VendorFee -> Maybe HighPrecMoney -> m ()
+updateVendorFeeWithMaxLimit merchantOpCityId vendorFee maxLimit = do
+  mbOldVendorFee <- findByVendorAndDriverFeeId vendorFee.vendorId vendorFee.driverFeeId
+  case mbOldVendorFee of
+    Just oldVendorFee -> do
+      let shouldUpdate = maybe True (> oldVendorFee.amount) maxLimit
+      when shouldUpdate $ do
+        let newTotal = HighPrecMoney $ oldVendorFee.amount.getHighPrecMoney + vendorFee.amount.getHighPrecMoney
+            finalAmount = maybe newTotal (min newTotal) maxLimit
+        transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+        updateWithKV
+          [ Se.Set Beam.amount (roundToTwoDecimalPlaces finalAmount),
+            Se.Set Beam.updatedAt now
+          ]
+          [ Se.And
+              [ Se.Is Beam.driverFeeId $ Se.Eq vendorFee.driverFeeId.getId,
+                Se.Is Beam.vendorId $ Se.Eq vendorFee.vendorId
+              ]
+          ]
+    _ -> createVendorFeeWithMaxLimit vendorFee maxLimit
+
+-- Creates new vendor fee, capping amount at maxVendorFeeAmount if it exceeds the limit
+createVendorFeeWithMaxLimit :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => VendorFee -> Maybe HighPrecMoney -> m ()
+createVendorFeeWithMaxLimit VendorFee {..} maxLimit = do
+  let finalAmount = maybe amount (min amount) maxLimit
+  createWithKV VendorFee {amount = finalAmount, ..}
+
+updateManyVendorFeeWithMaxLimit :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMC.MerchantOperatingCity -> [(VendorFee, Maybe HighPrecMoney)] -> m ()
+updateManyVendorFeeWithMaxLimit merchantOpCityId = traverse_ $ \(vendorFee, maxLimit) -> updateVendorFeeWithMaxLimit merchantOpCityId vendorFee maxLimit
+
+createManyWithMaxLimit :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [(VendorFee, Maybe HighPrecMoney)] -> m ()
+createManyWithMaxLimit = traverse_ $ \(vendorFee, maxLimit) -> createVendorFeeWithMaxLimit vendorFee maxLimit
