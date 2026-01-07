@@ -19,6 +19,7 @@ VendorSplitDetails:
     vehicleVariant : VehicleVariant|NoRelation
     splitType : SplitType
     splitValue : Double
+    maxVendorFeeAmount : Maybe HighPrecMoney
 
   constraints:
     merchantOperatingCityId: PrimaryKey

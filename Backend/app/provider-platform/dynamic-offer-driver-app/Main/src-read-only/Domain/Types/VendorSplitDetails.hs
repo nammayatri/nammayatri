@@ -8,12 +8,14 @@ import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Types.SpecialLocation
 import qualified Tools.Beam.UtilsTH
 
 data VendorSplitDetails = VendorSplitDetails
   { area :: Lib.Types.SpecialLocation.Area,
+    maxVendorFeeAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     splitType :: Domain.Types.VendorSplitDetails.SplitType,
     splitValue :: Kernel.Prelude.Double,
