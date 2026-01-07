@@ -324,6 +324,7 @@ data RideInfoRes = RideInfoRes
     vehicleServiceTierName :: Kernel.Prelude.Text,
     nextStopLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
     lastStopLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
+    stopInformation :: Kernel.Prelude.Maybe [StopInformation],
     endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mbDefaultServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideCity :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -403,6 +404,18 @@ data Status
   | ON_PICKUP
   | IDLE
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data StopInformation = StopInformation
+  { stopId :: Kernel.Prelude.Text,
+    stopLocId :: Kernel.Prelude.Text,
+    stopOrder :: Kernel.Prelude.Int,
+    waitingTimeStart :: Kernel.Prelude.UTCTime,
+    waitingTimeEnd :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    stopStartLatLng :: Kernel.External.Maps.Types.LatLong,
+    stopEndLatLng :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong
+  }
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype TicketRideListRes = TicketRideListRes {rides :: [RideInfo]}
