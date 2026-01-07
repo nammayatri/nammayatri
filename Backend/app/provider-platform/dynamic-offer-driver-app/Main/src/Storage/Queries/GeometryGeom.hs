@@ -32,7 +32,6 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
-import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry.Geometry as BeamG
 import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
@@ -77,17 +76,21 @@ instance FromTType' (Text, Context.City, Context.IndianState, Text, Maybe Text) 
             geom = gGeom
           }
 
+-- | Update geometry using raw Beam update that doesn't return rows.
+-- Uses L.updateRows with B.update' to avoid type mismatch error that occurs with updateWithKV
+-- which tries to read back the updated rows containing the geometry column.
 updateGeometry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Context.IndianState -> Text -> Text -> m ()
 updateGeometry cityParam stateParam regionParam newGeom = do
-  updateWithKV
-    [ Se.Set BeamGeomG.geom (Just newGeom)
-    ]
-    [ Se.And
-        [ Se.Is BeamGeomG.city (Se.Eq cityParam),
-          Se.Is BeamGeomG.state (Se.Eq stateParam),
-          Se.Is BeamGeomG.region (Se.Eq regionParam)
-        ]
-    ]
+  dbConf <- getMasterBeamConfig
+  void $
+    L.runDB dbConf $
+      L.updateRows $
+        B.update'
+          (BeamCommon.geometryGeom BeamCommon.atlasDB)
+          ( \BeamGeomG.GeometryGeomT {..} ->
+              geom B.<-. B.val_ (Just newGeom)
+          )
+          (\BeamGeomG.GeometryGeomT {..} -> B.sqlBool_ $ city B.==. B.val_ cityParam B.&&. state B.==. B.val_ stateParam B.&&. region B.==. B.val_ regionParam)
 
 instance FromTType' BeamGeomG.GeometryGeom Geometry where
   fromTType' BeamGeomG.GeometryGeomT {..} = do
