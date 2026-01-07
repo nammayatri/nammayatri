@@ -9,6 +9,7 @@ import qualified Beckn.ACL.FRFS.Select as ACL
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
+import qualified Data.Text as T
 import Domain.Action.Beckn.FRFS.Common hiding (status)
 import qualified Domain.Action.Beckn.FRFS.OnInit as DOnInit
 import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
@@ -39,7 +40,9 @@ import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.PTCircuitBreaker as CB
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
@@ -169,6 +172,20 @@ init :: (FRFSConfirmFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfi
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbEnableOffer = do
   Metrics.startMetrics Metrics.INIT_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+  -- Circuit breaker check
+  let ptMode = CB.vehicleCategoryToPTMode booking.vehicleType
+  mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing
+  let circuitOpen = CB.isCircuitOpen ptMode CB.BookingAPI mRiderConfig
+  let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
+  let apiConfig = cbConfig.booking
+
+  -- If circuit is open, try canary request
+  when circuitOpen $ do
+    let canaryAllowed = fromMaybe 1 (apiConfig <&> (.canaryAllowedPerWindow))
+    let canaryWindow = fromMaybe 120 (apiConfig <&> (.canaryWindowSeconds))
+    canarySlot <- CB.tryAcquireCanarySlot ptMode CB.BookingAPI merchantOperatingCity.id canaryAllowed canaryWindow
+    unless canarySlot $ throwError $ PTBookingTemporarilyDisabled (T.pack $ show ptMode)
+
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
@@ -185,8 +202,17 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       logDebug $ "FRFS InitReq " <> encodeToText bknInitReq
       void $ CallFRFSBPP.init providerUrl bknInitReq merchant.id
     _ -> do
-      onInitReq <- Flow.init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories
-      processOnInit onInitReq
+      result <- withTryCatch "ExternalBPP:init" $ Flow.init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories
+      case result of
+        Left err -> do
+          CB.recordFailure ptMode CB.BookingAPI merchantOperatingCity.id
+          CB.checkAndDisableIfNeeded ptMode CB.BookingAPI merchantOperatingCity.id cbConfig
+          throwError $ InternalError $ "Init failed: " <> show err
+        Right onInitReq -> do
+          -- If this was a canary request and it succeeded, re-enable the circuit
+          when circuitOpen $ CB.reEnableCircuit ptMode CB.BookingAPI merchantOperatingCity.id
+          CB.recordSuccess ptMode CB.BookingAPI merchantOperatingCity.id
+          processOnInit onInitReq
   where
     processOnInit :: (FRFSConfirmFlow m r) => DOnInit.DOnInit -> m ()
     processOnInit onInitReq = do
