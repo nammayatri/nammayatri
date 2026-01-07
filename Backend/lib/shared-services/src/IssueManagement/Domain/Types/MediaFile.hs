@@ -14,9 +14,9 @@
 
 module IssueManagement.Domain.Types.MediaFile where
 
-import AWS.S3 (FileType (..))
 import Kernel.Prelude
 import Kernel.Types.Id
+import Storage.Types (FileType (..))
 
 data MediaFile = MediaFile
   { id :: Id MediaFile,

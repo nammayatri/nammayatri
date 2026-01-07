@@ -6,7 +6,6 @@ module IssueManagement.Common.UI.Issue
   )
 where
 
-import AWS.S3 (FileType (..))
 import Data.Aeson
 import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T hiding (count, map)
@@ -23,6 +22,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Types (FileType (..))
 import qualified Text.Read as TR (read)
 
 type IssueCreateAPI =
