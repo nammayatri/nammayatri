@@ -517,3 +517,11 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN single_mode_walk_speed double prec
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN default_service_tier_order_config text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN suburban_fare_caching_allowed boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN pt_circuit_breaker_config json ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN metro_fare_caching_allowed boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN bus_fare_caching_allowed boolean ;

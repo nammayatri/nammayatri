@@ -440,6 +440,7 @@ library
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PickupETA
+      SharedLogic.PTCircuitBreaker
       SharedLogic.PublicTransport
       SharedLogic.Quote
       SharedLogic.Referral
