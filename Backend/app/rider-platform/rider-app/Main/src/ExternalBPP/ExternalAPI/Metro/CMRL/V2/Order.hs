@@ -26,19 +26,16 @@ import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 
--- Request wrapper with encrypted payload
 data TicketReq = TicketReq
-  { request :: T.Text -- Encrypted payload
+  { request :: T.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
--- Response wrapper with encrypted response
 data TicketEncryptedRes = TicketEncryptedRes
-  { response :: T.Text -- Encrypted response
+  { response :: T.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
--- Actual payload structure (before encryption)
 data OperatorData = OperatorData
   { operatorNameId :: Int,
     merchantOrderId :: T.Text,
@@ -98,15 +95,20 @@ data GenerateTicketPayload = GenerateTicketPayload
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
--- QR Payload structure
 data QRPayload = QRPayload
   { qR_Signature :: T.Text,
     qR_SVC :: T.Text,
     qR_Tkt_Block :: T.Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON)
 
--- Ticket response structure
+instance FromJSON QRPayload where
+  parseJSON = withObject "QRPayload" $ \v ->
+    QRPayload
+      <$> v .: "QR_Signature"
+      <*> v .: "QR_SVC"
+      <*> v .: "QR_Tkt_Block"
+
 data TicketResponse = TicketResponse
   { qR_Payload :: QRPayload,
     qR_Tkt_Sl_No :: T.Text,
@@ -118,15 +120,34 @@ data TicketResponse = TicketResponse
     ticket_Generation_Time :: T.Text,
     ticket_Validity_Time :: T.Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON)
 
--- Decrypted response structure
+instance FromJSON TicketResponse where
+  parseJSON = withObject "TicketResponse" $ \v ->
+    TicketResponse
+      <$> v .: "QR_Payload"
+      <*> v .: "QR_Tkt_Sl_No"
+      <*> v .: "QR_SHA256"
+      <*> v .: "Merchant_Order_Id"
+      <*> v .: "Interchange_Status"
+      <*> v .: "Interchange_Stations"
+      <*> v .: "Platform_No"
+      <*> v .: "Ticket_Generation_Time"
+      <*> v .: "Ticket_Validity_Time"
+
 data TicketRes = TicketRes
   { returnCode :: T.Text,
     returnMessage :: T.Text,
     ticket_Response :: [TicketResponse]
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON)
+
+instance FromJSON TicketRes where
+  parseJSON = withObject "TicketRes" $ \v ->
+    TicketRes
+      <$> v .: "returnCode"
+      <*> v .: "returnMessage"
+      <*> v .: "Ticket_Response"
 
 type TicketAPI =
   "api" :> "qr" :> "v1" :> "tickets" :> "generate"
