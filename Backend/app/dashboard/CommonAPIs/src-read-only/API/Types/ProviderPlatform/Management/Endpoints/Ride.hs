@@ -48,6 +48,7 @@ data CancellationSource
   | ByMerchant
   | ByAllocator
   | ByApplication
+  | ByFleetOwner
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

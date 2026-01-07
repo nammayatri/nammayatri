@@ -316,6 +316,7 @@ castCancellationSource = \case
   SBCR.ByMerchant -> BookingCancelledOU.ByMerchant
   SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
   SBCR.ByApplication -> BookingCancelledOU.ByApplication
+  SBCR.ByFleetOwner -> BookingCancelledOU.ByFleetOwner
 
 mkNewMessageTags :: Text -> Maybe [Spec.TagGroup]
 mkNewMessageTags message =
