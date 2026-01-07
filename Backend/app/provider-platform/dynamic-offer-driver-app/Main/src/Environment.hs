@@ -76,6 +76,7 @@ data AppCfg = AppCfg
     cutOffHedisCluster :: Bool,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    hedisSecondaryClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,

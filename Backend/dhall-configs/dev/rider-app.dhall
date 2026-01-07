@@ -215,6 +215,17 @@ let hccfg =
       , connectReadOnly = True
       }
 
+let hccfgSecondary =
+      { connectHost = "localhost"
+      , connectPort = 30002
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
 let kvConfigUpdateFrequency = +10
 
 let RiderJobType =
@@ -347,6 +358,7 @@ in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
     , hedisClusterCfg = hccfg
+    , hedisSecondaryClusterCfg = hccfgSecondary
     , hedisNonCriticalCfg = hcfg
     , hedisNonCriticalClusterCfg = hccfg
     , hedisMigrationStage = False
