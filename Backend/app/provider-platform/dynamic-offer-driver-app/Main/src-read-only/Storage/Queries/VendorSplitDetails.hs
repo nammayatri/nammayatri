@@ -53,7 +53,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.VendorSplitDetails.VendorSplitDetails {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.splitType splitType, Se.Set Beam.splitValue splitValue, Se.Set Beam.updatedAt _now]
+    [Se.Set Beam.maxVendorFeeAmount maxVendorFeeAmount, Se.Set Beam.splitType splitType, Se.Set Beam.splitValue splitValue, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.area $ Se.Eq area,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -68,6 +68,7 @@ instance FromTType' Beam.VendorSplitDetails Domain.Types.VendorSplitDetails.Vend
       Just
         Domain.Types.VendorSplitDetails.VendorSplitDetails
           { area = area,
+            maxVendorFeeAmount = maxVendorFeeAmount,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             splitType = splitType,
             splitValue = splitValue,
@@ -81,6 +82,7 @@ instance ToTType' Beam.VendorSplitDetails Domain.Types.VendorSplitDetails.Vendor
   toTType' (Domain.Types.VendorSplitDetails.VendorSplitDetails {..}) = do
     Beam.VendorSplitDetailsT
       { Beam.area = area,
+        Beam.maxVendorFeeAmount = maxVendorFeeAmount,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.splitType = splitType,
         Beam.splitValue = splitValue,
