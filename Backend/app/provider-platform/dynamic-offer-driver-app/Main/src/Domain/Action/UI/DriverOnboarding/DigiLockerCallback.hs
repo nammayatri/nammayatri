@@ -49,8 +49,7 @@ import Tools.Error
 import qualified Tools.Verification as Verification
 
 type DigiLockerCallbackAPI =
-  "dobpp"
-    :> "verify"
+  "verify"
     :> "callback"
     :> "digiLocker"
     :> QueryParam "error" Text
