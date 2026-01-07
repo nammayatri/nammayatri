@@ -93,7 +93,8 @@ postSocialLogin req = do
           email = Just email,
           identifierType = Just SP.EMAIL,
           registrationLat = req.registrationLat,
-          registrationLon = req.registrationLon
+          registrationLon = req.registrationLon,
+          otpChannel = Nothing
         }
 
 makeSession ::

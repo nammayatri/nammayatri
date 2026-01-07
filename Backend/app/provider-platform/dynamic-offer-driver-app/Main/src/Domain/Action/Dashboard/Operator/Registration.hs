@@ -69,5 +69,6 @@ buildOperatorAuthReq merchantId opCity Common.OperatorRegisterReq {..} =
       identifierType = Just DP.MOBILENUMBER,
       email = Nothing,
       registrationLat = Nothing,
-      registrationLon = Nothing
+      registrationLon = Nothing,
+      otpChannel = Nothing
     }

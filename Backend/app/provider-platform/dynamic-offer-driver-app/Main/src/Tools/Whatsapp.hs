@@ -15,6 +15,7 @@
 module Tools.Whatsapp
   ( module Reexport,
     whatsAppOptAPI,
+    whatsAppOtpApi,
     whatsAppSendMessageWithTemplateIdAPI,
   )
 where
@@ -25,6 +26,7 @@ import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Kernel.External.Types (ServiceFlow)
 import Kernel.External.Whatsapp.Interface as Reexport hiding
   ( whatsAppOptApi,
+    whatsAppOtpApi,
     whatsAppSendMessageWithTemplateIdAPI,
   )
 import qualified Kernel.External.Whatsapp.Interface as GupShup
@@ -40,6 +42,25 @@ whatsAppOptAPI :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> 
 whatsAppOptAPI _merchantId merchantOpCityId req = do
   void $ GupShup.whatsAppOptApi handler req
   return Success
+  where
+    handler = GupShup.WhatsappHandler {..}
+
+    getProvidersPriorityList = do
+      merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      let whatsappServiceProviders = merchantConfig.whatsappProvidersPriorityList
+      when (null whatsappServiceProviders) $ throwError $ InternalError ("No whatsapp service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
+      pure whatsappServiceProviders
+
+    getProviderConfig provider = do
+      merchantWhatsappServiceConfig <-
+        QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId
+          >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      case merchantWhatsappServiceConfig.serviceConfig of
+        DMSC.WhatsappServiceConfig msc -> pure msc
+        _ -> throwError $ InternalError "Unknown Service Config"
+
+whatsAppOtpApi :: ServiceFlow m r => Id MerchantOperatingCity -> GupShup.SendOtpApiReq -> m GupShup.SendOtpApiResp
+whatsAppOtpApi merchantOpCityId = GupShup.whatsAppOtpApi handler
   where
     handler = GupShup.WhatsappHandler {..}
 
