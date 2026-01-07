@@ -14,6 +14,8 @@
 
 module SharedLogic.External.LocationTrackingService.Flow where
 
+import qualified Data.Either as Either
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
@@ -40,13 +42,25 @@ vehicleTrackingOnRoute vehicleTracking = do
   logDebug $ "lts vehicle tracking on route: " <> show vehicleTrackingOnRouteResp
   return vehicleTrackingOnRouteResp
 
-nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => NearByDriverReq -> m [NearByDriverRes]
+nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, Forkable m) => NearByDriverReq -> m [NearByDriverRes]
 nearBy req = do
   ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
-  nearByRes <-
-    withShortRetry $
-      callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
-        >>= fromEitherM (ExternalAPICallError (Just "ERROR_IN_LTS_NEAR_BY_API") url)
-  logDebug $ "lts nearBy: " <> show nearByRes
-  return nearByRes
+  -- Call both APIs (primary and secondary cloud) concurrently and combine results
+  let callNearByAPI url = do
+        withShortRetry $
+          callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
+            >>= \case
+              Right locations -> pure locations
+              Left err -> do
+                logError $ "Failed to call nearBy API for url: " <> show url <> ", error: " <> show err
+                pure []
+
+  primaryAwaitable <- awaitableFork "primaryLTS" $ callNearByAPI ltsCfg.url
+  mbSecondaryAwaitable <- forM ltsCfg.secondaryUrl $ awaitableFork "secondaryLTS" . callNearByAPI
+
+  primaryResult <- Either.fromRight [] <$> L.await Nothing primaryAwaitable
+  secondaryResult <- maybe (pure []) (fmap (Either.fromRight []) . L.await Nothing) mbSecondaryAwaitable
+
+  let combinedLocations = primaryResult <> secondaryResult
+  logDebug $ "lts nearBy: " <> show combinedLocations
+  return combinedLocations

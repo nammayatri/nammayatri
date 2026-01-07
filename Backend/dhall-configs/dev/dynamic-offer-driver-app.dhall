@@ -332,7 +332,8 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.SendFeedbackPN, mapValue = True }
       ]
 
-let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
+let LocationTrackingeServiceConfig =
+      { url = "http://localhost:8081/", secondaryUrl = None Text }
 
 let VocaliticsConfig = { url = "http://0.0.0.0:8000/", token = "secret-key" }
 
