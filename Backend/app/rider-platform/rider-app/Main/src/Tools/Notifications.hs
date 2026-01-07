@@ -1462,6 +1462,32 @@ notifyFirstRideEvent personId vehicleCategory tripCategory = do
 -- title = fromMaybe (T.pack "First Ride Event") mbTitle
 -- body = fromMaybe (unwords ["Congratulations! You have taken your first ride with us."]) mbBody
 
+notifyFirstRideReminder :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Person.Person -> m ()
+notifyFirstRideReminder person = do
+  let entity = Notification.Entity Notification.Product person.id.getId ()
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "FIRST_RIDE_REMINDER" identity)
+    EmptyDynamicParam
+    entity
+    Nothing
+    []
+    Nothing
+    Nothing
+
+notifyInactiveRideReminder :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Person.Person -> m ()
+notifyInactiveRideReminder person = do
+  let entity = Notification.Entity Notification.Product person.id.getId ()
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "INACTIVE_RIDE_REMINDER" identity)
+    EmptyDynamicParam
+    entity
+    Nothing
+    []
+    Nothing
+    Nothing
+
 notifyToAllBookingParties :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => [Person] -> Maybe TripCategory -> Text -> m ()
 notifyToAllBookingParties persons tripCategory notikey =
   forM_ persons \person -> do

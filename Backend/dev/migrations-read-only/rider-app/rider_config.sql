@@ -517,3 +517,14 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN single_mode_walk_speed double prec
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN default_service_tier_order_config text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN first_ride_reminder_days integer []  default '{7, 10, 14}';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN inactive_ride_reminder_days integer []  default '{65, 70, 75}';

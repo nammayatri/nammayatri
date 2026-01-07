@@ -185,6 +185,8 @@ RiderConfig:
     subwayRestrictionEndTime: Maybe TimeOfDay
     nearbyBusRadiusBucketStep: Maybe Meters
     singleModeWalkSpeed: Maybe Double
+    firstRideReminderDays: "Maybe [Int]"
+    inactiveRideReminderDays: "Maybe [Int]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -235,6 +237,8 @@ RiderConfig:
     refundStatusUpdateRetries: Maybe Int
     sourceOfServiceTier: Maybe ServiceTierSource
     enableRideEndOffers: Maybe Bool
+    firstRideReminderDays: Maybe [Int]
+    inactiveRideReminderDays: Maybe [Int]
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -293,6 +297,8 @@ RiderConfig:
     refundStatusUpdateRetries: fromMaybe 5 refundStatusUpdateRetries|E
     sourceOfServiceTier: fromMaybe (Domain.Types.RiderConfig.NANDI) sourceOfServiceTier|E
     enableRideEndOffers: fromMaybe False enableRideEndOffers|E
+    firstRideReminderDays: maybe (Just [7, 10, 14]) Just firstRideReminderDays|E
+    inactiveRideReminderDays: maybe (Just [65, 70, 75]) Just inactiveRideReminderDays|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -343,6 +349,8 @@ RiderConfig:
     refundStatusUpdateRetries: Just refundStatusUpdateRetries|E
     sourceOfServiceTier: Just sourceOfServiceTier|E
     enableRideEndOffers: Just enableRideEndOffers|E
+    firstRideReminderDays: firstRideReminderDays|E
+    inactiveRideReminderDays: inactiveRideReminderDays|E
 
 
   default:
@@ -390,6 +398,8 @@ RiderConfig:
     distanceToNearestStopThreshold: "200"
     validateSetOnboardingVehicleRequest: "false"
     enableOnlinePaymentRide: "false"
+    firstRideReminderDays: "'{7, 10, 14}'"
+    inactiveRideReminderDays: "'{65, 70, 75}'"
   queries:
     findByMerchantOperatingCityId:
       kvFunction: findOneWithKV
@@ -436,6 +446,8 @@ RiderConfig:
     specialVehicleNotificationConfigs: "json"
     serviceTierRelationshipCfg: "json"
     metricsBlacklistPatterns: text []
+    firstRideReminderDays: integer []
+    inactiveRideReminderDays: integer []
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

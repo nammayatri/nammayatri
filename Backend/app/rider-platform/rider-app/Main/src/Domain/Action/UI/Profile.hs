@@ -49,6 +49,7 @@ import Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
 import qualified Data.Text as T
+import Data.Time (diffDays, utctDay)
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Registration as DR
 import Domain.Types.Booking as DBooking
@@ -73,6 +74,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification as Notification
+import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig, useFakeSms)
@@ -110,10 +112,12 @@ import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPersonDEN
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import qualified Storage.Queries.PersonStats as QPersonStats
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SafetySettings as QSafety
 import Text.Regex.Posix ((=~))
 import Tools.Error
 import Tools.Event
+import qualified Tools.Notifications as Notify
 
 -- Email validation function
 isValidEmail :: Maybe Text -> Bool
@@ -282,7 +286,7 @@ getIsMultimodalRider enableMultiModalForAllUsers mbTags integratedBPPConfigs =
        in any (isMultimodalRiderTag multimodalTagName) currentTags && not (null integratedBPPConfigs)
 
 getPersonDetails ::
-  (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, ServiceFlow m r) =>
   (Id Person.Person, Id Merchant.Merchant) ->
   Maybe Int ->
   Maybe Text ->
@@ -349,6 +353,11 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
       )
       vehicleTypes
   let isMultimodalRider = getIsMultimodalRider riderConfig.enableMultiModalForAllUsers decPerson.customerNammaTags integratedBPPConfigs
+      hasTakenAnyRide = not (null hasTakenValidRide)
+  fork "Check and send first ride reminder FCM" $ do
+    checkAndSendFirstRideReminder person riderConfig hasTakenAnyRide
+  fork "Check and send inactive ride reminder FCM" $ do
+    checkAndSendInactiveRideReminder person riderConfig hasTakenAnyRide
   makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage
   where
     makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam = do
@@ -843,3 +852,55 @@ verifyUpdateAuthDataOtp (personId, _merchantId) req = do
 makeUpdateAuthRedisKey :: SP.IdentifierType -> Text -> Text
 makeUpdateAuthRedisKey identifierType identifier =
   "updateAuth:" <> show identifierType <> ":" <> identifier
+
+getRideReminderRedisKey :: Id Person.Person -> Text
+getRideReminderRedisKey personId = "RideReminder:personId:" <> personId.getId
+
+checkAndSendRideReminder ::
+  (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) =>
+  Person.Person ->
+  [Int] ->
+  Int ->
+  (Person.Person -> m ()) ->
+  m ()
+checkAndSendRideReminder person reminderDays currentDay notifyFn = do
+  when (currentDay `elem` reminderDays) $ do
+    let redisKey = getRideReminderRedisKey person.id
+    mbLastSentDay <- Redis.get redisKey
+    let shouldSend = case mbLastSentDay of
+          Just lastSentDay -> lastSentDay /= currentDay
+          Nothing -> True
+    when shouldSend $ do
+      notifyFn person
+      Redis.setExp redisKey currentDay (24 * 60 * 60)
+
+checkAndSendFirstRideReminder ::
+  (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) =>
+  Person.Person ->
+  DRC.RiderConfig ->
+  Bool ->
+  m ()
+checkAndSendFirstRideReminder person riderConfig hasTakenValidRide = do
+  when (not hasTakenValidRide) $ do
+    whenJust riderConfig.firstRideReminderDays $ \reminderDays -> do
+      currentTime <- getCurrentTime
+      let daysSinceSignup = diffDays (utctDay currentTime) (utctDay person.createdAt)
+          currentDay = fromIntegral daysSinceSignup
+      checkAndSendRideReminder person reminderDays currentDay Notify.notifyFirstRideReminder
+
+checkAndSendInactiveRideReminder ::
+  (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) =>
+  Person.Person ->
+  DRC.RiderConfig ->
+  Bool ->
+  m ()
+checkAndSendInactiveRideReminder person riderConfig hasTakenValidRide = do
+  when hasTakenValidRide $ do
+    whenJust riderConfig.inactiveRideReminderDays $ \reminderDays -> do
+      mbLatestRide <- QRide.findLatestCompletedRide person.id
+      whenJust mbLatestRide $ \latestRide -> do
+        currentTime <- getCurrentTime
+        let lastRideTime = fromMaybe latestRide.createdAt latestRide.rideEndTime
+            daysSinceLastRide = diffDays (utctDay currentTime) (utctDay lastRideTime)
+            currentDay = fromIntegral daysSinceLastRide
+        checkAndSendRideReminder person reminderDays currentDay Notify.notifyInactiveRideReminder
