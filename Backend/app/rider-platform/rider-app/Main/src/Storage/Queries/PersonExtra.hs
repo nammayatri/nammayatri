@@ -362,6 +362,15 @@ updateHasTakenValidRide (Id personId) = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
+updateLastRideTimeStamp :: (MonadFlow m, EsqDBFlow m r) => Id Person -> UTCTime -> m ()
+updateLastRideTimeStamp (Id personId) lastRideTimeStamp = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.lastRideTimeStamp (Just lastRideTimeStamp),
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 updateReferredByCustomer :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m () -- TODO: move this once DSL Bug Fixed
 updateReferredByCustomer personId referredByPersonId = do
   now <- getCurrentTime
