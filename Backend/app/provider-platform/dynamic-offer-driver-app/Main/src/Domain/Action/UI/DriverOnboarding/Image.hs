@@ -28,7 +28,7 @@ module Domain.Action.UI.DriverOnboarding.Image
 where
 
 import qualified API.Types.UI.DriverOnboardingV2 as Domain
-import AWS.S3 as S3
+import qualified AWS.S3.Types as S3Types
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601
@@ -43,6 +43,7 @@ import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Decode, base64Encode)
+import qualified GCP.GCS.Types as GCSTypes
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Verification.Interface as VI
 import Kernel.Prelude
@@ -58,11 +59,13 @@ import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.FleetRCAssociationExtra as FRCA
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
+import qualified Storage.Types as StorageTypes
 import Tools.Error
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
@@ -113,14 +116,15 @@ data GetDocsResponse = GetDocsResponse
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
 createPath ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
+  (MonadTime m, MonadReader r m, HasField "storageConfig" r StorageTypes.StorageConfig) =>
   Text ->
   Text ->
   DVC.DocumentType ->
   Maybe Text ->
   m Text
 createPath driverId merchantId documentType mbExtension = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
+  storageConfig <- asks (.storageConfig)
+  let pathPrefix = getPathPrefixFromProvider storageConfig.primaryStorage
   now <- getCurrentTime
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
       sanitizedExt =
@@ -141,6 +145,12 @@ createPath driverId merchantId documentType mbExtension = do
         <> "."
         <> sanitizedExt
     )
+  where
+    getPathPrefixFromProvider provider = case provider of
+      StorageTypes.StorageS3 (S3Types.S3AwsConf config) -> config.pathPrefix
+      StorageTypes.StorageS3 (S3Types.S3MockConf config) -> config.pathPrefix
+      StorageTypes.StorageGCS (GCSTypes.GCSConf config) -> config.pathPrefix
+      StorageTypes.StorageGCS (GCSTypes.GCSMockConf config) -> config.pathPrefix
 
 validateImageHandler ::
   Bool ->
@@ -207,7 +217,7 @@ validateImageHandler isDashboard (personId, _, merchantOpCityId) req@ImageValida
       imagePath <- createPath personId.getId merchantId.getId imageType fileExtension
       fork "S3 Put Image" do
         Redis.withLockRedis (imageS3Lock imagePath) 5 $
-          S3.put (T.unpack imagePath) image
+          Storage.put (T.unpack imagePath) image
       imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId sdkFailureReason
       Query.create imageEntity
 
@@ -354,5 +364,5 @@ getImage :: Id DM.Merchant -> Id Domain.Image -> Flow Text
 getImage merchantId imageId = do
   imageMetadata <- Query.findById imageId
   case imageMetadata of
-    Just img | img.merchantId == merchantId -> S3.get $ T.unpack img.s3Path
+    Just img | img.merchantId == merchantId -> Storage.get $ T.unpack img.s3Path
     _ -> pure T.empty

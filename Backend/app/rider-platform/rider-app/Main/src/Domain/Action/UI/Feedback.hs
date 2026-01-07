@@ -25,7 +25,6 @@ module Domain.Action.UI.Feedback
   )
 where
 
-import qualified AWS.S3 as S3
 import qualified Data.Aeson as A
 import qualified Data.ByteString as B
 import qualified Data.Text as T
@@ -63,10 +62,12 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Issue as QIssue
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import Storage.Types (FileType (..))
 import Tools.Error
 import qualified Tools.Ticket as Ticket
 
@@ -135,9 +136,9 @@ feedback request personId = do
     _ -> pure Nothing
   filePath <- case request.mbAudio of
     Just audio -> do
-      let fileType = S3.Audio
+      let fileType = Audio
           contentType = T.pack "mp3"
-      filePath <- S3.createFilePath "/feedback-media/" ("bppBookingId-" <> bppBookingId.getId) fileType contentType
+      filePath <- Storage.createFilePath "/feedback-media/" ("bppBookingId-" <> bppBookingId.getId) fileType contentType
       void $ audioFeedbackUpload (personId, merchant.id) audio filePath
       return $ Just filePath
     Nothing -> do
@@ -299,7 +300,7 @@ audioFeedbackUpload (_personId, merchantId) audio filePath = do
   let fileSize = getFileSize audio
   when (fileSize > merchant.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
-  _ <- fork "S3 Put Feedback Media File" $ S3.put (T.unpack filePath) audio
+  _ <- fork "Storage Put Feedback Media File" $ Storage.put (T.unpack filePath) audio
   pure ()
   where
     getFileSize :: Text -> Int

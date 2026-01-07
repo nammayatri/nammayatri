@@ -8,7 +8,6 @@ where
 
 import qualified API.Client.RiderPlatform.AppManagement
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
-import AWS.S3 (FileType (..))
 import qualified Data.ByteString.Lazy as LBS
 import Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding (getDashboardAccessType)
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -25,6 +24,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
+import Storage.Types (FileType (..))
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error

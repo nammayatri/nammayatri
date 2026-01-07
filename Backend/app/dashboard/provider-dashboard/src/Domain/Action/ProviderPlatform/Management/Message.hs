@@ -27,7 +27,6 @@ where
 
 import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
-import AWS.S3 (FileType (..))
 import qualified Data.Text as DT
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -40,6 +39,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, throwError)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
+import Storage.Types (FileType (..))
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 

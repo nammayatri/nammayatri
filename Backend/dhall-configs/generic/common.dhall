@@ -22,6 +22,26 @@ let S3MockConfig =
 
 let S3Config = < S3AwsConf : S3AwsConfig | S3MockConf : S3MockConfig >
 
+let GCSConfigDetails =
+      { serviceAccountKey : Text
+      , bucketName : Text
+      , projectId : Text
+      , pathPrefix : Text
+      }
+
+let GCSMockConfig =
+      { baseLocalDirectory : Text, pathPrefix : Text, bucketName : Text }
+
+let GCSConfig = < GCSConf : GCSConfigDetails | GCSMockConf : GCSMockConfig >
+
+let StorageProvider = < StorageS3 : S3Config | StorageGCS : GCSConfig >
+
+let StorageConfig =
+      { primaryStorage : StorageProvider
+      , secondaryStorage : Optional StorageProvider
+      , enableMultiCloudWrite : Bool
+      }
+
 let smsSessionConfig = { attempts = +3, authExpiry = +3, tokenExpiry = +365 }
 
 let loggerConfig =
@@ -129,6 +149,9 @@ in  { smsSessionConfig
     , longDurationRetryCfg
     , ServerName
     , S3Config
+    , GCSConfig
+    , StorageConfig
+    , StorageProvider
     , healthCheckAppCfgT
     , periodType = PeriodType
     , consumerType = ConsumerType

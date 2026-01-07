@@ -64,6 +64,7 @@ import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
+import qualified Storage.Types as StorageTypes
 import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
@@ -91,6 +92,7 @@ data AppCfg = AppCfg
     signatureExpiry :: Seconds,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
+    storageConfig :: StorageTypes.StorageConfig,
     migrationPath :: [FilePath],
     autoMigrate :: Bool,
     coreVersion :: Text,
@@ -182,6 +184,7 @@ data AppEnv = AppEnv
     loggerConfig :: LoggerConfig,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
+    storageConfig :: StorageTypes.StorageConfig,
     graceTerminationPeriod :: Seconds,
     disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,

@@ -76,6 +76,7 @@ import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import Storage.CachedQueries.Merchant as CM
 import qualified Storage.Queries.BecknConfig as QBC
+import qualified Storage.Types as StorageTypes
 import System.Environment as SE
 import Tools.Error
 import Tools.Metrics
@@ -122,6 +123,7 @@ data AppCfg = AppCfg
     searchLimitExceedNotificationTemplate :: Text,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
+    storageConfig :: StorageTypes.StorageConfig,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
@@ -218,6 +220,7 @@ data AppEnv = AppEnv
     signatureExpiry :: Seconds,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
+    storageConfig :: StorageTypes.StorageConfig,
     s3Env :: S3Env Flow,
     s3EnvPublic :: S3Env Flow,
     disableSignatureAuth :: Bool,

@@ -14,7 +14,6 @@
 
 module Domain.Action.Beckn.Rating where
 
-import qualified AWS.S3 as S3
 import Data.List.Extra ((!?))
 import Data.Maybe
 import qualified Data.Text as T
@@ -53,6 +52,7 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDriverCorrelation as RDC
+import Storage.Types (FileType (..))
 import Tools.Error
 import Tools.Notifications
 
@@ -227,7 +227,7 @@ audioFeedbackUpload :: Maybe DBooking.Booking -> Maybe Text -> DTC.TransporterCo
 audioFeedbackUpload mbBooking mbFilePath transporterConfig = do
   case (mbBooking, mbFilePath) of
     (Just _booking, Just filePath) -> do
-      let fileType = S3.Audio
+      let fileType = Audio
       let fileUrl =
             transporterConfig.mediaFileUrlPattern
               & T.replace "<DOMAIN>" "feedback"
@@ -236,7 +236,7 @@ audioFeedbackUpload mbBooking mbFilePath transporterConfig = do
       return $ Just mediaId
     (_, _) -> return Nothing
 
-createMediaEntry :: Text -> S3.FileType -> Text -> Flow (Id D.MediaFile)
+createMediaEntry :: Text -> FileType -> Text -> Flow (Id D.MediaFile)
 createMediaEntry url fileType filePath = do
   fileEntity <- mkFile url
   _ <- QMF.create fileEntity

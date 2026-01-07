@@ -8,7 +8,7 @@ module SharedLogic.MediaFileDocument
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.MediaFileDocument as Common
-import AWS.S3 as S3
+import qualified AWS.S3.Types as S3Types
 import qualified "dashboard-helper-api" Dashboard.Common.MediaFileDocument as CommonMFD
 import Data.Either (isRight)
 import qualified Data.Text as T
@@ -20,6 +20,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
+import qualified GCP.GCS.Types as GCSTypes
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -35,8 +36,11 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.MediaFileDocument as QMFD
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
+import Storage.Types (FileType (..), eTagToHash)
+import qualified Storage.Types as StorageTypes
 import Tools.Error
 
 mkMediaFileDocLockKey ::
@@ -77,7 +81,7 @@ mediaFileDocumentUploadLink merchantShortId opCity requestorId req = do
     mediaFileDocument <- case listToMaybe existingMediaFiles of
       Nothing -> do
         mediaPath <- createMediaPathByRcId merchantOpCity.id rc.id mediaFileDocumentType fileExtension
-        mediaFileLink <- S3.generateUploadUrl (T.unpack mediaPath) merchant.mediaFileDocumentLinkExpires
+        mediaFileLink <- Storage.generateUploadUrl (T.unpack mediaPath) merchant.mediaFileDocumentLinkExpires
         newMediaFileDocument <- buildMediaFileDocument merchantOpCity (Id @DP.Person requestorId) mediaPath rc.id mediaFileLink req
         QMFD.create newMediaFileDocument
         let uploadlinkExpiredIn = fromIntegral merchant.mediaFileDocumentLinkExpires + 300 -- 5 minutes buffer
@@ -104,7 +108,7 @@ mediaFileDocumentUploadLink merchantShortId opCity requestorId req = do
   where
     validateContentType = do
       case req.fileType of
-        S3.Video -> case req.reqContentType of
+        Video -> case req.reqContentType of
           "video/mp4" -> pure "mp4"
           "video/x-msvideo" -> pure "avi"
           "video/mpeg" -> pure "mpeg"
@@ -124,14 +128,15 @@ castMediaFileDocumentStatus = \case
   DMFD.COMPLETED -> Common.COMPLETED
 
 createMediaPathByRcId ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
+  (MonadTime m, MonadReader r m, HasField "storageConfig" r StorageTypes.StorageConfig) =>
   Id DMOC.MerchantOperatingCity ->
   Id DRC.VehicleRegistrationCertificate ->
   DCommon.MediaFileDocumentType ->
   Text ->
   m Text
 createMediaPathByRcId merchantOpCityId rcId mediaFileDocumentType extension = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
+  storageConfig <- asks (.storageConfig)
+  let pathPrefix = getPathPrefixFromProvider storageConfig.primaryStorage
   now <- getCurrentTime
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
   return
@@ -145,6 +150,12 @@ createMediaPathByRcId merchantOpCityId rcId mediaFileDocumentType extension = do
         <> "."
         <> extension
     )
+  where
+    getPathPrefixFromProvider provider = case provider of
+      StorageTypes.StorageS3 (S3Types.S3AwsConf config) -> config.pathPrefix
+      StorageTypes.StorageS3 (S3Types.S3MockConf config) -> config.pathPrefix
+      StorageTypes.StorageGCS (GCSTypes.GCSConf config) -> config.pathPrefix
+      StorageTypes.StorageGCS (GCSTypes.GCSMockConf config) -> config.pathPrefix
 
 buildMediaFileDocument ::
   MonadFlow m =>
@@ -196,18 +207,18 @@ mediaFileDocumentConfirm merchantShortId opCity requestorId req = do
     throwError (InvalidRequest "MediaFileDocument download was already completed")
 
   let s3Path = T.unpack mediaFileDocument.s3Path
-  s3ObjectStatus <- catch (S3.headRequest s3Path) $ \(err :: SomeException) -> do
+  s3ObjectStatus <- catch (Storage.headRequest s3Path) $ \(err :: SomeException) -> do
     logError $ "File was not found: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show err
     QMFD.updateStatus DMFD.FAILED Nothing mediaFileDocumentId
     throwError $ InvalidRequest "File was not found"
 
   let fileSizeInBytes = s3ObjectStatus.fileSizeInBytes
-  let fileHash = S3.eTagToHash s3ObjectStatus.entityTag
+  let fileHash = eTagToHash s3ObjectStatus.entityTag
   checkVideoFileSize (Just merchantOpCityId) fileSizeInBytes mediaFileDocumentId >>= \case
     Right () -> pure ()
     Left errMessage -> do
       QMFD.updateStatus DMFD.FAILED Nothing mediaFileDocumentId
-      S3.delete s3Path
+      Storage.delete s3Path
       throwError $ InvalidRequest errMessage
 
   QMFD.updateStatus DMFD.CONFIRMED (Just fileHash) mediaFileDocumentId
@@ -253,7 +264,7 @@ mediaFileDocumentDelete merchantShortId _opCity requestorId req = do
         throwError (InvalidRequest "Media file document upload was not completed by another user")
       QMFD.updateStatus DMFD.DELETED Nothing mediaFileDocumentId
   let s3Path = T.unpack mediaFileDocument.s3Path
-  catch (S3.delete s3Path) $ \(err :: SomeException) -> do
+  catch (Storage.delete s3Path) $ \(err :: SomeException) -> do
     logWarning $ "Unable to delete file: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show err
   pure Success
 
@@ -287,7 +298,7 @@ mediaFileDocumentDownloadLink merchantShortId opCity mediaFileDocumentType' rcNu
   let fileWasUploaded = mediaFileDocument.status `elem` [DMFD.CONFIRMED, DMFD.COMPLETED]
   mbMediaFileLink <-
     if fileWasUploaded
-      then Just <$> S3.generateDownloadUrl (T.unpack mediaFileDocument.s3Path) merchant.mediaFileDocumentLinkExpires
+      then Just <$> Storage.generateDownloadUrl (T.unpack mediaFileDocument.s3Path) merchant.mediaFileDocumentLinkExpires
       else pure Nothing
   pure $
     Common.MediaFileDocumentResp
@@ -297,7 +308,7 @@ mediaFileDocumentDownloadLink merchantShortId opCity mediaFileDocumentType' rcNu
       }
 
 mediaFileDocumentComplete ::
-  (CacheFlow m r, MonadFlow m, EsqDBFlow m r, HasField "s3Env" r (S3Env m)) =>
+  (CacheFlow m r, MonadFlow m, EsqDBFlow m r, HasField "storageConfig" r StorageTypes.StorageConfig) =>
   Job 'MediaFileDocumentComplete ->
   m ExecutionResult
 mediaFileDocumentComplete Job {id, jobInfo, merchantOperatingCityId = mbMerchantOpCityId} = withLogTag ("JobId-" <> id.getId) $ do
@@ -316,7 +327,7 @@ mediaFileDocumentComplete Job {id, jobInfo, merchantOperatingCityId = mbMerchant
   where
     tryToCompleteMediaFileDocument mediaFileDocument = do
       let s3Path = T.unpack mediaFileDocument.s3Path
-      try (S3.headRequest s3Path) >>= \case
+      try (Storage.headRequest s3Path) >>= \case
         Right s3ObjectStatus -> do
           let isFileHashValid = Just (eTagToHash s3ObjectStatus.entityTag) == mediaFileDocument.fileHash
           isFileSizeValid <- isRight <$> checkVideoFileSize mbMerchantOpCityId s3ObjectStatus.fileSizeInBytes mediaFileDocument.id
@@ -329,6 +340,6 @@ mediaFileDocumentComplete Job {id, jobInfo, merchantOperatingCityId = mbMerchant
       logInfo $ "Remove MediaFileDocument: " <> mediaFileDocument.id.getId <> "; status: " <> show mediaFileDocument.status <> "; message: " <> message
       QMFD.deleteById mediaFileDocument.id
       let s3Path = T.unpack mediaFileDocument.s3Path
-      catch (S3.delete s3Path) $ \(err :: SomeException) -> do
+      catch (Storage.delete s3Path) $ \(err :: SomeException) -> do
         when (mediaFileDocument.status `elem` [DMFD.CONFIRMED, DMFD.COMPLETED]) $
-          logError $ "Unable to delete file from S3: mediaFileDocumentId: " <> mediaFileDocument.id.getId <> "err: " <> show err
+          logError $ "Unable to delete file from Storage: mediaFileDocumentId: " <> mediaFileDocument.id.getId <> "err: " <> show err

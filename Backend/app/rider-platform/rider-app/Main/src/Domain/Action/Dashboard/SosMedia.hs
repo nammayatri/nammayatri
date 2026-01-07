@@ -6,7 +6,6 @@ module Domain.Action.Dashboard.SosMedia
 where
 
 import qualified API.Types.RiderPlatform.Management.SosMedia as Common
-import qualified AWS.S3 as S3
 import qualified Dashboard.Common
 import qualified Data.Map as Map
 import qualified Data.Text as T
@@ -21,6 +20,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.IssueManagement ()
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Sos as QSos
 
@@ -55,7 +55,7 @@ getSosMediaSosMedia _merchantShortId _opCity customerId = do
       Just mediaFile -> do
         content <- case mediaFile.s3FilePath of
           Nothing -> throwError $ InvalidRequest "No S3 file path found"
-          Just s3Path -> S3.get $ T.unpack s3Path
+          Just s3Path -> Storage.get $ T.unpack s3Path
 
         let rideId = cast sos.rideId
         return $

@@ -16,7 +16,6 @@ module Domain.Action.Dashboard.Management.Message where
 
 import API.Types.ProviderPlatform.Management.Message (InputType (..))
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
-import qualified AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -48,6 +47,7 @@ import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Flow as Storage
 import Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Message as MQuery
 import qualified Storage.Queries.MessageReport as MRQuery
@@ -85,14 +85,14 @@ postMessageUploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
   -- _ <- validateContentType
   merchant <- findMerchantByShortId merchantShortId
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- S3.createFilePath "/message-media/" ("org-" <> merchant.id.getId) fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
+  filePath <- Storage.createFilePath "/message-media/" ("org-" <> merchant.id.getId) fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let fileUrl =
         transporterConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "message"
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 put file" $ S3.put (T.unpack filePath) mediaFile
+  _ <- fork "Storage put file" $ Storage.put (T.unpack filePath) mediaFile
   createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
 
 -- where
