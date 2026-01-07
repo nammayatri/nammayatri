@@ -34,6 +34,6 @@ instance B.Table DispatcherHistoryT where
 
 type DispatcherHistory = DispatcherHistoryT Identity
 
-$(enableKVPG (''DispatcherHistoryT) [('id)] [[('dispatcherId)]])
+$(enableKVPG (''DispatcherHistoryT) [('id)] [[('depotId)], [('dispatcherId)]])
 
 $(mkTableInstances (''DispatcherHistoryT) "dispatcher_history")
