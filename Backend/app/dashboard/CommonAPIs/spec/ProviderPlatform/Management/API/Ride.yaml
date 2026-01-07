@@ -259,6 +259,9 @@ types:
     - vehicleServiceTierName: Text
     - nextStopLocation: Maybe LocationAPIEntity
     - lastStopLocation: Maybe LocationAPIEntity
+    # Optional for backward compatibility. When present, this should be derived from
+    # atlas_driver_offer_bpp.stop_information for the ride.
+    - stopInformation: Maybe [StopInformation]
     - endOtp: Maybe Text
     - mbDefaultServiceTierName: Maybe Text
     - rideCity: Maybe Text
@@ -271,6 +274,14 @@ types:
     - isPetRide: Maybe Bool
     - cancellationPenaltyAmount: Maybe HighPrecMoney
     - cancellationPenaltyWaivedReason: Maybe Text
+  StopInformation:
+    - stopId: Text
+    - stopLocId: Text
+    - stopOrder: Int
+    - waitingTimeStart: UTCTime
+    - waitingTimeEnd: Maybe UTCTime
+    - stopStartLatLng: LatLong
+    - stopEndLatLng: Maybe LatLong
   LocationAPIEntity:
     - lat: Double
     - lon: Double
