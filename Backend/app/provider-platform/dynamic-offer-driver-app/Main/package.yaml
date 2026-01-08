@@ -64,6 +64,8 @@ dependencies:
   - generic-lens
   - bytestring
   - cryptonite
+  - cryptostore >= 0.2.3.0
+  - x509
   - containers
   - data-default-class
   - euler-hs
