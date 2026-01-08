@@ -36,7 +36,9 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.PTCircuitBreaker as CB
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
@@ -180,6 +182,11 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
         void $ CallFRFSBPP.confirm providerUrl bknConfirmReq merchant.id
     _ -> do
       fork "FRFS External Confirm Req" $ do
+        let ptMode = CB.vehicleCategoryToPTMode booking.vehicleType
+        mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing
+        let circuitOpen = CB.isCircuitOpen ptMode CB.BookingAPI mRiderConfig
+        let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
+
         result <- withTryCatch "callExternalBPP:confirmFlow" $ do
           frfsConfig <-
             CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
@@ -188,12 +195,17 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
           onConfirmHandler onConfirmReq
         case result of
           Left err -> do
+            CB.recordFailure ptMode CB.BookingAPI merchantOperatingCity.id
+            CB.checkAndDisableIfNeeded ptMode CB.BookingAPI merchantOperatingCity.id cbConfig
             case fromException err :: Maybe CRISError of
               Just crisError -> void $ QFRFSTicketBooking.updateFailureReasonById (Just crisError.errorMessage) booking.id
               Nothing -> logError $ "FRFS External Confirm failed with error: " <> show err
             void $ QFRFSTicketBooking.updateStatusById DBooking.FAILED booking.id
             throwM err
-          Right _ -> return ()
+          Right _ -> do
+            when circuitOpen $ CB.reEnableCircuit ptMode CB.BookingAPI merchantOperatingCity.id
+            CB.recordSuccess ptMode CB.BookingAPI merchantOperatingCity.id
+            return ()
 
 status ::
   ( CacheFlow m r,

@@ -60,13 +60,8 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       result <- withTryCatch "ExternalBPP:init" $ Flow.init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories
       case result of
         Left err -> do
-          CB.recordFailure ptMode CB.BookingAPI merchantOperatingCity.id
-          CB.checkAndDisableIfNeeded ptMode CB.BookingAPI merchantOperatingCity.id cbConfig
           throwError $ InternalError $ "Init failed: " <> show err
         Right onInitReq -> do
-          -- If this was a canary request and it succeeded, re-enable the circuit
-          when circuitOpen $ CB.reEnableCircuit ptMode CB.BookingAPI merchantOperatingCity.id
-          CB.recordSuccess ptMode CB.BookingAPI merchantOperatingCity.id
           processOnInit onInitReq
   where
     processOnInit :: (FRFSConfirmFlow m r c) => DOnInit.DOnInit -> m ()
