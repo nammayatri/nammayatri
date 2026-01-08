@@ -3167,13 +3167,14 @@ getDriverFleetAssignments ::
     Maybe UTCTime ->
     Maybe Text ->
     Maybe Text ->
+    Maybe Text ->
     Environment.Flow Common.FleetBookingAssignmentsResponse
   )
-getDriverFleetAssignments _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbVehicleNo mbMainAssignmentId = do
+getDriverFleetAssignments _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbVehicleNo mbMainAssignmentId mbBookingId = do
   fleetOwnerInfo <- getFleetOwnerIds memberPersonId Nothing
   let fleetOwnerIds = map fst fleetOwnerInfo
       fleetNameMap = Map.fromList fleetOwnerInfo
-  ticketAssignments <- QFBA.findFleetBookingAssignmentsByFleetOwnerIdsAndFilters fleetOwnerIds mbMainAssignmentId mbFrom mbTo mbLimit mbOffset mbVehicleNo
+  ticketAssignments <- QFBA.findFleetBookingAssignmentsByFleetOwnerIdsAndFilters fleetOwnerIds mbMainAssignmentId mbFrom mbTo mbLimit mbOffset mbVehicleNo mbBookingId
 
   ticketAssignmentsList <- forM ticketAssignments $ \assignment -> do
     let fleetOwnerId = assignment.fleetOwnerId

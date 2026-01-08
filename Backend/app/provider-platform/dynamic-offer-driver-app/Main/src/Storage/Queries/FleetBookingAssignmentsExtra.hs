@@ -68,8 +68,8 @@ findAllByFleetOwnerIdsAndFilters fleetOwnerIds mainAssignmentId' from' to' mLimi
     mLimit
     mOffset
 
-findFleetBookingAssignmentsByFleetOwnerIdsAndFilters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> m [DBFBA.FleetBookingAssignments]
-findFleetBookingAssignmentsByFleetOwnerIdsAndFilters fleetOwnerIds mainAssignmentId' from' to' limit offset vehicleNo = do
+findFleetBookingAssignmentsByFleetOwnerIdsAndFilters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> m [DBFBA.FleetBookingAssignments]
+findFleetBookingAssignmentsByFleetOwnerIdsAndFilters fleetOwnerIds mainAssignmentId' from' to' limit offset vehicleNo mbookingId = do
   dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
@@ -92,6 +92,7 @@ findFleetBookingAssignmentsByFleetOwnerIdsAndFilters fleetOwnerIds mainAssignmen
                                    (Nothing, Nothing) -> B.sqlBool_ $ B.val_ True
                                )
                         B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\vNo -> B.sqlBool_ (B.lower_ fba.vehicleNo `B.like_` (B.val_ ("%" <> toLower vNo <> "%")))) vehicleNo)
+                        B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\bId -> fba.bookingId B.==?. B.val_ bId) mbookingId)
                   )
                   $ B.all_ (BeamCommon.fleetBookingAssignments BeamCommon.atlasDB)
   case res of
