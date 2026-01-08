@@ -25,6 +25,7 @@ module SharedLogic.PTCircuitBreaker
     reEnableCircuit,
     parseCircuitBreakerConfig,
     vehicleCategoryToPTMode,
+    defaultCircuitBreakerConfig,
   )
 where
 
@@ -246,7 +247,7 @@ updateFareCachingFlag ::
   Bool ->
   m ()
 updateFareCachingFlag mode mocId enabled = do
-  mRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocId
+  mRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocId Nothing
   case mRiderConfig of
     Nothing -> logError $ "RiderConfig not found for mocId: " <> mocId.getId
     Just riderConfig -> do
@@ -264,7 +265,7 @@ updateBookingFlag ::
   Bool ->
   m ()
 updateBookingFlag mode mocId enabled = do
-  mRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocId
+  mRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocId Nothing
   case mRiderConfig of
     Nothing -> logError $ "RiderConfig not found for mocId: " <> mocId.getId
     Just riderConfig -> do
