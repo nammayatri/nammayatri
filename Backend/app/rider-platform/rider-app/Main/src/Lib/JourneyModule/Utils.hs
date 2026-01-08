@@ -179,7 +179,8 @@ data JourneyLegOption = JourneyLegOption
     fare :: HighPrecMoney,
     duration :: Maybe Seconds,
     distance :: Maybe Distance,
-    journeyLegId :: Id DJourneyLeg.JourneyLeg
+    journeyLegId :: Id DJourneyLeg.JourneyLeg,
+    providerRouteId :: Maybe Text
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -190,9 +191,11 @@ data JourneyLegRouteDetails = JourneyLegRouteDetails
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
-data ViaRoute = ViaRoute
+data ViaRouteDetails = ViaRouteDetails
   { viaPoints :: [(Text, Text)],
-    distance :: Meters
+    distance :: Meters,
+    routeCode :: Text,
+    fare :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -1071,7 +1074,7 @@ buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) 
 buildSingleModeDirectRoutes _ _ _ _ _ _ _ _ _ = return []
 
 getSubwayValidRoutes ::
-  [ViaRoute] ->
+  [ViaRouteDetails] ->
   (Maybe Text -> LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
   DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id Merchant ->
@@ -1079,7 +1082,7 @@ getSubwayValidRoutes ::
   Enums.VehicleCategory ->
   MultiModalTypes.GeneralVehicleType ->
   Bool ->
-  Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
+  Flow ([MultiModalTypes.MultiModalRoute], [ViaRouteDetails])
 getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints = do
   if processAllViaPoints
     then do
@@ -1123,7 +1126,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
     go (x : xs) = do
       processRoute x >>= \case
         Just route -> do
-          return ([route], xs)
+          return ([route], x : xs)
         Nothing -> do
           logDebug $ "getSubwayValidRoutes go Nothing: " <> show x <> " so going for other path"
           go xs
@@ -1142,7 +1145,7 @@ buildTrainAllViaRoutes ::
   Text ->
   [Spec.ServiceTierType] ->
   [DQuote.FRFSQuoteType] ->
-  Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
+  Flow ([MultiModalTypes.MultiModalRoute], [ViaRouteDetails])
 buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints personId searchReqId blacklistedServiceTiers blacklistedFareQuoteTypes = do
   eitherAllSubwayRoutes <- withTryCatch "getAllSubwayRoutes:buildTrainAllViaRoutes" (measureLatency getAllSubwayRoutes "getAllSubwayRoutes")
   case eitherAllSubwayRoutes of
@@ -1151,7 +1154,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
       logError $ "Error in getAllSubwayRoutes: " <> show err
       return ([], [])
   where
-    getAllSubwayRoutes :: Flow ([ViaRoute])
+    getAllSubwayRoutes :: Flow [ViaRouteDetails]
     getAllSubwayRoutes = do
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
@@ -1185,18 +1188,38 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                         && maybe True (\ft -> notElem ft blacklistedFareQuoteTypes) (fare.fareQuoteType)
                   )
                   sortedFares
-          let viaRoutes =
-                nub $
-                  map
-                    ( \fd ->
+
+          let viaRouteDetailsMap :: M.Map Text ViaRouteDetails
+              viaRouteDetailsMap =
+                foldl'
+                  ( \acc fare -> case fare.fareDetails of
+                      Nothing -> acc
+                      Just fd ->
                         let viaStops = if T.strip fd.via == "" then [] else T.splitOn "-" (T.strip fd.via)
                             stops = [originStopCode] <> viaStops <> [destinationStopCode]
                             viaPoints = zipWith (,) stops (drop 1 stops)
-                         in ViaRoute {viaPoints = viaPoints, distance = fd.distance}
-                    )
-                    $ mapMaybe (.fareDetails) filteredFares
-          logDebug $ "getAllSubwayRoutes viaRoutes: " <> show viaRoutes
-          return viaRoutes
+                            fareAmount =
+                              fromMaybe (HighPrecMoney 0.0) $
+                                (find ((== ADULT) . (.category)) fare.categories) <&> (.price.amount)
+                            newViaRoute =
+                              ViaRouteDetails
+                                { viaPoints = viaPoints,
+                                  distance = fd.distance,
+                                  routeCode = fd.providerRouteId,
+                                  fare = fareAmount
+                                }
+                         in M.insertWith
+                              (\new old -> if new.fare < old.fare then new else old)
+                              fd.providerRouteId
+                              newViaRoute
+                              acc
+                  )
+                  M.empty
+                  filteredFares
+
+          let viaRouteDetails = M.elems viaRouteDetailsMap
+          logDebug $ "getAllSubwayRoutes viaRouteDetails: " <> show viaRouteDetails
+          return viaRouteDetails
         _ -> return []
 buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ _ _ _ = return ([], [])
 
