@@ -328,6 +328,8 @@ MerchantServiceUsageConfig:
     createSetupIntent: PaymentService
     deleteCard: PaymentService
     cancelPaymentIntent: PaymentService
+    createRefunds: PaymentService
+    getRefunds: PaymentService
     updatedAt: UTCTime
     createdAt: UTCTime
     getMultiModalService: MultiModalService
@@ -340,18 +342,24 @@ MerchantServiceUsageConfig:
     getMultiModalService: Maybe MultiModalService
     getMultimodalWalkDistance: Maybe MapsService
     insuranceService: Maybe InsuranceService
+    createRefunds: Maybe PaymentService
+    getRefunds: Maybe PaymentService
   fromTType:
     cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
     getFrfsAutocompleteDistances: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
     getMultiModalService: fromMaybe (Kernel.External.MultiModal.Types.OTPTransit)|I
     getMultimodalWalkDistance: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
     insuranceService: fromMaybe (Kernel.External.Insurance.Types.Acko) insuranceService|E
+    createRefunds: fromMaybe (Kernel.External.Payment.Types.Stripe)|I
+    getRefunds: fromMaybe (Kernel.External.Payment.Types.Stripe)|I
   toTType:
     cancelPaymentIntent: Kernel.Prelude.Just|I
     getFrfsAutocompleteDistances: Kernel.Prelude.Just|I
     getMultiModalService: Kernel.Prelude.Just|I
     getMultimodalWalkDistance: Kernel.Prelude.Just|I
     insuranceService: Kernel.Prelude.Just|I
+    createRefunds: Kernel.Prelude.Just|I
+    getRefunds: Kernel.Prelude.Just|I
   beamInstance:
     - MakeTableInstances
     - Custom Domain.Types.UtilsTH.mkCacParseInstance <MerchantServiceUsageConfigT>
@@ -409,6 +417,8 @@ MerchantServiceUsageConfig:
     cancelPaymentIntent: "'Stripe'"
     createSetupIntent: "'Stripe'"
     deleteCard: "'Stripe'"
+    createRefunds: "'Stripe'"
+    getRefunds: "'Stripe'"
     getDistancesForScheduledRides: "'OSRM'"
     getFrfsAutocompleteDistances: "'OSRM'"
     getMultiModalService: "'OTPTransit'"

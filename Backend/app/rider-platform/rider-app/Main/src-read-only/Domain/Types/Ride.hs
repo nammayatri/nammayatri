@@ -9,6 +9,7 @@ import qualified Domain.Types.Client
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.RefundRequest
 import qualified Domain.Types.RideStatus
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleVariant
@@ -79,6 +80,7 @@ data RideE e = Ride
     pickupEtaLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupRouteCallCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupSpeedInMPS :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    refundRequestStatus :: Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestStatus,
     rideEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -171,6 +173,7 @@ instance EncryptedItem Ride where
           pickupEtaLogicVersion = pickupEtaLogicVersion entity,
           pickupRouteCallCount = pickupRouteCallCount entity,
           pickupSpeedInMPS = pickupSpeedInMPS entity,
+          refundRequestStatus = refundRequestStatus entity,
           rideEndTime = rideEndTime entity,
           rideRating = rideRating entity,
           rideStartTime = rideStartTime entity,
@@ -255,6 +258,7 @@ instance EncryptedItem Ride where
             pickupEtaLogicVersion = pickupEtaLogicVersion entity,
             pickupRouteCallCount = pickupRouteCallCount entity,
             pickupSpeedInMPS = pickupSpeedInMPS entity,
+            refundRequestStatus = refundRequestStatus entity,
             rideEndTime = rideEndTime entity,
             rideRating = rideRating entity,
             rideStartTime = rideStartTime entity,

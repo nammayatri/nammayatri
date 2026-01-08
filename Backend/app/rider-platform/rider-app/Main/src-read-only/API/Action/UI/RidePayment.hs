@@ -88,10 +88,35 @@ type API =
       :> Get
            '[JSON]
            Kernel.External.Payment.Interface.Types.CreateCustomerResp
+      :<|> TokenAuth
+      :> "payment"
+      :> Capture
+           "rideId"
+           (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
+      :> "refundRequest"
+      :> "create"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.RidePayment.RefundRequestReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "payment"
+      :> Capture
+           "rideId"
+           (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
+      :> "refundRequest"
+      :> QueryParam
+           "refreshRefunds"
+           Kernel.Prelude.Bool
+      :> Get
+           '[JSON]
+           API.Types.UI.RidePayment.RefundRequestResp
   )
 
 handler :: Environment.FlowServer API
-handler = getPaymentMethods :<|> postPaymentMethodsMakeDefault :<|> getPaymentIntentSetup :<|> getPaymentIntentPayment :<|> postPaymentMethodUpdate :<|> deletePaymentMethodsDelete :<|> postPaymentAddTip :<|> getPaymentCustomer
+handler = getPaymentMethods :<|> postPaymentMethodsMakeDefault :<|> getPaymentIntentSetup :<|> getPaymentIntentPayment :<|> postPaymentMethodUpdate :<|> deletePaymentMethodsDelete :<|> postPaymentAddTip :<|> getPaymentCustomer :<|> postPaymentRefundRequestCreate :<|> getPaymentRefundRequest
 
 getPaymentMethods :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.RidePayment.PaymentMethodsResponse)
 getPaymentMethods a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentMethods (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
@@ -152,3 +177,23 @@ getPaymentCustomer ::
     Environment.FlowHandler Kernel.External.Payment.Interface.Types.CreateCustomerResp
   )
 getPaymentCustomer a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentCustomer (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+postPaymentRefundRequestCreate ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    API.Types.UI.RidePayment.RefundRequestReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postPaymentRefundRequestCreate a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentRefundRequestCreate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getPaymentRefundRequest ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Environment.FlowHandler API.Types.UI.RidePayment.RefundRequestResp
+  )
+getPaymentRefundRequest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentRefundRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

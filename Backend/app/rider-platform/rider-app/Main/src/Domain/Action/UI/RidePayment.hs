@@ -1,19 +1,24 @@
 module Domain.Action.UI.RidePayment where
 
 import qualified API.Types.UI.RidePayment
+import AWS.S3 as S3
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
+import Data.Time.Format.ISO8601 (iso8601Show)
+import qualified Domain.Types.Booking
 import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
 import qualified Domain.Types.Person
+import qualified Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RideStatus
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Payment.Interface
 import Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -22,17 +27,24 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import Kernel.Utils.Common (logError)
 import Kernel.Utils.Error
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
+import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Payment as Payment
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import qualified Tools.Payment as Payment
 
 data DFareBreakup = DFareBreakup
@@ -234,7 +246,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
     unless (ride.status == Domain.Types.RideStatus.COMPLETED) $
       throwError $ RideInvalidStatus ("Ride is not completed yet." <> Text.pack (show ride.status))
-    booking <- QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
     unless (booking.riderId == personId) $ throwError $ InvalidRequest "Person is not the owner of the ride"
     unless ride.onlinePayment $ throwError (InvalidRequest "Could not add tip for Cash ride")
     fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
@@ -321,3 +333,226 @@ getPaymentCustomer (mbPersonId, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   getcustomer person
+
+postPaymentRefundRequestCreate ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    API.Types.UI.RidePayment.RefundRequestReq ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postPaymentRefundRequestCreate (mbPersonId, _) rideId req = do
+  let orderId = Kernel.Types.Id.cast @Domain.Types.Ride.Ride @DPaymentOrder.PaymentOrder rideId
+  Redis.whenWithLockRedis (refundRequestProccessingKey orderId) 60 $ do
+    mbExistingRefundRequest <- QRefundRequest.findByOrderId orderId
+    whenJust mbExistingRefundRequest $ \_ -> throwError (RefundRequestAlreadyExists orderId.getId)
+    personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+    ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+    refundPurpose <- case ride.status of
+      Domain.Types.RideStatus.COMPLETED -> pure DRefundRequest.RIDE_FARE
+      Domain.Types.RideStatus.CANCELLED -> pure DRefundRequest.CANCELLATION_FEE
+      _ -> throwError $ RideInvalidStatus ("Refund request available only for COMPLETED or CANCELLED ride. Ride status: " <> show ride.status)
+    unless (ride.paymentStatus == Domain.Types.Ride.Completed) $
+      throwError (RideInvalidStatus $ "Ride payment is not completed yet. Payment status: " <> show ride.paymentStatus)
+
+    booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    unless (booking.riderId == personId) $ throwError $ InvalidRequest "Person is not the owner of the ride"
+    unless ride.onlinePayment $ throwError (InvalidRequest "Could not refund cash ride")
+
+    -- We need earliest transaction in case if we have more than one transaction (ride fare and ride tip)
+    -- Later we can add transactions differentiation based on purpose: RIDE_FARE | RIDE_TIP | CANCELLATION_FEE
+    transaction <- QPaymentTransaction.findEarliestChargedTransactionByOrderId orderId >>= fromMaybeM (InvalidRequest "No transaction found for refund")
+
+    whenJust req.requestedAmount $ \requestedAmount -> do
+      unless (requestedAmount.currency == transaction.currency) $
+        throwError (InvalidRequest "Invalid currency")
+      when (requestedAmount.amount > transaction.amount) $
+        throwError (InvalidRequest $ "Could not request refund more than transaction amount: " <> show transaction.amount)
+
+    evidenceS3Path <- forM req.evidence $ \evidence -> do
+      imageExtension <- validateContentType
+      path <- createPath booking.merchantId personId rideId refundPurpose imageExtension
+      fork "S3 Put Image" do
+        Redis.withLockRedis (imageS3Lock path) 5 $
+          S3.put (Text.unpack path) evidence
+      pure path
+    refundRequest <- buildRefundRequest orderId booking refundPurpose transaction evidenceS3Path req
+    QRefundRequest.create refundRequest
+    QRide.updateRefundRequestStatus (Just refundRequest.status) rideId
+  pure Success
+  where
+    validateContentType = do
+      fileType <- req.fileType & fromMaybeM (InvalidRequest "fileType is required")
+      reqContentType <- req.reqContentType & fromMaybeM (InvalidRequest "reqContentType is required")
+      case fileType of
+        S3.Image -> case reqContentType of
+          "image/png" -> pure "png"
+          "image/jpeg" -> pure "jpg"
+          _ -> throwError $ FileFormatNotSupported reqContentType
+        _ -> throwError $ FileFormatNotSupported reqContentType
+
+refundRequestProccessingKey :: Kernel.Types.Id.Id DPaymentOrder.PaymentOrder -> Text
+refundRequestProccessingKey orderId = "RefundRequest:Processing:OrderId" <> orderId.getId
+
+imageS3Lock :: Text -> Text
+imageS3Lock path = "image-s3-lock-" <> path
+
+buildRefundRequest ::
+  Kernel.Types.Id.Id DPaymentOrder.PaymentOrder ->
+  Domain.Types.Booking.Booking ->
+  DRefundRequest.RefundPurpose ->
+  DTransaction.PaymentTransaction ->
+  Kernel.Prelude.Maybe Text ->
+  API.Types.UI.RidePayment.RefundRequestReq ->
+  Environment.Flow DRefundRequest.RefundRequest
+buildRefundRequest orderId booking refundPurpose transaction evidenceS3Path API.Types.UI.RidePayment.RefundRequestReq {..} = do
+  id <- generateGUID
+  now <- getCurrentTime
+  pure
+    DRefundRequest.RefundRequest
+      { requestedAmount = requestedAmount <&> (.amount),
+        transactionId = transaction.id,
+        transactionAmount = transaction.amount,
+        currency = transaction.currency,
+        status = DRefundRequest.OPEN,
+        responseDescription = Nothing,
+        refundsId = Nothing,
+        refundsAmount = Nothing, -- should be updated after admin approve
+        refundsTries = 0,
+        personId = booking.riderId,
+        merchantId = booking.merchantId,
+        merchantOperatingCityId = booking.merchantOperatingCityId,
+        createdAt = now,
+        updatedAt = now,
+        ..
+      }
+
+createPath ::
+  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
+  Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+  DRefundRequest.RefundPurpose ->
+  Text ->
+  m Text
+createPath merchantId personId rideId refundPurpose imageExtension = do
+  pathPrefix <- asks (.s3Env.pathPrefix)
+  now <- getCurrentTime
+  let fileName = Text.replace (Text.singleton ':') (Text.singleton '-') (Text.pack $ iso8601Show now)
+  return
+    ( pathPrefix <> "/payment-refunds/" <> "org-" <> merchantId.getId <> "/"
+        <> personId.getId
+        <> "/"
+        <> rideId.getId
+        <> "/"
+        <> show refundPurpose
+        <> "/"
+        <> fileName
+        <> "."
+        <> imageExtension
+    )
+
+getPaymentRefundRequest ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Environment.Flow API.Types.UI.RidePayment.RefundRequestResp
+  )
+getPaymentRefundRequest (mbPersonId, _merchantId) rideId refreshRefunds = do
+  let refundRequestInfoHandler =
+        RefundRequestInfoHandler
+          { validateRefundRequestOwner = \refundRequest -> do
+              personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+              unless (refundRequest.personId == personId) $ throwError $ InvalidRequest "Person is not the owner of the ride",
+            mkRefundRequestInfoResp = \refundRequest evidence _refundStatus _errorCode -> mkRefundRequestResp refundRequest evidence,
+            fetchRefunds = \_refundsId -> pure Nothing, -- required only for admin
+            notifyRefunds = \_refundRequest -> pure () -- notification not required for UI api
+          }
+  fetchPaymentRefundRequestInfo @API.Types.UI.RidePayment.RefundRequestResp refundRequestInfoHandler refreshRefunds rideId
+
+mkRefundRequestResp ::
+  DRefundRequest.RefundRequest ->
+  Maybe Text ->
+  API.Types.UI.RidePayment.RefundRequestResp
+mkRefundRequestResp DRefundRequest.RefundRequest {..} evidence =
+  API.Types.UI.RidePayment.RefundRequestResp
+    { rideId = Kernel.Types.Id.cast @DPaymentOrder.PaymentOrder @Domain.Types.Ride.Ride orderId,
+      refundsAmount = flip PriceAPIEntity currency <$> refundsAmount,
+      requestedAmount = flip PriceAPIEntity currency <$> requestedAmount,
+      transactionAmount = PriceAPIEntity transactionAmount currency,
+      ..
+    }
+
+data RefundRequestInfoHandler resp = RefundRequestInfoHandler
+  { validateRefundRequestOwner :: DRefundRequest.RefundRequest -> Environment.Flow (),
+    mkRefundRequestInfoResp :: DRefundRequest.RefundRequest -> Maybe Text -> Maybe Kernel.External.Payment.Interface.RefundStatus -> Maybe Text -> resp,
+    fetchRefunds :: Kernel.Types.Id.Id DRefunds.Refunds -> Environment.Flow (Maybe DRefunds.Refunds), -- required only for error code and status
+    notifyRefunds :: DRefundRequest.RefundRequest -> Environment.Flow ()
+  }
+
+fetchPaymentRefundRequestInfo ::
+  forall resp.
+  RefundRequestInfoHandler resp ->
+  Maybe Bool ->
+  Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+  Environment.Flow resp
+fetchPaymentRefundRequestInfo h refreshRefunds rideId = do
+  let orderId = Kernel.Types.Id.cast @Domain.Types.Ride.Ride @DPaymentOrder.PaymentOrder rideId
+  eResult <- Redis.whenWithLockRedisAndReturnValue (refundRequestProccessingKey orderId) 60 $ do
+    refundRequest <- QRefundRequest.findByOrderId orderId >>= fromMaybeM (RefundRequestDoesNotExist orderId.getId)
+    h.validateRefundRequestOwner refundRequest
+    evidence <- fetchEvidenceFromS3 refundRequest
+    if refreshRefunds == Just True
+      then do
+        -- refresh is possible only if refund object already created on Stripe side and in refunds db table
+        ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+        booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+        driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+        let refreshStripeRefundReq =
+              DPayment.RefreshStripeRefundReq
+                { orderId = refundRequest.orderId,
+                  driverAccountId
+                }
+        result <- Payment.refreshStripeRefund refundRequest.merchantId refundRequest.merchantOperatingCityId booking.paymentMode refreshStripeRefundReq
+        let updStatus = castRefundRequestStatus result.status
+        when (refundRequest.refundsId /= Just result.refundsId || refundRequest.status /= updStatus) $
+          QRefundRequest.updateRefundIdAndStatus (Just result.refundsId) updStatus refundRequest.id
+        let updRefundRequest = refundRequest{refundsId = Just result.refundsId, status = updStatus}
+        when (refundRequest.status /= updStatus) $ do
+          QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
+          h.notifyRefunds updRefundRequest
+        pure $ h.mkRefundRequestInfoResp updRefundRequest evidence (Just result.status) result.errorCode
+      else do
+        mbRefunds <- case refundRequest.refundsId of
+          Just refundsId -> h.fetchRefunds refundsId
+          Nothing -> pure Nothing
+        pure $ h.mkRefundRequestInfoResp refundRequest evidence (mbRefunds <&> (.status)) (mbRefunds >>= (.errorCode))
+
+  case eResult of
+    Left () -> do
+      logError $ "Order refund locked: " <> orderId.getId
+      throwError (InvalidRequest "Order refund locked")
+    Right result -> return result
+
+castRefundRequestStatus :: Payment.RefundStatus -> DRefundRequest.RefundRequestStatus
+castRefundRequestStatus = \case
+  Payment.REFUND_PENDING -> DRefundRequest.APPROVED -- did not changed
+  Payment.REFUND_FAILURE -> DRefundRequest.FAILED
+  Payment.REFUND_SUCCESS -> DRefundRequest.REFUNDED
+  Payment.MANUAL_REVIEW -> DRefundRequest.APPROVED -- did not changed
+  Payment.REFUND_CANCELED -> DRefundRequest.FAILED
+  Payment.REFUND_REQUIRES_ACTION -> DRefundRequest.APPROVED -- did not changed
+
+fetchEvidenceFromS3 :: DRefundRequest.RefundRequest -> Environment.Flow (Maybe Text)
+fetchEvidenceFromS3 refundRequest = forM refundRequest.evidenceS3Path $ \evidenceS3Path -> do
+  eImage <-
+    Redis.whenWithLockRedisAndReturnValue (imageS3Lock evidenceS3Path) 60 $
+      S3.get $ Text.unpack evidenceS3Path
+  case eImage of
+    Left _err -> do
+      logError $ "Evidence image locked: " <> refundRequest.orderId.getId
+      throwError (InvalidRequest "Evidence image locked")
+    Right image -> pure image

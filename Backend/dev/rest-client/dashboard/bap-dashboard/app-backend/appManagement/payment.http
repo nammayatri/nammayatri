@@ -1,0 +1,65 @@
+# access tokens with different roles
+@customer = {{bap-dashboard/token/YATRI/customer}}
+@driver = {{bap-dashboard/token/YATRI/driver}}
+@juspay_ops = {{bap-dashboard/token/YATRI/juspay_ops}}
+@juspay_admin = {{bap-dashboard/token/YATRI/juspay_admin}}
+@customer_service = {{bap-dashboard/token/YATRI/customer_service}}
+
+# @name healthcheck
+GET {{bap-dashboard-host}}
+
+###
+
+# @name listOfCompleted
+
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &status="COMPLETED"
+content-type: application/json
+token: {{app-token}}
+
+###
+
+@rideId = {{listOfCompleted.response.body.list[0].rideList[0].id}}
+
+# @name postPaymentRefundRequestCreate
+POST {{app-host}}/payment/{{rideId}}/refundRequest/create
+content-type: application/json
+token: {{app-token}}
+
+{   "requestedAmount": {"amount": 11, "currency": "INR"},
+    "code": "WRONGFUL_DEDUCTION",
+    "description": "Wrongful deduction",
+    "evidence": null,
+    "fileType": null,
+    "reqContentType": null
+}
+
+###
+
+# @name getPaymentRefundRequestList
+GET {{bap-dashboard-host}}/bap/YATRI/payment/refundRequest/list
+content-type: application/json
+token: {{juspay_admin}}
+
+###
+
+# @name getPaymentRefundRequestInfo
+GET {{bap-dashboard-host}}/bap/YATRI/payment/refundRequest/{{rideId}}/info?refreshRefunds=true
+content-type: application/json
+token: {{juspay_admin}}
+
+###
+
+# @name postPaymentRefundRequestRespond
+POST {{bap-dashboard-host}}/bap/YATRI/payment/refundRequest/{{rideId}}/respond
+content-type: application/json
+token: {{juspay_admin}}
+
+{
+  "approve": true,
+  "responseDescription": "excellent",
+  "approvedAmount": {"amount": 12, "currency": "INR"},
+  "retryRefunds": true
+}

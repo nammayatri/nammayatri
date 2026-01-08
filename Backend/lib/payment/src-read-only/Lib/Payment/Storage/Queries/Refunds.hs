@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Payment.Storage.Queries.Refunds where
+module Lib.Payment.Storage.Queries.Refunds (module Lib.Payment.Storage.Queries.Refunds, module ReExport) where
 
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -16,6 +16,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Lib.Payment.Domain.Types.Refunds
 import qualified Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.Refunds as Beam
+import Lib.Payment.Storage.Queries.RefundsExtra as ReExport
 import qualified Sequelize as Se
 
 create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.Refunds.Refunds -> m ())
@@ -50,40 +51,16 @@ updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessag
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-instance FromTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
-  fromTType' (Beam.RefundsT {..}) = do
-    pure $
-      Just
-        Lib.Payment.Domain.Types.Refunds.Refunds
-          { createdAt = createdAt,
-            errorCode = errorCode,
-            errorMessage = errorMessage,
-            id = Kernel.Types.Id.Id id,
-            idAssignedByServiceProvider = idAssignedByServiceProvider,
-            initiatedBy = initiatedBy,
-            isApiCallSuccess = isApiCallSuccess,
-            merchantId = merchantId,
-            orderId = Kernel.Types.Id.ShortId orderId,
-            refundAmount = refundAmount,
-            shortId = Kernel.Types.Id.ShortId shortId,
-            status = status,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
-  toTType' (Lib.Payment.Domain.Types.Refunds.Refunds {..}) = do
-    Beam.RefundsT
-      { Beam.createdAt = createdAt,
-        Beam.errorCode = errorCode,
-        Beam.errorMessage = errorMessage,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.idAssignedByServiceProvider = idAssignedByServiceProvider,
-        Beam.initiatedBy = initiatedBy,
-        Beam.isApiCallSuccess = isApiCallSuccess,
-        Beam.merchantId = merchantId,
-        Beam.orderId = Kernel.Types.Id.getShortId orderId,
-        Beam.refundAmount = refundAmount,
-        Beam.shortId = Kernel.Types.Id.getShortId shortId,
-        Beam.status = status,
-        Beam.updatedAt = updatedAt
-      }
+updateRefundsEntryByStripeResponse ::
+  (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Payment.Interface.RefundStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds -> m ())
+updateRefundsEntryByStripeResponse idAssignedByServiceProvider errorCode status isApiCallSuccess id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.idAssignedByServiceProvider idAssignedByServiceProvider,
+      Se.Set Beam.errorCode errorCode,
+      Se.Set Beam.status status,
+      Se.Set Beam.isApiCallSuccess isApiCallSuccess,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

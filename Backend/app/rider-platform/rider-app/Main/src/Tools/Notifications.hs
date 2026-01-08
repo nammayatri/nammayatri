@@ -32,6 +32,7 @@ import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import qualified Domain.Types.NotificationSoundsConfig as NSC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.RefundRequest as DRefundRequest
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
@@ -53,6 +54,7 @@ import Kernel.Storage.Esqueleto hiding (count, runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import qualified Kernel.Types.Price as Price
 import Kernel.Utils.Common hiding (getCurrentTime)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -1643,5 +1645,41 @@ notifyOnRideEndOffer person = do
     entity
     Nothing
     []
+    Nothing
+    Nothing
+
+notifyRefunds ::
+  ServiceFlow m r =>
+  DRefundRequest.RefundRequest ->
+  m ()
+notifyRefunds refundRequest = case refundRequest.status of
+  DRefundRequest.APPROVED -> notifyRefunds' FCMType.REFUND_REQUEST_APPROVED refundRequest
+  DRefundRequest.REJECTED -> notifyRefunds' FCMType.REFUND_REQUEST_REJECTED refundRequest
+  DRefundRequest.FAILED -> notifyRefunds' FCMType.REFUND_FAILED refundRequest
+  DRefundRequest.REFUNDED -> notifyRefunds' FCMType.REFUND_SUCCESS refundRequest
+  DRefundRequest.OPEN -> pure ()
+
+notifyRefunds' ::
+  ServiceFlow m r =>
+  FCMType.FCMNotificationType ->
+  DRefundRequest.RefundRequest ->
+  m ()
+notifyRefunds' notificationType DRefundRequest.RefundRequest {..} = do
+  person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let entity = Notification.Entity Notification.Product personId.getId ()
+  dynamicNotifyPerson
+    person
+    (createNotificationReq (show notificationType) identity)
+    EmptyDynamicParam
+    entity
+    Nothing
+    [ ("rideId", orderId.getId), -- should we use rideShortId?
+      ("refundPurpose", show refundPurpose),
+      ("status", show status),
+      ("code", code.getRefundRequestCode),
+      ("requestedAmount", Price.showPriceWithRounding . Price.mkPrice (Just currency) $ fromMaybe transactionAmount requestedAmount),
+      ("transactionAmount", Price.showPriceWithRounding $ Price.mkPrice (Just currency) transactionAmount),
+      ("refundsAmount", Price.showPriceWithRounding . Price.mkPrice (Just currency) $ fromMaybe 0.0 refundsAmount)
+    ]
     Nothing
     Nothing
