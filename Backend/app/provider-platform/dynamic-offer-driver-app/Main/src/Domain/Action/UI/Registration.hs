@@ -31,6 +31,7 @@ module Domain.Action.UI.Registration
     makePerson,
     marketingEventsPreLogin,
     marketingEventsPostLogin,
+    signatureAuth,
   )
 where
 
@@ -78,7 +79,6 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.OTP as SOTP
-import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -88,7 +88,7 @@ import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import Tools.Auth (authTokenCacheKey)
+import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.Event as TE
 import Tools.MarketingEvents as TM
@@ -117,7 +117,9 @@ validateInitiateLoginReq AuthReq {..} =
 
 data AuthRes = AuthRes
   { authId :: Id SR.RegistrationToken,
-    attempts :: Int
+    attempts :: Int,
+    token :: Maybe Text,
+    person :: Maybe SP.PersonAPIEntity
   }
   deriving (Generic, ToJSON, ToSchema)
 
@@ -184,7 +186,7 @@ auth ::
   Flow AuthRes
 auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash = do
   authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash
-  return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId}
+  return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId, token = Nothing, person = Nothing}
 
 authWithOtp ::
   Bool ->
@@ -235,7 +237,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId merchantId
-  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId
+  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SMS SR.OTP
   _ <- QR.create token
   QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId
   let otpCode = SR.authValueHash token
@@ -459,8 +461,10 @@ makeSession ::
   SR.RTEntityType ->
   Maybe Text ->
   Text ->
+  SR.Medium ->
+  SR.LoginType ->
   m SR.RegistrationToken
-makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchantOpCityId = do
+makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchantOpCityId authMedium authType = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- generateGUID
   token <- generateGUID
@@ -471,8 +475,8 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchan
       { id = Id rtid,
         token = token,
         attempts = attempts,
-        authMedium = SR.SMS,
-        authType = SR.OTP,
+        authMedium = authMedium,
+        authType = authType,
         authValueHash = otp,
         verified = False,
         authExpiry = authExpiry,
@@ -602,7 +606,7 @@ resend tokenId mbSenderHash = do
     mbSenderHash
 
   void $ QR.updateAttempts (attempts - 1) id
-  return $ AuthRes tokenId (attempts - 1)
+  return $ AuthRes tokenId (attempts - 1) Nothing Nothing
 
 cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
@@ -710,3 +714,51 @@ marketingEventsPostLogin (personId, merchantId, merchantOpCityId) req = do
           }
   TE.triggerMarketingParamEvent marketingParamsData
   pure Success
+
+signatureAuth ::
+  AuthReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow AuthRes
+signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbClientId = do
+  let req = if req'.merchantId == "JATRI_SAATHI_PARTNER" then (req' {merchantId = "NAMMA_YATRI_PARTNER"} :: AuthReq) else req'
+  runRequestValidation validateInitiateLoginReq req
+  smsCfg <- asks (.smsCfg)
+  countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for signature auth")
+  mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for signature auth")
+  deploymentVersion <- asks (.version)
+  merchant <-
+    QMerchant.findByShortId (ShortId req.merchantId)
+      >>= fromMaybeM (MerchantNotFound (req.merchantId))
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req.merchantOperatingCity
+  mobileNumberDecrypted <- decryptAES128 merchant.cipherText mobileNumber
+  let reqWithMobileNumber = req {mobileNumber = Just mobileNumberDecrypted}
+  mobileNumberHash <- getDbHash mobileNumberDecrypted
+  person <-
+    QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
+      >>= maybe (createDriverWithDetails reqWithMobileNumber mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId False) return -- Simple fallback for create, refining
+  checkSlidingWindowLimit (authHitsCountKey person)
+  let entityId = getId $ person.id
+      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+      scfg = sessionConfig smsCfg
+      mkId = getId merchant.id
+  -- Authentication flow
+  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SIGNATURE SR.DIRECT
+  _ <- QR.create token
+  void $ QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchantOpCityId
+  -- Verification flow
+  fork "generating the referral code for driver" $ do
+    void $ generateReferralCode (Just person.role) (person.id, person.merchantId, merchantOpCityId)
+  cleanCachedTokens person.id
+  QR.deleteByPersonIdExceptNew person.id token.id
+  let isNewPerson = person.isNew
+  _ <- QR.setVerified True token.id
+  when isNewPerson $
+    QP.setIsNewFalse False person.id
+  decPerson <- decrypt person
+  let personAPIEntity = SP.makePersonAPIEntity decPerson
+  return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)

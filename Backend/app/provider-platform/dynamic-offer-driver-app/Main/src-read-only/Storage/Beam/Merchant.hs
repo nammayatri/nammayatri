@@ -10,13 +10,15 @@ import qualified Domain.Types.Merchant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Base64
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Geofencing
 import Tools.Beam.UtilsTH
 
 data MerchantT f = MerchantT
-  { city :: B.C f Kernel.Types.Beckn.Context.City,
+  { cipherText :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
+    city :: B.C f Kernel.Types.Beckn.Context.City,
     country :: B.C f Kernel.Types.Beckn.Context.Country,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -42,6 +44,9 @@ data MerchantT f = MerchantT
     prepaidSubscriptionAndWalletEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     registryUrl :: B.C f Kernel.Prelude.Text,
     shortId :: B.C f Kernel.Prelude.Text,
+    signatureExpiry :: B.C f Kernel.Prelude.Int,
+    signingPrivateKey :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
+    signingPublicKey :: B.C f Kernel.Types.Base64.Base64,
     state :: B.C f Kernel.Types.Beckn.Context.IndianState,
     status :: B.C f Domain.Types.Merchant.Status,
     subscriberId :: B.C f Kernel.Prelude.Text,

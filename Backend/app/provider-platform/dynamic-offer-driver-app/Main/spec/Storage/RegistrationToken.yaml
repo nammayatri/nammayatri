@@ -9,13 +9,13 @@ RegistrationToken:
 
   types:
     Medium:
-      enum: "SMS, EMAIL"
+      enum: "SMS, EMAIL, SIGNATURE"
 
     RTEntityType:
       enum: "CUSTOMER, USER"
 
     LoginType:
-      enum: "OTP, PASSWORD, OAUTH"
+      enum: "OTP, PASSWORD, OAUTH, DIRECT"
 
   fields:
     id : Id RegistrationToken

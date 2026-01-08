@@ -21,7 +21,8 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
     pure $
       Just
         Domain.Types.Merchant.Merchant
-          { city = city,
+          { cipherText = cipherText,
+            city = city,
             country = country,
             createdAt = createdAt,
             description = description,
@@ -46,6 +47,9 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             prepaidSubscriptionAndWalletEnabled = prepaidSubscriptionAndWalletEnabled,
             registryUrl = registryUrl',
             shortId = Kernel.Types.Id.ShortId shortId,
+            signatureExpiry = signatureExpiry,
+            signingPrivateKey = signingPrivateKey,
+            signingPublicKey = signingPublicKey,
             state = state,
             status = status,
             subscriberId = Kernel.Types.Id.ShortId subscriberId,
@@ -58,7 +62,8 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
 instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
   toTType' (Domain.Types.Merchant.Merchant {..}) = do
     Beam.MerchantT
-      { Beam.city = city,
+      { Beam.cipherText = cipherText,
+        Beam.city = city,
         Beam.country = country,
         Beam.createdAt = createdAt,
         Beam.description = description,
@@ -84,6 +89,9 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.prepaidSubscriptionAndWalletEnabled = prepaidSubscriptionAndWalletEnabled,
         Beam.registryUrl = Kernel.Prelude.showBaseUrl registryUrl,
         Beam.shortId = Kernel.Types.Id.getShortId shortId,
+        Beam.signatureExpiry = signatureExpiry,
+        Beam.signingPrivateKey = signingPrivateKey,
+        Beam.signingPublicKey = signingPublicKey,
         Beam.state = state,
         Beam.status = status,
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,

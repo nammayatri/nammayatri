@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types
 import Domain.Types.Common (UsageSafety (..))
 import Kernel.Prelude
+import qualified Kernel.Types.Base64
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Geofencing
@@ -15,7 +16,8 @@ import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data MerchantD (s :: UsageSafety) = Merchant
-  { city :: Kernel.Types.Beckn.Context.City,
+  { cipherText :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,
+    city :: Kernel.Types.Beckn.Context.City,
     country :: Kernel.Types.Beckn.Context.Country,
     createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -40,6 +42,9 @@ data MerchantD (s :: UsageSafety) = Merchant
     prepaidSubscriptionAndWalletEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     registryUrl :: Kernel.Prelude.BaseUrl,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
+    signatureExpiry :: Kernel.Prelude.Int,
+    signingPrivateKey :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,
+    signingPublicKey :: Kernel.Types.Base64.Base64,
     state :: Kernel.Types.Beckn.Context.IndianState,
     status :: Domain.Types.Merchant.Status,
     subscriberId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Subscriber,

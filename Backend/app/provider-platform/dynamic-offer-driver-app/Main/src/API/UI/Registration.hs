@@ -38,6 +38,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.SignatureAuth
 
 type API =
   "auth"
@@ -50,6 +51,15 @@ type API =
            :> Header "x-device" Text
            :> Header "x-sender-hash" Text
            :> Post '[JSON] DRegistration.AuthRes
+           :<|> "signature"
+             :> SignatureAuth DRegistration.AuthReq "x-sdk-authorization"
+             :> Header "x-bundle-version" Version
+             :> Header "x-client-version" Version
+             :> Header "x-config-version" Version
+             :> Header "x-react-bundle-version" Text
+             :> Header "x-package" Text
+             :> Header "x-device" Text
+             :> Post '[JSON] DRegistration.AuthRes
            :<|> Capture "authId" (Id SR.RegistrationToken)
              :> "verify"
              :> ReqBody '[JSON] DRegistration.AuthVerifyReq
@@ -71,13 +81,18 @@ type API =
 handler :: FlowServer API
 handler =
   auth
+    :<|> signatureAuth
     :<|> verify
     :<|> resend
     :<|> logout
     :<|> marketingEvents
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
-auth req mbBundleVersionText mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash = withFlowHandlerAPI $ DRegistration.auth False req mbBundleVersionText mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash
+auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash = withFlowHandlerAPI $ DRegistration.auth False req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash
+
+signatureAuth :: SignatureAuthResult DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
+signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice =
+  withFlowHandlerAPI $ DRegistration.signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbClientId
 
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId
