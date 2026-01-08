@@ -526,6 +526,7 @@ ServicePeopleCategory:
         - vendorSplitDetails
         - placeId
         - iconUrl
+        - rules
       where:
         and: [id, timeBounds]
     deleteByIdAndTimebounds:
