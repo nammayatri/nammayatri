@@ -56,3 +56,26 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN media_file_document_link_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN prepaid_subscription_and_wallet_enabled boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN signing_public_key text ;
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN signing_private_key text ;
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN signature_expiry int ;
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN cipher_text text  default '';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signing_public_key SET DEFAULT '';
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signing_public_key SET NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signature_expiry SET DEFAULT 300;
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signature_expiry SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signing_public_key DROP DEFAULT;
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signing_private_key SET DEFAULT '';

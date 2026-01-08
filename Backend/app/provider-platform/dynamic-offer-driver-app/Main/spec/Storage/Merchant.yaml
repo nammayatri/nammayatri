@@ -47,6 +47,7 @@ imports:
   ServiceName: Domain.Types.Extra.MerchantServiceConfig
   GatewayAndRegistryService: Domain.Types
   Role: Domain.Types.Person
+  Base64: Kernel.Types.Base64
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -94,6 +95,10 @@ Merchant:
     overwriteAssociation: Maybe Bool
     mediaFileDocumentLinkExpires: Seconds
     prepaidSubscriptionAndWalletEnabled: Maybe Bool # This is a top level switch to enable prepaid subscription and wallet features for drivers and fleet owners
+    signingPublicKey: Base64
+    signingPrivateKey: Maybe Base64
+    signatureExpiry: Int
+    cipherText: Maybe Base64
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -108,6 +113,10 @@ Merchant:
     subscriberId: character varying (255)
     uniqueKeyId: character varying (255)
     gatewayAndRegistryPriorityList: "text[]"
+    signingPublicKey: text
+    signingPrivateKey: text
+    signatureExpiry: int
+    cipherText: text
 
   default:
     city: "'Kochi'"
@@ -121,6 +130,9 @@ Merchant:
     fleetOwnerEnabledCheck: "false"
     overwriteAssociation: "false"
     mediaFileDocumentLinkExpires: 3600
+    cipherText: "''"
+    signatureExpiry: "300"
+    signingPrivateKey: "''"
 
   excludedFields:
     - merchantId

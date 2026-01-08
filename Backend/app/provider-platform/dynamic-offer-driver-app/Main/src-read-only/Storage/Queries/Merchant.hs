@@ -45,7 +45,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.city city,
+    [ Se.Set Beam.cipherText cipherText,
+      Se.Set Beam.city city,
       Se.Set Beam.country country,
       Se.Set Beam.description description,
       Se.Set Beam.enabled enabled,
@@ -69,6 +70,9 @@ updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
       Se.Set Beam.prepaidSubscriptionAndWalletEnabled prepaidSubscriptionAndWalletEnabled,
       Se.Set Beam.registryUrl (Kernel.Prelude.showBaseUrl registryUrl),
       Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
+      Se.Set Beam.signatureExpiry signatureExpiry,
+      Se.Set Beam.signingPrivateKey signingPrivateKey,
+      Se.Set Beam.signingPublicKey signingPublicKey,
       Se.Set Beam.state state,
       Se.Set Beam.status status,
       Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId),
