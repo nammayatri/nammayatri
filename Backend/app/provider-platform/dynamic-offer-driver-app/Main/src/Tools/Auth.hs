@@ -14,7 +14,14 @@
 
 module Tools.Auth where
 
+import Crypto.Cipher.AES (AES128)
+import Crypto.Cipher.Types (AEAD (..), AEADMode (..), AuthTag (..), aeadInit, aeadSimpleDecrypt, cipherInit)
+import Crypto.Error (CryptoFailable (..), maybeCryptoError)
+import qualified Data.ByteArray as BA
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base64 as Base64
 import Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -25,6 +32,7 @@ import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.App
+import Kernel.Types.Base64
 import Kernel.Types.Id
 import Kernel.Utils.Common as CoreCommon
 import qualified Kernel.Utils.Common as Utils
@@ -117,6 +125,18 @@ merchantIdFallback v = v
 authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =
   "providerPlatform:authTokenCacheKey:" <> regToken
+
+decryptAES128 :: (MonadThrow m, Log m) => Maybe Base64 -> Text -> m Text
+decryptAES128 Nothing encryptedText = return encryptedText
+decryptAES128 (Just (Base64 cipherText)) encryptedText = do
+  aes <- fromMaybeM (InternalError "Failed to decode CipherText") $ maybeCryptoError (cipherInit $ Base64.decodeLenient cipherText :: CryptoFailable AES128)
+  let (nonce, remaining) = BS.splitAt 12 $ Base64.decodeLenient $ TE.encodeUtf8 encryptedText
+      (encrypted, authTag) = BS.splitAt (BS.length remaining - 16) remaining
+  aeadState <- fromMaybeM (InternalError "Failed to initialize AEAD cipher") $ maybeCryptoError (aeadInit AEAD_GCM aes (nonce :: ByteString) :: CryptoFailable (AEAD AES128))
+  decrypted <- fromMaybeM (InternalError "Decryption failed") $ aeadSimpleDecrypt aeadState (BA.empty :: BS.ByteString) encrypted (mkAuthTag authTag)
+  return $ TE.decodeUtf8 decrypted
+  where
+    mkAuthTag authTag = AuthTag $ BA.convert authTag
 
 validateAdminAction :: forall m r. (HasEsqEnv m r, EncFlow m r, Utils.CacheFlow m r, Utils.EsqDBFlow m r) => VerificationAction AdminVerifyToken m
 validateAdminAction = VerificationAction validateAdmin

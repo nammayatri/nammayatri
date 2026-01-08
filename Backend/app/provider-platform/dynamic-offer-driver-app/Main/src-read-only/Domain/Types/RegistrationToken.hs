@@ -27,16 +27,16 @@ data RegistrationToken = RegistrationToken
     updatedAt :: Kernel.Prelude.UTCTime,
     verified :: Kernel.Prelude.Bool
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, (Show), (Eq))
 
-data LoginType = OTP | PASSWORD | OAUTH deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data LoginType = OTP | PASSWORD | OAUTH | DIRECT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data Medium = SMS | EMAIL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data Medium = SMS | EMAIL | SIGNATURE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RTEntityType = CUSTOMER | USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LoginType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''LoginType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Medium)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Medium))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RTEntityType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RTEntityType))
