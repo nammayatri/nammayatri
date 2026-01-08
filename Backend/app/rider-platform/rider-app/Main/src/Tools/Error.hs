@@ -797,28 +797,6 @@ instance IsHTTPError JourneyError where
 
 instance IsAPIError JourneyError
 
-data PTCircuitBreakerError
-  = PTBookingTemporarilyDisabled Text
-  | PTFareCachingTemporarilyDisabled Text
-  deriving (Eq, Show, IsBecknAPIError)
-
-instanceExceptionWithParent 'HTTPException ''PTCircuitBreakerError
-
-instance IsBaseError PTCircuitBreakerError where
-  toMessage = \case
-    PTBookingTemporarilyDisabled mode -> Just $ "Public transport booking for " <> mode <> " is temporarily disabled due to provider issues."
-    PTFareCachingTemporarilyDisabled mode -> Just $ "Public transport fare service for " <> mode <> " is temporarily unavailable."
-
-instance IsHTTPError PTCircuitBreakerError where
-  toErrorCode = \case
-    PTBookingTemporarilyDisabled _ -> "PT_BOOKING_TEMPORARILY_DISABLED"
-    PTFareCachingTemporarilyDisabled _ -> "PT_FARE_CACHING_TEMPORARILY_DISABLED"
-  toHttpCode = \case
-    PTBookingTemporarilyDisabled _ -> E503
-    PTFareCachingTemporarilyDisabled _ -> E503
-
-instance IsAPIError PTCircuitBreakerError
-
 data CancellationError
   = CancellationNotSupported
   deriving (Eq, Show, IsBecknAPIError)

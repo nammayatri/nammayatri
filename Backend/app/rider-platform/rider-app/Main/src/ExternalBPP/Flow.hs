@@ -27,51 +27,15 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
-import qualified SharedLogic.PTCircuitBreaker as CB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
 getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> NonEmpty CallAPI.BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> m (Bool, [FRFSFare])
 getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId = do
-  -- Circuit breaker check
-  let ptMode = CB.vehicleCategoryToPTMode vehicleCategory
-  mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing
-  let circuitOpen = CB.isCircuitOpen ptMode CB.FareAPI mRiderConfig
-  let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
-  let apiConfig = cbConfig.fare
-
-  -- If circuit is open, try canary request or return early
-  when circuitOpen $ do
-    let canaryAllowed = fromMaybe 2 (apiConfig <&> (.canaryAllowedPerWindow))
-    let canaryWindow = fromMaybe 60 (apiConfig <&> (.canaryWindowSeconds))
-    canarySlot <- CB.tryAcquireCanarySlot ptMode CB.FareAPI merchantOperatingCity.id canaryAllowed canaryWindow
-    unless canarySlot $ return () -- Return early with empty fares handled below
-
-  -- Check if we should skip the call entirely (circuit open and no canary slot)
-  shouldSkip <- do
-    if circuitOpen
-      then do
-        let canaryAllowed = fromMaybe 2 (apiConfig <&> (.canaryAllowedPerWindow))
-        let canaryWindow = fromMaybe 60 (apiConfig <&> (.canaryWindowSeconds))
-        canarySlot <- CB.tryAcquireCanarySlot ptMode CB.FareAPI merchantOperatingCity.id canaryAllowed canaryWindow
-        return $ not canarySlot
-      else return False
-
-  if shouldSkip
-    then return (True, []) -- Return empty fares when circuit is open and no canary slot
-    else do
-      withTryCatch "callExternalBPP:getFares" (CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId) >>= \case
-        Left _ -> do
-          CB.recordFailure ptMode CB.FareAPI merchantOperatingCity.id
-          CB.checkAndDisableIfNeeded ptMode CB.FareAPI merchantOperatingCity.id cbConfig
-          return (True, [])
-        Right fares -> do
-          -- If this was a canary request and it succeeded, re-enable the circuit
-          when circuitOpen $ CB.reEnableCircuit ptMode CB.FareAPI merchantOperatingCity.id
-          CB.recordSuccess ptMode CB.FareAPI merchantOperatingCity.id
-          return fares
+  withTryCatch "callExternalBPP:getFares" (CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId) >>= \case
+    Left _ -> return (True, [])
+    Right fares -> return fares
 
 search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m DOnSearch
 search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails = do

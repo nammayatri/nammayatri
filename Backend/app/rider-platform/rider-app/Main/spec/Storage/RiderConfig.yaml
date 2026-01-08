@@ -66,10 +66,6 @@ RiderConfig:
     metroBookingAllowed: Maybe Bool
     suburbanBookingAllowed: Maybe Bool
     busBookingAllowed: Maybe Bool
-    metroFareCachingAllowed: Maybe Bool
-    suburbanFareCachingAllowed: Maybe Bool
-    busFareCachingAllowed: Maybe Bool
-    ptCircuitBreakerConfig: Maybe Value
     localPoliceNumber: Maybe Text
     enableSupportForSafety: Bool
     videoFileSizeUpperLimit: Int
@@ -435,7 +431,6 @@ RiderConfig:
     specialVehicleNotificationConfigs: "json"
     serviceTierRelationshipCfg: "json"
     metricsBlacklistPatterns: text []
-    ptCircuitBreakerConfig: "json"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
