@@ -38,7 +38,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.RiderConfig as QRiderConfig
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 
 -- | Public transport mode
 data PTMode = Metro | Bus | Subway
