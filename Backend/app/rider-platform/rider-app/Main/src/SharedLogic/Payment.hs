@@ -449,6 +449,41 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentIntentId = do
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
   DPayment.chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall
 
+makeStripeRefund ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
+  DPayment.InitiateStripeRefundReq ->
+  m (Either Text DPayment.InitiateStripeRefundResp)
+makeStripeRefund merchantId merchantOpCityId paymentMode initiateRefundReq = do
+  let createRefundsCall = TPayment.createRefund merchantId merchantOpCityId paymentMode
+  let getRefundsCall = TPayment.getRefund merchantId merchantOpCityId paymentMode
+  DPayment.initiateStripeRefundService initiateRefundReq createRefundsCall getRefundsCall
+
+refreshStripeRefund ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
+  DPayment.RefreshStripeRefundReq ->
+  m DPayment.RefreshStripeRefundResp
+refreshStripeRefund merchantId merchantOpCityId paymentMode refreshRefundReq = do
+  let getRefundsCall = TPayment.getRefund merchantId merchantOpCityId paymentMode
+  DPayment.refreshStripeRefundService refreshRefundReq getRefundsCall
+
 paymentErrorHandler ::
   ( EncFlow m r,
     Esq.EsqDBReplicaFlow m r,

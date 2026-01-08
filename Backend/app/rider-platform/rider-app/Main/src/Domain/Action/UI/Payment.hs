@@ -22,12 +22,14 @@ module Domain.Action.UI.Payment
     stripeWebhookHandler,
     postWalletRecharge,
     getWalletBalance,
+    stripeTestWebhookHandler,
   )
 where
 
 import qualified API.Types.UI.Payment as PaymentAPI
 import Control.Applicative ((<|>))
 import qualified Data.Text
+import qualified Domain.Action.UI.RidePayment as DRidePayment
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -37,6 +39,7 @@ import qualified Domain.Types.RideStatus as DRide
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface.Events.Types as PEInterface
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Stripe as Stripe
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -56,6 +59,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
+import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
 import Servant (BasicAuthData)
@@ -67,10 +71,12 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error
 import Tools.Metrics
+import qualified Tools.Notifications as Notify
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 
@@ -261,7 +267,20 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
 mkOrderStatusCheckKey orderId status = "lockKey:orderId:" <> orderId <> ":status" <> show status
 
-stripeWebhookHandler ::
+stripeWebhookHandler,
+  stripeTestWebhookHandler ::
+    ShortId DM.Merchant ->
+    Maybe Context.City ->
+    Maybe Payment.PaymentServiceType ->
+    Maybe Text ->
+    Maybe Text ->
+    RawByteString ->
+    Flow AckResponse
+stripeWebhookHandler = stripeWebhookHandler' Payment.Stripe
+stripeTestWebhookHandler = stripeWebhookHandler' Payment.StripeTest
+
+stripeWebhookHandler' ::
+  Payment.PaymentService ->
   ShortId DM.Merchant ->
   Maybe Context.City ->
   Maybe Payment.PaymentServiceType ->
@@ -269,10 +288,35 @@ stripeWebhookHandler ::
   Maybe Text ->
   RawByteString ->
   Flow AckResponse
-stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = do
-  paymentServiceConfig <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Payment.Stripe
+stripeWebhookHandler' serviceName merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = do
+  paymentServiceConfig <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId serviceName
   let checkDuplicatedEvent _eventId = pure False -- FIXME
-  Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent DPayment.stripeWebhookService mbSigHeader rawBytes
+  Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent stripeWebhookAction mbSigHeader rawBytes
+
+stripeWebhookAction ::
+  PEInterface.ServiceEventResp ->
+  Text ->
+  Flow AckResponse
+stripeWebhookAction resp respDump = do
+  let stripeWebhookData = DPayment.mkStripeWebhookData resp.eventData
+  case stripeWebhookData of
+    DPayment.RefundWebhookData refundInfo -> do
+      orderId <- (Id @DOrder.PaymentOrder <$>) $ refundInfo.orderId & fromMaybeM (InvalidRequest "orderId not found")
+      refundsId <- (Id @DRefunds.Refunds <$>) $ refundInfo.refundsId & fromMaybeM (InvalidRequest "refundsId not found")
+      Redis.whenWithLockRedis (DRidePayment.refundRequestProccessingKey orderId) 60 $ do
+        void $ DPayment.stripeWebhookService resp respDump stripeWebhookData
+        QRefundRequest.findByRefundsId (Just refundsId) >>= \case
+          Nothing -> logInfo $ "No refund request found for update in webhook with refundsId: " <> refundsId.getId
+          Just refundRequest -> do
+            let updStatus = DRidePayment.castRefundRequestStatus refundInfo.status
+            unless (refundRequest.status == updStatus) $ do
+              QRefundRequest.updateRefundStatus updStatus refundRequest.id
+              let updRefundRequest = refundRequest{status = updStatus}
+              let rideId = cast @DOrder.PaymentOrder @DRide.Ride updRefundRequest.orderId
+              QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
+              Notify.notifyRefunds updRefundRequest
+      pure Ack
+    _ -> DPayment.stripeWebhookService resp respDump stripeWebhookData
 
 ----------------------------------------- wallet apis -----------------------------------------------------
 

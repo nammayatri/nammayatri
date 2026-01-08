@@ -1,0 +1,78 @@
+imports:
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  PaymentTransaction: Lib.Payment.Domain.Types.PaymentTransaction
+  Refunds: Lib.Payment.Domain.Types.Refunds
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  RefundRequestCode: Domain.Types.Extra.RefundRequest
+  Currency: Kernel.Utils.Common
+
+RefundRequest:
+  tableName: refund_request
+  fields:
+    id : Id RefundRequest
+    orderId: Id PaymentOrder
+    transactionId: Id PaymentTransaction
+    transactionAmount: HighPrecMoney
+    currency: Currency
+    refundPurpose: RefundPurpose
+    personId: Id Person
+    requestedAmount: Maybe HighPrecMoney
+    status: RefundRequestStatus
+    code: RefundRequestCode
+    description: Text
+    # after admin response: # should we store admin response time? Turnaround Time?
+    responseDescription: Maybe Text
+    refundsId: Maybe (Id Refunds)
+    refundsAmount: Maybe HighPrecMoney
+    refundsTries: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    evidenceS3Path: Maybe Text # TODO image size validation
+  constraints:
+    id: PrimaryKey
+    orderId: SecondaryKey
+
+  types:
+    RefundRequestStatus:
+      enum: "OPEN, APPROVED, REJECTED, FAILED, REFUNDED" # finally status should be REFUNDED or REJECTED
+      derive: "HttpInstance"
+    RefundPurpose:
+      enum: "RIDE_FARE, CANCELLATION_FEE"
+
+  queries:
+    findByOrderId:
+      kvFunction: findOneWithKV
+      where: orderId
+    findByRefundsId:
+      kvFunction: findOneWithKV
+      where: refundsId
+    updateRefundDetails:
+      kvFunction: updateOneWithKV
+      params:
+       - status
+       - responseDescription
+       - refundsAmount
+       - refundsTries
+      where: id
+    updateRefundIdAndStatus:
+      kvFunction: updateOneWithKV
+      params:
+       - refundsId
+       - status
+      where: id
+    updateRefundStatus:
+      kvFunction: updateOneWithKV
+      params:
+       - status
+      where: id
+
+  excludedDefaultQueries:
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

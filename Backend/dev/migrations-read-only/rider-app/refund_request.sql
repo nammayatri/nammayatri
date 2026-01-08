@@ -1,0 +1,23 @@
+CREATE TABLE atlas_app.refund_request ();
+
+ALTER TABLE atlas_app.refund_request ADD COLUMN code text NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN currency text NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN description text NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN evidence_s3_path text ;
+ALTER TABLE atlas_app.refund_request ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN order_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN person_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN refund_purpose text NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN refunds_amount double precision ;
+ALTER TABLE atlas_app.refund_request ADD COLUMN refunds_id character varying(36) ;
+ALTER TABLE atlas_app.refund_request ADD COLUMN refunds_tries integer NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN requested_amount double precision ;
+ALTER TABLE atlas_app.refund_request ADD COLUMN response_description text ;
+ALTER TABLE atlas_app.refund_request ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN transaction_amount double precision NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN transaction_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.refund_request ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.refund_request ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.refund_request ADD PRIMARY KEY ( id);

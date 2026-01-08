@@ -20,6 +20,8 @@ module Lib.Payment.Domain.Action
     orderStatusService,
     juspayWebhookService,
     stripeWebhookService,
+    mkStripeWebhookData,
+    StripeWebhookData (..),
     createNotificationService,
     createExecutionService,
     buildSDKPayload,
@@ -27,6 +29,12 @@ module Lib.Payment.Domain.Action
     createPaymentIntentService,
     updateForCXCancelPaymentIntentService,
     chargePaymentIntentService,
+    InitiateStripeRefundReq (..),
+    InitiateStripeRefundResp (..),
+    initiateStripeRefundService,
+    refreshStripeRefundService,
+    RefreshStripeRefundReq (..),
+    RefreshStripeRefundResp,
     createPayoutService,
     payoutStatusService,
     payoutStatusUpdates,
@@ -56,7 +64,6 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Events.Types as PEInterface
 import qualified Kernel.External.Payment.Interface.Types as PInterface
-import Kernel.External.Payment.Juspay.Types (RefundStatus (REFUND_PENDING))
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Interface as PT
 import qualified Kernel.External.Payout.Interface.Types as Payout
@@ -1038,40 +1045,69 @@ juspayWebhookService resp respDump = do
 
 -- stripe webhook ----------------------------------------------------------
 
+data StripeWebhookData
+  = OrderTxnWebhookData (Maybe Text, OrderTxn)
+  | RefundWebhookData PEInterface.Refund
+  | SkipWebhookData
+
+mkStripeWebhookData ::
+  PEInterface.EventObject ->
+  StripeWebhookData
+mkStripeWebhookData = \case
+  -- order transaction update
+  PEInterface.PaymentIntentSucceededEvent paymentIntent -> OrderTxnWebhookData $ mkPaymentIntentOrderTxn paymentIntent
+  PEInterface.PaymentIntentPaymentFailedEvent paymentIntent -> OrderTxnWebhookData $ mkPaymentIntentOrderTxn paymentIntent
+  PEInterface.PaymentIntentProcessingEvent paymentIntent -> OrderTxnWebhookData $ mkPaymentIntentOrderTxn paymentIntent
+  PEInterface.PaymentIntentCanceledEvent paymentIntent -> OrderTxnWebhookData $ mkPaymentIntentOrderTxn paymentIntent
+  PEInterface.PaymentIntentCreatedEvent paymentIntent -> OrderTxnWebhookData $ mkPaymentIntentOrderTxn paymentIntent
+  PEInterface.PaymentIntentRequiresActionEvent paymentIntent -> OrderTxnWebhookData $ mkPaymentIntentOrderTxn paymentIntent
+  PEInterface.ChargeSucceededEvent charge -> OrderTxnWebhookData $ mkChargeOrderTxn charge
+  PEInterface.ChargeFailedEvent charge -> OrderTxnWebhookData $ mkChargeOrderTxn charge
+  PEInterface.ChargeRefundedEvent charge -> OrderTxnWebhookData $ mkChargeOrderTxn charge
+  PEInterface.ChargeDisputeCreatedEvent charge -> OrderTxnWebhookData $ mkChargeOrderTxn charge
+  PEInterface.ChargeDisputeClosedEvent charge -> OrderTxnWebhookData $ mkChargeOrderTxn charge
+  -- refunds update
+  PEInterface.ChargeRefundUpdatedEvent _refunds -> SkipWebhookData -- redundant event
+  PEInterface.RefundCreatedEvent refunds -> RefundWebhookData refunds
+  PEInterface.RefundUpdatedEvent refunds -> RefundWebhookData refunds
+  PEInterface.RefundFailedEvent refunds -> RefundWebhookData refunds
+  -- setup intent, not implemented currently
+  PEInterface.SetupIntentSucceededEvent _setupIntent -> SkipWebhookData
+  PEInterface.SetupIntentSetupFailedEvent _setupIntent -> SkipWebhookData
+  PEInterface.SetupIntentCanceledEvent _setupIntent -> SkipWebhookData
+  PEInterface.SetupIntentCreatedEvent _setupIntent -> SkipWebhookData
+  PEInterface.SetupIntentRequiresActionEvent _setupIntent -> SkipWebhookData
+  PEInterface.CustomEvent _event -> SkipWebhookData
+
 stripeWebhookService ::
   BeamFlow m r =>
   PEInterface.ServiceEventResp ->
   Text ->
+  StripeWebhookData ->
   m AckResponse
-stripeWebhookService resp respDump = do
+stripeWebhookService resp respDump stripeWebhookData = do
   logWarning $ "Webhook response dump: " <> respDump
   logWarning $ "Webhook response: " <> show resp
-  let mbOrderTxn = case resp.eventData of
-        PEInterface.PaymentIntentSucceededEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.PaymentIntentPaymentFailedEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.PaymentIntentProcessingEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.PaymentIntentCanceledEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.PaymentIntentCreatedEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.PaymentIntentRequiresActionEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.ChargeSucceededEvent charge -> Just $ mkChargeOrderTxn charge
-        PEInterface.ChargeFailedEvent charge -> Just $ mkChargeOrderTxn charge
-        PEInterface.ChargeRefundedEvent charge -> Just $ mkChargeOrderTxn charge
-        PEInterface.ChargeDisputeCreatedEvent charge -> Just $ mkChargeOrderTxn charge
-        PEInterface.ChargeDisputeClosedEvent charge -> Just $ mkChargeOrderTxn charge
-        PEInterface.ChargeRefundUpdatedEvent charge -> Just $ mkChargeOrderTxn charge
-        _ -> Nothing
 
-  whenJust mbOrderTxn $ \(mbOrderShortId, orderTxn) -> do
-    case mbOrderShortId of
-      Just orderShortId -> do
-        order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
-        maybe
-          (updateOrderTransaction order orderTxn Nothing)
-          ( \transactionUUID' ->
-              Redis.whenWithLockRedis (txnStripeProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
-          )
-          orderTxn.transactionUUID
-      Nothing -> throwError (InvalidRequest $ "orderShortId not found for eventId: " <> resp.id.getId)
+  case stripeWebhookData of
+    OrderTxnWebhookData (mbOrderShortId, orderTxn) -> do
+      case mbOrderShortId of
+        Just orderShortId -> do
+          order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+          maybe
+            (updateOrderTransaction order orderTxn Nothing)
+            ( \transactionUUID' ->
+                Redis.whenWithLockRedis (txnStripeProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
+            )
+            orderTxn.transactionUUID
+        Nothing -> throwError (InvalidRequest $ "orderShortId not found for eventId: " <> resp.id.getId)
+    RefundWebhookData refundsInfo -> do
+      case refundsInfo.orderShortId of
+        Just orderShortId -> do
+          Redis.whenWithLockRedis (refundProccessingKey orderShortId) 60 $ updateRefundsByWebhook refundsInfo -- respDump currently does not stored in refunds table
+        Nothing -> throwError (InvalidRequest $ "orderShortId not found for eventId: " <> resp.id.getId)
+    SkipWebhookData -> logInfo $ "Skip webhook event: " <> show resp.eventType <> "; eventId: " <> resp.id.getId
+
   pure Ack
 
 txnStripeProccessingKey :: Text -> Text
@@ -1132,6 +1168,18 @@ mkChargeOrderTxn PEInterface.Charge {..} = do
                         bankErrorCode = failureCode
                        }
   (orderShortId, orderTxn)
+
+updateRefundsByWebhook ::
+  forall m r.
+  ( BeamFlow m r
+  ) =>
+  PEInterface.Refund ->
+  m ()
+updateRefundsByWebhook refundInfo = do
+  refundsId <- (Id @Refunds <$>) $ refundInfo.refundsId & fromMaybeM (InvalidRequest "refundsId not found")
+  refunds <- QRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist.")
+  when (refundInfo.errorCode /= refunds.errorCode || refundInfo.status /= refunds.status) $ do
+    QRefunds.updateRefundsEntryByStripeResponse refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status refunds.isApiCallSuccess refunds.id
 
 --- notification api ----------
 
@@ -1235,8 +1283,8 @@ createRefundService orderShortId refundsCall =
   where
     -- processRefund :: DOrder.PaymentOrder -> m (Maybe Payment.AutoRefundResp)
     processRefund order = do
-      exisitingOrderRefunds <- QRefunds.findAllByOrderId order.shortId
-      if null exisitingOrderRefunds
+      existingOrderRefunds <- QRefunds.findLatestByOrderId order.shortId
+      if isNothing existingOrderRefunds
         then do
           paymentSplits <- QPaymentOrderSplit.findByPaymentOrder order.id
           splitSettlementDetails <-
@@ -1255,7 +1303,7 @@ createRefundService orderShortId refundsCall =
                     splitSettlementDetails
                   }
           logDebug $ "Refund request splitSettlementDetails : " <> show splitSettlementDetails
-          refundsEntry <- mkRefundsEntry order.merchantId refundReq.requestId order.shortId refundAmount REFUND_PENDING
+          refundsEntry <- mkRefundsEntry order.merchantId refundReq.requestId order.shortId refundAmount PInterface.REFUND_PENDING
           QRefunds.create refundsEntry
           resp <- withTryCatch "refundsCall:refundService" (refundsCall refundReq)
           case resp of
@@ -1292,10 +1340,11 @@ createRefundService orderShortId refundsCall =
                   mdrBorneBy,
                   vendor = PInterface.RefundVendor vendorSplits
                 }
-    refundProccessingKey :: Text -> Text
-    refundProccessingKey refundId = "Refund:Processing:RefundId" <> refundId
 
-mkRefundsEntry :: (BeamFlow m r) => Id Merchant -> Text -> ShortId DOrder.PaymentOrder -> HighPrecMoney -> RefundStatus -> m Refunds
+refundProccessingKey :: Text -> Text
+refundProccessingKey refundId = "Refund:Processing:RefundId" <> refundId
+
+mkRefundsEntry :: (BeamFlow m r) => Id Merchant -> Text -> ShortId DOrder.PaymentOrder -> HighPrecMoney -> PInterface.RefundStatus -> m Refunds
 mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
   now <- getCurrentTime
   return $
@@ -1304,7 +1353,7 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         merchantId = merchantId.getId,
         shortId = ShortId requestId,
         status = refundStatus,
-        isApiCallSuccess = if refundStatus == REFUND_PENDING then Nothing else Just True,
+        isApiCallSuccess = if refundStatus == PInterface.REFUND_PENDING then Nothing else Just True,
         orderId = orderShortId,
         refundAmount = amount,
         errorMessage = Nothing,
@@ -1338,6 +1387,165 @@ upsertRefundStatus order Payment.RefundsData {..} =
 
 txnProccessingKey :: Text -> Text
 txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid
+
+data InitiateStripeRefundReq = InitiateStripeRefundReq
+  { orderId :: Id DOrder.PaymentOrder,
+    transactionId :: Id DTransaction.PaymentTransaction,
+    amount :: Maybe HighPrecMoney,
+    driverAccountId :: Payment.AccountId,
+    email :: Maybe Text,
+    retryRefunds :: Bool
+  }
+
+data InitiateStripeRefundResp = InitiateStripeRefundResp
+  { refundsId :: Id Refunds,
+    stripeRefundId :: Payment.RefundId,
+    status :: PInterface.RefundStatus,
+    errorCode :: Maybe Text
+  }
+
+initiateStripeRefundService ::
+  forall m r.
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  InitiateStripeRefundReq ->
+  (Payment.CreateRefundReq -> m Payment.CreateRefundResp) ->
+  (Payment.GetRefundReq -> m Payment.GetRefundResp) ->
+  m (Either Text InitiateStripeRefundResp)
+initiateStripeRefundService req createRefundsCall getRefundsCall = do
+  order <- QOrder.findById req.orderId >>= fromMaybeM (PaymentOrderDoesNotExist req.orderId.getId) -- TODO should we update PaymentFulfillmentStatus inside of lock?
+  Redis.whenWithLockRedisAndReturnValue (refundProccessingKey order.shortId.getShortId) 60 (processRefund' order) >>= \case
+    Left () -> return . Left $ "Order refund already initiated: " <> req.orderId.getId
+    Right (response :: Either Text InitiateStripeRefundResp) -> return response
+  where
+    processRefund' :: DOrder.PaymentOrder -> m (Either Text InitiateStripeRefundResp)
+    processRefund' order =
+      try (processRefund order) >>= \case
+        Right resp -> pure $ Right resp
+        Left err -> pure $ Left (getErrMessage err)
+
+    -- TODO test this
+    getErrMessage :: SomeException -> Text
+    getErrMessage exc
+      | Just (BaseException baseExc) <- fromException @BaseException exc = fromMaybe "Failed to initiate refunds" $ toMessage baseExc
+      | otherwise = "Failed to initiate refunds"
+
+    processRefund :: DOrder.PaymentOrder -> m InitiateStripeRefundResp
+    processRefund order = do
+      unless (order.status == Payment.CHARGED) $
+        throwError (InvalidRequest $ "Order status for refund should be CHARGED, but got: " <> show order.status)
+      existingOrderRefunds <- QRefunds.findLatestByOrderId order.shortId
+      case existingOrderRefunds of
+        Nothing -> initiateNewRefund order
+        Just latestRefunds ->
+          if req.retryRefunds
+            then do
+              updRefunds <- snd <$> fetchRefundInfo req.driverAccountId latestRefunds getRefundsCall
+              unless (updRefunds.status == PInterface.REFUND_FAILURE) $
+                throwError $
+                  InvalidRequest ("Retry refunds applicable only if previous refunds was failed; latest refunds status: " <> show updRefunds.status)
+              -- TODO should we cancel before create new refund?
+              initiateNewRefund order
+            else throwError . InvalidRequest $ "Refunds already exists for orderId: " <> order.id.getId
+
+    initiateNewRefund :: DOrder.PaymentOrder -> m InitiateStripeRefundResp
+    initiateNewRefund order = do
+      transaction <-
+        QTransaction.findById req.transactionId
+          >>= fromMaybeM (InvalidRequest $ "PaymentTransaction with transactionId \"" <> req.transactionId.getId <> "\"not found.") -- FIXME error code
+      let updRefundsAmount = fromMaybe transaction.amount req.amount
+      when (updRefundsAmount > transaction.amount) $ do
+        throwError . InvalidRequest $ "Couldn't refund more than transaction amount: " <> show transaction.amount
+
+      refundId <- Id @Refunds <$> generateGUID
+      refundsEntry <- mkRefundsEntry order.merchantId refundId.getId order.shortId updRefundsAmount PInterface.REFUND_PENDING
+      QRefunds.create refundsEntry
+
+      let refundReq =
+            PInterface.CreateRefundReq
+              { orderShortId = order.shortId.getShortId,
+                orderId = order.id.getId,
+                refundsId = refundId.getId,
+                paymentIntentId = order.paymentServiceOrderId,
+                amount = req.amount,
+                refundApplicationFee = False, -- FIXME handle in proper way
+                driverAccountId = req.driverAccountId,
+                email = req.email
+              }
+
+      resp <- withTryCatch "createRefundsCall:refundService" (createRefundsCall refundReq)
+      case resp of
+        Right response -> do
+          let isApiCallSuccess = Just True
+          QRefunds.updateRefundsEntryByStripeResponse (Just response.id.getRefundId) response.errorCode response.status isApiCallSuccess refundId
+          return $ mkInitiateStripeRefundResp refundId response
+        Left err -> do
+          logError $ "Create Refund API Call Failure with Error: " <> show err
+          QRefunds.updateIsApiCallSuccess (Just False) refundId
+          throwError $ InvalidRequest "Create Refund API call error"
+
+    mkInitiateStripeRefundResp refundsId Payment.CreateRefundResp {..} = InitiateStripeRefundResp {stripeRefundId = id, ..}
+
+fetchRefundInfo ::
+  forall m r.
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  Payment.AccountId ->
+  Refunds ->
+  (Payment.GetRefundReq -> m Payment.GetRefundResp) ->
+  m (InitiateStripeRefundResp, Refunds)
+fetchRefundInfo driverAccountId latestRefunds getRefundsCall = do
+  idAssignedByServiceProvider <- latestRefunds.idAssignedByServiceProvider & fromMaybeM (InvalidRequest "Could not refresh order, as Stripe refunds object not found. Please retry refunds")
+  let refundReq =
+        PInterface.GetRefundReq
+          { id = PInterface.RefundId idAssignedByServiceProvider,
+            driverAccountId = driverAccountId
+          }
+  resp <- withTryCatch "getRefundsCall:refundService" (getRefundsCall refundReq)
+  case resp of
+    Right response -> do
+      QRefunds.updateRefundsEntryByStripeResponse (Just response.id.getRefundId) response.errorCode response.status latestRefunds.isApiCallSuccess latestRefunds.id
+      let updRefunds =
+            latestRefunds{idAssignedByServiceProvider = Just response.id.getRefundId,
+                          errorCode = response.errorCode,
+                          status = response.status
+                         }
+      pure (mkRefreshInitiateStripeRefundResp latestRefunds.id response, updRefunds)
+    Left err -> do
+      logError $ "Get Refund API Call Failure with Error: " <> show err
+      throwError $ InvalidRequest "Get Refund API call error"
+  where
+    mkRefreshInitiateStripeRefundResp refundsId Payment.GetRefundResp {refundsId = _refundsId, ..} = InitiateStripeRefundResp {stripeRefundId = id, ..}
+
+data RefreshStripeRefundReq = RefreshStripeRefundReq
+  { orderId :: Id DOrder.PaymentOrder,
+    driverAccountId :: Payment.AccountId
+  }
+
+type RefreshStripeRefundResp = InitiateStripeRefundResp
+
+refreshStripeRefundService ::
+  forall m r.
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  RefreshStripeRefundReq ->
+  (Payment.GetRefundReq -> m Payment.GetRefundResp) ->
+  m RefreshStripeRefundResp
+refreshStripeRefundService req getRefundsCall = do
+  order <- QOrder.findById req.orderId >>= fromMaybeM (PaymentOrderDoesNotExist req.orderId.getId)
+  Redis.whenWithLockRedisAndReturnValue (refundProccessingKey order.shortId.getShortId) 60 (processRefund order) >>= \case
+    Left () -> throwError (InvalidRequest $ "Order refund locked: " <> req.orderId.getId)
+    Right (response :: RefreshStripeRefundResp) -> return response
+  where
+    processRefund :: DOrder.PaymentOrder -> m RefreshStripeRefundResp
+    processRefund order = do
+      existingOrderRefunds <- QRefunds.findLatestByOrderId order.shortId
+      case existingOrderRefunds of
+        Just latestRefunds -> fst <$> fetchRefundInfo req.driverAccountId latestRefunds getRefundsCall
+        Nothing -> throwError . InvalidRequest $ "Refunds does not exist for orderId: " <> order.id.getId
 
 -- payout APIs ---
 

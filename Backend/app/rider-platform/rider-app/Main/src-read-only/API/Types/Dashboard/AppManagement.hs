@@ -7,6 +7,7 @@ import qualified API.Types.Dashboard.AppManagement.Customer
 import qualified API.Types.Dashboard.AppManagement.EventManagement
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
 import qualified API.Types.Dashboard.AppManagement.Pass
+import qualified API.Types.Dashboard.AppManagement.Payment
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified Data.List
@@ -21,6 +22,7 @@ data AppManagementUserActionType
   | EVENT_MANAGEMENT API.Types.Dashboard.AppManagement.EventManagement.EventManagementUserActionType
   | MERCHANT_ONBOARDING API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingUserActionType
   | PASS API.Types.Dashboard.AppManagement.Pass.PassUserActionType
+  | PAYMENT API.Types.Dashboard.AppManagement.Payment.PaymentUserActionType
   | TICKET_DASHBOARD API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardUserActionType
   | TICKETS API.Types.Dashboard.AppManagement.Tickets.TicketsUserActionType
   deriving stock (Generic, Eq, Ord)
@@ -32,6 +34,7 @@ instance Text.Show.Show AppManagementUserActionType where
     EVENT_MANAGEMENT e -> "EVENT_MANAGEMENT/" <> show e
     MERCHANT_ONBOARDING e -> "MERCHANT_ONBOARDING/" <> show e
     PASS e -> "PASS/" <> show e
+    PAYMENT e -> "PAYMENT/" <> show e
     TICKET_DASHBOARD e -> "TICKET_DASHBOARD/" <> show e
     TICKETS e -> "TICKETS/" <> show e
 
@@ -60,6 +63,15 @@ instance Text.Read.Read AppManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "PASS/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( PAYMENT v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "PAYMENT/" r,
                    ( v1,
                      r2
                      ) <-

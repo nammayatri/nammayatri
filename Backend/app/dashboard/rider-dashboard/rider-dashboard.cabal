@@ -34,6 +34,7 @@ library
       Domain.Action.RiderPlatform.AppManagement.EventManagement
       Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding
       Domain.Action.RiderPlatform.AppManagement.Pass
+      Domain.Action.RiderPlatform.AppManagement.Payment
       Domain.Action.RiderPlatform.AppManagement.TicketDashboard
       Domain.Action.RiderPlatform.AppManagement.Tickets
       Domain.Action.RiderPlatform.IssueManagement.Issue
@@ -67,6 +68,7 @@ library
       API.Action.RiderPlatform.AppManagement.EventManagement
       API.Action.RiderPlatform.AppManagement.MerchantOnboarding
       API.Action.RiderPlatform.AppManagement.Pass
+      API.Action.RiderPlatform.AppManagement.Payment
       API.Action.RiderPlatform.AppManagement.TicketDashboard
       API.Action.RiderPlatform.AppManagement.Tickets
       API.Action.RiderPlatform.IssueManagement

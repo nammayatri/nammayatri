@@ -72,6 +72,13 @@ type MainAPI =
              :> QueryParam "placeId" Text
              :> Stripe.StripeWebhookAPI
          )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> QueryParam "serviceType" TPayment.PaymentServiceType
+             :> QueryParam "placeId" Text
+             :> "test"
+             :> Stripe.StripeWebhookAPI
+         )
     :<|> Dashboard.APIV2
     :<|> Internal.API
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
@@ -100,6 +107,7 @@ mainServer =
     -- :<|> const Beckn.handler  -- TODO : Revert after 2.x release
     :<|> juspayWebhookHandler
     :<|> stripeWebhookHandler
+    :<|> stripeTestWebhookHandler
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
     :<|> juspayPayoutWebhookHandlerV2
@@ -148,6 +156,17 @@ stripeWebhookHandler ::
   FlowHandler AckResponse
 stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader =
   withFlowHandlerAPI . Payment.stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader
+
+stripeTestWebhookHandler ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe TPayment.PaymentServiceType ->
+  Maybe Text ->
+  Maybe Text ->
+  Stripe.RawByteString ->
+  FlowHandler AckResponse
+stripeTestWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader =
+  withFlowHandlerAPI . Payment.stripeTestWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader
 
 juspayPayoutWebhookHandlerV2 ::
   ShortId DM.Merchant ->

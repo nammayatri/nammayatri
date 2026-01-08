@@ -357,6 +357,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       pickupEtaLogicVersion = Nothing
       commission = booking.commission
       pickupSpeedInMPS = Nothing
+      refundRequestStatus = Nothing
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::
