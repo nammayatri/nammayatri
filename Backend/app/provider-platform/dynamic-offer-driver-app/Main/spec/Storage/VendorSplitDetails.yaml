@@ -10,7 +10,7 @@ VendorSplitDetails:
 
   types:
     SplitType:
-      enum: "FIXED" # add PERCENTAGE later
+      enum: "FIXED, PERCENTAGE"
 
   fields:
     merchantOperatingCityId : Id MerchantOperatingCity
