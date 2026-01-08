@@ -9,7 +9,6 @@ where
 import qualified Crypto.Cipher.AES as AES
 import qualified Crypto.Cipher.Types as CT
 import qualified Crypto.Error as CE
-import Crypto.Random (getRandomBytes)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.Text as T
@@ -17,6 +16,9 @@ import qualified Data.Text.Encoding as TE
 import EulerHS.Prelude
 import ExternalBPP.ExternalAPI.Metro.CMRL.V2.Error (CMRLV2Error (CMRLV2InternalError))
 import Kernel.Utils.Common
+
+zeroIV :: BS.ByteString
+zeroIV = BS.replicate 16 0
 
 pkcs7Pad :: BS.ByteString -> BS.ByteString
 pkcs7Pad input =
@@ -49,42 +51,37 @@ initCipher clientKey = do
 
 encryptPayload :: (MonadFlow m) => Text -> Text -> m Text
 encryptPayload plaintext clientKey = do
+  logDebug $ "[CMRLV2:Encryption] Encrypting payload: " <> plaintext
   cipher <- case initCipher clientKey of
     Left err -> throwError $ CMRLV2InternalError (T.pack err)
     Right c -> pure c
 
-  ivBytes <- liftIO $ getRandomBytes 16
-  iv <- case CT.makeIV ivBytes of
+  iv <- case CT.makeIV zeroIV of
     Nothing -> throwError $ CMRLV2InternalError "Failed to create IV"
     Just v -> pure v
 
   let padded = pkcs7Pad (TE.encodeUtf8 plaintext)
       ciphertext = CT.cbcEncrypt cipher iv padded
-      finalBytes = ivBytes <> ciphertext
-      encoded = TE.decodeUtf8 (B64.encode finalBytes)
+      encoded = TE.decodeUtf8 (B64.encode ciphertext)
 
-  logInfo $ "Encrypted payload generated successfully"
+  logDebug $ "[CMRLV2:Encryption] Encrypted payload generated successfully"
   pure encoded
 
 decryptPayload :: Text -> Text -> Either String Text
 decryptPayload encryptedText clientKey = do
   cipher <- initCipher clientKey
 
-  raw <- case B64.decode (TE.encodeUtf8 encryptedText) of
+  ciphertext <- case B64.decode (TE.encodeUtf8 encryptedText) of
     Left err -> Left $ "Base64 decode failed: " <> err
     Right b -> Right b
 
-  if BS.length raw < 16
-    then Left "Ciphertext too short"
-    else do
-      let (ivBytes, ciphertext) = BS.splitAt 16 raw
-      iv <- case CT.makeIV ivBytes of
-        Nothing -> Left "Invalid IV"
-        Just v -> Right v
+  iv <- case CT.makeIV zeroIV of
+    Nothing -> Left "Invalid IV"
+    Just v -> Right v
 
-      let decrypted = CT.cbcDecrypt cipher iv ciphertext
-      unpadded <- pkcs7Unpad decrypted
+  let decrypted = CT.cbcDecrypt cipher iv ciphertext
+  unpadded <- pkcs7Unpad decrypted
 
-      case TE.decodeUtf8' unpadded of
-        Left err -> Left $ "UTF-8 decode failed: " <> show err
-        Right txt -> Right txt
+  case TE.decodeUtf8' unpadded of
+    Left err -> Left $ "UTF-8 decode failed: " <> show err
+    Right txt -> Right txt
