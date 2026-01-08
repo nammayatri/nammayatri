@@ -726,19 +726,6 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
         SP.EMAIL -> SOTP.EMAIL
         SP.AADHAAR -> SOTP.SMS
         SP.DEVICE -> SOTP.SMS -- Just to fill in the cases, not reachable
-  when (isNothing useFakeOtpM) $ do
-    SOTP.sendOTP
-      otpChannel
-      otpCode
-      personId
-      person.merchantId
-      person.merchantOperatingCityId
-      req.mobileCountryCode
-      req.mobileNumber
-      req.email
-      riderConfig.emailOtpConfig
-      Nothing
-
   case identifierType of
     SP.MOBILENUMBER -> do
       countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for MOBILENUMBER identifier")
@@ -757,7 +744,7 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       storeAndSendOTP generatedOtpCode identifierType personId person smsCfg useFakeOtpM otpChannel riderConfig req Nothing Nothing (Just receiverEmail)
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
-
+    SP.DEVICE -> throwError $ InvalidRequest "DEVICE identifier is not supported" -- Just to fill in the cases, not reachable
   pure APISuccess.Success
   where
     storeAndSendOTP ::
@@ -803,9 +790,6 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
           req'.email
           riderConfig'.emailOtpConfig
           Nothing
-    SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
-    SP.DEVICE -> throwError $ InvalidRequest "DEVICE identifier is not supported" -- Just to fill in the cases, not reachable
-  pure APISuccess.Success
 
 data VerifyUpdateAuthOTPReq = VerifyUpdateAuthOTPReq
   { identifier :: Maybe SP.IdentifierType,
