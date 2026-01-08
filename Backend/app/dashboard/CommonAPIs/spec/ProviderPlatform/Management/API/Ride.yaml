@@ -259,6 +259,7 @@ types:
     - vehicleServiceTierName: Text
     - nextStopLocation: Maybe LocationAPIEntity
     - lastStopLocation: Maybe LocationAPIEntity
+    - stopInformation: Maybe [StopInformation]
     - endOtp: Maybe Text
     - mbDefaultServiceTierName: Maybe Text
     - rideCity: Maybe Text
@@ -269,6 +270,14 @@ types:
     - deliveryParcelImageId: Maybe Text
     - estimatedReservedDuration: Maybe Minutes
     - isPetRide: Maybe Bool
+  StopInformation:
+    - stopId: Text
+    - stopLocId: Text
+    - stopOrder: Int
+    - waitingTimeStart: UTCTime
+    - waitingTimeEnd: Maybe UTCTime
+    - stopStartLatLng: LatLong
+    - stopEndLatLng: Maybe LatLong
   LocationAPIEntity:
     - lat: Double
     - lon: Double
