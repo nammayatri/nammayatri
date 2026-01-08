@@ -855,6 +855,7 @@ library
       Domain.Types.FRFSTicketBookingBreakup
       Domain.Types.FRFSTicketBookingFeedback
       Domain.Types.FRFSTicketBookingPayment
+      Domain.Types.FRFSTicketBookingPaymentCategory
       Domain.Types.FRFSTicketCategoryMetadataConfig
       Domain.Types.FRFSTicketDiscount
       Domain.Types.FRFSVehicleServiceTier
@@ -1005,6 +1006,7 @@ library
       Storage.Beam.FRFSTicketBookingBreakup
       Storage.Beam.FRFSTicketBookingFeedback
       Storage.Beam.FRFSTicketBookingPayment
+      Storage.Beam.FRFSTicketBookingPaymentCategory
       Storage.Beam.FRFSTicketCategoryMetadataConfig
       Storage.Beam.FRFSTicketDiscount
       Storage.Beam.FRFSVehicleServiceTier
@@ -1158,6 +1160,7 @@ library
       Storage.Queries.FRFSTicketBookingBreakup
       Storage.Queries.FRFSTicketBookingFeedback
       Storage.Queries.FRFSTicketBookingPayment
+      Storage.Queries.FRFSTicketBookingPaymentCategory
       Storage.Queries.FRFSTicketCategoryMetadataConfig
       Storage.Queries.FRFSTicketDiscount
       Storage.Queries.FRFSVehicleServiceTier

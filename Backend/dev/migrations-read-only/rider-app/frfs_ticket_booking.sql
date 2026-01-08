@@ -135,3 +135,23 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN vehicle_number text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

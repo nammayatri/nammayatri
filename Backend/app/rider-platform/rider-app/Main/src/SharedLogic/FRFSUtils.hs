@@ -44,6 +44,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
+import qualified Domain.Types.FRFSTicketBookingPaymentCategory as DTBPC
 import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as DFRFSTicketCategoryMetadataConfig
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -101,6 +102,7 @@ import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import Storage.Queries.FRFSStageFare as QFRFSStageFare
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.JourneyLeg as QJL
 import Storage.Queries.RouteTripMapping as QRouteTripMapping
@@ -827,7 +829,9 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   personEmail <- mapM decrypt person.email
   (orderId, orderShortId) <- getPaymentIds
-  ticketBookingPayments' <- processPayments orderId `mapM` bookings
+  results <- processPayments orderId `mapM` bookings
+  let (ticketBookingPayments', allPaymentCategories) = unzip results
+  QFRFSTicketBookingPaymentCategory.createMany (concat allPaymentCategories)
   QFRFSTicketBookingPayment.createMany ticketBookingPayments'
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
@@ -880,7 +884,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
       ) =>
       Id PaymentOrder.PaymentOrder ->
       FTBooking.FRFSTicketBooking ->
-      m DFRFSTicketBookingPayment.FRFSTicketBookingPayment
+      m (DFRFSTicketBookingPayment.FRFSTicketBookingPayment, [DTBPC.FRFSTicketBookingPaymentCategory])
     processPayments orderId booking = do
       ticketBookingPaymentId <- generateGUID
       now <- getCurrentTime
@@ -896,7 +900,37 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
                 updatedAt = now,
                 paymentOrderId = orderId
               }
-      return ticketBookingPayment
+      -- Fetch quote categories and create payment categories
+      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+      paymentCategories <- mapM (mkPaymentCategory ticketBookingPaymentId booking now) quoteCategories
+      return (ticketBookingPayment, paymentCategories)
+
+    mkPaymentCategory ::
+      (MonadFlow m) =>
+      Id DFRFSTicketBookingPayment.FRFSTicketBookingPayment ->
+      FTBooking.FRFSTicketBooking ->
+      UTCTime ->
+      DFRFSQuoteCategory.FRFSQuoteCategory ->
+      m DTBPC.FRFSTicketBookingPaymentCategory
+    mkPaymentCategory paymentId booking now quoteCategory = do
+      categoryId <- generateGUID
+      return $
+        DTBPC.FRFSTicketBookingPaymentCategory
+          { id = categoryId,
+            frfsTicketBookingPaymentId = paymentId,
+            quoteId = quoteCategory.quoteId,
+            bppItemId = quoteCategory.bppItemId,
+            category = quoteCategory.category,
+            categoryMeta = quoteCategory.categoryMeta,
+            price = quoteCategory.price,
+            offeredPrice = quoteCategory.offeredPrice,
+            finalPrice = quoteCategory.finalPrice,
+            selectedQuantity = quoteCategory.selectedQuantity,
+            merchantId = booking.merchantId,
+            merchantOperatingCityId = booking.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
 
 makecancelledTtlKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
 makecancelledTtlKey bookingId = "FRFS:OnConfirm:CancelledTTL:bookingId-" <> bookingId.getId

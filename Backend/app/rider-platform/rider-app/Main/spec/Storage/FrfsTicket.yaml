@@ -15,6 +15,7 @@ imports:
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   FRFSTicket: Domain.Types.FRFSTicket
   FRFSTicketBookingPayment: Domain.Types.FRFSTicketBookingPayment
+  FRFSTicketBookingPaymentCategory: Domain.Types.FRFSTicketBookingPaymentCategory
   Station: Domain.Types.Station
   FRFSQuoteType: Domain.Types.FRFSQuote
   FRFSRoutes: Domain.Types.FRFSQuote
@@ -40,6 +41,7 @@ imports:
   FRFSCategoryTag: Domain.Types.FRFSQuoteCategorySpec
   OfferedValue: Domain.Types.FRFSQuoteCategorySpec
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
+  QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
   BusLocation: API.Types.UI.RiderLocation
   Value: Data.Aeson
 
@@ -655,6 +657,75 @@ FRFSTicketBookingPayment:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
+FRFSTicketBookingPaymentCategory:
+  tableName: frfs_ticket_booking_payment_category
+  fields:
+    id: Id FRFSTicketBookingPaymentCategory
+    frfsTicketBookingPaymentId: Id FRFSTicketBookingPayment
+    quoteId: Id FRFSQuote
+    bppItemId: Text
+    category: FRFSQuoteCategoryType|NoRelation
+    categoryMeta: Maybe QuoteCategoryMetadata
+    price: Price
+    offeredPrice: Price
+    finalPrice: Maybe Price
+    selectedQuantity: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
+    frfsTicketBookingPaymentId: SecondaryKey
+
+  beamFields:
+    categoryMeta:
+      code: Maybe Text
+      title: Maybe Text
+      description: Maybe Text
+      tnc: Maybe Text
+    price:
+      currency: Maybe Currency
+      price: HighPrecMoney
+    offeredPrice:
+      offeredPrice: HighPrecMoney
+    finalPrice:
+      finalPrice: Maybe HighPrecMoney
+
+  beamType:
+    category: Maybe FRFSQuoteCategoryType
+    selectedQuantity: Maybe Int
+
+  default:
+    selectedQuantity: "0"
+
+  fromTType:
+    price: Kernel.Types.Common.mkPrice currency price|E
+    offeredPrice: Kernel.Types.Common.mkPrice currency offeredPrice|E
+    finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
+    categoryMeta: Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadata code title description tnc|E
+    category: Kernel.Prelude.fromMaybe Domain.Types.FRFSQuoteCategoryType.ADULT category|E
+    selectedQuantity: Kernel.Prelude.fromMaybe 0|I
+
+  toTType:
+    price: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+    offeredPrice: (.amount)|I
+    finalPrice: (Kernel.Prelude.fmap (.amount))|I
+    code: (categoryMeta <&> (.code))|E
+    title: (categoryMeta <&> (.title))|E
+    description: (categoryMeta <&> (.description))|E
+    tnc: (categoryMeta <&> (.tnc))|E
+    category: Kernel.Prelude.Just|I
+    selectedQuantity: Kernel.Prelude.Just|I
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByPaymentId:
+      kvFunction: findAllWithKV
+      where: frfsTicketBookingPaymentId
 
 FRFSRecon:
   tableName: frfs_recon

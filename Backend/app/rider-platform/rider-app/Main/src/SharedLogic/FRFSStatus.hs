@@ -14,6 +14,7 @@ import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketBookingPaymentCategory as DTBPC
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as DJ
@@ -63,6 +64,7 @@ import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
@@ -235,7 +237,10 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                   QJourney.findByPrimaryKey journeyLeg.journeyId
                                 Nothing -> pure Nothing
                               let mbIsSingleMode = mbJourney >>= (.isSingleMode)
-                              void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking quoteCategories mbIsSingleMode
+                              -- Use payment categories if available, otherwise fall back to quote categories
+                              paymentCategories <- QFRFSTicketBookingPaymentCategory.findAllByPaymentId paymentBooking.id
+                              let categoriesToUse = if null paymentCategories then quoteCategories else map paymentCategoryToQuoteCategory paymentCategories
+                              void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode
                               void $ addPaymentoffersTags quoteUpdatedBooking.totalPrice person
                               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                               buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentSuccess
@@ -540,3 +545,23 @@ mkFRFSQuoteCategoryAPIEntity FRFSQuoteCategory.FRFSQuoteCategory {..} =
   FRFSTicketService.FRFSQuoteCategoryAPIEntity {categoryMetadata = mkCategoryMetadataAPIEntity <$> categoryMeta, price = mkPriceAPIEntity price, offeredPrice = mkPriceAPIEntity offeredPrice, finalPrice = mkPriceAPIEntity <$> finalPrice, ..}
   where
     mkCategoryMetadataAPIEntity FRFSQuoteCategory.QuoteCategoryMetadata {..} = FRFSTicketService.FRFSTicketCategoryMetadataAPIEntity {..}
+
+-- | Convert FRFSTicketBookingPaymentCategory to FRFSQuoteCategory format
+-- This is used for backward compatibility with the confirm flow
+paymentCategoryToQuoteCategory :: DTBPC.FRFSTicketBookingPaymentCategory -> FRFSQuoteCategory.FRFSQuoteCategory
+paymentCategoryToQuoteCategory DTBPC.FRFSTicketBookingPaymentCategory {..} =
+  FRFSQuoteCategory.FRFSQuoteCategory
+    { id = Id $ getId id, -- Convert Id type
+      quoteId = quoteId,
+      bppItemId = bppItemId,
+      category = category,
+      categoryMeta = categoryMeta,
+      price = price,
+      offeredPrice = offeredPrice,
+      finalPrice = finalPrice,
+      selectedQuantity = selectedQuantity,
+      merchantId = merchantId,
+      merchantOperatingCityId = merchantOperatingCityId,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
