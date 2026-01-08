@@ -171,8 +171,7 @@ postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, _merchantId, _) req = do
       storedEmail <- case storedAuthData of
         AuthData {email = Just em} -> pure em
         _ -> throwError $ InvalidRequest "AUTH_EMAIL_NOT_FOUND: Email not found in auth data"
-      encryptedValue <- encrypt storedEmail
-      QPersonExtra.updateEmailByPersonId personId encryptedValue
+      QPersonExtra.updateEmailByPersonId personId storedEmail
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
 
   void $ Redis.del redisKey

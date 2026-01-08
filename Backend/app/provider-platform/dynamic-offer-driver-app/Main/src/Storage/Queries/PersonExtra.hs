@@ -576,14 +576,12 @@ updateMobileNumberByPersonId (Id personId) encMobile mobileNumberHash mobileCoun
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateEmailByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m ()
-updateEmailByPersonId (Id personId) encEmail = do
+updateEmailByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Text -> m ()
+updateEmailByPersonId (Id personId) email = do
   now <- getCurrentTime
-  let encVal = unEncrypted (encEmail.encrypted)
-  -- emailHash = encEmail.hash
   updateWithKV
     [ Se.Set BeamP.updatedAt now,
-      Se.Set BeamP.email (Just encVal)
+      Se.Set BeamP.email (Just email)
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
