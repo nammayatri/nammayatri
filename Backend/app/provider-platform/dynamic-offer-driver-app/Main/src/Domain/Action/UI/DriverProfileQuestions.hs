@@ -1,7 +1,6 @@
 module Domain.Action.UI.DriverProfileQuestions where
 
 import qualified API.Types.UI.DriverProfileQuestions
-import qualified AWS.S3 as S3
 import ChatCompletion.Interface.Types as CIT
 import qualified Data.Text as T
 import Data.Time.Clock (utctDay)
@@ -27,6 +26,7 @@ import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
 import Storage.CachedQueries.LLMPrompt.LLMPrompt as SCL
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Image as ImageQuery
@@ -164,7 +164,7 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
     Just mediaId -> do
       mediaEntry <- runInReplica $ QMF.findById mediaId >>= fromMaybeM (FileDoNotExist driverId.getId)
       case mediaEntry.s3FilePath of
-        Just s3Path -> Just <$> S3.get (T.unpack s3Path)
+        Just s3Path -> Just <$> Storage.get (T.unpack s3Path)
         _ -> fetchLegacyProfileImage driverId
     Nothing -> do
       fetchLegacyProfileImage driverId
@@ -201,7 +201,7 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
   where
     getImages imageIds = do
       mapM (QMF.findById) imageIds <&> catMaybes <&> ((.url) <$>)
-        >>= mapM (S3.get . T.unpack . extractFilePath)
+        >>= mapM (Storage.get . T.unpack . extractFilePath)
 
     extractFilePath url = case T.splitOn "filePath=" url of
       [_before, after] -> after
@@ -209,7 +209,7 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
 
     fetchLegacyProfileImage driverId =
       ImageQuery.findByPersonIdImageTypeAndValidationStatus driverId DTO.ProfilePhoto DImage.APPROVED
-        >>= maybe (pure Nothing) (\image -> Just <$> S3.get (T.unpack image.s3Path))
+        >>= maybe (pure Nothing) (\image -> Just <$> Storage.get (T.unpack image.s3Path))
 
     fetchVehicleImage mbVehicleImageId = case mbVehicleImageId of
       Just mediaId -> do
@@ -217,7 +217,7 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
         case mbMediaEntry of
           Just mediaEntry -> do
             case mediaEntry.s3FilePath of
-              Just s3Path -> Just <$> S3.get (T.unpack s3Path)
+              Just s3Path -> Just <$> Storage.get (T.unpack s3Path)
               _ -> return Nothing
           Nothing -> return Nothing
       Nothing -> return Nothing

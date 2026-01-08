@@ -12,17 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module IssueManagement.Domain.Types.MediaFile where
+module GCP.GCS.Types where
 
 import Kernel.Prelude
-import Kernel.Types.Id
-import Storage.Types (FileType (..))
+import Kernel.Utils.Dhall (FromDhall)
 
-data MediaFile = MediaFile
-  { id :: Id MediaFile,
-    _type :: FileType,
-    url :: Text,
-    s3FilePath :: Maybe Text,
-    createdAt :: UTCTime
+data GCSConfig = GCSConf GCSConfigDetails | GCSMockConf GCSMockConfig
+  deriving (Generic, FromDhall)
+
+data GCSConfigDetails = GCSConfigDetails
+  { serviceAccountKey :: Text, -- JSON key as Text
+    bucketName :: Text,
+    projectId :: Text,
+    pathPrefix :: Text
   }
-  deriving (Generic, FromJSON, Eq, ToJSON, ToSchema, Show)
+  deriving (Generic, FromDhall)
+
+data GCSMockConfig = GCSMockConfig
+  { baseLocalDirectory :: String,
+    pathPrefix :: Text,
+    bucketName :: Text
+  }
+  deriving (Generic, FromDhall)

@@ -17,7 +17,6 @@ where
 
 import API.Types.Dashboard.AppManagement.MerchantOnboarding (UploadFileRequest (..))
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
-import qualified AWS.S3 as S3
 import Data.Aeson as A
 import qualified Data.Aeson
 import Data.Aeson.Key (fromText)
@@ -48,9 +47,11 @@ import Kernel.Utils.Common (fromMaybeM, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Flow as Storage
 import Storage.Queries.MerchantOnboarding as QMO
 import Storage.Queries.MerchantOnboardingStep as QMOS
 import Storage.Queries.MerchantOnboardingStepConfig as QMOSC
+import Storage.Types (FileType (..))
 import System.IO (hFileSize)
 import Tools.Error
 
@@ -296,12 +297,12 @@ merchantOnboardingStepUploadFile _merchantShortId _opCity stepId payloadKey requ
     throwError $ FileSizeExceededError ("File size " <> show fileSize <> " exceeds the limit of " <> show merchantConfig.mediaFileSizeUpperLimit)
 
   documentFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- S3.createFilePath "/onboarding/" ("step-" <> stepId <> "-payloadKey-" <> payloadKey) fileType reqContentType
+  filePath <- Storage.createFilePath "/onboarding/" ("step-" <> stepId <> "-payloadKey-" <> payloadKey) fileType reqContentType
   let fileUrl =
         merchantConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "merchant-onboarding"
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 put file" $ S3.put (T.unpack filePath) documentFile
+  _ <- fork "Storage put file" $ Storage.put (T.unpack filePath) documentFile
   uploadFileRes <- createMediaEntry fileUrl fileType filePath
   updateStepPayloadWithFileId step payloadKey uploadFileRes.fileId.getId
   return uploadFileRes
@@ -353,7 +354,7 @@ merchantOnboardingStepList _merchantShortId _opCity onboardingId requestorId mbR
   steps <- QMOS.findByMerchantOnboardingId onboarding.id.getId
   return steps
 
-createMediaEntry :: Text -> S3.FileType -> Text -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse
+createMediaEntry :: Text -> FileType -> Text -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse
 createMediaEntry url fileType filePath = do
   fileEntity <- mkFile url
   MFQuery.create fileEntity
@@ -380,7 +381,7 @@ merchantOnboardingGetFile _merchantShortId _opCity onboardingId fileId requestor
     throwError $ InvalidRequest "RequestorId does not have access to this file"
   file <- MFQuery.findById (Kernel.Types.Id.Id fileId) >>= fromMaybeM (InvalidRequest "No file found")
   filePath <- file.s3FilePath & fromMaybeM (FileDoNotExist fileId)
-  base64File <- S3.get $ T.unpack filePath
+  base64File <- Storage.get $ T.unpack filePath
   return $ Domain.Types.MerchantOnboarding.GetFileResponse {fileBase64 = base64File, fileType = show file._type}
 
 merchantOnboardingCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Kernel.Types.APISuccess.APISuccess)

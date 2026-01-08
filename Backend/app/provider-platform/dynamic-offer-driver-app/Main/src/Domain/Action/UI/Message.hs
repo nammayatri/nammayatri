@@ -14,7 +14,6 @@
 
 module Domain.Action.UI.Message where
 
-import qualified AWS.S3 as S3
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
@@ -31,14 +30,16 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Storage.Beam.IssueManagement ()
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.Message as MQ
 import qualified Storage.Queries.MessageReport as MRQ
 import qualified Storage.Queries.Person as QP
+import Storage.Types (FileType)
 import Tools.Error
 
 data MediaFileApiResponse = MediaFileApiResponse
   { url :: Text,
-    fileType :: S3.FileType
+    fileType :: FileType
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -121,7 +122,7 @@ getMessage (driverId, _, _) messageId = do
 fetchMedia :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> Flow Text
 fetchMedia (driverId, _, _) filePath = do
   _ <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  S3.get $ T.unpack filePath
+  Storage.get $ T.unpack filePath
 
 messageSeen :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.Message -> Flow APISuccess
 messageSeen (driverId, _, _) messageId = do

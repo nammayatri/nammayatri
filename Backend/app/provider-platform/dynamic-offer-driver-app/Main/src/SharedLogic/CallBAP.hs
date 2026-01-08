@@ -41,7 +41,6 @@ module SharedLogic.CallBAP
   )
 where
 
-import qualified AWS.S3 as S3
 import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnStatus as ACL
@@ -335,7 +334,6 @@ rideAssignedCommon ::
     CacheFlow m r,
     HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -449,7 +447,6 @@ buildOnConfirmMessage ::
     CacheFlow m r,
     HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -478,7 +475,6 @@ sendOnConfirmToBAP ::
     CacheFlow m r,
     HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -516,7 +512,6 @@ sendRideAssignedUpdateToBAP ::
     CacheFlow m r,
     HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],

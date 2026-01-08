@@ -20,7 +20,6 @@ import qualified API.Client.RiderPlatform.AppManagement
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding as AppMO
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
 import "rider-app" API.Types.Dashboard.AppManagement.MerchantOnboarding ()
-import AWS.S3 (FileType (..))
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -40,6 +39,7 @@ import "lib-dashboard" Storage.Beam.BeamFlow
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.Role as QR
+import Storage.Types (FileType (..))
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error

@@ -8,7 +8,6 @@ module Domain.Action.UI.PickupInstructions
 where
 
 import qualified API.Types.UI.PickupInstructions as API
-import AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.Geohash as Geohash
 import qualified Data.List as List
@@ -31,8 +30,10 @@ import Kernel.Utils.Common
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PickupInstructions as QPI
+import Storage.Types (FileType (..))
 import Tools.Error
 
 -- FromMultipart instance for PickupInstructionsReq
@@ -93,26 +94,26 @@ instance ToMultipart Tmp API.PickupInstructionsReq where
           Nothing -> []
       )
 
-validateAudioContentType :: Text -> Either String S3.FileType
+validateAudioContentType :: Text -> Either String FileType
 validateAudioContentType = \case
-  "audio/wave" -> Right S3.Audio
-  "audio/wav" -> Right S3.Audio
-  "audio/mpeg" -> Right S3.Audio
-  "audio/mp3" -> Right S3.Audio
-  "audio/mp4" -> Right S3.Audio
-  "audio/m4a" -> Right S3.Audio
-  "audio/aac" -> Right S3.Audio
-  "audio/ogg" -> Right S3.Audio
-  "audio/webm" -> Right S3.Audio
-  "audio/flac" -> Right S3.Audio
-  "audio/x-flac" -> Right S3.Audio
-  "audio/opus" -> Right S3.Audio
-  "audio/amr" -> Right S3.Audio
-  "audio/3gpp" -> Right S3.Audio
-  "audio/x-wav" -> Right S3.Audio
-  "audio/x-ms-wma" -> Right S3.Audio
-  "audio/vnd.wave" -> Right S3.Audio
-  _ -> Right S3.Audio -- Accept any audio/* MIME type
+  "audio/wave" -> Right Audio
+  "audio/wav" -> Right Audio
+  "audio/mpeg" -> Right Audio
+  "audio/mp3" -> Right Audio
+  "audio/mp4" -> Right Audio
+  "audio/m4a" -> Right Audio
+  "audio/aac" -> Right Audio
+  "audio/ogg" -> Right Audio
+  "audio/webm" -> Right Audio
+  "audio/flac" -> Right Audio
+  "audio/x-flac" -> Right Audio
+  "audio/opus" -> Right Audio
+  "audio/amr" -> Right Audio
+  "audio/3gpp" -> Right Audio
+  "audio/x-wav" -> Right Audio
+  "audio/x-ms-wma" -> Right Audio
+  "audio/vnd.wave" -> Right Audio
+  _ -> Right Audio -- Accept any audio/* MIME type
 
 -- Map MIME type to file extension
 mimeTypeToExtension :: Text -> Text
@@ -198,7 +199,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
       logDebug $ "PickupInstructions: Audio data length: " <> show (T.length (show audioData))
       -- Create file path for S3
       pickupInstructionsId :: Kernel.Types.Id.Id DMF.MediaFile <- generateGUID
-      filePath <- S3.createFilePath "/pickup-instructions/" ("pickup-" <> pickupInstructionsId.getId) S3.Audio fileExtension
+      filePath <- Storage.createFilePath "/pickup-instructions/" ("pickup-" <> pickupInstructionsId.getId) Audio fileExtension
       logDebug $ "PickupInstructions: File path: " <> show filePath
       -- Create file URL
       let fileUrl =
@@ -208,7 +209,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
       logDebug $ "PickupInstructions: File URL: " <> show fileUrl
 
       -- Upload to S3
-      result <- withTryCatch "S3:put:postPickupinstructions" $ S3.put (T.unpack filePath) audioData
+      result <- withTryCatch "Storage:put:postPickupinstructions" $ Storage.put (T.unpack filePath) audioData
       case result of
         Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
         Right _ -> pure ()
@@ -309,7 +310,7 @@ createMediaFileEntry fileUrl filePath = do
   return $
     DMF.MediaFile
       { id = mediaFileId,
-        _type = S3.Audio,
+        _type = Audio,
         url = fileUrl,
         s3FilePath = Just filePath,
         createdAt = now
@@ -357,7 +358,7 @@ getPickupinstructionsClosest (mbPersonId, _) mbLat mbLon = do
               case mediaFile.s3FilePath of
                 Just s3Path -> do
                   logDebug $ "PickupInstructions: Fetching audio file from S3: " <> show s3Path
-                  audioContent <- S3.get (T.unpack s3Path)
+                  audioContent <- Storage.get (T.unpack s3Path)
                   logDebug $ "PickupInstructions: Successfully retrieved audio content from S3"
                   return (Just audioContent)
                 Nothing -> do
@@ -424,7 +425,7 @@ deletePickupinstructions (mbPersonId, _) mbLat mbLon mbTarget = do
                   case mediaFile.s3FilePath of
                     Just s3Path -> do
                       logDebug $ "PickupInstructions: Deleting S3 file: " <> show s3Path
-                      void $ fork "S3 delete audio file" $ S3.delete (T.unpack s3Path)
+                      void $ fork "Storage delete audio file" $ Storage.delete (T.unpack s3Path)
                       logDebug $ "PickupInstructions: Successfully deleted S3 file"
                     Nothing ->
                       logDebug "PickupInstructions: No S3 path found for media file"
