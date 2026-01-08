@@ -4,6 +4,7 @@ module Domain.Types.Extra.Ride where
 
 import Data.Aeson
 import qualified Domain.Types.LocationAddress as DLA
+import qualified Domain.Types.RefundRequest
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RideStatus
 import qualified Domain.Types.ServiceTierType
@@ -73,6 +74,8 @@ data RideAPIEntity = RideAPIEntity
     isSafetyPlus :: Kernel.Prelude.Bool,
     isInsured :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     insuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
+    tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    paymentStatus :: Domain.Types.Ride.PaymentStatus,
+    refundRequestStatus :: Maybe Domain.Types.RefundRequest.RefundRequestStatus
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

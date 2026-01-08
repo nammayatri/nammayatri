@@ -5,6 +5,7 @@ module Storage.Beam.Ride where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.RefundRequest
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RideStatus
 import qualified Domain.Types.ServiceTierType
@@ -83,6 +84,7 @@ data RideT f = RideT
     pickupEtaLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pickupRouteCallCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pickupSpeedInMPS :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    refundRequestStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestStatus),
     rideEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rideRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

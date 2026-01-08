@@ -354,6 +354,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         distanceUnit = booking.distanceUnit,
         driverAccountId = req.onlinePaymentParameters <&> (.driverAccountId),
         paymentStatus = DRide.NotInitiated,
+        refundRequestStatus = Nothing,
         vehicleAge = req.vehicleAge,
         cancellationFeeIfCancelled = Nothing,
         isAlreadyFav = Just isAlreadyFav,

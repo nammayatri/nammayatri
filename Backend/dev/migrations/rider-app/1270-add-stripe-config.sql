@@ -6,6 +6,7 @@ SELECT m.merchant_id, m.id, 'Payment_Stripe',
     , 'returnUrl','dummyReturnUrl'
     , 'refreshUrl','dummyRefreshUrl'
     , 'url','dummyUrl'
+    , 'chargeDestination', 'Platform'
   )
 FROM atlas_app.merchant_operating_city m where m.id in (select id from atlas_app.merchant_operating_city where city = 'Kochi');
 

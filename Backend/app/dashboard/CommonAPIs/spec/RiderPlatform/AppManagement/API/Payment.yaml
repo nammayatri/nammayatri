@@ -1,0 +1,98 @@
+imports:
+  RefundRequestStatus: Domain.Types.RefundRequest
+  Person: Domain.Types.Person
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  Refunds: Lib.Payment.Domain.Types.Refunds
+  Summary: Dashboard.Common
+  RefundStatus: Kernel.External.Payment.Interface.Types
+  RefundRequestCode: Domain.Types.RefundRequest
+  RefundPurpose: Domain.Types.RefundRequest
+
+importPackageOverrides:
+  Domain.Types.RefundRequest: "rider-app"
+  Domain.Types.Person: "rider-app"
+  Lib.Payment.Domain.Types.PaymentOrder: "payment"
+  Lib.Payment.Domain.Types.Refunds: "payment"
+
+module: Payment
+
+apis:
+  - GET:
+      endpoint: refundRequest/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - status: RefundRequestStatus
+        - code: RefundRequestCode
+        - customerId: Id Person
+        - orderId: Id PaymentOrder
+        - from: UTCTime
+        - to: UTCTime
+      response:
+        type: RefundRequestResp
+  - GET:
+      endpoint: refundRequest/{orderId}/info
+      auth: ApiAuthV2
+      params:
+        orderId: Id PaymentOrder
+      query:
+        refreshRefunds: Bool
+      response:
+        type: RefundRequestInfoResp
+  - POST:
+      endpoint: refundRequest/{orderId}/respond
+      auth: ApiAuthV2
+      params:
+        orderId: Id PaymentOrder
+      request:
+        type: RefundRequestRespondReq
+      response:
+        type: RefundRequestRespondResp
+
+types:
+  RefundRequestResp:
+    - summary: Summary
+    - refundRequests: [RefundRequestItem]
+  RefundRequestItem:
+    - orderId: Id PaymentOrder
+    - requestedAmount: Maybe PriceAPIEntity
+    - transactionAmount: PriceAPIEntity
+    - refundPurpose: RefundPurpose
+    - status: RefundRequestStatus
+    - code: RefundRequestCode
+    - description: Text
+    - responseDescription: Maybe Text
+    - refundsId: Maybe (Id Refunds)
+    - refundsAmount: Maybe PriceAPIEntity
+    - refundsTries: Int
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  RefundRequestInfoResp:
+    - orderId: Id PaymentOrder
+    - requestedAmount: Maybe PriceAPIEntity
+    - transactionAmount: PriceAPIEntity
+    - refundPurpose: RefundPurpose
+    - status: RefundRequestStatus
+    - code: RefundRequestCode
+    - description: Text
+    - responseDescription: Maybe Text
+    - refundsId: Maybe (Id Refunds)
+    - refundsAmount: Maybe PriceAPIEntity
+    - refundsTries: Int
+    - evidence: Maybe Text
+    - refundStatus: Maybe RefundStatus
+    - errorCode: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  RefundRequestRespondReq:
+    - approve: Bool
+    - responseDescription: Maybe Text
+    - approvedAmount: Maybe PriceAPIEntity
+    - retryRefunds: Maybe Bool # in case if previous refund was failed
+    - derive: "'HideSecrets"
+  RefundRequestRespondResp:
+    - status: RefundRequestStatus
+    - refundStatus: Maybe RefundStatus
+    - errorCode: Maybe Text
+    - derive: "'HideSecrets"
