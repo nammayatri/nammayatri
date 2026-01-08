@@ -48,6 +48,10 @@ Refunds:
       kvFunction: updateWithKV
       params: [initiatedBy, idAssignedByServiceProvider, errorMessage, errorCode, status]
       where: id
+    updateRefundsEntryByStripeResponse:
+      kvFunction: updateWithKV
+      params: [idAssignedByServiceProvider, errorCode, status, isApiCallSuccess]
+      where: id
     updateIsApiCallSuccess:
       kvFunction: updateWithKV
       params: [isApiCallSuccess]
@@ -59,3 +63,6 @@ Refunds:
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
 
   beamInstance: MakeTableInstancesGenericSchema
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

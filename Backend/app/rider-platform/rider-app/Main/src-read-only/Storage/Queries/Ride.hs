@@ -5,6 +5,7 @@
 module Storage.Queries.Ride (module Storage.Queries.Ride, module ReExport) where
 
 import qualified Domain.Types.Booking
+import qualified Domain.Types.RefundRequest
 import qualified Domain.Types.Ride
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -79,6 +80,11 @@ updatePickupSpeedInMPS :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel
 updatePickupSpeedInMPS pickupSpeedInMPS id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.pickupSpeedInMPS pickupSpeedInMPS, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateRefundRequestStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestStatus -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateRefundRequestStatus refundRequestStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.refundRequestStatus refundRequestStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTalkedWithDriver :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateTalkedWithDriver talkedWithDriver id = do
