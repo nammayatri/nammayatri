@@ -98,7 +98,7 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
       now <- getCurrentTime
       let travelDatetime = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" now
       fares <-
-        CMRLV2GetFare.getFare integrationBPPConfig config' $
+        CMRLV2GetFare.getFare integrationBPPConfig config' riderId.getId $
           CMRLV2GetFare.GetFareReq
             { operatorNameId = config'.operatorNameId,
               fromStationId = extractStationCode startStopCode,
