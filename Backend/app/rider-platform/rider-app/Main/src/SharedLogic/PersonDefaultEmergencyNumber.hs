@@ -17,7 +17,6 @@ module SharedLogic.PersonDefaultEmergencyNumber where
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Sos as DSos
 import Environment
 import Kernel.Beam.Functions
 import qualified Kernel.External.Notification as Notification
@@ -30,13 +29,8 @@ import Tools.Error
 import Tools.Notifications
 import Tools.SMS as Sms
 
-data SosNotificationEntityData = SosNotificationEntityData
-  { sosId :: Maybe Text
-  }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
-
-notifyEmergencyContacts :: Person.Person -> Text -> Text -> Notification.Category -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Maybe (Id DSos.Sos) -> Flow ()
-notifyEmergencyContacts person body title notificationType mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId = do
+notifyEmergencyContacts :: Person.Person -> Text -> Text -> Notification.Category -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Flow ()
+notifyEmergencyContacts person body title notificationType mbBuildSmsReq useSmsAsBackup emergencyContacts = do
   void $
     mapM
       ( \emergencyContact ->
@@ -46,7 +40,7 @@ notifyEmergencyContacts person body title notificationType mbBuildSmsReq useSmsA
               contactPersonEntity <- runInReplica $ QPerson.findById emergencyContactId >>= fromMaybeM (PersonNotFound (getId emergencyContactId))
               case contactPersonEntity.deviceToken of
                 Nothing -> sendMessageToContact emergencyContact
-                Just _ -> sendNotificationToEmergencyContact contactPersonEntity body title notificationType mbSosId
+                Just _ -> sendNotificationToEmergencyContact contactPersonEntity body title notificationType
       )
       emergencyContacts
   where
@@ -54,8 +48,8 @@ notifyEmergencyContacts person body title notificationType mbBuildSmsReq useSmsA
       Just buildSmsReq -> sendMessageToEmergencyContact person emergencyContact buildSmsReq
       Nothing -> pure ()
 
-sendNotificationToEmergencyContact :: Person.Person -> Text -> Text -> Notification.Category -> Maybe (Id DSos.Sos) -> Flow ()
-sendNotificationToEmergencyContact person body title notificationType mbSosId = do
+sendNotificationToEmergencyContact :: Person.Person -> Text -> Text -> Notification.Category -> Flow ()
+sendNotificationToEmergencyContact person body title notificationType = do
   notificationSoundFromConfig <- SQNSC.findByNotificationType notificationType person.merchantOperatingCityId
   disabilityTag <- getDisabilityTag person.hasDisability person.id
   notificationSound <- getNotificationSound disabilityTag notificationSoundFromConfig
@@ -67,7 +61,7 @@ sendNotificationToEmergencyContact person body title notificationType mbSosId = 
           subCategory = Nothing,
           showNotification = Notification.SHOW,
           messagePriority = Nothing,
-          entity = Notification.Entity Notification.Product person.id.getId (SosNotificationEntityData {sosId = (.getId) <$> mbSosId}),
+          entity = Notification.Entity Notification.Product person.id.getId (),
           body = body,
           title = title,
           dynamicParams = EmptyDynamicParam,

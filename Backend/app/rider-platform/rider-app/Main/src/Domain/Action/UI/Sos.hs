@@ -189,10 +189,10 @@ postSosCreate (mbPersonId, _merchantId) req = do
           void $ QPDEN.updateShareRideForAll personId True
           enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
         let sosType = if req.isRideEnded == Just True then Notification.POST_RIDE_SOS_ALERT else Notification.SOS_TRIGGERED
-        when shouldNotifyContacts $ SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle sosType (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
+        when shouldNotifyContacts $ SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle sosType (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers
     Nothing -> do
       emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-      SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
+      SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers
   return $
     SosRes
       { sosId = sosId
@@ -267,7 +267,7 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
         Nothing -> pure ()
         Just _ -> do
           Redis.setExp (CQSos.mockSosKey personId) (DSos.SosMockDrill {personId, status = DSos.MockResolved}) 13400
-      SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
+      SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers
       return APISuccess.Success
     _ -> do
       sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
@@ -280,9 +280,9 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
       case sosDetails.rideId of
         Just _ -> do
           when (safetySettings.notifySosWithEmergencyContacts && isRideEnded /= Just True) $ do
-            SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
+            SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers
         Nothing -> do
-          SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers (Just sosId)
+          SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers
       pure APISuccess.Success
   where
     notificationBody person_ =
@@ -300,7 +300,7 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
   case startDrill of
     Just True -> do
-      SPDEN.notifyEmergencyContacts person (notificationBody person True) notificationTitle Notification.SOS_MOCK_DRILL_NOTIFY Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
+      SPDEN.notifyEmergencyContacts person (notificationBody person True) notificationTitle Notification.SOS_MOCK_DRILL_NOTIFY Nothing False emergencyContacts.defaultEmergencyNumbers
       when (fromMaybe False onRide) $ do
         void $ QPDEN.updateShareRideForAll personId True
         enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
@@ -309,7 +309,7 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
       when (fromMaybe False onRide) $ do
         let mockEntity = DSos.SosMockDrill {personId, status = DSos.MockPending}
         Redis.setExp (CQSos.mockSosKey personId) mockEntity 13400
-      SPDEN.notifyEmergencyContacts person (notificationBody person False) notificationTitle Notification.SOS_MOCK_DRILL Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
+      SPDEN.notifyEmergencyContacts person (notificationBody person False) notificationTitle Notification.SOS_MOCK_DRILL Nothing False emergencyContacts.defaultEmergencyNumbers
   pure APISuccess.Success
   where
     notificationBody person_ isStartDrill =
@@ -629,7 +629,7 @@ shareLocationWithContacts (personId, _merchantId) person customerLocation durati
           isRideEnded = False
         }
 
-  SPDEN.notifyEmergencyContacts person (notificationBody person expiresAt) notificationTitle Notification.SHARE_RIDE (Just buildSmsReq) True contactsToNotify (Just sosId)
+  SPDEN.notifyEmergencyContacts person (notificationBody person expiresAt) notificationTitle Notification.SHARE_RIDE (Just buildSmsReq) True contactsToNotify
 
   return $
     ShareLocationRes
