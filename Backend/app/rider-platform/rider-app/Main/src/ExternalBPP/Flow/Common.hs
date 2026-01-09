@@ -42,13 +42,6 @@ getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig f
   let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
   let apiConfig = cbConfig.fare
 
-  -- If circuit is open, try canary request or return early
-  when circuitOpen $ do
-    let canaryAllowed = fromMaybe 2 (apiConfig <&> (.canaryAllowedPerWindow))
-    let canaryWindow = fromMaybe 60 (apiConfig <&> (.canaryWindowSeconds))
-    canarySlot <- CB.tryAcquireCanarySlot ptMode CB.FareAPI merchantOperatingCity.id canaryAllowed canaryWindow
-    unless canarySlot $ return () -- Return early with empty fares handled below
-
   -- Check if we should skip the call entirely (circuit open and no canary slot)
   shouldSkip <- do
     if circuitOpen
