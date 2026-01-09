@@ -433,9 +433,9 @@ createOrderService ::
   m (Maybe Payment.CreateOrderResp)
 createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderReq createOrderCall = do
   logInfo $ "CreateOrderService: "
-  -- Apply test- prefix if isTestTransaction is True
+  -- Apply test- prefix if isTestTransaction is True and not already prefixed (idempotent)
   let updatedOrderShortId =
-        if isTestTransaction
+        if isTestTransaction && not (T.isPrefixOf "test-" createOrderReq.orderShortId)
           then "test-" <> createOrderReq.orderShortId
           else createOrderReq.orderShortId
       updatedCreateOrderReq =
