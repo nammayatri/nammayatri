@@ -5,7 +5,10 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   Ride: Domain.Types.Ride
   PriceAPIEntity: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
   CreateCustomerResp : Kernel.External.Payment.Interface.Types
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
 
 module: RidePayment
 types:
@@ -23,6 +26,22 @@ types:
   AddTipRequest:
     recordType: NewType
     amount: PriceAPIEntity
+  DueAmountRide:
+    rideId: Id Ride
+    amount: HighPrecMoney
+  GetDueAmountResp:
+    rides: "[DueAmountRide]"
+    totalDueAmount: HighPrecMoney
+    currency: Currency
+  ClearDuesReq:
+    paymentMethodId: Maybe PaymentMethodId
+  ClearDuesResp:
+    orderId: Maybe (Id PaymentOrder)
+    status: Text
+    amountCleared: HighPrecMoney
+    currency: Currency
+    ridesCleared: "[Id Ride]"
+    errorMessage: Maybe Text
 apis:
   - GET:
       endpoint: /payment/methods
@@ -75,3 +94,15 @@ apis:
       auth: TokenAuth
       response:
         type: CreateCustomerResp
+  - GET:
+      endpoint: /payment/getDueAmount
+      auth: TokenAuth
+      response:
+        type: GetDueAmountResp
+  - POST:
+      endpoint: /payment/clearDues
+      auth: TokenAuth
+      request:
+        type: ClearDuesReq
+      response:
+        type: ClearDuesResp
