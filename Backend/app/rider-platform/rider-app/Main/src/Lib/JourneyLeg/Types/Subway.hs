@@ -84,5 +84,6 @@ data SubwayLegRequestGetFareData = SubwayLegRequestGetFareData
     riderId :: Id DPerson.Person,
     searchReqId :: Maybe Text,
     blacklistedServiceTiers :: [Spec.ServiceTierType],
-    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType]
+    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
+    isSingleMode :: Maybe Bool
   }
