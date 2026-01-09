@@ -1086,8 +1086,7 @@ createVendorSplitFromBookings ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
     EncFlow m r,
-    ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    ServiceFlow m r
   ) =>
   [FTBooking.FRFSTicketBooking] ->
   Id Merchant.Merchant ->
@@ -1096,9 +1095,8 @@ createVendorSplitFromBookings ::
   Bool ->
   m ([Payment.VendorSplitDetails], HighPrecMoney)
 createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentType isFRFSTestingEnabled = do
-  isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let amount =
-        if isFRFSTestingEnabled && isMetroTestTransaction
+        if isFRFSTestingEnabled
           then 1.0 * (HighPrecMoney $ toRational $ length allJourneyBookings)
           else
             foldl

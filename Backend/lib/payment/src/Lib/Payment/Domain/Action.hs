@@ -431,39 +431,19 @@ createOrderService ::
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderReq createOrderCall = do
+createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall = do
   logInfo $ "CreateOrderService: "
   -- Apply test- prefix if isTestTransaction is True and not already prefixed (idempotent)
   let updatedOrderShortId =
-        if isTestTransaction && not (T.isPrefixOf "test-" createOrderReq.orderShortId)
-          then "test-" <> createOrderReq.orderShortId
-          else createOrderReq.orderShortId
-      updatedCreateOrderReq =
-        Payment.CreateOrderReq
-          { orderId = createOrderReq.orderId,
-            orderShortId = updatedOrderShortId,
-            amount = createOrderReq.amount,
-            customerId = createOrderReq.customerId,
-            customerEmail = createOrderReq.customerEmail,
-            customerPhone = createOrderReq.customerPhone,
-            customerFirstName = createOrderReq.customerFirstName,
-            customerLastName = createOrderReq.customerLastName,
-            createMandate = createOrderReq.createMandate,
-            mandateMaxAmount = createOrderReq.mandateMaxAmount,
-            mandateFrequency = createOrderReq.mandateFrequency,
-            mandateStartDate = createOrderReq.mandateStartDate,
-            mandateEndDate = createOrderReq.mandateEndDate,
-            optionsGetUpiDeepLinks = createOrderReq.optionsGetUpiDeepLinks,
-            metadataExpiryInMins = createOrderReq.metadataExpiryInMins,
-            metadataGatewayReferenceId = createOrderReq.metadataGatewayReferenceId,
-            splitSettlementDetails = createOrderReq.splitSettlementDetails,
-            basket = createOrderReq.basket
-          }
+        if isTestTransaction
+          then "test-" <> createOrderRequest.orderShortId
+          else createOrderRequest.orderShortId
+      createOrderReq = (createOrderRequest :: Payment.CreateOrderReq) {Payment.orderShortId = updatedOrderShortId}
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
-      createOrderResp <- createOrderCall updatedCreateOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType updatedCreateOrderReq createOrderResp
+      createOrderResp <- createOrderCall createOrderReq -- api call
+      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp
       QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
