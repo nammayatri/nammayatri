@@ -53,6 +53,7 @@ import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer as SOffer
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -361,12 +362,13 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       let isSingleMode = fromMaybe False booking.isSingleMode
       splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
+      staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
       let createOrderReq =
             Payment.CreateOrderReq
               { orderId = paymentOrder.id.getId,
                 orderShortId = paymentOrder.shortId.getShortId,
                 amount = paymentOrder.amount,
-                customerId = person.id.getId,
+                customerId = staticCustomerId,
                 customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
                 customerPhone = personPhone,
                 customerFirstName = person.firstName,
@@ -383,7 +385,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 basket = Nothing
               }
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
-      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion)
+      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) createOrderReq (createOrderCall merchantOperatingCityId booking (Just staticCustomerId) person.clientSdkVersion)
 
     createOrderCall merchantOperatingCityId booking mRoutingId sdkVersion = Payment.createOrder merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) mRoutingId sdkVersion
 
@@ -488,7 +490,8 @@ addPaymentoffersTags ::
     CacheFlow m r,
     EncFlow m r,
     HasKafkaProducer r,
-    ServiceFlow m r
+    ServiceFlow m r,
+    EsqDBReplicaFlow m r
   ) =>
   Price ->
   DP.Person ->

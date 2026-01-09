@@ -124,6 +124,7 @@ import qualified SharedLogic.Cancel as SharedCancel
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.Utils as SLUtils
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -342,12 +343,13 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
   isSplitEnabled_ <- Payment.getIsSplitEnabled (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
+  staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrder.id.getId,
             orderShortId = paymentOrder.shortId.getShortId,
             amount = paymentOrder.amount,
-            customerId = person.id.getId,
+            customerId = staticCustomerId,
             customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
             customerPhone = personPhone,
             customerFirstName = person.firstName,
@@ -364,7 +366,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             basket = Nothing
           }
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
-  let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType Nothing person.clientSdkVersion
+  let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just staticCustomerId) person.clientSdkVersion
   DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType createOrderReq createOrderCall
 
 -- TODO :: To be deprecated @Kavyashree

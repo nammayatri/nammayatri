@@ -65,6 +65,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
@@ -290,12 +291,13 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         splitSettlementDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled pass.amount vendorSplitList isPercentageSplitEnabled False
+        staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
         let createOrderReq =
               Payment.CreateOrderReq
                 { orderId = paymentOrderId.getId,
                   orderShortId = paymentOrderShortId.getShortId,
                   amount = pass.amount,
-                  customerId = personId.getId,
+                  customerId = staticCustomerId,
                   customerEmail,
                   customerPhone,
                   customerFirstName = person.firstName,
@@ -314,7 +316,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId
             commonPersonId = Id.cast @DP.Person @DPayment.Person personId
-            createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just personId.getId) person.clientSdkVersion
+            createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just staticCustomerId) person.clientSdkVersion
         mbPaymentOrderValidity <- TPayment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase createOrderReq createOrderCall
       else return Nothing

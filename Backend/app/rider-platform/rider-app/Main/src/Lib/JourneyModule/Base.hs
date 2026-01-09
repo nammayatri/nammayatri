@@ -1362,7 +1362,7 @@ getJourneyChangeLogCounter journeyId = do
   mbJourneyChangeLogCounter <- Redis.safeGet (mkJourneyChangeLogKey journeyId.getId)
   return $ fromMaybe 0 mbJourneyChangeLogCounter
 
-generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r) => DJourney.Journey -> [JL.LegInfo] -> m APITypes.JourneyInfoResp
+generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => DJourney.Journey -> [JL.LegInfo] -> m APITypes.JourneyInfoResp
 generateJourneyInfoResponse journey legs = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs

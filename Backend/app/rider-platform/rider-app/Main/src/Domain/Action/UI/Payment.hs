@@ -52,6 +52,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -86,12 +87,13 @@ createOrder (personId, merchantId) rideId = do
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing Payment.Normal
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing Payment.Normal
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled totalFare.amount [] isPercentageSplitEnabled False
+  staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = rideId.getId,
             orderShortId = ride.shortId.getShortId, -- should be Alphanumeric with character length less than 18.
             amount = totalFare.amount,
-            customerId = person.id.getId,
+            customerId = staticCustomerId,
             customerEmail,
             customerPhone,
             customerFirstName = person.firstName,
@@ -110,7 +112,7 @@ createOrder (personId, merchantId) rideId = do
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
-      createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal (Just person.id.getId) person.clientSdkVersion -- api call
+      createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal (Just staticCustomerId) person.clientSdkVersion -- api call
   DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.Normal createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------

@@ -135,6 +135,7 @@ data RiderConfigT f = RiderConfigT
     sourceOfServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderConfig.ServiceTierSource),
     specialVehicleNotificationConfigs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     specialZoneRadius :: B.C f Kernel.Prelude.Int,
+    staticCustomerIdThresholdDay :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
     suburbanBookingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     suburbanFareCachingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     subwayRestrictionEndTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),

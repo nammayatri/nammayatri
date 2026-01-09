@@ -62,6 +62,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.TicketRule.Apply as TicketRule
 import qualified SharedLogic.TicketRule.Core
 import SharedLogic.TicketUtils
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
@@ -325,12 +326,13 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOpCity.id (Just placeId) Payment.Normal
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount.amount (fromMaybe [] vendorSplits) False False
+  staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = ticketBooking.id.getId,
             orderShortId = ticketBooking.shortId.getShortId,
             amount = amount.amount,
-            customerId = personId_.getId,
+            customerId = staticCustomerId,
             customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
             customerPhone = personPhone,
             customerFirstName = person.firstName,
@@ -348,7 +350,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_
-      createOrderCall = Payment.createOrder merchantId merchantOpCity.id (Just placeId) Payment.Normal (Just person.id.getId) person.clientSdkVersion
+      createOrderCall = Payment.createOrder merchantId merchantOpCity.id (Just placeId) Payment.Normal (Just staticCustomerId) person.clientSdkVersion
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCity.id) commonPersonId Nothing Nothing Payment.Normal createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return createOrderRes

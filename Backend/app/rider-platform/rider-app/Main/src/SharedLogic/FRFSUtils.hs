@@ -84,6 +84,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSFareCalculator as Reexport
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
@@ -839,12 +840,13 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
         [_] -> True
         _ -> False
   splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr isPercentageSplitEnabled isSingleMode
+  staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId.getId,
             orderShortId = orderShortId,
             amount = amount,
-            customerId = person.id.getId,
+            customerId = staticCustomerId,
             customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
             customerPhone = personPhone,
             customerFirstName = person.firstName,

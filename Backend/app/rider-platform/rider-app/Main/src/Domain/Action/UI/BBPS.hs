@@ -45,7 +45,9 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Servant hiding (throwError)
 import SharedLogic.External.BbpsService.Flow
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.BBPS as QBBPS
 import qualified Storage.Queries.BBPSConfig as QBBPSC
 import qualified Storage.Queries.Person as QP
@@ -104,12 +106,13 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
           }
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing Payment.BBPS
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled bbpsAmount [] False False
+  staticCustomerId <- SLUtils.getStaticCustomerId person req.mobileNumber
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = req.bbpsTxnId,
             orderShortId = refShortId.getShortId,
             amount = bbpsAmount,
-            customerId = personId.getId,
+            customerId = staticCustomerId,
             customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
             customerPhone = req.mobileNumber,
             customerFirstName = person.firstName,
@@ -127,7 +130,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
-      createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
+      createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing Payment.BBPS (Just staticCustomerId) person.clientSdkVersion
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.BBPS createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> do

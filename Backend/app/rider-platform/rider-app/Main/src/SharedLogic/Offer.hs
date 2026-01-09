@@ -8,6 +8,7 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
@@ -18,6 +19,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Person as QPerson
@@ -44,21 +46,23 @@ data CumulativeOfferReq = CumulativeOfferReq
 ----------------------------------- Fetch Offers List With Caching ------------------------------------
 -------------------------------------------------------------------------------------------------------
 
-invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m ()
+invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m ()
 invalidateOfferListCache person merchantOperatingCityId paymentServiceType price = do
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-  _req <- mkOfferListReq person price
-  let version = fromMaybe "N/A" riderConfig.offerListCacheVersion
-      key = makeOfferListCacheKey person version paymentServiceType
+  req <- mkOfferListReq person price
+  let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
+      version = fromMaybe "N/A" riderConfig.offerListCacheVersion
+      key = makeOfferListCacheKey version paymentServiceType customerId
   Redis.withCrossAppRedis $ Redis.del key
 
-offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m Payment.OfferListResp
+offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m Payment.OfferListResp
 offerListCache merchantId personId merchantOperatingCityId paymentServiceType price = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   req <- mkOfferListReq person price
-  let version = fromMaybe "N/A" riderConfig.offerListCacheVersion
-      key = makeOfferListCacheKey person version paymentServiceType
+  let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
+      version = fromMaybe "N/A" riderConfig.offerListCacheVersion
+      key = makeOfferListCacheKey version paymentServiceType customerId
   Redis.withCrossAppRedis $ do
     Redis.get key >>= \case
       Just a -> return a
@@ -67,7 +71,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
             Redis.setExp key resp (31 * 86400) -- Cache for 31 days
             return resp
         )
-          =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion req
+          =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion req
 
 mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> [JL.LegInfo] -> m (Maybe CumulativeOfferResp)
 mkCumulativeOfferResp merchantOperatingCityId offerListResp legInfos = do
@@ -88,12 +92,14 @@ mkCumulativeOfferResp merchantOperatingCityId offerListResp legInfos = do
           logError $ "Failed to parse cumulative offer logic result: " <> show err
           pure Nothing
 
-mkOfferListReq :: (MonadFlow m, EncFlow m r) => Person.Person -> Price -> m Payment.OfferListReq
+mkOfferListReq :: (MonadFlow m, EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Price -> m Payment.OfferListReq
 mkOfferListReq person price = do
   now <- getCurrentTime
   email <- mapM decrypt person.email
+  personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = price.amount, currency = price.currency}
-      customerReq = Payment.OfferCustomer {customerId = person.id.getId, email = email, mobile = Nothing}
+      customerReq = Payment.OfferCustomer {customerId = staticCustomerId, email = email, mobile = Nothing}
   return
     Payment.OfferListReq
       { order = offerOrder,
@@ -107,5 +113,5 @@ mkOfferListReq person price = do
         offerListingMetric = Nothing
       }
 
-makeOfferListCacheKey :: Person.Person -> Text -> DOrder.PaymentServiceType -> Text
-makeOfferListCacheKey person version serviceType = "OfferList:CId" <> person.id.getId <> ":V-" <> version <> ":ST-" <> show serviceType
+makeOfferListCacheKey :: Text -> DOrder.PaymentServiceType -> Text -> Text
+makeOfferListCacheKey version serviceType customerId = "OfferList:CId" <> customerId <> ":V-" <> version <> ":ST-" <> show serviceType

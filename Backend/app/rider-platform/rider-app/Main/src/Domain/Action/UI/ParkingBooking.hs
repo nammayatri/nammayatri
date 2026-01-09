@@ -16,6 +16,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.ParkingTransaction as QPT
@@ -67,12 +68,13 @@ postMultimodalParkingBook mbApiKey req = do
 
   customerEmail <- fromMaybe "noreply@nammayatri.in" <$> mapM decrypt person.email
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
             orderShortId = orderShortId.getShortId,
             amount = req.amount,
-            customerId = req.customerId.getId,
+            customerId = staticCustomerId,
             customerEmail,
             customerPhone,
             customerFirstName = person.firstName,
@@ -91,7 +93,7 @@ postMultimodalParkingBook mbApiKey req = do
 
   let commonMerchantId = Kernel.Types.Id.cast @Domain.Types.Merchant.Merchant @DPayment.Merchant person.merchantId
       commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person req.customerId
-      createOrderCall = TPayment.createOrder person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking (Just req.customerId.getId) person.clientSdkVersion
+      createOrderCall = TPayment.createOrder person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking (Just staticCustomerId) person.clientSdkVersion
 
   orderResp <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCityId) commonPersonId Nothing Nothing TPayment.ParkingBooking createOrderReq createOrderCall >>= fromMaybeM (InternalError "Failed to create payment order")
 
