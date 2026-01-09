@@ -1785,7 +1785,18 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
   case mbRouteBusData of
     Nothing -> do
       let userRequestedRouteCode = maybe [] (: []) req.routeCode
-      alternateRoutes <- (nub . (\rc -> userRequestedRouteCode <> rc)) <$> JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
+      directRouteCodes <- JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
+      alternateRoutes <-
+        if null directRouteCodes && null userRequestedRouteCode
+          then do
+            originAlternateStations <- OTPRest.getAlternateStationsByGtfsIdAndStopCode srcCode integratedBPPConfig
+            destinationAlternateStations <- OTPRest.getAlternateStationsByGtfsIdAndStopCode destCode integratedBPPConfig
+            let originCodes = nub $ srcCode : map (.code) originAlternateStations
+            let destinationCodes = nub $ destCode : map (.code) destinationAlternateStations
+            let routePairs = [(o, d) | o <- originCodes, d <- destinationCodes]
+            routesNested <- mapConcurrently (\(o, d) -> JLU.getRouteCodesFromTo o d integratedBPPConfig) routePairs
+            return $ nub (concat routesNested)
+          else return $ nub (userRequestedRouteCode <> directRouteCodes)
       busesForRoutes <- CQMMB.getBusesForRoutes alternateRoutes integratedBPPConfig
       logDebug $ "postMultimodalRouteServiceability: Branch=AlternateRoutes, userRequestedRouteCode=" <> show userRequestedRouteCode <> ", alternateRoutes=" <> show alternateRoutes <> ", routeCount=" <> show (length alternateRoutes) <> ", busesForRoutes=" <> show (map (\r -> (r.routeId, map (.vehicleNumber) r.buses)) busesForRoutes)
       alterateLiveVehicleData <-

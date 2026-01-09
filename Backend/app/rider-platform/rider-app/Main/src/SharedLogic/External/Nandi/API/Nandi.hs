@@ -56,6 +56,8 @@ type GetVehiclesFromDepotIdAPI = "getVehiclesFrom" :> QueryParam "depotId" Text 
 
 type DepotNameByIdAPI = "getDepotNameById" :> Capture "depotId" Text :> Get '[JSON] Text
 
+type AlternateStopsByGtfsIdAndStopCodeAPI = "alternateStops" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
+
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
 
@@ -131,6 +133,9 @@ nandiGetVehiclesFromDepotIdAPI = Proxy
 nandiDepotNameByIdAPI :: Proxy DepotNameByIdAPI
 nandiDepotNameByIdAPI = Proxy
 
+nandiAlternateStopsByGtfsIdAndStopCodeAPI :: Proxy AlternateStopsByGtfsIdAndStopCodeAPI
+nandiAlternateStopsByGtfsIdAndStopCodeAPI = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -205,3 +210,6 @@ getNandiGetVehiclesFromByDepotId = ET.client nandiGetVehiclesFromDepotIdAPI
 
 getNandiDepotNameById :: Text -> ET.EulerClient Text
 getNandiDepotNameById = ET.client nandiDepotNameByIdAPI
+
+getNandiAlternateStopsByGtfsIdAndStopCode :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
+getNandiAlternateStopsByGtfsIdAndStopCode = ET.client nandiAlternateStopsByGtfsIdAndStopCodeAPI

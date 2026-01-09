@@ -445,6 +445,16 @@ getExampleTrip integratedBPPConfig routeId = IM.withInMemCache ["ExampleTrip", i
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getExampleTrip baseUrl integratedBPPConfig.feedKey routeId
 
+getAlternateStationsByGtfsIdAndStopCode ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  IntegratedBPPConfig ->
+  m [Station.Station]
+getAlternateStationsByGtfsIdAndStopCode stopCode integratedBPPConfig = IM.withInMemCache ["AlternateStops", stopCode, integratedBPPConfig.id.getId] 3600 $ do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  stations <- Flow.getAlternateStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
+  parseStationsFromInMemoryServer stations integratedBPPConfig False
+
 -- Helper function to find a specific stop in TripDetails
 findTripStopByStopCode :: TripDetails -> Text -> Maybe TripStopDetail
 findTripStopByStopCode tripDetails stopCode =

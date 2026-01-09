@@ -160,3 +160,7 @@ getVehiclesFromByDepotId baseUrl depotId = do
 getDepotNameById :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> m Text
 getDepotNameById baseUrl depotId = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiDepotNameById depotId) "getDepotNameById" NandiAPI.nandiDepotNameByIdAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_NAME_BY_ID_API") baseUrl)
+
+getAlternateStationsByGtfsIdAndStopCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m [RouteStopMappingInMemoryServer]
+getAlternateStationsByGtfsIdAndStopCode baseUrl gtfsId stopCode = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiAlternateStopsByGtfsIdAndStopCode gtfsId stopCode) "getNandiAlternateStopsByGtfsIdAndStopCode" NandiAPI.nandiAlternateStopsByGtfsIdAndStopCodeAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ALTERNATE_STATIONS_BY_GTFS_ID_AND_STOP_CODE_API") baseUrl)
