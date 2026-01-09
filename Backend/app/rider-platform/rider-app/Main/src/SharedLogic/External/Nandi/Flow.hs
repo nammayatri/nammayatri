@@ -88,6 +88,10 @@ getVehicleServiceType baseUrl gtfsId vehicleNumber mbPassVerifyReq = do
         logError $ "Error getting vehicle service type: " <> show err
         pure Nothing
 
+getVehiclesByServiceType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> ServiceTierType -> m [Text]
+getVehiclesByServiceType baseUrl gtfsId serviceType = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiVehiclesByServiceType gtfsId (show serviceType)) "getVehiclesByServiceType" NandiAPI.nandiVehiclesByServiceTypeAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_VEHICLES_BY_SERVICE_TYPE_API") baseUrl)
+
 getVehicleInfo :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m (Maybe VehicleInfoResponse)
 getVehicleInfo baseUrl gtfsId vehicleNumber = do
   withShortRetry $

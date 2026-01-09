@@ -388,6 +388,18 @@ getVehicleServiceType integratedBPPConfig vehicleNumber mbPassVerifyReq = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getVehicleServiceType baseUrl integratedBPPConfig.feedKey vehicleNumber mbPassVerifyReq
 
+getVehiclesByServiceType ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  BecknV2.FRFS.Enums.ServiceTierType ->
+  m [Text]
+getVehiclesByServiceType integratedBPPConfig serviceTier = do
+  let canonicalKey = T.intercalate ":" ["OTPRest:Vehicles", integratedBPPConfig.feedKey, T.pack (show serviceTier)]
+  IM.withInMemCache [canonicalKey] 7200 $ do
+    logInfo $ "Cache miss for vehiclesByServiceTier (key): " <> canonicalKey
+    baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+    Flow.getVehiclesByServiceType baseUrl integratedBPPConfig.feedKey serviceTier
+
 getVehicleInfo ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   IntegratedBPPConfig ->
