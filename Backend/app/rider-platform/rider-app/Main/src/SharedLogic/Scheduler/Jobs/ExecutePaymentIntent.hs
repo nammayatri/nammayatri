@@ -16,6 +16,8 @@ module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.RidePayment as DRidePayment
+import Domain.Types.PaymentInvoice (PaymentPurpose (TIP))
+import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -34,6 +36,7 @@ import SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.PaymentInvoice as QPaymentInvoice
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -80,7 +83,33 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             }
     paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq
     paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode paymentIntentResp.paymentIntentId
-    when paymentCharged $ QRide.markPaymentStatus DRide.Completed ride.id
+    when paymentCharged $ do
+      QRide.markPaymentStatus DRide.Completed ride.id
+      -- Update invoice status to CAPTURED when payment is successfully charged
+      paymentOrder <- QOrder.findById (cast ride.id)
+      whenJust paymentOrder $ \order -> do
+        invoices <- QPaymentInvoice.findByPaymentOrderId (Just order.id)
+        mapM_ (\invoice -> QPaymentInvoice.updatePaymentStatus DPI.CAPTURED invoice.id) invoices
+
+    -- Handle tip payment orders (FALLBACK: for tips that weren't immediately captured)
+    -- Find tip invoices: payment_invoice.ride_id = ride.id AND payment_invoice.payment_purpose = 'TIP'
+    -- Note: Tips added after payment capture are usually captured immediately, but this serves as a fallback
+    allInvoices <- QPaymentInvoice.findAllByRideId rideId
+    let tipInvoices = filter (\inv -> inv.paymentPurpose == TIP && inv.paymentStatus == DPI.PENDING) allInvoices
+
+    -- Process each tip payment order
+    forM_ tipInvoices $ \tipInvoice -> do
+      whenJust tipInvoice.paymentOrderId $ \tipPaymentOrderId -> do
+        tipPaymentOrder <- QOrder.findById tipPaymentOrderId
+        whenJust tipPaymentOrder $ \order -> do
+          -- Get Stripe payment intent ID from payment order
+          let paymentIntentId = order.paymentServiceOrderId
+          -- Charge the existing payment intent
+          tipPaymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode paymentIntentId
+          when tipPaymentCharged $ do
+            -- Update tip invoice status to CAPTURED
+            QPaymentInvoice.updatePaymentStatus DPI.CAPTURED tipInvoice.id
+            logDebug $ "Successfully charged tip payment intent: " <> paymentIntentId
   return Complete
 
 cancelExecutePaymentIntentJob ::
