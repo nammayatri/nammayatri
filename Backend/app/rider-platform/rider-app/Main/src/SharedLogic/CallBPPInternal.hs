@@ -812,7 +812,8 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
     assignments :: Maybe [BookingAssignment],
     paymentMethod :: Maybe Text,
     customerMobileNumber :: Maybe Text,
-    customerName :: Maybe Text
+    customerName :: Maybe Text,
+    serviceName :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 

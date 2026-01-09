@@ -912,6 +912,7 @@ postTicketBookingsVerify _ = processBookingService
                   person <- QP.findById booking.personId >>= fromMaybeM (PersonNotFound booking.personId.getId)
                   mobileNumber <- mapM decrypt person.mobileNumber
                   let customerName = person.firstName <> ((" " <>) <$> person.lastName)
+                      serviceName = Just ticketServiceConfig.service
                       updateReq =
                         CallBPPInternal.UpdateFleetBookingInformationReq
                           { id = bookingService.assignmentId,
@@ -930,7 +931,8 @@ postTicketBookingsVerify _ = processBookingService
                             ticketPlaceId = Just ticketPlace.id.getId,
                             paymentMethod = show <$> booking.paymentMethod,
                             customerMobileNumber = mobileNumber,
-                            customerName = customerName
+                            customerName = customerName,
+                            serviceName = serviceName
                           }
                   response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
                   QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
@@ -1077,6 +1079,7 @@ postTicketBookingsVerifyV2 _ = processBookingService
               person <- QP.findById booking.personId >>= fromMaybeM (PersonNotFound booking.personId.getId)
               mobileNumber <- mapM decrypt person.mobileNumber
               let customerName = person.firstName <> ((" " <>) <$> person.lastName)
+                  serviceName = Just ticketServiceConfig.service
                   allFleetOwnerIds = nub $ map (\assignment -> assignment.fleetOwnerId) (fromMaybe [] req.assignments)
                   allVehicleNos = nub $ map (\assignment -> assignment.vehicleNo) (fromMaybe [] req.assignments)
                   fleetOwnerId' = case allFleetOwnerIds of
@@ -1103,7 +1106,8 @@ postTicketBookingsVerifyV2 _ = processBookingService
                         ticketPlaceId = Just ticketPlace.id.getId,
                         paymentMethod = show <$> booking.paymentMethod,
                         customerMobileNumber = mobileNumber,
-                        customerName = customerName
+                        customerName = customerName,
+                        serviceName = serviceName
                       }
               response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
               QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id

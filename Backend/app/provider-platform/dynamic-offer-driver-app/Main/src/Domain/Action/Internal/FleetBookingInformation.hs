@@ -69,7 +69,8 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
     assignments :: Maybe [BookingAssignment],
     paymentMethod :: Maybe Text,
     customerMobileNumber :: Maybe Text,
-    customerName :: Maybe Text
+    customerName :: Maybe Text,
+    serviceName :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -142,6 +143,7 @@ updateBookingInformation req = do
                 DFBI.paymentMethod = req.paymentMethod <|> existing.paymentMethod,
                 DFBI.customerMobileNumber = encryptedMobileNumber <|> existing.customerMobileNumber,
                 DFBI.customerName = req.customerName <|> existing.customerName,
+                DFBI.serviceName = req.serviceName <|> existing.serviceName,
                 DFBI.updatedAt = now
               }
       QFBI.updateByPrimaryKey updated
@@ -153,7 +155,7 @@ updateBookingInformation req = do
               { bookingId = req.bookingId,
                 serviceId = req.serviceId,
                 placeName = Nothing,
-                serviceName = Nothing,
+                serviceName = req.serviceName,
                 personId = req.personId,
                 amount = req.amount,
                 vehicleNo = Just req.vehicleNo,

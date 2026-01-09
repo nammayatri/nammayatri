@@ -499,6 +499,7 @@ apis:
         - to: UTCTime
         - vehicleNo: Text
         - mainAssignmentId: Text
+        - bookingId: Text
       response:
         type: FleetBookingAssignmentsResponse
       migrate:
@@ -516,6 +517,7 @@ apis:
               - to: UTCTime
               - vehicleNo: Text
               - mainAssignmentId: Text
+              - bookingId: Text
             response:
               type: FleetBookingAssignmentsResponse
 
