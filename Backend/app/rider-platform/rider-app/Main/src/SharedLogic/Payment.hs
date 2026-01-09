@@ -396,16 +396,54 @@ makePaymentIntent ::
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Id Person.Person ->
-  Ride.Ride ->
+  DPayment.OrderProcessing ->
+  Text -> -- orderShortId
   Payment.CreatePaymentIntentReq ->
-  m Payment.CreatePaymentIntentResp
-makePaymentIntent merchantId merchantOpCityId paymentMode personId ride createPaymentIntentReq = do
+  m DPayment.CreatePaymentIntentServiceResp
+makePaymentIntent merchantId merchantOpCityId paymentMode personId orderProcessing orderShortId createPaymentIntentReq = do
   let commonMerchantId = cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @Person.Person @DPayment.Person personId
-      commonRideId = cast @Ride.Ride @DPayment.Ride ride.id
       createPaymentIntentCall = TPayment.createPaymentIntent merchantId merchantOpCityId paymentMode
       cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId paymentMode
-  DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall cancelPaymentIntentCall
+  DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId orderProcessing orderShortId createPaymentIntentReq createPaymentIntentCall cancelPaymentIntentCall
+
+-- Helper: main ride order
+makeRidePaymentIntent ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
+  Id Person.Person ->
+  Ride.Ride ->
+  Payment.CreatePaymentIntentReq ->
+  m DPayment.CreatePaymentIntentServiceResp
+makeRidePaymentIntent merchantId merchantOpCityId paymentMode personId ride createPaymentIntentReq =
+  makePaymentIntent merchantId merchantOpCityId paymentMode personId (DPayment.MainOrder $ cast ride.id) ride.shortId.getShortId createPaymentIntentReq
+
+-- Helper: additional order (e.g., tip)
+makeAdditionalPaymentIntent ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
+  Id Person.Person ->
+  Text -> -- orderShortId
+  Payment.CreatePaymentIntentReq ->
+  m DPayment.CreatePaymentIntentServiceResp
+makeAdditionalPaymentIntent merchantId merchantOpCityId paymentMode personId orderShortId createPaymentIntentReq =
+  makePaymentIntent merchantId merchantOpCityId paymentMode personId DPayment.AdditionalOrder orderShortId createPaymentIntentReq
 
 cancelPaymentIntent ::
   ( MonadFlow m,

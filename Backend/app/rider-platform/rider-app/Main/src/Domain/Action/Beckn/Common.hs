@@ -35,6 +35,7 @@ import qualified Domain.Types.BookingStatus as BT
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.ClientPersonInfo as DPCI
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM (PaymentInstrument (Cash))
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
@@ -77,6 +78,7 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Event as Yudhishthira
@@ -90,6 +92,7 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Payment as SPayment
+import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -111,6 +114,7 @@ import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJL
+import qualified Storage.Queries.PaymentInvoice as QPaymentInvoice
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.RecentLocation as SQRL
@@ -459,7 +463,29 @@ rideAssignedReqHandler req = do
                   receiptEmail = email,
                   driverAccountId
                 }
-        handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId ride createPaymentIntentReq)
+        handle (SPayment.paymentErrorHandler booking) $
+          withShortRetry $ do
+            void $ SPayment.makeRidePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId ride createPaymentIntentReq
+            -- Create PaymentInvoice when payment order is created
+            -- Note: payment_order.id = ride.id for main orders
+            mbPaymentOrder <- QPaymentOrder.findById (cast ride.id)
+            whenJust mbPaymentOrder $ \paymentOrder -> do
+              let paymentMethod = fromMaybe DMPM.Cash booking.paymentInstrument
+                  -- Use tip amount from ride if available (for future support of tips at assignment)
+                  -- Convert Maybe Price to Maybe HighPrecMoney by extracting the amount field
+                  mbTipAmount = ride.tipAmount <&> (.amount)
+              merchant <- fromMaybeM (MerchantNotFound booking.merchantId.getId) mbMerchant
+              paymentInvoice <- SPInvoice.buildPaymentInvoiceForOrder merchant.shortId ride.id (Just paymentOrder.id) booking mbTipAmount paymentOrder.amount paymentOrder.currency paymentMethod now
+              QPaymentInvoice.create paymentInvoice
+      -- Create PaymentInvoice for Cash payments (payment_order_id will be NULL)
+      when (isNothing req'.onlinePaymentParameters) $ do
+        let paymentMethod = fromMaybe DMPM.Cash booking.paymentInstrument
+            -- Use tip amount from ride if available (for future support of tips at assignment)
+            -- Convert Maybe Price to Maybe HighPrecMoney by extracting the amount field
+            mbTipAmount = ride.tipAmount <&> (.amount)
+        merchant <- fromMaybeM (MerchantNotFound booking.merchantId.getId) mbMerchant
+        paymentInvoice <- SPInvoice.buildPaymentInvoiceForOrder merchant.shortId ride.id Nothing booking mbTipAmount booking.estimatedFare.amount booking.estimatedFare.currency paymentMethod now
+        QPaymentInvoice.create paymentInvoice
       triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
       let category = case booking.specialLocationTag of
             Just _ -> "specialLocation"
@@ -727,7 +753,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               receiptEmail = email,
               driverAccountId
             }
-    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq)
+    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makeRidePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq)
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
     createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 

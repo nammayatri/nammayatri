@@ -7,6 +7,8 @@ import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
+import Domain.Types.PaymentInvoice (PaymentPurpose (RIDE_TIP, TIP))
+import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RideStatus
@@ -22,18 +24,20 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Error
+import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import qualified SharedLogic.Payment as Payment
+import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
+import qualified Storage.Queries.PaymentInvoice as QPaymentInvoice
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import qualified Tools.Payment as Payment
+import qualified Tools.Payment as TPayment
 
 data DFareBreakup = DFareBreakup
   { amount :: Price,
@@ -42,7 +46,7 @@ data DFareBreakup = DFareBreakup
   deriving (Generic, Show)
 
 getcustomer ::
-  Domain.Types.Person.Person -> Environment.Flow Payment.CreateCustomerResp
+  Domain.Types.Person.Person -> Environment.Flow TPayment.CreateCustomerResp
 getcustomer person = do
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
   mbCustomer <- QPaymentCustomer.findByCustomerIdAndPaymentMode person.id.getId (Just paymentMode)
@@ -52,17 +56,17 @@ getcustomer person = do
       if maybe False (> now) customer.clientAuthTokenExpiry
         then
           return $
-            Payment.CreateCustomerResp
+            TPayment.CreateCustomerResp
               { customerId = customer.customerId,
                 clientAuthToken = customer.clientAuthToken,
                 clientAuthTokenExpiry = customer.clientAuthTokenExpiry
               }
         else do
-          getCustomer <- Payment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode person.id.getId
+          getCustomer <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode person.id.getId
           QPaymentCustomer.updateCATAndExipry getCustomer.clientAuthToken getCustomer.clientAuthTokenExpiry getCustomer.customerId (Just paymentMode)
           return $ getCustomer
     Nothing -> do
-      customer <- Payment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode person.id.getId
+      customer <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode person.id.getId
       paymentCustomer <- buildCreateCustomer customer paymentMode
       QPaymentCustomer.create paymentCustomer
       return customer
@@ -72,7 +76,7 @@ buildCreateCustomer ::
     EsqDBFlow m r,
     EncFlow m r
   ) =>
-  Payment.CreateCustomerResp ->
+  TPayment.CreateCustomerResp ->
   DMPM.PaymentMode ->
   m DPaymentCustomer.PaymentCustomer
 buildCreateCustomer createCustomerResp paymentMode = do
@@ -100,8 +104,8 @@ getCustomerPaymentId person = do
       --- Create a customer in payment service if not there ---
       mbEmailDecrypted <- mapM decrypt person.email
       phoneDecrypted <- mapM decrypt person.mobileNumber
-      let req = Payment.CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Nothing, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
-      customer <- Payment.createCustomer person.merchantId person.merchantOperatingCityId person.paymentMode req
+      let req = TPayment.CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Nothing, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
+      customer <- TPayment.createCustomer person.merchantId person.merchantOperatingCityId person.paymentMode req
       case paymentMode of
         DMPM.LIVE -> QPerson.updateCustomerPaymentId (Just customer.customerId) person.id
         DMPM.TEST -> QPerson.updateTestCustomerPaymentId (Just customer.customerId) person.id
@@ -110,7 +114,7 @@ getCustomerPaymentId person = do
 checkIfPaymentMethodExists :: Domain.Types.Person.Person -> PaymentMethodId -> Environment.Flow Bool
 checkIfPaymentMethodExists person paymentMethodId = do
   customerPaymentId <- getCustomerPaymentId person
-  cardList <- Payment.getCardList person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
+  cardList <- TPayment.getCardList person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
   return $ paymentMethodId `elem` (cardList <&> (.cardId))
 
 getPaymentMethods ::
@@ -123,7 +127,7 @@ getPaymentMethods (mbPersonId, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   customerPaymentId <- getCustomerPaymentId person
-  resp <- Payment.getCardList person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId -- TODO: Add pagination, do we need to store the card details in our DB?
+  resp <- TPayment.getCardList person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId -- TODO: Add pagination, do we need to store the card details in our DB?
   let savedPaymentMethodIds = resp <&> (.cardId)
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
   let defaultPaymentMethodId =
@@ -132,7 +136,7 @@ getPaymentMethods (mbPersonId, _) = do
           DMPM.TEST -> person.defaultTestPaymentMethodId
   when (maybe False (\dpm -> dpm `notElem` savedPaymentMethodIds) defaultPaymentMethodId) $ do
     let firstSavedPaymentMethodId = listToMaybe savedPaymentMethodIds
-    Payment.updateDefaultPersonPaymentMethodId person firstSavedPaymentMethodId
+    SPayment.updateDefaultPersonPaymentMethodId person firstSavedPaymentMethodId
   return $ API.Types.UI.RidePayment.PaymentMethodsResponse {list = resp, defaultPaymentMethodId}
 
 postPaymentMethodsMakeDefault ::
@@ -147,7 +151,7 @@ postPaymentMethodsMakeDefault (mbPersonId, _) paymentMethodId = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   checkIfPaymentMethodExists person paymentMethodId >>= \case
     False -> throwError $ InvalidRequest "Payment method doesn't belong to Customer"
-    True -> Payment.updateDefaultPersonPaymentMethodId person (Just paymentMethodId) >> pure Success
+    True -> SPayment.updateDefaultPersonPaymentMethodId person (Just paymentMethodId) >> pure Success
 
 getPaymentIntentSetup ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -160,8 +164,8 @@ getPaymentIntentSetup (mbPersonId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
   customerPaymentId <- getCustomerPaymentId person
-  ephemeralKey <- Payment.createEphemeralKeys person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
-  setupIntent <- Payment.createSetupIntent person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
+  ephemeralKey <- TPayment.createEphemeralKeys person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
+  setupIntent <- TPayment.createSetupIntent person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
   return $
     API.Types.UI.RidePayment.SetupIntentResponse
       { setupIntentClientSecret = setupIntent.clientSecret,
@@ -201,8 +205,8 @@ postPaymentMethodUpdate (mbPersonId, _) rideId newPaymentMethodId = do
       let bookingPaymentMode = fromMaybe DMPM.LIVE booking.paymentMode
       unless (paymentMode == bookingPaymentMode) $ throwError (InvalidRequest "Invalid payment mode")
   order <- runInReplica $ QPaymentOrder.findById (Kernel.Types.Id.cast rideId) >>= fromMaybeM (InternalError $ "No payment order found for the ride " <> rideId.getId)
-  Payment.updatePaymentMethodInIntent person.merchantId person.merchantOperatingCityId person.paymentMode order.paymentServiceOrderId newPaymentMethodId
-  Payment.updateDefaultPersonPaymentMethodId person (Just newPaymentMethodId)
+  TPayment.updatePaymentMethodInIntent person.merchantId person.merchantOperatingCityId person.paymentMode order.paymentServiceOrderId newPaymentMethodId
+  SPayment.updateDefaultPersonPaymentMethodId person (Just newPaymentMethodId)
   -- Update booking payment method
   return Success
 
@@ -216,7 +220,7 @@ deletePaymentMethodsDelete ::
 deletePaymentMethodsDelete (mbPersonId, _) paymentMethodId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Payment.deleteCard person.merchantId person.merchantOperatingCityId person.paymentMode paymentMethodId
+  TPayment.deleteCard person.merchantId person.merchantOperatingCityId person.paymentMode paymentMethodId
   return Success
 
 postPaymentAddTip ::
@@ -239,33 +243,15 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
     unless ride.onlinePayment $ throwError (InvalidRequest "Could not add tip for Cash ride")
     fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
     when (any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups) $ throwError $ InvalidRequest "Tip already added"
-    (customerPaymentId, paymentMethodId) <- Payment.getCustomerAndPaymentMethod booking person
+    (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
-    if ride.paymentStatus == Domain.Types.Ride.NotInitiated
+    if ride.paymentStatus == Domain.Types.Ride.Completed
       then do
-        -- we will add this tip amount in ride end and charge it in job which is already created in ride end
-        let tipAmount = mkPrice (Just tipRequest.amount.currency) tipRequest.amount.amount
-        totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
-        fareWithTip <- totalFare `addPrice` tipAmount
-        let applicationFeeAmount = fromMaybe 0 booking.commission
+        -- Tip added after payment is captured (Completed status)
+        -- Create a new payment order for the tip and capture immediately
         let createPaymentIntentReq =
-              Payment.CreatePaymentIntentReq
-                { orderShortId = ride.shortId.getShortId,
-                  amount = fareWithTip.amount,
-                  applicationFeeAmount,
-                  currency = fareWithTip.currency,
-                  customer = customerPaymentId,
-                  paymentMethod = paymentMethodId,
-                  receiptEmail = email,
-                  driverAccountId
-                }
-        void $ Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq
-        QRide.updateTipByRideId (Just tipAmount) rideId -- update tip in ride
-      else do
-        -- Here we creating a new payment intent for tip if the ride payment status is already initiated
-        let createPaymentIntentReq =
-              Payment.CreatePaymentIntentReq
+              TPayment.CreatePaymentIntentReq
                 { orderShortId = ride.shortId.getShortId,
                   amount = tipRequest.amount.amount,
                   applicationFeeAmount = applicationFeeAmountForTipAmount tipRequest,
@@ -275,8 +261,64 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                   receiptEmail = email,
                   driverAccountId
                 }
-        paymentIntentResp <- Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq
-        void $ Payment.chargePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode paymentIntentResp.paymentIntentId
+        -- Create a new payment intent for tip (separate from the main ride payment)
+        tipPaymentIntentResp <- SPayment.makeAdditionalPaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride.shortId.getShortId createPaymentIntentReq
+        now <- getCurrentTime
+        let tipPaymentOrderId = tipPaymentIntentResp.orderId
+        let tipAmount = mkPrice (Just tipRequest.amount.currency) tipRequest.amount.amount
+        let paymentMethod = fromMaybe (DMPM.Cash) booking.paymentInstrument
+        -- Generate separate invoice number for tip
+        merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+        invoiceNumber <- SPInvoice.generateInvoiceNumber merchant.shortId TIP DPI.PAYMENT now
+        invoiceId <- Kernel.Types.Id.Id <$> generateGUID
+        let tipInvoice =
+              DPI.PaymentInvoice
+                { id = invoiceId,
+                  rideId = rideId,
+                  paymentOrderId = Just tipPaymentOrderId, -- Link to NEW payment order
+                  paymentStatus = DPI.PENDING, -- Will be updated to CAPTURED immediately after successful charge
+                  paymentMethod = paymentMethod,
+                  paymentPurpose = TIP, -- Separate purpose for accounting
+                  invoiceType = DPI.PAYMENT,
+                  invoiceNumber = invoiceNumber, -- Separate invoice number
+                  amount = tipAmount.amount,
+                  currency = tipAmount.currency,
+                  createdAt = now,
+                  updatedAt = now,
+                  merchantId = Just booking.merchantId,
+                  merchantOperatingCityId = Just booking.merchantOperatingCityId
+                }
+        QPaymentInvoice.create tipInvoice
+        -- Update tip amount in ride
+        QRide.updateTipByRideId (Just tipAmount) rideId
+        -- Immediately attempt to capture the tip payment intent
+        tipPaymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode tipPaymentIntentResp.paymentIntentId
+        when tipPaymentCaptured $ QPaymentInvoice.updatePaymentStatus DPI.CAPTURED tipInvoice.id
+      else do
+        -- Tip added before payment is captured (NotInitiated or Initiated)
+        -- Update existing payment intent and invoice
+        let tipAmount = mkPrice (Just tipRequest.amount.currency) tipRequest.amount.amount
+        totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
+        fareWithTip <- totalFare `addPrice` tipAmount
+        let applicationFeeAmount = fromMaybe 0 booking.commission
+        let createPaymentIntentReq =
+              TPayment.CreatePaymentIntentReq
+                { orderShortId = ride.shortId.getShortId,
+                  amount = fareWithTip.amount,
+                  applicationFeeAmount,
+                  currency = fareWithTip.currency,
+                  customer = customerPaymentId,
+                  paymentMethod = paymentMethodId,
+                  receiptEmail = email,
+                  driverAccountId
+                }
+        mainPaymentIntentResp <- SPayment.makeRidePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq
+        QRide.updateTipByRideId (Just tipAmount) rideId -- update tip in ride
+        -- Update existing invoice to RIDE_TIP purpose and new amount (fare + tip)
+        mbInvoice <- QPaymentInvoice.findByPaymentOrderId (Just mainPaymentIntentResp.orderId)
+        whenJust mbInvoice $ \invoice -> do
+          let updatedInvoice = invoice{paymentPurpose = RIDE_TIP, amount = fareWithTip.amount}
+          QPaymentInvoice.updateByPrimaryKey updatedInvoice
     createFareBreakup
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     void $ CallBPPInternal.populateTipAmount merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId tipRequest.amount.amount

@@ -16,6 +16,8 @@
 
 module Lib.Payment.Domain.Action
   ( PaymentStatusResp (..),
+    OrderProcessing (..),
+    CreatePaymentIntentServiceResp (..),
     createOrderService,
     orderStatusService,
     juspayWebhookService,
@@ -138,6 +140,18 @@ data PayoutPaymentStatus = PayoutPaymentStatus
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+-- Order processing intent
+data OrderProcessing
+  = MainOrder (Id Ride)
+  | AdditionalOrder
+  deriving (Show, Eq, Generic)
+
+data CreatePaymentIntentServiceResp = CreatePaymentIntentServiceResp
+  { paymentIntentId :: Text,
+    orderId :: Id DOrder.PaymentOrder
+  }
+  deriving (Show, Eq, Generic)
+
 -- create payment intent --------------------------------------------
 
 createPaymentIntentService ::
@@ -149,40 +163,52 @@ createPaymentIntentService ::
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
-  Id Ride ->
+  OrderProcessing ->
   Text ->
   Payment.CreatePaymentIntentReq ->
   (Payment.CreatePaymentIntentReq -> m Payment.CreatePaymentIntentResp) ->
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
-  m Payment.CreatePaymentIntentResp
-createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall cancelPaymentIntentCall = do
+  m CreatePaymentIntentServiceResp
+createPaymentIntentService merchantId mbMerchantOpCityId personId orderProcessing rideShortIdText createPaymentIntentReq createPaymentIntentCall cancelPaymentIntentCall = do
   let rideShortId = ShortId rideShortIdText
-  mbExistingOrder <- QOrder.findById (cast rideId)
-  case mbExistingOrder of
-    Nothing -> do
+  case orderProcessing of
+    MainOrder rideId -> do
+      mbExistingOrder <- QOrder.findById (cast rideId)
+      case mbExistingOrder of
+        Nothing -> do
+          createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq -- api call
+          paymentOrder <- buildPaymentOrder_ createPaymentIntentResp (cast rideId) rideShortId
+          transaction <- buildTransaction paymentOrder createPaymentIntentResp
+          logInfo $ "Created new order and payment intent: " <> createPaymentIntentResp.paymentIntentId <> "; amount: " <> show createPaymentIntentReq.amount <> "; applicationFeeAmount: " <> show createPaymentIntentReq.applicationFeeAmount
+          QOrder.create paymentOrder
+          QTransaction.create transaction
+          pure $ CreatePaymentIntentServiceResp createPaymentIntentResp.paymentIntentId paymentOrder.id
+        Just existingOrder -> do
+          transactions <- QTransaction.findAllByOrderId existingOrder.id
+          let mbInProgressTransaction = find (isInProgress . (.status)) transactions
+          resp <- case mbInProgressTransaction of
+            Nothing -> createNewTransaction existingOrder -- if previous all payment intents are already charged or cancelled, then create a new payment intent
+            Just existingTransaction -> do
+              paymentIntentId <- existingTransaction.txnId & fromMaybeM (InternalError "Transaction doesn't have txnId") -- should never happen
+              let newTransactionAmount = createPaymentIntentReq.amount -- changing whole amount
+              let newApplicationFeeAmount = createPaymentIntentReq.applicationFeeAmount -- changing application fee amount
+              if newTransactionAmount > existingTransaction.amount
+                then do
+                  -- currently we don't support incremental authorization, so just cancel and create new intent
+                  logError $ "As amount increased cancel old payment intent: " <> paymentIntentId <> " and create new one"
+                  cancelOldTransaction existingTransaction paymentIntentId -- cancel older payment intent
+                  createNewTransaction existingOrder -- create new payment intent
+                else updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder existingTransaction
+          pure $ CreatePaymentIntentServiceResp resp.paymentIntentId existingOrder.id
+    AdditionalOrder -> do
       createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq -- api call
-      paymentOrder <- buildPaymentOrder_ createPaymentIntentResp rideShortId
+      newOrderId <- Id <$> generateGUID
+      paymentOrder <- buildPaymentOrder_ createPaymentIntentResp newOrderId rideShortId
       transaction <- buildTransaction paymentOrder createPaymentIntentResp
-      logInfo $ "Created new order and payment intent: " <> createPaymentIntentResp.paymentIntentId <> "; amount: " <> show createPaymentIntentReq.amount <> "; applicationFeeAmount: " <> show createPaymentIntentReq.applicationFeeAmount
+      logInfo $ "Created additional order and payment intent: " <> createPaymentIntentResp.paymentIntentId <> "; amount: " <> show createPaymentIntentReq.amount <> "; applicationFeeAmount: " <> show createPaymentIntentReq.applicationFeeAmount
       QOrder.create paymentOrder
       QTransaction.create transaction
-      return createPaymentIntentResp
-    Just existingOrder -> do
-      transactions <- QTransaction.findAllByOrderId existingOrder.id
-      let mbInProgressTransaction = find (isInProgress . (.status)) transactions
-      case mbInProgressTransaction of
-        Nothing -> createNewTransaction existingOrder -- if previous all payment intents are already charged or cancelled, then create a new payment intent
-        Just existingTransaction -> do
-          paymentIntentId <- existingTransaction.txnId & fromMaybeM (InternalError "Transaction doesn't have txnId") -- should never happen
-          let newTransactionAmount = createPaymentIntentReq.amount -- changing whole amount
-          let newApplicationFeeAmount = createPaymentIntentReq.applicationFeeAmount -- changing application fee amount
-          if newTransactionAmount > existingTransaction.amount
-            then do
-              -- currently we don't support incremental authorization, so just cancel and create new intent
-              logError $ "As amount increased cancel old payment intent: " <> paymentIntentId <> " and create new one"
-              cancelOldTransaction existingTransaction paymentIntentId -- cancel older payment intent
-              createNewTransaction existingOrder -- create new payment intent
-            else updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder existingTransaction
+      pure $ CreatePaymentIntentServiceResp createPaymentIntentResp.paymentIntentId newOrderId
   where
     isInProgress = (`elem` [Payment.NEW, Payment.PENDING_VBV, Payment.STARTED, Payment.AUTHORIZING])
 
@@ -233,15 +259,16 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
         BeamFlow m r
       ) =>
       Payment.CreatePaymentIntentResp ->
+      Id DOrder.PaymentOrder ->
       ShortId DOrder.PaymentOrder ->
       m DOrder.PaymentOrder
-    buildPaymentOrder_ createPaymentIntentResp rideShortId = do
+    buildPaymentOrder_ createPaymentIntentResp orderId rideShortId = do
       now <- getCurrentTime
       clientAuthToken <- encrypt createPaymentIntentResp.clientSecret
       let clientAuthTokenExpiry = Time.UTCTime (Time.fromGregorian 2099 1 1) 0 -- setting infinite expiry for now
       pure
         DOrder.PaymentOrder
-          { id = cast rideId,
+          { id = orderId,
             shortId = rideShortId,
             paymentServiceOrderId = createPaymentIntentResp.paymentIntentId,
             requestId = Nothing,
