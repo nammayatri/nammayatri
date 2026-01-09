@@ -181,8 +181,12 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
       singleAdultTicketPrice = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice.amountInt.getMoney)
       totalTicketQuantity = fareParameters.totalQuantity
       totalFare = fromMaybe 0 singleAdultTicketPrice * totalTicketQuantity
+      singleTicketFare = fromMaybe 0 singleAdultTicketPrice
 
-      operatorData =
+  let fareQuoteIdValue = booking.id.getId
+  logDebug $ "[CMRLV2:Order] Using booking ID as fareQuoteId: " <> fareQuoteIdValue
+
+  let operatorData =
         OperatorData
           { operatorNameId = config.operatorNameId,
             merchantOrderId = orderId,
@@ -193,7 +197,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
             paymentChannelId = 0,
             transTypeId = 100,
             zoneNumber = 20,
-            fareQuoteId = ""
+            fareQuoteId = fareQuoteIdValue
           }
 
       extractStationCode stationCode = fromMaybe stationCode $ listToMaybe $ drop 1 $ T.splitOn "|" stationCode
@@ -206,7 +210,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
             activation_Date = travelDatetime,
             product_Id = T.pack $ show config.ticketTypeId,
             service_Id = "1",
-            tkt_Fare = T.pack $ show totalFare,
+            tkt_Fare = T.pack $ show singleTicketFare,
             validity = "100",
             duration = "180",
             operatorData = operatorData
@@ -224,7 +228,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
         GenerateTicketPayload
           { requester_ID = config.merchantId,
             language = "0",
-            txn_Type = "100",
+            txn_Type = "65",
             txn_Ref_No = orderId,
             txn_Date = travelDatetime,
             pSP_Specific_Data = "Mode=UPI;ServiceFee=0%",
@@ -244,6 +248,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
   logDebug $ "[CMRLV2:Order] Payload built, encrypting..."
   encKey <- decrypt config.encryptionKey
   let payloadText = TE.decodeUtf8 $ BL.toStrict $ encode payload
+  logDebug $ "[CMRLV2:Order] Payload Text: " <> payloadText
   encryptedPayload <- encryptPayload payloadText encKey
   logDebug $ "[CMRLV2:Order] Encrypted Payload: " <> encryptedPayload
   logDebug $ "[CMRLV2:Order] Payload encrypted, calling CMRL API..."

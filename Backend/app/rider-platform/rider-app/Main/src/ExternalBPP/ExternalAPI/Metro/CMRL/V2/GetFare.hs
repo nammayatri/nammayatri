@@ -4,10 +4,8 @@
 module ExternalBPP.ExternalAPI.Metro.CMRL.V2.GetFare where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import BecknV2.FRFS.Utils
 import Data.Aeson
 import qualified Data.Text as T
-import Domain.Types.FRFSQuoteCategorySpec
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
@@ -20,7 +18,6 @@ import Kernel.Types.App
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.FRFSUtils as FRFSUtils
-import qualified Storage.Queries.FRFSTicketCategoryMetadataConfig as QFRFSTicketCategoryMetadataConfig
 
 data GetFareReq = GetFareReq
   { operatorNameId :: Int,
@@ -60,8 +57,8 @@ type GetFareAPI =
 getFareAPI :: Proxy GetFareAPI
 getFareAPI = Proxy
 
-getFare :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> CMRLV2Config -> GetFareReq -> m [FRFSUtils.FRFSFare]
-getFare integrationBPPConfig config fareReq = do
+getFare :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> CMRLV2Config -> T.Text -> GetFareReq -> m [FRFSUtils.FRFSFare]
+getFare _ config _riderId fareReq = do
   logInfo $ "[CMRLV2:GetFare] Getting fare from: " <> fareReq.fromStationId <> " to: " <> fareReq.toStationId
   logDebug $ "[CMRLV2:GetFare] Request params - operatorNameId: " <> show fareReq.operatorNameId <> ", ticketTypeId: " <> show fareReq.ticketTypeId <> ", fareTypeId: " <> show fareReq.fareTypeId
   let cacheKey = "cmrlv2-fare-" <> T.pack (show fareReq.operatorNameId) <> "-" <> fareReq.fromStationId <> "-" <> fareReq.toStationId <> "-" <> T.pack (show fareReq.ticketTypeId)
@@ -76,21 +73,14 @@ getFare integrationBPPConfig config fareReq = do
       let eulerClient = \accessToken -> ET.client getFareAPI (Just $ "Bearer " <> accessToken) fareReq
       fareRes <- callCMRLV2API config eulerClient "getFare" getFareAPI
       logDebug $ "[CMRLV2:GetFare] API Response: " <> T.pack (show fareRes)
-      ticketCategoryMetadataConfig <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity ADULT (becknVehicleCategoryToFrfsVehicleCategory integrationBPPConfig.vehicleCategory) integrationBPPConfig.merchantOperatingCityId
       fares <-
         case fareRes of
           (fareItem : _) -> do
             if fareItem.returnCode == "0"
               then do
-                let amount = HighPrecMoney $ toRational fareItem.finalFare
-                    offeredPrice = amount
-                    originalPrice =
-                      case (ticketCategoryMetadataConfig <&> (.domainCategoryValue)) of
-                        Just domainCategoryValue ->
-                          case domainCategoryValue of
-                            FixedAmount discountAmt -> offeredPrice + discountAmt
-                            Percentage discountPercentage -> HighPrecMoney $ offeredPrice.getHighPrecMoney / (1 - (toRational discountPercentage / 100))
-                        Nothing -> offeredPrice
+                let originalPrice = HighPrecMoney $ toRational fareItem.fareBeforeDiscount
+                    offeredPrice = HighPrecMoney $ toRational fareItem.finalFare
+                logDebug $ "[CMRLV2:GetFare] Using API values - fareBeforeDiscount: " <> T.pack (show fareItem.fareBeforeDiscount) <> ", finalFare: " <> T.pack (show fareItem.finalFare) <> ", discountAmount: " <> T.pack (show fareItem.discountAmount)
                 return $
                   [ FRFSUtils.FRFSFare
                       { categories =
@@ -104,8 +94,8 @@ getFare integrationBPPConfig config fareReq = do
                                     },
                                 offeredPrice =
                                   Price
-                                    { amountInt = round amount,
-                                      amount = amount,
+                                    { amountInt = round offeredPrice,
+                                      amount = offeredPrice,
                                       currency = INR
                                     },
                                 eligibility = True

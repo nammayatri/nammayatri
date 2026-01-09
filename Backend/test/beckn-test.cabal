@@ -27,6 +27,7 @@ flag Local
 library
   exposed-modules:
       Common
+      FRFS.CMRLV2.EncryptionSpec
       HSpec
       Mobility.AppBackend.APICalls
       Mobility.AppBackend.Fixtures
@@ -100,9 +101,11 @@ library
     , aeson
     , async
     , base >=4.7 && <5
+    , base64-bytestring
     , beckn-gateway
     , beckn-spec
     , bytestring
+    , cryptonite
     , dashboard-helper-api
     , data-default-class
     , driver-offer-allocator
@@ -196,10 +199,12 @@ test-suite beckn-integ-test
     , aeson
     , async
     , base >=4.7 && <5
+    , base64-bytestring
     , beckn-gateway
     , beckn-spec
     , beckn-test
     , bytestring
+    , cryptonite
     , dashboard-helper-api
     , data-default-class
     , driver-offer-allocator

@@ -103,6 +103,8 @@ dependencies:
   - dashboard-helper-api
   - sequelize
   - beckn-spec
+  - cryptonite
+  - base64-bytestring
 
 ghc-options:
   - -fwrite-ide-info
