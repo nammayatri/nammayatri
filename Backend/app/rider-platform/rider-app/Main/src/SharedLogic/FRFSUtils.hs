@@ -801,7 +801,8 @@ createPaymentOrder ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
     EncFlow m r,
-    ServiceFlow m r
+    ServiceFlow m r,
+    HasField "isMetroTestTransaction" r Bool
   ) =>
   [FTBooking.FRFSTicketBooking] ->
   Id DMOC.MerchantOperatingCity ->
@@ -856,7 +857,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
       commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
       createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType False createOrderReq createOrderCall
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall
   mapM (DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq) orderResp
   where
     getPaymentIds = do
@@ -1084,7 +1086,8 @@ createVendorSplitFromBookings ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
     EncFlow m r,
-    ServiceFlow m r
+    ServiceFlow m r,
+    HasField "isMetroTestTransaction" r Bool
   ) =>
   [FTBooking.FRFSTicketBooking] ->
   Id Merchant.Merchant ->
@@ -1093,8 +1096,9 @@ createVendorSplitFromBookings ::
   Bool ->
   m ([Payment.VendorSplitDetails], HighPrecMoney)
 createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentType isFRFSTestingEnabled = do
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let amount =
-        if isFRFSTestingEnabled
+        if isFRFSTestingEnabled && isMetroTestTransaction
           then 1.0 * (HighPrecMoney $ toRational $ length allJourneyBookings)
           else
             foldl
