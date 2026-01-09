@@ -78,7 +78,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64-linux-critical
+            host: x86_64-linux
             arch: amd64
             name: Master Release Build
             continue-on-error: false
