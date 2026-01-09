@@ -134,7 +134,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
             childFareAmount <- mbChildFareAmount & fromMaybeM (CRISError $ "Failed to parse fare amount: " <> show fare.childFare)
             classCode <- pure fare.classCode & fromMaybeM (CRISError $ "Failed to parse class code: " <> show fare.classCode)
             serviceTiers <- QFRFSVehicleServiceTier.findByProviderCodeAndTrainType classCode (Just fare.trainTypeCode) merchantOperatingCityId
-            let fareQuoteType = if fare.trainTypeCode == "R" then DQuote.ReturnJourney else DQuote.SingleJourney
+            let fareQuoteType = if fare.ticketTypeCode == "R" then DQuote.ReturnJourney else DQuote.SingleJourney
             serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "Failed to find service tier: " <> show classCode <> " " <> show fare.trainTypeCode)
             return $
               FRFSUtils.FRFSFare
