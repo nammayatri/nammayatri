@@ -52,7 +52,8 @@ paymentOrderStatusCheckJob ::
     Metrics.HasBAPMetrics m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "isMetroTestTransaction" r Bool
   ) =>
   Job 'PaymentOrderStatusCheck ->
   m ExecutionResult
@@ -105,7 +106,8 @@ processPaymentOrder ::
     Metrics.HasBAPMetrics m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "isMetroTestTransaction" r Bool
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

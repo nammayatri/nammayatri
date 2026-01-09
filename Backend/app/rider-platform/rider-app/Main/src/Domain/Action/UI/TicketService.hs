@@ -350,8 +350,9 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_
-      createOrderCall = Payment.createOrder merchantId merchantOpCity.id (Just placeId) Payment.Normal (Just staticCustomerId) person.clientSdkVersion
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCity.id) commonPersonId Nothing Nothing Payment.Normal createOrderReq createOrderCall
+      createOrderCall = Payment.createOrder merchantId merchantOpCity.id (Just placeId) Payment.Normal (Just person.id.getId) person.clientSdkVersion
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCity.id) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return createOrderRes
     Nothing -> do

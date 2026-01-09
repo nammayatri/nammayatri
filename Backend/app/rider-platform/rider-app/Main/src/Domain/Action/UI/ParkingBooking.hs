@@ -93,9 +93,9 @@ postMultimodalParkingBook mbApiKey req = do
 
   let commonMerchantId = Kernel.Types.Id.cast @Domain.Types.Merchant.Merchant @DPayment.Merchant person.merchantId
       commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person req.customerId
-      createOrderCall = TPayment.createOrder person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking (Just staticCustomerId) person.clientSdkVersion
-
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCityId) commonPersonId Nothing Nothing TPayment.ParkingBooking createOrderReq createOrderCall >>= fromMaybeM (InternalError "Failed to create payment order")
+      createOrderCall = TPayment.createOrder person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking (Just req.customerId.getId) person.clientSdkVersion
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCityId) commonPersonId Nothing Nothing TPayment.ParkingBooking isMetroTestTransaction createOrderReq createOrderCall >>= fromMaybeM (InternalError "Failed to create payment order")
 
   paymentLink <- case orderResp.payment_links of
     Just links -> fromMaybeM (InternalError "Payment link not found") links.web

@@ -366,9 +366,10 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing
           }
+  let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
-  let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just staticCustomerId) person.clientSdkVersion
-  DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType createOrderReq createOrderCall
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
+  DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall
 
 -- TODO :: To be deprecated @Kavyashree
 postMultimodalPaymentUpdateOrder ::

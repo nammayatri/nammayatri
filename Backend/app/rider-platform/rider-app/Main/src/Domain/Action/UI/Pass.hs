@@ -157,7 +157,8 @@ purchasePassWithPayment ::
     EncFlow m r,
     EventStreamFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    EsqDBReplicaFlow m r
+    EsqDBReplicaFlow m r,
+    HasField "isMetroTestTransaction" r Bool
   ) =>
   Bool ->
   DP.Person ->
@@ -318,7 +319,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             commonPersonId = Id.cast @DP.Person @DPayment.Person personId
             createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just staticCustomerId) person.clientSdkVersion
         mbPaymentOrderValidity <- TPayment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
-        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase createOrderReq createOrderCall
+        isMetroTestTransaction <- asks (.isMetroTestTransaction)
+        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall
       else return Nothing
   QPurchasedPassPayment.create purchasedPassPayment
   return $

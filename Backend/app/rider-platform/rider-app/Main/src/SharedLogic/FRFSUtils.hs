@@ -801,8 +801,7 @@ createPaymentOrder ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
     EncFlow m r,
-    ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    ServiceFlow m r
   ) =>
   [FTBooking.FRFSTicketBooking] ->
   Id DMOC.MerchantOperatingCity ->
@@ -857,15 +856,13 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
       commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
       createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq createOrderCall
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType False createOrderReq createOrderCall
   mapM (DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq) orderResp
   where
     getPaymentIds = do
       orderShortId <- generateShortId
       orderId <- generateGUID
-      isMetroTestTransaction <- asks (.isMetroTestTransaction)
-      let updatedOrderShortId = bool (orderShortId.getShortId) ("test-" <> orderShortId.getShortId) isMetroTestTransaction
-      return (orderId, updatedOrderShortId)
+      return (orderId, orderShortId.getShortId)
 
     processPayments ::
       ( EsqDBReplicaFlow m r,
