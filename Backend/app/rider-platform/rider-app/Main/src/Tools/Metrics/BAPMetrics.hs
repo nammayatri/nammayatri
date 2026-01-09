@@ -102,6 +102,13 @@ incrementBusScannetCounterMetric merchantName merchantOperatingCityId vehicleNum
   let busScannerCounter = bmContainer.busScannerCounter
   liftIO $ P.withLabel busScannerCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, vehicleNumber) P.incCounter
 
+incrementFleetRouteMapMissingCounter :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementFleetRouteMapMissingCounter merchantName merchantOperatingCityId vehicleNumber = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let fleetRouteMapMissingCounter = bmContainer.fleetRouteMapMissingCounter
+  liftIO $ P.withLabel fleetRouteMapMissingCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, vehicleNumber) P.incCounter
+
 putSearchDuration :: MonadIO m => P.Vector P.Label2 P.Histogram -> Text -> DeploymentVersion -> Double -> m ()
 putSearchDuration searchDurationHistogram merchantName version duration = liftIO $ P.withLabel searchDurationHistogram (merchantName, version.getDeploymentVersion) (`P.observe` duration)
 

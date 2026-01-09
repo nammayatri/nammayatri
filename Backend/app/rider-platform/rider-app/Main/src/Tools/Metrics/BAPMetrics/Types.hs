@@ -41,12 +41,15 @@ data BAPMetricsContainer = BAPMetricsContainer
     createOrderDurationFRFS :: DurationMetric,
     initDuration :: DurationMetric,
     confirmDuration :: DurationMetric,
-    busScannerCounter :: BusScannetCounterMetric
+    busScannerCounter :: BusScannetCounterMetric,
+    fleetRouteMapMissingCounter :: FleetRouteMapMissingCounterMetric
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
 
 type BusScannetCounterMetric = P.Vector P.Label4 P.Counter
+
+type FleetRouteMapMissingCounterMetric = P.Vector P.Label4 P.Counter
 
 type RideCreatedCounterMetric = P.Vector P.Label4 P.Counter
 
@@ -60,6 +63,7 @@ registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
   busScannerCounter <- registerBusScannetCounterMetric
+  fleetRouteMapMissingCounter <- registerFleetRouteMapMissingCounterMetric
   busScanSearchRequestCounter <- registerBusScanSearchRequestCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
@@ -78,6 +82,9 @@ registerSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "ve
 
 registerBusScannetCounterMetric :: IO BusScannetCounterMetric
 registerBusScannetCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "vehicle_number") $ P.counter $ P.Info "scanned_bus_counter" ""
+
+registerFleetRouteMapMissingCounterMetric :: IO FleetRouteMapMissingCounterMetric
+registerFleetRouteMapMissingCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "vehicle_number") $ P.counter $ P.Info "fleet_route_map_missing_counter" ""
 
 registerBusScanSearchRequestCounterMetric :: IO BusScanSearchRequestCounterMetric
 registerBusScanSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "bus_scan_search_request_count" ""
