@@ -127,6 +127,7 @@ import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -871,6 +872,7 @@ getPublicTransportDataImpl ::
 getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
   let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
@@ -882,7 +884,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           _ -> [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   fork "incrementBusScannetCounterMetric" $
     whenJust mbVehicleNumber $ \vehicleNumber -> do
-      Metrics.incrementBusScannetCounterMetric "ANNA_APP" merchantOperatingCityId.getId vehicleNumber
+      Metrics.incrementBusScannetCounterMetric merchant.shortId.getShortId merchantOperatingCityId.getId vehicleNumber
 
   integratedBPPConfigs <-
     concatMapM
@@ -1022,7 +1024,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
       )
       >>= \case
         Left _ -> do
-          mbRouteCodeAndServiceType :: Maybe (Kernel.Prelude.Text, Maybe Spec.ServiceTierType) <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo
+          mbRouteCodeAndServiceType :: Maybe (Kernel.Prelude.Text, Maybe Spec.ServiceTierType) <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId
           lst1 <- mapConcurrently (fetchData mbRouteCodeAndServiceType) integratedBPPConfigs
           lst2 <-
             maybe
@@ -1039,7 +1041,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           -- Group configs by feed_id and take first config for each feed_id
           let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedKey, _)) -> (feedKey, [config])) configsWithFeedInfo
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
-          mbRouteCodeAndServiceType <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo
+          mbRouteCodeAndServiceType <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId
           lst1 <- mapConcurrently (fetchData mbRouteCodeAndServiceType) uniqueConfigs
           lst2 <- maybe (pure []) (\oppositeTripDetails -> concat <$> mapConcurrently (\oppositeTripDetail -> mapConcurrently (fetchData (Just (oppositeTripDetail.route_id, snd =<< mbRouteCodeAndServiceType))) uniqueConfigs) oppositeTripDetails) mbOppositeTripDetails
           return (lst1 <> lst2)
@@ -1061,12 +1063,16 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
       vehicleRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
       pure $ Just vehicleRouteInfo
 
-    getRouteCodeAndServiceType Nothing = return Nothing
-    getRouteCodeAndServiceType (Just vehicleLiveRouteInfo) = do
+    getRouteCodeAndServiceType Nothing _ _ = return Nothing
+    getRouteCodeAndServiceType (Just vehicleLiveRouteInfo) merchant merchantOperatingCityId = do
       let mbRouteCode = (snd vehicleLiveRouteInfo).routeCode
       case mbRouteCode of
         Just routeCode -> return $ Just (routeCode, Just ((snd vehicleLiveRouteInfo).serviceType))
-        Nothing -> throwError (FleetRouteMapMissing $ "Route code not found for fleetId: " <> show (snd vehicleLiveRouteInfo).vehicleNumber)
+        Nothing -> do
+          let vehicleNumber = (snd vehicleLiveRouteInfo).vehicleNumber
+          fork "incrementFleetRouteMapMissingCounter" $
+            Metrics.incrementFleetRouteMapMissingCounter merchant.shortId.getShortId merchantOperatingCityId.getId vehicleNumber
+          throwError (FleetRouteMapMissing $ "Route code not found for fleetId: " <> show vehicleNumber)
 
 getMultimodalOrderGetLegTierOptions ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
