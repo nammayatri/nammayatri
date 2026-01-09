@@ -672,7 +672,8 @@ frfsOrderStatusHandler ::
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
     HasBAPMetrics m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "isMetroTestTransaction" r Bool
   ) =>
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
   DPayment.PaymentStatusResp ->
@@ -759,7 +760,8 @@ getFrfsBookingStatus ::
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
     HasBAPMetrics m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "isMetroTestTransaction" r Bool
   ) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking ->

@@ -56,7 +56,8 @@ checkRefundStatusJob ::
     HasBAPMetrics m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "isMetroTestTransaction" r Bool
   ) =>
   Job 'CheckRefundStatus ->
   m ExecutionResult
@@ -99,7 +100,8 @@ processRefundStatus ::
     HasBAPMetrics m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "isMetroTestTransaction" r Bool
   ) =>
   DRefunds.Refunds ->
   DP.Person ->

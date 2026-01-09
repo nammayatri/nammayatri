@@ -131,7 +131,8 @@ data HandlerEnv = HandlerEnv
     url :: Maybe Text,
     googleSAPrivateKey :: String,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
-    noSignatureSubscribers :: [Text]
+    noSignatureSubscribers :: [Text],
+    isMetroTestTransaction :: Bool
   }
   deriving (Generic)
 
