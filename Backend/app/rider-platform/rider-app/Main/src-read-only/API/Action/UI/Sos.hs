@@ -116,24 +116,25 @@ type API =
            API.Types.UI.Sos.SosTrackingRes
       :<|> TokenAuth
       :> "sos"
-      :> "shareLocation"
-      :> "contact"
+      :> "startTracking"
       :> ReqBody
            '[JSON]
-           API.Types.UI.Sos.ShareLocationWithContactReq
+           API.Types.UI.Sos.StartTrackingReq
       :> Post
            '[JSON]
-           API.Types.UI.Sos.ShareLocationRes
+           API.Types.UI.Sos.StartTrackingRes
       :<|> TokenAuth
       :> "sos"
-      :> "shareLocation"
-      :> "all"
+      :> "updateState"
+      :> Capture
+           "sosId"
+           (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
       :> ReqBody
            '[JSON]
-           API.Types.UI.Sos.ShareLocationWithAllReq
+           API.Types.UI.Sos.UpdateStateReq
       :> Post
            '[JSON]
-           API.Types.UI.Sos.ShareLocationRes
+           Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "sos"
       :> "trackingDetails"
@@ -146,7 +147,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getSosGetDetails :<|> getSosIvrOutcome :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos :<|> postSosCallPolice :<|> postSosUpdateLocation :<|> getSosTracking :<|> postSosShareLocationContact :<|> postSosShareLocationAll :<|> getSosTrackingDetails
+handler = getSosGetDetails :<|> getSosIvrOutcome :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos :<|> postSosCallPolice :<|> postSosUpdateLocation :<|> getSosTracking :<|> postSosStartTracking :<|> postSosUpdateState :<|> getSosTrackingDetails
 
 getSosGetDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -214,23 +215,24 @@ postSosUpdateLocation a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postS
 getSosTracking :: (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> Environment.FlowHandler API.Types.UI.Sos.SosTrackingRes)
 getSosTracking a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosTracking a1
 
-postSosShareLocationContact ::
+postSosStartTracking ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    API.Types.UI.Sos.ShareLocationWithContactReq ->
-    Environment.FlowHandler API.Types.UI.Sos.ShareLocationRes
+    API.Types.UI.Sos.StartTrackingReq ->
+    Environment.FlowHandler API.Types.UI.Sos.StartTrackingRes
   )
-postSosShareLocationContact a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosShareLocationContact (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSosStartTracking a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosStartTracking (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-postSosShareLocationAll ::
+postSosUpdateState ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    API.Types.UI.Sos.ShareLocationWithAllReq ->
-    Environment.FlowHandler API.Types.UI.Sos.ShareLocationRes
+    Kernel.Types.Id.Id Domain.Types.Sos.Sos ->
+    API.Types.UI.Sos.UpdateStateReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSosShareLocationAll a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosShareLocationAll (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSosUpdateState a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosUpdateState (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getSosTrackingDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

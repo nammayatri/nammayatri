@@ -4,6 +4,7 @@ imports:
   Ride: Domain.Types.Ride
   SosType : Domain.Types.Sos
   SosStatus : Domain.Types.Sos
+  SosState : Domain.Types.Sos
   Sos : Domain.Types.Sos
   LatLong : Kernel.External.Maps.Types
 
@@ -22,7 +23,6 @@ types:
     sendPNOnPostRideSOS: Maybe Bool
     notifyAllContacts: Maybe Bool
     customerLocation: Maybe LatLong
-    trackingExpiresAt: Maybe UTCTime
 
   SosUpdateReq:
     status: SosStatus
@@ -35,6 +35,7 @@ types:
   MarkAsSafeReq:
     isMock: Maybe Bool
     isRideEnded: Maybe Bool
+    isEndLiveTracking: Maybe Bool
 
   CallPoliceAPI:
     rideId: Id Ride
@@ -51,24 +52,25 @@ types:
 
   SosTrackingRes:
     currentLocation: Maybe SosLocationRes
-    isTrackingActive: Bool
+    sosState: Maybe SosState
+    status: SosStatus
 
-  ShareLocationWithContactReq:
-    mobileNumber: Text
-    customerLocation: Maybe LatLong
+  StartTrackingReq:
+    contacts: "[Text]"
     durationInMinutes: Int
-
-  ShareLocationWithAllReq:
     customerLocation: Maybe LatLong
-    durationInMinutes: Int
+    sosId: Maybe (Id Sos)
 
-  ShareLocationRes:
+  StartTrackingRes:
     sosId: Id Sos
+    trackingUrl: Text
+
+  UpdateStateReq:
+    sosState: SosState
 
   SosTrackingDetailsRes:
     personName: Text
     mobileNumber: Text
-    expiryTimeStamp: UTCTime
 
 apis:
   # GET /sos/getDetails
@@ -161,23 +163,25 @@ apis:
       response:
         type: API.Types.UI.Sos.SosTrackingRes
 
-  # POST /sos/shareLocation/contact
+  # POST /sos/startTracking
   - POST:
-      endpoint: /sos/shareLocation/contact
+      endpoint: /sos/startTracking
       auth: TokenAuth
       request:
-        type: API.Types.UI.Sos.ShareLocationWithContactReq
+        type: API.Types.UI.Sos.StartTrackingReq
       response:
-        type: API.Types.UI.Sos.ShareLocationRes
+        type: API.Types.UI.Sos.StartTrackingRes
 
-  # POST /sos/shareLocation/all
+  # POST /sos/updateState/{sosId}
   - POST:
-      endpoint: /sos/shareLocation/all
+      endpoint: /sos/updateState/{sosId}
       auth: TokenAuth
+      params:
+        sosId: Id Sos
       request:
-        type: API.Types.UI.Sos.ShareLocationWithAllReq
+        type: API.Types.UI.Sos.UpdateStateReq
       response:
-        type: API.Types.UI.Sos.ShareLocationRes
+        type: Kernel.Types.APISuccess.APISuccess
 
   # GET /sos/trackingDetails/{sosId}
   - GET:

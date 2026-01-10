@@ -14,11 +14,13 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data Sos = Sos
-  { flow :: Domain.Types.Sos.SosType,
+  { entityType :: Kernel.Prelude.Maybe Domain.Types.Sos.SosEntityType,
+    flow :: Domain.Types.Sos.SosType,
     id :: Kernel.Types.Id.Id Domain.Types.Sos.Sos,
     mediaFiles :: [Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile],
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
+    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    sosState :: Kernel.Prelude.Maybe Domain.Types.Sos.SosState,
     status :: Domain.Types.Sos.SosStatus,
     ticketId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     trackingExpiresAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -31,7 +33,11 @@ data Sos = Sos
 
 data EmergencyContactId = EmergencyContactId Kernel.Prelude.Text deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data SosEntityType = Ride | NonRide deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data SosMockDrill = SosMockDrill {personId :: Kernel.Types.Id.Id Domain.Types.Person.Person, status :: Domain.Types.Sos.SosStatus} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data SosState = LiveTracking | SosActive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SosStatus = Resolved | NotResolved | Pending | MockPending | MockResolved deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -46,6 +52,10 @@ data SosType
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EmergencyContactId)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosEntityType)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosState)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosStatus)
 

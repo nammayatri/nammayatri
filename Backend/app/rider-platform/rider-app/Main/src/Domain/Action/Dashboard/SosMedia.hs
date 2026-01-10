@@ -12,6 +12,7 @@ import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Sos as DSos
 import qualified Environment
 import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import Kernel.Prelude
@@ -35,7 +36,7 @@ getSosMediaSosMedia _merchantShortId _opCity customerId = do
   let sosWithMediaPairs =
         [ (mediaFileId, sos)
           | sos <- sosList,
-            isJust sos.rideId, -- Only include ride-based SOS for this endpoint
+            sos.entityType == Just DSos.Ride,
             mediaFileId <- sos.mediaFiles
         ]
 
@@ -56,9 +57,7 @@ getSosMediaSosMedia _merchantShortId _opCity customerId = do
           Nothing -> throwError $ InvalidRequest "No S3 file path found"
           Just s3Path -> S3.get $ T.unpack s3Path
 
-        rideId <- case sos.rideId of
-          Nothing -> throwError $ InternalError "Unexpected: rideId is Nothing after filtering"
-          Just rid -> return $ cast rid
+        let rideId = cast sos.rideId
         return $
           Common.GetSosMediaResponse
             { content = content,
