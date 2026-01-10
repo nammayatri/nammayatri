@@ -60,7 +60,7 @@ import Kernel.Sms.Config
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
@@ -77,7 +77,6 @@ import Kernel.Utils.Version
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.OTP as SOTP
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -93,7 +92,6 @@ import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 import qualified Tools.Event as TE
 import Tools.MarketingEvents as TM
-import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
 data AuthReq = AuthReq
@@ -232,6 +230,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
 
   checkSlidingWindowLimit (authHitsCountKey person)
+  void $ cachePersonOTPChannel person.id otpChannel
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
@@ -572,7 +571,7 @@ checkPersonExists entityId =
   QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
 
 resend ::
-  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
+  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
@@ -585,23 +584,24 @@ resend tokenId mbSenderHash = do
   SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
-  smsCfg <- asks (.smsCfg)
-  mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-  countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  let merchantOpCityId = Id merchantOperatingCityId
   let otpCode = authValueHash
-  let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
-      phoneNumber = countryCode <> mobileNumber
-  withLogTag ("personId_" <> entityId) $ do
-    (mbSender, message, templateId) <-
-      MessageBuilder.buildSendOTPMessage (Id merchantOperatingCityId) $
-        MessageBuilder.BuildSendOTPMessageReq
-          { otp = otpCode,
-            hash = otpHash
-          }
-    let sender = fromMaybe smsCfg.sender mbSender
-    Sms.sendSMS person.merchantId (Id merchantOperatingCityId) (Sms.SendSMSReq message phoneNumber sender templateId)
-      >>= Sms.checkSmsResult
-  _ <- QR.updateAttempts (attempts - 1) id
+  otpChannel <- getPersonOTPChannel person.id
+  mobileNumber <- mapM decrypt person.mobileNumber
+  let receiverEmail = person.email
+
+  SOTP.sendOTP
+    otpChannel
+    otpCode
+    person.id
+    person.merchantId
+    merchantOpCityId
+    person.mobileCountryCode
+    mobileNumber
+    receiverEmail
+    mbSenderHash
+
+  void $ QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
 cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id SP.Person -> m ()
@@ -610,6 +610,19 @@ cleanCachedTokens personId = do
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
+
+authHitOTPChannel :: Id SP.Person -> Text
+authHitOTPChannel personId = "BPP:Registration:auth" <> getId personId <> ":OtpChannel"
+
+cachePersonOTPChannel :: (CacheFlow m r, MonadFlow m) => Id SP.Person -> SOTP.OTPChannel -> m ()
+cachePersonOTPChannel personId otpChannel = do
+  Redis.setExp (authHitOTPChannel personId) otpChannel 1800
+
+getPersonOTPChannel :: (CacheFlow m r, MonadFlow m) => Id SP.Person -> m SOTP.OTPChannel
+getPersonOTPChannel personId = do
+  Redis.get (authHitOTPChannel personId) >>= \case
+    Just a -> pure a
+    Nothing -> pure SOTP.SMS
 
 logout ::
   ( EsqDBFlow m r,
