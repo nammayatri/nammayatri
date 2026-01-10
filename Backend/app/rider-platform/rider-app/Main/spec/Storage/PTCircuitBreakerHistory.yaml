@@ -1,0 +1,58 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+
+PTCircuitBreakerHistory:
+  tableName: pt_circuit_breaker_history
+
+  types:
+    PTMode:
+      enum: "Metro, Bus, Subway"
+
+    APIType:
+      enum: "FareAPI, BookingAPI"
+
+    CircuitState:
+      enum: "Open, Closed, HalfOpen"
+
+  fields:
+    id: Id PTCircuitBreakerHistory
+    merchantOperatingCityId: Id MerchantOperatingCity
+    ptMode: PTMode
+    apiType: APIType
+    previousState: CircuitState
+    newState: CircuitState
+    failureCount: Maybe Int
+    reason: Maybe Text
+    createdAt: UTCTime
+
+  sqlType:
+    id: character varying(36)
+    merchantOperatingCityId: character varying(36)
+    ptMode: character varying(20)
+    apiType: character varying(20)
+    previousState: character varying(20)
+    newState: character varying(20)
+    reason: character varying(500)
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByMerchantOperatingCityId:
+      kvFunction: findAllWithOptionsDb
+      where:
+        and: [merchantOperatingCityId]
+      orderBy:
+        field: createdAt
+        order: desc
+
+  default:
+    createdAt: 'CURRENT_TIMESTAMP'
+
+  extraOperations:
+    - GENERATE_INDEXES

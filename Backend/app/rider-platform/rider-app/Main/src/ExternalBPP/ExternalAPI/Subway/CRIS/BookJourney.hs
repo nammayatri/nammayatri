@@ -21,11 +21,9 @@ import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..), CRISErrorUnhandled (..))
-import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare (mkRouteFareCacheKey)
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.Prelude ((!!))
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.Error
@@ -320,17 +318,8 @@ createOrder config integratedBPPConfig booking quoteCategories = do
             tpBookType = tpBookType
           }
   logInfo $ "GetBookJourney: " <> show bookJourneyReq
-  let changeOver = fromMaybe " " $ quote.fareDetails <&> (.via)
-  bookJourneyResp <-
-    getBookJourney config bookJourneyReq `safeCatch` \(err :: SomeException) -> do
-      logError $ "Booking failed, clearing fare cache for route: " <> fromStation.code <> " -> " <> toStation.code
-      let fareCacheKeyTrue = mkRouteFareCacheKey fromStation.code toStation.code changeOver True
-      let fareCacheKeyFalse = mkRouteFareCacheKey fromStation.code toStation.code changeOver False
-      Hedis.del fareCacheKeyTrue
-      Hedis.del fareCacheKeyFalse
-      logInfo $ "Cleared fare cache keys: " <> fareCacheKeyTrue <> ", " <> fareCacheKeyFalse
-      throwM err
 
+  bookJourneyResp <- getBookJourney config bookJourneyReq
   qrValidityTime <- parseTicketValidity bookJourneyResp.showTicketValidity
 
   return $

@@ -5,10 +5,9 @@ import Data.List (nub, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Data.Time.Format (defaultTimeLocale, formatTime)
-import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types hiding (ONDC)
+import Domain.Types.Beckn.FRFS.OnSearch
 import Domain.Types.BecknConfig
-import qualified Domain.Types.FRFSQuote as DQuote
 import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
@@ -40,18 +39,19 @@ import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.TicketStatus as CMRLV2Tic
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney as CRISBookJourney
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as CRISRouteFareV3
+import qualified ExternalBPP.ExternalAPI.Subway.CRIS.Types as CRISTypes
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
@@ -73,13 +73,17 @@ data BasicRouteDetail = BasicRouteDetail
   }
   deriving (Show)
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DQuote.FRFSQuoteType] -> m (Bool, [FRFSUtils.FRFSFare])
-getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDetails vehicleCategory serviceTier mbSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes = do
+data SubwayFareDetail = SubwayFareDetail
+  { viaPoints :: Text,
+    changeOver :: Text,
+    rawChangeOver :: Text,
+    getAllFares :: Bool
+  }
+  deriving (Show)
+
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> m [FRFSUtils.FRFSFare]
+getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail = do
   let (routeCode, startStopCode, endStopCode) = getRouteCodeAndStartAndStop
-  let isFareMandatory =
-        case integrationBPPConfig.providerConfig of
-          ONDC _ -> False
-          _ -> True
   case integrationBPPConfig.providerConfig of
     CMRL config' -> do
       fares <-
@@ -89,7 +93,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
               destination = endStopCode,
               ticketType = "SJT"
             }
-      return (isFareMandatory, fares)
+      return fares
     CMRLV2 config' -> do
       now <- getCurrentTime
       let travelDatetime = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" now
@@ -104,79 +108,49 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
               travelDatetime = travelDatetime,
               fareTypeId = config'.fareTypeId
             }
-      return (isFareMandatory, fares)
+      return fares
     ONDC _ -> do
-      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode blacklistedServiceTiers blacklistedFareQuoteTypes
-      return (isFareMandatory, fares)
+      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode
+      return fares
     EBIX _ -> do
-      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode blacklistedServiceTiers blacklistedFareQuoteTypes
-      return
-        ( isFareMandatory,
-          map
-            ( \FRFSUtils.FRFSFare {..} ->
-                let FRFSUtils.FRFSVehicleServiceTier {..} = vehicleServiceTier
-                 in FRFSUtils.FRFSFare
-                      { vehicleServiceTier =
-                          FRFSUtils.FRFSVehicleServiceTier
-                            { serviceTierType =
-                                case serviceTierType of
-                                  Spec.ASHOK_LEYLAND_AC -> Spec.AC
-                                  Spec.MIDI_AC -> Spec.AC
-                                  Spec.VOLVO_AC -> Spec.AC
-                                  Spec.ELECTRIC_V -> Spec.AC
-                                  Spec.ELECTRIC_V_PMI -> Spec.AC
-                                  a -> a,
-                              ..
-                            },
-                        ..
-                      }
-            )
-            fares
-        )
+      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode
+      return $
+        map
+          ( \FRFSUtils.FRFSFare {..} ->
+              let FRFSUtils.FRFSVehicleServiceTier {..} = vehicleServiceTier
+               in FRFSUtils.FRFSFare
+                    { vehicleServiceTier =
+                        FRFSUtils.FRFSVehicleServiceTier
+                          { serviceTierType =
+                              case serviceTierType of
+                                Spec.ASHOK_LEYLAND_AC -> Spec.AC
+                                Spec.MIDI_AC -> Spec.AC
+                                Spec.VOLVO_AC -> Spec.AC
+                                Spec.ELECTRIC_V -> Spec.AC
+                                Spec.ELECTRIC_V_PMI -> Spec.AC
+                                a -> a,
+                            ..
+                          },
+                      ..
+                    }
+          )
+          fares
     DIRECT _ -> do
-      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode blacklistedServiceTiers blacklistedFareQuoteTypes
-      return (isFareMandatory, fares)
+      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode
+      return fares
     CRIS config' -> do
-      (viaPoints, changeOver, rawChangeOver) <- getChangeOverAndViaPoints (NE.toList fareRouteDetails) integrationBPPConfig
-      maybe
-        (callCRISAPI config' changeOver rawChangeOver viaPoints >>= \fares -> return (isFareMandatory, filterFares fares))
-        ( \searchReqId -> do
-            let redisKey = CRISRouteFare.mkRouteFareKey startStopCode endStopCode searchReqId
-            redisResp <- Redis.safeGet redisKey
-            case redisResp of
-              Just subwayFares -> do
-                let cachedFares = filter (\fare -> maybe False (\fd -> fd.via == rawChangeOver) fare.fareDetails) subwayFares
-                if null cachedFares
-                  then fetchAndCacheFares config' redisKey changeOver rawChangeOver viaPoints isFareMandatory
-                  else return (isFareMandatory, filterFares cachedFares)
-              Nothing -> fetchAndCacheFares config' redisKey changeOver rawChangeOver viaPoints isFareMandatory
-        )
-        mbSearchReqId
+      SubwayFareDetail {viaPoints, changeOver, rawChangeOver, getAllFares} <- subwayFareDetail & fromMaybeM (InternalError "SubwayFareDetail not found")
+      fares <- callCRISAPI config' changeOver rawChangeOver viaPoints startStopCode endStopCode getAllFares
+      return fares
   where
-    filterFares :: [FRFSUtils.FRFSFare] -> [FRFSUtils.FRFSFare]
-    filterFares fares =
-      filter
-        ( \fare ->
-            notElem fare.vehicleServiceTier.serviceTierType blacklistedServiceTiers
-              && maybe True (\ft -> notElem ft blacklistedFareQuoteTypes) (fare.fareQuoteType)
-        )
-        fares
-
-    callCRISAPI config' changeOver rawChangeOver viaPoints = do
-      let (_, startStop, endStop) = getRouteCodeAndStartAndStop
-      routeFareReq <- JMU.getRouteFareRequest startStop endStop changeOver rawChangeOver viaPoints riderId (config'.useRouteFareV4 /= Just True)
-      resp <- withTryCatch "CRIS:getRouteFare" $ if config'.useRouteFareV4 == Just True then CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq False else CRISRouteFareV3.getRouteFare config' merchanOperatingCity.id routeFareReq True False
+    callCRISAPI config' changeOver rawChangeOver viaPoints startStopCode endStopCode getAllFares = do
+      routeFareReq <- getRouteFareRequest startStopCode endStopCode changeOver rawChangeOver viaPoints riderId (config'.useRouteFareV4 /= Just True)
+      resp <- withTryCatch "CRIS:getRouteFare" $ if config'.useRouteFareV4 == Just True then CRISRouteFare.getRouteFare config' merchantOperatingCityId routeFareReq getAllFares else CRISRouteFareV3.getRouteFare config' merchantOperatingCityId routeFareReq getAllFares
       case resp of
         Left err -> do
           logError $ "Error while calling CRIS API: " <> show err
           return []
         Right (fares, _) -> return fares
-
-    fetchAndCacheFares config' redisKey changeOver rawChangeOver viaPoints isFareMandatory = do
-      fares <- callCRISAPI config' changeOver rawChangeOver viaPoints
-      let filteredFares = filterFares fares
-      unless (null fares) $ Redis.setExp redisKey fares 1800
-      return (isFareMandatory, filteredFares)
 
     getRouteCodeAndStartAndStop :: (Text, Text, Text)
     getRouteCodeAndStartAndStop = do
@@ -186,6 +160,42 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       let startStopCode = firstFareRouteDetail.startStopCode
       let endStopCode = lastFareRouteDetail.endStopCode
       (routeCode, startStopCode, endStopCode)
+
+getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Text -> Id Person -> Bool -> m CRISTypes.CRISFareRequest
+getRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints personId useDummy = do
+  if useDummy
+    then getDummyRouteFareRequest
+    else do
+      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      mbMobileNumber <- mapM decrypt person.mobileNumber
+      mbImeiNumber <- mapM decrypt person.imeiNumber
+      sessionId <- getRandomInRange (1, 1000000 :: Int)
+      return $
+        CRISTypes.CRISFareRequest
+          { mobileNo = mbMobileNumber,
+            imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
+            appSession = sessionId,
+            sourceCode = sourceCode,
+            destCode = destCode,
+            changeOver = changeOver,
+            rawChangeOver = rawChangeOver,
+            via = viaPoints
+          }
+  where
+    getDummyRouteFareRequest :: MonadFlow m => m CRISTypes.CRISFareRequest
+    getDummyRouteFareRequest = do
+      sessionId <- getRandomInRange (1, 1000000 :: Int)
+      return $
+        CRISTypes.CRISFareRequest
+          { mobileNo = Just "1111111111",
+            imeiNo = "abcdefgh",
+            appSession = sessionId,
+            sourceCode = sourceCode,
+            destCode = destCode,
+            changeOver = changeOver,
+            rawChangeOver = rawChangeOver,
+            via = viaPoints
+          }
 
 extractStationCode :: Text -> Text
 extractStationCode code = fromMaybe code $ listToMaybe $ drop 1 $ T.splitOn "|" code
