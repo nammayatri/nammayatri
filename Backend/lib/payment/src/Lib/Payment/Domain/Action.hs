@@ -459,7 +459,7 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
       createOrderReq = (createOrderRequest :: Payment.CreateOrderReq) {Payment.orderShortId = updatedOrderShortId}
   when (paymentServiceType == DOrder.Wallet) $ do
     case mbCreateWalletCall of
-      Just createWalletCall -> do handleWalletOrder createWalletCall
+      Just createWalletCall -> do handleWalletOrder createOrderReq createWalletCall
       Nothing -> throwError $ InternalError "Wallet creation call not found"
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
@@ -495,7 +495,7 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
       let buffer = secondsToNominalDiffTime 150 -- 2.5 mins of buffer
       return (order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED] && expiry < addUTCTime buffer now)
 
-    handleWalletOrder createWalletCall = do
+    handleWalletOrder createOrderReq createWalletCall = do
       now <- getCurrentTime
       mbPersonWallet <- QPersonWallet.findByPersonId personId.getId
       personWallet <-
