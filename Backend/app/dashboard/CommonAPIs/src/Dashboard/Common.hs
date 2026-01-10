@@ -58,6 +58,8 @@ data Image
 
 data Ride
 
+data Sos
+
 data Message
 
 data File

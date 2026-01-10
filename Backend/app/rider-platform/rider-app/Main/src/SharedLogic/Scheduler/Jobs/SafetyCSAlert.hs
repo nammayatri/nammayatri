@@ -23,6 +23,7 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
@@ -82,7 +83,7 @@ createSafetyTicket person ride = do
       Left err -> do
         logError $ "Ticket didn't created when rider didn't picked up call with error : " <> show err
         return Nothing
-  sosDetails <- buildSosDetails person SosReq {flow = DSos.CSAlertSosTicket, rideId = Just ride.id, isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing, trackingExpiresAt = Nothing} ticketId
+  sosDetails <- buildSosDetails person SosReq {flow = DSos.CSAlertSosTicket, rideId = Just ride.id, isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing} ticketId
   void $ QSos.create sosDetails
 
 mkTicket :: DP.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> DSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
@@ -146,18 +147,23 @@ buildSosDetails :: (EncFlow m r) => DP.Person -> SosReq -> Maybe Text -> m DSos.
 buildSosDetails person req ticketId = do
   pid <- generateGUID
   now <- getCurrentTime
+  rideId <- case req.rideId of
+    Just existingRideId -> return existingRideId
+    Nothing -> Id <$> generateGUID
   return
     DSos.Sos
       { id = pid,
         personId = person.id,
         status = DSos.Pending,
         flow = req.flow,
-        rideId = req.rideId,
+        rideId = rideId,
         ticketId = ticketId,
         mediaFiles = [],
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just person.merchantOperatingCityId,
         trackingExpiresAt = Nothing,
+        entityType = Just DSos.Ride,
+        sosState = Just DSos.SosActive,
         createdAt = now,
         updatedAt = now
       }

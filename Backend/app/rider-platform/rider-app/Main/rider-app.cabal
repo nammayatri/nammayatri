@@ -196,6 +196,7 @@ library
       Domain.Action.Dashboard.RideBooking.Search
       Domain.Action.Dashboard.RideBooking.Select
       Domain.Action.Dashboard.Route
+      Domain.Action.Dashboard.Sos
       Domain.Action.Dashboard.SosMedia
       Domain.Action.Dashboard.System
       Domain.Action.Internal.Cac
@@ -686,6 +687,7 @@ library
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.NammaTag
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.Sos
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.RideBooking

@@ -17,23 +17,11 @@ data CallPoliceAPI = CallPoliceAPI {rideId :: Kernel.Types.Id.Id Domain.Types.Ri
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MarkAsSafeReq = MarkAsSafeReq {isMock :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
+data MarkAsSafeReq = MarkAsSafeReq {isEndLiveTracking :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, isMock :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MockSosReq = MockSosReq {onRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, startDrill :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data ShareLocationRes = ShareLocationRes {sosId :: Kernel.Types.Id.Id Domain.Types.Sos.Sos}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data ShareLocationWithAllReq = ShareLocationWithAllReq {customerLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong, durationInMinutes :: Kernel.Prelude.Int}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data ShareLocationWithContactReq = ShareLocationWithContactReq {customerLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong, durationInMinutes :: Kernel.Prelude.Int, mobileNumber :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -55,8 +43,7 @@ data SosReq = SosReq
     isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     notifyAllContacts :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
-    sendPNOnPostRideSOS :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    trackingExpiresAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    sendPNOnPostRideSOS :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -65,14 +52,31 @@ data SosRes = SosRes {sosId :: Kernel.Types.Id.Id Domain.Types.Sos.Sos}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosTrackingDetailsRes = SosTrackingDetailsRes {expiryTimeStamp :: Kernel.Prelude.UTCTime, mobileNumber :: Data.Text.Text, personName :: Data.Text.Text}
+data SosTrackingDetailsRes = SosTrackingDetailsRes {mobileNumber :: Data.Text.Text, personName :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosTrackingRes = SosTrackingRes {currentLocation :: Kernel.Prelude.Maybe SosLocationRes, isTrackingActive :: Kernel.Prelude.Bool}
+data SosTrackingRes = SosTrackingRes {currentLocation :: Kernel.Prelude.Maybe SosLocationRes, sosState :: Kernel.Prelude.Maybe Domain.Types.Sos.SosState, status :: Domain.Types.Sos.SosStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SosUpdateReq = SosUpdateReq {comment :: Kernel.Prelude.Maybe Data.Text.Text, status :: Domain.Types.Sos.SosStatus}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data StartTrackingReq = StartTrackingReq
+  { contacts :: [Data.Text.Text],
+    customerLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    durationInMinutes :: Kernel.Prelude.Int,
+    sosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data StartTrackingRes = StartTrackingRes {sosId :: Kernel.Types.Id.Id Domain.Types.Sos.Sos, trackingUrl :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateStateReq = UpdateStateReq {sosState :: Domain.Types.Sos.SosState}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
