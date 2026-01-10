@@ -1,0 +1,41 @@
+imports:
+  Sos: Dashboard.Common
+
+module: Sos
+apiPrefix: sos
+helperApiPrefix: ""
+
+apis:
+  # GET /sos/{sosId}/tracking - NoAuth tracking endpoint for dashboard
+  - GET:
+      endpoint: /{sosId}/tracking
+      auth: NoAuth
+      params:
+        sosId: Id Sos
+      response:
+        type: SosTrackingRes
+      helperApi:
+        - GET:
+            endpoint: /sos/{sosId}/tracking
+            auth: NoAuth
+            params:
+              sosId: Id Sos
+            response:
+              type: SosTrackingRes
+
+types:
+  SosLocationRes:
+    - lat: Double
+    - lon: Double
+    - accuracy: Maybe Double
+
+  SosState:
+    - enum: LiveTracking, SosActive
+
+  SosStatus:
+    - enum: NotResolved, Pending, Resolved, MockPending, MockResolved
+
+  SosTrackingRes:
+    - currentLocation: Maybe SosLocationRes
+    - sosState: Maybe SosState
+    - status: SosStatus
