@@ -69,7 +69,7 @@ postSocialLogin req = do
           Nothing ->
             (,True) <$> do
               let authReq = buildAuthReq info.email
-              PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing
+              PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing Nothing
       QR.deleteByPersonId person.id
       token <- makeSession person.id.getId merchant.id.getId
       _ <- QR.create token
@@ -84,6 +84,7 @@ postSocialLogin req = do
           merchantId = req.merchantShortId,
           deviceToken = Nothing,
           notificationToken = Nothing,
+          imeiNumber = Nothing,
           whatsappNotificationEnroll = Nothing,
           firstName = req.name,
           middleName = Nothing,

@@ -1184,3 +1184,25 @@ instance IsHTTPError EmailError where
     EmailConfigurationError -> E500
 
 instance IsAPIError EmailError
+
+data GuestUserError
+  = GuestUserAccessDenied Text
+  | GuestLinkTokenMissing Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''GuestUserError
+
+instance IsBaseError GuestUserError where
+  toMessage = \case
+    GuestUserAccessDenied guestUserId -> Just $ "Guest user with id: " <> guestUserId <> " is not allowed to access this resource."
+    GuestLinkTokenMissing linkToken -> Just $ "Guest link token with token: " <> linkToken <> " not found."
+
+instance IsHTTPError GuestUserError where
+  toErrorCode = \case
+    GuestUserAccessDenied _ -> "GUEST_USER_ACCESS_DENIED"
+    GuestLinkTokenMissing _ -> "GUEST_LINK_TOKEN_MISSING"
+  toHttpCode = \case
+    GuestUserAccessDenied _ -> E401
+    GuestLinkTokenMissing _ -> E400
+
+instance IsAPIError GuestUserError

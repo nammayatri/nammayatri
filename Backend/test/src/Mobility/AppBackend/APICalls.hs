@@ -107,6 +107,7 @@ appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.Aut
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> Maybe Text -> ClientM Reg.ResendAuthRes
 appGenerateTempAppCode :: RegToken -> ClientM Reg.TempCodeRes
 appMakeSignature :: RegToken -> ClientM (SignedResponse.SignedResponse Reg.CustomerSignatureRes)
+linkAndMerge :: Reg.AuthLinkAndMergeReq -> ClientM APISuccess
 logout :: RegToken -> ClientM APISuccess
 sendBusinessEmailVerification :: RegToken -> ClientM APISuccess
 verifyBusinessEmailWithAuth :: RegToken -> Reg.VerifyBusinessEmailReq -> ClientM Reg.VerifyBusinessEmailRes
@@ -121,6 +122,7 @@ appAuth
   :<|> appReInitiateLogin
   :<|> appGenerateTempAppCode
   :<|> appMakeSignature
+  :<|> linkAndMerge
   :<|> logout =
     client (Proxy :: Proxy Reg.API)
 
@@ -147,7 +149,8 @@ mkAuthReq =
       businessEmail = Nothing,
       allowBlockedUserLogin = Nothing,
       isOperatorReq = Nothing,
-      reuseToken = Nothing
+      reuseToken = Nothing,
+      imeiNumber = Nothing
     }
 
 mkAuthVerifyReq :: Reg.AuthVerifyReq
