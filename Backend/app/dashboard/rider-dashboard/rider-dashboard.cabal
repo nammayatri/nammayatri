@@ -46,6 +46,7 @@ library
       Domain.Action.RiderPlatform.Management.Merchant
       Domain.Action.RiderPlatform.Management.NammaTag
       Domain.Action.RiderPlatform.Management.Ride
+      Domain.Action.RiderPlatform.Management.Sos
       Domain.Action.RiderPlatform.Management.SosMedia
       Domain.Action.RiderPlatform.Management.System
       Domain.Action.RiderPlatform.RideBooking.Booking
@@ -80,6 +81,7 @@ library
       API.Action.RiderPlatform.Management.Merchant
       API.Action.RiderPlatform.Management.NammaTag
       API.Action.RiderPlatform.Management.Ride
+      API.Action.RiderPlatform.Management.Sos
       API.Action.RiderPlatform.Management.SosMedia
       API.Action.RiderPlatform.Management.System
       API.Action.RiderPlatform.RideBooking
