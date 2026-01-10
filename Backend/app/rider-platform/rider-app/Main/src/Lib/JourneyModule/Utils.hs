@@ -3,6 +3,7 @@ module Lib.JourneyModule.Utils where
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
@@ -37,9 +38,8 @@ import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
 import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
 import Environment
-import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
-import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as CRISRouteFareV3
-import qualified ExternalBPP.ExternalAPI.Subway.CRIS.Types as CRISTypes
+import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
+import qualified ExternalBPP.Flow.Fare as Flow
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
@@ -47,7 +47,6 @@ import qualified Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified Kernel.External.Payment.Interface.Types as KT
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
-import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
@@ -76,7 +75,6 @@ import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
@@ -1158,10 +1156,8 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
     getAllSubwayRoutes = do
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
-          routeFareReq <- getRouteFareRequest originStopCode destinationStopCode " " " " " " personId (crisConfig.useRouteFareV4 /= Just True)
-          (fares, _) <- if crisConfig.useRouteFareV4 == Just True then CRISRouteFare.getRouteFare crisConfig mocid routeFareReq True else CRISRouteFareV3.getRouteFare crisConfig mocid routeFareReq True True
-          let redisKey = CRISRouteFare.mkRouteFareKey originStopCode destinationStopCode searchReqId
-          unless (null fares) $ Hedis.setExp redisKey fares 1800
+          let fareRouteDetails = CallAPI.BasicRouteDetail {routeCode = "-", startStopCode = originStopCode, endStopCode = destinationStopCode}
+          (_, fares) <- Flow.getFares personId mid mocid integratedBppConfig (NonEmpty.fromList [fareRouteDetails]) (Utils.becknVehicleCategoryToFrfsVehicleCategory vc) Nothing (Just searchReqId) blacklistedServiceTiers blacklistedFareQuoteTypes True
           let sortedFares = case crisConfig.routeSortingCriteria of
                 Just DIntegratedBPPConfig.FARE ->
                   sortBy
@@ -1403,27 +1399,6 @@ getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = d
       logError $ "Failed to get walk distance from OSRM for leg " <> show merchantId.getId <> ": " <> show err
       -- Return Nothing instead of throwing error to allow graceful fallback
       return (Nothing, Nothing)
-
-getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Text -> Id Person -> Bool -> m CRISTypes.CRISFareRequest
-getRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints personId useDummy = do
-  if useDummy
-    then getDummyRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints
-    else do
-      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      mbMobileNumber <- mapM decrypt person.mobileNumber
-      mbImeiNumber <- mapM decrypt person.imeiNumber
-      sessionId <- getRandomInRange (1, 1000000 :: Int)
-      return $
-        CRISTypes.CRISFareRequest
-          { mobileNo = mbMobileNumber,
-            imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
-            appSession = sessionId,
-            sourceCode = sourceCode,
-            destCode = destCode,
-            changeOver = changeOver,
-            rawChangeOver = rawChangeOver,
-            via = viaPoints
-          }
 
 data VehicleLiveRouteInfo = VehicleLiveRouteInfo
   { routeCode :: Maybe Text,
@@ -1670,21 +1645,6 @@ getLegTierOptionsUtil journeyLeg enableSuburbanRoundTrip = do
       (_, availableRoutesByTiers, _) <- findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig journeyLeg.merchantId journeyLeg.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY) False False enableSuburbanRoundTrip
       return availableRoutesByTiers
     _ -> return []
-
-getDummyRouteFareRequest :: MonadFlow m => Text -> Text -> Text -> Text -> Text -> m CRISTypes.CRISFareRequest
-getDummyRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints = do
-  sessionId <- getRandomInRange (1, 1000000 :: Int)
-  return $
-    CRISTypes.CRISFareRequest
-      { mobileNo = Just "1111111111",
-        imeiNo = "abcdefgh",
-        appSession = sessionId,
-        sourceCode = sourceCode,
-        destCode = destCode,
-        changeOver = changeOver,
-        rawChangeOver = rawChangeOver,
-        via = viaPoints
-      }
 
 getLiveRouteInfo ::
   ( Metrics.HasBAPMetrics m r,

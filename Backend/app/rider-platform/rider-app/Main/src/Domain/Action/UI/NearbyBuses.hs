@@ -27,14 +27,11 @@ import Kernel.Utils.Common
 import Lib.JourneyLeg.Common.FRFS (getNearbyBusesFRFS)
 import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
-import qualified Storage.Queries.Merchant as QMerchant
-import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RecentLocation as QRecentLocation
 import Tools.Error
@@ -147,14 +144,11 @@ getRecentRides person req = do
           >>= \case
             [] -> return Nothing
             integratedBPPConfigs@(_ : _) -> do
-              merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantDoesNotExist person.merchantId.getId)
-              merchantOperatingCity <- QMerchantOperatingCity.findById person.merchantOperatingCityId >>= fromMaybeM (InternalError "No merchant operating city found")
-              becknConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id "FRFS" vehicleCategory >>= fromMaybeM (InternalError "No beckn config found")
               mbFare <-
                 Kernel.Prelude.listToMaybe
                   <$> ( SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
                           let fareRouteDetails = fromList [CallAPI.BasicRouteDetail {routeCode, startStopCode = fromStopCode, endStopCode = toStopCode}]
-                          snd <$> Flow.getFares person.id merchant merchantOperatingCity integratedBPPConfig becknConfig fareRouteDetails req.vehicleType Nothing Nothing [] []
+                          snd <$> Flow.getFares person.id person.merchantId person.merchantOperatingCityId integratedBPPConfig fareRouteDetails req.vehicleType Nothing Nothing [] [] False
                       )
               return $
                 (mbFare >>= (\fare -> find (\category -> category.category == ADULT) fare.categories)) <&> \fare ->

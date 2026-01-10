@@ -288,6 +288,7 @@ library
       Domain.Action.UI.TrackRoute
       Domain.Action.UI.TriggerFCM
       Domain.Action.UI.Whatsapp
+      Domain.Types.Beckn.FRFS.OnSearch
       Domain.Types.Booking.API
       Domain.Types.CacType
       Domain.Types.Common
@@ -377,6 +378,7 @@ library
       ExternalBPP.ExternalAPI.Types
       ExternalBPP.Flow
       ExternalBPP.Flow.Common
+      ExternalBPP.Flow.Fare
       ExternalBPP.Flow.Select
       Lib.JourneyLeg.Bus
       Lib.JourneyLeg.Common.FRFS
@@ -910,6 +912,7 @@ library
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.PlaceNameCache
       Domain.Types.PopularLocation
+      Domain.Types.PTCircuitBreakerHistory
       Domain.Types.PurchasedPass
       Domain.Types.PurchasedPassPayment
       Domain.Types.Quote
@@ -1060,6 +1063,7 @@ library
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.PlaceNameCache
       Storage.Beam.PopularLocation
+      Storage.Beam.PTCircuitBreakerHistory
       Storage.Beam.PurchasedPass
       Storage.Beam.PurchasedPassPayment
       Storage.Beam.Quote
@@ -1277,6 +1281,7 @@ library
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.PlaceNameCache
       Storage.Queries.PopularLocation
+      Storage.Queries.PTCircuitBreakerHistory
       Storage.Queries.PurchasedPass
       Storage.Queries.PurchasedPassPayment
       Storage.Queries.Quote

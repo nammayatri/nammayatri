@@ -17,9 +17,9 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
-import Domain.Types.Person
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import ExternalBPP.ExternalAPI.Types
+import qualified ExternalBPP.Flow.Fare as Flow
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
@@ -27,44 +27,9 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
-import qualified SharedLogic.PTCircuitBreaker as CB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
-
-getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> NonEmpty CallAPI.BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> m (Bool, [FRFSFare])
-getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes = do
-  -- Circuit breaker check
-  let ptMode = CB.vehicleCategoryToPTMode vehicleCategory
-  mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing
-  let circuitOpen = CB.isCircuitOpen ptMode CB.FareAPI mRiderConfig
-  let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
-  let apiConfig = cbConfig.fare
-
-  -- Check if we should skip the call entirely (circuit open and no canary slot)
-  shouldSkip <- do
-    if circuitOpen
-      then do
-        let canaryAllowed = fromMaybe 2 (apiConfig <&> (.canaryAllowedPerWindow))
-        let canaryWindow = fromMaybe 60 (apiConfig <&> (.canaryWindowSeconds))
-        canarySlot <- CB.tryAcquireCanarySlot ptMode CB.FareAPI merchantOperatingCity.id canaryAllowed canaryWindow
-        return $ not canarySlot
-      else return False
-
-  if shouldSkip
-    then return (True, []) -- Return empty fares when circuit is open and no canary slot
-    else do
-      withTryCatch "callExternalBPP:getFares" (CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes) >>= \case
-        Left _ -> do
-          CB.recordFailure ptMode CB.FareAPI merchantOperatingCity.id
-          CB.checkAndDisableIfNeeded ptMode CB.FareAPI merchantOperatingCity.id cbConfig
-          return (True, [])
-        Right fares -> do
-          -- If this was a canary request and it succeeded, re-enable the circuit
-          when circuitOpen $ CB.reEnableCircuit ptMode CB.FareAPI merchantOperatingCity.id
-          CB.recordSuccess ptMode CB.FareAPI merchantOperatingCity.id
-          return fares
 
 search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> m DOnSearch
 search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes = do
@@ -142,7 +107,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
       let fareRouteDetails = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode}) routesInfo
       stations <- CallAPI.buildStations fareRouteDetails integratedBPPConfig
       let nonEmptyFareRouteDetails = NE.fromList fareRouteDetails
-      (_, fares) <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig nonEmptyFareRouteDetails vehicleType serviceTier searchReq.multimodalSearchRequestId blacklistedServiceTiers blacklistedFareQuoteTypes
+      (_, fares) <- Flow.getFares searchReq.riderId merchant.id merchantOperatingCity.id integratedBPPConfig nonEmptyFareRouteDetails vehicleType serviceTier searchReq.multimodalSearchRequestId blacklistedServiceTiers blacklistedFareQuoteTypes False
       return $
         map
           ( \FRFSFare {..} ->
