@@ -137,6 +137,11 @@ PurchasedPassPayment:
       params: [status]
       where: orderId
 
+    updatePurchaseDataByOrderId:
+      kvFunction: updateOneWithKV
+      params: [startDate, endDate, status]
+      where: orderId
+
     findAllByPurchasedPassIdAndStatus:
       kvFunction: findAllWithOptionsKV
       where:
