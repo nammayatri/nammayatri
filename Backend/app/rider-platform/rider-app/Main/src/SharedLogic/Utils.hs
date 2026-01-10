@@ -14,21 +14,12 @@
 
 module SharedLogic.Utils where
 
-import qualified Data.Time as Time
 import qualified Domain.Types.Person as DP
 import EulerHS.Prelude
-import Kernel.Storage.Esqueleto.Config
 import Kernel.Utils.Common
 import qualified Kernel.Utils.UUID as UUID
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 
-getStaticCustomerId :: (MonadFlow m, EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => DP.Person -> Text -> m Text
+getStaticCustomerId :: MonadFlow m => DP.Person -> Text -> m Text
 getStaticCustomerId person phone = do
-  mbRiderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing
-  let mbThreshold = mbRiderConfig >>= (.staticCustomerIdThresholdDay)
-  case mbThreshold of
-    Just threshold ->
-      if Time.utctDay person.createdAt > threshold
-        then return $ UUID.generateStaticUUID phone
-        else return person.id.getId
-    Nothing -> return person.id.getId
+  let key = phone <> ":" <> person.merchantId.getId
+  return $ UUID.generateStaticUUID key

@@ -526,7 +526,3 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN pt_circuit_breaker_config json ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN metro_fare_caching_allowed boolean ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN bus_fare_caching_allowed boolean ;
 
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.rider_config ADD COLUMN static_customer_id_threshold_day date ;
