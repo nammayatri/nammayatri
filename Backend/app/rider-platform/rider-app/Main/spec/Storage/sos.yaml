@@ -11,12 +11,14 @@ Sos:
   fields:
     id : Id Sos
     personId : Id Person
-    rideId : Maybe (Id Ride)
+    rideId : Id Ride
     flow : SosType
     status : SosStatus
     ticketId : Maybe Text
     mediaFiles : "[Id MediaFile]"
     trackingExpiresAt : Maybe UTCTime
+    sosState : Maybe SosState
+    entityType : Maybe SosEntityType
 
   types:
     EmergencyContactId:
@@ -27,6 +29,12 @@ Sos:
 
     SosStatus:
       enum: "Resolved,NotResolved,Pending,MockPending,MockResolved"
+
+    SosState:
+      enum: "LiveTracking,SosActive"
+
+    SosEntityType:
+      enum: "Ride,NonRide"
 
     SosMockDrill:
       personId: Id Person
@@ -44,6 +52,14 @@ Sos:
     updateTrackingExpiresAt:
       kvFunction: updateOneWithKV
       params: [trackingExpiresAt]
+      where: id
+    updateState:
+      kvFunction: updateOneWithKV
+      params: [sosState]
+      where: id
+    updateEntityType:
+      kvFunction: updateOneWithKV
+      params: [entityType]
       where: id
     findById:
       kvFunction: findOneWithKV

@@ -12,11 +12,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SosT f = SosT
-  { flow :: B.C f Domain.Types.Sos.SosType,
+  { entityType :: B.C f (Kernel.Prelude.Maybe Domain.Types.Sos.SosEntityType),
+    flow :: B.C f Domain.Types.Sos.SosType,
     id :: B.C f Kernel.Prelude.Text,
     mediaFiles :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     personId :: B.C f Kernel.Prelude.Text,
-    rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    rideId :: B.C f Kernel.Prelude.Text,
+    sosState :: B.C f (Kernel.Prelude.Maybe Domain.Types.Sos.SosState),
     status :: B.C f Domain.Types.Sos.SosStatus,
     ticketId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     trackingExpiresAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
