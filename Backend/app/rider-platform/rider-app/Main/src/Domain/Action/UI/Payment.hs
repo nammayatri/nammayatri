@@ -313,8 +313,9 @@ postWalletRecharge (personId, merchantId) req = do
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity person.merchantOperatingCityId
       createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing DOrder.Wallet (Just person.id.getId) person.clientSdkVersion
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing DOrder.Wallet
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet createOrderReq createOrderCall (Just createWalletCall)
+  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall)
   _ <- mbOrderResp & fromMaybeM (InternalError "Failed to create payment order")
   return Success
 

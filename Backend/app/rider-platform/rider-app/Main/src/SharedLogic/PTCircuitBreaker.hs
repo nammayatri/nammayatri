@@ -157,9 +157,9 @@ isCircuitOpen mode FareAPI mRiderConfig =
     Subway -> not $ fromMaybe True (mRiderConfig >>= (.suburbanFareCachingAllowed))
 isCircuitOpen mode BookingAPI mRiderConfig =
   case mode of
-    Metro -> not $ fromMaybe True (mRiderConfig >>= (.metroBookingAllowed))
-    Bus -> not $ fromMaybe True (mRiderConfig >>= (.busBookingAllowed))
-    Subway -> not $ fromMaybe True (mRiderConfig >>= (.suburbanBookingAllowed))
+    Metro -> not $ fromMaybe True (mRiderConfig >>= (.metroTicketAllowed))
+    Bus -> not $ fromMaybe True (mRiderConfig >>= (.busTicketAllowed))
+    Subway -> not $ fromMaybe True (mRiderConfig >>= (.suburbanTicketAllowed))
 
 -- | Try to acquire a canary slot (returns True if allowed to proceed)
 tryAcquireCanarySlot ::
@@ -283,9 +283,9 @@ updateBookingFlag mode mocId enabled = do
     Nothing -> logError $ "RiderConfig not found for mocId: " <> mocId.getId
     Just riderConfig -> do
       let updatedConfig = case mode of
-            Metro -> riderConfig {DRC.metroBookingAllowed = Just enabled}
-            Bus -> riderConfig {DRC.busBookingAllowed = Just enabled}
-            Subway -> riderConfig {DRC.suburbanBookingAllowed = Just enabled}
+            Metro -> riderConfig {DRC.metroTicketAllowed = Just enabled}
+            Bus -> riderConfig {DRC.busTicketAllowed = Just enabled}
+            Subway -> riderConfig {DRC.suburbanTicketAllowed = Just enabled}
       QRiderConfig.updateByPrimaryKey updatedConfig
 
 -- | Record circuit breaker state change in history

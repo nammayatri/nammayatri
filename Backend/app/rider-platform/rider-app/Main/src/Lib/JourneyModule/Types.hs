@@ -74,6 +74,7 @@ import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.PTCircuitBreaker as PTCircuitBreaker
 import qualified SharedLogic.Ride as DARide
 import qualified SharedLogic.Search as SLSearch
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
@@ -1079,11 +1080,26 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                 (maybe False (`elem` DPurchasedPass.applicableVehicleServiceTiers p) serviceTierType && (shouldMatchDeviceId p imeiNumber))
             )
             userPasses
+  let isTicketAllowed = case vehicleType of
+        Spec.METRO -> fromMaybe True (mRiderConfig >>= (.metroTicketAllowed))
+        Spec.BUS -> fromMaybe True (mRiderConfig >>= (.busTicketAllowed))
+        Spec.SUBWAY -> fromMaybe True (mRiderConfig >>= (.suburbanTicketAllowed))
+
+  isCanaryAllowed <-
+    if not isTicketAllowed
+      then do
+        let ptMode = PTCircuitBreaker.vehicleCategoryToPTMode vehicleType
+        let cbConfig = PTCircuitBreaker.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
+        case cbConfig.booking of
+          Nothing -> return False
+          Just cfg -> PTCircuitBreaker.tryAcquireCanarySlot ptMode PTCircuitBreaker.BookingAPI merchantOperatingCityId cfg.canaryAllowedPerWindow cfg.canaryWindowSeconds
+      else return False
+
   let bookingAllowedForVehicleType =
         case vehicleType of
-          Spec.METRO -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)) || isPTBookingAllowedForUser)
-          Spec.SUBWAY -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed)) || isPTBookingAllowedForUser)
-          Spec.BUS -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.busBookingAllowed)) || isPTBookingAllowedForUser)
+          Spec.METRO -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)) || isPTBookingAllowedForUser) && (isTicketAllowed || isCanaryAllowed || isPTBookingAllowedForUser)
+          Spec.SUBWAY -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed)) || isPTBookingAllowedForUser) && (isTicketAllowed || isCanaryAllowed || isPTBookingAllowedForUser)
+          Spec.BUS -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.busBookingAllowed)) || isPTBookingAllowedForUser) && (isTicketAllowed || isCanaryAllowed || isPTBookingAllowedForUser)
   let bookingAllowed = bookingAllowedForVehicleType && not isPTBookingNotAllowedForUser && not hasApplicablePass
   now <- getCurrentTime
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg Nothing

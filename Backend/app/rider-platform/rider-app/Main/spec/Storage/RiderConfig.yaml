@@ -67,6 +67,9 @@ RiderConfig:
     metroBookingAllowed: Maybe Bool
     suburbanBookingAllowed: Maybe Bool
     busBookingAllowed: Maybe Bool
+    metroTicketAllowed: Maybe Bool -- Controls ticket booking availability (toggled by circuit breaker)
+    suburbanTicketAllowed: Maybe Bool
+    busTicketAllowed: Maybe Bool
     metroFareCachingAllowed: Maybe Bool
     suburbanFareCachingAllowed: Maybe Bool
     busFareCachingAllowed: Maybe Bool
