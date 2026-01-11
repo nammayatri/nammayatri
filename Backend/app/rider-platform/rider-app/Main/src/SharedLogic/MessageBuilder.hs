@@ -44,6 +44,10 @@ module SharedLogic.MessageBuilder
     templateText,
     BuildPassSuccessMessage (..),
     buildPassSuccessMessage,
+    BuildLiveTrackingStartedMessageReq (..),
+    buildLiveTrackingStartedMessage,
+    BuildLiveTrackingStoppedMessageReq (..),
+    buildLiveTrackingStoppedMessage,
   )
 where
 
@@ -171,6 +175,33 @@ buildMarkRideAsSafeMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.MARK_RIDE_AS_SAFE Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.MARK_RIDE_AS_SAFE))
+  buildSendSmsReq merchantMessage [("userName", req.userName)]
+
+data BuildLiveTrackingStartedMessageReq = BuildLiveTrackingStartedMessageReq
+  { userName :: Text,
+    trackingLink :: Text,
+    expiryTime :: Text
+  }
+  deriving (Generic)
+
+buildLiveTrackingStartedMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildLiveTrackingStartedMessageReq -> m SmsReqBuilder
+buildLiveTrackingStartedMessage merchantOperatingCityId req = do
+  shortenedTrackingUrl <- shortenTrackingUrl req.trackingLink
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.LIVE_TRACKING_STARTED Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.LIVE_TRACKING_STARTED))
+  buildSendSmsReq merchantMessage [("userName", req.userName), ("trackingLink", shortenedTrackingUrl), ("expiryTime", req.expiryTime)]
+
+newtype BuildLiveTrackingStoppedMessageReq = BuildLiveTrackingStoppedMessageReq
+  { userName :: Text
+  }
+  deriving (Generic)
+
+buildLiveTrackingStoppedMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildLiveTrackingStoppedMessageReq -> m SmsReqBuilder
+buildLiveTrackingStoppedMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.LIVE_TRACKING_STOPPED Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.LIVE_TRACKING_STOPPED))
   buildSendSmsReq merchantMessage [("userName", req.userName)]
 
 data BuildFollowRideMessageReq = BuildFollowRideMessageReq

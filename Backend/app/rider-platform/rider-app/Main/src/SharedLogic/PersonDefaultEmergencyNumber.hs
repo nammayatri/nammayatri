@@ -46,7 +46,7 @@ notifyEmergencyContacts person body title notificationType mbBuildSmsReq useSmsA
               contactPersonEntity <- runInReplica $ QPerson.findById emergencyContactId >>= fromMaybeM (PersonNotFound (getId emergencyContactId))
               case contactPersonEntity.deviceToken of
                 Nothing -> sendMessageToContact emergencyContact
-                Just _ -> sendNotificationToEmergencyContact contactPersonEntity body title notificationType mbSosId
+                Just _ -> sendNotificationToEmergencyContact person.id contactPersonEntity body title notificationType mbSosId
       )
       emergencyContacts
   where
@@ -54,12 +54,12 @@ notifyEmergencyContacts person body title notificationType mbBuildSmsReq useSmsA
       Just buildSmsReq -> sendMessageToEmergencyContact person emergencyContact buildSmsReq
       Nothing -> pure ()
 
-sendNotificationToEmergencyContact :: Person.Person -> Text -> Text -> Notification.Category -> Maybe (Id DSos.Sos) -> Flow ()
-sendNotificationToEmergencyContact person body title notificationType mbSosId = do
-  notificationSoundFromConfig <- SQNSC.findByNotificationType notificationType person.merchantOperatingCityId
-  disabilityTag <- getDisabilityTag person.hasDisability person.id
+sendNotificationToEmergencyContact :: Id Person.Person -> Person.Person -> Text -> Text -> Notification.Category -> Maybe (Id DSos.Sos) -> Flow ()
+sendNotificationToEmergencyContact senderPersonId recipientPerson body title notificationType mbSosId = do
+  notificationSoundFromConfig <- SQNSC.findByNotificationType notificationType recipientPerson.merchantOperatingCityId
+  disabilityTag <- getDisabilityTag recipientPerson.hasDisability recipientPerson.id
   notificationSound <- getNotificationSound disabilityTag notificationSoundFromConfig
-  notifyPerson person.merchantId person.merchantOperatingCityId person.id (buildNotificationData notificationSound) Nothing
+  notifyPerson recipientPerson.merchantId recipientPerson.merchantOperatingCityId recipientPerson.id (buildNotificationData notificationSound) Nothing
   where
     buildNotificationData notificationSound =
       Notification.NotificationReq
@@ -67,11 +67,11 @@ sendNotificationToEmergencyContact person body title notificationType mbSosId = 
           subCategory = Nothing,
           showNotification = Notification.SHOW,
           messagePriority = Nothing,
-          entity = Notification.Entity Notification.Product person.id.getId (SosNotificationEntityData {sosId = (.getId) <$> mbSosId}),
+          entity = Notification.Entity Notification.Product senderPersonId.getId (SosNotificationEntityData {sosId = (.getId) <$> mbSosId}),
           body = body,
           title = title,
           dynamicParams = EmptyDynamicParam,
-          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+          auth = Notification.Auth recipientPerson.id.getId recipientPerson.deviceToken recipientPerson.notificationToken,
           ttl = Nothing,
           sound = notificationSound
         }

@@ -11,6 +11,7 @@ import qualified API.Types.RiderPlatform.Management.Media
 import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified API.Types.RiderPlatform.Management.Ride
+import qualified API.Types.RiderPlatform.Management.Sos
 import qualified API.Types.RiderPlatform.Management.SosMedia
 import qualified API.Types.RiderPlatform.Management.System
 import qualified Data.List
@@ -29,6 +30,7 @@ data ManagementUserActionType
   | MERCHANT API.Types.RiderPlatform.Management.Merchant.MerchantUserActionType
   | NAMMA_TAG API.Types.RiderPlatform.Management.NammaTag.NammaTagUserActionType
   | RIDE API.Types.RiderPlatform.Management.Ride.RideUserActionType
+  | SOS API.Types.RiderPlatform.Management.Sos.SosUserActionType
   | SOS_MEDIA API.Types.RiderPlatform.Management.SosMedia.SosMediaUserActionType
   | SYSTEM API.Types.RiderPlatform.Management.System.SystemUserActionType
   deriving stock (Generic, Eq, Ord)
@@ -44,6 +46,7 @@ instance Text.Show.Show ManagementUserActionType where
     MERCHANT e -> "MERCHANT/" <> show e
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
     RIDE e -> "RIDE/" <> show e
+    SOS e -> "SOS/" <> show e
     SOS_MEDIA e -> "SOS_MEDIA/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
 
@@ -113,6 +116,15 @@ instance Text.Read.Read ManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ ( SOS v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "SOS/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( SOS_MEDIA v1,
                    r2
                  )
@@ -136,4 +148,4 @@ instance Text.Read.Read ManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])
