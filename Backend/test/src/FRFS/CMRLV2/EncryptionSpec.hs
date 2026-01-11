@@ -3,6 +3,7 @@
 
 module FRFS.CMRLV2.EncryptionSpec
   ( testEncryptMockPayload,
+    testEncryptGetFarePayload,
     testDecryption,
   )
 where
@@ -195,3 +196,45 @@ testEncryptMockPayload key = do
 
 testDecryption :: Text -> Text -> Either String Text
 testDecryption key encryptedText = decryptPayload encryptedText key
+
+-- GetFare request mock payload
+data MockGetFareReq = MockGetFareReq
+  { gf_operatorNameId :: Int,
+    gf_fromStationId :: T.Text,
+    gf_toStationId :: T.Text,
+    gf_ticketTypeId :: Int,
+    gf_merchantId :: T.Text,
+    gf_travelDatetime :: T.Text,
+    gf_fareTypeId :: Int
+  }
+  deriving (Generic, Show)
+
+instance ToJSON MockGetFareReq where
+  toJSON req =
+    object
+      [ "operatorNameId" .= gf_operatorNameId req,
+        "fromStationId" .= gf_fromStationId req,
+        "toStationId" .= gf_toStationId req,
+        "ticketTypeId" .= gf_ticketTypeId req,
+        "merchantId" .= gf_merchantId req,
+        "travelDatetime" .= gf_travelDatetime req,
+        "fareTypeId" .= gf_fareTypeId req
+      ]
+
+testEncryptGetFarePayload :: Text -> Either String (Text, Text)
+testEncryptGetFarePayload key = do
+  let mockGetFareReq =
+        MockGetFareReq
+          { gf_operatorNameId = 1000,
+            gf_fromStationId = "0119",
+            gf_toStationId = "0117",
+            gf_ticketTypeId = 105,
+            gf_merchantId = "7000886103345",
+            gf_travelDatetime = "11012026000000",
+            gf_fareTypeId = 1
+          }
+
+      payloadText = TE.decodeUtf8 $ BL.toStrict $ encode mockGetFareReq
+
+  encrypted <- testEncryptOnly key payloadText
+  Right (payloadText, encrypted)
