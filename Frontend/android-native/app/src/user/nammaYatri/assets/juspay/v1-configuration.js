@@ -103,8 +103,8 @@ const nammaYatriConfig = function () {
       "PLEASE_ENABLE_LOCATION_PERMISSION": "Please enable location permissions for Namma Yatri from the settings app to start looking for rides.",
       "TAXI_FROM_ZONE": "from Namma Yatri Zone",
       "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN": "OTP for the Namma Yatri zone has been expired, please try booking again",
-      "REPORT_ISSUE_CHAT_PLACEHOLDER": "Describe your issue. Namma Yatri will try to resolve it in under 24 hours.",
-      "CALL_SUPPORT_DESCRIPTION": "You are about to place a call to Namma Yatri Support. Do you want to proceed?",
+        "REPORT_ISSUE_CHAT_PLACEHOLDER": "Describe your issue. Our team will try to resolve it in under 24 hours.",
+        "CALL_SUPPORT_DESCRIPTION": "You are about to place a call to Namma Yatri Support. Do you want to proceed?",
       "WE_HOPE_THE_ISSUE_IS_RESOLVED": "We hope the issue is resolved, feel free to write to us at support@nammayatri.in for any queries."
     },
     "hindiStrings": {
