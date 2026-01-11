@@ -262,7 +262,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
           (TicketReq encryptedPayload)
 
   encryptedResponse <- callCMRLV2API config eulerClient "generateTicket" ticketAPI
-  logDebug $ "[CMRLV2:Order] Received encrypted response, decrypting..."
+  logDebug $ "[CMRLV2:Order] Encrypted Response: " <> encryptedResponse.response
   decryptedResponseText <- case decryptPayload encryptedResponse.response encKey of
     Left err -> do
       logError $ "[CMRLV2:Order] Decryption failed: " <> T.pack err
