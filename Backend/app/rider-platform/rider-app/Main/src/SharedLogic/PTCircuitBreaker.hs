@@ -83,16 +83,16 @@ defaultCircuitBreakerConfig =
     { fare =
         Just
           APICircuitBreakerConfig
-            { thresholds = [ThresholdConfig 5 60, ThresholdConfig 10 300],
-              canaryAllowedPerWindow = 2,
+            { thresholds = [ThresholdConfig 120 60],
+              canaryAllowedPerWindow = 120,
               canaryWindowSeconds = 60
             },
       booking =
         Just
           APICircuitBreakerConfig
-            { thresholds = [ThresholdConfig 3 60, ThresholdConfig 5 300],
-              canaryAllowedPerWindow = 1,
-              canaryWindowSeconds = 120
+            { thresholds = [ThresholdConfig 120 60],
+              canaryAllowedPerWindow = 120,
+              canaryWindowSeconds = 60
             }
     }
 
