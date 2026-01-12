@@ -7,7 +7,6 @@ on:
       - "prodHotPush-Common"
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
-      - "backend/multi-cloud-setup-shared-ny"
   workflow_dispatch:
 
 permissions:
@@ -51,7 +50,7 @@ jobs:
               "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels")
             has_backend=$(echo "$response" | jq 'map(select(.name == "backend")) | length > 0')
           else
-            # For direct pushes to main/prodHotPush-Common/backend branches, assume backend changes
+            # For direct pushes to main/prodHotPush-Common, assume backend changes
             has_backend=true
           fi
           echo "has_backend=${has_backend}" >> $GITHUB_OUTPUT
@@ -65,7 +64,6 @@ jobs:
                 "${{ github.ref }}" == "refs/heads/prodHotPush-MMFRFS" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BPP" ||
-                "${{ github.ref }}" == "refs/heads/backend/multi-cloud-setup-shared-ny" ||
                 "${{ github.event.pull_request.merged }}" == "true" ]]; then
             echo "should_push_docker=true" >> $GITHUB_OUTPUT
           else
