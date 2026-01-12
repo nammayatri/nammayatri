@@ -86,26 +86,6 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
   personEmail <- mapM decrypt person.email
   refShortId <- generateShortId
   now <- getCurrentTime
-  let bbpsInfo =
-        DBBPS.BBPS
-          { DBBPS.refId = Kernel.Types.Id.Id req.bbpsTxnId,
-            DBBPS.amount = bbpsAmount,
-            DBBPS.billerId = req.billDetails.billerId,
-            DBBPS.customerParams = req.billDetails.customerParams,
-            DBBPS.customerMobileNumber = req.mobileNumber,
-            DBBPS.customerId = personId,
-            DBBPS.merchantId = person.merchantId,
-            DBBPS.merchantOperatingCityId = person.merchantOperatingCityId,
-            DBBPS.refShortId = refShortId,
-            DBBPS.status = DBBPS.PENDING,
-            DBBPS.transType = req.transType,
-            DBBPS.paymentInformation = Nothing,
-            DBBPS.paymentMode = Nothing,
-            DBBPS.paymentTxnId = Nothing,
-            DBBPS.errorMessage = Nothing,
-            DBBPS.createdAt = now,
-            DBBPS.updatedAt = now
-          }
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing Payment.BBPS
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled bbpsAmount [] False False
   staticCustomerId <- SLUtils.getStaticCustomerId person req.mobileNumber
@@ -138,6 +118,26 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.BBPS isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall)
   case mCreateOrderRes of
     Just createOrderRes -> do
+      let bbpsInfo =
+            DBBPS.BBPS
+              { DBBPS.refId = Kernel.Types.Id.Id req.bbpsTxnId,
+                DBBPS.amount = bbpsAmount,
+                DBBPS.billerId = req.billDetails.billerId,
+                DBBPS.customerParams = req.billDetails.customerParams,
+                DBBPS.customerMobileNumber = req.mobileNumber,
+                DBBPS.customerId = personId,
+                DBBPS.merchantId = person.merchantId,
+                DBBPS.merchantOperatingCityId = person.merchantOperatingCityId,
+                DBBPS.refShortId = Kernel.Types.Id.ShortId createOrderRes.order_id,
+                DBBPS.status = DBBPS.PENDING,
+                DBBPS.transType = req.transType,
+                DBBPS.paymentInformation = Nothing,
+                DBBPS.paymentMode = Nothing,
+                DBBPS.paymentTxnId = Nothing,
+                DBBPS.errorMessage = Nothing,
+                DBBPS.createdAt = now,
+                DBBPS.updatedAt = now
+              }
       QBBPS.create bbpsInfo
       return createOrderRes
     Nothing -> do

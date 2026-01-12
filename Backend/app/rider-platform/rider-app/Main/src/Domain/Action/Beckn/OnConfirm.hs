@@ -116,7 +116,8 @@ onConfirm ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "storeRidesTimeLimit" r Int,
     HasBAPMetrics m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasFlowEnv m r '["isMetroTestTransaction" ::: Bool]
   ) =>
   ValidatedOnConfirmReq ->
   m ()

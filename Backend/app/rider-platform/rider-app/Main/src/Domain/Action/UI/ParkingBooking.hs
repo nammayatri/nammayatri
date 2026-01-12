@@ -108,7 +108,7 @@ postMultimodalParkingBook mbApiKey req = do
   return $
     API.Types.UI.ParkingBooking.ParkingBookingResponse
       { parkingLotId = parkingTransactionId,
-        orderShortId = orderShortId.getShortId,
+        orderShortId = orderResp.order_id,
         paymentLink = Kernel.Prelude.showBaseUrl paymentLink,
         orderId = Kernel.Types.Id.Id paymentOrderId
       }

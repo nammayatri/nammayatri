@@ -447,10 +447,11 @@ createTicketBooking ::
 createTicketBooking personId merchantOperatingCityId ticketBookingId placeId subPlaceId amount bookedSeats vendorSplits mbBlockExpiryTime peopleTicketQuantity visitDate paymentMethod merchantId mbTicketBookedBy = do
   shortId <- generateShortId
   now <- getCurrentTime
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
   return $
     Domain.Types.TicketBooking.TicketBooking
       { id = ticketBookingId,
-        shortId,
+        shortId = bool shortId (ShortId $ "test-" <> shortId.getShortId) isMetroTestTransaction,
         ticketPlaceId = placeId,
         ticketSubPlaceId = subPlaceId,
         personId = Kernel.Types.Id.cast personId,

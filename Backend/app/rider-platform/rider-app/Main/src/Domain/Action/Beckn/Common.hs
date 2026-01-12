@@ -284,7 +284,7 @@ data ValidatedDriverArrivedReq = ValidatedDriverArrivedReq
     booking :: DRB.Booking
   }
 
-buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> UTCTime -> DRide.RideStatus -> m DRide.Ride
+buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion], HasFlowEnv m r '["isMetroTestTransaction" ::: Bool]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> UTCTime -> DRide.RideStatus -> m DRide.Ride
 buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
   let BookingDetails {..} = bookingDetails
   guid <- generateGUID
@@ -312,10 +312,12 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
             & flip (Text.replace "<FILE_PATH>")
         )
           <$> bookingDetails.driverImage
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
   return
     DRide.Ride
       { id = guid,
         bookingId = booking.id,
+        shortId = bool shortId (ShortId $ "test-" <> shortId.getShortId) isMetroTestTransaction,
         merchantId = Just booking.merchantId,
         merchantOperatingCityId = Just booking.merchantOperatingCityId,
         clientId = booking.clientId,
@@ -392,7 +394,8 @@ rideAssignedReqHandler ::
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasFlowEnv m r '["isMetroTestTransaction" ::: Bool]
   ) =>
   ValidatedRideAssignedReq ->
   m ()
@@ -436,7 +439,8 @@ rideAssignedReqHandler req = do
         HasBAPMetrics m r,
         EventStreamFlow m r,
         HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-        HasKafkaProducer r
+        HasKafkaProducer r,
+        HasFlowEnv m r '["isMetroTestTransaction" ::: Bool]
       ) =>
       ValidatedRideAssignedReq ->
       Maybe DMerchant.Merchant ->
