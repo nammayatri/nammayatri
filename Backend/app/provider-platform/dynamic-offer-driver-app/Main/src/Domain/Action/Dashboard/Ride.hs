@@ -437,6 +437,8 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         deliveryParcelImageId = ride.deliveryFileIds >>= lastMay & fmap getId,
         estimatedReservedDuration = timeDiffInMinutes <$> booking.returnTime <*> (Just booking.startTime),
         isPetRide = Just ride.isPetRide,
+        cancellationPenaltyAmount = ride.driverCancellationPenaltyAmount,
+        cancellationPenaltyWaivedReason = ride.driverCancellationPenaltyWaivedReason,
         stopInformation = stopInformation
       }
 
