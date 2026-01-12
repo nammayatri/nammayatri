@@ -14,7 +14,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel/backend/multi-cloud-setup-shared-kernel";
+      url = "github:nammayatri/shared-kernel";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
