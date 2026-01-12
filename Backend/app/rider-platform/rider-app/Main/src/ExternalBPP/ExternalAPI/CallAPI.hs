@@ -52,6 +52,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Auth as TAuth
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
@@ -167,6 +168,7 @@ getRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints perso
     then getDummyRouteFareRequest
     else do
       person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      whenM (TAuth.checkMobileVerification person) $ throwError (GuestUserAccessDenied personId.getId "Guest users cannot book train rides") -- Blocks guest user from making subway fare request
       mbMobileNumber <- mapM decrypt person.mobileNumber
       mbImeiNumber <- mapM decrypt person.imeiNumber
       sessionId <- getRandomInRange (1, 1000000 :: Int)

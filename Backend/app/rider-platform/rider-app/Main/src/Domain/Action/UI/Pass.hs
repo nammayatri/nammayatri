@@ -75,6 +75,7 @@ import qualified Storage.Queries.PassVerifyTransaction as QPassVerifyTransaction
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
+import qualified Tools.Auth as TAuth
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import Tools.SMS as Sms hiding (Success)
@@ -131,7 +132,7 @@ postMultimodalPassSelectUtil ::
 postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbStartDay = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  when person.isNew $ throwError (GuestUserAccessDenied "Guest users cannot purchase passes") -- Blocks guest user from purchasing passes
+  whenM (TAuth.checkMobileVerification person) $ throwError (GuestUserAccessDenied personId.getId "Guest users cannot purchase passes") -- Blocks guest user from purchasing passes
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
 
   unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")

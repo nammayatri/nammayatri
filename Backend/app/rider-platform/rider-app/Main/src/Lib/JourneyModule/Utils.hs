@@ -1401,28 +1401,6 @@ getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = d
       -- Return Nothing instead of throwing error to allow graceful fallback
       return (Nothing, Nothing)
 
-getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Text -> Id Person -> Bool -> m CRISTypes.CRISFareRequest
-getRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints personId useDummy = do
-  if useDummy
-    then getDummyRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints
-    else do
-      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      when person.isNew $ throwError (GuestUserAccessDenied "Guest users cannot book train rides") -- Blocks guest user from making subway fare request
-      mbMobileNumber <- mapM decrypt person.mobileNumber
-      mbImeiNumber <- mapM decrypt person.imeiNumber
-      sessionId <- getRandomInRange (1, 1000000 :: Int)
-      return $
-        CRISTypes.CRISFareRequest
-          { mobileNo = mbMobileNumber,
-            imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
-            appSession = sessionId,
-            sourceCode = sourceCode,
-            destCode = destCode,
-            changeOver = changeOver,
-            rawChangeOver = rawChangeOver,
-            via = viaPoints
-          }
-
 data VehicleLiveRouteInfo = VehicleLiveRouteInfo
   { routeCode :: Maybe Text,
     serviceType :: Spec.ServiceTierType,
