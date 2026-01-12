@@ -94,16 +94,27 @@ nearBy lat lon onRide vt radius merchantId groupId groupId2 = do
   let callNearByAPI url = do
         withShortRetry $
           callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
+            >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NEAR_BY_API") url)
+
+  -- For secondary URL, gracefully handle errors
+  let secondaryCallNearByAPI url = do
+        withShortRetry $
+          callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
             >>= \case
               Right locations -> pure locations
               Left err -> do
-                logError $ "Failed to call nearBy API for url: " <> show url <> ", error: " <> show err
+                logError $ "Failed to call nearBy API for secondary url: " <> show url <> ", error: " <> show err
                 pure []
 
   primaryAwaitable <- awaitableFork "primaryLTS" $ callNearByAPI ltsCfg.url
-  mbSecondaryAwaitable <- forM ltsCfg.secondaryUrl $ awaitableFork "secondaryLTS" . callNearByAPI
+  mbSecondaryAwaitable <- forM ltsCfg.secondaryUrl $ awaitableFork "secondaryLTS" . secondaryCallNearByAPI
 
-  primaryResult <- Either.fromRight [] <$> L.await Nothing primaryAwaitable
+  -- Primary call must succeed - propagate error if it fails
+  primaryResult <-
+    L.await Nothing primaryAwaitable >>= \case
+      Left err -> throwError $ InternalError $ "Failed to call nearBy API for primary url: " <> show ltsCfg.url <> ", error: " <> show err
+      Right result -> pure result
+  -- Secondary call is optional - gracefully handle errors
   secondaryResult <- maybe (pure []) (fmap (Either.fromRight []) . L.await Nothing) mbSecondaryAwaitable
 
   let combinedLocations = primaryResult <> secondaryResult
