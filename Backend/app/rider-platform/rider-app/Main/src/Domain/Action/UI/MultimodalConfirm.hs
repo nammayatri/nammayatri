@@ -1742,6 +1742,20 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                     return Nothing
             )
             busScheduleDetails
+
+  let enrichBusStopETA integratedBPPConfig' eta =
+        case eta.stopName of
+          Just _ ->
+            pure eta
+          Nothing -> do
+            mbStation <-
+              OTPRest.getStationByGtfsIdAndStopCode
+                eta.stopCode
+                integratedBPPConfig'
+            let fetchedName = fmap (.name) mbStation
+            pure $
+              eta{CQMMB.stopName = fetchedName <|> eta.stopName
+                 }
   let getLiveVehicles busesData =
         catMaybes
           <$> mapM
@@ -1751,9 +1765,15 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                   Just serviceTier -> do
                     frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier person.merchantOperatingCityId integratedBPPConfig.id
                     logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
+                    enrichedEta <-
+                      traverse
+                        ( mapConcurrently
+                            (enrichBusStopETA integratedBPPConfig)
+                        )
+                        bus.busData.eta_data
                     return . Just $
                       API.Types.UI.MultimodalConfirm.LiveVehicleInfo
-                        { eta = bus.busData.eta_data,
+                        { eta = enrichedEta,
                           number = bus.vehicleNumber,
                           position = LatLong bus.busData.latitude bus.busData.longitude,
                           locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,
