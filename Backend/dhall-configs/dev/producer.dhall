@@ -44,6 +44,17 @@ let hedisClusterCfg =
       , connectReadOnly = True
       }
 
+let hedisSecondaryClusterCfg =
+      { connectHost = "localhost"
+      , connectPort = 30002
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
 let cacheConfig = { configsExpTime = +86400 }
 
 let cacConfig =
@@ -96,4 +107,5 @@ in  { hedisCfg
     , kafkaProducerCfg
     , cacConfig
     , inMemConfig
+    , hedisSecondaryClusterCfg
     }
