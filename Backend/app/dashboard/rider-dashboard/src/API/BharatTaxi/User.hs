@@ -21,13 +21,20 @@ module API.BharatTaxi.User
 where
 
 import Data.Aeson (Value)
+import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Types.AccessMatrix as DMatrix
 import "lib-dashboard" Domain.Types.ServerName as DSN
 import "lib-dashboard" Environment
 import qualified EulerHS.Types as ET
+import Kernel.Beam.Functions as B
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude hiding (toList)
-import Kernel.Utils.Common (withFlowHandlerAPI')
+import Kernel.Types.Error (PersonError (PersonDoesNotExist))
+import Kernel.Types.Id
+import Kernel.Utils.Common (fromMaybeM, withFlowHandlerAPI')
 import Servant
+import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Auth.Api (ApiAuth, ApiTokenInfo)
 import "lib-dashboard" Tools.Client as Client
 
@@ -78,6 +85,7 @@ type ExternalInvoiceAPI =
     :> "invoice"
     :> QueryParam' '[Required] "bookingId" Text
     :> QueryParam' '[Required] "riderPhoneNumber" Text
+    :> QueryParam "riderName" Text
     :> Header "accept" Text
     :> Header "token" Text
     :> Get '[JSON] Value
@@ -175,7 +183,7 @@ type API =
            :<|> "invoice"
            :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_INVOICE
            :> QueryParam' '[Required] "bookingId" Text
-           :> QueryParam' '[Required] "riderPhoneNumber" Text
+           :> QueryParam' '[Required] "riderId" Text
            :> Get '[JSON] Value
            :<|> "booking"
            :> "latest"
@@ -251,7 +259,7 @@ externalBookingClient = ET.client externalBookingAPI
 externalInvoiceAPI :: Proxy ExternalInvoiceAPI
 externalInvoiceAPI = Proxy
 
-externalInvoiceClient :: Text -> Text -> Maybe Text -> Maybe Text -> ET.EulerClient Value
+externalInvoiceClient :: Text -> Text -> Maybe Text -> Maybe Text -> Maybe Text -> ET.EulerClient Value
 externalInvoiceClient = ET.client externalInvoiceAPI
 
 externalBookingLatestAPI :: Proxy ExternalBookingLatestAPI
@@ -302,7 +310,7 @@ data BharatTaxiAPIs = BharatTaxiAPIs
     toListDSL :: Maybe Text -> ET.EulerClient Value,
     estimateDSL :: Value -> ET.EulerClient Value,
     bookingDSL :: Value -> ET.EulerClient Value,
-    invoiceDSL :: Text -> Text -> ET.EulerClient Value,
+    invoiceDSL :: Text -> Text -> Maybe Text -> ET.EulerClient Value,
     bookingLatestDSL :: Text -> ET.EulerClient Value,
     bookingByIdDSL :: Text -> ET.EulerClient Value,
     updateBookingDSL :: Text -> Value -> ET.EulerClient Value,
@@ -319,7 +327,7 @@ mkBharatTaxiAPIs token =
       toListDSL fromLocation = externalToListClient fromLocation (Just "application/json") (Just token)
       estimateDSL = externalEstimateClient (Just "application/json") (Just token)
       bookingDSL = externalBookingClient (Just "application/json") (Just token)
-      invoiceDSL bookingId riderPhoneNumber = externalInvoiceClient bookingId riderPhoneNumber (Just "application/json") (Just token)
+      invoiceDSL bookingId riderPhoneNumber riderName = externalInvoiceClient bookingId riderPhoneNumber riderName (Just "application/json") (Just token)
       bookingLatestDSL riderId = externalBookingLatestClient riderId (Just "application/json") (Just token)
       bookingByIdDSL bookingId = externalBookingByIdClient bookingId (Just "application/json") (Just token)
       updateBookingDSL bookingId = externalUpdateBookingClient bookingId (Just "application/json") (Just token)
@@ -350,7 +358,15 @@ booking :: ApiTokenInfo -> Value -> FlowHandler Value
 booking _ req = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.bookingDSL req)
 
 invoice :: ApiTokenInfo -> Text -> Text -> FlowHandler Value
-invoice _ bookingId riderPhoneNumber = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.invoiceDSL bookingId riderPhoneNumber)
+invoice _ bookingId riderId =
+  withFlowHandlerAPI' $ do
+    -- Extract rider phone number and name from person table using riderId
+    let personId = Id riderId
+    person <- B.runInReplica (QP.findById personId) >>= fromMaybeM (PersonDoesNotExist riderId)
+    riderPhoneNumber <- decrypt person.mobileNumber
+    let fullName = T.unwords (filter (not . T.null) [person.firstName, person.lastName])
+        riderName = if T.null fullName then Nothing else Just fullName
+    callBharatTaxiAPI (\apis -> apis.invoiceDSL bookingId riderPhoneNumber riderName)
 
 bookingLatest :: ApiTokenInfo -> Text -> FlowHandler Value
 bookingLatest _ riderId = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.bookingLatestDSL riderId)
