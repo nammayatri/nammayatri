@@ -58,7 +58,7 @@ SET config_value = '{
   "defaultShardMod": 128,
   "tableShardModRange": {},
   "tableRedisKeyPrefix": {},
-  "allTablesDisabled": true,
+  "allTablesDisabled": false,
   "enableSecondaryCloudRead": null,
   "tablesForSecondaryCloudRead": null
 }'
