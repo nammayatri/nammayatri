@@ -43,6 +43,7 @@ import Kernel.Utils.Common hiding (mkPrice)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
@@ -223,10 +224,19 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                       isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
                       if isLockAcquired
                         then do
-                          latestBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
-                          let isPaymentBookingLatest = maybe True (\lpb -> lpb.id == paymentBooking.id) latestBookingPayment
-                          if isPaymentBookingLatest
+                          -- Refresh booking status to check if already confirmed by another payment
+                          currentBooking <- QFRFSTicketBooking.findById booking.id >>= fromMaybeM (InvalidRequest "Booking not found")
+
+                          -- Check if booking is already confirmed/confirming (duplicate payment scenario)
+                          if currentBooking.status `elem` [DFRFSTicketBooking.CONFIRMED, DFRFSTicketBooking.CONFIRMING]
                             then do
+                              -- Duplicate successful payment detected - initiate refund
+                              logInfo $ "Duplicate successful payment detected for booking: " <> bookingId.getId <> ", payment: " <> paymentBooking.id.getId <> ", booking status: " <> show currentBooking.status
+                              void $ initiateRefundForDuplicatePayment booking.riderId paymentOrder.id
+                              -- Return current booking status without failing it
+                              buildFRFSTicketBookingStatusAPIRes currentBooking quoteCategories paymentSuccess
+                            else do
+                              -- First successful payment - confirm the booking
                               void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.SUCCESS paymentBooking.id
                               void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
                               mbJourneyLeg <- markJourneyPaymentSuccess booking paymentOrder paymentBooking
@@ -247,12 +257,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                               void $ addPaymentoffersTags quoteUpdatedBooking.totalPrice person
                               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                               buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentSuccess
-                            else do
-                              logError $ "booking payment for which order was charged is older: " <> show booking
-                              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
-                              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-                              void $ markJourneyPaymentSuccess updatedBooking paymentOrder paymentBooking
-                              buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
                         else buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentSuccess
                     else do
                       if paymentBookingStatus == FRFSTicketService.REFUNDED
@@ -315,6 +319,38 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) (Just True) journeyId
         void $ QJourney.updateStatus (if booking.status == DFRFSTicketBooking.FAILED then DJ.FAILED else DJ.INPROGRESS) journeyId
       pure mbJourneyLeg
+
+    initiateRefundForDuplicatePayment ::
+      ( MonadFlow m,
+        EsqDBFlow m r,
+        CacheFlow m r,
+        EncFlow m r,
+        EsqDBReplicaFlow m r,
+        ServiceFlow m r,
+        SchedulerFlow r
+      ) =>
+      Id DP.Person ->
+      Id DPaymentOrder.PaymentOrder ->
+      m ()
+    initiateRefundForDuplicatePayment riderId paymentOrderId = do
+      refundPaymentOrder <- QPaymentOrder.findById paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found")
+      paymentServiceType <- refundPaymentOrder.paymentServiceType & fromMaybeM (InvalidRequest "Payment service type not found")
+      refundPerson <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
+      let refundMerchantOperatingCityId = fromMaybe refundPerson.merchantOperatingCityId (cast <$> refundPaymentOrder.merchantOperatingCityId)
+      riderConfig <- QRC.findByMerchantOperatingCityId refundMerchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist refundMerchantOperatingCityId.getId)
+      let refundsOrderCall = Payment.refundOrder (cast refundPaymentOrder.merchantId) refundMerchantOperatingCityId Nothing paymentServiceType (Just refundPerson.id.getId) refundPerson.clientSdkVersion
+      mbRefundResp <- DPayment.createRefundService refundPaymentOrder.shortId refundsOrderCall
+      whenJust mbRefundResp $ \refundResp -> do
+        let refundRequestId = (listToMaybe refundResp.refunds) <&> (.requestId)
+        whenJust refundRequestId $ \refundId -> do
+          let scheduleAfter = riderConfig.refundStatusUpdateInterval
+              jobData =
+                JobScheduler.CheckRefundStatusJobData
+                  { JobScheduler.refundId = refundId,
+                    JobScheduler.numberOfRetries = 0
+                  }
+          createJobIn @_ @'CheckRefundStatus (Just refundPerson.merchantId) (Just refundMerchantOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
+          logInfo $ "Scheduled refund status check job for " <> refundId <> " for duplicate payment"
 
     paymentSuccess =
       Just $
