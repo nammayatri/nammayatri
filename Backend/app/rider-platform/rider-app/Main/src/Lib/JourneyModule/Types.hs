@@ -1092,7 +1092,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         let cbConfig = PTCircuitBreaker.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
         case cbConfig.booking of
           Nothing -> return False
-          Just cfg -> PTCircuitBreaker.tryAcquireCanarySlot ptMode PTCircuitBreaker.BookingAPI merchantOperatingCityId cfg.canaryAllowedPerWindow cfg.canaryWindowSeconds
+          Just cfg -> PTCircuitBreaker.tryAcquireOrCheckCanarySlot id.getId ptMode PTCircuitBreaker.BookingAPI merchantOperatingCityId cfg.canaryAllowedPerWindow cfg.canaryWindowSeconds
       else return False
 
   let bookingAllowedForVehicleType =

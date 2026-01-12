@@ -23,6 +23,7 @@ module SharedLogic.PTCircuitBreaker
     recordSuccess,
     isCircuitOpen,
     tryAcquireCanarySlot,
+    tryAcquireOrCheckCanarySlot,
     checkAndDisableIfNeeded,
     reEnableCircuit,
     parseCircuitBreakerConfig,
@@ -176,6 +177,37 @@ tryAcquireCanarySlot mode apiType mocId maxAllowed windowSeconds = do
   when (count == 1) $ void $ Hedis.expire key windowSeconds
   return $ count <= fromIntegral maxAllowed
 
+-- | Redis key for per-search canary grant flag
+mkCanaryGrantedKey :: Text -> PTMode -> APIType -> Text
+mkCanaryGrantedKey searchId mode apiType =
+  "pt:canaryGranted:" <> searchId <> ":" <> T.pack (show mode) <> ":" <> T.pack (show apiType)
+
+-- | Try to acquire a canary slot for a specific search.
+-- If already granted for this search, returns True without incrementing the counter.
+-- This prevents exhausting the canary count on repeated polling calls.
+tryAcquireOrCheckCanarySlot ::
+  (MonadFlow m, Hedis.HedisFlow m r) =>
+  Text -> -- searchId to tie the canary grant to
+  PTMode ->
+  APIType ->
+  Id MerchantOperatingCity ->
+  Int -> -- Max canary requests allowed
+  Int -> -- Window in seconds
+  m Bool
+tryAcquireOrCheckCanarySlot searchId mode apiType mocId maxAllowed windowSeconds = do
+  let grantedKey = mkCanaryGrantedKey searchId mode apiType
+  -- Check if canary was already granted for this search
+  alreadyGranted <- Hedis.get grantedKey
+  case alreadyGranted of
+    Just True -> return True
+    _ -> do
+      -- Try to acquire a new slot
+      acquired <- tryAcquireCanarySlot mode apiType mocId maxAllowed windowSeconds
+      when acquired $ do
+        -- Mark this search as having been granted canary status
+        void $ Hedis.setExp grantedKey True (windowSeconds + 60) -- TTL slightly longer than canary window
+      return acquired
+
 -- | Check if threshold is exceeded and disable if needed
 checkAndDisableIfNeeded ::
   (MonadFlow m, Hedis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -323,9 +355,9 @@ recordStateChange mode apiType mocId previousState newState failureCount reason 
 -- ============================================================================
 
 -- | Redis key for top-level fare caching
-makeFareCacheKey :: Id MerchantOperatingCity -> PTMode -> Text -> Text -> Text -> Text
-makeFareCacheKey mocId mode routeCode startStop endStop =
-  "pt:fareCache:" <> mocId.getId <> ":" <> T.pack (show mode) <> ":" <> routeCode <> ":" <> startStop <> ":" <> endStop
+makeFareCacheKey :: Id MerchantOperatingCity -> PTMode -> Text -> Text -> Text -> Maybe Spec.ServiceTierType -> Text
+makeFareCacheKey mocId mode routeCode startStop endStop mbServiceTier =
+  "pt:fareCache:" <> mocId.getId <> ":" <> T.pack (show mode) <> ":" <> routeCode <> ":" <> startStop <> ":" <> endStop <> maybe "" (\serviceTier -> ":" <> show serviceTier) mbServiceTier
 
 -- | Redis key for probe counter
 mkProbeCounterKey :: Id MerchantOperatingCity -> PTMode -> APIType -> Text

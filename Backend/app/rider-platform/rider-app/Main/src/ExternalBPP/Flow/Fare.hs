@@ -64,6 +64,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
           merchantOperatingCityId
           ptMode
           firstRoute.routeCode firstRoute.startStopCode lastRoute.endStopCode
+          serviceTier
       setCacheKeys = case integratedBPPConfig.providerConfig of
         CRIS _ ->
           ( case (mbParentSearchReqId, getAllSubwayFares) of
