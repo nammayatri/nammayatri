@@ -40,8 +40,8 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
-import qualified Kernel.Utils.SignatureAuth as HttpSig
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -61,26 +61,18 @@ handler = search
 forwardSearchToBpp ::
   BaseUrl ->
   Id DM.Merchant ->
-  SignatureAuthResult ->
-  SignatureAuthResult ->
   Search.SearchReqV2 ->
   Flow AckResponse
-forwardSearchToBpp redirectBaseUrl merchantId authResult gatewayAuthResult reqV2 = do
+forwardSearchToBpp redirectBaseUrl merchantId reqV2 = do
   let basePath = Kernel.baseUrlPath redirectBaseUrl
       becknPath = basePath <> "/beckn/" <> T.unpack merchantId.getId
       redirectedUrl = redirectBaseUrl {Kernel.baseUrlPath = becknPath}
   logInfo $ "Forwarding to " <> Kernel.showBaseUrl redirectedUrl <> " for merchant " <> merchantId.getId
-  let baseClient = ET.client Search.searchAPI reqV2
-      gatewaySignature = decodeUtf8 $ HttpSig.encode gatewayAuthResult.signature
-      clientWithHeaders =
-        withHeaders
-          [ ("Authorization", decodeUtf8 $ HttpSig.encode authResult.signature),
-            ("X-Gateway-Authorization", gatewaySignature),
-            ("Proxy-Authorization", gatewaySignature)
-          ]
-          baseClient
-  callAPI redirectedUrl clientWithHeaders "search" Search.searchAPI
-    >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_FORWARD_SEARCH") redirectedUrl)
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+  let bppSubscriberId = merchant.subscriberId.getShortId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  -- Use the merchant's subscriber ID to sign the forwarded request
+  Beckn.callBecknAPI (Just $ ET.ManagerSelector $ getHttpManagerKey bppSubscriberId) Nothing (show Context.SEARCH) Search.searchAPI redirectedUrl internalEndPointHashMap reqV2
 
 search ::
   Id DM.Merchant ->
@@ -88,11 +80,11 @@ search ::
   SignatureAuthResult ->
   Search.SearchReqV2 ->
   FlowHandler AckResponse
-search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAPI $ do
+search transporterId authResult _ reqV2 = withFlowHandlerBecknAPI $ do
   bapUri <- Utils.getContextBapUri reqV2.searchReqContext
   redirectMap <- asks (.bapHostRedirectMap)
   case shouldRedirectBapHost redirectMap bapUri of
-    Just (Just url) -> forwardSearchToBpp url transporterId authResult gatewayAuthResult reqV2
+    Just (Just url) -> forwardSearchToBpp url transporterId reqV2
     _ -> do
       -- Process locally
       transactionId <- Utils.getTransactionId reqV2.searchReqContext
