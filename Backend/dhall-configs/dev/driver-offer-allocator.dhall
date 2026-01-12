@@ -43,6 +43,7 @@ let schedulerConfig =
       , kafkaProducerCfg = appCfg.kafkaProducerCfg
       , cacConfig = appCfg.cacConfig
       , inMemConfig
+      , hedisSecondaryClusterCfg = appCfg.hedisSecondaryClusterCfg
       }
 
 in  { appCfg =

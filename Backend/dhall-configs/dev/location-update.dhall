@@ -46,6 +46,17 @@ let hedisClusterCfg =
       , connectReadOnly = True
       }
 
+let hedisSecondaryClusterCfg =
+      { connectHost = "localhost"
+      , connectPort = 30002
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
 let consumerProperties =
       { groupId = "groupId"
       , brockers = [ "localhost:29092" ]
@@ -157,4 +168,5 @@ in  { hedisCfg
     , consumerEndTime = Some +20
     , dashboardClickhouseCfg
     , inMemConfig
+    , hedisSecondaryClusterCfg
     }
