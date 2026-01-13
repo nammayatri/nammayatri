@@ -44,6 +44,7 @@ data FareParameters = FareParameters
     congestionCharge :: Maybe HighPrecMoney,
     petCharges :: Maybe HighPrecMoney,
     businessDiscount :: Maybe HighPrecMoney,
+    personalDiscount :: Maybe HighPrecMoney,
     priorityCharges :: Maybe HighPrecMoney,
     congestionChargeViaDp :: Maybe HighPrecMoney,
     insuranceCharge :: Maybe HighPrecMoney,
@@ -61,6 +62,7 @@ data FareParameters = FareParameters
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     conditionalCharges :: [DAC.ConditionalCharges],
     shouldApplyBusinessDiscount :: Bool,
+    shouldApplyPersonalDiscount :: Bool,
     driverCancellationPenaltyAmount :: Maybe HighPrecMoney,
     -- | Payment processing fee (blended or method-specific)
     -- TODO: Will be enhanced when payment context is available

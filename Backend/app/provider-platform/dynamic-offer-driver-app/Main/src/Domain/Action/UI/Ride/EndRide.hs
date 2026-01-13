@@ -731,6 +731,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               noOfStops = length ride.stops,
               distanceUnit = booking.distanceUnit,
               shouldApplyBusinessDiscount = booking.billingCategory == SLT.BUSINESS,
+              shouldApplyPersonalDiscount = booking.billingCategory == SLT.PERSONAL,
               merchantOperatingCityId = Just booking.merchantOperatingCityId,
               mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
               numberOfLuggages = booking.numberOfLuggages

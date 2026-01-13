@@ -656,6 +656,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           currency = searchRequest.currency,
           noOfStops = length searchRequest.stops,
           shouldApplyBusinessDiscount = False,
+          shouldApplyPersonalDiscount = True,
           distanceUnit = searchRequest.distanceUnit,
           merchantOperatingCityId = Just merchantOpCityId,
           mbAdditonalChargeCategories = Nothing,
@@ -743,6 +744,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               currency,
               distanceUnit,
               shouldApplyBusinessDiscount = False,
+              shouldApplyPersonalDiscount = False,
               merchantOperatingCityId = Just merchantOperatingCityId,
               mbAdditonalChargeCategories = Nothing,
               numberOfLuggages = mbSearchReq >>= (.numberOfLuggages)
@@ -754,12 +756,13 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         else return fareParamsMax
     return (fareParamsMin, fareParamsMax)
   let businessDiscount = if isJust fullFarePolicy.businessDiscountPercentage then calculateBusinessDiscount maxFareParams (fromMaybe 0.0 fullFarePolicy.businessDiscountPercentage) else Nothing
+  let personalDiscount = if isJust fullFarePolicy.personalDiscountPercentage then calculateBusinessDiscount maxFareParams (fromMaybe 0.0 fullFarePolicy.personalDiscountPercentage) else Nothing
   estimateId <- Id <$> generateGUID
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
   let pickupChargesMaxx = case fullFarePolicy.farePolicyDetails of
         DFP.ProgressiveDetails progressiveDetails ->
-          if progressiveDetails.pickupCharges.pickupChargesMin == progressiveDetails.pickupCharges.pickupChargesMax then 0 else progressiveDetails.pickupCharges.pickupChargesMax
+          if progressiveDetails.pickupCharges.pickupChargesMin == progressiveDetails.pickupCharges.pickupChargesMax then 0 else progressiveDetails.pickupCharges.pickupChargesMax - progressiveDetails.pickupCharges.pickupChargesMin
         _ -> 0
   let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
       minFare = fareSum minFareParams (Just []) + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
@@ -1051,5 +1054,8 @@ transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
   fareParams <- QFP.findById (fromMaybe "" fareParamsId)
   let businessDiscount = case (farePolicy, fareParams) of
         (Just farePolicy', Just params) -> if isJust farePolicy'.businessDiscountPercentage then calculateBusinessDiscount params (fromMaybe 0.0 farePolicy'.businessDiscountPercentage) else Nothing
+        _ -> Nothing
+  let personalDiscount = case (farePolicy, fareParams) of
+        (Just farePolicy', Just params) -> if isJust farePolicy'.personalDiscountPercentage then calculateBusinessDiscount params (fromMaybe 0.0 farePolicy'.personalDiscountPercentage) else Nothing
         _ -> Nothing
   return DEst.Estimate {..}

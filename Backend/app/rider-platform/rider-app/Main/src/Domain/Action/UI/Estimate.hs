@@ -55,6 +55,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     nightShiftRate :: Maybe NightShiftRateAPIEntity, -- TODO: doesn't make sense, to be removed
     nightShiftInfo :: Maybe NightShiftInfoAPIEntity,
     businessDiscountInfo :: Maybe BusinessDiscountInfoAPIEntity,
+    personalDiscountInfo :: Maybe PersonalDiscountInfoAPIEntity,
     tollChargesInfo :: Maybe TollChargesInfoAPIEntity,
     waitingCharges :: WaitingChargesAPIEntity,
     driversLatLong :: [LatLong],
@@ -125,6 +126,7 @@ mkEstimateAPIEntity isReferredRide (Estimate {..}) = do
         discountWithCurrency = mkPriceAPIEntity <$> discount,
         nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
         businessDiscountInfo = mkBusinessDiscountInfoAPIEntity <$> businessDiscountInfo,
+        personalDiscountInfo = mkPersonalDiscountInfoAPIEntity <$> personalDiscountInfo,
         tollChargesInfo = mkTollChargesInfoAPIEntity <$> tollChargesInfo,
         waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
         totalFareRange = mkFareRangeAPIEntity totalFareRange,
@@ -180,10 +182,22 @@ data BusinessDiscountInfoAPIEntity = BusinessDiscountInfoAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data PersonalDiscountInfoAPIEntity = PersonalDiscountInfoAPIEntity
+  { personalDiscount :: Money,
+    personalDiscountWithCurrency :: PriceAPIEntity,
+    personalDiscountPercentage :: Double
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 mkBusinessDiscountInfoAPIEntity :: BusinessDiscountInfo -> BusinessDiscountInfoAPIEntity
 mkBusinessDiscountInfoAPIEntity BusinessDiscountInfo {..} = do
   let businessDiscountWithCurrency = mkPriceAPIEntity businessDiscount
   BusinessDiscountInfoAPIEntity {businessDiscount = businessDiscount.amountInt, ..}
+
+mkPersonalDiscountInfoAPIEntity :: PersonalDiscountInfo -> PersonalDiscountInfoAPIEntity
+mkPersonalDiscountInfoAPIEntity PersonalDiscountInfo {..} = do
+  let personalDiscountWithCurrency = mkPriceAPIEntity personalDiscount
+  PersonalDiscountInfoAPIEntity {personalDiscount = personalDiscount.amountInt, ..}
 
 mkNightShiftInfoAPIEntity :: NightShiftInfo -> NightShiftInfoAPIEntity
 mkNightShiftInfoAPIEntity NightShiftInfo {..} = do
@@ -191,7 +205,7 @@ mkNightShiftInfoAPIEntity NightShiftInfo {..} = do
   NightShiftInfoAPIEntity {nightShiftCharge = nightShiftCharge.amountInt, ..}
 
 data WaitingChargesAPIEntity = WaitingChargesAPIEntity
-  { waitingChargePerMin :: Maybe Money,
+  { waitingChargePerMin :: Maybe HighPrecMoney,
     waitingChargePerMinWithCurrency :: Maybe PriceAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -199,7 +213,7 @@ data WaitingChargesAPIEntity = WaitingChargesAPIEntity
 mkWaitingChargesAPIEntity :: WaitingCharges -> WaitingChargesAPIEntity
 mkWaitingChargesAPIEntity WaitingCharges {waitingChargePerMin} =
   WaitingChargesAPIEntity
-    { waitingChargePerMin = waitingChargePerMin <&> (.amountInt),
+    { waitingChargePerMin = waitingChargePerMin <&> (.amount),
       waitingChargePerMinWithCurrency = mkPriceAPIEntity <$> waitingChargePerMin
     }
 
