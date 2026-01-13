@@ -102,6 +102,7 @@ data Pricing = Pricing
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
     businessDiscount :: Maybe HighPrecMoney,
+    personalDiscount :: Maybe HighPrecMoney,
     qar :: Maybe Double
   }
 
@@ -1399,6 +1400,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       tipOptions = Nothing,
       qar = Nothing,
       businessDiscount = fareParams.businessDiscount,
+      personalDiscount = fareParams.personalDiscount,
       ..
     }
 
@@ -1425,6 +1427,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       tipOptions = Nothing,
       qar = Nothing,
       businessDiscount = fareParams.businessDiscount,
+      personalDiscount = fareParams.personalDiscount,
       ..
     }
 
@@ -1444,6 +1447,7 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
           specialLocationTagSingleton pricing.specialLocationTag
             <> specialLocationNameTag pricing.specialLocationName
             <> businessDiscountTagSingleton
+            <> personalDiscountTagSingleton
             <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
             <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
             <> isBlockedRouteSingleton pricing.isBlockedRoute
@@ -1499,6 +1503,21 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
                       descriptorShortDesc = Nothing
                     },
               tagValue = show <$> pricing.businessDiscount
+            }
+    personalDiscountTagSingleton
+      | isNothing pricing.personalDiscount || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.PERSONAL_DISCOUNT,
+                      descriptorName = Just "Personal Discount",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> pricing.personalDiscount
             }
     qarTagSingleton
       | isNothing pricing.qar || not isValueAddNP = Nothing

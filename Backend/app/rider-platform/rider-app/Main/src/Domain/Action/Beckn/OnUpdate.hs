@@ -321,7 +321,7 @@ data NightShiftInfo = NightShiftInfo
 
 data WaitingChargesInfo = WaitingChargesInfo
   { waitingTimeEstimatedThreshold :: Maybe Seconds,
-    waitingChargePerMin :: Maybe Money
+    waitingChargePerMin :: Maybe HighPrecMoney
   }
 
 data EstimateBreakupInfo = EstimateBreakupInfo

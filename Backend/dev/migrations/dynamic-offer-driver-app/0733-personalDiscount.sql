@@ -1,0 +1,3 @@
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN personal_discount DOUBLE PRECISION;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN personal_discount_percentage DOUBLE PRECISION;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN should_apply_personal_discount BOOLEAN default false;

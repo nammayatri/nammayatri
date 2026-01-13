@@ -100,6 +100,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       driversLocation_ <- Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider vehicleVariant_
       let nightShiftInfo_ = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
       let businessDiscountInfo_ = Beckn.OnDemand.Utils.OnSearch.buildBusinessDiscountInfo item currency
+      let personalDiscountInfo_ = Beckn.OnDemand.Utils.OnSearch.buildPersonalDiscountInfo item currency
       totalFareRange_ <- Beckn.OnDemand.Utils.OnSearch.getTotalFareRange item currency
       -- petCharges <-
       waitingCharges_ <- Beckn.OnDemand.Utils.OnSearch.buildWaitingChargeInfo item currency
@@ -130,6 +131,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               serviceTierType = mbServiceTierType,
               serviceTierShortDesc = mbServiceTierShortDesc,
               businessDiscountInfo = businessDiscountInfo_,
+              personalDiscountInfo = personalDiscountInfo_,
               isAirConditioned = isAirConditioned_,
               isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_,
               isBlockedRoute = isBlockedRoute_,

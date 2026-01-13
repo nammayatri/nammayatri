@@ -33,6 +33,7 @@ module Domain.Action.Beckn.OnSearch
     onSearch,
     validateRequest,
     BusinessDiscountInfo (..),
+    PersonalDiscountInfo (..),
   )
 where
 
@@ -142,6 +143,7 @@ data EstimateInfo = EstimateInfo
     estimateBreakupList :: [EstimateBreakupInfo],
     nightShiftInfo :: Maybe NightShiftInfo,
     businessDiscountInfo :: Maybe BusinessDiscountInfo,
+    personalDiscountInfo :: Maybe PersonalDiscountInfo,
     tollChargesInfo :: Maybe TollChargesInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong],
@@ -181,6 +183,11 @@ data TollChargesInfo = TollChargesInfo
 data BusinessDiscountInfo = BusinessDiscountInfo
   { businessDiscount :: Price,
     businessDiscountPercentage :: Double
+  }
+
+data PersonalDiscountInfo = PersonalDiscountInfo
+  { personalDiscount :: Price,
+    personalDiscountPercentage :: Double
   }
 
 newtype WaitingChargesInfo = WaitingChargesInfo
@@ -501,6 +508,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
         estimateBreakupList = estimateBreakupList',
         driversLocation = driversLocation,
         businessDiscountInfo = businessDiscountInfo <&> \businessDiscountInfo' -> DEstimate.BusinessDiscountInfo {businessDiscount = businessDiscountInfo'.businessDiscount, businessDiscountPercentage = businessDiscountInfo'.businessDiscountPercentage},
+        personalDiscountInfo = personalDiscountInfo <&> \personalDiscountInfo' -> DEstimate.PersonalDiscountInfo {personalDiscount = personalDiscountInfo'.personalDiscount, personalDiscountPercentage = personalDiscountInfo'.personalDiscountPercentage},
         nightShiftInfo =
           nightShiftInfo <&> \nightShiftInfo' ->
             DEstimate.NightShiftInfo
