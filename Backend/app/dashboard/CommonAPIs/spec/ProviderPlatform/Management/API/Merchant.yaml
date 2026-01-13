@@ -855,6 +855,7 @@ types:
     - nightShiftCharge: Maybe NightShiftChargeAPIEntity
     - petCharges: Maybe HighPrecMoney
     - businessDiscountPercentage: Maybe Double
+    - personalDiscountPercentage: Maybe Double
     - derive: "'HideSecrets"
   WaitingChargeInfoAPIEntity:
     - freeWaitingTime: Minutes

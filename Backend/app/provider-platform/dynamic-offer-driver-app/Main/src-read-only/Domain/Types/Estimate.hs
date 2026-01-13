@@ -50,6 +50,7 @@ data Estimate = Estimate
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     minFare :: Kernel.Types.Common.HighPrecMoney,
+    personalDiscount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     smartTipReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     smartTipSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

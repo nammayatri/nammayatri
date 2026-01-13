@@ -149,6 +149,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 tollCharges = tollCharges,
                 petCharges = petCharges,
                 shouldApplyBusinessDiscount = fromMaybe False shouldApplyBusinessDiscount,
+                shouldApplyPersonalDiscount = fromMaybe False shouldApplyPersonalDiscount,
                 insuranceCharge,
                 cardCharge =
                   Just $
@@ -161,6 +162,8 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 merchantId = Id <$> merchantId,
                 merchantOperatingCityId = Id <$> merchantOperatingCityId,
                 conditionalCharges = conditionalCharges',
+                businessDiscount = businessDiscount,
+                personalDiscount = personalDiscount,
                 ..
               }
       Nothing -> return Nothing
@@ -192,6 +195,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.fareParametersType = getFareParametersType $ FareParameters {..},
         BeamFP.customerCancellationDues = customerCancellationDues,
         BeamFP.shouldApplyBusinessDiscount = Just shouldApplyBusinessDiscount,
+        BeamFP.shouldApplyPersonalDiscount = Just shouldApplyPersonalDiscount,
         BeamFP.tollCharges = tollCharges,
         BeamFP.congestionCharge = roundToIntegral <$> congestionCharge,
         BeamFP.congestionChargeAmount = congestionCharge,
@@ -204,5 +208,8 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         merchantId = getId <$> merchantId,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamFP.conditionalCharges = Just $ toJSON conditionalCharges,
+        BeamFP.petCharges = petCharges,
+        BeamFP.businessDiscount = businessDiscount,
+        BeamFP.personalDiscount = personalDiscount,
         ..
       }

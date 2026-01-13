@@ -310,6 +310,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   currency,
                   distanceUnit,
                   shouldApplyBusinessDiscount = False,
+                  shouldApplyPersonalDiscount = True,
                   tollCharges = Nothing,
                   merchantOperatingCityId = Just merchantOperatingCityId,
                   mbAdditonalChargeCategories = Nothing,

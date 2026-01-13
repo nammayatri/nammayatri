@@ -64,6 +64,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             nightShiftInfo = mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart oldNightShiftCharge currency,
+            personalDiscountInfo = mkPersonalDiscountInfo personalDiscount personalDiscountPercentage currency,
             providerCompletedRidesCount = providerCompletedRidesCount,
             providerId = providerId,
             providerMobileNumber = providerMobileNumber,
@@ -90,7 +91,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant,
-            waitingCharges = Domain.Types.Estimate.WaitingCharges $ Kernel.Types.Common.mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin
+            waitingCharges = mkWaitingCharges waitingChargePerMin waitingChargePerMinAmount currency
           }
 
 instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
@@ -137,6 +138,8 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.nightShiftEnd = nightShiftInfo <&> (.nightShiftEnd),
         Beam.nightShiftStart = nightShiftInfo <&> (.nightShiftStart),
         Beam.oldNightShiftCharge = (.oldNightShiftCharge) =<< nightShiftInfo,
+        Beam.personalDiscount = personalDiscountInfo <&> ((.amount) . (.personalDiscount)),
+        Beam.personalDiscountPercentage = personalDiscountInfo <&> (.personalDiscountPercentage),
         Beam.providerCompletedRidesCount = providerCompletedRidesCount,
         Beam.providerId = providerId,
         Beam.providerMobileNumber = providerMobileNumber,
@@ -166,6 +169,6 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType,
-        Beam.waitingChargePerMin = (.waitingChargePerMin) waitingCharges <&> (.amountInt),
+        Beam.waitingChargePerMin = (.waitingChargePerMin) waitingCharges <&> (.amount),
         Beam.waitingChargePerMinAmount = (.waitingChargePerMin) waitingCharges <&> (.amount)
       }

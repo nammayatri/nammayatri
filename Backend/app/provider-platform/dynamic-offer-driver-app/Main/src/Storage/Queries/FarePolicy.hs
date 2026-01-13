@@ -57,6 +57,7 @@ update' farePolicy = do
       Se.Set BeamFP.tollCharges $ farePolicy.tollCharges,
       Se.Set BeamFP.petCharges $ farePolicy.petCharges,
       Se.Set BeamFP.businessDiscountPercentage $ farePolicy.businessDiscountPercentage,
+      Se.Set BeamFP.personalDiscountPercentage $ farePolicy.personalDiscountPercentage,
       Se.Set BeamFP.priorityCharges $ farePolicy.priorityCharges,
       Se.Set BeamFP.pickupBufferInSecsForNightShiftCal $ farePolicy.pickupBufferInSecsForNightShiftCal,
       Se.Set BeamFP.serviceChargeAmount $ farePolicy.serviceCharge,
