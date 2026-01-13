@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN is_mock_payment boolean;

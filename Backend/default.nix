@@ -94,6 +94,7 @@
           mock-public-transport-provider-platform.custom = cacConfig;
           mock-rider-platform.custom = cacConfig;
           mock-sms.custom = cacConfig;
+          mock-payment.custom = cacConfig;
           public-transport-rider-platform.custom = cacConfig;
           public-transport-search-consumer.custom = cacConfig;
           rider-app.custom = cacConfig;

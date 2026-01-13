@@ -112,10 +112,10 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
-      createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
+      createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion Nothing
       createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.BBPS isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall)
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.BBPS isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False
   case mCreateOrderRes of
     Just createOrderRes -> do
       let bbpsInfo =
@@ -158,7 +158,7 @@ getBbpsGetOrderStatus (_, _) refIdTxt = do
   where
     withPaymentStatusResponseHandler :: DBBPS.BBPS -> DP.Person -> (DPayment.PaymentStatusResp -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
     withPaymentStatusResponseHandler bbpsInfo person action = do
-      let orderStatusCall = Payment.orderStatus bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
+      let orderStatusCall = Payment.orderStatus bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion Nothing
       let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person bbpsInfo.customerId
           walletPostingCall = TWallet.walletPosting bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId
       orderStatusResponse <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.cast bbpsInfo.refId) orderStatusCall (Just walletPostingCall)

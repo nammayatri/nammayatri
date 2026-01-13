@@ -418,6 +418,7 @@ apis:
         type: JourneyConfirmReq
       query:
         forceBookLegOrder: Int
+        isMockPayment: Bool
       response:
         type: JourneyConfirmResp
   - GET:

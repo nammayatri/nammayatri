@@ -68,7 +68,8 @@ data PaymentOrderT f = PaymentOrderT
     effectAmount :: B.C f (Maybe HighPrecMoney),
     paymentFulfillmentStatus :: B.C f (Maybe PaymentFulfillmentStatus),
     domainEntityId :: B.C f (Maybe Text),
-    domainTransactionId :: B.C f (Maybe Text)
+    domainTransactionId :: B.C f (Maybe Text),
+    isMockPayment :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

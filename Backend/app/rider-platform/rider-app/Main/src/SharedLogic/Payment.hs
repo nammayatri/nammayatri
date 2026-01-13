@@ -418,7 +418,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   processRefund person paymentOrder paymentServiceType
   let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-      orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
+      orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
       walletPostingCall = TWallet.walletPosting (cast paymentOrder.merchantId) merchantOperatingCityId
   paymentStatusResp <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall (Just walletPostingCall)
   refundStatusHandler paymentOrder paymentServiceType
@@ -536,7 +536,7 @@ syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
         ticketBooking <- QTB.findById (cast paymentOrder.id)
         return $ ticketBooking <&> (.ticketPlaceId)
       _ -> return Nothing
-  let orderStatusCall = TPayment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion
+  let orderStatusCall = TPayment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
   orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
 
 -------------------------------------------------------------------------------------------------------

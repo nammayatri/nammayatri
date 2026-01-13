@@ -66,7 +66,8 @@ data PaymentOrderE e = PaymentOrder
     paymentFulfillmentStatus :: Maybe PaymentFulfillmentStatus,
     domainEntityId :: Maybe Text,
     domainTransactionId :: Maybe Text,
-    effectAmount :: Maybe HighPrecMoney
+    effectAmount :: Maybe HighPrecMoney,
+    isMockPayment :: Maybe Bool
   }
   deriving (Generic)
 
