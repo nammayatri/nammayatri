@@ -819,7 +819,7 @@ validateRequest merchant sReq = do
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   let (cityDistanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sReq.transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
-  (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation sourceCity merchant
+  (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.stops sReq.dropLocation sourceCity merchant
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
       isMeterRideSearch = sReq.isMeterRideSearch
@@ -850,27 +850,61 @@ getIsInterCity merchantId apiKey IsIntercityReq {..} = do
   let bapCity = nearestOperatingCity.city
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
-  (isInterCity, isCrossCity, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong sourceCity merchant
+  (isInterCity, isCrossCity, _) <- checkForIntercityOrCrossCity transporterConfig [] mbDropLatLong sourceCity merchant
   return $ IsIntercityResp {..}
 
-checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text)
-checkForIntercityOrCrossCity transporterConfig mbDropLocation sourceCity merchant = do
+checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> [DSearchReqLocation] -> Maybe LatLong -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text)
+checkForIntercityOrCrossCity transporterConfig stops mbDropLocation sourceCity merchant = do
   case mbDropLocation of
-    Just dropLoc -> do
-      (destinationCityState, mbDestinationTravelCityName) <- getDestinationCity merchant dropLoc -- This checks for destination serviceability too
-      if destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.AnyCity
+    Nothing -> return (False, False, Nothing)
+    Just dropLocation -> do
+      -- Get city states for all locations
+      (destinationCityState, mbDestinationTravelCityName) <- getDestinationCity merchant dropLocation
+      stopCityStates <- mapM (\stop -> fst <$> getDestinationCity merchant stop.gps) stops
+
+      -- Check if source and destination are in the same city
+      let isSameCityAsSource = destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.AnyCity
+
+      -- Get allowed destination states for source state
+      mbMerchantState <- CQMS.findByMerchantIdAndState merchant.id sourceCity.state
+      let allowedStates = maybe [sourceCity.state] (.allowedDestinationStates) mbMerchantState
+
+      -- Validate all stops are serviceable from source state
+      forM_ stopCityStates $ \stopCityState -> do
+        unless (stopCityState.state `elem` allowedStates) $
+          throwError (RideNotServiceableInState $ show stopCityState.state)
+
+      -- Validate destination is serviceable from source state
+      unless (destinationCityState.state `elem` allowedStates) $
+        throwError (RideNotServiceableInState $ show destinationCityState.state)
+
+      -- Check if any segment crosses cities (for intercity detection)
+      let allCityStates = sourceCity : stopCityStates ++ [destinationCityState]
+          consecutiveCityPairs = zip allCityStates (tail allCityStates)
+          -- A city crossing occurs when:
+          -- 1. Cities are different, OR
+          -- 2. Any location involves AnyCity (unregistered area - treat as intercity for safety)
+          -- This catches: SpecificCity <-> SpecificCity, SpecificCity <-> AnyCity, AnyCity <-> AnyCity
+          anyCityCrossing =
+            any
+              ( \(fromCity, toCity) ->
+                  fromCity.city /= toCity.city
+                    || fromCity.city == Context.AnyCity
+                    || toCity.city == Context.AnyCity
+              )
+              consecutiveCityPairs
+
+      -- If same source and destination city AND no city crossing in route, not intercity
+      if isSameCityAsSource && not anyCityCrossing
         then return (False, False, Nothing)
         else do
-          mbMerchantState <- CQMS.findByMerchantIdAndState merchant.id sourceCity.state
-          let allowedStates = maybe [sourceCity.state] (.allowedDestinationStates) mbMerchantState
-          -- Destination states should be in the allowed states of the origin state
-          if destinationCityState.state `elem` allowedStates
-            then do
-              if destinationCityState.city `elem` transporterConfig.crossTravelCities
-                then return (True, True, mbDestinationTravelCityName)
-                else return (True, False, mbDestinationTravelCityName)
-            else throwError (RideNotServiceableInState $ show destinationCityState.state)
-    Nothing -> pure (False, False, Nothing)
+          -- Check if any location (stops or destination) is in crossTravelCities
+          let allDestinationCityStates = stopCityStates ++ [destinationCityState]
+              isCrossCityRoute = any (\cs -> cs.city `elem` transporterConfig.crossTravelCities) allDestinationCityStates
+
+          if isCrossCityRoute
+            then return (True, True, mbDestinationTravelCityName)
+            else return (True, False, mbDestinationTravelCityName)
 
 getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
 getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
