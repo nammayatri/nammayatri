@@ -269,6 +269,7 @@ types:
     ss: [TransportStation]
     rsm: [TransportRouteStopMapping]
     ptcv: Text
+    eligiblePassIds: Maybe [Text]
     derive': "Generic, ToSchema"
 
   UpdatePaymentOrderReq:
