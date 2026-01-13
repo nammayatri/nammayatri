@@ -910,6 +910,11 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
       Nothing -> return Nothing
 
+  -- eligiblePassIds are vehicle-level data.
+  -- They must be present only when live vehicle info exists.
+  let mbEligiblePassIds =
+        mbVehicleLiveRouteInfo >>= (JMU.eligiblePassIds . snd)
+
   let mbOppositeTripDetails :: Maybe [NandiTypes.BusScheduleTrip] =
         case (mbEnableSwitchRoute, isPublicVehicleData) of
           (Just True, False) -> do
@@ -987,7 +992,8 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                         }
                   )
                   routeStops,
-              ptcv = gtfsVersion
+              ptcv = gtfsVersion,
+              eligiblePassIds = Nothing
             }
 
   let fetchData mbRouteCodeAndServiceType bppConfig = do
@@ -1058,7 +1064,8 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
-            ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion)))
+            ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion))),
+            eligiblePassIds = mbEligiblePassIds
           }
   return transportData
   where

@@ -1412,7 +1412,8 @@ data VehicleLiveRouteInfo = VehicleLiveRouteInfo
     remaining_trip_details :: Maybe [NandiTypes.BusScheduleTrip],
     isActuallyValid :: Maybe Bool,
     busConductorId :: Maybe Text,
-    busDriverId :: Maybe Text
+    busDriverId :: Maybe Text,
+    eligiblePassIds :: Maybe [Text]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -1457,7 +1458,7 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
         mbResult
           <&> ( \result ->
                   ( integratedBPPConfig,
-                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id}
+                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id, eligiblePassIds = result.eligible_pass_ids}
                   )
               )
 

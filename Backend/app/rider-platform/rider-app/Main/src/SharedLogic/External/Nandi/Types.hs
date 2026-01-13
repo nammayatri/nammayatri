@@ -88,7 +88,8 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     remaining_trip_details :: Maybe [BusScheduleTrip],
     is_actually_valid :: Maybe Bool,
     driver_id :: Maybe Text,
-    conductor_id :: Maybe Text
+    conductor_id :: Maybe Text,
+    eligible_pass_ids :: Maybe [Text]
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
