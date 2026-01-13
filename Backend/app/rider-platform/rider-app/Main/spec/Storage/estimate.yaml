@@ -58,6 +58,11 @@ Estimate:
       businessDiscountPercentage: Double
       derive': "Generic, Show"
 
+    PersonalDiscountInfo:
+      personalDiscount: Price
+      personalDiscountPercentage: Double
+      derive': "Generic, Show"
+
     TollChargesInfo:
       tollCharges: Price
       tollNames: "[Text]"
@@ -97,6 +102,7 @@ Estimate:
     estimateBreakupList : "[EstimateBreakup]"
     nightShiftInfo : Maybe NightShiftInfo
     businessDiscountInfo : Maybe BusinessDiscountInfo
+    personalDiscountInfo : Maybe PersonalDiscountInfo
     status : EstimateStatus|NoRelation
     waitingCharges : WaitingCharges
     driversLocation : "[LatLong]"
@@ -168,12 +174,16 @@ Estimate:
       businessDiscount: Maybe HighPrecMoney
       businessDiscountPercentage: Maybe Double
 
+    personalDiscountInfo:
+      personalDiscount: Maybe HighPrecMoney
+      personalDiscountPercentage: Maybe Double
+
     tollChargesInfo:
       tollCharges : Maybe HighPrecMoney
       tollNames : Maybe [Text]
 
     waitingCharges:
-      waitingChargePerMin: Maybe Money
+      waitingChargePerMin: Maybe HighPrecMoney
       waitingChargePerMinAmount: Maybe HighPrecMoney
     estimateBreakupList: {}
 
@@ -196,9 +206,10 @@ Estimate:
     totalFareRange: mkFareRange
     nightShiftInfo: mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart oldNightShiftCharge currency|E
     businessDiscountInfo: mkBusinessDiscountInfo businessDiscount businessDiscountPercentage currency|E
+    personalDiscountInfo: mkPersonalDiscountInfo personalDiscount personalDiscountPercentage currency|E
     tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
     estimateBreakupList: Storage.Queries.EstimateBreakup.findAllByEstimateIdT (Kernel.Types.Id.Id id)|EM
-    waitingCharges: Domain.Types.Estimate.WaitingCharges $ Kernel.Types.Common.mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin|E
+    waitingCharges: mkWaitingCharges waitingChargePerMin waitingChargePerMinAmount currency|E
     tripTerms: mKTripTerms|M
     providerUrl: parseBaseUrl|MI
     discount: Kernel.Types.Common.mkPrice currency <$> discount|E
@@ -217,7 +228,7 @@ Estimate:
   toTType:
     maxTotalFare: (mkMaxTotalFare totalFareRange)|E
     minTotalFare:  (mkMinTotalFare totalFareRange)|E
-    waitingChargePerMin: ((.waitingChargePerMin) waitingCharges <&> (.amountInt))|E
+    waitingChargePerMin: ((.waitingChargePerMin) waitingCharges <&> (.amount))|E
     waitingChargePerMinAmount: ((.waitingChargePerMin) waitingCharges <&> (.amount))|E
     estimatedFare: ((.amount) estimatedFare)|E
     estimatedTotalFare: ((.amount) estimatedTotalFare)|E
@@ -228,6 +239,8 @@ Estimate:
     tollCharges: (tollChargesInfo <&> ((.amount) . (.tollCharges)))|E
     tollNames: (tollChargesInfo <&> (.tollNames))|E
     businessDiscount: (businessDiscountInfo <&> ((.amount) . (.businessDiscount)))|E
+    personalDiscount: (personalDiscountInfo <&> ((.amount) . (.personalDiscount)))|E
+    personalDiscountPercentage: (personalDiscountInfo <&> (.personalDiscountPercentage))|E
     businessDiscountPercentage: (businessDiscountInfo <&> (.businessDiscountPercentage))|E
     nightShiftCharge: (mknightShiftCharge nightShiftInfo)|E
     nightShiftChargeAmount: (mknightShiftChargeAmount nightShiftInfo)|E

@@ -59,6 +59,8 @@ data EstimateT f = EstimateT
     nightShiftEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     nightShiftStart :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     oldNightShiftCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
+    personalDiscount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    personalDiscountPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     providerCompletedRidesCount :: B.C f Kernel.Prelude.Int,
     providerId :: B.C f Kernel.Prelude.Text,
     providerMobileNumber :: B.C f Kernel.Prelude.Text,
@@ -88,7 +90,7 @@ data EstimateT f = EstimateT
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType,
-    waitingChargePerMin :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
+    waitingChargePerMin :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     waitingChargePerMinAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)
   }
   deriving (Generic, B.Beamable)

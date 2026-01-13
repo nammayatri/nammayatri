@@ -29,6 +29,15 @@ mkBusinessDiscountInfo businessDiscount businessDiscountPercentage currency =
           businessDiscountPercentage = businessDiscountPercentage'
         }
 
+mkPersonalDiscountInfo :: (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Double -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Domain.Types.Estimate.PersonalDiscountInfo)
+mkPersonalDiscountInfo personalDiscount personalDiscountPercentage currency =
+  ((,) <$> personalDiscount <*> personalDiscountPercentage)
+    <&> \(personalDiscount', personalDiscountPercentage') ->
+      DE.PersonalDiscountInfo
+        { personalDiscount = mkPriceWithDefault (Just personalDiscount') currency (round personalDiscount' :: Money),
+          personalDiscountPercentage = personalDiscountPercentage'
+        }
+
 mkTollChargesInfo :: (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Domain.Types.Estimate.TollChargesInfo)
 mkTollChargesInfo tollCharges tollNames currency =
   ((,) <$> tollCharges <*> tollNames)
@@ -59,3 +68,8 @@ mkMaxTotalFare = (.maxFare.amount)
 
 mkMinTotalFare :: FareRange -> HighPrecMoney
 mkMinTotalFare = (.minFare.amount)
+
+mkWaitingCharges :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Kernel.Types.Common.Currency -> DE.WaitingCharges
+mkWaitingCharges waitingChargePerMin waitingChargePerMinAmount currency =
+  DE.WaitingCharges $
+    waitingChargePerMin <&> \wc -> mkPriceWithDefault waitingChargePerMinAmount currency (round wc :: Money)

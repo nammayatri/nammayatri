@@ -84,6 +84,8 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.nightShiftEnd (nightShiftInfo <&> (.nightShiftEnd)),
       Se.Set Beam.nightShiftStart (nightShiftInfo <&> (.nightShiftStart)),
       Se.Set Beam.oldNightShiftCharge ((.oldNightShiftCharge) =<< nightShiftInfo),
+      Se.Set Beam.personalDiscount (personalDiscountInfo <&> ((.amount) . (.personalDiscount))),
+      Se.Set Beam.personalDiscountPercentage (personalDiscountInfo <&> (.personalDiscountPercentage)),
       Se.Set Beam.providerCompletedRidesCount providerCompletedRidesCount,
       Se.Set Beam.providerId providerId,
       Se.Set Beam.providerMobileNumber providerMobileNumber,
@@ -113,7 +115,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.vehicleServiceTierAirConditioned vehicleServiceTierAirConditioned,
       Se.Set Beam.vehicleServiceTierSeatingCapacity vehicleServiceTierSeatingCapacity,
       Se.Set Beam.vehicleVariant vehicleServiceTierType,
-      Se.Set Beam.waitingChargePerMin ((.waitingChargePerMin) waitingCharges <&> (.amountInt)),
+      Se.Set Beam.waitingChargePerMin ((.waitingChargePerMin) waitingCharges <&> (.amount)),
       Se.Set Beam.waitingChargePerMinAmount ((.waitingChargePerMin) waitingCharges <&> (.amount))
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

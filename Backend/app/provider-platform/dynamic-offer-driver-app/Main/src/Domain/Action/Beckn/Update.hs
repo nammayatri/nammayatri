@@ -289,6 +289,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     estimatedRideDuration = Just duration,
                     timeDiffFromUtc = Nothing,
                     shouldApplyBusinessDiscount = booking.billingCategory == SLT.BUSINESS,
+                    shouldApplyPersonalDiscount = booking.billingCategory == SLT.PERSONAL,
                     tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _, _) -> tollCharges),
                     currency = booking.currency,
                     distanceUnit = booking.distanceUnit,

@@ -1766,6 +1766,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               timeDiffFromUtc = Nothing,
               currency = searchReq.currency,
               shouldApplyBusinessDiscount = if searchTry.billingCategory == SLT.BUSINESS then True else False,
+              shouldApplyPersonalDiscount = if searchTry.billingCategory == SLT.PERSONAL then True else False,
               distanceUnit = searchReq.distanceUnit,
               merchantOperatingCityId = Just merchantOpCityId,
               mbAdditonalChargeCategories = Just sReqFD.conditionalCharges,

@@ -299,15 +299,37 @@ buildBusinessDiscountInfo item currency = do
         businessDiscountPercentage = businessDiscountPercentage
       }
 
+buildPersonalDiscountInfo :: Spec.Item -> Currency -> Maybe OnSearch.PersonalDiscountInfo
+buildPersonalDiscountInfo item currency = do
+  let itemTags = item.itemTags
+  personalDiscount <- getPersonalDiscount itemTags currency
+  personalDiscountPercentage <- getPersonalDiscountPercentage itemTags
+  Just $
+    OnSearch.PersonalDiscountInfo
+      { personalDiscount = personalDiscount,
+        personalDiscountPercentage = personalDiscountPercentage
+      }
+
 getBusinessDiscount :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getBusinessDiscount tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.INFO Tag.BUSINESS_DISCOUNT tagGroups
   businessDiscount <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency businessDiscount
 
+getPersonalDiscount :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getPersonalDiscount tagGroups currency = do
+  tagValue <- Utils.getTagV2 Tag.INFO Tag.PERSONAL_DISCOUNT tagGroups
+  personalDiscount <- DecimalValue.valueFromString tagValue
+  Just $ decimalValueToPrice currency personalDiscount
+
 getBusinessDiscountPercentage :: Maybe [Spec.TagGroup] -> Maybe Double
 getBusinessDiscountPercentage tagGroups = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.BUSINESS_DISCOUNT_PERCENTAGE tagGroups
+  readMaybe tagValue :: Maybe Double
+
+getPersonalDiscountPercentage :: Maybe [Spec.TagGroup] -> Maybe Double
+getPersonalDiscountPercentage tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PERSONAL_DISCOUNT_PERCENTAGE tagGroups
   readMaybe tagValue :: Maybe Double
 
 getBaseFare :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price

@@ -199,7 +199,8 @@ validateSlidingWindowOptions SWC.SlidingWindowOptions {..} =
 validateUpdateFarePolicyReq :: Validate UpdateFarePolicyReq
 validateUpdateFarePolicyReq UpdateFarePolicyReq {..} =
   sequenceA_
-    [ validateField "businessDiscountPercentage" businessDiscountPercentage $ InMaybe $ InRange @Double 1.0 100.0
+    [ validateField "businessDiscountPercentage" businessDiscountPercentage $ InMaybe $ InRange @Double 1.0 100.0,
+      validateField "personalDiscountPercentage" personalDiscountPercentage $ InMaybe $ InRange @Double 1.0 100.0
     ]
 
 ---------------------------------------------------------
