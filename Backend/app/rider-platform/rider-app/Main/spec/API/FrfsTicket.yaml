@@ -405,6 +405,9 @@ apis:
       endpoint: /frfs/quote/{quoteId}/confirm
       params:
         quoteId: Id FRFSQuote
+      query:
+        isMockPayment: Bool
+
       auth: TokenAuth
       response:
         type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
@@ -414,6 +417,8 @@ apis:
       endpoint: /frfs/quote/v2/{quoteId}/confirm
       params:
         quoteId: Id FRFSQuote
+      query:
+        isMockPayment: Bool
       auth: TokenAuth
       request:
         type: API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq

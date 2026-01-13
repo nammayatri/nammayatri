@@ -15,7 +15,7 @@ instance JT.JourneyLeg SubwayLegRequest m where
   search (SubwayLegRequestSearch SubwayLegRequestSearchData {..}) = CFRFS.search Spec.SUBWAY personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId Nothing upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes
   search _ = throwError (InternalError "Not supported")
 
-  confirm (SubwayLegRequestConfirm SubwayLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId bookLater bookingAllowed crisSdkResponse Spec.SUBWAY categorySelectionReq isSingleMode mbEnableOffer
+  confirm (SubwayLegRequestConfirm SubwayLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId bookLater bookingAllowed crisSdkResponse Spec.SUBWAY categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment
   confirm _ = throwError (InternalError "Not supported")
 
   update (SubwayLegRequestUpdate _) = return ()

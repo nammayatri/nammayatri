@@ -43,7 +43,8 @@ data MetroLegRequestConfirmData = MetroLegRequestConfirmData
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     isSingleMode :: Maybe Bool,
     mbEnableOffer :: Maybe Bool,
-    categorySelectionReq :: [FRFSCategorySelectionReq]
+    categorySelectionReq :: [FRFSCategorySelectionReq],
+    mbIsMockPayment :: Maybe Bool
   }
 
 data MetroLegRequestCancelData = MetroLegRequestCancelData

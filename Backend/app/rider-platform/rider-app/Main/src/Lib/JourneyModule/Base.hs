@@ -470,8 +470,9 @@ startJourney ::
   Maybe Int ->
   DJourney.Journey ->
   Maybe Bool ->
+  Maybe Bool ->
   m ()
-startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer = do
+startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer mbIsMockPayment = do
   allLegs <- getAllLegsInfo riderId journey.id
   mapM_ (\leg -> QTBooking.updateOnInitDoneBySearchId (Just False) (Id leg.searchId)) allLegs -- TODO :: Handle the case where isMultiAllowed is False
   mapM_
@@ -509,7 +510,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
         let totalTicketQuantity = sum $ map (.quantity) categorySelectionReq
             bookingAllowed' = leg.bookingAllowed || ((fromMaybe False leg.hasApplicablePasses) && totalTicketQuantity /= 1)
             updatedLeg = leg {JL.bookingAllowed = bookingAllowed'}
-        JLI.confirm forcedBooking bookLater updatedLeg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer
+        JLI.confirm forcedBooking bookLater updatedLeg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer mbIsMockPayment
     )
     allLegs
 
@@ -535,7 +536,7 @@ startJourneyLeg legInfo isSingleMode = do
           ( \category -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.categoryId, quantity = category.categorySelectedQuantity}
           )
           categories
-  JLI.confirm True False legInfo crisSdkResponse categorySelectionReq isSingleMode Nothing
+  JLI.confirm True False legInfo crisSdkResponse categorySelectionReq isSingleMode Nothing Nothing
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,
@@ -1063,7 +1064,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         -- cancelRequiredLegs journey.riderId
         QJourneyLeg.create journeyLeg
         void $ addTaxiLeg journey journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation) (\searchId -> QJourneyLeg.updateLegSearchId (Just searchId) journeyLeg.id)
-        startJourney journey.riderId [] (Just currentLeg.sequenceNumber) journey Nothing
+        startJourney journey.riderId [] (Just currentLeg.sequenceNumber) journey Nothing Nothing
 
     -- cancelRequiredLegs riderId = do
     --   case mbEndLegOrder of

@@ -196,6 +196,9 @@ type API =
            "quoteId"
            (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
       :> "confirm"
+      :> QueryParam
+           "isMockPayment"
+           Kernel.Prelude.Bool
       :> Post
            '[JSON]
            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
@@ -207,6 +210,9 @@ type API =
            "quoteId"
            (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
       :> "confirm"
+      :> QueryParam
+           "isMockPayment"
+           Kernel.Prelude.Bool
       :> ReqBody
            '[JSON]
            API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
@@ -442,19 +448,21 @@ postFrfsQuoteConfirm ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
-postFrfsQuoteConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postFrfsQuoteConfirm a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postFrfsQuoteV2Confirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
-postFrfsQuoteV2Confirm a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteV2Confirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postFrfsQuoteV2Confirm a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteV2Confirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postFrfsQuotePaymentRetry ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

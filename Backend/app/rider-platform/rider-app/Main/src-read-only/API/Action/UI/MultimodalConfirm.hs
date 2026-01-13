@@ -53,6 +53,9 @@ type API =
       :> QueryParam
            "forceBookLegOrder"
            Kernel.Prelude.Int
+      :> QueryParam
+           "isMockPayment"
+           Kernel.Prelude.Bool
       :> ReqBody
            '[JSON]
            API.Types.UI.MultimodalConfirm.JourneyConfirmReq
@@ -573,10 +576,11 @@ postMultimodalConfirm ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
-postMultimodalConfirm a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalConfirm a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getMultimodalBookingInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

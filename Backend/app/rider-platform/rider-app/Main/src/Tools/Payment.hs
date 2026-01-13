@@ -89,6 +89,7 @@ import Kernel.External.Payment.Interface as Reexport hiding
     updatePaymentMethodInIntent,
   )
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Juspay.Config as JuspayConfig
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -103,23 +104,23 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import System.Environment as SE
 
-createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
+createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfigAndServiceName Payment.createOrder
 
-updateOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OrderUpdateReq -> m Payment.OrderUpdateResp
+updateOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.OrderUpdateReq -> m Payment.OrderUpdateResp
 updateOrder = runWithServiceConfigAndServiceName Payment.updateOrder
 
-orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
+orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfigAndServiceName Payment.orderStatus
 
 offerList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OfferListReq -> m Payment.OfferListResp
-offerList = runWithServiceConfigAndServiceName Payment.offerList
+offerList merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion = runWithServiceConfigAndServiceName Payment.offerList merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion Nothing
 
 refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
-refundOrder = runWithServiceConfigAndServiceName Payment.autoRefunds
+refundOrder merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion = runWithServiceConfigAndServiceName Payment.autoRefunds merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion Nothing
 
 verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
-verifyVpa = runWithServiceConfigAndServiceName Payment.verifyVPA
+verifyVpa merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion = runWithServiceConfigAndServiceName Payment.verifyVPA merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion Nothing
 
 ---- Ride Payment Related Functions (mostly stripe) ---
 createCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CreateCustomerReq -> m CreateCustomerResp
@@ -174,9 +175,10 @@ runWithServiceConfigAndServiceName ::
   PaymentServiceType ->
   Maybe Text ->
   Maybe Version ->
+  Maybe Bool ->
   req ->
   m resp
-runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion req = do
+runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion mbIsMockPayment req = do
   placeBasedConfig <- case mbPlaceId of
     Just id -> do
       paymentServiceName <- decidePaymentService (DMSC.PaymentService Payment.Juspay) clientSdkVersion
@@ -187,15 +189,21 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId paymentServiceName
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
-    Just (DMSC.PaymentServiceConfig vsc) -> func vsc mRoutingId req
-    Just (DMSC.MetroPaymentServiceConfig vsc) -> func vsc mRoutingId req
-    Just (DMSC.BusPaymentServiceConfig vsc) -> func vsc mRoutingId req
-    Just (DMSC.BbpsPaymentServiceConfig vsc) -> func vsc mRoutingId req
-    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> func vsc mRoutingId req
-    Just (DMSC.PassPaymentServiceConfig vsc) -> func vsc mRoutingId req
-    Just (DMSC.ParkingPaymentServiceConfig vsc) -> func vsc mRoutingId req
+    Just (DMSC.PaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.MetroPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.BusPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.PassPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.ParkingPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     _ -> throwError $ InternalError "Unknown Service Config"
   where
+    overrideMockUrlIfNeeded :: Payment.PaymentServiceConfig -> Maybe Bool -> Payment.PaymentServiceConfig
+    overrideMockUrlIfNeeded vsc (Just True) = vsc
+    overrideMockUrlIfNeeded vsc _ =
+      case vsc of
+        Payment.JuspayConfig cfg -> Payment.JuspayConfig $ cfg {JuspayConfig.mockStatusUrl = Nothing}
+        _ -> vsc
     getPaymentServiceByType = \case
       Normal -> decidePaymentService (DMSC.PaymentService Payment.Juspay) clientSdkVersion
       Wallet -> pure $ DMSC.JuspayWalletService Payment.Juspay

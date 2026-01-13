@@ -400,7 +400,7 @@ FRFSTicketBooking:
     isSingleMode: Maybe Bool
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
-
+    isMockPayment: Maybe Bool
 
   default:
     customerCancelled: "false"

@@ -26,14 +26,6 @@ data FRFSTicketBookingPayment = FRFSTicketBookingPayment
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FRFSTicketBookingPaymentStatus
-  = PENDING
-  | SUCCESS
-  | FAILED
-  | REFUND_PENDING
-  | REFUNDED
-  | REFUND_FAILED
-  | REFUND_INITIATED
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSTicketBookingPaymentStatus = PENDING | SUCCESS | FAILED | REFUND_PENDING | REFUNDED | REFUND_FAILED | REFUND_INITIATED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingPaymentStatus)

@@ -153,8 +153,8 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
               Just $ FRFSRouteDetails {routeCode = Just routeCode, serviceTier = serviceTier, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> m ()
-confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer =
+confirm :: JL.ConfirmFlow m r c => Bool -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> m ()
+confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -202,7 +202,8 @@ confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelection
               merchantOperatingCityId,
               isSingleMode,
               mbEnableOffer,
-              categorySelectionReq
+              categorySelectionReq,
+              mbIsMockPayment
             }
     mkSubwayLegConfirmReq :: JL.ConfirmFlow m r c => m SubwayLegRequest
     mkSubwayLegConfirmReq = do
@@ -219,7 +220,8 @@ confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelection
               crisSdkResponse,
               isSingleMode,
               mbEnableOffer,
-              categorySelectionReq
+              categorySelectionReq,
+              mbIsMockPayment
             }
     mkBusLegConfirmReq :: JL.ConfirmFlow m r c => m BusLegRequest
     mkBusLegConfirmReq = do
@@ -235,5 +237,6 @@ confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelection
               merchantOperatingCityId,
               categorySelectionReq,
               isSingleMode,
-              mbEnableOffer
+              mbEnableOffer,
+              mbIsMockPayment
             }
