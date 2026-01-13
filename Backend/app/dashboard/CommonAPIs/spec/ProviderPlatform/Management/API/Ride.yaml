@@ -294,7 +294,7 @@ types:
     - area: Maybe Text
     - id: Text
   CancellationSource:
-    - enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication, ByFleetOwner"
+    - enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication"
   RideSyncRes:
     - newStatus: RideStatus
     - message: Text

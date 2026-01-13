@@ -208,10 +208,6 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
           unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.CallBased)
-        DP.FLEET_OWNER -> do
-          when (ride.fleetOwnerId /= Just authPerson.id) $ throwError (RideDoesNotExist rideId.getId)
-          logTagInfo "fleetOwner -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByFleetOwner ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.FleetOwner)
         _ -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
           goHomeConfig <- CGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId)))

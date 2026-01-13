@@ -13,7 +13,7 @@ BookingCancellationReason:
 
   types:
     CancellationSource:
-      enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication, ByFleetOwner"
+      enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication"
 
   fields:
     driverId : Maybe (Id Person)

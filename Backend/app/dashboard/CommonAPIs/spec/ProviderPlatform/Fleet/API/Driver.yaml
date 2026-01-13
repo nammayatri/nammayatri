@@ -25,7 +25,6 @@ imports:
   FleetType: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
   TripCategory: Dashboard.Common
   ServiceTierType: Dashboard.Common
-  CancellationReasonCode: Dashboard.Common.Booking
 module: Driver
 
 apis:
@@ -1409,24 +1408,6 @@ apis:
             response:
               type: APISuccess
 
-  - POST: # CancelScheduledBookingAPI
-      endpoint: /fleet/scheduledBooking/cancel
-      auth: ApiAuthV2
-      request:
-        type: CancelScheduledBookingReq
-      response:
-        type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /fleet/{fleetOwnerId}/scheduledBooking/cancel
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-            request:
-              type: CancelScheduledBookingReq
-            response:
-              type: APISuccess
-
 types:
   EstimatedRouteDetails:
     - polyline: Maybe Text
@@ -2136,11 +2117,6 @@ types:
     - bookingId: Text
     - driverId: Id Driver
     - clientId: Maybe Text
-    - derive: "'HideSecrets"
-  CancelScheduledBookingReq:
-    - rideId: Text
-    - reasonCode: CancellationReasonCode
-    - additionalInfo: Maybe Text
     - derive: "'HideSecrets"
   RateCardItem:
     - title: Text

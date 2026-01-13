@@ -76,7 +76,6 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
     getDriverFleetScheduledBookingList,
     postDriverFleetScheduledBookingAssign,
-    postDriverFleetScheduledBookingCancel,
     postDriverFleetDashboardAnalyticsCache,
   )
 where
@@ -84,12 +83,10 @@ where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
-import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode (..))
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import Control.Applicative (liftA2, optional)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Char (isDigit)
-import Data.Coerce (coerce)
 import Data.Csv
 import Data.List (groupBy, nub, sortOn)
 import Data.List.NonEmpty (fromList, toList)
@@ -110,13 +107,11 @@ import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as DReg
-import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Action.UI.WMB as DWMB
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Alert as DTA
 import Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.AlertRequest as DTR
-import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
 import qualified Domain.Types.DriverFlowStatus as DDF
@@ -3898,24 +3893,4 @@ postDriverFleetScheduledBookingAssign merchantShortId opCity fleetOwnerId Common
   fleetDriverAssociation <- QFDAExtra.findByDriverId driverPersonId True >>= fromMaybeM (InvalidRequest "Driver not associated with fleet")
   unless (fleetDriverAssociation.fleetOwnerId == fleetOwnerId) $ throwError (InvalidRequest "Driver does not belong to this fleet owner")
   void $ UIDriver.acceptScheduledBooking (driverPersonId, merchant.id, merchantOpCityId) clientId (Id bookingId)
-  pure Success
-
-----------------------------------------------------------------------
-postDriverFleetScheduledBookingCancel ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Text ->
-  Common.CancelScheduledBookingReq ->
-  Flow APISuccess
-postDriverFleetScheduledBookingCancel _merchantShortId _opCity fleetOwnerId Common.CancelScheduledBookingReq {..} = do
-  -- Convert cancellation reason code
-  let cancelRideReq =
-        RideCancel.CancelRideReq
-          { reasonCode = coerce @CancellationReasonCode @DCReason.CancellationReasonCode reasonCode,
-            additionalInfo,
-            doCancellationRateBasedBlocking = Nothing
-          }
-
-  -- Call driverCancelRideHandler
-  void $ RideCancel.driverCancelRideHandler RideCancel.cancelRideHandle (Id fleetOwnerId) (Id rideId) cancelRideReq
   pure Success

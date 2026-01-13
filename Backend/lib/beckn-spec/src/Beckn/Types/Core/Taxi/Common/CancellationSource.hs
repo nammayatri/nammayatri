@@ -25,7 +25,6 @@ data CancellationSource
   | ByMerchant
   | ByAllocator
   | ByApplication
-  | ByFleetOwner
   deriving (Show, Eq, Ord, Read, Generic)
 
 derivePersistField "CancellationSource"
@@ -45,7 +44,6 @@ cancellationSourceJSONOptions =
         "ByMerchant" -> "CANCELLED_BY_MERCHANT"
         "ByAllocator" -> "CANCELLED_BY_ALLOCATOR"
         "ByApplication" -> "CANCELLED_BY_APPLICATION"
-        "ByFleetOwner" -> "CANCELLED_BY_FLEET_OWNER"
         _ -> error "CancellationReason parsing error"
     }
 
