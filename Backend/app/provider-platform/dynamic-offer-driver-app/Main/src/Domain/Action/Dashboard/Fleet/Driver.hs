@@ -217,6 +217,7 @@ import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
+import qualified Storage.Queries.RideExtra as QRideExtra
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
 import qualified Storage.Queries.TripAlertRequest as QTAR
@@ -938,6 +939,10 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
       -- Check if there's an active association before ending it
       mbActiveAssociation <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
+      -- Check if driver has any active rides (not completed or cancelled)
+      when (isJust mbActiveAssociation) $ do
+        mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId personId
+        when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before removing from fleet")
       FDV.endFleetDriverAssociation entityId personId
       -- Only decrement analytics if there was an active association
       when (isJust mbActiveAssociation) $ do
@@ -2055,6 +2060,10 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
 
       SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
+
+      -- Check if driver has any active rides (not completed or cancelled)
+      mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId person.id
+      when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
 
       -- onboarded operator required only for new drivers
       assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing (DomainRC.convertTextToUTC (Just "2099-12-12"))

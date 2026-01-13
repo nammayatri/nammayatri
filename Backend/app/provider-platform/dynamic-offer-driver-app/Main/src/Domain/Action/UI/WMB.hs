@@ -39,6 +39,7 @@ import Domain.Types.TripTransaction
 import qualified Domain.Types.VehicleCategory as DVehCategory
 import qualified Domain.Types.VehicleVariant as DVehVariant
 import Environment
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types hiding (fromList)
 import Kernel.Prelude
@@ -68,6 +69,7 @@ import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.RideExtra as QRideExtra
 import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.TripTransactionExtra as QTTE
@@ -487,6 +489,10 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
   SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
+
+  -- Check if driver has any active rides (not completed or cancelled)
+  mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
+  when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
 
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
   when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId

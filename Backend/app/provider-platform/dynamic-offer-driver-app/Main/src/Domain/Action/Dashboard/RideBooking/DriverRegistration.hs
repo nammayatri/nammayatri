@@ -29,6 +29,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
+import qualified Storage.Queries.RideExtra as QRideExtra
 import Tools.Error
 
 postDriverRegistrationAuth, auth :: ShortId DM.Merchant -> Context.City -> Common.AuthReq -> Flow Common.AuthRes
@@ -80,6 +81,9 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
   when mbFleet $ do
     checkAssoc <- runInReplica $ QFDV.findByDriverIdAndFleetOwnerId res.person.id fleetOwnerId True
     when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
+    -- Check if driver has any active rides (not completed or cancelled)
+    mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId res.person.id
+    when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
     assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFDV.create assoc
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById res.person.id
