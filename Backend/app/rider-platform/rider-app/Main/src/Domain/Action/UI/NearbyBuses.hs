@@ -79,53 +79,58 @@ castToOnDemandVehicleCategory Spe.SUBWAY = BecknV2.OnDemand.Enums.SUBWAY
 getSimpleNearbyBuses :: Id MerchantOperatingCity -> DomainRiderConfig.RiderConfig -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [API.Types.UI.NearbyBuses.NearbyBus]
 getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
   let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory req.platformType
-  buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig integratedBPPConfig
-  logDebug $ "Nearby buses: " <> show buses
-  let busesWithMostMatchingRouteStates = mapMaybe (\bus -> (bus,) <$> sortOnRouteMatchConfidence bus.routes_info) buses
-  logDebug $ "Buses with most matching route states: " <> show busesWithMostMatchingRouteStates
-  logDebug $ "Number of nearby buses: " <> show (length buses)
+  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory req.platformType
+  case mbIntegratedBPPConfig of
+    Just integratedBPPConfig -> do
+      buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig integratedBPPConfig
+      logDebug $ "Nearby buses: " <> show buses
+      let busesWithMostMatchingRouteStates = mapMaybe (\bus -> (bus,) <$> sortOnRouteMatchConfidence bus.routes_info) buses
+      logDebug $ "Buses with most matching route states: " <> show busesWithMostMatchingRouteStates
+      logDebug $ "Number of nearby buses: " <> show (length buses)
 
-  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory req.platformType
+      integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory req.platformType
 
-  let vehicleNumbers = Set.toList $ Set.fromList $ mapMaybe (.vehicle_number) buses
-  logDebug $ "Vehicle numbers: " <> show vehicleNumbers
-  logDebug $ "Number of unique vehicle numbers: " <> show (length vehicleNumbers)
+      let vehicleNumbers = Set.toList $ Set.fromList $ mapMaybe (.vehicle_number) buses
+      logDebug $ "Vehicle numbers: " <> show vehicleNumbers
+      logDebug $ "Number of unique vehicle numbers: " <> show (length vehicleNumbers)
 
-  busRouteMapping <- forM vehicleNumbers $ \vehicleNumber -> do
-    mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
-      maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber Nothing
-    pure $ Kernel.Prelude.listToMaybe mbResult
+      busRouteMapping <- forM vehicleNumbers $ \vehicleNumber -> do
+        mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
+          maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber Nothing
+        pure $ Kernel.Prelude.listToMaybe mbResult
 
-  let successfulMappings = catMaybes busRouteMapping
+      let successfulMappings = catMaybes busRouteMapping
 
-  serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text) <-
-    HashMap.fromList
-      <$> mapM
-        ( \m -> do
-            frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config -> do
-              CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId m.service_type riderConfig.merchantOperatingCityId config.id
-            return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName)))
-        )
-        successfulMappings
+      serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text) <-
+        HashMap.fromList
+          <$> mapM
+            ( \m -> do
+                frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config -> do
+                  CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId m.service_type riderConfig.merchantOperatingCityId config.id
+                return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName)))
+            )
+            successfulMappings
 
-  pure $
-    map
-      ( \(bus, (route_id, routeInfo)) ->
-          let maybeServiceType = bus.vehicle_number >>= (`HashMap.lookup` serviceTypeMap)
-           in API.Types.UI.NearbyBuses.NearbyBus
-                { currentLocation = Maps.LatLong bus.latitude bus.longitude,
-                  distance = Nothing,
-                  routeCode = route_id,
-                  routeState = Just routeInfo.route_state,
-                  serviceType = fst <$> maybeServiceType,
-                  serviceTierName = snd =<< maybeServiceType,
-                  shortName = routeInfo.route_number,
-                  vehicleNumber = bus.vehicle_number,
-                  bearing = round <$> bus.bearing
-                }
-      )
-      busesWithMostMatchingRouteStates
+      pure $
+        map
+          ( \(bus, (route_id, routeInfo)) ->
+              let maybeServiceType = bus.vehicle_number >>= (`HashMap.lookup` serviceTypeMap)
+               in API.Types.UI.NearbyBuses.NearbyBus
+                    { currentLocation = Maps.LatLong bus.latitude bus.longitude,
+                      distance = Nothing,
+                      routeCode = route_id,
+                      routeState = Just routeInfo.route_state,
+                      serviceType = fst <$> maybeServiceType,
+                      serviceTierName = snd =<< maybeServiceType,
+                      shortName = routeInfo.route_number,
+                      vehicleNumber = bus.vehicle_number,
+                      bearing = round <$> bus.bearing
+                    }
+          )
+          busesWithMostMatchingRouteStates
+    Nothing -> do
+      logError $ "No integrated BPP config found for merchant operating city: " <> merchantOperatingCityId.getId <> " and vehicle category: " <> show vehicleCategory <> " and platform type: " <> show req.platformType
+      return []
   where
     sortOnRouteMatchConfidence :: Maybe (M.Map CQMMB.BusRouteId CQMMB.BusRouteInfo) -> Maybe (CQMMB.BusRouteId, CQMMB.BusRouteInfo)
     sortOnRouteMatchConfidence mbRouteInfo = do
