@@ -2,7 +2,7 @@
 
 \ctx pipeline ->
   let
-    isMain = ctx.branch == "main"
+    isMain = ctx.branch == "main" || ctx.branch == "vira"
   in
   pipeline
     { signoff.enable = True
