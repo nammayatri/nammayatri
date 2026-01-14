@@ -34,6 +34,7 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantConfigDriverPool,
     postMerchantConfigDriverPoolUpdate,
     postMerchantConfigDriverPoolCreate,
+    postMerchantConfigDriverPoolUpsert,
     getMerchantConfigDriverIntelligentPool,
     postMerchantConfigDriverIntelligentPoolUpdate,
     getMerchantConfigOnboardingDocument,
@@ -52,6 +53,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigMerchantCreate,
     getMerchantConfigVehicleServiceTier,
     postMerchantConfigVehicleServiceTierUpdate,
+    postMerchantConfigVehicleServiceTierCreate,
     getMerchantConfigSpecialLocationList,
     getMerchantConfigGeometryList,
     putMerchantConfigGeometryUpdate,
@@ -584,6 +586,216 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance distanceUnit area
         selfRequestIfRiderIsDriver = False,
         ..
       }
+
+---------------------------------------------------------------------
+postMerchantConfigDriverPoolUpsert ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpsertDriverPoolConfigCsvReq ->
+  Flow Common.APISuccessWithUnprocessedEntities
+postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
+  let (distanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
+
+  driverPoolConfigs <- readDriverPoolConfigCsv req.file distanceUnit merchant.id merchantOpCityId
+
+  unprocessedEntities <-
+    foldlM
+      ( \unprocessedEntities config -> do
+          withTryCatch
+            "processDriverPoolConfigUpsert"
+            (upsertDriverPoolConfig merchantOpCityId config)
+            >>= \case
+              Left err -> return $ unprocessedEntities <> ["Unable to upsert driver pool config: " <> show err]
+              Right _ -> return unprocessedEntities
+      )
+      []
+      driverPoolConfigs
+
+  CQDPC.clearCache merchantOpCityId
+  logTagInfo "dashboard -> postMerchantConfigDriverPoolUpsert : " $ show merchant.id
+  return $ Common.APISuccessWithUnprocessedEntities unprocessedEntities
+  where
+    readDriverPoolConfigCsv :: FilePath -> DistanceUnit -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow [DDPC.DriverPoolConfig]
+    readDriverPoolConfigCsv csvFile distanceUnit merchantId merchantOpCityId = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector DriverPoolConfigCSVRow)) of
+        Left err -> throwError (InvalidRequest $ "CSV parsing error: " <> show err)
+        Right (_, v) -> V.imapM (makeDriverPoolConfig distanceUnit merchantId merchantOpCityId) v >>= (pure . V.toList)
+
+    makeDriverPoolConfig :: DistanceUnit -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> DriverPoolConfigCSVRow -> Flow DDPC.DriverPoolConfig
+    makeDriverPoolConfig distanceUnit merchantId merchantOpCityId idx row = do
+      now <- getCurrentTime
+      configId <- generateGUID
+
+      tripDistance :: Meters <- readCSVField idx row.tripDistance "Trip Distance"
+      area :: SL.Area <- readCSVField idx row.area "Area"
+      tripCategory :: Text <- cleanCSVField idx row.tripCategory "Trip Category"
+      let vehicleVariant :: Maybe ServiceTierType = readMaybeCSVField idx row.vehicleVariant "Vehicle Variant"
+
+      minRadiusOfSearch :: Meters <- readCSVField idx row.minRadiusOfSearch "Min Radius Of Search"
+      maxRadiusOfSearch :: Meters <- readCSVField idx row.maxRadiusOfSearch "Max Radius Of Search"
+      radiusStepSize :: Meters <- readCSVField idx row.radiusStepSize "Radius Step Size"
+      driverBatchSize :: Int <- readCSVField idx row.driverBatchSize "Driver Batch Size"
+      maxNumberOfBatches :: Int <- readCSVField idx row.maxNumberOfBatches "Max Number Of Batches"
+      maxParallelSearchRequests :: Int <- readCSVField idx row.maxParallelSearchRequests "Max Parallel Search Requests"
+      maxParallelSearchRequestsOnRide :: Int <- readCSVField idx row.maxParallelSearchRequestsOnRide "Max Parallel Search Requests On Ride"
+      poolSortingType :: DriverPool.PoolSortingType <- readCSVField idx row.poolSortingType "Pool Sorting Type"
+      singleBatchProcessTime :: Seconds <- readCSVField idx row.singleBatchProcessTime "Single Batch Process Time"
+      radiusShrinkValueForDriversOnRide :: Meters <- readCSVField idx row.radiusShrinkValueForDriversOnRide "Radius Shrink Value For Drivers On Ride"
+      driverToDestinationDistanceThreshold :: Meters <- readCSVField idx row.driverToDestinationDistanceThreshold "Driver To Destination Distance Threshold"
+      driverToDestinationDuration :: Seconds <- readCSVField idx row.driverToDestinationDuration "Driver To Destination Duration"
+      maxDriverQuotesRequired :: Int <- readCSVField idx row.maxDriverQuotesRequired "Max Driver Quotes Required"
+      driverQuoteLimit :: Int <- readCSVField idx row.driverQuoteLimit "Driver Quote Limit"
+      driverRequestCountLimit :: Int <- readCSVField idx row.driverRequestCountLimit "Driver Request Count Limit"
+      driverPositionInfoExpiry :: Maybe Seconds <- readCSVField idx row.driverPositionInfoExpiry "Driver Position Info Expiry"
+      actualDistanceThreshold :: Maybe Meters <- readCSVField idx row.actualDistanceThreshold "Actual Distance Threshold"
+      actualDistanceThresholdOnRide :: Maybe Meters <- readCSVField idx row.actualDistanceThresholdOnRide "Actual Distance Threshold On Ride"
+      enableForwardBatching :: Bool <- readCSVField idx row.enableForwardBatching "Enable Forward Batching"
+      batchSizeOnRide :: Int <- readCSVField idx row.batchSizeOnRide "Batch Size On Ride"
+      enableUnifiedPooling :: Maybe Bool <- readCSVField idx row.enableUnifiedPooling "Enable Unified Pooling"
+      thresholdToIgnoreActualDistanceThreshold :: Maybe Meters <- readCSVField idx row.thresholdToIgnoreActualDistanceThreshold "Threshold To Ignore Actual Distance Threshold"
+      selfRequestIfRiderIsDriver :: Bool <- readCSVField idx row.selfRequestIfRiderIsDriver "Self Request If Rider Is Driver"
+      batchSizeOnRideWithStraightLineDistance :: Maybe Int <- readCSVField idx row.batchSizeOnRideWithStraightLineDistance "Batch Size On Ride With Straight Line Distance"
+      useOneToOneOsrmMapping :: Maybe Bool <- readCSVField idx row.useOneToOneOsrmMapping "Use One To One Osrm Mapping"
+      dynamicBatchSize :: [Int] <- readCSVField idx row.dynamicBatchSize "Dynamic Batch Size"
+      distanceBasedBatchSplit :: [DriverPool.BatchSplitByPickupDistance] <- readCSVField idx row.distanceBasedBatchSplit "Distance Based Batch Split"
+      scheduleTryTimes :: [Int] <- readCSVField idx row.scheduleTryTimes "Schedule Try Times"
+      onRideBatchSplitConfig :: [DriverPool.BatchSplitByPickupDistanceOnRide] <- readCSVField idx row.onRideBatchSplitConfig "On Ride Batch Split Config"
+      onRideRadiusConfig :: [DriverPool.OnRideRadiusConfig] <- readCSVField idx row.onRideRadiusConfig "On Ride Radius Config"
+      timeBounds :: TimeBound <- readCSVField idx row.timeBounds "Time Bounds"
+      currentRideTripCategoryValidForForwardBatching :: [Text] <- readCSVField idx row.currentRideTripCategoryValidForForwardBatching "Current Ride Trip Category Valid For Forward Batching"
+
+      pure
+        DDPC.DriverPoolConfig
+          { id = configId,
+            merchantId,
+            merchantOperatingCityId = merchantOpCityId,
+            tripDistance,
+            area,
+            tripCategory,
+            vehicleVariant,
+            minRadiusOfSearch,
+            maxRadiusOfSearch,
+            radiusStepSize,
+            driverBatchSize,
+            maxNumberOfBatches,
+            maxParallelSearchRequests,
+            maxParallelSearchRequestsOnRide,
+            poolSortingType,
+            singleBatchProcessTime,
+            radiusShrinkValueForDriversOnRide,
+            driverToDestinationDistanceThreshold,
+            driverToDestinationDuration,
+            maxDriverQuotesRequired,
+            driverQuoteLimit,
+            driverRequestCountLimit,
+            driverPositionInfoExpiry,
+            actualDistanceThreshold,
+            actualDistanceThresholdOnRide,
+            enableForwardBatching,
+            batchSizeOnRide,
+            enableUnifiedPooling,
+            distanceUnit,
+            distanceBasedBatchSplit,
+            scheduleTryTimes,
+            onRideBatchSplitConfig,
+            onRideRadiusConfig,
+            thresholdToIgnoreActualDistanceThreshold,
+            timeBounds,
+            selfRequestIfRiderIsDriver,
+            batchSizeOnRideWithStraightLineDistance,
+            currentRideTripCategoryValidForForwardBatching,
+            useOneToOneOsrmMapping,
+            dynamicBatchSize = V.fromList dynamicBatchSize,
+            createdAt = now,
+            updatedAt = now
+          }
+
+    upsertDriverPoolConfig :: Id DMOC.MerchantOperatingCity -> DDPC.DriverPoolConfig -> Flow ()
+    upsertDriverPoolConfig merchantOpCityId config = do
+      mbExistingConfig <-
+        CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh
+          merchantOpCityId
+          config.tripDistance
+          config.vehicleVariant
+          config.tripCategory
+          config.area
+          (Just [])
+          Nothing
+      case mbExistingConfig of
+        Just existingConfig -> do
+          let updatedConfig =
+                existingConfig
+                  { DDPC.minRadiusOfSearch = config.minRadiusOfSearch,
+                    DDPC.maxRadiusOfSearch = config.maxRadiusOfSearch,
+                    DDPC.radiusStepSize = config.radiusStepSize,
+                    DDPC.driverBatchSize = config.driverBatchSize,
+                    DDPC.maxNumberOfBatches = config.maxNumberOfBatches,
+                    DDPC.maxParallelSearchRequests = config.maxParallelSearchRequests,
+                    DDPC.maxParallelSearchRequestsOnRide = config.maxParallelSearchRequestsOnRide,
+                    DDPC.poolSortingType = config.poolSortingType,
+                    DDPC.singleBatchProcessTime = config.singleBatchProcessTime,
+                    DDPC.radiusShrinkValueForDriversOnRide = config.radiusShrinkValueForDriversOnRide,
+                    DDPC.driverToDestinationDistanceThreshold = config.driverToDestinationDistanceThreshold,
+                    DDPC.driverToDestinationDuration = config.driverToDestinationDuration,
+                    DDPC.maxDriverQuotesRequired = config.maxDriverQuotesRequired,
+                    DDPC.driverQuoteLimit = config.driverQuoteLimit,
+                    DDPC.driverRequestCountLimit = config.driverRequestCountLimit,
+                    DDPC.driverPositionInfoExpiry = config.driverPositionInfoExpiry,
+                    DDPC.actualDistanceThreshold = config.actualDistanceThreshold,
+                    DDPC.actualDistanceThresholdOnRide = config.actualDistanceThresholdOnRide,
+                    DDPC.enableForwardBatching = config.enableForwardBatching,
+                    DDPC.batchSizeOnRide = config.batchSizeOnRide,
+                    DDPC.enableUnifiedPooling = config.enableUnifiedPooling,
+                    DDPC.updatedAt = config.updatedAt
+                  }
+          CQDPC.update updatedConfig
+        Nothing -> do
+          CQDPC.create config
+
+data DriverPoolConfigCSVRow = DriverPoolConfigCSVRow
+  { tripDistance :: Text,
+    area :: Text,
+    tripCategory :: Text,
+    vehicleVariant :: Text,
+    minRadiusOfSearch :: Text,
+    maxRadiusOfSearch :: Text,
+    radiusStepSize :: Text,
+    driverBatchSize :: Text,
+    maxNumberOfBatches :: Text,
+    maxParallelSearchRequests :: Text,
+    maxParallelSearchRequestsOnRide :: Text,
+    poolSortingType :: Text,
+    singleBatchProcessTime :: Text,
+    radiusShrinkValueForDriversOnRide :: Text,
+    driverToDestinationDistanceThreshold :: Text,
+    driverToDestinationDuration :: Text,
+    maxDriverQuotesRequired :: Text,
+    driverQuoteLimit :: Text,
+    driverRequestCountLimit :: Text,
+    driverPositionInfoExpiry :: Text,
+    actualDistanceThreshold :: Text,
+    actualDistanceThresholdOnRide :: Text,
+    enableForwardBatching :: Text,
+    batchSizeOnRide :: Text,
+    enableUnifiedPooling :: Text,
+    thresholdToIgnoreActualDistanceThreshold :: Text,
+    selfRequestIfRiderIsDriver :: Text,
+    batchSizeOnRideWithStraightLineDistance :: Text,
+    useOneToOneOsrmMapping :: Text,
+    dynamicBatchSize :: Text,
+    distanceBasedBatchSplit :: Text,
+    scheduleTryTimes :: Text,
+    onRideBatchSplitConfig :: Text,
+    onRideRadiusConfig :: Text,
+    timeBounds :: Text,
+    currentRideTripCategoryValidForForwardBatching :: Text
+  }
+  deriving (Generic, Show)
+
+instance FromNamedRecord DriverPoolConfigCSVRow
 
 ---------------------------------------------------------------------
 getMerchantConfigDriverIntelligentPool :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverIntelligentPoolConfigRes
@@ -3663,3 +3875,73 @@ putMerchantConfigGeometryUpdate merchantShortId opCity req = do
   newGeom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Not able to convert the given KML to PostGis geom")
   QGEO.updateGeometry cityParam stateParam req.region (T.pack newGeom)
   return Success
+
+postMerchantConfigVehicleServiceTierCreate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.VehicleServiceTierConfigCreateReq ->
+  Flow APISuccess
+postMerchantConfigVehicleServiceTierCreate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  existingConfig <- CQVST.findByServiceTierTypeAndCityId req.serviceTierType merchantOpCityId Nothing
+  whenJust existingConfig $ \_ ->
+    throwError (InvalidRequest $ "Vehicle service tier already exists: " <> show req.serviceTierType)
+
+  newConfig <- buildVehicleServiceTierFromRequest merchant.id merchantOpCityId req.serviceTierType req
+
+  QVST.create newConfig
+
+  CQVST.clearCache merchantOpCityId
+  CQVST.clearCacheByServiceTier merchantOpCityId req.serviceTierType
+
+  logTagInfo "dashboard -> postMerchantConfigVehicleServiceTierCreate : " $
+    show merchant.id <> " serviceTierType: " <> show req.serviceTierType
+
+  pure Success
+
+buildVehicleServiceTierFromRequest ::
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  ServiceTierType ->
+  Common.VehicleServiceTierConfigCreateReq ->
+  Flow DVST.VehicleServiceTier
+buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType req = do
+  now <- getCurrentTime
+  configId <- generateGUID
+  vehicleIconBaseUrl <- parseBaseUrl req.vehicleIconUrl
+
+  pure $
+    DVST.VehicleServiceTier
+      { id = configId,
+        merchantId = merchantId,
+        merchantOperatingCityId = merchantOpCityId,
+        serviceTierType = serviceTierType,
+        name = req.name,
+        shortDescription = Just req.shortDescription,
+        longDescription = Just req.longDescription,
+        seatingCapacity = Just req.seatingCapacity,
+        airConditionedThreshold = req.airConditionedThreshold,
+        isAirConditioned = Just req.isAirConditioned,
+        isIntercityEnabled = Just req.isIntercityEnabled,
+        isRentalsEnabled = Just req.isRentalsEnabled,
+        allowedVehicleVariant = req.allowedVehicleVariant,
+        autoSelectedVehicleVariant = req.autoSelectedVehicleVariant,
+        defaultForVehicleVariant = req.defaultForVehicleVariant,
+        vehicleIconUrl = Just vehicleIconBaseUrl,
+        driverRating = req.driverRating,
+        vehicleRating = req.vehicleRating,
+        priority = req.priority,
+        baseVehicleServiceTier = req.baseVehicleServiceTier,
+        fareAdditionPerKmOverBaseServiceTier = req.fareAdditionPerKmOverBaseServiceTier,
+        oxygen = req.oxygen,
+        ventilator = req.ventilator,
+        luggageCapacity = req.luggageCapacity,
+        stopFcmThreshold = req.stopFcmThreshold,
+        stopFcmSuppressCount = req.stopFcmSuppressCount,
+        scheduleBookingListEligibilityTags = req.scheduleBookingListEligibilityTags,
+        vehicleCategory = req.vehicleCategory,
+        createdAt = now,
+        updatedAt = now
+      }
