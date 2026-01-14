@@ -47,6 +47,7 @@
       pre-commit.settings.imports = [
         ./nix/pre-commit.nix
       ];
+      pre-commit.settings.hooks.treefmt.enable = lib.mkForce false;
 
       haskellProjects.default = {
         projectRoot = ./.;
