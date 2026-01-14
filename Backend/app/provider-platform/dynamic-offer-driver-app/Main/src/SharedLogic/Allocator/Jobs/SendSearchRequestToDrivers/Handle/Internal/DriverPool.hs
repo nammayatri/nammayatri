@@ -643,11 +643,16 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       )
       sortedPool'
 
+  logDebug $ (show searchReq.id) <> " selfRequestIfRiderIsDriver is coming as -> " <> (show driverPoolCfg.selfRequestIfRiderIsDriver)
+
+  logDebug $ (show searchReq.id) <> " sortedPool is coming as -> " <> (show sortedPool)
+
   finalPool <-
     if driverPoolCfg.selfRequestIfRiderIsDriver
       then checkSelfDriver sortedPool
       else pure sortedPool
 
+  logDebug $ (show searchReq.id) <> " finalPool is coming as -> " <> (show finalPool)
   pushTaggedPoolToKafka sortedPool
   return (mbVersion, take batchSize finalPool)
   where
@@ -666,20 +671,29 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       selfDriver <-
         case searchReq.riderId of
           Just riderId -> do
+            logDebug $ (show searchReq.id) <> " riderId is coming as -> " <> (show riderId)
             riderDetails <- RD.findById riderId
             case riderDetails of
               Just rider -> QP.findByMobileNumberAndMerchant rider.mobileNumber.hash driverPoolCfg.merchantId
               Nothing -> pure Nothing
           Nothing -> pure Nothing
 
+      case selfDriver of
+        Just driver -> logDebug $ (show searchReq.id) <> " selfDriver is coming as -> " <> (show driver.id)
+        Nothing -> logDebug $ (show searchReq.id) <> " selfDriver is coming as -> Nothing"
+
+      logDebug $ (show searchReq.id) <> " batchNum is coming as -> " <> (show batchNum)
+
       case (selfDriver, batchNum) of
         (Just driver, 0) -> do
+          logDebug $ (show searchReq.id) <> " driver is coming as -> " <> (show driver.id)
           let filteredPool =
                 filter
                   ( \driverPoolResult ->
                       driver.id == driverPoolResult.driverPoolResult.driverId
                   )
                   pool
+          logDebug $ (show searchReq.id) <> " filteredPool is coming as -> " <> (show filteredPool)
           pure $ if null filteredPool then pool else filteredPool
         (_, _) -> pure pool
 
