@@ -1,0 +1,12 @@
+-- Pipeline configuration for Vira <https://vira.nixos.asia/>
+
+\ctx pipeline ->
+  let
+    isMain = ctx.branch == "main" || ctx.branch == "vira"
+  in
+  pipeline
+    { signoff.enable = True
+    , cache.url = if
+        | isMain -> Just "https://cache.nixos.asia/oss"
+        | otherwise -> Nothing
+    }
