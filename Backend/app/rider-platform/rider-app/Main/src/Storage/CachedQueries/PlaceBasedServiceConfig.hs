@@ -68,6 +68,7 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
     Whatsapp.TataCommunicationsConfig _ -> WhatsappService Whatsapp.TataCommunications
+    Whatsapp.KarixConfig _ -> WhatsappService Whatsapp.Karix
   AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
     AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
   CallServiceConfig callCfg -> case callCfg of
