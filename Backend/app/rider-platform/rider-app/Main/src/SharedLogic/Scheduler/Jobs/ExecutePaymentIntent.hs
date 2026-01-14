@@ -16,16 +16,17 @@ module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.RidePayment as DRidePayment
+import Domain.Types.PaymentInvoice (PaymentPurpose (TIP))
+import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
-import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
-import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Lib.Scheduler
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
@@ -34,6 +35,8 @@ import SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.PaymentInvoice as QPaymentInvoice
+import qualified Storage.Queries.PaymentInvoiceExtra as QPaymentInvoiceExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -67,10 +70,9 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
-    let createPaymentIntentReq =
-          Payment.CreatePaymentIntentReq
-            { orderShortId = ride.shortId.getShortId,
-              amount = fareWithTip.amount,
+    let createPaymentIntentServiceReq =
+          DPayment.CreatePaymentIntentServiceReq
+            { amount = fareWithTip.amount,
               applicationFeeAmount,
               currency = fareWithTip.currency,
               customer = customerPaymentId,
@@ -78,9 +80,50 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
               receiptEmail = email,
               driverAccountId
             }
-    paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq
+    -- Lookup existing invoice to get order ID for retry handling
+    mbExistingInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE
+    let mbExistingOrderId = mbExistingInvoice >>= (.paymentOrderId)
+    paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id mbExistingOrderId createPaymentIntentServiceReq
     paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode paymentIntentResp.paymentIntentId
-    when paymentCharged $ QRide.markPaymentStatus DRide.Completed ride.id
+    -- Use returned orderId from makePaymentIntent (order.id is now independent of ride.id)
+    let orderId = paymentIntentResp.orderId
+    if paymentCharged
+      then do
+        QRide.markPaymentStatus DRide.Completed ride.id
+        -- Update invoice status to CAPTURED when payment is successfully charged
+        mbInvoice <- QPaymentInvoice.findByPaymentOrderIdAndInvoiceType (Just orderId) DPI.PAYMENT
+        whenJust mbInvoice $ \invoice -> QPaymentInvoice.updatePaymentStatus DPI.CAPTURED invoice.id
+      else do
+        -- Update ride.paymentStatus and invoice.paymentStatus to FAILED when scheduler fails
+        QRide.markPaymentStatus DRide.Failed ride.id
+        logError $ "Failed to charge payment intent for ride: " <> ride.id.getId
+        mbInvoice <- QPaymentInvoice.findByPaymentOrderIdAndInvoiceType (Just orderId) DPI.PAYMENT
+        whenJust mbInvoice $ \invoice -> QPaymentInvoice.updatePaymentStatus DPI.FAILED invoice.id
+
+    -- Handle tip payment orders (FALLBACK: for tips that weren't immediately captured)
+    -- Find tip invoices: payment_invoice.ride_id = ride.id AND payment_invoice.payment_purpose = 'TIP'
+    -- Note: Tips added after payment capture are usually captured immediately, but this serves as a fallback
+    allInvoices <- QPaymentInvoice.findAllByRideId rideId
+    let tipInvoices = filter (\inv -> inv.paymentPurpose == TIP && inv.paymentStatus == DPI.PENDING) allInvoices
+
+    -- Process each tip payment order
+    forM_ tipInvoices $ \tipInvoice -> do
+      whenJust tipInvoice.paymentOrderId $ \tipPaymentOrderId -> do
+        tipPaymentOrder <- QOrder.findById tipPaymentOrderId
+        whenJust tipPaymentOrder $ \order -> do
+          -- Get Stripe payment intent ID from payment order
+          let paymentIntentId = order.paymentServiceOrderId
+          -- Charge the existing payment intent
+          tipPaymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode paymentIntentId
+          if tipPaymentCharged
+            then do
+              -- Update tip invoice status to CAPTURED
+              QPaymentInvoice.updatePaymentStatus DPI.CAPTURED tipInvoice.id
+              logDebug $ "Successfully charged tip payment intent: " <> paymentIntentId
+            else do
+              -- Update tip invoice status to FAILED
+              QPaymentInvoice.updatePaymentStatus DPI.FAILED tipInvoice.id
+              logError $ "Failed to charge tip payment intent: " <> paymentIntentId
   return Complete
 
 cancelExecutePaymentIntentJob ::
@@ -107,7 +150,11 @@ cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   merchantOpCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  order <- QOrder.findById (cast rideId) >>= fromMaybeM (PaymentOrderNotFound rideId.getId)
+  -- Lookup order via PaymentInvoice since order.id is independent of ride.id
+  mbInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose rideId DPI.PAYMENT DPI.RIDE
+  invoice <- mbInvoice & fromMaybeM (InternalError $ "Payment invoice not found for ride: " <> rideId.getId)
+  orderId <- invoice.paymentOrderId & fromMaybeM (InternalError $ "Payment order ID not found in invoice for ride: " <> rideId.getId)
+  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   let mobileCountryCode = person.mobileCountryCode
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   when (isNothing ride.cancellationFeeIfCancelled) $ do

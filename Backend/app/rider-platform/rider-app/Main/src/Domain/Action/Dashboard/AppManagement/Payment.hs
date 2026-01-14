@@ -26,6 +26,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
@@ -197,6 +198,11 @@ postPaymentRefundRequestRespond merchantShortId opCity orderId req = do
             let updRefundRequest = refundRequest{refundsId = Just result.refundsId, status = updStatus}
             QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
             Notify.notifyRefunds updRefundRequest
+          -- Create or update refund invoice
+          let refundAmount = fromMaybe refundRequest.transactionAmount refundRequest.refundsAmount
+              invoiceStatus = SPInvoice.refundStatusToInvoiceStatus result.status
+              paymentPurpose = SPInvoice.refundPurposeToPaymentPurpose refundRequest.refundPurpose
+          SPInvoice.createOrUpdateRefundInvoice merchantShortId rideId orderId paymentPurpose invoiceStatus refundAmount refundRequest.currency merchantOpCity.merchantId merchantOpCity.id
           pure Common.RefundRequestRespondResp {status = updStatus, refundStatus = Just result.status, errorCode = result.errorCode}
 
     rejectRefunds refundRequest = do

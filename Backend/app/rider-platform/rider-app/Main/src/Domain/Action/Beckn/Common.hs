@@ -44,6 +44,7 @@ import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
@@ -78,6 +79,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
+import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -94,6 +96,7 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Payment as SPayment
+import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -116,6 +119,7 @@ import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJL
+import qualified Storage.Queries.PaymentInvoiceExtra as QPaymentInvoiceExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.RecentLocation as SQRL
@@ -467,19 +471,34 @@ rideAssignedReqHandler req = do
       let BookingDetails {..} = req'.bookingDetails
       ride <- buildRide req' mbMerchant now rideStatus
       let applicationFeeAmount = fromMaybe 0 booking.commission
-      whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
-        let createPaymentIntentReq =
-              Payment.CreatePaymentIntentReq
-                { orderShortId = ride.shortId.getShortId,
-                  amount = booking.estimatedFare.amount,
-                  applicationFeeAmount,
-                  currency = booking.estimatedFare.currency,
-                  customer = customerPaymentId,
-                  paymentMethod = paymentMethodId,
-                  receiptEmail = email,
-                  driverAccountId
-                }
-        handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId ride createPaymentIntentReq)
+      -- Create payment intent for online payments, capture orderId for invoice creation
+      mbPaymentIntentResp <- case req'.onlinePaymentParameters of
+        Just OnlinePaymentParameters {..} -> do
+          let createPaymentIntentServiceReq =
+                DPayment.CreatePaymentIntentServiceReq
+                  { amount = booking.estimatedFare.amount,
+                    applicationFeeAmount,
+                    currency = booking.estimatedFare.currency,
+                    customer = customerPaymentId,
+                    paymentMethod = paymentMethodId,
+                    receiptEmail = email,
+                    driverAccountId
+                  }
+          -- Lookup existing invoice to get order ID for retry handling
+          mbExistingInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE
+          let mbExistingOrderId = mbExistingInvoice >>= (.paymentOrderId)
+          -- Wrap makePaymentIntent in retry, capture result for orderId
+          handle (\e -> SPayment.paymentErrorHandler booking e >> pure Nothing) $
+            withShortRetry $
+              Just <$> SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId mbExistingOrderId createPaymentIntentServiceReq
+        Nothing -> pure Nothing
+      -- Create PaymentInvoice after handle block (unified for online and cash payments)
+      -- This is outside the retry block to prevent duplicate invoices
+      merchant <- fromMaybeM (MerchantNotFound booking.merchantId.getId) mbMerchant
+      let mbTipAmount = ride.tipAmount <&> (.amount)
+      -- For online payments, use orderId from makePaymentIntent response
+      let mbPaymentOrderInfo = mbPaymentIntentResp <&> \resp -> (resp.orderId, booking.estimatedFare.amount, booking.estimatedFare.currency)
+      SPInvoice.createPaymentInvoiceAfterOrder merchant.shortId ride.id booking mbPaymentOrderInfo mbTipAmount now
       triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
       let category = case booking.specialLocationTag of
             Just _ -> "specialLocation"
@@ -741,10 +760,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
-    let createPaymentIntentReq =
-          Payment.CreatePaymentIntentReq
-            { orderShortId = ride.shortId.getShortId,
-              amount = totalFare.amount,
+    let createPaymentIntentServiceReq =
+          DPayment.CreatePaymentIntentServiceReq
+            { amount = totalFare.amount,
               applicationFeeAmount,
               currency = totalFare.currency,
               customer = customerPaymentId,
@@ -752,7 +770,15 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               receiptEmail = email,
               driverAccountId
             }
-    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq)
+    -- Lookup existing invoice to get order ID for retry handling
+    mbExistingInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE
+    let mbExistingOrderId = mbExistingInvoice >>= (.paymentOrderId)
+    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id mbExistingOrderId createPaymentIntentServiceReq)
+    -- Update invoice amount if fare changed (e.g., fare recalculation after toll, etc.)
+    whenJust mbExistingInvoice $ \existingInvoice -> do
+      when (existingInvoice.amount /= totalFare.amount) $ do
+        logInfo $ "Updating invoice amount from " <> show existingInvoice.amount <> " to " <> show totalFare.amount <> " for invoice: " <> existingInvoice.id.getId
+        QPaymentInvoiceExtra.updateAmount existingInvoice.id totalFare.amount
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
     createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
@@ -1000,12 +1026,16 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
           when ride.onlinePayment $ do
             logInfo $ "Cancel payment intent due to rider configs: rideId: " <> ride.id.getId
             void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
+            -- Update payment invoice status to CANCELLED
+            QPaymentInvoiceExtra.updatePaymentStatusByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE DPI.CANCELLED
         _ -> pure ()
     when (isNothing cancellationFee) $
       whenJust mbRide $ \ride -> do
         when ride.onlinePayment $ do
           logInfo $ "Cancel payment intent as no cancellation fees found: rideId: " <> ride.id.getId
           void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
+          -- Update payment invoice status to CANCELLED
+          QPaymentInvoiceExtra.updatePaymentStatusByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE DPI.CANCELLED
 
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
