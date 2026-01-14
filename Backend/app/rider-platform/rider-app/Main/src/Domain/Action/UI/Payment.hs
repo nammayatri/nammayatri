@@ -37,6 +37,7 @@ import qualified Domain.Action.UI.RidePayment as DRidePayment
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
@@ -69,12 +70,14 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
 import Servant (BasicAuthData)
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
+import qualified Storage.Queries.PaymentInvoiceExtra as QPaymentInvoiceExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
@@ -328,6 +331,10 @@ stripeWebhookAction resp respDump = do
               let updRefundRequest = refundRequest{status = updStatus}
               let rideId = cast @DOrder.PaymentOrder @DRide.Ride updRefundRequest.orderId
               QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
+              -- Update refund invoice status using purpose from refund request
+              let paymentPurpose = SPInvoice.refundPurposeToPaymentPurpose refundRequest.refundPurpose
+                  invoiceStatus = SPInvoice.refundStatusToInvoiceStatus refundInfo.status
+              QPaymentInvoiceExtra.updatePaymentStatusByRideIdAndTypeAndPurpose rideId DPI.REFUNDS paymentPurpose invoiceStatus
               Notify.notifyRefunds updRefundRequest
       pure Ack
     _ -> DPayment.stripeWebhookService resp respDump stripeWebhookData
