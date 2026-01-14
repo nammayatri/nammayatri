@@ -37,6 +37,7 @@ library
       Lib.Payment.Storage.Queries.PaymentOrder
       Lib.Payment.Storage.Queries.PaymentTransaction
       Lib.Payment.Storage.Queries.PayoutOrderExtra
+      Lib.Payment.Storage.Queries.RefundsExtra
       Lib.Payment.Domain.Types.PaymentOrderOffer
       Lib.Payment.Domain.Types.PaymentOrderSplit
       Lib.Payment.Domain.Types.PayoutOrder
@@ -52,6 +53,7 @@ library
       Lib.Payment.Storage.Beam.Refunds
       Lib.Payment.Storage.Beam.WalletRewardPosting
       Lib.Payment.Storage.Queries.OrphanInstances.PayoutOrder
+      Lib.Payment.Storage.Queries.OrphanInstances.Refunds
       Lib.Payment.Storage.Queries.PaymentOrderOffer
       Lib.Payment.Storage.Queries.PaymentOrderSplit
       Lib.Payment.Storage.Queries.PayoutOrder

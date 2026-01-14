@@ -42,10 +42,6 @@ buildRatingReqV2 subscriber req = do
   bap_id <- context.contextBapId & fromMaybeM (InvalidRequest "Missing bap_id")
   unless (subscriber.subscriber_id == bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
-  bap_uriText <- context.contextBapUri & fromMaybeM (InvalidRequest "Missing bap_uri")
-  bap_uri <- parseBaseUrl bap_uriText
-  unless (subscriber.subscriber_url == bap_uri) $
-    throwError (InvalidRequest "Invalid bap_uri")
   ratings <- req.ratingReqMessage.ratingReqMessageRatings & fromMaybeM (InvalidRequest "Missing ratings")
   rating <- safeHead ratings & fromMaybeM (InvalidRequest "Missing rating")
   bookingId <- rating.ratingId & fromMaybeM (InvalidRequest "Missing ratingId")

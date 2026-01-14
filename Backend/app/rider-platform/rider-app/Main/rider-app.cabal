@@ -170,6 +170,7 @@ library
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
       Domain.Action.Dashboard.AppManagement.Pass
+      Domain.Action.Dashboard.AppManagement.Payment
       Domain.Action.Dashboard.AppManagement.TicketDashboard
       Domain.Action.Dashboard.AppManagement.Tickets
       Domain.Action.Dashboard.Booking
@@ -196,6 +197,7 @@ library
       Domain.Action.Dashboard.RideBooking.Search
       Domain.Action.Dashboard.RideBooking.Select
       Domain.Action.Dashboard.Route
+      Domain.Action.Dashboard.Sos
       Domain.Action.Dashboard.SosMedia
       Domain.Action.Dashboard.System
       Domain.Action.Internal.Cac
@@ -311,6 +313,7 @@ library
       Domain.Types.Extra.PlaceNameCache
       Domain.Types.Extra.PurchasedPass
       Domain.Types.Extra.RecentLocation
+      Domain.Types.Extra.RefundRequest
       Domain.Types.Extra.RentalDetails
       Domain.Types.Extra.Ride
       Domain.Types.Extra.RiderConfig
@@ -594,6 +597,7 @@ library
       Storage.Queries.QuoteExtra
       Storage.Queries.RatingExtra
       Storage.Queries.RecentLocationExtra
+      Storage.Queries.RefundRequestExtra
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RideExtra
       Storage.Queries.RouteDetailsExtra
@@ -672,6 +676,7 @@ library
       API.Action.Dashboard.AppManagement.EventManagement
       API.Action.Dashboard.AppManagement.MerchantOnboarding
       API.Action.Dashboard.AppManagement.Pass
+      API.Action.Dashboard.AppManagement.Payment
       API.Action.Dashboard.AppManagement.TicketDashboard
       API.Action.Dashboard.AppManagement.Tickets
       API.Action.Dashboard.IssueManagement
@@ -686,6 +691,7 @@ library
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.NammaTag
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.Sos
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.RideBooking
@@ -743,11 +749,13 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.EventManagement
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.Pass
+      API.Types.Dashboard.AppManagement.Endpoints.Payment
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
       API.Types.Dashboard.AppManagement.EventManagement
       API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Pass
+      API.Types.Dashboard.AppManagement.Payment
       API.Types.Dashboard.AppManagement.TicketDashboard
       API.Types.Dashboard.AppManagement.Tickets
       API.Types.Dashboard.RideBooking
@@ -921,6 +929,7 @@ library
       Domain.Types.QuoteBreakup
       Domain.Types.Rating
       Domain.Types.RecentLocation
+      Domain.Types.RefundRequest
       Domain.Types.RegistrationToken
       Domain.Types.RentalDetails
       Domain.Types.Ride
@@ -1072,6 +1081,7 @@ library
       Storage.Beam.QuoteBreakup
       Storage.Beam.Rating
       Storage.Beam.RecentLocation
+      Storage.Beam.RefundRequest
       Storage.Beam.RegistrationToken
       Storage.Beam.RentalDetails
       Storage.Beam.Ride
@@ -1244,6 +1254,7 @@ library
       Storage.Queries.OrphanInstances.Quote
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RecentLocation
+      Storage.Queries.OrphanInstances.RefundRequest
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.RouteDetails
@@ -1290,6 +1301,7 @@ library
       Storage.Queries.QuoteBreakup
       Storage.Queries.Rating
       Storage.Queries.RecentLocation
+      Storage.Queries.RefundRequest
       Storage.Queries.RegistrationToken
       Storage.Queries.RentalDetails
       Storage.Queries.Ride

@@ -55,6 +55,7 @@ data Estimate = Estimate
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     nightShiftInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.NightShiftInfo,
+    personalDiscountInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.PersonalDiscountInfo,
     providerCompletedRidesCount :: Kernel.Prelude.Int,
     providerId :: Kernel.Prelude.Text,
     providerMobileNumber :: Kernel.Prelude.Text,
@@ -108,6 +109,8 @@ data NightShiftInfo = NightShiftInfo
     oldNightShiftCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal
   }
   deriving (Generic, Show)
+
+data PersonalDiscountInfo = PersonalDiscountInfo {personalDiscount :: Kernel.Types.Common.Price, personalDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, Show)
 
 data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
 

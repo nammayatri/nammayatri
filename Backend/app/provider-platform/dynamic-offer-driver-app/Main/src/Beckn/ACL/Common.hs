@@ -97,6 +97,7 @@ castCancellationSource = \case
   DBCR.ByMerchant -> Common.ByMerchant
   DBCR.ByAllocator -> Common.ByAllocator
   DBCR.ByApplication -> Common.ByApplication
+  DBCR.ByFleetOwner -> Common.ByFleetOwner
 
 filterRequiredBreakups :: DFParams.FareParametersType -> Common.BreakupItem -> Bool
 filterRequiredBreakups fParamsType breakup = do

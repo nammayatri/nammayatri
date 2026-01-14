@@ -40,6 +40,7 @@ utcToIST = addUTCTime 19800
 -- Type for bus stop ETA information
 data BusStopETA = BusStopETA
   { stopCode :: Text,
+    stopName :: Maybe Text,
     arrivalTime :: UTCTime,
     etaSeconds :: Maybe Integer
   }
@@ -55,6 +56,7 @@ instance FromJSON BusStopETA where
     stopCode <- v .: "stop_id"
     arrivalTimestamp <- v .: "arrival_time" :: Parser Integer
     etaSeconds <- v .:? "eta_seconds"
+    stopName <- v .:? "stop_name"
     let arrivalTime = utcToIST $ posixSecondsToUTCTime $ realToFrac arrivalTimestamp
     return $ BusStopETA {..}
 
@@ -65,7 +67,8 @@ instance ToJSON BusStopETA where
         "arrival_time"
           .= floor @Double @Integer
             (realToFrac $ utcTimeToPOSIXSeconds arrivalTime),
-        "eta_seconds" .= etaSeconds
+        "eta_seconds" .= etaSeconds,
+        "stop_name" .= stopName
       ]
 
 -- Type for bus data including location and ETAs

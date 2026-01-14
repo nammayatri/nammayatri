@@ -47,13 +47,9 @@ buildSelectReqV2 subscriber req = do
   ContextV2.validateContext Context.SELECT context
   now <- getCurrentTime
   bap_id <- context.contextBapId & fromMaybeM (InvalidRequest "Missing bap_id")
-  bap_uriText <- context.contextBapUri & fromMaybeM (InvalidRequest "Missing bap_uri")
-  bap_uri <- parseBaseUrl bap_uriText
   let order = req.selectReqMessage.confirmReqMessageOrder
   unless (subscriber.subscriber_id == bap_id) $
-    throwError (InvalidRequest "Invalid bap_id")
-  unless (subscriber.subscriber_url == bap_uri) $
-    throwError (InvalidRequest "Invalid bap_uri")
+    throwError (InvalidRequest $ "Invalid bap_id " <> "bap_id: " <> bap_id <> "subscriber_id: " <> subscriber.subscriber_id)
   messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
   transactionUuid <- context.contextTransactionId & fromMaybeM (InvalidRequest "Missing transaction_id")
   let messageId = UUID.toText messageUuid

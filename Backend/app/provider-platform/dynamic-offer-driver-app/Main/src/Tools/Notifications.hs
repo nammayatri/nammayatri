@@ -288,6 +288,7 @@ cancellationSourceToSubCategory = \case
   SBCR.ByUser -> Notification.ByUser
   SBCR.ByMerchant -> Notification.ByMerchant
   SBCR.ByDriver -> Notification.ByDriver
+  SBCR.ByFleetOwner -> Notification.ByDriver
   SBCR.ByApplication -> Notification.ByApplication
   SBCR.ByAllocator -> Notification.ByAllocator
 

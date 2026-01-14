@@ -43,6 +43,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -129,13 +130,15 @@ getSosGetDetails (mbPersonId, _) rideId_ = do
         { flow = DSos.SafetyFlow,
           id = "mock-sos",
           personId = mockSos.personId,
-          rideId = Just rideId_,
+          rideId = rideId_,
           status = mockSos.status,
           ticketId = Nothing,
           mediaFiles = [],
           merchantId = Nothing,
           merchantOperatingCityId = Nothing,
           trackingExpiresAt = Nothing,
+          sosState = Nothing,
+          entityType = Nothing,
           createdAt = now,
           updatedAt = now
         }
@@ -158,21 +161,16 @@ postSosCreate (mbPersonId, _merchantId) req = do
     Nothing -> do
       riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
       sosDetails <- SIVR.buildSosDetails person req Nothing
-      void $ QSos.create sosDetails
-
       now <- getCurrentTime
       let eightHoursInSeconds :: Int = 8 * 60 * 60
-      let maxTrackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
-      let cappedTrackingExpiresAt = case req.trackingExpiresAt of
-            Just requestedExpiry -> Just $ min requestedExpiry maxTrackingExpiresAt
-            Nothing -> Nothing
-      whenJust cappedTrackingExpiresAt $ \expiry ->
-        void $ QSos.updateTrackingExpiresAt (Just expiry) sosDetails.id
+      let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
+      let sosDetailsWithEntityType = sosDetails {DSos.entityType = Just DSos.NonRide, DSos.sosState = Just DSos.SosActive, DSos.trackingExpiresAt = Just trackingExpiresAt}
+      void $ QSos.create sosDetailsWithEntityType
 
       whenJust req.customerLocation $ \location -> do
-        SOSLocation.updateSosRiderLocation sosDetails.id location Nothing cappedTrackingExpiresAt
-      let finalTrackLink = buildSosTrackingUrl sosDetails.id riderConfig.trackingShortUrlPattern
-      return (sosDetails.id, finalTrackLink, Nothing)
+        SOSLocation.updateSosRiderLocation sosDetailsWithEntityType.id location Nothing (Just trackingExpiresAt)
+      let finalTrackLink = buildSosTrackingUrl sosDetailsWithEntityType.id riderConfig.trackingShortUrlPattern
+      return (sosDetailsWithEntityType.id, finalTrackLink, Nothing)
   buildSmsReq <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
       MessageBuilder.BuildSOSAlertMessageReq
@@ -189,21 +187,16 @@ postSosCreate (mbPersonId, _merchantId) req = do
           void $ QPDEN.updateShareRideForAll personId True
           enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
         let sosType = if req.isRideEnded == Just True then Notification.POST_RIDE_SOS_ALERT else Notification.SOS_TRIGGERED
-        when shouldNotifyContacts $ SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle sosType (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
+        when shouldNotifyContacts $ SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" sosType [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
     Nothing -> do
       emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-      SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
+      SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
   return $
     SosRes
       { sosId = sosId
       }
   where
     triggerShareRideAndNotifyContacts safetySettings = (fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts) && req.flow == DSos.SafetyFlow
-    suffixNotificationBody = case req.rideId of
-      Just _ -> if req.isRideEnded /= Just True then " has initiated an SOS. Tap to follow and respond to the emergency situation" else " has activated SOS after their Namma Yatri ride. Please check on their safety"
-      Nothing -> " has initiated an SOS. Tap to track their live location and respond to the emergency situation"
-    notificationBody person_ = SLP.getName person_ <> suffixNotificationBody
-    notificationTitle = "SOS Alert"
     shouldNotifyContacts = bool True (req.sendPNOnPostRideSOS == Just True) (req.isRideEnded == Just True)
 
 enableFollowRideInSos :: [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Flow ()
@@ -225,7 +218,7 @@ createTicketForNewSos person ride riderConfig trackLink req = do
     Just sosDetails -> do
       void $ QSos.updateStatus DSos.Pending sosDetails.id
       void $ callUpdateTicket person sosDetails $ Just "SOS Re-Activated"
-      when (req.flow == DSos.SafetyFlow) $ CQSos.cacheSosIdByRideId ride.id $ sosDetails {DSos.status = DSos.Pending}
+      when (req.flow == DSos.SafetyFlow) $ CQSos.cacheSosIdByRideId ride.id $ sosDetails {DSos.status = DSos.Pending, DSos.entityType = Just DSos.Ride, DSos.sosState = Just DSos.SosActive}
       return sosDetails.id
     Nothing -> do
       phoneNumber <- mapM decrypt person.mobileNumber
@@ -240,9 +233,10 @@ createTicketForNewSos person ride riderConfig trackLink req = do
               Left _ -> return Nothing
           else return Nothing
       sosDetails <- SIVR.buildSosDetails person req ticketId
-      when (req.flow == DSos.SafetyFlow) $ CQSos.cacheSosIdByRideId ride.id sosDetails
-      void $ QSos.create sosDetails
-      return sosDetails.id
+      let sosDetailsWithEntityType = sosDetails {DSos.entityType = Just DSos.Ride, DSos.sosState = Just DSos.SosActive}
+      when (req.flow == DSos.SafetyFlow) $ CQSos.cacheSosIdByRideId ride.id sosDetailsWithEntityType
+      void $ QSos.create sosDetailsWithEntityType
+      return sosDetailsWithEntityType.id
 
 postSosStatus :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DSos.Sos -> SosUpdateReq -> Flow APISuccess.APISuccess
 postSosStatus (mbPersonId, _) sosId req = do
@@ -253,6 +247,11 @@ postSosStatus (mbPersonId, _) sosId req = do
   void $ QSos.updateStatus req.status sosId
   void $ callUpdateTicket person sosDetails req.comment
   pure APISuccess.Success
+
+isRideBasedSos :: Maybe DSos.SosEntityType -> Bool
+isRideBasedSos (Just DSos.Ride) = True
+isRideBasedSos Nothing = True
+isRideBasedSos _ = False
 
 postSosMarkRideAsSafe :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DSos.Sos -> MarkAsSafeReq -> Flow APISuccess.APISuccess
 postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
@@ -267,30 +266,44 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
         Nothing -> pure ()
         Just _ -> do
           Redis.setExp (CQSos.mockSosKey personId) (DSos.SosMockDrill {personId, status = DSos.MockResolved}) 13400
-      SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
+      SPDEN.notifyEmergencyContactsWithKey person "SOS_RESOLVED_SAFE" Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
       return APISuccess.Success
     _ -> do
       sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
       when (sosDetails.status == DSos.Resolved) $ throwError $ InvalidRequest "Sos already resolved."
+
+      let wasLiveTracking = sosDetails.sosState == Just DSos.LiveTracking
+      let shouldStopTracking = fromMaybe True isEndLiveTracking
       void $ callUpdateTicket person sosDetails $ Just "Mark Ride as Safe"
-      void $ QSos.updateStatus DSos.Resolved sosId
-      whenJust sosDetails.rideId $ \rideId ->
-        CQSos.cacheSosIdByRideId rideId $ sosDetails {DSos.status = DSos.Resolved}
-      SOSLocation.clearSosRiderLocation sosId
-      case sosDetails.rideId of
-        Just _ -> do
+
+      let shouldMarkAsResolved =
+            (isRideBasedSos sosDetails.entityType)
+              || (isEndLiveTracking == Just True)
+
+      when shouldMarkAsResolved $ do
+        void $ QSos.updateStatus DSos.Resolved sosId
+        when (isRideBasedSos sosDetails.entityType) $
+          CQSos.cacheSosIdByRideId sosDetails.rideId $ sosDetails {DSos.status = DSos.Resolved}
+
+      when (sosDetails.entityType == Just DSos.NonRide && sosDetails.sosState == Just DSos.SosActive && isEndLiveTracking == Just False) $ do
+        void $ QSos.updateState (Just DSos.LiveTracking) sosId
+
+      when shouldStopTracking $ do
+        SOSLocation.clearSosRiderLocation sosId
+      if isRideBasedSos sosDetails.entityType
+        then do
           when (safetySettings.notifySosWithEmergencyContacts && isRideEnded /= Just True) $ do
-            SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
-        Nothing -> do
-          SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers (Just sosId)
+            SPDEN.notifyEmergencyContactsWithKey person "SOS_RESOLVED_SAFE" Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
+        else case sosDetails.entityType of
+          Just DSos.NonRide -> do
+            if shouldStopTracking && wasLiveTracking
+              then do
+                SPDEN.notifyEmergencyContactsWithKey person "LIVE_TRACKING_STOPPED" Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers (Just sosId)
+              else do
+                SPDEN.notifyEmergencyContactsWithKey person "SOS_RESOLVED_SAFE" Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers (Just sosId)
+          _ -> do
+            SPDEN.notifyEmergencyContactsWithKey person "SOS_RESOLVED_SAFE" Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers (Just sosId)
       pure APISuccess.Success
-  where
-    notificationBody person_ =
-      SLP.getName person_
-        <> if fromMaybe False isMock
-          then " has marked ride as safe in test safety drill. This is a practice exercise, not a real emergency situation."
-          else " has marked the ride as safe. Tap to view the ride details"
-    notificationTitle = if fromMaybe False isMock then "Test Safety Drill Alert" else "Ride Safe"
 
 postSosCreateMockSos :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> MockSosReq -> Flow APISuccess.APISuccess
 postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
@@ -363,11 +376,17 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               )
               riderConfig.dashboardMediaFileUrlPattern
       when riderConfig.enableSupportForSafety $ do
-        whenJust sosDetails.rideId $ \rideId -> do
-          ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+        when (isRideBasedSos sosDetails.entityType) $ do
+          ride <- QRide.findById sosDetails.rideId >>= fromMaybeM (RideDoesNotExist sosDetails.rideId.getId)
           let rideInfo = SIVR.buildRideInfo ride person phoneNumber
               trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
-          void $ withTryCatch "createTicket:sendSosTracking" $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber (["https://" <> trackLink] <> dashboardFileUrl) rideInfo DSos.AudioRecording riderConfig.kaptureConfig.disposition kaptureQueue))
+          void $
+            withTryCatch "createTicket:sendSosTracking" $
+              withShortRetry $
+                createTicket
+                  person.merchantId
+                  person.merchantOperatingCityId
+                  (mkTicket person phoneNumber (["https://" <> trackLink] <> dashboardFileUrl) rideInfo DSos.AudioRecording (riderConfig.kaptureConfig.disposition) kaptureQueue)
       return $ AddSosVideoRes {fileUrl = fileUrl}
 
 callUpdateTicket :: Person.Person -> DSos.Sos -> Maybe Text -> Flow APISuccess.APISuccess
@@ -485,14 +504,14 @@ sendUnattendedSosTicketAlert ticketId = do
   where
     sendAlert :: DMOC.MerchantOperatingCity -> DSos.Sos -> Maybe Text -> IC.CxAgentDetails -> Flow ()
     sendAlert merchantOpCity sos maybeAppId cxAgentDetails =
-      whenJust sos.rideId $ \rideId -> do
+      when (isRideBasedSos sos.entityType) $ do
         fork ("Sending unattended sos ticket alert to agentDetails - " <> show cxAgentDetails) $ do
           callStatusId <- generateGUID
           let callReq =
                 Call.InitiateCallReq
                   { fromPhoneNum = cxAgentDetails.agentMobileNumber,
                     toPhoneNum = Nothing,
-                    attachments = Call.Attachments $ DUCall.CallAttachments {callStatusId = callStatusId, rideId = rideId},
+                    attachments = Call.Attachments $ DUCall.CallAttachments {callStatusId = callStatusId, rideId = sos.rideId},
                     appletId = maybeAppId
                   }
           exotelResponse <- Call.initiateCall merchantOpCity.merchantId merchantOpCity.id callReq
@@ -506,7 +525,7 @@ sendUnattendedSosTicketAlert ticketId = do
         DCall.CallStatus
           { id = callStatusId,
             callId = exotelResponse.callId,
-            rideId = sos.rideId,
+            rideId = Just sos.rideId,
             dtmfNumberUsed = Nothing,
             status = exotelResponse.callStatus,
             callAttempt = Nothing,
@@ -537,8 +556,11 @@ postSosUpdateLocation (mbPersonId, _) sosId req = do
 
 getSosTracking :: Id DSos.Sos -> Flow SosTrackingRes
 getSosTracking sosId = do
+  apiRateLimitOptions <- asks (.apiRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (sosTrackingHitsCountKey sosId) apiRateLimitOptions
+
   sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
-  unless (sosDetails.flow == DSos.SafetyFlow && isNothing sosDetails.rideId) $
+  unless (sosDetails.flow == DSos.SafetyFlow && sosDetails.entityType == Just DSos.NonRide) $
     throwError $ InvalidRequest "Invalid SOS for tracking"
 
   now <- getCurrentTime
@@ -555,7 +577,8 @@ getSosTracking sosId = do
   return $
     SosTrackingRes
       { currentLocation = convertToApiLocation <$> currentLocation,
-        isTrackingActive = isTrackingActive
+        sosState = sosDetails.sosState,
+        status = sosDetails.status
       }
   where
     convertToApiLocation :: SOSLocation.SosLocationData -> SosLocationRes
@@ -570,7 +593,7 @@ getSosTrackingDetails :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id 
 getSosTrackingDetails (mbPersonId, _) sosId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
-  unless (sosDetails.flow == DSos.SafetyFlow && isNothing sosDetails.rideId) $
+  unless (sosDetails.flow == DSos.SafetyFlow && sosDetails.entityType == Just DSos.NonRide) $
     throwError $ InvalidRequest "Invalid SOS for tracking"
   unless (sosDetails.status == DSos.Pending) $
     throwError $ InvalidRequest "Location sharing has expired"
@@ -585,132 +608,155 @@ getSosTrackingDetails (mbPersonId, _) sosId = do
   unless isEmergencyContact $
     throwError $ InvalidRequest "Access denied"
 
-  expiryTimeStamp <- sosDetails.trackingExpiresAt & fromMaybeM (InvalidRequest "Tracking expiry not set")
-  now <- getCurrentTime
-  unless (expiryTimeStamp > now) $
-    throwError $ InvalidRequest "Location sharing has expired"
-
   person <- QP.findById sosDetails.personId >>= fromMaybeM (PersonDoesNotExist sosDetails.personId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
 
   return $
     SosTrackingDetailsRes
       { personName = SLP.getName person,
-        mobileNumber = phoneNumber,
-        expiryTimeStamp = expiryTimeStamp
+        mobileNumber = phoneNumber
       }
 
-shareLocationWithContacts ::
-  (Id Person.Person, Id Merchant.Merchant) ->
-  Person.Person ->
-  Maybe Maps.LatLong ->
-  Int ->
-  [DPDEN.PersonDefaultEmergencyNumberAPIEntity] ->
-  Flow ShareLocationRes
-shareLocationWithContacts (personId, _merchantId) person customerLocation durationInMinutes contactsToNotify = do
-  when (durationInMinutes < 1 || durationInMinutes > 1440) $
-    throwError $ InvalidRequest "Duration must be between 1 and 1440 minutes (24 hours)"
-
-  when (List.null contactsToNotify) $ throwError $ InvalidRequest "No contacts to notify"
-  (sosId, _isNewSos) <- getOrCreateLocationSharingSos personId person customerLocation durationInMinutes
-
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  let trackLink = buildSosTrackingUrl sosId riderConfig.trackingShortUrlPattern
-  now <- getCurrentTime
-  let durationSeconds = durationInMinutes * 60
-  let expiresAt = addUTCTime (fromIntegral durationSeconds) now
-
-  buildSmsReq <-
-    MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
-      MessageBuilder.BuildSOSAlertMessageReq
-        { userName = SLP.getName person,
-          rideLink = trackLink,
-          rideEndTime = Just $ T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" $ expiresAt,
-          isRideEnded = False
-        }
-
-  SPDEN.notifyEmergencyContacts person (notificationBody person expiresAt) notificationTitle Notification.SHARE_RIDE (Just buildSmsReq) True contactsToNotify (Just sosId)
-
-  return $
-    ShareLocationRes
-      { sosId = sosId
-      }
-  where
-    notificationBody person_ expiresAt_ =
-      SLP.getName person_
-        <> " has shared their location with you. Tap to track their live location. Location sharing expires at "
-        <> (T.pack . formatTime defaultTimeLocale "%I:%M %p" $ expiresAt_)
-    notificationTitle = "Location Shared"
-
-postSosShareLocationContact :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> ShareLocationWithContactReq -> Flow ShareLocationRes
-postSosShareLocationContact (mbPersonId, merchantId) ShareLocationWithContactReq {..} = do
-  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
-  let contactToNotify = List.find (\contact -> contact.mobileNumber == mobileNumber) emergencyContacts.defaultEmergencyNumbers
-
-  case contactToNotify of
-    Nothing -> throwError $ InvalidRequest "Contact not found in emergency contacts"
-    Just contact -> shareLocationWithContacts (personId, merchantId) person customerLocation durationInMinutes [contact]
-
-postSosShareLocationAll :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> ShareLocationWithAllReq -> Flow ShareLocationRes
-postSosShareLocationAll (mbPersonId, merchantId) ShareLocationWithAllReq {..} = do
-  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
-  shareLocationWithContacts (personId, merchantId) person customerLocation durationInMinutes emergencyContacts.defaultEmergencyNumbers
-
-getOrCreateLocationSharingSos :: Id Person.Person -> Person.Person -> Maybe Maps.LatLong -> Int -> Flow (Id DSos.Sos, Bool)
-getOrCreateLocationSharingSos personId person mbLocation durationInMinutes = do
-  existingSosList <- QSos.findByPersonId personId
-  let activeNonRideSos = List.find (\sos -> sos.status == DSos.Pending && isNothing sos.rideId && sos.flow == DSos.SafetyFlow) existingSosList
-
-  now <- getCurrentTime
-  let durationSeconds = durationInMinutes * 60
-  let expiryTimeStamp = addUTCTime (fromIntegral durationSeconds) now
-
-  case activeNonRideSos of
-    Just sos -> do
-      void $ QSos.updateTrackingExpiresAt (Just expiryTimeStamp) sos.id
-      whenJust mbLocation $ \location -> do
-        SOSLocation.updateSosRiderLocation sos.id location Nothing (Just expiryTimeStamp)
-      return (sos.id, False)
-    Nothing -> do
-      sosId <- generateGUID
-      let sosDetails =
-            DSos.Sos
-              { id = sosId,
-                personId = personId,
-                flow = DSos.SafetyFlow,
-                status = DSos.Pending,
-                rideId = Nothing,
-                ticketId = Nothing,
-                mediaFiles = [],
-                merchantId = Just person.merchantId,
-                merchantOperatingCityId = Just person.merchantOperatingCityId,
-                trackingExpiresAt = Just expiryTimeStamp,
-                createdAt = now,
-                updatedAt = now
-              }
-      void $ QSos.create sosDetails
-      whenJust mbLocation $ \location -> do
-        SOSLocation.updateSosRiderLocation sosDetails.id location Nothing (Just expiryTimeStamp)
-
-      return (sosDetails.id, True)
+sosTrackingHitsCountKey :: Id DSos.Sos -> Text
+sosTrackingHitsCountKey sosId = "SosTrackingHits:" <> sosId.getId <> ":hitsCount"
 
 -- | Build tracking URL for SOS rider location (non-ride scenario)
 -- Uses the same pattern-based approach as ride tracking for consistency
--- Pattern format: "https://nammayatri.in/u?vp={#vp#}&rideId="
+-- Pattern format: "https://nammayatri.in/u?vp={#vp#}&rideId=" or "https://nammayatri.in/u?vp=shareRide&rideId="
 -- For SOS: replaces rideId with sosId and uses vp=sosTracking
 buildSosTrackingUrl :: Id DSos.Sos -> Text -> Text
 buildSosTrackingUrl sosId trackingUrlPattern =
   let patternWithSosId = T.replace "rideId=" "sosId=" trackingUrlPattern
       templateText txt = "{#" <> txt <> "#}"
-      builtUrl =
-        Foldable.foldl'
-          ( \msg (findKey, replaceVal) ->
-              T.replace (templateText findKey) replaceVal msg
-          )
-          patternWithSosId
-          [("vp", "sosTracking")]
-   in builtUrl <> sosId.getId
+      urlWithVpReplaced =
+        if T.isInfixOf (templateText "vp") patternWithSosId
+          then -- Template format: replace {#vp#} with sosTracking
+
+            Foldable.foldl'
+              ( \msg (findKey, replaceVal) ->
+                  T.replace (templateText findKey) replaceVal msg
+              )
+              patternWithSosId
+              [("vp", "sosTracking")]
+          else T.replace "vp=shareRide" "vp=sosTracking" patternWithSosId
+   in urlWithVpReplaced <> sosId.getId
+
+postSosStartTracking :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> StartTrackingReq -> Flow StartTrackingRes
+postSosStartTracking (mbPersonId, merchantId) StartTrackingReq {..} = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  when (durationInMinutes < 1 || durationInMinutes > 1440) $
+    throwError $ InvalidRequest "Duration must be between 1 and 1440 minutes (24 hours)"
+
+  now <- getCurrentTime
+  let durationSeconds = durationInMinutes * 60
+  let expiryTimeStamp = addUTCTime (fromIntegral durationSeconds) now
+
+  (finalSosId, trackLink) <- case sosId of
+    Just existingSosId -> do
+      sosDetails <- runInReplica $ QSos.findById existingSosId >>= fromMaybeM (SosIdDoesNotExist existingSosId.getId)
+      unless (personId == sosDetails.personId) $ throwError $ InvalidRequest "PersonId not same"
+      unless (sosDetails.entityType == Just DSos.NonRide) $ throwError $ InvalidRequest "Invalid SOS for tracking"
+      when (sosDetails.status == DSos.Resolved) $ throwError $ InvalidRequest "Cannot start tracking for resolved SOS"
+      void $ QSos.updateTrackingExpiresAt (Just expiryTimeStamp) existingSosId
+      whenJust customerLocation $ \location -> do
+        SOSLocation.updateSosRiderLocation existingSosId location Nothing (Just expiryTimeStamp)
+      riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      let trackLink' = buildSosTrackingUrl existingSosId riderConfig.trackingShortUrlPattern
+      return (existingSosId, trackLink')
+    Nothing -> do
+      sosId' <- generateGUID
+      uniqueRideId <- generateGUID
+      let sosDetails =
+            DSos.Sos
+              { id = sosId',
+                personId = personId,
+                flow = DSos.SafetyFlow,
+                status = DSos.Pending,
+                rideId = Id uniqueRideId,
+                ticketId = Nothing,
+                mediaFiles = [],
+                merchantId = Just person.merchantId,
+                merchantOperatingCityId = Just person.merchantOperatingCityId,
+                trackingExpiresAt = Just expiryTimeStamp,
+                sosState = Just DSos.LiveTracking,
+                entityType = Just DSos.NonRide,
+                createdAt = now,
+                updatedAt = now
+              }
+      void $ QSos.create sosDetails
+      whenJust customerLocation $ \location -> do
+        SOSLocation.updateSosRiderLocation sosDetails.id location Nothing (Just expiryTimeStamp)
+      riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      let trackLink' = buildSosTrackingUrl sosDetails.id riderConfig.trackingShortUrlPattern
+      return (sosDetails.id, trackLink')
+
+  emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
+  let contactsToNotify =
+        if List.null contacts
+          then []
+          else List.filter (\ec -> List.elem ec.mobileNumber contacts) emergencyContacts.defaultEmergencyNumbers
+
+  when (not (List.null contacts) && List.null contactsToNotify) $
+    throwError $ InvalidRequest "No valid emergency contacts found"
+
+  when (not (List.null contactsToNotify)) $ do
+    fork "Notifying emergency contacts about live tracking start" $ do
+      let formattedExpiryTime = T.pack . formatTime defaultTimeLocale "%I:%M %p" $ expiryTimeStamp
+      SPDEN.notifyEmergencyContactsWithKey person "LIVE_TRACKING_STARTED" Notification.SHARE_RIDE [("userName", SLP.getName person), ("expiryTime", formattedExpiryTime)] Nothing False contactsToNotify (Just finalSosId)
+
+  return $
+    StartTrackingRes
+      { sosId = finalSosId,
+        trackingUrl = trackLink
+      }
+
+postSosUpdateState :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DSos.Sos -> UpdateStateReq -> Flow APISuccess.APISuccess
+postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
+  unless (personId == sosDetails.personId) $ throwError $ InvalidRequest "PersonId not same"
+  unless (sosDetails.entityType == Just DSos.NonRide) $ throwError $ InvalidRequest "Can only update state for non-ride SOS"
+  unless (sosDetails.status == DSos.Pending) $ throwError $ InvalidRequest "Can only update state for pending SOS"
+  unless (sosDetails.sosState /= Just sosState) $ throwError $ InvalidRequest "State is already set to requested value"
+
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  let trackLink = buildSosTrackingUrl sosId riderConfig.trackingShortUrlPattern
+
+  case (sosDetails.sosState, sosState) of
+    (Just DSos.LiveTracking, DSos.SosActive) -> do
+      now <- getCurrentTime
+      let eightHoursInSeconds :: Int = 8 * 60 * 60
+      let newExpiryTime = addUTCTime (fromIntegral eightHoursInSeconds) now
+      void $ QSos.updateTrackingExpiresAt (Just newExpiryTime) sosId
+      void $ QSos.updateState (Just sosState) sosId
+
+      mbCurrentLocation <- SOSLocation.getSosRiderLocation sosId
+      whenJust mbCurrentLocation $ \locationData -> do
+        let location = Maps.LatLong {lat = locationData.lat, lon = locationData.lon}
+        SOSLocation.updateSosRiderLocation sosId location locationData.accuracy (Just newExpiryTime)
+
+      buildSmsReq <-
+        MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
+          MessageBuilder.BuildSOSAlertMessageReq
+            { userName = SLP.getName person,
+              rideLink = trackLink,
+              rideEndTime = Nothing,
+              isRideEnded = False
+            }
+
+      SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
+    (Just DSos.SosActive, DSos.LiveTracking) -> do
+      void $ QSos.updateState (Just sosState) sosId
+
+      SPDEN.notifyEmergencyContactsWithKey person "SOS_RESOLVED_TO_LIVE_TRACKING" Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers (Just sosId)
+    _ -> do
+      void $ QSos.updateState (Just sosState) sosId
+
+  whenJust sosDetails.ticketId $ \_ticketId -> do
+    void $ callUpdateTicket person sosDetails $ Just "SOS State Updated"
+
+  pure APISuccess.Success

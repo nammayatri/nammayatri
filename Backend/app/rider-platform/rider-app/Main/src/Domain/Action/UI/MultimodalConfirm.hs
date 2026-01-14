@@ -910,6 +910,11 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
       Nothing -> return Nothing
 
+  -- eligiblePassIds are vehicle-level data.
+  -- They must be present only when live vehicle info exists.
+  let mbEligiblePassIds =
+        mbVehicleLiveRouteInfo >>= (JMU.eligiblePassIds . snd)
+
   let mbOppositeTripDetails :: Maybe [NandiTypes.BusScheduleTrip] =
         case (mbEnableSwitchRoute, isPublicVehicleData) of
           (Just True, False) -> do
@@ -987,7 +992,8 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                         }
                   )
                   routeStops,
-              ptcv = gtfsVersion
+              ptcv = gtfsVersion,
+              eligiblePassIds = Nothing
             }
 
   let fetchData mbRouteCodeAndServiceType bppConfig = do
@@ -1058,7 +1064,8 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
-            ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion)))
+            ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion))),
+            eligiblePassIds = mbEligiblePassIds
           }
   return transportData
   where
@@ -1742,6 +1749,20 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                     return Nothing
             )
             busScheduleDetails
+
+  let enrichBusStopETA integratedBPPConfig' eta =
+        case eta.stopName of
+          Just _ ->
+            pure eta
+          Nothing -> do
+            mbStation <-
+              OTPRest.getStationByGtfsIdAndStopCode
+                eta.stopCode
+                integratedBPPConfig'
+            let fetchedName = fmap (.name) mbStation
+            pure $
+              eta{CQMMB.stopName = fetchedName <|> eta.stopName
+                 }
   let getLiveVehicles busesData =
         catMaybes
           <$> mapM
@@ -1751,9 +1772,15 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                   Just serviceTier -> do
                     frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier person.merchantOperatingCityId integratedBPPConfig.id
                     logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
+                    enrichedEta <-
+                      traverse
+                        ( mapConcurrently
+                            (enrichBusStopETA integratedBPPConfig)
+                        )
+                        bus.busData.eta_data
                     return . Just $
                       API.Types.UI.MultimodalConfirm.LiveVehicleInfo
-                        { eta = bus.busData.eta_data,
+                        { eta = enrichedEta,
                           number = bus.vehicleNumber,
                           position = LatLong bus.busData.latitude bus.busData.longitude,
                           locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,

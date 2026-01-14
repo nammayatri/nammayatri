@@ -6,6 +6,10 @@ imports:
   Ride: Domain.Types.Ride
   PriceAPIEntity: Kernel.Types.Common
   CreateCustomerResp : Kernel.External.Payment.Interface.Types
+  RefundRequestStatus: Domain.Types.RefundRequest
+  RefundRequestCode: Domain.Types.RefundRequest
+  RefundPurpose: Domain.Types.RefundRequest
+  FileType: AWS.S3
 
 module: RidePayment
 types:
@@ -23,6 +27,26 @@ types:
   AddTipRequest:
     recordType: NewType
     amount: PriceAPIEntity
+  RefundRequestReq:
+    requestedAmount: Maybe PriceAPIEntity
+    code: RefundRequestCode
+    description: Text
+    evidence: Maybe Text
+    fileType: Maybe FileType
+    reqContentType: Maybe Text
+  RefundRequestResp:
+    rideId: Id Ride
+    requestedAmount: Maybe PriceAPIEntity
+    transactionAmount: PriceAPIEntity
+    refundPurpose: RefundPurpose
+    status: RefundRequestStatus
+    code: RefundRequestCode
+    description: Text
+    responseDescription: Maybe Text
+    refundsAmount: Maybe PriceAPIEntity
+    evidence: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
 apis:
   - GET:
@@ -76,3 +100,21 @@ apis:
       auth: TokenAuth
       response:
         type: CreateCustomerResp
+  - POST:
+      endpoint: /payment/{rideId}/refundRequest/create
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+      request:
+        type: RefundRequestReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /payment/{rideId}/refundRequest
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+      query:
+        refreshRefunds: Bool
+      response:
+        type: RefundRequestResp

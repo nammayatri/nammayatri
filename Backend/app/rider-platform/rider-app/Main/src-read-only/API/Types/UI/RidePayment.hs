@@ -2,11 +2,15 @@
 
 module API.Types.UI.RidePayment where
 
+import qualified AWS.S3
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.RefundRequest
+import qualified Domain.Types.Ride
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
@@ -19,6 +23,34 @@ data PaymentIntentResponse = PaymentIntentResponse {customerId :: Kernel.Externa
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PaymentMethodsResponse = PaymentMethodsResponse {defaultPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId, list :: Kernel.External.Payment.Interface.Types.CustomerCardListResp}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RefundRequestReq = RefundRequestReq
+  { code :: Domain.Types.RefundRequest.RefundRequestCode,
+    description :: Kernel.Prelude.Text,
+    evidence :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fileType :: Kernel.Prelude.Maybe AWS.S3.FileType,
+    reqContentType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RefundRequestResp = RefundRequestResp
+  { code :: Domain.Types.RefundRequest.RefundRequestCode,
+    createdAt :: Kernel.Prelude.UTCTime,
+    description :: Kernel.Prelude.Text,
+    evidence :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    refundPurpose :: Domain.Types.RefundRequest.RefundPurpose,
+    refundsAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    requestedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    responseDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    status :: Domain.Types.RefundRequest.RefundRequestStatus,
+    transactionAmount :: Kernel.Types.Common.PriceAPIEntity,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

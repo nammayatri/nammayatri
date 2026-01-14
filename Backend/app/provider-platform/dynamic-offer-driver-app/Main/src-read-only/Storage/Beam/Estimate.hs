@@ -53,6 +53,7 @@ data EstimateT f = EstimateT
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     minFare :: B.C f Kernel.Types.Common.Money,
     minFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    personalDiscount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     requestId :: B.C f Kernel.Prelude.Text,
     smartTipReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     smartTipSuggestion :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

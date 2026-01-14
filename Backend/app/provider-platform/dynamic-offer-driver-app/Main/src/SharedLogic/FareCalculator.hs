@@ -104,6 +104,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mkBusinessDiscountCaption = show Enums.BUSINESS_DISCOUNT
       mbBusinessDiscountItem = mkBreakupItem mkBusinessDiscountCaption . mkPrice <$> fareParams.businessDiscount
 
+      mkPersonalDiscountCaption = show Enums.PERSONAL_DISCOUNT
+      mbPersonalDiscountItem = mkBreakupItem mkPersonalDiscountCaption . mkPrice <$> fareParams.personalDiscount
+
       priorityChargesCaption = show Enums.PRIORITY_CHARGES
       mbPriorityChargesItem = mkBreakupItem priorityChargesCaption . mkPrice <$> fareParams.priorityCharges
 
@@ -143,6 +146,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbParkingChargeItem,
       mbWaitingChargesItem,
       mbBusinessDiscountItem,
+      mbPersonalDiscountItem,
       mbFixedGovtRateItem,
       mbPetChargesItem,
       mbPriorityChargesItem,
@@ -252,7 +256,11 @@ fareSum fareParams conditionalChargeCategories = do
   pureFareSum fareParams conditionalChargeCategories
     + fromMaybe 0.0 fareParams.driverSelectedFare
     + fromMaybe 0.0 fareParams.customerExtraFee
-    - if fareParams.shouldApplyBusinessDiscount then fromMaybe 0.0 fareParams.businessDiscount else 0.0
+    - if fareParams.shouldApplyBusinessDiscount
+      then fromMaybe 0.0 fareParams.businessDiscount
+      else
+        0.0
+          - if fareParams.shouldApplyPersonalDiscount then fromMaybe 0.0 fareParams.personalDiscount else 0.0
 
 -- Pure fare without customerExtraFee and driverSelectedFare
 
@@ -340,6 +348,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     distanceUnit :: DistanceUnit,
     petCharges :: Maybe HighPrecMoney,
     shouldApplyBusinessDiscount :: Bool,
+    shouldApplyPersonalDiscount :: Bool,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
     numberOfLuggages :: Maybe Int
@@ -415,14 +424,16 @@ calculateFareParameters params = do
         fullRideCostN
           + fromMaybe 0 govtCharges
       cardChargeOnFare = countCardChargeOnFare fullCompleteRideCost <$> (fp.cardCharge >>= (.perDistanceUnitMultiplier))
-      rideCostForBusinessDiscount = fullRideCost + fromMaybe 0.0 resultNightShiftCharge + finalCongestionCharge + notPartOfNightShiftCharge ------------Business Discount includes Base Fare, Night Shift Charge, Congestion Charge, pickup charges, Duration Fare and distance Fare
+      rideCostForBusinessDiscount = fullRideCost + fromMaybe 0.0 resultNightShiftCharge + finalCongestionCharge + notPartOfNightShiftCharge + fromMaybe 0.0 stopCharges ------------Business Discount includes Base Fare, Night Shift Charge, Congestion Charge, pickup charges, Duration Fare, stop charges and distance Fare
       businessDiscount = if params.shouldApplyBusinessDiscount then maybe Nothing (\discountPercentage -> Just $ HighPrecMoney $ (rideCostForBusinessDiscount.getHighPrecMoney * toRational discountPercentage) / 100) fp.businessDiscountPercentage else Nothing
+      personalDiscount = if params.shouldApplyPersonalDiscount then maybe Nothing (\discountPercentage -> Just $ HighPrecMoney $ (rideCostForBusinessDiscount.getHighPrecMoney * toRational discountPercentage) / 100) fp.personalDiscountPercentage else Nothing
       fareParams =
         FareParameters
           { id,
             driverSelectedFare = params.driverSelectedFare,
             customerExtraFee = params.customerExtraFee,
             shouldApplyBusinessDiscount = params.shouldApplyBusinessDiscount,
+            shouldApplyPersonalDiscount = params.shouldApplyPersonalDiscount,
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
             baseFare = baseFare,
@@ -481,6 +492,7 @@ calculateFareParameters params = do
             conditionalCharges = filter (\addCharges -> maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
             driverCancellationPenaltyAmount = fp.driverCancellationPenaltyAmount,
             businessDiscount = businessDiscount,
+            personalDiscount = personalDiscount,
             paymentProcessingFee = Nothing,
             rideVat = Nothing,
             tollVat = Nothing

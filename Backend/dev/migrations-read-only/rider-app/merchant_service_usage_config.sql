@@ -80,3 +80,10 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_multimodal_wa
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN insurance_service character varying(30)  default 'Acko';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN create_refunds text  default 'Stripe';
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_refunds text  default 'Stripe';

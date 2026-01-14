@@ -39,10 +39,7 @@ buildInitReqV2 subscriber req isValueAddNP = do
   Utils.validateContext Context.INIT context
   bap_id <- context.contextBapId & fromMaybeM (InvalidRequest "Missing bap_id")
   unless (subscriber.subscriber_id == bap_id) $
-    throwError (InvalidRequest "Invalid bap_id")
-  bapUri <- mapM parseBaseUrl context.contextBapUri >>= fromMaybeM (InvalidRequest "bap_uri not found")
-  unless (subscriber.subscriber_url == bapUri) $
-    throwError (InvalidRequest "Invalid bap_uri")
+    throwError (InvalidRequest $ "Invalid bap_id " <> "bap_id: " <> bap_id <> "subscriber_id: " <> subscriber.subscriber_id)
   items <- req.initReqMessage.confirmReqMessageOrder.orderItems & fromMaybeM (InvalidRequest "items not found")
   case items of
     [_it] -> return ()

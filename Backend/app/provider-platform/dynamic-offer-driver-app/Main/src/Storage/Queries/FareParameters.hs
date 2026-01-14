@@ -149,6 +149,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 tollCharges = tollCharges,
                 petCharges = petCharges,
                 shouldApplyBusinessDiscount = fromMaybe False shouldApplyBusinessDiscount,
+                shouldApplyPersonalDiscount = fromMaybe False shouldApplyPersonalDiscount,
                 insuranceCharge,
                 cardCharge =
                   Just $
@@ -165,6 +166,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 rideVat = rideVat,
                 tollVat = tollVat,
                 businessDiscount = businessDiscount,
+                personalDiscount = personalDiscount,
                 congestionChargeViaDp = congestionChargeViaDp,
                 luggageCharge = luggageCharge,
                 returnFeeCharge = returnFeeCharge,
@@ -203,6 +205,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.fareParametersType = getFareParametersType $ FareParameters {..},
         BeamFP.customerCancellationDues = customerCancellationDues,
         BeamFP.shouldApplyBusinessDiscount = Just shouldApplyBusinessDiscount,
+        BeamFP.shouldApplyPersonalDiscount = Just shouldApplyPersonalDiscount,
         BeamFP.tollCharges = tollCharges,
         BeamFP.congestionCharge = roundToIntegral <$> congestionCharge,
         BeamFP.congestionChargeAmount = congestionCharge,
@@ -221,6 +224,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.commission = Nothing,
         BeamFP.petCharges = petCharges,
         BeamFP.businessDiscount = businessDiscount,
+        BeamFP.personalDiscount = personalDiscount,
         BeamFP.congestionChargeViaDp = congestionChargeViaDp,
         BeamFP.luggageCharge = luggageCharge,
         BeamFP.returnFeeCharge = returnFeeCharge,

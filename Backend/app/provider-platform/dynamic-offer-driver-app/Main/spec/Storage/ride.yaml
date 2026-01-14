@@ -31,7 +31,7 @@ Ride:
   derives: "Generic,Show,FromJSON,ToJSON"
   types:
     RideEndedBy:
-      enum: "Driver,Dashboard,CallBased,CronJob,Allocator"
+      enum: "Driver,Dashboard,CallBased,CronJob,Allocator,FleetOwner"
     OdometerReading:
       value: Centesimal
       fileId: Maybe (Id MediaFile)

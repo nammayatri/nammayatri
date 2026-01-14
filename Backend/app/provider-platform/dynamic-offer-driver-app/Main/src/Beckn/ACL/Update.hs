@@ -40,11 +40,8 @@ buildUpdateReq ::
   m DUpdate.DUpdateReq
 buildUpdateReq merchantId subscriber req = do
   ContextV2.validateContext Context.UPDATE req.updateReqContext
-  bap_uri <- Utils.getContextBapUri req.updateReqContext
   unless (Just subscriber.subscriber_id == req.updateReqContext.contextBapId) $
-    throwError (InvalidRequest "Invalid bap_id")
-  unless (subscriber.subscriber_url == bap_uri) $
-    throwError (InvalidRequest "Invalid bap_uri")
+    throwError (InvalidRequest $ "Invalid bap_id " <> "bap_id: " <> show req.updateReqContext.contextBapId <> "subscriber_id: " <> show subscriber.subscriber_id)
   parseEvent merchantId req.updateReqMessage req.updateReqContext
 
 parseEvent :: (MonadFlow m) => Id DM.Merchant -> Spec.UpdateReqMessage -> Spec.Context -> m DUpdate.DUpdateReq

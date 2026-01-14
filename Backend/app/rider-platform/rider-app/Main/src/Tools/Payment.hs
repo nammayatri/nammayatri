@@ -49,6 +49,8 @@ module Tools.Payment
     extractSplitSettlementDetailsAmount,
     getPaymentOrderValidity,
     offerList,
+    createRefund,
+    getRefund,
   )
 where
 
@@ -72,11 +74,13 @@ import Kernel.External.Payment.Interface as Reexport hiding
     createEphemeralKeys,
     createOrder,
     createPaymentIntent,
+    createRefund,
     createSetupIntent,
     deleteCard,
     getCardList,
     getCustomer,
     getPaymentIntent,
+    getRefund,
     isSplitEnabled,
     offerList,
     orderStatus,
@@ -154,6 +158,12 @@ createSetupIntent = runWithServiceConfig1 Payment.createSetupIntent (.createSetu
 
 deleteCard :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentMethodId -> m ()
 deleteCard = runWithServiceConfig1 Payment.deleteCard (.deleteCard)
+
+createRefund :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> Payment.CreateRefundReq -> m Payment.CreateRefundResp
+createRefund = runWithServiceConfig1 Payment.createRefund (.createRefunds)
+
+getRefund :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> Payment.GetRefundReq -> m Payment.GetRefundResp
+getRefund = runWithServiceConfig1 Payment.getRefund (.getRefunds)
 
 runWithServiceConfigAndServiceName ::
   ServiceFlow m r =>

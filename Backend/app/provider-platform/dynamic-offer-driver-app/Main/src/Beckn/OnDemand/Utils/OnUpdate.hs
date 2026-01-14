@@ -108,6 +108,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.PET_CHARGES),
                      Just (show Enums.BUSINESS_DISCOUNT),
+                     Just (show Enums.PERSONAL_DISCOUNT),
                      Just (show Enums.TOLL_CHARGES),
                      Just (show Enums.PARKING_CHARGE),
                      Just (show Enums.RIDE_STOP_CHARGES),
@@ -133,6 +134,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.CUSTOMER_SELECTED_FARE),
                      Just (show Enums.NIGHT_SHIFT_CHARGE),
                      Just (show Enums.BUSINESS_DISCOUNT),
+                     Just (show Enums.PERSONAL_DISCOUNT),
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.TOLL_CHARGES),
@@ -158,6 +160,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.NIGHT_SHIFT_CHARGE),
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.BUSINESS_DISCOUNT),
+                     Just (show Enums.PERSONAL_DISCOUNT),
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.PET_CHARGES),
                      Just (show Enums.PARKING_CHARGE),
@@ -187,6 +190,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.RETURN_FEE),
                      Just (show Enums.BOOTH_CHARGE),
                      Just (show Enums.BUSINESS_DISCOUNT),
+                     Just (show Enums.PERSONAL_DISCOUNT),
                      Just (show Enums.PARKING_CHARGE),
                      Just (show Enums.RIDE_VAT),
                      Just (show Enums.TOLL_VAT)
@@ -312,6 +316,7 @@ castCancellationSource = \case
   SBCR.ByMerchant -> BookingCancelledOU.ByMerchant
   SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
   SBCR.ByApplication -> BookingCancelledOU.ByApplication
+  SBCR.ByFleetOwner -> BookingCancelledOU.ByFleetOwner
 
 mkNewMessageTags :: Text -> Maybe [Spec.TagGroup]
 mkNewMessageTags message =

@@ -1184,3 +1184,24 @@ instance IsHTTPError EmailError where
     EmailConfigurationError -> E500
 
 instance IsAPIError EmailError
+
+data RefundRequestError
+  = RefundRequestDoesNotExist Text
+  | RefundRequestAlreadyExists Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RefundRequestError
+
+instance IsBaseError RefundRequestError where
+  toMessage (RefundRequestDoesNotExist orderId) = Just $ "Refund request matches passed data \"" <> orderId <> "\" does not exist."
+  toMessage (RefundRequestAlreadyExists orderId) = Just $ "Refund request \"" <> orderId <> "\" already exists."
+
+instance IsHTTPError RefundRequestError where
+  toErrorCode = \case
+    RefundRequestDoesNotExist _ -> "REFUND_REQUEST_DOES_NOT_EXIST"
+    RefundRequestAlreadyExists _ -> "REFUND_REQUEST_ALREADY_EXISTS"
+  toHttpCode = \case
+    RefundRequestDoesNotExist _ -> E400
+    RefundRequestAlreadyExists _ -> E400
+
+instance IsAPIError RefundRequestError
