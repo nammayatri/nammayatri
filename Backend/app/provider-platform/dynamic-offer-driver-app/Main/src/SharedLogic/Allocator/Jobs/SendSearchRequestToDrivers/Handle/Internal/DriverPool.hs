@@ -134,7 +134,6 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
   let merchantOpCityId = searchReq.merchantOperatingCityId
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   PrepareDriverPoolBatchEntity {..} <- prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum True merchantOpCityId searchReq.transactionId isValueAddNP
-  logDebug $ "CurrentDriverPoolBatch-" <> show currentDriverPoolBatch
   let finalPool = currentDriverPoolBatch <> currentDriverPoolBatchOnRide
   incrementDriverRequestCount finalPool searchTry.id
   pure $ buildDriverPoolWithActualDistResultWithFlags finalPool poolType nextScheduleTime (previousBatchesDrivers <> previousBatchesDriversOnRide)
@@ -321,11 +320,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               pure (batchEntity.currentDriverPoolBatch, batchEntity.currentDriverPoolBatchOnRide, Nothing)
             else do
               (mbVersion, normalDriverPoolBatch) <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers intelligentPoolConfig transporterConfig batchSize False
-              logDebug $ (show searchTry.id) <> "NormalDriverPoolBatch-" <> (show normalDriverPoolBatch)
               if not driverPoolCfg.selfRequestIfRiderIsDriver && length normalDriverPoolBatch < batchSize
                 then do
                   filledBatch <- fillBatch transporterConfig mOCityId normalDriverPool normalDriverPoolBatch intelligentPoolConfig blockListedDrivers mbVersion
-                  logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
                   pure (filledBatch, [], Just radiusStep)
                 else do
                   pure (normalDriverPoolBatch, [], Just radiusStep)
@@ -650,7 +647,6 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       then checkSelfDriver sortedPool
       else pure sortedPool
 
-  logDebug $ (show searchReq.id) <> "FinalPool-" <> (show finalPool)
   pushTaggedPoolToKafka finalPool
   return (mbVersion, take batchSize finalPool)
   where
@@ -683,7 +679,6 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
                       driver.id == driverPoolResult.driverPoolResult.driverId
                   )
                   pool
-          logDebug $ (show searchReq.id) <> "FilteredPool-" <> (show filteredPool)
           pure $ if null filteredPool then pool else filteredPool
         _ -> pure pool
 
