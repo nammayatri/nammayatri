@@ -134,6 +134,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
   let merchantOpCityId = searchReq.merchantOperatingCityId
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   PrepareDriverPoolBatchEntity {..} <- prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum True merchantOpCityId searchReq.transactionId isValueAddNP
+  logDebug $ "CurrentDriverPoolBatch-" <> show currentDriverPoolBatch
   let finalPool = currentDriverPoolBatch <> currentDriverPoolBatchOnRide
   incrementDriverRequestCount finalPool searchTry.id
   pure $ buildDriverPoolWithActualDistResultWithFlags finalPool poolType nextScheduleTime (previousBatchesDrivers <> previousBatchesDriversOnRide)
@@ -320,7 +321,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               pure (batchEntity.currentDriverPoolBatch, batchEntity.currentDriverPoolBatchOnRide, Nothing)
             else do
               (mbVersion, normalDriverPoolBatch) <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers intelligentPoolConfig transporterConfig batchSize False
-              if length normalDriverPoolBatch < batchSize
+              logDebug $ (show searchTry.id) <> "NormalDriverPoolBatch-" <> (show normalDriverPoolBatch)
+              if not driverPoolCfg.selfRequestIfRiderIsDriver && length normalDriverPoolBatch < batchSize
                 then do
                   filledBatch <- fillBatch transporterConfig mOCityId normalDriverPool normalDriverPoolBatch intelligentPoolConfig blockListedDrivers mbVersion
                   logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
@@ -643,17 +645,13 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       )
       sortedPool'
 
-  logDebug $ (show searchReq.id) <> " selfRequestIfRiderIsDriver is coming as -> " <> (show driverPoolCfg.selfRequestIfRiderIsDriver)
-
-  logDebug $ (show searchReq.id) <> " sortedPool is coming as -> " <> (show sortedPool)
-
   finalPool <-
-    if driverPoolCfg.selfRequestIfRiderIsDriver
+    if driverPoolCfg.selfRequestIfRiderIsDriver && batchNum == 0
       then checkSelfDriver sortedPool
       else pure sortedPool
 
-  logDebug $ (show searchReq.id) <> " finalPool is coming as -> " <> (show finalPool)
-  pushTaggedPoolToKafka sortedPool
+  logDebug $ (show searchReq.id) <> "FinalPool-" <> (show finalPool)
+  pushTaggedPoolToKafka finalPool
   return (mbVersion, take batchSize finalPool)
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
@@ -671,7 +669,6 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       selfDriver <-
         case searchReq.riderId of
           Just riderId -> do
-            logDebug $ (show searchReq.id) <> " riderId is coming as -> " <> (show riderId)
             riderDetails <- RD.findById riderId
             case riderDetails of
               Just rider -> QP.findByMobileNumberAndMerchant rider.mobileNumber.hash driverPoolCfg.merchantId
@@ -679,23 +676,16 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
           Nothing -> pure Nothing
 
       case selfDriver of
-        Just driver -> logDebug $ (show searchReq.id) <> " selfDriver is coming as -> " <> (show driver.id)
-        Nothing -> logDebug $ (show searchReq.id) <> " selfDriver is coming as -> Nothing"
-
-      logDebug $ (show searchReq.id) <> " batchNum is coming as -> " <> (show batchNum)
-
-      case (selfDriver, batchNum) of
-        (Just driver, 0) -> do
-          logDebug $ (show searchReq.id) <> " driver is coming as -> " <> (show driver.id)
+        Just driver -> do
           let filteredPool =
                 filter
                   ( \driverPoolResult ->
                       driver.id == driverPoolResult.driverPoolResult.driverId
                   )
                   pool
-          logDebug $ (show searchReq.id) <> " filteredPool is coming as -> " <> (show filteredPool)
+          logDebug $ (show searchReq.id) <> "FilteredPool-" <> (show filteredPool)
           pure $ if null filteredPool then pool else filteredPool
-        (_, _) -> pure pool
+        _ -> pure pool
 
     pushTaggedPoolToKafka taggedPool = do
       pushToKafka
