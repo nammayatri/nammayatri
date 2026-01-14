@@ -319,7 +319,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               pure (batchEntity.currentDriverPoolBatch, batchEntity.currentDriverPoolBatchOnRide, Nothing)
             else do
               (mbVersion, normalDriverPoolBatch) <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers intelligentPoolConfig transporterConfig batchSize False
-              if length normalDriverPoolBatch < batchSize
+              if not driverPoolCfg.selfRequestIfRiderIsDriver && length normalDriverPoolBatch < batchSize
                 then do
                   filledBatch <- fillBatch transporterConfig mOCityId normalDriverPool normalDriverPoolBatch intelligentPoolConfig blockListedDrivers mbVersion
                   logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
@@ -640,7 +640,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       sortedPool'
 
   finalPool <-
-    if driverPoolCfg.selfRequestIfRiderIsDriver
+    if driverPoolCfg.selfRequestIfRiderIsDriver && batchNum == 0
       then checkSelfDriver sortedPool
       else pure sortedPool
 
@@ -668,8 +668,8 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
               Nothing -> pure Nothing
           Nothing -> pure Nothing
 
-      case (selfDriver, batchNum) of
-        (Just driver, 0) -> do
+      case selfDriver of
+        Just driver -> do
           let filteredPool =
                 filter
                   ( \driverPoolResult ->
@@ -677,7 +677,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
                   )
                   pool
           pure $ if null filteredPool then pool else filteredPool
-        (_, _) -> pure pool
+        _ -> pure pool
 
     pushTaggedPoolToKafka taggedPool = do
       pushToKafka
