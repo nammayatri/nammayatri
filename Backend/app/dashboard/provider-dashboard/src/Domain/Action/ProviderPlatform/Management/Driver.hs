@@ -56,6 +56,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverEarnings,
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
+    postDriverVehicleAppendSelectedServiceTiers,
   )
 where
 
@@ -371,3 +372,10 @@ postDriverUpdateMerchant merchantShortId opCity apiTokenInfo driverId req = do
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateMerchant) driverId req
+
+postDriverVehicleAppendSelectedServiceTiers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.AppendSelectedServiceTiersReq -> Environment.Flow APISuccess
+postDriverVehicleAppendSelectedServiceTiers merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverVehicleAppendSelectedServiceTiers) driverId req

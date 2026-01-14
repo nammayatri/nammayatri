@@ -55,6 +55,8 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     getMerchantConfigGeometryList,
     putMerchantConfigGeometryUpdate,
     getMerchantConfigSpecialLocationList,
+    postMerchantConfigDriverPoolUpsert,
+    postMerchantConfigVehicleServiceTierCreate,
   )
 where
 
@@ -517,3 +519,15 @@ putMerchantConfigGeometryUpdate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.putMerchantConfigGeometryUpdate)) req
+
+postMerchantConfigDriverPoolUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertDriverPoolConfigCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
+postMerchantConfigDriverPoolUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigDriverPoolUpsert)) req
+
+postMerchantConfigVehicleServiceTierCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.VehicleServiceTierConfigCreateReq -> Flow APISuccess
+postMerchantConfigVehicleServiceTierCreate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigVehicleServiceTierCreate) req

@@ -903,6 +903,24 @@ newtype APISuccessWithUnprocessedEntities = APISuccessWithUnprocessedEntities {u
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+--- Upsert driver pool config using csv file ----
+
+newtype UpsertDriverPoolConfigCsvReq = UpsertDriverPoolConfigCsvReq {file :: Kernel.Prelude.FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertDriverPoolConfigCsvReq where
+  hideSecrets = identity
+
+instance FromMultipart Tmp UpsertDriverPoolConfigCsvReq where
+  fromMultipart form = do
+    UpsertDriverPoolConfigCsvReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp UpsertDriverPoolConfigCsvReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
 data UpdateGeometryReq = UpdateGeometryReq {region :: Text, file :: Kernel.Prelude.FilePath}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

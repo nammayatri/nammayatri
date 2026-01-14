@@ -31,6 +31,7 @@ imports:
   UpdateTagBulkRes: Dashboard.Common
   Merchant: Dashboard.Common
   MerchantOperatingCity: Dashboard.Common
+  ServiceTierType: Dashboard.Common
 
 module: Driver
 
@@ -465,6 +466,16 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_VEHICLE_MANUFACTURING
 
   - POST:
+      endpoint: /{driverId}/vehicle/appendSelectedServiceTiers
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: AppendSelectedServiceTiersReq
+      response:
+        type: APISuccess
+
+  - POST:
       endpoint: /{driverId}/refundByPayout
       params:
         driverId: Id Driver
@@ -681,6 +692,9 @@ types:
   UpdateVehicleManufacturingReq:
     - rcId: Text
     - manufacturing: Day
+    - derive: "'HideSecrets"
+  AppendSelectedServiceTiersReq:
+    - selected_service_tiers: [ServiceTierType]
     - derive: "'HideSecrets"
   ReviewRCVariantReq:
     - rcId: Text

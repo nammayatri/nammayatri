@@ -60,6 +60,7 @@ module Domain.Action.Dashboard.Management.Driver
     isAssociationBetweenTwoPerson,
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
+    postDriverVehicleAppendSelectedServiceTiers,
   )
 where
 
@@ -1380,3 +1381,21 @@ updateMerchantInAllTables personId merchantId merchantOperatingCityId = do
   QPerson.updateMerchantIdAndCityId personId merchantId merchantOperatingCityId
 
   logTagInfo "updateMerchantInAllTables" $ "Updated merchant for driver " <> show personId <> " in all tables"
+
+---------------------------------------------------------------------
+postDriverVehicleAppendSelectedServiceTiers :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AppendSelectedServiceTiersReq -> Flow APISuccess
+postDriverVehicleAppendSelectedServiceTiers merchantShortId opCity driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  -- Validate that each requested service tier exists in vehicle_service_tier for this city
+  forM_ req.selected_service_tiers $ \serviceTier -> do
+    CQVST.findByServiceTierTypeAndCityId serviceTier merchantOpCityId Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show serviceTier)
+  vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+  let currentTiers = vehicle.selectedServiceTiers
+      newTiers = nub $ currentTiers ++ req.selected_service_tiers
+  QVehicle.updateSelectedServiceTiers newTiers personId
+  logTagInfo "dashboard -> appendSelectedServiceTiers : " (show personId <> " added tiers: " <> show req.selected_service_tiers)
+  pure Success

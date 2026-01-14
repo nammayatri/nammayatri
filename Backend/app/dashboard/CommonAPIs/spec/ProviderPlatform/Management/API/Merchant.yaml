@@ -20,6 +20,7 @@ imports:
   CreateMerchantOperatingCityRes: Dashboard.Common.Merchant
   CreateMerchantOperatingCityReqT: Dashboard.Common.Merchant
   UpsertSpecialLocationCsvReq: Dashboard.Common.Merchant
+  UpsertDriverPoolConfigCsvReq: Dashboard.Common.Merchant
   APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
   SpecialLocation: Lib.Types.SpecialLocation
   SpecialLocationFull: Lib.Queries.SpecialLocation
@@ -126,6 +127,14 @@ apis:
         endpoint: MerchantAPI DriverPoolConfigCreateEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG_CREATE
+  - POST: # DriverPoolConfigCsvUpsertAPI
+      endpoint: /config/driverPool/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertDriverPoolConfigCsvReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG_CSV_UPSERT
   - GET: # DriverIntelligentPoolConfigAPI
       endpoint: /config/driverIntelligentPool
       auth: ApiAuthV2
@@ -548,6 +557,13 @@ apis:
         - serviceTierType: ServiceTierType
       request:
         type: VehicleServiceTierConfigUpdateReq
+      response:
+        type: APISuccess
+  - POST: # VehicleServiceTierConfigCreateAPI
+      endpoint: /config/vehicleServiceTier/create
+      auth: ApiAuthV2
+      request:
+        type: VehicleServiceTierConfigCreateReq
       response:
         type: APISuccess
 
@@ -987,6 +1003,33 @@ types:
     - stopFcmThreshold: Maybe Int
     - stopFcmSuppressCount: Maybe Int
     - scheduleBookingListEligibilityTags: Maybe [Text]
+    - derive: "'HideSecrets"
+  VehicleServiceTierConfigCreateReq:
+    - serviceTierType: ServiceTierType
+    - name: Text
+    - shortDescription: Text
+    - longDescription: Text
+    - seatingCapacity: Int
+    - airConditionedThreshold: Maybe Double
+    - isAirConditioned: Bool
+    - isIntercityEnabled: Bool
+    - isRentalsEnabled: Bool
+    - allowedVehicleVariant: [VehicleVariant]
+    - autoSelectedVehicleVariant: [VehicleVariant]
+    - defaultForVehicleVariant: [VehicleVariant]
+    - vehicleIconUrl: Text
+    - driverRating: Maybe Centesimal
+    - vehicleRating: Maybe Double
+    - priority: Int
+    - baseVehicleServiceTier: Maybe Bool
+    - fareAdditionPerKmOverBaseServiceTier: Maybe Int
+    - oxygen: Maybe Double
+    - ventilator: Maybe Int
+    - luggageCapacity: Maybe Int
+    - stopFcmThreshold: Maybe Int
+    - stopFcmSuppressCount: Maybe Int
+    - scheduleBookingListEligibilityTags: Maybe [Text]
+    - vehicleCategory: Maybe VehicleCategory
     - derive: "'HideSecrets"
   SpecialLocationResp:
     - recordType: Type
