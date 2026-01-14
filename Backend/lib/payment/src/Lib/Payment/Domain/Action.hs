@@ -16,6 +16,8 @@
 
 module Lib.Payment.Domain.Action
   ( PaymentStatusResp (..),
+    CreatePaymentIntentServiceResp (..),
+    CreatePaymentIntentServiceReq (..),
     createOrderService,
     orderStatusService,
     juspayWebhookService,
@@ -58,7 +60,6 @@ import Control.Applicative ((<|>))
 import Data.List (sortBy)
 import Data.Ord (comparing)
 import qualified Data.Text as T
-import qualified Data.Time as Time
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
@@ -162,7 +163,27 @@ data PayoutPaymentStatus = PayoutPaymentStatus
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+data CreatePaymentIntentServiceResp = CreatePaymentIntentServiceResp
+  { paymentIntentId :: Text,
+    orderId :: Id DOrder.PaymentOrder
+  }
+  deriving (Show, Eq, Generic)
+
+-- Request type for createPaymentIntentService that doesn't require orderShortId
+-- The orderShortId is generated internally by the service
+data CreatePaymentIntentServiceReq = CreatePaymentIntentServiceReq
+  { amount :: HighPrecMoney,
+    applicationFeeAmount :: HighPrecMoney,
+    currency :: Currency,
+    customer :: Payment.CustomerId,
+    paymentMethod :: Payment.PaymentMethodId,
+    receiptEmail :: Maybe Text,
+    driverAccountId :: Payment.AccountId
+  }
+  deriving (Show, Eq, Generic)
+
 -- create payment intent --------------------------------------------
+-- Note: All orders now get new IDs. Link to ride is via PaymentInvoice table, not order.id
 
 createPaymentIntentService ::
   forall m r c.
@@ -173,101 +194,101 @@ createPaymentIntentService ::
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
-  Id Ride ->
-  Text ->
-  Payment.CreatePaymentIntentReq ->
+  Maybe (Id DOrder.PaymentOrder) -> -- existing order ID (for retry handling)
+  CreatePaymentIntentServiceReq ->
   (Payment.CreatePaymentIntentReq -> m Payment.CreatePaymentIntentResp) ->
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
-  m Payment.CreatePaymentIntentResp
-createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall cancelPaymentIntentCall = do
-  let rideShortId = ShortId rideShortIdText
-  mbExistingOrder <- QOrder.findById (cast rideId)
+  m CreatePaymentIntentServiceResp
+createPaymentIntentService merchantId mbMerchantOpCityId personId mbExistingOrderId createPaymentIntentServiceReq createPaymentIntentCall _cancelPaymentIntentCall = do
+  -- Step 1: Check if existing order exists (for retry handling)
+  mbExistingOrder <- case mbExistingOrderId of
+    Just orderId -> QOrder.findById orderId
+    Nothing -> pure Nothing
+
   case mbExistingOrder of
-    Nothing -> do
-      createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq -- api call
-      paymentOrder <- buildPaymentOrder_ createPaymentIntentResp rideShortId
-      transaction <- buildTransaction paymentOrder createPaymentIntentResp
-      logInfo $ "Created new order and payment intent: " <> createPaymentIntentResp.paymentIntentId <> "; amount: " <> show createPaymentIntentReq.amount <> "; applicationFeeAmount: " <> show createPaymentIntentReq.applicationFeeAmount
-      QOrder.create paymentOrder
-      QTransaction.create transaction
-      return createPaymentIntentResp
     Just existingOrder -> do
+      -- Order exists - check for in-progress transactions
+      -- Use existing order's shortId for Stripe request
+      let createPaymentIntentReq = mkPaymentIntentReq existingOrder.shortId createPaymentIntentServiceReq
       transactions <- QTransaction.findAllByOrderId existingOrder.id
+      let isInProgress status = status `notElem` [Payment.CHARGED, Payment.CANCELLED, Payment.AUTO_REFUNDED, Payment.AUTHORIZATION_FAILED]
       let mbInProgressTransaction = find (isInProgress . (.status)) transactions
       case mbInProgressTransaction of
-        Nothing -> createNewTransaction existingOrder -- if previous all payment intents are already charged or cancelled, then create a new payment intent
+        Nothing -> do
+          -- No in-progress transaction - all previous intents are charged/cancelled
+          -- Create a new payment intent
+          logInfo $ "Retry: No in-progress txn found, creating new payment intent for order: " <> existingOrder.id.getId
+          createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq
+          transaction <- buildTransaction existingOrder createPaymentIntentResp
+          clientAuthToken <- encrypt createPaymentIntentResp.clientSecret
+          let clientAuthTokenExpiry = Nothing
+          QOrder.updateAmountAndStatus existingOrder.id createPaymentIntentServiceReq.amount createPaymentIntentServiceReq.currency (Payment.castToTransactionStatus createPaymentIntentResp.status) createPaymentIntentResp.paymentIntentId (Just clientAuthToken) clientAuthTokenExpiry
+          QTransaction.create transaction
+          pure $ CreatePaymentIntentServiceResp createPaymentIntentResp.paymentIntentId existingOrder.id
         Just existingTransaction -> do
-          paymentIntentId <- existingTransaction.txnId & fromMaybeM (InternalError "Transaction doesn't have txnId") -- should never happen
-          let newTransactionAmount = createPaymentIntentReq.amount -- changing whole amount
-          let newApplicationFeeAmount = createPaymentIntentReq.applicationFeeAmount -- changing application fee amount
+          -- In-progress transaction exists - compare amounts
+          paymentIntentId <- existingTransaction.txnId & fromMaybeM (InternalError "Transaction doesn't have txnId")
+          let newTransactionAmount = createPaymentIntentServiceReq.amount
+          let newApplicationFeeAmount = createPaymentIntentServiceReq.applicationFeeAmount
           if newTransactionAmount > existingTransaction.amount
             then do
-              -- currently we don't support incremental authorization, so just cancel and create new intent
-              logError $ "As amount increased cancel old payment intent: " <> paymentIntentId <> " and create new one"
-              cancelOldTransaction existingTransaction paymentIntentId -- cancel older payment intent
-              createNewTransaction existingOrder -- create new payment intent
-            else updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder existingTransaction
-  where
-    isInProgress = (`elem` [Payment.NEW, Payment.PENDING_VBV, Payment.STARTED, Payment.AUTHORIZING])
+              -- Amount increased - Stripe doesn't support incremental authorization
+              -- Cancel old payment intent and create new one
+              logError $ "Amount increased from " <> show existingTransaction.amount <> " to " <> show newTransactionAmount <> ", cancelling old payment intent: " <> paymentIntentId
+              void $ _cancelPaymentIntentCall paymentIntentId
+              QTransaction.updateStatusAndError existingTransaction.id Payment.CANCELLED Nothing Nothing
+              -- Create new payment intent
+              createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq
+              transaction <- buildTransaction existingOrder createPaymentIntentResp
+              clientAuthToken <- encrypt createPaymentIntentResp.clientSecret
+              let clientAuthTokenExpiry = Nothing
+              QOrder.updateAmountAndStatus existingOrder.id newTransactionAmount createPaymentIntentServiceReq.currency (Payment.castToTransactionStatus createPaymentIntentResp.status) createPaymentIntentResp.paymentIntentId (Just clientAuthToken) clientAuthTokenExpiry
+              QTransaction.create transaction
+              pure $ CreatePaymentIntentServiceResp createPaymentIntentResp.paymentIntentId existingOrder.id
+            else do
+              -- Amount same or decreased - just update existing transaction
+              logInfo $ "Amount same/decreased, updating existing transaction: " <> paymentIntentId <> "; new amount: " <> show newTransactionAmount
+              QOrder.updateAmountAndPaymentIntentId existingOrder.id newTransactionAmount existingOrder.paymentServiceOrderId
+              QTransaction.updateAmount existingTransaction.id newTransactionAmount newApplicationFeeAmount
+              pure $ CreatePaymentIntentServiceResp paymentIntentId existingOrder.id
+    Nothing -> do
+      -- Step 2: No existing order - create order in DB FIRST (before Stripe call)
+      newOrderId <- Id <$> generateGUID
+      newOrderShortId <- generateShortId
+      -- Generate Stripe request with internally generated orderShortId
+      let createPaymentIntentReq = mkPaymentIntentReq newOrderShortId createPaymentIntentServiceReq
+      pendingOrder <- buildPendingPaymentOrder newOrderId newOrderShortId
+      logInfo $ "Creating new PaymentOrder first: " <> newOrderId.getId <> "; amount: " <> show createPaymentIntentServiceReq.amount
+      QOrder.create pendingOrder
 
-    cancelOldTransaction :: DTransaction.PaymentTransaction -> Payment.PaymentIntentId -> m ()
-    cancelOldTransaction transaction paymentIntentId = do
-      resp <- withTryCatch "cancelPaymentIntentCall:cancelOldTransaction" $ withShortRetry $ cancelPaymentIntentCall paymentIntentId
-      (errorCode', errorMessage') <- case resp of
-        Left exec -> do
-          let err = fromException @Payment.StripeError exec
-              errorCode = err <&> toErrorCode
-              errorMessage = err >>= toMessage
-          logError $ "Error while cancelling payment intent: paymentIntentId: " <> paymentIntentId <> "; err: " <> show err <> "; error code: " <> show errorCode <> "; error message: " <> show errorMessage
-          pure (errorCode, errorMessage)
-        Right paymentIntentResp -> do
-          unless (paymentIntentResp.status == Payment.Cancelled) $ do
-            -- impossible: paymentIntentResp.status will be always canceled, if the cancellation attempt fails, Stripe will throw error instead of PaymentIntent object
-            logError $ "Invalid payment intent status: " <> show paymentIntentResp.status <> "; paymentIntentId: " <> paymentIntentId <> "; should be: canceled"
-          pure (Nothing, Nothing)
-      -- no need to update order status, because we will create new payment intent linked to this order
-      QTransaction.updateStatusAndError transaction.id Payment.CANCELLED errorCode' errorMessage'
+      -- Step 3: Call Stripe API
+      createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq
 
-    createNewTransaction :: (EncFlow m r, BeamFlow m r) => DOrder.PaymentOrder -> m Payment.CreatePaymentIntentResp
-    createNewTransaction existingOrder = do
-      createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq -- api call
-      let newOrderAmount = createPaymentIntentReq.amount
-      transaction <- buildTransaction existingOrder createPaymentIntentResp
-      logInfo $ "Updated order amount with new payment intent: " <> createPaymentIntentResp.paymentIntentId <> "; amount: " <> show newOrderAmount
-      logInfo $ "Created new payment intent: " <> createPaymentIntentResp.paymentIntentId
-      QOrder.updateAmountAndPaymentIntentId existingOrder.id newOrderAmount createPaymentIntentResp.paymentIntentId
+      -- Step 4: Update order with Stripe response
+      transaction <- buildTransaction pendingOrder createPaymentIntentResp
+      clientAuthToken <- encrypt createPaymentIntentResp.clientSecret
+      let clientAuthTokenExpiry = Nothing
+      logInfo $ "Updated order with Stripe response: " <> newOrderId.getId <> "; paymentIntentId: " <> createPaymentIntentResp.paymentIntentId
+      QOrder.updateAmountAndStatus newOrderId createPaymentIntentServiceReq.amount createPaymentIntentServiceReq.currency (Payment.castToTransactionStatus createPaymentIntentResp.status) createPaymentIntentResp.paymentIntentId (Just clientAuthToken) clientAuthTokenExpiry
       QTransaction.create transaction
-      return createPaymentIntentResp
-
-    updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder existingTransaction = do
-      mbClientSecret <- mapM decrypt existingOrder.clientAuthToken
-      clientSecret <- mbClientSecret & fromMaybeM (InternalError "Client secret not found") -- should never happen
-      let newOrderAmount = createPaymentIntentReq.amount
-      when (newOrderAmount /= existingOrder.amount || paymentIntentId /= existingOrder.paymentServiceOrderId) $ do
-        logInfo $ "Updated order amount: " <> paymentIntentId <> "; amount: " <> show newOrderAmount
-        QOrder.updateAmountAndPaymentIntentId existingOrder.id newOrderAmount paymentIntentId
-      when (newTransactionAmount /= existingTransaction.amount || newApplicationFeeAmount /= existingTransaction.applicationFeeAmount) $ do
-        logInfo $ "Updated transaction amount: " <> paymentIntentId <> "; amount: " <> show newTransactionAmount <> "; applicationFeeAmount: " <> show newApplicationFeeAmount
-        QTransaction.updateAmount existingTransaction.id newTransactionAmount newApplicationFeeAmount
-      let paymentIntentStatus = Payment.caseToPaymentIntentStatus existingTransaction.status
-      return $ Payment.CreatePaymentIntentResp paymentIntentId clientSecret paymentIntentStatus
-
-    buildPaymentOrder_ ::
+      pure $ CreatePaymentIntentServiceResp createPaymentIntentResp.paymentIntentId newOrderId
+  where
+    -- Build a pending PaymentOrder BEFORE calling Stripe API
+    -- Uses placeholder values that will be updated after Stripe responds
+    buildPendingPaymentOrder ::
       ( EncFlow m r,
         BeamFlow m r
       ) =>
-      Payment.CreatePaymentIntentResp ->
+      Id DOrder.PaymentOrder ->
       ShortId DOrder.PaymentOrder ->
       m DOrder.PaymentOrder
-    buildPaymentOrder_ createPaymentIntentResp rideShortId = do
+    buildPendingPaymentOrder orderId shortId = do
       now <- getCurrentTime
-      clientAuthToken <- encrypt createPaymentIntentResp.clientSecret
-      let clientAuthTokenExpiry = Time.UTCTime (Time.fromGregorian 2099 1 1) 0 -- setting infinite expiry for now
       pure
         DOrder.PaymentOrder
-          { id = cast rideId,
-            shortId = rideShortId,
-            paymentServiceOrderId = createPaymentIntentResp.paymentIntentId,
+          { id = orderId,
+            shortId = shortId,
+            paymentServiceOrderId = "", -- Will be updated after Stripe call
             requestId = Nothing,
             service = Nothing,
             clientId = Nothing,
@@ -279,19 +300,19 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             entityName = Nothing,
             paymentServiceType = Nothing,
             paymentMerchantId = Nothing,
-            amount = createPaymentIntentReq.amount,
-            currency = createPaymentIntentReq.currency,
-            status = Payment.castToTransactionStatus createPaymentIntentResp.status,
+            amount = createPaymentIntentServiceReq.amount,
+            currency = createPaymentIntentServiceReq.currency,
+            status = Payment.NEW, -- Pending status before Stripe call
             paymentLinks = Payment.PaymentLinks Nothing Nothing Nothing Nothing,
-            clientAuthToken = Just clientAuthToken,
-            clientAuthTokenExpiry = Just clientAuthTokenExpiry,
+            clientAuthToken = Nothing, -- Will be updated after Stripe call
+            clientAuthTokenExpiry = Nothing,
             getUpiDeepLinksOption = Nothing,
             environment = Nothing,
             createMandate = Nothing,
             mandateMaxAmount = Nothing,
             mandateStartDate = Nothing,
             mandateEndDate = Nothing,
-            serviceProvider = Payment.Stripe, -- fix it later
+            serviceProvider = Payment.Stripe,
             bankErrorCode = Nothing,
             bankErrorMessage = Nothing,
             isRetried = False,
@@ -331,10 +352,10 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             gatewayReferenceId = Nothing,
             orderId = order.id,
             merchantId = order.merchantId,
-            amount = createPaymentIntentReq.amount,
-            applicationFeeAmount = createPaymentIntentReq.applicationFeeAmount,
+            amount = createPaymentIntentServiceReq.amount,
+            applicationFeeAmount = createPaymentIntentServiceReq.applicationFeeAmount,
             retryCount = 0,
-            currency = createPaymentIntentReq.currency,
+            currency = createPaymentIntentServiceReq.currency,
             dateCreated = Nothing,
             statusId = 0, -- not used for stripe
             status = Payment.castToTransactionStatus resp.status,
@@ -352,6 +373,21 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             updatedAt = now,
             merchantOperatingCityId = order.merchantOperatingCityId
           }
+
+    -- Helper to convert CreatePaymentIntentServiceReq to Payment.CreatePaymentIntentReq
+    -- with the internally generated orderShortId
+    mkPaymentIntentReq :: ShortId DOrder.PaymentOrder -> CreatePaymentIntentServiceReq -> Payment.CreatePaymentIntentReq
+    mkPaymentIntentReq orderShortId CreatePaymentIntentServiceReq {..} =
+      Payment.CreatePaymentIntentReq
+        { orderShortId = orderShortId.getShortId,
+          amount,
+          applicationFeeAmount,
+          currency,
+          customer,
+          paymentMethod,
+          receiptEmail,
+          driverAccountId
+        }
 
 cancelPaymentIntentService ::
   ( EncFlow m r,
