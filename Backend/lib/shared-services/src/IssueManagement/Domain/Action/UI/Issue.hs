@@ -786,7 +786,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
     language <- getLanguage personId mbLanguage issueHandle
     issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
     mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
-    if issueReport.status `notElem` [CLOSED, REOPENED, NOT_APPLICABLE]
+    if issueReport.status /= NOT_APPLICABLE && issueReport.status /= status
       then do
         case status of
           CLOSED -> do
