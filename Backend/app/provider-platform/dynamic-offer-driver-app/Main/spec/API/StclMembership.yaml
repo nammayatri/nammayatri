@@ -1,0 +1,67 @@
+imports:
+  Person: Domain.Types.Person
+  APISuccess: Kernel.Types.APISuccess
+  UTCTime: Kernel.Prelude
+  Day: Data.Time
+  ApplicationStatus: Domain.Types.StclMembership
+
+module: StclMembership
+types:
+  Address:
+    streetAddress1: Text
+    streetAddress2: Maybe Text
+    city: Text
+    stateName: Text
+    postalCode: Text
+  BankDetails:
+    bankName: Text
+    branch: Text
+    accountNumber: Text
+    ifscCode: Text
+  VehicleInfo:
+    vehicleType: VehicleType
+    fuelTypes: "[FuelType]"
+  VehicleType:
+    enum: "TwoWheeler,ThreeWheeler,FourWheeler"
+  FuelType:
+    enum: "EV,Petrol,Diesel,CNG,Other"
+  NomineeInfo:
+    nomineeName: Text
+    nomineeAadhar: Text
+  Declaration:
+    place: Text
+    date: Day
+    signature: Text
+    termsAccepted: Bool
+  MembershipApplicationReq:
+    driverId: Text
+    firstName: Text
+    lastName: Text
+    memberCategory: Text
+    numberOfShares: Int
+    dateOfBirth: Day
+    aadharNumber: Text
+    panNumber: Text
+    mobileNumber: Text
+    emailId: Text
+    fatherMotherName: Text
+    address: Address
+    bankDetails: BankDetails
+    vehicleInfo: VehicleInfo
+    nomineeInfo: NomineeInfo
+    declaration: Declaration
+  MembershipApplicationResp:
+    applicationId: Text
+    status: ApplicationStatus
+    message: Text
+    submittedAt: UTCTime
+
+apis:
+  - POST:
+      endpoint: /submitApplication
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: MembershipApplicationReq
+      response:
+        type: MembershipApplicationResp
+

@@ -41,6 +41,7 @@ import qualified API.Action.UI.ReferralPayout as ReferralPayout
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
+import qualified API.Action.UI.StclMembership as StclMembership
 import qualified API.Action.UI.SubscriptionTransaction as SubscriptionTransaction
 import qualified API.Action.UI.Tokenization as Tokenization
 import qualified API.Action.UI.VehicleDetails as VehicleDetails
@@ -137,6 +138,7 @@ type API =
            :<|> DriverWallet.API
            :<|> SubscriptionTransaction.API
            :<|> Penalty.API
+           :<|> StclMembership.API
        )
 
 handler :: FlowServer API
@@ -197,3 +199,5 @@ handler =
     :<|> DriverWallet.handler
     :<|> SubscriptionTransaction.handler
     :<|> Penalty.handler
+    :<|> StclMembership.handler
+    
