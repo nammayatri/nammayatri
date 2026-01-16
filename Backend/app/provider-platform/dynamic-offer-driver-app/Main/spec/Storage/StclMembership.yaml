@@ -1,0 +1,126 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  Day: Data.Time
+
+StclMembership:
+  tableName: stcl_membership
+  fields:
+    id: Id StclMembership
+    driverId: Id Person
+    applicationId: Text
+    firstName: Text
+    lastName: Text
+    memberCategory: Text
+    numberOfShares: Int
+    dateOfBirth: Day
+    aadharNumber: EncryptedHashedField e Text
+    panNumber: EncryptedHashedField e Text
+    mobileNumber: EncryptedHashedField e Text
+    emailId: Text
+    fatherMotherName: Text
+    addressStreetAddress1: Text
+    addressStreetAddress2: Maybe Text
+    addressCity: Text
+    addressState: Text
+    addressPostalCode: Text
+    bankName: Text
+    bankBranch: Text
+    accountNumber: EncryptedHashedField e Text
+    ifscCode: EncryptedHashedField e Text
+    vehicleType: Text
+    fuelTypes: "[Text]"
+    nomineeName: Text
+    nomineeAadhar: EncryptedHashedField e Text
+    declarationPlace: Text
+    declarationDate: Day
+    declarationSignature: Text
+    termsAccepted: Bool
+    status: ApplicationStatus
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  types:
+    ApplicationStatus:
+      enum: "SUBMITTED,PENDING,APPROVED,REJECTED"
+  default:
+    status: "'SUBMITTED'"
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    applicationId: SecondaryKey
+    aadharNumberHash: "!SecondaryKey"
+    panNumberHash: "!SecondaryKey"
+    mobileNumberHash: "!SecondaryKey"
+    accountNumberHash: "!SecondaryKey"
+  beamFields:
+    aadharNumber:
+      aadharNumberEncrypted: Text
+      aadharNumberHash: DbHash
+    panNumber:
+      panNumberEncrypted: Text
+      panNumberHash: DbHash
+    mobileNumber:
+      mobileNumberEncrypted: Text
+      mobileNumberHash: DbHash
+    accountNumber:
+      accountNumberEncrypted: Text
+      accountNumberHash: DbHash
+    ifscCode:
+      ifscCodeEncrypted: Text
+      ifscCodeHash: DbHash
+  fromTType:
+    aadharNumber: EncryptedHashed (Encrypted aadharNumberEncrypted) aadharNumberHash|E
+    panNumber: EncryptedHashed (Encrypted panNumberEncrypted) panNumberHash|E
+    mobileNumber: EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash|E
+    accountNumber: EncryptedHashed (Encrypted accountNumberEncrypted) accountNumberHash|E
+    ifscCode: EncryptedHashed (Encrypted ifscCodeEncrypted) ifscCodeHash|E
+  toTType:
+    aadharNumberEncrypted: (unEncrypted . (.encrypted) $ aadharNumber)|E
+    aadharNumberHash: ((.hash) aadharNumber)|E
+    panNumberEncrypted: (unEncrypted . (.encrypted) $ panNumber)|E
+    panNumberHash: ((.hash) panNumber)|E
+    mobileNumberEncrypted: (unEncrypted . (.encrypted) $ mobileNumber)|E
+    mobileNumberHash: ((.hash) mobileNumber)|E
+    accountNumberEncrypted: (unEncrypted . (.encrypted) $ accountNumber)|E
+    accountNumberHash: ((.hash) accountNumber)|E
+    ifscCodeEncrypted: (unEncrypted . (.encrypted) $ ifscCode)|E
+    ifscCodeHash: ((.hash) ifscCode)|E
+  sqlType:
+    aadharNumberEncrypted: character varying(255)
+    aadharNumberHash: bytea
+    panNumberEncrypted: character varying(255)
+    panNumberHash: bytea
+    mobileNumberEncrypted: character varying(255)
+    mobileNumberHash: bytea
+    accountNumberEncrypted: character varying(255)
+    accountNumberHash: bytea
+    ifscCodeEncrypted: character varying(255)
+    ifscCodeHash: bytea
+    fuelTypes: text[]
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findByApplicationId:
+      kvFunction: findOneWithKV
+      where: applicationId
+    findByDriverIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, status]
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+  extraOperations:
+    - EXTRA_QUERY_FILE
+

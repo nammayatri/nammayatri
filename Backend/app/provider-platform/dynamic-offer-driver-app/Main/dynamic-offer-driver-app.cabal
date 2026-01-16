@@ -301,6 +301,7 @@ library
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.SpecialLocationWarrior
+      Domain.Action.UI.StclMembership
       Domain.Action.UI.SubscriptionTransaction
       Domain.Action.UI.Tokenization
       Domain.Action.UI.Transporter
@@ -698,6 +699,7 @@ library
       Storage.Queries.SearchTryExtra
       Storage.Queries.StationExtra
       Storage.Queries.Status
+      Storage.Queries.StclMembershipExtra
       Storage.Queries.SubscriptionTransactionExtra
       Storage.Queries.Transformers.Booking
       Storage.Queries.Transformers.BookingLocation
@@ -850,6 +852,7 @@ library
       API.Action.UI.SocialLogin
       API.Action.UI.SpecialLocation
       API.Action.UI.SpecialLocationWarrior
+      API.Action.UI.StclMembership
       API.Action.UI.SubscriptionTransaction
       API.Action.UI.Tokenization
       API.Action.UI.VehicleDetails
@@ -905,6 +908,7 @@ library
       API.Types.UI.ReferralPayout
       API.Types.UI.SocialLogin
       API.Types.UI.SpecialLocationWarrior
+      API.Types.UI.StclMembership
       API.Types.UI.SubscriptionTransaction
       API.Types.UI.Tokenization
       API.Types.UI.VehicleDetails
@@ -1043,6 +1047,7 @@ library
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
       Domain.Types.Station
+      Domain.Types.StclMembership
       Domain.Types.StopInformation
       Domain.Types.SubscriptionConfig
       Domain.Types.SubscriptionTransaction
@@ -1202,6 +1207,7 @@ library
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
       Storage.Beam.Station
+      Storage.Beam.StclMembership
       Storage.Beam.StopInformation
       Storage.Beam.SubscriptionConfig
       Storage.Beam.SubscriptionTransaction
@@ -1413,6 +1419,7 @@ library
       Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.SearchTry
       Storage.Queries.OrphanInstances.Station
+      Storage.Queries.OrphanInstances.StclMembership
       Storage.Queries.OrphanInstances.SubscriptionTransaction
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.TransporterConfig
@@ -1453,6 +1460,7 @@ library
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
       Storage.Queries.Station
+      Storage.Queries.StclMembership
       Storage.Queries.StopInformation
       Storage.Queries.SubscriptionConfig
       Storage.Queries.SubscriptionTransaction
