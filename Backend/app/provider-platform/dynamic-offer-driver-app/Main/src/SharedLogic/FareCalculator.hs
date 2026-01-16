@@ -248,11 +248,8 @@ fareSum fareParams conditionalChargeCategories = do
   pureFareSum fareParams conditionalChargeCategories
     + fromMaybe 0.0 fareParams.driverSelectedFare
     + fromMaybe 0.0 fareParams.customerExtraFee
-    - if fareParams.shouldApplyBusinessDiscount
-      then fromMaybe 0.0 fareParams.businessDiscount
-      else
-        0.0
-          - if fareParams.shouldApplyPersonalDiscount then fromMaybe 0.0 fareParams.personalDiscount else 0.0
+    - (if fareParams.shouldApplyBusinessDiscount then fromMaybe 0.0 fareParams.businessDiscount else 0.0)
+    - (if fareParams.shouldApplyPersonalDiscount then fromMaybe 0.0 fareParams.personalDiscount else 0.0)
 
 -- Pure fare without customerExtraFee and driverSelectedFare
 pureFareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
