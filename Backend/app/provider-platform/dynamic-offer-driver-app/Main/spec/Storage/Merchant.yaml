@@ -1144,6 +1144,7 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: "Maybe [VehicleCategory]"
     linkFleetToUnVerifiedExistingRC: Maybe Bool
     sendSmsOnEnablement: Maybe Bool # Controls whether SMS is sent to drivers/fleet owners when they are enabled
+    enableScheduleReallocation: Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1560,6 +1561,7 @@ TransporterConfig:
     exotelStatusCheckSchedulerDelay: "120"
     cachedDevicesOSForSearchRequest: "'{}'"
     scheduledRideSearchRepeatLimit: "10"
+    enableScheduleReallocation: "true"
     dailyConditionCooldownTimeHours: "24"
     weeklyConditionCooldownTimeHours: "168"
     disableListScheduledBookingAPI: "false"
