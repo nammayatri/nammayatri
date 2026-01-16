@@ -1403,6 +1403,8 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     extraKmRateStartDistance :: Text,
     perExtraKmRate :: Text,
     baseFareDepreciation :: Text,
+    perMinRateStartDuration :: Text,
+    perMinRate :: Text,
     peakTimings :: Text,
     peakDays :: Text,
     cancellationFarePolicyDescription :: Text,
@@ -1504,6 +1506,8 @@ instance ToNamedRecord FarePolicyCSVRow where
         "extra_km_rate_start_distance" .= extraKmRateStartDistance,
         "per_extra_km_rate" .= perExtraKmRate,
         "base_fare_depreciation" .= baseFareDepreciation,
+        "per_min_rate_start_duration" .= perMinRateStartDuration,
+        "per_min_rate" .= perMinRate,
         "peak_timings" .= peakTimings,
         "peak_days" .= peakDays,
         "cancellation_fare_policy_description" .= cancellationFarePolicyDescription,
@@ -1604,6 +1608,8 @@ farePolicyCSVHeader =
       "extra_km_rate_start_distance",
       "per_extra_km_rate",
       "base_fare_depreciation",
+      "per_min_rate_start_duration",
+      "per_min_rate",
       "peak_timings",
       "peak_days",
       "cancellation_fare_policy_description",
@@ -1704,6 +1710,8 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "extra_km_rate_start_distance"
       <*> r .: "per_extra_km_rate"
       <*> r .: "base_fare_depreciation"
+      <*> r .: "per_min_rate_start_duration"
+      <*> r .: "per_min_rate"
       <*> r .: "peak_timings"
       <*> r .: "peak_days"
       <*> r .: "cancellation_fare_policy_description"
@@ -1850,7 +1858,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
               Nothing -> ("", "", "", "", "", "", "", "")
 
           -- Progressive details extraction
-          (baseDist, baseFareVal, deadKmFare, pickupMin, pickupMax, waitCharge, waitType, nightCharge, nightType, freeWait, extraKmStart, perExtraKm, baseFareDeprec, platformFeeType, platformFeeVal, pfCgst, pfSgst, _pfInfo) =
+          (baseDist, baseFareVal, deadKmFare, pickupMin, pickupMax, waitCharge, waitType, nightCharge, nightType, freeWait, extraKmStart, perExtraKm, baseFareDeprec, platformFeeType, platformFeeVal, pfCgst, pfSgst, _pfInfo, perMinRateStartDur, perMinRateVal) =
             case farePolicy.farePolicyDetails of
               FarePolicy.ProgressiveDetails details ->
                 let firstSection = NE.head details.perExtraKmRateSections
@@ -1860,6 +1868,11 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     (nc, nt) = case details.nightShiftCharge of
                       Just (FarePolicy.ProgressiveNightShiftCharge val) -> (showT val, "ProgressiveNightShiftCharge")
                       Just (FarePolicy.ConstantNightShiftCharge val) -> (showT val, "ConstantNightShiftCharge")
+                      Nothing -> ("", "")
+                    (perMinStart, perMinVal) = case details.perMinRateSections of
+                      Just perMinSections ->
+                        let firstPerMinSection = NE.head perMinSections
+                         in (showT firstPerMinSection.rideDurationInMin, showT firstPerMinSection.perMinRate.amount)
                       Nothing -> ("", "")
                  in -- Note: FPProgressiveDetails doesn't have platformFeeInfo, use empty values
                     ( showT details.baseDistance,
@@ -1879,9 +1892,11 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                       "" :: Text,
                       "" :: Text,
                       "" :: Text,
-                      "" :: Text -- platformFeeInfo fields empty for progressive
+                      "" :: Text, -- platformFeeInfo fields empty for progressive
+                      perMinStart,
+                      perMinVal
                     )
-              _ -> ("", "", "", "", "", "0", "PerMinuteWaitingCharge", "", "", "0", "0", "0", "0", "", "", "", "", "")
+              _ -> ("", "", "", "", "", "0", "PerMinuteWaitingCharge", "", "", "0", "0", "0", "0", "", "", "", "", "", "", "")
 
           -- Driver extra fee bounds
           (driverAddStart, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStep) =
@@ -1983,6 +1998,8 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
               extraKmRateStartDistance = extraKmStart,
               perExtraKmRate = perExtraKm,
               baseFareDepreciation = baseFareDeprec,
+              perMinRateStartDuration = perMinRateStartDur,
+              perMinRate = perMinRateVal,
               peakTimings = peakTimingsVal,
               peakDays = peakDaysVal,
               cancellationFarePolicyDescription = cfpDesc,
@@ -2108,7 +2125,22 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                               [] -> perExtraKmRateSections
                               _ -> perExtraKmRateSections <> NE.fromList (concat remainingPerKmSections)
                       let perExtraKmRateSectionsDuplicateRemoved = NE.nubBy (\a b -> a.startDistance == b.startDistance) perExtraKmRateSections'
-                      return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {perExtraKmRateSections = perExtraKmRateSectionsDuplicateRemoved, ..}
+                      remainingPerMinSections <-
+                        mapM
+                          ( \f ->
+                              case f.farePolicyDetails of
+                                FarePolicy.ProgressiveDetails details -> return $ maybe [] NE.toList details.perMinRateSections
+                                _ -> return []
+                          )
+                          remainingfarePolicies
+                      let perMinRateSections' =
+                            case (perMinRateSections, concat remainingPerMinSections) of
+                              (Nothing, []) -> Nothing
+                              (Just existing, []) -> Just existing
+                              (Nothing, remaining) -> NE.nonEmpty remaining
+                              (Just existing, remaining) -> Just $ existing <> NE.fromList remaining
+                      let perMinRateSectionsDuplicateRemoved = NE.nubBy (\a b -> a.rideDurationInMin == b.rideDurationInMin) <$> perMinRateSections'
+                      return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {perExtraKmRateSections = perExtraKmRateSectionsDuplicateRemoved, perMinRateSections = perMinRateSectionsDuplicateRemoved, ..}
                     FarePolicy.SlabsDetails FarePolicy.FPSlabsDetails {..} -> do
                       remainingSlabs <-
                         mapM
@@ -2398,8 +2430,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             let pickupCharges = FarePolicy.PickupCharges {pickupChargesMin = pickupChargesMin, pickupChargesMax = pickupChargesMax}
             let baseFareDepreciation :: HighPrecMoney = fromMaybe (HighPrecMoney 0.0) (readMaybeCSVField idx row.baseFareDepreciation "Base fare depreciation")
             let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate, baseFareDepreciation}]
-            -- TODO: Add support for per min rate sections in csv file
-            let perMinRateSections = Nothing
+            let perMinRateSections = do
+                  rideDurationInMin :: Int <- readMaybeCSVField idx row.perMinRateStartDuration "Per Min Rate Start Duration"
+                  perMinRateVal :: HighPrecMoney <- readMaybeCSVField idx row.perMinRate "Per Min Rate"
+                  let perMinRatePrice = mkPrice (Just currency) perMinRateVal
+                  NE.nonEmpty [FarePolicy.FPProgressiveDetailsPerMinRateSection {rideDurationInMin, perMinRate = perMinRatePrice}]
             return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {nightShiftCharge = mbNightCharges, ..}
           FarePolicy.Slabs -> do
             baseDistance :: Meters <- readCSVField idx row.baseDistance "Base Distance"
