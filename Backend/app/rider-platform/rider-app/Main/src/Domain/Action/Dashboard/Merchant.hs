@@ -1450,7 +1450,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       gateInfoGeom <- do
         if gateInfoHasGeom
           then do
-            gateInfoFileName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (file_name)"
+            gateInfoFileName :: Text <- cleanCSVField idx row.gateInfoFileName "Gate Info (file_name)"
             (_, gateInfoGeomFile) <- find (\(gateFileName, _) -> gateInfoFileName == gateFileName) gateGeomFiles & fromMaybeM (InvalidRequest $ "KML file missing for gateInfo: " <> gateInfoName)
             gateGeom <- getGeomFromKML gateInfoGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to PostGis geom for gateInfo: " <> gateInfoName)
             return $ Just gateGeom
