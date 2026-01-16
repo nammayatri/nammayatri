@@ -26,17 +26,16 @@ import qualified "lib-dashboard" Domain.Types.AccessMatrix as DMatrix
 import "lib-dashboard" Domain.Types.ServerName as DSN
 import "lib-dashboard" Environment
 import qualified EulerHS.Types as ET
-import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude hiding (toList)
-import Kernel.Types.Error (PersonError (PersonDoesNotExist))
+import Kernel.Types.Error (PersonError (PersonDoesNotExist, PersonFieldNotPresent))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, withFlowHandlerAPI')
 import Servant
 import Storage.Beam.CommonInstances ()
-import qualified "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Auth.Api (ApiAuth, ApiTokenInfo)
 import "lib-dashboard" Tools.Client as Client
+import qualified Domain.Action.RiderPlatform.Management.Customer as Customer
+import qualified Dashboard.Common as Common
 
 type ExternalFromListAPI =
   "delhi-temp"
@@ -358,14 +357,20 @@ booking :: ApiTokenInfo -> Value -> FlowHandler Value
 booking _ req = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.bookingDSL req)
 
 invoice :: ApiTokenInfo -> Text -> Text -> FlowHandler Value
-invoice _ bookingId riderId =
+invoice apiTokenInfo bookingId riderId =
   withFlowHandlerAPI' $ do
-    -- Extract rider phone number and name from person table using riderId
+    -- Extract rider phone number and name from rider-app person table using riderId
     let personId = Id riderId
-    person <- B.runInReplica (QP.findById personId) >>= fromMaybeM (PersonDoesNotExist riderId)
-    riderPhoneNumber <- decrypt person.mobileNumber
-    let fullName = T.unwords (filter (not . T.null) [person.firstName, person.lastName])
-        riderName = if T.null fullName then Nothing else Just fullName
+        customerId = cast @Common.Person @Common.Customer personId
+    -- Get customer information from rider-app using getCustomerList
+    customerListRes <- Customer.getCustomerList apiTokenInfo.merchant.shortId apiTokenInfo.city apiTokenInfo Nothing Nothing Nothing Nothing Nothing (Just customerId)
+    -- Extract the first customer from the list
+    customer <- fromMaybeM (PersonDoesNotExist riderId) (listToMaybe customerListRes.customers)
+    -- Extract phone number and name from customer
+    riderPhoneNumber <- fromMaybeM (PersonFieldNotPresent $ "phoneNo (riderId: " <> riderId <> ")") customer.phoneNo
+    let nameParts = filter (not . T.null) (catMaybes [customer.firstName, customer.middleName, customer.lastName])
+        fullName = T.unwords nameParts
+        riderName = if null nameParts then Nothing else Just fullName
     callBharatTaxiAPI (\apis -> apis.invoiceDSL bookingId riderPhoneNumber riderName)
 
 bookingLatest :: ApiTokenInfo -> Text -> FlowHandler Value
