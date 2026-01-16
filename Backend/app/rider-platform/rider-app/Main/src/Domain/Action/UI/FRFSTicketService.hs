@@ -81,6 +81,8 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QP
+import qualified Lib.JourneyModule.Utils as JourneyUtils
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
@@ -581,13 +583,35 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity search
   unless (personId == search.riderId) $ throwError AccessDenied
   (quotes :: [DFRFSQuote.FRFSQuote]) <- B.runInReplica $ QFRFSQuote.findAllBySearchId searchId_
+  quotesWithCategories <- mapM (\quote -> (quote,) <$> QFRFSQuoteCategory.findAllByQuoteId quote.id) quotes
+  sortedQuotesWithCategories <- case search.vehicleType of
+    Spec.BUS -> do
+      mbRiderConfig <- QRC.findByMerchantOperatingCityId search.merchantOperatingCityId Nothing
+      let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
+          serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)
+      return $
+        sortBy
+          ( \(quote1, quoteCategories1) (quote2, quoteCategories2) ->
+              compare
+                (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote1 quoteCategories1))
+                (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote2 quoteCategories2))
+          )
+          quotesWithCategories
+    _ ->
+      return $
+        sortBy
+          ( \(_, quoteCategories1) (_, quoteCategories2) ->
+              let mbAdultPrice1 = find (\category -> category.category == ADULT) quoteCategories1 <&> (.price)
+                  mbAdultPrice2 = find (\category -> category.category == ADULT) quoteCategories2 <&> (.price)
+               in compare (maybe 0 (.amount) mbAdultPrice1) (maybe 0 (.amount) mbAdultPrice2)
+          )
+          quotesWithCategories
   mapM
-    ( \quote -> do
+    ( \(quote, quoteCategories) -> do
         let (routeStations :: Maybe [FRFSRouteStationsAPI], stations :: Maybe [FRFSStationAPI]) =
               if integratedBppConfig.platformType == DIBC.MULTIMODAL
                 then (Nothing, Nothing)
                 else (decodeFromText =<< quote.routeStationsJson, decodeFromText quote.stationsJson)
-        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
         let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
             categories = map mkCategoryInfoResponse quoteCategories
         singleAdultTicketPrice <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)) & fromMaybeM (InternalError "Adult Ticket Unit Price not found.")
@@ -608,7 +632,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
               ..
             }
     )
-    quotes
+    sortedQuotesWithCategories
 
 postFrfsQuoteV2Confirm :: (CallExternalBPP.FRFSConfirmFlow m r c) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId req = do
