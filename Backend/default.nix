@@ -48,6 +48,9 @@
         ./nix/pre-commit.nix
       ];
       pre-commit.settings.hooks.treefmt.enable = lib.mkForce false;
+      treefmt.config.settings.formatter.ormolu.excludes = [
+        "vira.hs"
+      ];
 
       haskellProjects.default = {
         projectRoot = ./.;
