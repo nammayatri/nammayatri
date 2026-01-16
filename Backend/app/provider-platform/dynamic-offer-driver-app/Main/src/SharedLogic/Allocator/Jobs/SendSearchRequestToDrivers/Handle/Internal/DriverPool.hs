@@ -304,7 +304,13 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
         calculateNormalBatch mOCityId transporterConfig intelligentPoolConfig normalDriverPool radiusStep blockListedDrivers txnId' poolType = do
           logDebug $ "NormalDriverPool-" <> show normalDriverPool
           onlyNewNormalDrivers <- filtersForNormalBatch mOCityId transporterConfig normalDriverPool blockListedDrivers previousBatchesDrivers
-          (normalBatchNotOnRide, normalBatchOnRide', mbRadiusThreshold) <- getDriverPoolNotOnRide mOCityId transporterConfig intelligentPoolConfig normalDriverPool radiusStep blockListedDrivers onlyNewNormalDrivers txnId'
+          (normalBatchNotOnRide', normalBatchOnRide', mbRadiusThreshold) <- getDriverPoolNotOnRide mOCityId transporterConfig intelligentPoolConfig normalDriverPool radiusStep blockListedDrivers onlyNewNormalDrivers txnId'
+
+          normalBatchNotOnRide <-
+            if driverPoolCfg.selfRequestIfRiderIsDriver && batchNum == 0
+              then checkSelfDriver normalBatchNotOnRide'
+              else pure $ normalBatchNotOnRide'
+
           normalBatchOnRide <-
             case mbRadiusThreshold of
               Just radiusStepThreshold -> do
@@ -320,7 +326,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               pure (batchEntity.currentDriverPoolBatch, batchEntity.currentDriverPoolBatchOnRide, Nothing)
             else do
               (mbVersion, normalDriverPoolBatch) <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers intelligentPoolConfig transporterConfig batchSize False
-              if not driverPoolCfg.selfRequestIfRiderIsDriver && length normalDriverPoolBatch < batchSize
+              if length normalDriverPoolBatch < batchSize
                 then do
                   filledBatch <- fillBatch transporterConfig mOCityId normalDriverPool normalDriverPoolBatch intelligentPoolConfig blockListedDrivers mbVersion
                   pure (filledBatch, [], Just radiusStep)
@@ -567,6 +573,26 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           let radiusStepSize = fromIntegral @_ @Double driverPoolCfg.radiusStepSize
           let maxRadiusStep = ceiling $ (maxRadiusOfSearch - minRadiusOfSearch) / radiusStepSize
           maxRadiusStep <= radiusStep
+
+        checkSelfDriver pool = do
+          selfDriver <-
+            case searchReq.riderId of
+              Just riderId -> do
+                riderDetails <- RD.findById riderId
+                case riderDetails of
+                  Just rider -> QP.findByMobileNumberAndMerchant rider.mobileNumber.hash driverPoolCfg.merchantId
+                  Nothing -> pure Nothing
+              Nothing -> pure Nothing
+          case selfDriver of
+            Just driver -> do
+              let filteredPool =
+                    filter
+                      ( \driverPoolResult ->
+                          driver.id == driverPoolResult.driverPoolResult.driverId
+                      )
+                      pool
+              pure $ if null filteredPool then pool else filteredPool
+            _ -> pure pool
         -- util function
         bimapM fna fnb (a, b) = (,) <$> fna a <*> fnb b
 
@@ -642,13 +668,8 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       )
       sortedPool'
 
-  finalPool <-
-    if driverPoolCfg.selfRequestIfRiderIsDriver && batchNum == 0
-      then checkSelfDriver sortedPool
-      else pure sortedPool
-
-  pushTaggedPoolToKafka finalPool
-  return (mbVersion, take batchSize finalPool)
+  pushTaggedPoolToKafka sortedPool
+  return (mbVersion, take batchSize sortedPool)
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
       DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject LYTU.convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
@@ -660,27 +681,6 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       whenJust mbVersion $ \_ -> do
         when (isNothing mbPoolingLogicVersion) $
           QSR.updatePoolingLogicVersion mbVersion searchReq.id
-
-    checkSelfDriver pool = do
-      selfDriver <-
-        case searchReq.riderId of
-          Just riderId -> do
-            riderDetails <- RD.findById riderId
-            case riderDetails of
-              Just rider -> QP.findByMobileNumberAndMerchant rider.mobileNumber.hash driverPoolCfg.merchantId
-              Nothing -> pure Nothing
-          Nothing -> pure Nothing
-
-      case selfDriver of
-        Just driver -> do
-          let filteredPool =
-                filter
-                  ( \driverPoolResult ->
-                      driver.id == driverPoolResult.driverPoolResult.driverId
-                  )
-                  pool
-          pure $ if null filteredPool then pool else filteredPool
-        _ -> pure pool
 
     pushTaggedPoolToKafka taggedPool = do
       pushToKafka
