@@ -139,6 +139,7 @@ data TransporterConfigT f = TransporterConfigT
     enableFareCalculatorV2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableMobileNumberValidation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOverchargingBlocker :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableScheduleReallocation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableTollCrossedNotifications :: B.C f Kernel.Prelude.Bool,
     enableUdfForOffers :: B.C f Kernel.Prelude.Bool,
     enableVendorCheckForCollectingDues :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

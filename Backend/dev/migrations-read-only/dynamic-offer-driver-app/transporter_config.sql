@@ -752,3 +752,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN send_sms_on_ena
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_schedule_reallocation boolean  default true;
+
+
+------- SQL updates -------
+

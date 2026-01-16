@@ -290,12 +290,13 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
           isSearchTryValid = searchTry.validTill > now
           arrivedPickupThreshold = highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
           driverHasNotArrived = isNothing driverArrivalTime || maybe True (> arrivedPickupThreshold) bookingCReason.driverDistToPickup
+          scheduleReallocationAllowed = transporterConfig.enableScheduleReallocation == Just True
       return $
         searchTry.searchRepeatCounter < searchRepeatLimit
-          && (bookingCReason.source == SBCR.ByDriver || (bookingCReason.source == SBCR.ByUser && userReallocationEnabled))
+          && (bookingCReason.source == SBCR.ByDriver || (bookingCReason.source == SBCR.ByFleetOwner && scheduleReallocationAllowed) || (bookingCReason.source == SBCR.ByUser && userReallocationEnabled))
           && (isSearchTryValid || isScheduled)
           && fromMaybe False isReallocationEnabled
-          && driverHasNotArrived
+          && (driverHasNotArrived || (scheduleReallocationAllowed && booking.startTime > now))
 
     buildBookingCancellationReason newBooking = do
       return $
