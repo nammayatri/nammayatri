@@ -18,6 +18,7 @@ import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -33,6 +34,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.FRFSUtils
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -112,12 +114,13 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let booking = oldBooking {FTBooking.totalPrice = totalPrice, FTBooking.journeyOnInitDone = Just True}
   QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking
 
   let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
   when allLegsOnInitDone $ do
     Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
-      let paymentType = getPaymentType (isJust mbJourneyId) booking.vehicleType
+      let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
       baskets <- case mbJourneyId of
         Just _ -> do
