@@ -9,7 +9,6 @@ module Domain.Action.UI.Pass
     postMultimodalPassSwitchDeviceId,
     postMultimodalPassResetDeviceSwitchCount,
     getMultimodalPassTransactions,
-    createPassReconEntry,
     postMultimodalPassActivateToday,
     postMultimodalPassSelectUtil,
     postMultimodalPassUploadProfilePicture,
@@ -17,15 +16,12 @@ module Domain.Action.UI.Pass
 where
 
 import qualified API.Types.UI.Pass as PassAPI
-import qualified BecknV2.FRFS.Enums as Spec
-import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Time as DT
-import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -55,7 +51,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Common.FRFS as FRFS
+import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as FRFSJourneyUtils
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -67,11 +63,9 @@ import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Translations as QT
-import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
 import qualified Storage.Queries.PassExtra as QPass
 import qualified Storage.Queries.PassTypeExtra as QPassType
@@ -653,17 +647,24 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
           QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
           when (passStatus == DPurchasedPass.Active && purchasedPassPayment.startDate <= today && purchasedPassPayment.endDate >= today) $
             QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
-      case mbPassStatus of
-        Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
-        Just DPurchasedPass.PreBooked -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
-        Just DPurchasedPass.PhotoPending -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
-        Just DPurchasedPass.Expired -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
-        Just DPurchasedPass.Failed -> return (DPayment.FulfillmentFailed, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
-        Just DPurchasedPass.RefundPending -> return (DPayment.FulfillmentRefundPending, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
-        Just DPurchasedPass.RefundInitiated -> return (DPayment.FulfillmentRefundInitiated, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
-        Just DPurchasedPass.RefundFailed -> return (DPayment.FulfillmentRefundFailed, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
-        Just DPurchasedPass.Refunded -> return (DPayment.FulfillmentRefunded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
-        _ -> return (DPayment.FulfillmentPending, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+      case purchasedPassPayment.status of
+        DPurchasedPass.RefundPending -> return (DPayment.FulfillmentRefundPending, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        DPurchasedPass.RefundInitiated -> return (DPayment.FulfillmentRefundInitiated, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        DPurchasedPass.RefundFailed -> return (DPayment.FulfillmentRefundFailed, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        DPurchasedPass.Refunded -> return (DPayment.FulfillmentRefunded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        DPurchasedPass.Failed -> return (DPayment.FulfillmentFailed, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        _ -> do
+          case mbPassStatus of
+            Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+            Just DPurchasedPass.PreBooked -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+            Just DPurchasedPass.PhotoPending -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+            Just DPurchasedPass.Expired -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+            Just DPurchasedPass.Failed -> return (DPayment.FulfillmentFailed, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+            Just DPurchasedPass.RefundPending -> return (DPayment.FulfillmentRefundPending, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+            Just DPurchasedPass.RefundInitiated -> return (DPayment.FulfillmentRefundInitiated, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+            Just DPurchasedPass.RefundFailed -> return (DPayment.FulfillmentRefundFailed, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+            Just DPurchasedPass.Refunded -> return (DPayment.FulfillmentRefunded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+            _ -> return (DPayment.FulfillmentPending, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
     _ -> do
       logError $ "Purchased pass not found for paymentOrderId: " <> paymentOrderId.getId
       return (DPayment.FulfillmentPending, Nothing, Nothing)
@@ -689,68 +690,6 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
           buildSmsReq <- MessageBuilder.buildPassSuccessMessage merchantOpCityId $ MessageBuilder.BuildPassSuccessMessage {passName}
           Sms.sendSMS merchantId merchantOpCityId (buildSmsReq phoneNumberWithCountryCode)
             >>= Sms.checkSmsResult
-
-createPassReconEntry ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    MonadFlow m,
-    EsqDBReplicaFlow m r
-  ) =>
-  DPayment.PaymentStatusResp ->
-  Text ->
-  m ()
-createPassReconEntry paymentStatusResponse transactionId = do
-  case paymentStatusResponse.status of
-    Payment.CHARGED -> do
-      purchasedPassPayment <- QPurchasedPassPayment.findByPrimaryKey (Id.Id transactionId) >>= fromMaybeM (InvalidRequest $ "Purchase pass payment not found for id: " <> transactionId)
-      bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback purchasedPassPayment.merchantOperatingCityId purchasedPassPayment.merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS) >>= fromMaybeM (InternalError "Beckn Config not found")
-      mkPassReconEntry bapConfig purchasedPassPayment
-    _ -> return ()
-  where
-    mkPassReconEntry bapConfig purchasedPassPayment = do
-      let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
-      now <- getCurrentTime
-      reconId <- generateGUID
-      let reconEntry =
-            Recon.FRFSRecon
-              { Recon.id = reconId,
-                Recon.frfsTicketBookingId = Id.Id purchasedPassPayment.id.getId,
-                Recon.networkOrderId = purchasedPassPayment.id.getId,
-                Recon.collectorSubscriberId = bapConfig.subscriberId,
-                Recon.receiverSubscriberId = "MTC bus pass",
-                Recon.date = show now,
-                Recon.time = show now,
-                Recon.mobileNumber = Nothing,
-                Recon.sourceStationCode = Nothing,
-                Recon.destinationStationCode = Nothing,
-                Recon.ticketQty = Nothing,
-                Recon.ticketNumber = Nothing,
-                Recon.transactionRefNumber = Nothing,
-                Recon.transactionUUID = paymentStatusResponse.txnUUID,
-                Recon.txnId = paymentStatusResponse.txnId,
-                Recon.fare = mkPrice Nothing purchasedPassPayment.amount,
-                Recon.buyerFinderFee = finderFee,
-                Recon.totalOrderValue = mkPrice Nothing purchasedPassPayment.amount,
-                Recon.settlementAmount = mkPrice Nothing purchasedPassPayment.amount,
-                Recon.beneficiaryIFSC = Nothing,
-                Recon.beneficiaryBankAccount = Nothing,
-                Recon.collectorIFSC = bapConfig.bapIFSC,
-                Recon.settlementReferenceNumber = Nothing,
-                Recon.settlementDate = Nothing,
-                Recon.differenceAmount = Nothing,
-                Recon.message = Nothing,
-                Recon.ticketStatus = Nothing,
-                Recon.providerId = "MTC Bus Pass",
-                Recon.providerName = "MTC Bus Pass Provider",
-                Recon.entityType = Just Recon.BUS_PASS,
-                Recon.reconStatus = Just Recon.PENDING,
-                Recon.paymentGateway = Nothing,
-                Recon.merchantId = Just purchasedPassPayment.merchantId,
-                Recon.merchantOperatingCityId = Just purchasedPassPayment.merchantOperatingCityId,
-                Recon.createdAt = now,
-                Recon.updatedAt = now
-              }
-      void $ QRecon.create reconEntry
 
 getMultimodalPassList ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
@@ -843,7 +782,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
             case integratedBPPConfigs of
               [] -> throwError (InvalidRequest "No integrated BPP config available for auto activation")
               (nearbyConfig : _) -> do
-                buses <- FRFS.getNearbyBusesFRFS (LatLong lat lon) riderConfig nearbyConfig
+                buses <- FRFSJourneyUtils.getNearbyBusesFRFS (LatLong lat lon) riderConfig nearbyConfig
                 let busesWithVehicle = filter (isJust . (.vehicle_number)) buses
                 when (null busesWithVehicle) $ throwError (InvalidRequest "No nearby buses found for auto activation")
 

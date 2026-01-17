@@ -56,7 +56,7 @@ cancelJourney booking = do
 handleCancelledStatus :: Merchant.Merchant -> DFRFSTicketBooking.FRFSTicketBooking -> HighPrecMoney -> HighPrecMoney -> Text -> Bool -> Flow ()
 handleCancelledStatus merchant booking refundAmount cancellationCharges messageId counterCancellationPossible = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  paymentBooking <- QTBP.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  paymentBooking <- QTBP.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   mRiderNumber <- mapM decrypt person.mobileNumber
@@ -74,7 +74,7 @@ handleCancelledStatus merchant booking refundAmount cancellationCharges messageI
       void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
       void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
       void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
-      void $ SPayment.initiateRefundWithPaymentStatusRespSync booking.riderId paymentBooking.paymentOrderId
+      void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
       cancelJourney booking
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId

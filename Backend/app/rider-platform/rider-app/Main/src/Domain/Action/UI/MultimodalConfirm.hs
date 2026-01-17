@@ -66,6 +66,9 @@ import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
+import qualified Domain.Action.UI.Pass as Pass
+import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
@@ -117,6 +120,7 @@ import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
@@ -283,7 +287,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   bookingsPaymentOrders <-
     mapM
       ( \booking -> do
-          QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
+          QFRFSTicketBookingPayment.findTicketBookingPayment booking
             >>= \case
               Just paymentBooking -> do
                 QPaymentOrder.findById paymentBooking.paymentOrderId
@@ -292,7 +296,8 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
                       let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
                           merchantOperatingCityId = fromMaybe booking.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
                           orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
-                      void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
+                          fulfillmentHandler = mkFulfillmentHandler paymentServiceType paymentOrder.id
+                      void $ SPayment.orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
                       createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode
                       return (createOrderResp, Just paymentBooking.status)
                     Nothing -> return (Nothing, Nothing)
@@ -330,13 +335,27 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
     mkDomainPaymentStatusToAPIStatus :: DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> FRFSTicketServiceAPI.FRFSBookingPaymentStatusAPI
     mkDomainPaymentStatusToAPIStatus = \case
       DFRFSTicketBookingPayment.PENDING -> FRFSTicketServiceAPI.PENDING
-      DFRFSTicketBookingPayment.REATTEMPTED -> FRFSTicketServiceAPI.PENDING
       DFRFSTicketBookingPayment.SUCCESS -> FRFSTicketServiceAPI.SUCCESS
       DFRFSTicketBookingPayment.FAILED -> FRFSTicketServiceAPI.FAILURE
       DFRFSTicketBookingPayment.REFUND_PENDING -> FRFSTicketServiceAPI.REFUND_PENDING
       DFRFSTicketBookingPayment.REFUNDED -> FRFSTicketServiceAPI.REFUNDED
       DFRFSTicketBookingPayment.REFUND_FAILED -> FRFSTicketServiceAPI.REFUND_FAILED
       DFRFSTicketBookingPayment.REFUND_INITIATED -> FRFSTicketServiceAPI.REFUND_INITIATED
+
+    mkFulfillmentHandler paymentServiceType orderId paymentStatusResp = case paymentServiceType of
+      DOrder.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+      DOrder.FRFSBusBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+      DOrder.FRFSMultiModalBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+      DOrder.FRFSPassPurchase -> do
+        status <- DPayment.getTransactionStatus paymentStatusResp
+        Pass.passOrderStatusHandler orderId merchantId status
+      DOrder.ParkingBooking -> do
+        status <- DPayment.getTransactionStatus paymentStatusResp
+        ParkingBooking.parkingBookingOrderStatusHandler orderId merchantId status
+      DOrder.BBPS -> do
+        paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler merchantId paymentStatusResp
+        pure (paymentFulfillStatus, Nothing, Nothing)
+      _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
 
 buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Bool -> Environment.Flow (Maybe Payment.CreateOrderResp)
 buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode = do

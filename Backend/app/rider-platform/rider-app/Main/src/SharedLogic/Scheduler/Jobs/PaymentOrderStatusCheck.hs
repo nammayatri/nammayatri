@@ -14,6 +14,10 @@
 
 module SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck where
 
+import qualified Domain.Action.UI.BBPS as BBPS
+import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
+import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -24,6 +28,9 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Utils as JMU
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler
@@ -92,6 +99,7 @@ paymentOrderStatusCheckJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   return Complete
 
 processPaymentOrder ::
+  forall m r c.
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
@@ -117,4 +125,22 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
   person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
   let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
       orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
-  void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
+      fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast merchantId) paymentOrder.id
+  void $ SPayment.orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+  where
+    -- Helper to create fulfillment handler based on payment service type
+    mkFulfillmentHandler :: Payment.PaymentServiceType -> Id DM.Merchant -> Id DOrder.PaymentOrder -> DPayment.PaymentStatusResp -> m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
+    mkFulfillmentHandler serviceType mId orderId paymentStatusResp = case serviceType of
+      Payment.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler mId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+      Payment.FRFSBusBooking -> FRFSTicketService.frfsOrderStatusHandler mId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+      Payment.FRFSMultiModalBooking -> FRFSTicketService.frfsOrderStatusHandler mId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+      Payment.FRFSPassPurchase -> do
+        status <- DPayment.getTransactionStatus paymentStatusResp
+        Pass.passOrderStatusHandler orderId mId status
+      Payment.ParkingBooking -> do
+        status <- DPayment.getTransactionStatus paymentStatusResp
+        ParkingBooking.parkingBookingOrderStatusHandler orderId mId status
+      Payment.BBPS -> do
+        paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler mId paymentStatusResp
+        pure (paymentFulfillStatus, Nothing, Nothing)
+      _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)

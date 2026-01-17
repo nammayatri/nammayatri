@@ -34,6 +34,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     discountedTickets :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     eventDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     failureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    frfsTicketBookingPaymentIdForTicketGeneration :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromStationAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromStationId :: B.C f Kernel.Prelude.Text,
     fromStationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

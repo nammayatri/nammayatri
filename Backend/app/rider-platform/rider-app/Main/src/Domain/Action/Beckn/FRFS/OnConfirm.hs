@@ -44,7 +44,7 @@ import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as Person
 import EulerHS.Prelude ((+||), (||+))
-import ExternalBPP.CallAPI
+import ExternalBPP.CallAPI.Cancel
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption as ENC
@@ -52,6 +52,7 @@ import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude as Prelude hiding (lookup)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -61,7 +62,7 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
--- import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
@@ -103,7 +104,12 @@ validateRequest ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     CallFRFSBPP.BecknAPICallFlow m r,
-    Metrics.HasBAPMetrics m r
+    Metrics.HasBAPMetrics m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "isMetroTestTransaction" r Bool
   ) =>
   DOrder ->
   m (Merchant, Booking.FRFSTicketBooking, [DFRFSQuoteCategory.FRFSQuoteCategory])
@@ -113,7 +119,7 @@ validateRequest DOrder {..} = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  bookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
+  bookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
   now <- getCurrentTime
   if booking.validTill < now
     then do
@@ -122,7 +128,7 @@ validateRequest DOrder {..} = do
       merchantOperatingCity <- QMerchOpCity.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
       bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:- " <> merchantId.getId)
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
-      -- void $ SPayment.initiateRefundWithPaymentStatusRespSync booking.riderId bookingPayment.paymentOrderId
+      void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
       void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking
       throwM $ InvalidRequest "Booking expired, initated cancel request"
@@ -139,7 +145,12 @@ onConfirmFailure ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     CallFRFSBPP.BecknAPICallFlow m r,
-    Metrics.HasBAPMetrics m r
+    Metrics.HasBAPMetrics m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "isMetroTestTransaction" r Bool
   ) =>
   BecknConfig ->
   Booking.FRFSTicketBooking ->
@@ -148,9 +159,9 @@ onConfirmFailure bapConfig ticketBooking = do
   logInfo $ "onConfirmFailure: " <> show ticketBooking
   merchant <- QMerch.findById ticketBooking.merchantId >>= fromMaybeM (MerchantNotFound ticketBooking.merchantId.getId)
   merchantOperatingCity <- QMerchOpCity.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound ticketBooking.merchantOperatingCityId.getId)
-  bookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId ticketBooking.id >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBooking.id.getId)
+  bookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment ticketBooking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBooking.id.getId)
   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED ticketBooking.id
-  -- void $ SPayment.initiateRefundWithPaymentStatusRespSync ticketBooking.riderId bookingPayment.paymentOrderId
+  void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId
   void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking
 
 onConfirm ::
@@ -256,7 +267,7 @@ buildReconTable merchant booking fareParameters _dOrder tickets mRiderNumber int
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
   txn <- runInReplica $ QPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId")
-  paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  paymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
   let paymentBookingStatus = paymentBooking.status
   now <- getCurrentTime
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")

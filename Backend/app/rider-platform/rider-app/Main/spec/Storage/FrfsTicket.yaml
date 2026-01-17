@@ -369,6 +369,7 @@ FRFSTicketBooking:
     totalPrice: Price # This is the total price multiplied for all the selected quantities of Quote Categories
     validTill: UTCTime
     paymentTxnId: Maybe Text
+    frfsTicketBookingPaymentIdForTicketGeneration: Maybe Text # Id FRFSTicketBookingPayment
     bppBankAccountNumber: Maybe Text
     bppBankCode: Maybe Text
     cancellationCharges: Maybe HighPrecMoney
@@ -399,6 +400,7 @@ FRFSTicketBooking:
     isSingleMode: Maybe Bool
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
+
 
   default:
     customerCancelled: "false"
@@ -478,9 +480,9 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [validTill, updatedAt]
       where: id
-    updateStatusValidTillAndPaymentTxnById:
+    updateStatusValidTillAndPaymentTxnByIdAndTicketBookingPaymentId:
       kvFunction: updateWithKV
-      params: [status, validTill, paymentTxnId, updatedAt]
+      params: [status, validTill, paymentTxnId, frfsTicketBookingPaymentIdForTicketGeneration, updatedAt]
       where: id
     updateBPPOrderIdAndStatusById:
       kvFunction: updateWithKV
@@ -629,7 +631,7 @@ FRFSTicketBookingPayment:
 
   types:
     FRFSTicketBookingPaymentStatus:
-      enum: "PENDING, SUCCESS, FAILED, REATTEMPTED, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
+      enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
 
   constraints:
     id: PrimaryKey

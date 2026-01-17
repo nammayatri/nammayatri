@@ -24,7 +24,8 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.RouteDetails as DRD
 import qualified Domain.Types.Trip as DTrip
 import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust)
-import qualified ExternalBPP.CallAPI as CallExternalBPP
+import qualified ExternalBPP.CallAPI.Init as CallExternalBPP
+import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
@@ -100,8 +101,6 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                       totalPrice = fareParameters.totalPrice
                   void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
                   void $ QFRFSTicketBooking.updateQuoteAndBppItemIdAndRouteStationsJson quote.id quote.bppItemId quote.routeStationsJson booking.id
-                  -- TODO :: Update the status of the old payment booking to REATTEMPTED, Uncomment post release.
-                  -- void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REATTEMPTED booking.id
                   void $ QFRFSTicketBooking.updateIsFareChangedById Nothing booking.id
                   return $ booking {DFRFSTicketBooking.quoteId = quote.id, DFRFSTicketBooking.bppItemId = quote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.totalPrice = totalPrice}
                 else return booking
@@ -125,6 +124,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 updatedAt = now,
                 merchantId = quote'.merchantId,
                 totalPrice = fareParameters.totalPrice,
+                frfsTicketBookingPaymentIdForTicketGeneration = Nothing,
                 paymentTxnId = Nothing,
                 bppBankAccountNumber = Nothing,
                 bppBankCode = Nothing,
@@ -202,7 +202,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
       ((DFRFSTicketBookingPayment.FRFSTicketBookingPayment, DPaymentOrder.PaymentOrder, Maybe DPayment.PaymentStatusResp) -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes) ->
       m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
     withPaymentStatusResponseHandler booking quoteCategories fareParameters routeStations stations merchantOperatingCity action = do
-      mbPaymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
+      mbPaymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking
       mbPaymentOrder <- maybe (pure Nothing) (QPaymentOrder.findById . (.paymentOrderId)) mbPaymentBooking
       case (mbPaymentBooking, mbPaymentOrder) of
         (Just paymentBooking, Just paymentOrder) -> do

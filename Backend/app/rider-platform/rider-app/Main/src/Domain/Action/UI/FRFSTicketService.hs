@@ -37,8 +37,11 @@ import Domain.Types.Station
 import Domain.Types.StationType
 import qualified Environment
 import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust)
-import qualified ExternalBPP.CallAPI as CallExternalBPP
+import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
+import qualified ExternalBPP.CallAPI.Search as CallExternalBPP
+import qualified ExternalBPP.CallAPI.Cancel as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Select as CallExternalBPP
+import qualified ExternalBPP.CallAPI.Verify as CallExternalBPP
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Interface.Types
@@ -55,11 +58,11 @@ import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
+import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.External.Nandi.Types (StopInfo (..), StopSchedule (..))
 import SharedLogic.FRFSConfirm
 import SharedLogic.FRFSStatus
@@ -72,6 +75,7 @@ import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
@@ -81,8 +85,6 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QP
-import qualified Lib.JourneyModule.Utils as JourneyUtils
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
@@ -685,21 +687,7 @@ postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Ty
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
 
 frfsOrderStatusHandler ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
-    EncFlow m r,
-    SchedulerFlow r,
-    EsqDBReplicaFlow m r,
-    HasLongDurationRetryCfg r c,
-    HasShortDurationRetryCfg r c,
-    CallFRFSBPP.BecknAPICallFlow m r,
-    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
-    HasBAPMetrics m r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasField "isMetroTestTransaction" r Bool
-  ) =>
+  (CallExternalBPP.FRFSConfirmFlow m r c) =>
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
   DPayment.PaymentStatusResp ->
   (DJL.JourneyLeg -> Id DFRFSQuote.FRFSQuote -> m ()) ->
@@ -726,12 +714,11 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
   return $
     ( evaluateConditions
         [ (Just DFRFSTicketBooking.CONFIRMED, Nothing, DPayment.FulfillmentSucceeded, all), -- Ticket Generated
-          (Nothing, Just FRFSTicketService.REFUND_PENDING, DPayment.FulfillmentRefundPending, all), -- Paid But Refund Pending (Could be due to Booking Cancellation/Failure)
-          (Nothing, Just FRFSTicketService.REFUND_INITIATED, DPayment.FulfillmentRefundInitiated, all), -- Paid But Refund Initiated (Could be due to Booking Cancellation/Failure)
-          (Nothing, Just FRFSTicketService.REFUND_FAILED, DPayment.FulfillmentRefundFailed, all), -- Paid But Refund Failed (Could be due to Booking Cancellation/Failure)
-          (Nothing, Just FRFSTicketService.REFUNDED, DPayment.FulfillmentRefunded, all), -- Paid But Refunded (Could be due to Booking Cancellation/Failure)
-          (Just DFRFSTicketBooking.FAILED, Just FRFSTicketService.FAILURE, DPayment.FulfillmentFailed, all), -- Booking Payment Failed
-          (Just DFRFSTicketBooking.FAILED, Just FRFSTicketService.SUCCESS, DPayment.FulfillmentFailed, any) -- Paid but Booking Failed
+          (Nothing, Just FRFSTicketService.REFUND_PENDING, DPayment.FulfillmentRefundPending, all), -- Paid But Refund Pending (Could be due to Booking Cancellation/Failure/Async Ticket Generation Failure)
+          (Nothing, Just FRFSTicketService.REFUND_INITIATED, DPayment.FulfillmentRefundInitiated, all), -- Paid But Refund Initiated (Could be due to Booking Cancellation/Failure/Async Ticket Generation Failure)
+          (Nothing, Just FRFSTicketService.REFUND_FAILED, DPayment.FulfillmentRefundFailed, all), -- Paid But Refund Failed (Could be due to Booking Cancellation/Failure/Async Ticket Generation Failure)
+          (Nothing, Just FRFSTicketService.REFUNDED, DPayment.FulfillmentRefunded, all), -- Paid But Refunded (Could be due to Booking Cancellation/Failure/Async Ticket Generation Failure/Auto Refund)
+          (Just DFRFSTicketBooking.FAILED, Nothing, DPayment.FulfillmentFailed, any) -- If Any Booking Failed, fulfillment cannot happen and should be marked as Failed
         ]
         bookingsStatus,
       journeyId <&> (.getId),
@@ -773,21 +760,7 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
     withPaymentStatusResponseHandler paymentBooking paymentOrder action = action (paymentBooking, paymentOrder, Just paymentStatusResponse)
 
 getFrfsBookingStatus ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
-    EncFlow m r,
-    SchedulerFlow r,
-    EsqDBReplicaFlow m r,
-    HasLongDurationRetryCfg r c,
-    HasShortDurationRetryCfg r c,
-    CallFRFSBPP.BecknAPICallFlow m r,
-    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
-    HasBAPMetrics m r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasField "isMetroTestTransaction" r Bool
-  ) =>
+  (CallExternalBPP.FRFSConfirmFlow m r c) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking ->
   m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
@@ -813,7 +786,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
       ((DFRFSTicketBookingPayment.FRFSTicketBookingPayment, DPaymentOrder.PaymentOrder, Maybe DPayment.PaymentStatusResp) -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes) ->
       m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
     withPaymentStatusResponseHandler integratedBppConfig booking person action = do
-      paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+      paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
       paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
       let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person booking.riderId
       let orderStatusCall = Payment.orderStatus booking.merchantId booking.merchantOperatingCityId Nothing (getPaymentType (integratedBppConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType) (Just person.id.getId) person.clientSdkVersion

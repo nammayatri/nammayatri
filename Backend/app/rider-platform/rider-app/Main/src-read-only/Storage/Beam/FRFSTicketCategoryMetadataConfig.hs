@@ -14,18 +14,18 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSTicketCategoryMetadataConfigT f = FRFSTicketCategoryMetadataConfigT
-  { category :: (B.C f Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType),
-    code :: (B.C f Kernel.Prelude.Text),
-    description :: (B.C f Kernel.Prelude.Text),
-    domainCategoryValue :: (B.C f Domain.Types.FRFSQuoteCategorySpec.OfferedValue),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    title :: (B.C f Kernel.Prelude.Text),
-    tnc :: (B.C f Kernel.Prelude.Text),
-    vehicleCategory :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { category :: B.C f Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType,
+    code :: B.C f Kernel.Prelude.Text,
+    description :: B.C f Kernel.Prelude.Text,
+    domainCategoryValue :: B.C f Domain.Types.FRFSQuoteCategorySpec.OfferedValue,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    title :: B.C f Kernel.Prelude.Text,
+    tnc :: B.C f Kernel.Prelude.Text,
+    vehicleCategory :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +35,6 @@ instance B.Table FRFSTicketCategoryMetadataConfigT where
 
 type FRFSTicketCategoryMetadataConfig = FRFSTicketCategoryMetadataConfigT Identity
 
-$(enableKVPG (''FRFSTicketCategoryMetadataConfigT) [('id)] [])
+$(enableKVPG ''FRFSTicketCategoryMetadataConfigT ['id] [])
 
-$(mkTableInstances (''FRFSTicketCategoryMetadataConfigT) "frfs_ticket_category_metadata_config")
+$(mkTableInstances ''FRFSTicketCategoryMetadataConfigT "frfs_ticket_category_metadata_config")
