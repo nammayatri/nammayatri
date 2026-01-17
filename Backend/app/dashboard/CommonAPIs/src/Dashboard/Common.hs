@@ -21,6 +21,7 @@ module Dashboard.Common
     module Domain.Types.VehicleVariant,
     VehicleCategory (CAR, MOTORCYCLE, TRAIN, BUS, FLIGHT, AUTO_CATEGORY, AMBULANCE, TRUCK),
     module Reexport,
+    ServiceTierType,
   )
 where
 
@@ -31,6 +32,7 @@ import qualified Data.Csv as Csv
 import Data.OpenApi
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import Domain.Types.ServiceTierType (ServiceTierType (..))
 import Domain.Types.VehicleCategory
 import Domain.Types.VehicleVariant
 import Kernel.Prelude

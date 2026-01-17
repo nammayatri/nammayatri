@@ -146,7 +146,6 @@ postMerchantConfigOperatingCityWhiteList a3 a2 a1 = withDashboardFlowHandlerAPI 
 
 postMerchantConfigMerchantCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT -> Environment.FlowHandler Dashboard.Common.Merchant.CreateMerchantOperatingCityRes)
 postMerchantConfigMerchantCreate a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigOperatingCityCreate a3 a2 a1
-postMerchantConfigMerchantCreate a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigMerchantCreate a3 a2 a1
 
 getMerchantConfigVehicleServiceTier :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.VehicleServiceTierRes)
 getMerchantConfigVehicleServiceTier a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigVehicleServiceTier a3 a2 a1

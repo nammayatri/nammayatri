@@ -52,12 +52,16 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigMerchantCreate,
     getMerchantConfigVehicleServiceTier,
     postMerchantConfigVehicleServiceTierUpdate,
+    getMerchantConfigSpecialLocationList,
+    getMerchantConfigGeometryList,
+    putMerchantConfigGeometryUpdate,
   )
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Control.Applicative
+import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as HM
 import qualified Data.Aeson.Types as DAT
 import qualified Data.ByteString as BS
@@ -67,6 +71,7 @@ import qualified Data.List as DL
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TEnc
 import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
@@ -1321,10 +1326,7 @@ instance ToNamedRecord FarePolicyCSVRow where
         "driver_cancellation_penalty_amount" .= driverCancellationPenaltyAmount,
         "per_luggage_charge" .= perLuggageCharge,
         "return_fee" .= returnFee,
-        "booth_charges" .= boothCharges,
-        "vat_charge_config" .= vatChargeConfig,
-        "commission_charge_config" .= commissionChargeConfig,
-        "toll_tax_charge_config" .= tollTaxCharge
+        "booth_charges" .= boothCharges
       ]
 
 farePolicyCSVHeader :: Header
@@ -1710,9 +1712,9 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
 
           -- JSON encode complex fields
           conditionalChargesJson = if null farePolicy.conditionalCharges then "" else TEnc.decodeUtf8 $ LBS.toStrict $ A.encode farePolicy.conditionalCharges
-          vatChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.vatChargeConfig
-          commissionChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.commissionChargeConfig
-          tollTaxChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.tollTaxChargeConfig
+          -- vatChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.vatChargeConfig
+          -- commissionChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.commissionChargeConfig
+          -- tollTaxChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.tollTaxChargeConfig
           returnFeeVal = maybe "" showT farePolicy.returnFee
           boothChargesVal = maybe "" showT farePolicy.boothCharges
        in FarePolicyCSVRow
@@ -1809,9 +1811,10 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
               perLuggageCharge = maybe "" showT farePolicy.perLuggageCharge,
               returnFee = returnFeeVal,
               boothCharges = boothChargesVal,
-              vatChargeConfig = vatChargeJson,
-              commissionChargeConfig = commissionChargeJson,
-              tollTaxCharge = tollTaxChargeJson
+              rideExtraTimeChargeGracePeriod = maybe "" showT farePolicy.rideExtraTimeChargeGracePeriod
+              -- vatCharge Config = vatChargeJson,
+              -- commissionChargeConfig = commissionChargeJson,
+              -- tollTaxCharge = tollTaxChargeJson
             }
 
     -- Helper functions
@@ -3503,6 +3506,7 @@ putMerchantConfigGeometryUpdate merchantShortId opCity req = do
   newGeom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Not able to convert the given KML to PostGis geom")
   QGEO.updateGeometry cityParam stateParam req.region (T.pack newGeom)
   return Success
+
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigMerchantCreate = postMerchantConfigOperatingCityCreate
 
