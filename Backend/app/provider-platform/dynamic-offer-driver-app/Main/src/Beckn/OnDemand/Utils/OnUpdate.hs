@@ -184,7 +184,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.RETURN_FEE),
                      Just (show Enums.BOOTH_CHARGE),
                      Just (show Enums.BUSINESS_DISCOUNT),
-                      Just (show Enums.PERSONAL_DISCOUNT),
+                     Just (show Enums.PERSONAL_DISCOUNT),
                      Just (show Enums.PARKING_CHARGE)
                    ]
         _ -> True
