@@ -884,7 +884,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
       }
   where
     mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters totalBookingAmount = do
-      mbBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
+      mbBookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
       refundBloc <- case mbBookingPayment of
         Just bookingPayment -> do
           mbPaymentOrder <- QPaymentOrder.findById bookingPayment.paymentOrderId

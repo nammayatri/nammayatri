@@ -9,6 +9,7 @@ import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified Tools.Metrics as Metrics
 import qualified UrlShortner.Common as UrlShortner
+import Kernel.Storage.Hedis
 
 type FRFSSearchFlow m r =
   ( CacheFlow m r,
@@ -33,5 +34,6 @@ type FRFSConfirmFlow m r c =
     SchedulerFlow r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasFlowEnv m r '["googleSAPrivateKey" ::: String]
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasField "ltsHedisEnv" r HedisEnv
   )

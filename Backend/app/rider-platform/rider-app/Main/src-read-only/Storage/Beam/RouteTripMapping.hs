@@ -12,16 +12,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RouteTripMappingT f = RouteTripMappingT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    integratedBppConfigId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    routeCode :: (B.C f Kernel.Prelude.Text),
-    tripCode :: (B.C f Kernel.Prelude.Text),
-    tripEndTime :: (B.C f Kernel.Prelude.Text),
-    tripStartTime :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    routeCode :: B.C f Kernel.Prelude.Text,
+    tripCode :: B.C f Kernel.Prelude.Text,
+    tripEndTime :: B.C f Kernel.Prelude.Text,
+    tripStartTime :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table RouteTripMappingT where
 
 type RouteTripMapping = RouteTripMappingT Identity
 
-$(enableKVPG (''RouteTripMappingT) [('tripCode)] [])
+$(enableKVPG ''RouteTripMappingT ['tripCode] [])
 
-$(mkTableInstances (''RouteTripMappingT) "route_trip_mapping")
+$(mkTableInstances ''RouteTripMappingT "route_trip_mapping")

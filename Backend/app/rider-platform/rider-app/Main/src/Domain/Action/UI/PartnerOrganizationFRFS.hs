@@ -426,7 +426,7 @@ shareTicketInfo ticketBookingId = do
   let tickets = map Utils.mkTicketAPI tickets'
 
   ticketBooking <- B.runInReplica $ QFTB.findById ticketBookingId >>= fromMaybeM (FRFSTicketBookingNotFound ticketBookingId.getId)
-  paymentBooking <- B.runInReplica $ QFTBP.findNewTBPByBookingId ticketBookingId >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBookingId.getId)
+  paymentBooking <- B.runInReplica $ QFTBP.findTicketBookingPayment ticketBooking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBookingId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity ticketBooking
   fromStation' <- OTPRest.getStationByGtfsIdAndStopCode ticketBooking.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for fromStationCode:" +|| ticketBooking.fromStationCode ||+ "")
   toStation' <- OTPRest.getStationByGtfsIdAndStopCode ticketBooking.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for toStationCode:" +|| ticketBooking.toStationCode ||+ "")

@@ -151,12 +151,12 @@ buildHandlerEnv HandlerCfg {..} = do
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
-  hedisEnv <- connectHedis appCfg.hedisCfg ("app-backend:" <>)
+  hedisEnv <- connectHedis appCfg.hedisCfg ("rider-app-scheduler:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("ras:n_c:" <>)
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg ("app-backend:" <>)
+      else connectHedisCluster hedisClusterCfg ("rider-app-scheduler:" <>)
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv

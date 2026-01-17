@@ -19,15 +19,12 @@ import qualified Domain.Types.FRFSQuote as DQuote
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import Kernel.Beam.Functions
-import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Storage.Beam.BeamFlow
-import SharedLogic.CallFRFSBPP
 import SharedLogic.FRFSConfirm
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
@@ -36,24 +33,7 @@ import qualified Storage.Queries.FRFSQuote as Qquote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Tools.Metrics as Metrics
-import qualified UrlShortner.Common as UrlShortner
-
-type FRFSConfirmFlow m r c =
-  ( MonadFlow m,
-    BeamFlow m r,
-    EsqDBReplicaFlow m r,
-    Metrics.HasBAPMetrics m r,
-    BecknAPICallFlow m r,
-    EncFlow m r,
-    ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool,
-    HasShortDurationRetryCfg r c,
-    HasLongDurationRetryCfg r c,
-    SchedulerFlow r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasFlowEnv m r '["googleSAPrivateKey" ::: String]
-  )
+import ExternalBPP.CallAPI.Types
 
 validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnSelect -> m (Merchant.Merchant, DQuote.FRFSQuote, DIBC.IntegratedBPPConfig)
 validateRequest DOnSelect {..} = do

@@ -117,41 +117,6 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN from_station_lat double pre
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN vehicle_number text ;
 
 
-
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN frfs_ticket_booking_payment_id_for_ticket_generation text ;

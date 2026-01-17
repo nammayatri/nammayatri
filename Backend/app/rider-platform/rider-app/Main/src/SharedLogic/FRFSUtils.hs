@@ -128,7 +128,6 @@ mkTBPStatusAPI = \case
   DTBP.PENDING -> APITypes.PENDING
   DTBP.SUCCESS -> APITypes.SUCCESS
   DTBP.FAILED -> APITypes.FAILURE
-  DTBP.REATTEMPTED -> APITypes.FAILURE
   DTBP.REFUND_PENDING -> APITypes.REFUND_PENDING
   DTBP.REFUNDED -> APITypes.REFUNDED
   DTBP.REFUND_FAILED -> APITypes.REFUND_FAILED
@@ -938,7 +937,7 @@ totalOrderValue paymentBookingStatus booking =
 -- TODO :: This function called in Ticket Cancellation flow does not properly handle multiple quote category, whe enabling cancellation for multiple categories this needs to be rectified.
 updateTotalOrderValueAndSettlementAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> BecknConfig -> m ()
 updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig = do
-  paymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  paymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
   let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
       finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
       finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational fareParameters.totalQuantity)

@@ -39,6 +39,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    frfsTicketBookingPaymentIdForTicketGeneration :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromStationAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromStationCode :: Kernel.Prelude.Text,
     fromStationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

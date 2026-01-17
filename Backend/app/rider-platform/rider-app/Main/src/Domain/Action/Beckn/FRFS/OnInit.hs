@@ -149,7 +149,7 @@ createPayments ::
   Maybe (Id DJ.Journey) ->
   m ()
 createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer mbJourneyId = do
-  ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
+  ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findTicketBookingPayment) bookings
   mbPaymentOrder <-
     if and ticketBookingPaymentsExist
       then do

@@ -29,6 +29,10 @@ where
 import qualified API.Types.UI.Payment as PaymentAPI
 import Control.Applicative ((<|>))
 import qualified Data.Text
+import qualified Domain.Action.UI.BBPS as BBPS
+import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
+import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Action.UI.RidePayment as DRidePayment
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -55,6 +59,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -139,18 +144,8 @@ getStatus ::
   Id DOrder.PaymentOrder ->
   Flow DPayment.PaymentStatusResp
 getStatus (personId, merchantId) orderId = do
-  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   paymentOrder <- QOrder.findById orderId |<|>| QOrder.findByShortId (ShortId orderId.getId) >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
-  mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
-  let paymentServiceType = fromMaybe Payment.Normal paymentOrder.paymentServiceType
-  ticketPlaceId <-
-    case paymentServiceType of
-      Payment.Normal -> do
-        ticketBooking <- QTB.findById (cast paymentOrder.id)
-        return $ ticketBooking <&> (.ticketPlaceId)
-      _ -> return Nothing
-  let orderStatusCall = Payment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion
-  SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
+  SPayment.syncOrderStatus merchantId personId paymentOrder
 
 -- order status s2s -----------------------------------------------------
 getStatusS2S :: Id DOrder.PaymentOrder -> Id DP.Person -> Id DM.Merchant -> Maybe Data.Text.Text -> Flow DPayment.PaymentStatusResp
@@ -262,7 +257,23 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
     callWebhookHandlerWithOrderStatus paymentServiceType' orderShortId orderStatusCall = do
       paymentOrder <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
       let paymentServiceType = fromMaybe paymentServiceType' paymentOrder.paymentServiceType
-      SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
+          fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
+      SPayment.orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+
+    mkFulfillmentHandler paymentServiceType merchantId orderId paymentStatusResp = case paymentServiceType of
+      DOrder.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+      DOrder.FRFSBusBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+      DOrder.FRFSMultiModalBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+      DOrder.FRFSPassPurchase -> do
+        status <- DPayment.getTransactionStatus paymentStatusResp
+        Pass.passOrderStatusHandler orderId merchantId status
+      DOrder.ParkingBooking -> do
+        status <- DPayment.getTransactionStatus paymentStatusResp
+        ParkingBooking.parkingBookingOrderStatusHandler orderId merchantId status
+      DOrder.BBPS -> do
+        paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler merchantId paymentStatusResp
+        pure (paymentFulfillStatus, Nothing, Nothing)
+      _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
 mkOrderStatusCheckKey orderId status = "lockKey:orderId:" <> orderId <> ":status" <> show status

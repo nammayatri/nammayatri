@@ -143,12 +143,19 @@ updateStatusById ::
   (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateStatusById status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateStatusValidTillAndPaymentTxnById ::
+updateStatusValidTillAndPaymentTxnByIdAndTicketBookingPaymentId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updateStatusValidTillAndPaymentTxnById status validTill paymentTxnId id = do
+  (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateStatusValidTillAndPaymentTxnByIdAndTicketBookingPaymentId status validTill paymentTxnId frfsTicketBookingPaymentIdForTicketGeneration id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.status status, Se.Set Beam.validTill validTill, Se.Set Beam.paymentTxnId paymentTxnId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.validTill validTill,
+      Se.Set Beam.paymentTxnId paymentTxnId,
+      Se.Set Beam.frfsTicketBookingPaymentIdForTicketGeneration frfsTicketBookingPaymentIdForTicketGeneration,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTotalPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateTotalPriceById totalPrice id = do
@@ -187,6 +194,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.failureReason failureReason,
+      Se.Set Beam.frfsTicketBookingPaymentIdForTicketGeneration frfsTicketBookingPaymentIdForTicketGeneration,
       Se.Set Beam.fromStationAddress fromStationAddress,
       Se.Set Beam.fromStationId fromStationCode,
       Se.Set Beam.fromStationName fromStationName,
