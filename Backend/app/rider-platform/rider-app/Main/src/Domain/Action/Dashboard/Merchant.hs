@@ -1407,8 +1407,8 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "drop_priority"
       <*> r .: "special_location_id"
 
-postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
-postMerchantConfigSpecialLocationUpsert merchantShortId opCity mbUpsertInDriverApp req = do
+postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
+postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   flatSpecialLocationAndGateInfo <- readCsv req.file req.locationGeoms req.gateGeoms merchantOpCity
@@ -1425,9 +1425,9 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity mbUpsertInDriverA
       )
       []
       groupedSpecialLocationAndGateInfo
-  -- If upsertInDriverApp QueryParam is true, call the driver app with CSV data
+  -- If upsertInDriverApp from multipart form is true, call the driver app with CSV data
   driverAppUnprocessed <-
-    if fromMaybe False mbUpsertInDriverApp
+    if fromMaybe False req.upsertInDriverApp
       then do
         result <- withTryCatch "callDriverAppSpecialLocationUpsert" $ do
           CallBPPInternal.upsertSpecialLocation merchant opCity req.file req.locationGeoms req.gateGeoms
@@ -1646,8 +1646,8 @@ getMerchantConfigGeometryList merchantShortId opCity mbLimit mbOffset mbAllCitie
           platform = sourcePlatform
         }
 
-putMerchantConfigGeometryUpdate :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Common.UpdateGeometryReq -> Flow APISuccess
-putMerchantConfigGeometryUpdate merchantShortId opCity mbUpdateInDriver req = do
+putMerchantConfigGeometryUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateGeometryReq -> Flow APISuccess
+putMerchantConfigGeometryUpdate merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let cityParam = merchantOpCity.city
@@ -1657,8 +1657,8 @@ putMerchantConfigGeometryUpdate merchantShortId opCity mbUpdateInDriver req = do
   -- Update rider geometry
   QGEO.updateGeometry cityParam stateParam req.region (T.pack newGeom)
 
-  -- If updateInDriver is true, also update driver geometry via internal API
-  when (fromMaybe False mbUpdateInDriver) $ do
+  -- If updateInDriver from multipart form is true, also update driver geometry via internal API
+  when (fromMaybe False req.updateInDriver) $ do
     void $ CallBPPInternal.updateGeometry merchant opCity req.region (T.pack newGeom)
 
   return Success

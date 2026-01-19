@@ -130,9 +130,6 @@ type PostMerchantConfigOperatingCityCreateHelper =
 
 type PostMerchantConfigSpecialLocationUpsert =
   ( "config" :> "specialLocation" :> "upsert"
-      :> QueryParam
-           "upsertInDriverApp"
-           Kernel.Prelude.Bool
       :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
       :> Post
            '[JSON]
@@ -156,7 +153,7 @@ type GetMerchantConfigGeometryList =
   )
 
 type PutMerchantConfigGeometryUpdate =
-  ( "config" :> "geometry" :> "update" :> QueryParam "updateInDriver" Kernel.Prelude.Bool
+  ( "config" :> "geometry" :> "update"
       :> Kernel.ServantMultipart.MultipartForm
            Kernel.ServantMultipart.Tmp
            Dashboard.Common.Merchant.UpdateGeometryReq
@@ -276,7 +273,6 @@ data MerchantAPIs = MerchantAPIs
     postMerchantServiceUsageConfigSmsUpdate :: Dashboard.Common.Merchant.SmsServiceUsageConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigOperatingCityCreate :: Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.CreateMerchantOperatingCityRes,
     postMerchantConfigSpecialLocationUpsert ::
-      Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
       ( Data.ByteString.Lazy.ByteString,
         Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
       ) ->
@@ -284,7 +280,6 @@ data MerchantAPIs = MerchantAPIs
     getMerchantConfigSpecialLocationList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.SpecialLocationType -> EulerHS.Types.EulerClient SpecialLocationResp,
     getMerchantConfigGeometryList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient GeometryResp,
     putMerchantConfigGeometryUpdate ::
-      Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
       ( Data.ByteString.Lazy.ByteString,
         Dashboard.Common.Merchant.UpdateGeometryReq
       ) ->
