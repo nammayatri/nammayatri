@@ -131,7 +131,7 @@ buildTransaction apiTokenInfo driverId =
 
 --------------------------------------- Single Fleet Owners Access --------------------------------------
 getFleetOwnerId :: Text -> Maybe Text -> Flow Text
-getFleetOwnerId memberPersonId mbFleetOwnerId = Client.callFleetAPI (skipMerchantCityAccessCheck (ShortId "no_required")) City.AnyCity (.driverDSL.getDriverDashboardInternalHelperGetFleetOwnerId) mbFleetOwnerId memberPersonId
+getFleetOwnerId memberPersonId mbFleetOwnerId = Client.callFleetAPI (skipMerchantCityAccessCheck (ShortId "no_required")) (City.City "AnyCity") (.driverDSL.getDriverDashboardInternalHelperGetFleetOwnerId) mbFleetOwnerId memberPersonId
 
 ------------------------------------- Helper Functions --------------------------------------
 -- in case if fleet owner is mandatory
@@ -201,7 +201,7 @@ getFleetOwnerIds memberPersonId mbFleetOwnerId = do
   case mbCachedFleetOwnerIds of
     Just fleetOwnerIds -> return fleetOwnerIds
     Nothing -> do
-      fleetOwnerIds <- Client.callFleetAPI (skipMerchantCityAccessCheck (ShortId "no_required")) City.AnyCity (.driverDSL.getDriverDashboardInternalHelperGetFleetOwnerIds) mbFleetOwnerId memberPersonId
+      fleetOwnerIds <- Client.callFleetAPI (skipMerchantCityAccessCheck (ShortId "no_required")) (City.City "AnyCity") (.driverDSL.getDriverDashboardInternalHelperGetFleetOwnerIds) mbFleetOwnerId memberPersonId
       Redis.setExp redisKey fleetOwnerIds 180
       return fleetOwnerIds
   where

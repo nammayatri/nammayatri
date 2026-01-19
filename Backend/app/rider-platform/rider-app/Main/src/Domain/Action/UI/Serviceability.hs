@@ -197,9 +197,9 @@ getNearestOperatingCityHelper merchant geoRestriction latLong merchantCityState 
         If the pickup location is not in the city, then return the nearest city for that state else the merchant default city.
       -}
       geoms <- B.runInReplica $ findGeometriesContaining latLong regions
-      case filter (\geom -> geom.city /= Context.AnyCity) geoms of
+      case filter (\geom -> geom.city /= Context.City "AnyCity") geoms of
         [] ->
-          find (\geom -> geom.city == Context.AnyCity) geoms & \case
+          find (\geom -> geom.city == Context.City "AnyCity") geoms & \case
             Just anyCityGeom -> do
               cities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters latLong (LatLong m.lat m.long), m.city))
               let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (listToMaybe $ sortBy (comparing fst) cities)

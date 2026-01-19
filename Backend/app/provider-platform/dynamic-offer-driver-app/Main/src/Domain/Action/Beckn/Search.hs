@@ -863,7 +863,7 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocatio
   case (mbDropLocation, mbToSpecialLocationId) of
     (Just dropLoc, Nothing) -> do
       (destinationCityState, mbDestinationTravelCityName) <- getDestinationCity merchant dropLoc -- This checks for destination serviceability too
-      if destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.AnyCity
+      if destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.City "AnyCity"
         then return (False, False, Nothing)
         else do
           mbMerchantState <- CQMS.findByMerchantIdAndState merchant.id sourceCity.state
@@ -945,9 +945,9 @@ getNearestOperatingAndSourceCity merchant pickupLatLong = do
         If the pickup location is not in the city, then return the nearest city for that state else the merchant default city.
       -}
       geoms <- B.runInReplica $ QGeometry.findGeometriesContaining pickupLatLong regions
-      case filter (\geom -> geom.city /= Context.AnyCity) geoms of
+      case filter (\geom -> geom.city /= Context.City "AnyCity") geoms of
         [] ->
-          find (\geom -> geom.city == Context.AnyCity) geoms & \case
+          find (\geom -> geom.city == Context.City "AnyCity") geoms & \case
             Just anyCityGeom -> do
               cities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters pickupLatLong m.location, m.city))
               let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (listToMaybe $ sortBy (comparing fst) cities)
@@ -967,9 +967,9 @@ getDestinationCity merchant dropLatLong = do
     Unrestricted -> return (CityState {city = merchant.city, state = merchant.state}, Nothing)
     Regions regions -> do
       geoms <- B.runInReplica $ QGeometry.findGeometriesContaining dropLatLong regions
-      case filter (\geom -> geom.city /= Context.AnyCity) geoms of
+      case filter (\geom -> geom.city /= Context.City "AnyCity") geoms of
         [] ->
-          find (\geom -> geom.city == Context.AnyCity) geoms & \case
+          find (\geom -> geom.city == Context.City "AnyCity") geoms & \case
             Just anyCityGeom -> do
               interTravelCities <- CQITC.findByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters dropLatLong (LatLong m.lat m.lng), m.cityName))
               mbNearestCity <-

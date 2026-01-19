@@ -2658,7 +2658,7 @@ normalizeName = T.strip . T.toLower
 
 postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigOperatingCityCreate merchantShortId city req = do
-  when (req.city == Context.AnyCity) $ throwError $ InvalidRequest "This Operation is not Allowed For AnyCity"
+  when (req.city == Context.City "AnyCity") $ throwError $ InvalidRequest "This Operation is not Allowed For AnyCity"
   baseMerchant <- findMerchantByShortId merchantShortId
   baseMerchantCity <- case req.baseRequestCity of
     Just baseMerchantCity -> return baseMerchantCity

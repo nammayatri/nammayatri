@@ -57,7 +57,7 @@ nammaYatriPartnerMerchantShortId :: ShortId DM.Merchant
 nammaYatriPartnerMerchantShortId = "NAMMA_YATRI_PARTNER"
 
 nammaYatriDefaultOperatingCity :: Context.City
-nammaYatriDefaultOperatingCity = Context.Bangalore
+nammaYatriDefaultOperatingCity = Context.City "Bangalore"
 
 otherMerchant2Id :: Id DM.Merchant
 otherMerchant2Id = "nearest-drivers-testing-organization"

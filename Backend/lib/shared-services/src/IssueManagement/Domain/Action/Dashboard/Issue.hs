@@ -61,8 +61,8 @@ import Kernel.Utils.Logging
 -- Temporary Solution for backward Comaptibility (Remove after 1 successfull release)
 getDefaultMerchantOperatingCityId :: BeamFlow m r => ServiceHandle m -> Identifier -> m (Id MerchantOperatingCity)
 getDefaultMerchantOperatingCityId issueHandle identifier =
-  ( issueHandle.findMOCityByMerchantShortIdAndCity shortId Context.Bangalore
-      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> shortId.getShortId <> "-city-" <> show Context.Bangalore)
+  ( issueHandle.findMOCityByMerchantShortIdAndCity shortId (Context.City "Bangalore")
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> shortId.getShortId <> "-city-" <> show (Context.City "Bangalore"))
   )
     <&> (.id)
   where

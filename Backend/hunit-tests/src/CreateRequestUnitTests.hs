@@ -45,7 +45,7 @@ testPostDriverOperatorCreateRequestWithRealExecution =
     "postDriverOperatorCreateRequest (Real Execution with Request/Response)"
     [ testCase "Executes with valid create request and validates response structure" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             req =
               Common.DriverOperationHubRequest
                 { Common.creatorId = "creator-123",
@@ -75,7 +75,7 @@ testPostDriverOperatorCreateRequestWithRealExecution =
         let req1 = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "hub-123") "DL01AB1234" Common.ONBOARDING_INSPECTION
             req2 = Common.DriverOperationHubRequest "creator-456" (Kernel.Types.Id.Id "hub-456") "DL02CD5678" Common.REGULAR_INSPECTION
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
         executeFlowAction
           "postDriverOperatorCreateRequest with req1"
           (evaluate $ DDriverOp.postDriverOperatorCreateRequest merchantShortId opCity req1)
@@ -118,9 +118,9 @@ testDataTypeValidation =
         registrationNo @?= "DL01AB1234"
         requestType @?= Common.ONBOARDING_INSPECTION,
       testCase "City enum values are correct" $ do
-        let delhi = Context.Delhi
-            bangalore = Context.Bangalore
-            mumbai = Context.Mumbai
+        let delhi = Context.City "Delhi"
+            bangalore = Context.City "Bangalore"
+            mumbai = Context.City "Mumbai"
         delhi /= bangalore @? "Delhi should not equal Bangalore"
         bangalore /= mumbai @? "Bangalore should not equal Mumbai"
         delhi /= mumbai @? "Delhi should not equal Mumbai",
@@ -186,7 +186,7 @@ testErrorHandlingWithRealFunctions =
         operationHubId @?= Kernel.Types.Id.Id "",
       testCase "Function handles empty creator ID gracefully" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             invalidReq = Common.DriverOperationHubRequest "" (Kernel.Types.Id.Id "hub-123") "DL01AB1234" Common.ONBOARDING_INSPECTION
         result <- try (evaluate $ DDriverOp.postDriverOperatorCreateRequest merchantShortId opCity invalidReq)
         case result of
@@ -198,7 +198,7 @@ testErrorHandlingWithRealFunctions =
             creatorId @?= "", -- Verify the empty creator ID was passed through
       testCase "Function handles short registration number gracefully" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             invalidReq = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "hub-123") "123" Common.ONBOARDING_INSPECTION
         result <- try (evaluate $ DDriverOp.postDriverOperatorCreateRequest merchantShortId opCity invalidReq)
         case result of
@@ -210,7 +210,7 @@ testErrorHandlingWithRealFunctions =
             registrationNo @?= "123", -- Verify the short registration number was passed through
       testCase "Function handles empty operation hub ID gracefully" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             invalidReq = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "") "DL01AB1234" Common.ONBOARDING_INSPECTION
         result <- try (evaluate $ DDriverOp.postDriverOperatorCreateRequest merchantShortId opCity invalidReq)
         case result of

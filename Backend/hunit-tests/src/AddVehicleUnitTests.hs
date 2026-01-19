@@ -162,20 +162,20 @@ createTestApiTokenInfo =
             DM.shortId = Kernel.Types.Id.ShortId "test-merchant",
             DM.serverNames = [],
             DM.is2faMandatory = False,
-            DM.defaultOperatingCity = Context.Delhi,
+            DM.defaultOperatingCity = Context.City "Delhi",
             DM.domain = Nothing,
             DM.website = Nothing,
             DM.authToken = Nothing,
             DM.enabled = Just True,
             DM.hasFleetMemberHierarchy = Just False,
-            DM.supportedOperatingCities = [Context.Delhi],
+            DM.supportedOperatingCities = [Context.City "Delhi"],
             DM.verifyFleetWhileLogin = Just True,
             DM.requireAdminApprovalForFleetOnboarding = Just False,
             DM.isStrongNameCheckRequired = Just True,
             DM.createdAt = UTCTime (fromGregorian 2023 1 1) 0,
             DM.singleActiveSessionOnly = Just False
           },
-      Tools.Auth.Api.city = Context.Delhi,
+      Tools.Auth.Api.city = Context.City "Delhi",
       Tools.Auth.Api.userActionType = DMatrix.PROVIDER_FLEET (FleetTypes.DRIVER FleetAPI.POST_DRIVER_FLEET_ADD_VEHICLE),
       Tools.Auth.Api.person = createTestPerson
     }
@@ -254,7 +254,7 @@ executeMultipleVehicleRequestsTest description executeFunction requests = do
 createTestParameters :: (Kernel.Types.Id.ShortId DM.Merchant, Context.City, T.Text, Maybe T.Text, Maybe T.Text, Maybe Dashboard.Common.Role)
 createTestParameters =
   ( Kernel.Types.Id.ShortId "test-merchant",
-    Context.Delhi,
+    Context.City "Delhi",
     "8222222222",
     Just "+91",
     Just "fleet-owner-123",
@@ -298,7 +298,7 @@ testPostDriverFleetAddVehicleWithRealExecution =
     "postDriverFleetAddVehicle (Real Execution with Request/Response)"
     [ testCase "Executes with valid add vehicle request and validates response structure" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             apiTokenInfo = createTestApiTokenInfo
             phoneNo = "8222222222"
             mbMobileCountryCode = Just "+91"
@@ -329,7 +329,7 @@ testPostDriverFleetAddVehicleWithRealExecution =
         let req1 = createCustomVehicleRequest "DL01AB1234" "Hatchback" (Just 4) "White" "Petrol" "Swift" "Maruti" (Just True) (Just "John Doe") (Just False)
             req2 = createCustomVehicleRequest "DL02CD5678" "SUV" (Just 6) "Black" "Diesel" "Innova" "Toyota" (Just True) (Just "Jane Smith") (Just True)
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             apiTokenInfo = createTestApiTokenInfo
             phoneNo = "8222222222"
             mbMobileCountryCode = Just "+91"
@@ -362,9 +362,9 @@ testDataTypeValidation =
         vehicleClass @?= "Hatchback"
         capacity @?= Just 4,
       testCase "City enum values are correct" $ do
-        let delhi = Context.Delhi
-            bangalore = Context.Bangalore
-            mumbai = Context.Mumbai
+        let delhi = Context.City "Delhi"
+            bangalore = Context.City "Bangalore"
+            mumbai = Context.City "Mumbai"
         validateEnumValues "Delhi and Bangalore" delhi bangalore
         validateEnumValues "Bangalore and Mumbai" bangalore mumbai
         validateEnumValues "Delhi and Mumbai" delhi mumbai,

@@ -27,7 +27,7 @@ coreConfig =
     { version = "0.9.3",
       domain = Context.PUBLIC_TRANSPORT,
       country = Context.India,
-      city = Context.Kochi
+      city = Context.City "Kochi"
     }
 
 buildContext ::

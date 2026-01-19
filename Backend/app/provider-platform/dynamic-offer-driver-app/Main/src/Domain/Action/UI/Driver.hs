@@ -957,7 +957,7 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
   pure APISuccess.Success
   where
     checkIfGoToInDifferentGeometry :: DM.Merchant -> LatLong -> LatLong -> Flow Bool
-    checkIfGoToInDifferentGeometry merchant driverLoc = uncurry (liftM2 (\dl hl -> dl == hl && dl /= Context.AnyCity && hl /= Context.AnyCity)) . DTE.both ((((.city) . (.nearestOperatingCity)) <$>) . runInReplica . getNearestOperatingAndSourceCity merchant) . (driverLoc,)
+    checkIfGoToInDifferentGeometry merchant driverLoc = uncurry (liftM2 (\dl hl -> dl == hl && dl /= Context.City "AnyCity" && hl /= Context.City "AnyCity")) . DTE.both ((((.city) . (.nearestOperatingCity)) <$>) . runInReplica . getNearestOperatingAndSourceCity merchant) . (driverLoc,)
 
     withLockDriverId driverId' = do
       isLockSuccussful <- Redis.tryLockRedis (buildActivateGoHomeKey driverId') 30
@@ -2627,9 +2627,9 @@ getCity req = do
         Right nearestSourceCity -> return GetCityResp {city = Just $ show nearestSourceCity.nearestOperatingCity.city, status = APISuccess.Success}
     Nothing -> do
       geometry <- runInReplica $ QGeometry.findGeometriesContainingGps latLng
-      case filter (\geom -> geom.city /= Context.AnyCity) geometry of
+      case filter (\geom -> geom.city /= Context.City "AnyCity") geometry of
         [] ->
-          find (\geom -> geom.city == Context.AnyCity) geometry & \case
+          find (\geom -> geom.city == Context.City "AnyCity") geometry & \case
             Just anyCityGeom -> return GetCityResp {city = Just $ show anyCityGeom.city, status = APISuccess.Success}
             Nothing -> return GetCityResp {city = Nothing, status = APISuccess.Success}
         (g : _) -> return GetCityResp {city = Just $ show g.city, status = APISuccess.Success}

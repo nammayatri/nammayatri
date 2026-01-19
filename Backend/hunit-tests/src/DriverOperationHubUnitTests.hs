@@ -84,9 +84,9 @@ testComplexScenariosWithRealFunctions =
   testGroup
     "Complex Scenarios with Real Functions"
     [ testCase "Different cities work correctly" $ do
-        let delhiCity = Context.Delhi
-            bangaloreCity = Context.Bangalore
-            mumbaiCity = Context.Mumbai
+        let delhiCity = Context.City "Delhi"
+            bangaloreCity = Context.City "Bangalore"
+            mumbaiCity = Context.City "Mumbai"
 
         delhiCity /= bangaloreCity @? "Delhi should not equal Bangalore"
         delhiCity /= mumbaiCity @? "Delhi should not equal Mumbai"

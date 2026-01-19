@@ -51,7 +51,7 @@ testPostDriverRegistrationDocumentUploadWithRealExecution =
     "postDriverRegistrationDocumentUpload (Real Execution with Request/Response)"
     [ testCase "Executes with valid document upload request and validates response structure" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
             req =
               Common.UploadDocumentReq
@@ -95,7 +95,7 @@ testPostDriverRegistrationDocumentUploadWithRealExecution =
             req2 = Common.UploadDocumentReq "base64string2==" Common.PanCard (Just "PAN1234") (Just "requestor-2")
             req3 = Common.UploadDocumentReq "base64string3==" Common.AadhaarCard (Just "AADHAAR1234") (Just "requestor-3")
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
 
         -- Actually execute the Flow actions and handle any exceptions
@@ -130,7 +130,7 @@ testPostDriverRegistrationRegisterDlWithRealExecution =
     "postDriverRegistrationRegisterDl (Real Execution with Request/Response)"
     [ testCase "Executes with valid DL registration request and validates response structure" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
             req =
               Common.RegisterDLReq
@@ -175,7 +175,7 @@ testPostDriverRegistrationRegisterDlWithRealExecution =
         let req1 = Common.RegisterDLReq "DL123456789" "Delhi" (UTCTime (fromGregorian 1990 1 1) 0) Nothing (Kernel.Types.Id.Id "image-1") (Just (Kernel.Types.Id.Id "image-2")) (Just (UTCTime (fromGregorian 2020 1 1) 0)) Nothing
             req2 = Common.RegisterDLReq "DL987654321" "Mumbai" (UTCTime (fromGregorian 1990 1 1) 0) Nothing (Kernel.Types.Id.Id "image-3") Nothing (Just (UTCTime (fromGregorian 2020 1 1) 0)) Nothing
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
 
         -- Actually execute the Flow actions and handle any exceptions
@@ -209,7 +209,7 @@ testPostDriverRegistrationRegisterAadhaarWithRealExecution =
     "postDriverRegistrationRegisterAadhaar (Real Execution with Request/Response)"
     [ testCase "Executes with valid Aadhaar registration request and validates response structure" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
             req =
               Common.AadhaarCardReq
@@ -260,7 +260,7 @@ testPostDriverRegistrationRegisterAadhaarWithRealExecution =
         let req1 = Common.AadhaarCardReq (Just (Kernel.Types.Id.Id "back-1")) (Just (Kernel.Types.Id.Id "front-1")) (Just "Address 1") True (UTCTime (fromGregorian 2023 1 1) 0) (Just "1990-01-01") (Just "1234****5678") (Just "John Doe") "txn-1" Common.APPROVED
             req2 = Common.AadhaarCardReq (Just (Kernel.Types.Id.Id "back-2")) (Just (Kernel.Types.Id.Id "front-2")) (Just "Address 2") True (UTCTime (fromGregorian 2023 1 1) 0) (Just "1985-05-15") (Just "5678****1234") (Just "Jane Smith") "txn-2" Common.NEEDS_REVIEW
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
 
         -- Actually execute the Flow actions and handle any exceptions
@@ -292,7 +292,7 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
     "postDriverRegistrationRegisterRc (Real Execution with Request/Response)"
     [ testCase "Executes with valid RC registration request and validates response structure" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
             req =
               Common.RegisterRCReq
@@ -341,7 +341,7 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
         let req1 = Common.RegisterRCReq "RC123456789" (Kernel.Types.Id.Id "rc-image-1") "Delhi" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just True) (Just False) (Just False) Nothing Nothing
             req2 = Common.RegisterRCReq "RC987654321" (Kernel.Types.Id.Id "rc-image-2") "Mumbai" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just False) (Just True) (Just True) Nothing Nothing
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
 
         -- Actually execute the Flow actions and handle any exceptions

@@ -58,10 +58,10 @@ handler merchantId = do
     :<|> RideBookingDSL.handler merchantId city
   where
     getCity = \case
-      "NAMMA_YATRI" -> City.Bangalore
-      "YATRI" -> City.Kochi
-      "JATRI_SAATHI" -> City.Kolkata
-      _ -> City.AnyCity
+      "NAMMA_YATRI" -> City.City "Bangalore"
+      "YATRI" -> City.City "Kochi"
+      "JATRI_SAATHI" -> City.City "Kolkata"
+      _ -> City.City "AnyCity"
 
 handlerV2 :: FlowServer APIV2
 handlerV2 merchantId city =

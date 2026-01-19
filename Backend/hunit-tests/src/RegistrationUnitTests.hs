@@ -65,7 +65,7 @@ testPostRegistrationV2LoginOtpWithRealExecution =
                   Common.mobileCountryCode = "+91"
                 }
             merchantShortId = ShortId "test-merchant"
-            opCity = Context.Bangalore
+            opCity = Context.City "Bangalore"
 
         -- Actually execute the Flow action and handle any exceptions
         executeFlowAction
@@ -88,7 +88,7 @@ testPostRegistrationV2LoginOtpWithRealExecution =
         let req1 = Common.FleetOwnerLoginReqV2 "9876543210" "+91"
             req2 = Common.FleetOwnerLoginReqV2 "8765432109" "+91"
             merchantShortId = ShortId "test-merchant"
-            opCity = Context.Bangalore
+            opCity = Context.City "Bangalore"
 
         -- Actually execute the Flow actions and handle any exceptions
         executeFlowAction
@@ -119,7 +119,7 @@ testPostRegistrationV2VerifyOtpWithRealExecution =
                   Common.otp = Just "123456"
                 }
             merchantShortId = ShortId "test-merchant"
-            opCity = Context.Bangalore
+            opCity = Context.City "Bangalore"
 
         -- Actually execute the Flow action and handle any exceptions
         executeFlowAction
@@ -145,7 +145,7 @@ testPostRegistrationV2VerifyOtpWithRealExecution =
             req2 = Common.FleetOwnerVerifyReqV2 "6123456789" "+91" (Just "654321")
             req3 = Common.FleetOwnerVerifyReqV2 "6123456789" "+91" Nothing
             merchantShortId = ShortId "test-merchant"
-            opCity = Context.Bangalore
+            opCity = Context.City "Bangalore"
 
         -- Actually execute the Flow actions and handle any exceptions
         executeFlowAction
@@ -191,7 +191,7 @@ testPostRegistrationV2RegisterWithRealExecution =
                   Common.setIsEnabled = Nothing
                 }
             merchantShortId = ShortId "test-merchant"
-            opCity = Context.Bangalore
+            opCity = Context.City "Bangalore"
             apiTokenInfo =
               Tools.Auth.Api.ApiTokenInfo
                 { Tools.Auth.Api.personId = Id "person-123",
@@ -201,20 +201,20 @@ testPostRegistrationV2RegisterWithRealExecution =
                         DM.shortId = ShortId "test-merchant",
                         DM.serverNames = [],
                         DM.is2faMandatory = False,
-                        DM.defaultOperatingCity = Context.Bangalore,
+                        DM.defaultOperatingCity = Context.City "Bangalore",
                         DM.domain = Nothing,
                         DM.website = Nothing,
                         DM.authToken = Nothing,
                         DM.enabled = Just True,
                         DM.hasFleetMemberHierarchy = Just False,
-                        DM.supportedOperatingCities = [Context.Bangalore],
+                        DM.supportedOperatingCities = [Context.City "Bangalore"],
                         DM.verifyFleetWhileLogin = Just True,
                         DM.requireAdminApprovalForFleetOnboarding = Just False,
                         DM.isStrongNameCheckRequired = Just True,
                         DM.createdAt = UTCTime (fromGregorian 2020 1 1) 0,
                         DM.singleActiveSessionOnly = Just False
                       },
-                  Tools.Auth.Api.city = Context.Bangalore,
+                  Tools.Auth.Api.city = Context.City "Bangalore",
                   Tools.Auth.Api.userActionType = DMatrix.PROVIDER_FLEET (FleetAPI.REGISTRATION_V2 Common.POST_REGISTRATION_V2_REGISTER),
                   Tools.Auth.Api.person = undefined
                 }
@@ -244,7 +244,7 @@ testPostRegistrationV2RegisterWithRealExecution =
         let req1 = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.RENTAL_FLEET) Nothing Nothing Nothing Nothing Nothing
             req2 = Common.FleetOwnerRegisterReqV2 "Jane" "Smith" Nothing Nothing (Just Common.BUSINESS_FLEET) Nothing Nothing Nothing Nothing Nothing
             merchantShortId = ShortId "test-merchant"
-            opCity = Context.Bangalore
+            opCity = Context.City "Bangalore"
             apiTokenInfo =
               Tools.Auth.Api.ApiTokenInfo
                 { Tools.Auth.Api.personId = Id "person-123",
@@ -254,20 +254,20 @@ testPostRegistrationV2RegisterWithRealExecution =
                         DM.shortId = ShortId "test-merchant",
                         DM.serverNames = [],
                         DM.is2faMandatory = False,
-                        DM.defaultOperatingCity = Context.Bangalore,
+                        DM.defaultOperatingCity = Context.City "Bangalore",
                         DM.domain = Nothing,
                         DM.website = Nothing,
                         DM.authToken = Nothing,
                         DM.enabled = Just True,
                         DM.hasFleetMemberHierarchy = Just False,
-                        DM.supportedOperatingCities = [Context.Bangalore],
+                        DM.supportedOperatingCities = [Context.City "Bangalore"],
                         DM.verifyFleetWhileLogin = Just True,
                         DM.requireAdminApprovalForFleetOnboarding = Just False,
                         DM.isStrongNameCheckRequired = Just True,
                         DM.createdAt = UTCTime (fromGregorian 2020 1 1) 0,
                         DM.singleActiveSessionOnly = Just False
                       },
-                  Tools.Auth.Api.city = Context.Bangalore,
+                  Tools.Auth.Api.city = Context.City "Bangalore",
                   Tools.Auth.Api.userActionType = DMatrix.PROVIDER_FLEET (FleetAPI.REGISTRATION_V2 Common.POST_REGISTRATION_V2_REGISTER),
                   Tools.Auth.Api.person = undefined
                 }

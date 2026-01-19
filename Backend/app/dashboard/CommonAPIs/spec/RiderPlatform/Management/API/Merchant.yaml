@@ -126,8 +126,6 @@ apis:
   - POST: # UpsertSpecialLocationCsvAPI
       endpoint: /config/specialLocation/upsert/
       auth: ApiAuthV2
-      query:
-        - upsertInDriverApp: Bool
       multipart:
         type: UpsertSpecialLocationCsvReq
       response:
@@ -157,8 +155,6 @@ apis:
   - PUT: # PutMerchantConfigGeometryUpdate
       endpoint: /config/geometry/update
       auth: ApiAuthV2
-      query:
-        - updateInDriver: Bool
       multipart:
         type: UpdateGeometryReq
       response:

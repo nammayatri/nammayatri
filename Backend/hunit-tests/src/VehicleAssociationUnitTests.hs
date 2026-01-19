@@ -61,7 +61,7 @@ testGetDriverFleetVehicleAssociationWithRealExecution =
     "getDriverFleetVehicleAssociation (Real Execution with Request/Response)"
     [ testCase "Executes with valid query parameters and validates response structure" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             mbLimit = Just 10
             mbOffset = Just 0
             mbVehicleNumber = Nothing
@@ -126,8 +126,8 @@ testGetDriverFleetVehicleAssociationWithRealExecution =
                 Environment.Flow Common.DrivertoVehicleAssociationResT
         True @? "Function should return DrivertoVehicleAssociationResT",
       testCase "Executes with different query parameters and validates request handling" $ do
-        let req1 = (Kernel.Types.Id.ShortId "merchant-1", Context.Delhi, Just 5, Just 10, Nothing, Just False, Nothing, Nothing, Nothing, Nothing, Nothing, Just "fleet-1", Just "req-1", Just True, Just False)
-            req2 = (Kernel.Types.Id.ShortId "merchant-2", Context.Bangalore, Just 20, Just 0, Nothing, Just True, Nothing, Nothing, Nothing, Nothing, Nothing, Just "fleet-2", Just "req-2", Just False, Just True)
+        let req1 = (Kernel.Types.Id.ShortId "merchant-1", Context.City "Delhi", Just 5, Just 10, Nothing, Just False, Nothing, Nothing, Nothing, Nothing, Nothing, Just "fleet-1", Just "req-1", Just True, Just False)
+            req2 = (Kernel.Types.Id.ShortId "merchant-2", Context.City "Bangalore", Just 20, Just 0, Nothing, Just True, Nothing, Nothing, Nothing, Nothing, Nothing, Just "fleet-2", Just "req-2", Just False, Just True)
             (merchantShortId1, opCity1, mbLimit1, mbOffset1, mbVehicleNumber1, mbIncludeStats1, mbFrom1, mbTo1, mbStatus1, mbSearchString1, mbStatusAwareVehicleNo1, mbFleetOwnerId1, mbRequestorId1, hasFleetMemberHierarchy1, isRequestorFleerOwner1) = req1
             (merchantShortId2, opCity2, mbLimit2, mbOffset2, mbVehicleNumber2, mbIncludeStats2, mbFrom2, mbTo2, mbStatus2, mbSearchString2, mbStatusAwareVehicleNo2, mbFleetOwnerId2, mbRequestorId2, hasFleetMemberHierarchy2, isRequestorFleerOwner2) = req2
 
@@ -164,7 +164,7 @@ testGetDriverFleetDriverVehicleAssociationWithRealExecution =
     "getDriverFleetDriverVehicleAssociation (Real Execution with Request/Response)"
     [ testCase "Executes with valid query parameters and validates response structure" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
-            opCity = Context.Delhi
+            opCity = Context.City "Delhi"
             fleetOwnerId = "fleet-owner-123"
             mbLimit = Just 10
             mbOffset = Just 0
@@ -216,8 +216,8 @@ testGetDriverFleetDriverVehicleAssociationWithRealExecution =
                 Environment.Flow Common.DrivertoVehicleAssociationRes
         True @? "Function should return DrivertoVehicleAssociationRes",
       testCase "Executes with different query parameters and validates request handling" $ do
-        let req1 = (Kernel.Types.Id.ShortId "merchant-1", Context.Delhi, "fleet-1", Just 5, Just 10, Just "+91", Just "9876543210", Nothing, Nothing, Nothing, Nothing)
-            req2 = (Kernel.Types.Id.ShortId "merchant-2", Context.Bangalore, "fleet-2", Just 20, Just 0, Just "+91", Just "8765432109", Nothing, Nothing, Nothing, Nothing)
+        let req1 = (Kernel.Types.Id.ShortId "merchant-1", Context.City "Delhi", "fleet-1", Just 5, Just 10, Just "+91", Just "9876543210", Nothing, Nothing, Nothing, Nothing)
+            req2 = (Kernel.Types.Id.ShortId "merchant-2", Context.City "Bangalore", "fleet-2", Just 20, Just 0, Just "+91", Just "8765432109", Nothing, Nothing, Nothing, Nothing)
             (merchantShortId1, opCity1, fleetOwnerId1, mbLimit1, mbOffset1, mbCountryCode1, mbPhoneNo1, mbVehicleNo1, mbStatus1, mbFrom1, mbTo1) = req1
             (merchantShortId2, opCity2, fleetOwnerId2, mbLimit2, mbOffset2, mbCountryCode2, mbPhoneNo2, mbVehicleNo2, mbStatus2, mbFrom2, mbTo2) = req2
 
@@ -269,9 +269,9 @@ testDataTypeValidation =
         inactive /= pending @? "InActive should not equal Pending"
         active /= pending @? "Active should not equal Pending",
       testCase "City enum values are correct" $ do
-        let bangalore = Context.Bangalore
-            delhi = Context.Delhi
-            mumbai = Context.Mumbai
+        let bangalore = Context.City "Bangalore"
+            delhi = Context.City "Delhi"
+            mumbai = Context.City "Mumbai"
 
         bangalore /= delhi @? "Bangalore should not equal Delhi"
         delhi /= mumbai @? "Delhi should not equal Mumbai"
@@ -307,13 +307,13 @@ testComplexScenariosWithRealFunctions =
         inactiveStatus @?= Common.InActive
         pendingStatus @?= Common.Pending,
       testCase "City context works correctly" $ do
-        let delhiCity = Context.Delhi
-            bangaloreCity = Context.Bangalore
-            mumbaiCity = Context.Mumbai
+        let delhiCity = Context.City "Delhi"
+            bangaloreCity = Context.City "Bangalore"
+            mumbaiCity = Context.City "Mumbai"
 
-        delhiCity @?= Context.Delhi
-        bangaloreCity @?= Context.Bangalore
-        mumbaiCity @?= Context.Mumbai,
+        delhiCity @?= Context.City "Delhi"
+        bangaloreCity @?= Context.City "Bangalore"
+        mumbaiCity @?= Context.City "Mumbai",
       testCase "Optional parameters work correctly" $ do
         let limitJust = Just 10 :: Maybe Int
             limitNothing = Nothing :: Maybe Int

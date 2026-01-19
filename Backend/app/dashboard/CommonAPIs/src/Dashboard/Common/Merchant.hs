@@ -876,7 +876,7 @@ data PriorityListWrapperType = PriorityListWrapperType
 
 --- Upsert special location using csv file ----
 
-data UpsertSpecialLocationCsvReq = UpsertSpecialLocationCsvReq {locationGeoms :: [(Text, Kernel.Prelude.FilePath)], gateGeoms :: [(Text, Kernel.Prelude.FilePath)], file :: Kernel.Prelude.FilePath}
+data UpsertSpecialLocationCsvReq = UpsertSpecialLocationCsvReq {locationGeoms :: [(Text, Kernel.Prelude.FilePath)], gateGeoms :: [(Text, Kernel.Prelude.FilePath)], file :: Kernel.Prelude.FilePath, upsertInDriverApp :: Maybe Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -888,12 +888,13 @@ instance FromMultipart Tmp UpsertSpecialLocationCsvReq where
     let locationGeoms = map (\file -> (fdFileName file, fdPayload file)) (filter (\file -> fdInputName file == T.pack "locationGeoms") $ files form)
         gateGeoms = map (\file -> (fdFileName file, fdPayload file)) (filter (\file -> fdInputName file == T.pack "gateGeoms") $ files form)
     csvFile <- fmap fdPayload (lookupFile "file" form)
-    return $ UpsertSpecialLocationCsvReq locationGeoms gateGeoms csvFile
+    let upsertInDriverApp = either (const Nothing) (readMaybe . T.unpack) $ lookupInput "upsertInDriverApp" form
+    return $ UpsertSpecialLocationCsvReq locationGeoms gateGeoms csvFile upsertInDriverApp
 
 instance ToMultipart Tmp UpsertSpecialLocationCsvReq where
   toMultipart form =
     MultipartData
-      []
+      (maybe [] (\val -> [Input "upsertInDriverApp" (T.pack $ show val)]) form.upsertInDriverApp)
       ( [FileData "file" (T.pack form.file) "" (form.file)]
           <> (map (\(fileName, file) -> FileData "locationGeoms" fileName (T.pack file) file) form.locationGeoms)
           <> (map (\(fileName, file) -> FileData "gateGeoms" fileName (T.pack file) file) form.gateGeoms)
@@ -921,7 +922,7 @@ instance ToMultipart Tmp UpsertDriverPoolConfigCsvReq where
   toMultipart form =
     MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
 
-data UpdateGeometryReq = UpdateGeometryReq {region :: Text, file :: Kernel.Prelude.FilePath}
+data UpdateGeometryReq = UpdateGeometryReq {region :: Text, file :: Kernel.Prelude.FilePath, updateInDriver :: Maybe Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -932,12 +933,15 @@ instance FromMultipart Tmp UpdateGeometryReq where
   fromMultipart form = do
     region <- lookupInput "region" form
     csvFile <- fmap fdPayload (lookupFile "file" form)
-    return $ UpdateGeometryReq region csvFile
+    let updateInDriver = either (const Nothing) (readMaybe . T.unpack) $ lookupInput "updateInDriver" form
+    return $ UpdateGeometryReq region csvFile updateInDriver
 
 instance ToMultipart Tmp UpdateGeometryReq where
   toMultipart form =
     MultipartData
-      [Input "region" form.region]
+      ( [Input "region" form.region]
+          <> maybe [] (\val -> [Input "updateInDriver" (T.pack $ show val)]) form.updateInDriver
+      )
       [FileData "file" (T.pack form.file) "" (form.file)]
 
 ------------------------ WhiteList Operating City ------------------------
