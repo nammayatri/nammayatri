@@ -38,11 +38,9 @@ data SosTrackingRes = SosTrackingRes {currentLocation :: Kernel.Prelude.Maybe So
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = GetSosSosTrackingHelper
+type API = ("sos" :> GetSosTracking)
 
 type GetSosTracking = (Capture "sosId" (Kernel.Types.Id.Id Dashboard.Common.Sos) :> "tracking" :> Get '[JSON] SosTrackingRes)
-
-type GetSosSosTrackingHelper = ("sos" :> Capture "sosId" (Kernel.Types.Id.Id Dashboard.Common.Sos) :> "tracking" :> Get '[JSON] SosTrackingRes)
 
 newtype SosAPIs = SosAPIs {getSosTracking :: Kernel.Types.Id.Id Dashboard.Common.Sos -> EulerHS.Types.EulerClient SosTrackingRes}
 
