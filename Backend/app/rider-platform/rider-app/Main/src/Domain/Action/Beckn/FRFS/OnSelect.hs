@@ -18,6 +18,7 @@ import Domain.Action.Beckn.FRFS.Common (DOnSelect (..))
 import qualified Domain.Types.FRFSQuote as DQuote
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
+import ExternalBPP.CallAPI.Types
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -33,7 +34,6 @@ import qualified Storage.Queries.FRFSQuote as Qquote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Tools.Metrics as Metrics
-import ExternalBPP.CallAPI.Types
 
 validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnSelect -> m (Merchant.Merchant, DQuote.FRFSQuote, DIBC.IntegratedBPPConfig)
 validateRequest DOnSelect {..} = do

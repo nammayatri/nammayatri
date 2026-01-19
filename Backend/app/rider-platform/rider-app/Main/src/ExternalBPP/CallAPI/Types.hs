@@ -4,12 +4,12 @@ import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis
 import Kernel.Utils.Common
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified Tools.Metrics as Metrics
 import qualified UrlShortner.Common as UrlShortner
-import Kernel.Storage.Hedis
 
 type FRFSSearchFlow m r =
   ( CacheFlow m r,
