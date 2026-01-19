@@ -103,7 +103,6 @@ castCancellationSource = \case
   Common.ByMerchant -> SBCR.ByMerchant
   Common.ByAllocator -> SBCR.ByAllocator
   Common.ByApplication -> SBCR.ByApplication
-  Common.ByFleetOwner -> SBCR.ByMerchant -- ByFleetOwner not available in rider-platform, mapping to ByMerchant
 
 getTagV2' :: Tag.BecknTagGroup -> Tag.BecknTag -> Maybe [Spec.TagGroup] -> Maybe Text
 getTagV2' tagGroupCode tagCode mbTagGroups =

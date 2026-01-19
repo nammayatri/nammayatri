@@ -505,7 +505,6 @@ castCancellationSource = \case
   DBCReason.ByMerchant -> Common.ByMerchant
   DBCReason.ByAllocator -> Common.ByAllocator
   DBCReason.ByApplication -> Common.ByApplication
-  DBCReason.ByFleetOwner -> Common.ByFleetOwner
 
 timeDiffInMinutes :: UTCTime -> UTCTime -> Minutes
 timeDiffInMinutes t1 = secondsToMinutes . nominalDiffTimeToSeconds . diffUTCTime t1
