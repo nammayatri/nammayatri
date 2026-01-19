@@ -18,8 +18,8 @@ import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
-import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DP
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)

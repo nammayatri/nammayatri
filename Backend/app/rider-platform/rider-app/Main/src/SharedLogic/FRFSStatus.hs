@@ -23,9 +23,9 @@ import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust)
-import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Confirm as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Status as CallExternalBPP
+import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface
@@ -324,11 +324,11 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         SchedulerFlow r,
         HasShortDurationRetryCfg r c
       ) =>
-      DFRFSTicketBookingPayment.FRFSTicketBookingPayment
-      -> FRFSTicketService.FRFSBookingPaymentStatusAPI
-      -> DFRFSTicketBooking.FRFSTicketBooking
-      -> [FRFSQuoteCategory.FRFSQuoteCategory]
-      -> m (Maybe FRFSTicketService.FRFSTicketBookingStatusAPIRes)
+      DFRFSTicketBookingPayment.FRFSTicketBookingPayment ->
+      FRFSTicketService.FRFSBookingPaymentStatusAPI ->
+      DFRFSTicketBooking.FRFSTicketBooking ->
+      [FRFSQuoteCategory.FRFSQuoteCategory] ->
+      m (Maybe FRFSTicketService.FRFSTicketBookingStatusAPIRes)
     buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories = do
       if paymentBookingStatus == FRFSTicketService.SUCCESS && maybe False (/= paymentBooking.id.getId) booking.frfsTicketBookingPaymentIdForTicketGeneration
         then do

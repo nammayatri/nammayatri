@@ -20,8 +20,10 @@ module API.BharatTaxi.User
   )
 where
 
+import qualified Dashboard.Common as Common
 import Data.Aeson (Value)
 import qualified Data.Text as T
+import qualified Domain.Action.RiderPlatform.Management.Customer as Customer
 import qualified "lib-dashboard" Domain.Types.AccessMatrix as DMatrix
 import "lib-dashboard" Domain.Types.ServerName as DSN
 import "lib-dashboard" Environment
@@ -34,8 +36,6 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth.Api (ApiAuth, ApiTokenInfo)
 import "lib-dashboard" Tools.Client as Client
-import qualified Domain.Action.RiderPlatform.Management.Customer as Customer
-import qualified Dashboard.Common as Common
 
 type ExternalFromListAPI =
   "delhi-temp"
