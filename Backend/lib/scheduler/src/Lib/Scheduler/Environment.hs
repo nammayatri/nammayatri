@@ -85,6 +85,7 @@ data SchedulerEnv = SchedulerEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
+    secondaryHedisClusterEnv :: Maybe HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     coreMetrics :: Metrics.CoreMetricsContainer,
@@ -131,6 +132,7 @@ releaseSchedulerEnv SchedulerEnv {..} = do
   disconnectHedis hedisNonCriticalClusterEnv
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
+  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 
 type SchedulerM = FlowR SchedulerEnv
 

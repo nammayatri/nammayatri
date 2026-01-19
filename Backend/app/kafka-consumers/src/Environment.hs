@@ -18,6 +18,8 @@ import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
 import Kernel.External.Encryption (EncTools)
+import qualified Kernel.Prelude
+import qualified Kernel.Prelude as Kernel
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
@@ -129,6 +131,7 @@ data AppEnv = AppEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
+    secondaryHedisClusterEnv :: Maybe HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     kafkaConsumerCfg :: ConsumerConfig,
@@ -204,6 +207,12 @@ buildAppEnv AppCfg {..} consumerType = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg id
+  secondaryHedisClusterEnv <-
+    Kernel.try (connectHedisCluster hedisSecondaryClusterCfg id) >>= \case
+      Left (e :: SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ Kernel.Prelude.show e
+        pure Nothing
+      Right env -> pure (Just env)
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   coreMetrics <- Metrics.registerCoreMetricsContainer
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
@@ -221,3 +230,4 @@ releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
+  Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
