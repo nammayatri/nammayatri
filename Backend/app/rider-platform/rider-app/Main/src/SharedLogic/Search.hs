@@ -52,7 +52,7 @@ data SearchRes = SearchRes
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   }
 
-data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq | PTSearch PublicTransportSearchReq
+data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq | PTSearch PublicTransportSearchReq | FixedRouteSearch FixedRouteSearchReq
   deriving (Generic, Show)
 
 instance ToJSON SearchReq where
@@ -92,6 +92,7 @@ fareProductConstructorModifier = \case
   "InterCitySearch" -> "INTER_CITY"
   "AmbulanceSearch" -> "AMBULANCE"
   "DeliverySearch" -> "DELIVERY"
+  "FixedRouteSearch" -> "FIXED_ROUTE"
   x -> x
 
 data OneWaySearchReq = OneWaySearchReq
@@ -172,6 +173,16 @@ data InterCitySearchReq = InterCitySearchReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+data FixedRouteSearchReq = FixedRouteSearchReq
+  { fromSpecialLocationId :: Text, -- SpecialLocation ID for origin area
+    toSpecialLocationId :: Text, -- SpecialLocation ID for destination area
+    startTime :: Maybe UTCTime,
+    numberOfLuggages :: Maybe Int,
+    origin :: SearchReqLocation,
+    destination :: SearchReqLocation
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 data RouteDetails = RouteDetails
   { longestRouteDistance :: Maybe Meters,
     shortestRouteDistance :: Maybe Meters,
@@ -205,7 +216,9 @@ data SearchDetails = SearchDetails
     vehicleCategory :: Maybe Enums.VehicleCategory,
     platformType :: Maybe DIBPC.PlatformType,
     currentLocation :: Maybe LatLong,
-    busLocationData :: [RL.BusLocation]
+    busLocationData :: [RL.BusLocation],
+    fromSpecialLocationId :: Maybe Text, -- Fixed route: origin area ID
+    toSpecialLocationId :: Maybe Text -- Fixed route: destination area ID
   }
   deriving (Generic, Show)
 

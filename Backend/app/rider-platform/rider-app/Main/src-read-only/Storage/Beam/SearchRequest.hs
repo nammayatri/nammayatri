@@ -54,6 +54,7 @@ data SearchRequestT f = SearchRequestT
     estimatedRideDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedRideStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromSpecialLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     hasMultimodalSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
@@ -83,6 +84,7 @@ data SearchRequestT f = SearchRequestT
     selectedPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     startTime :: B.C f Kernel.Prelude.UTCTime,
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    toSpecialLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     totalRidesCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     validTill :: B.C f Kernel.Prelude.UTCTime,
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory)

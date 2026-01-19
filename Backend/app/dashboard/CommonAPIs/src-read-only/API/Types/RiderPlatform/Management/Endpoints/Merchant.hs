@@ -122,9 +122,10 @@ type PostMerchantConfigSpecialLocationUpsert =
 
 type GetMerchantConfigSpecialLocationList =
   ( "config" :> "specialLocation" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
-      :> Get
-           '[JSON]
-           SpecialLocationResp
+      :> QueryParam
+           "locationType"
+           Lib.Types.SpecialLocation.SpecialLocationType
+      :> Get '[JSON] SpecialLocationResp
   )
 
 type GetMerchantConfigGeometryList = ("config" :> "geometry" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] GeometryResp)
@@ -251,10 +252,10 @@ data MerchantAPIs = MerchantAPIs
     postMerchantConfigOperatingCityCreate :: Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.CreateMerchantOperatingCityRes,
     postMerchantConfigSpecialLocationUpsert ::
       ( Data.ByteString.Lazy.ByteString,
-        Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
-      ) ->
-      EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
-    getMerchantConfigSpecialLocationList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient SpecialLocationResp,
+          Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
+        ) ->
+        EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
+    getMerchantConfigSpecialLocationList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.SpecialLocationType -> EulerHS.Types.EulerClient SpecialLocationResp,
     getMerchantConfigGeometryList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient GeometryResp,
     putMerchantConfigGeometryUpdate :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.Merchant.UpdateGeometryReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantSpecialLocationUpsert :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> Dashboard.Common.Merchant.UpsertSpecialLocationReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

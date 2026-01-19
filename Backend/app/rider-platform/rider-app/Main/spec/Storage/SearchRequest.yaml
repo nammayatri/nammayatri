@@ -97,6 +97,8 @@ SearchRequest:
     isMultimodalSearch: Maybe Bool
     multimodalSearchRequestId: Maybe Text
     busLocationData: "[BusLocation]"
+    fromSpecialLocationId: Maybe Text  # Fixed route: origin area ID
+    toSpecialLocationId: Maybe Text    # Fixed route: destination area ID
 
 
   default:
@@ -107,7 +109,7 @@ SearchRequest:
       enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
       derive: "HttpInstance"
     RiderPreferredOption:
-      enum: "Rental, OneWay, InterCity, Ambulance, Delivery, PublicTransport"
+      enum: "Rental, OneWay, InterCity, Ambulance, Delivery, PublicTransport, FixedRoute"
       derive: "HttpInstance"
     SearchMode:
       enum: "NORMAL, RESERVE"

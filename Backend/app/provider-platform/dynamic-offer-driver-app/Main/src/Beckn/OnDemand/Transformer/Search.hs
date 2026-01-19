@@ -31,6 +31,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Maps
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Common
+import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber
 import Kernel.Utils.Common (decodeFromText, fromMaybeM, type (:::))
 import Kernel.Utils.Logging (logDebug)
@@ -63,6 +64,8 @@ buildSearchReq messageId subscriber req context = do
       isReserveRide = getIsReserveRide req
       reserveRideEstimate = getReserveRideEstimate req isReserveRide
       paymentMode = Beckn.OnDemand.Utils.Search.getPaymentMode req
+      fromSpecialLocationId_ = getFromSpecialLocationId req
+      toSpecialLocationId_ = getToSpecialLocationId req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   customerPhoneNum_ <- getPhoneNumberFromTag $ Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
@@ -102,6 +105,8 @@ buildSearchReq messageId subscriber req context = do
         stops,
         isReserveRide = isReserveRide,
         mbAdditonalChargeCategories = Nothing,
+        fromSpecialLocationId = Id <$> fromSpecialLocationId_,
+        toSpecialLocationId = Id <$> toSpecialLocationId_,
         ..
       }
 
@@ -159,3 +164,17 @@ getPhoneNumberFromTag customerPhoneNum_ = do
       mapM decrypt $ textToEncryptedHashed phoneNumber
     Nothing -> do
       return Nothing
+
+getFromSpecialLocationId :: Spec.SearchReqMessage -> Maybe Text
+getFromSpecialLocationId req = do
+  intent <- req.searchReqMessageIntent
+  fulfillment <- intent.intentFulfillment
+  tags <- fulfillment.fulfillmentTags
+  Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.FROM_SPECIAL_LOCATION_ID (Just tags)
+
+getToSpecialLocationId :: Spec.SearchReqMessage -> Maybe Text
+getToSpecialLocationId req = do
+  intent <- req.searchReqMessageIntent
+  fulfillment <- intent.intentFulfillment
+  tags <- fulfillment.fulfillmentTags
+  Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.TO_SPECIAL_LOCATION_ID (Just tags)
