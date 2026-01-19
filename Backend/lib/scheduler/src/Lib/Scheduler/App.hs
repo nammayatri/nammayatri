@@ -70,6 +70,12 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
     if cutOffHedisCluster
       then pure hedisEnv
       else connectHedisCluster hedisClusterCfg (\k -> hedisPrefix <> ":" <> k)
+  secondaryHedisClusterEnv <-
+    Kernel.Prelude.try (connectHedisCluster hedisSecondaryClusterCfg (\k -> hedisPrefix <> ":" <> k)) >>= \case
+      Left (e :: Kernel.Prelude.SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
+        pure Nothing
+      Right env -> pure (Just env)
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
   consumerId <- G.generateGUIDTextIO

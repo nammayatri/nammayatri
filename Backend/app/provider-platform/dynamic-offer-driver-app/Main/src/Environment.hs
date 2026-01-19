@@ -194,6 +194,7 @@ data AppEnv = AppEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
+    secondaryHedisClusterEnv :: Maybe HedisEnv,
     isShuttingDown :: TMVar (),
     loggerEnv :: LoggerEnv,
     encTools :: EncTools,
@@ -322,6 +323,12 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
+  secondaryHedisClusterEnv <-
+    try (connectHedisCluster hedisSecondaryClusterCfg modifierFunc) >>= \case
+      Left (e :: SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
+        pure Nothing
+      Right env -> pure (Just env)
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let sessionId = Nothing
@@ -351,6 +358,7 @@ releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
+  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 
 type Env = EnvR AppEnv
 

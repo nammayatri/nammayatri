@@ -77,6 +77,7 @@ data AppEnv = AppEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
+    secondaryHedisClusterEnv :: Maybe HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     hostname :: Maybe Text,
@@ -130,6 +131,12 @@ buildAppEnv AppCfg {..} producerType = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg id
+  secondaryHedisClusterEnv <-
+    try (connectHedisCluster hedisSecondaryClusterCfg id) >>= \case
+      Left (e :: SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
+        pure Nothing
+      Right env -> pure (Just env)
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)

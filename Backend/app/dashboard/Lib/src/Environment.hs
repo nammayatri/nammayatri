@@ -90,6 +90,7 @@ data AppEnv = AppEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
+    secondaryHedisClusterEnv :: Maybe HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     port :: Int,
@@ -162,6 +163,12 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
+  secondaryHedisClusterEnv <-
+    Kernel.Prelude.try (connectHedisCluster hedisSecondaryClusterCfg modifierFunc) >>= \case
+      Left (e :: SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
+        pure Nothing
+      Right env -> pure (Just env)
   isShuttingDown <- mkShutdown
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   cacAclMapRaw <- fromMaybe (error "AUTH_MAP not found in Env !!!!") <$> lookupEnv "AUTH_MAP"
@@ -175,6 +182,7 @@ releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
+  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 

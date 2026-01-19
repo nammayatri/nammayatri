@@ -81,6 +81,7 @@ data HandlerEnv = HandlerEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
+    secondaryHedisClusterEnv :: Maybe HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     cacheConfig :: CacheConfig,
@@ -156,6 +157,12 @@ buildHandlerEnv HandlerCfg {..} = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>)
+  secondaryHedisClusterEnv <-
+    Kernel.Prelude.try (connectHedisCluster appCfg.hedisSecondaryClusterCfg ("dynamic-offer-driver-app:" <>)) >>= \case
+      Left (e :: SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
+        pure Nothing
+      Right env -> pure (Just env)
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
@@ -173,6 +180,7 @@ releaseHandlerEnv HandlerEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
+  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 
 type Flow = FlowR HandlerEnv
 

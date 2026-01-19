@@ -79,6 +79,7 @@ data HandlerEnv = HandlerEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
+    secondaryHedisClusterEnv :: Maybe HedisEnv,
     ltsHedisEnv :: HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
@@ -161,6 +162,12 @@ buildHandlerEnv HandlerCfg {..} = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>)
+  secondaryHedisClusterEnv <-
+    Kernel.Prelude.try (connectHedisCluster schedulerConfig.hedisSecondaryClusterCfg ("rider-app-scheduler:" <>)) >>= \case
+      Left (e :: SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
+        pure Nothing
+      Right env -> pure (Just env)
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   coreMetrics <- registerCoreMetricsContainer
@@ -180,6 +187,7 @@ releaseHandlerEnv HandlerEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
+  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 
 type Flow = FlowR HandlerEnv
 
