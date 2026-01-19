@@ -62,7 +62,7 @@ import Data.Int ()
 import Data.List (nub, nubBy, partition)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
+import Data.Time (defaultTimeLocale, formatTime, parseTimeM, UTCTime (..), diffTimeToPicoseconds)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
@@ -1962,8 +1962,10 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
           True
           False
           False
-
-      let (liveBuses, staticBuses) = partition (\route -> route.source == LIVE) availableRoutesByTier
+      let UTCTime _date secondsDiffTimeTillNow = CQMMB.utcToIST currentTime
+      let secondsTillNow = fromIntegral $ div (diffTimeToPicoseconds secondsDiffTimeTillNow) 1000000000000
+      let filteredRoutesByTiming = map (\routeByTier -> routeByTier { RD.availableRoutesInfo = filter (\route -> not . null $ filter (\timing -> timing - secondsTillNow > 0 && timing - secondsTillNow < 7200) route.routeTimings) routeByTier.availableRoutesInfo }) availableRoutesByTier
+      let (liveBuses, staticBuses) = partition (\route -> route.source == LIVE) filteredRoutesByTiming
       let filteredRoutes =
             if req.onlyLive
               then liveBuses
