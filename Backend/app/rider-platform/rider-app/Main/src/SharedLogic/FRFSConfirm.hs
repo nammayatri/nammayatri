@@ -447,7 +447,8 @@ buildJourneyAndLeg booking fareParameters = do
               multimodalSearchRequestId = Just booking.searchId.getId, -- Note :: This is not SearchRequest Table's ID. Do not use it to Query SearchReqeust Anywhere in Application.
               busLocationData = booking.busLocationData,
               busConductorId = routeLiveInfo >>= (.busConductorId),
-              busDriverId = routeLiveInfo >>= (.busDriverId)
+              busDriverId = routeLiveInfo >>= (.busDriverId),
+              providerRouteId = Nothing
             }
 
     QLocation.createMany [fromLocation, toLocation]

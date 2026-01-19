@@ -54,6 +54,7 @@ data JourneyLegT f = JourneyLegT
     multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     osmEntrance :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     osmExit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    providerRouteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     sequenceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     startLocationLat :: B.C f Kernel.Prelude.Double,
     startLocationLon :: B.C f Kernel.Prelude.Double,

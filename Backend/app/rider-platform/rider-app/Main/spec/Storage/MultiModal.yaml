@@ -252,6 +252,7 @@ JourneyLeg:
     busConductorId: Maybe Text
     busDriverId: Maybe Text
     busLocationData: "[BusLocation]"
+    providerRouteId: Maybe Text
 
   sqlType:
     liveVehicleAvailableServiceTypes: text[]

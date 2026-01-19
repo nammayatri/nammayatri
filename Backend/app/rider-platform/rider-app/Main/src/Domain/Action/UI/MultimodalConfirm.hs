@@ -1319,7 +1319,6 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
       let vehicleCategory = castTravelModeToVehicleCategory leg.mode
       let mbAgencyId = leg.agency >>= (.gtfsId)
       mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
-      mbQuote <- maybe (pure Nothing) (QFRFSQuote.findById . Id) leg.legPricingId
       let mbRouteDetail = leg.routeDetails & listToMaybe
       let mbFomStopCode = mbRouteDetail >>= (.fromStopCode)
       let mbToStopCode = mbRouteDetail >>= (.toStopCode)
@@ -1347,7 +1346,7 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
               duration = leg.duration,
               distance = leg.distance,
               journeyLegId = leg.id,
-              providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId)
+              providerRouteId = leg.providerRouteId
             }
 
     mkJourneyLegRouteDetails :: RD.RouteDetails -> Maybe JLU.JourneyLegRouteDetails

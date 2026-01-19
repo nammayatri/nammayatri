@@ -1406,7 +1406,8 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         isDeleted = Just False,
         sequenceNumber = idx,
         multimodalSearchRequestId = Just multimodalSearchRequestId.getId,
-        busLocationData
+        busLocationData,
+        providerRouteId = leg.providerRouteId
       }
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
