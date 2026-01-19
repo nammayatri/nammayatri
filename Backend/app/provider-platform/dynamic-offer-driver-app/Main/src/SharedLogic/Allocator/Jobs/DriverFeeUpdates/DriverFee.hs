@@ -86,6 +86,7 @@ calculateDriverFeeForDrivers ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text],
     HasKafkaProducer r
   ) =>
   Job 'CalculateDriverFees ->

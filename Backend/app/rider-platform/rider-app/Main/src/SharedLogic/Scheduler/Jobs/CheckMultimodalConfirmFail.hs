@@ -49,7 +49,8 @@ checkMultimodalConfirmFailJob ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'CheckMultimodalConfirmFail ->
   m ExecutionResult

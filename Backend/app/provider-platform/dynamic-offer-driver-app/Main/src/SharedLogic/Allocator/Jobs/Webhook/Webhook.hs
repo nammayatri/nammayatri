@@ -23,7 +23,8 @@ sendWebhookWithRetryToExternal ::
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'SendWebhookToExternal ->
   m ExecutionResult

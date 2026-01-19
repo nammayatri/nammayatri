@@ -29,7 +29,8 @@ installationStatus ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'CheckDashCamInstallationStatus ->
   m ExecutionResult

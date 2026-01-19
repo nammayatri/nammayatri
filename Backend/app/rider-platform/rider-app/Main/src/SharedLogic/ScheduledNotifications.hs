@@ -24,7 +24,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 
-pushReminderUpdatesInScheduler :: (MonadFlow m, SchedulerFlow r, EsqDBFlow m r, CacheFlow m r) => DB.Booking -> DR.Ride -> UTCTime -> DRN.RideRelatedNotificationConfig -> m ()
+pushReminderUpdatesInScheduler :: (MonadFlow m, SchedulerFlow r, EsqDBFlow m r, CacheFlow m r, HasField "blackListedJobs" r [Text]) => DB.Booking -> DR.Ride -> UTCTime -> DRN.RideRelatedNotificationConfig -> m ()
 pushReminderUpdatesInScheduler booking ride now DRN.RideRelatedNotificationConfig {..} = do
   let eventAt = case timeDiffEvent of
         DRN.RIDE_ASSIGNED -> ride.createdAt -- gives the time of TRIP_ASSIGNED

@@ -396,7 +396,8 @@ rideAssignedReqHandler ::
     EventStreamFlow m r,
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasKafkaProducer r,
-    HasFlowEnv m r '["isMetroTestTransaction" ::: Bool]
+    HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
+    HasField "blackListedJobs" r [Text]
   ) =>
   ValidatedRideAssignedReq ->
   m ()
@@ -441,7 +442,8 @@ rideAssignedReqHandler req = do
         EventStreamFlow m r,
         HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
         HasKafkaProducer r,
-        HasFlowEnv m r '["isMetroTestTransaction" ::: Bool]
+        HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
+        HasField "blackListedJobs" r [Text]
       ) =>
       ValidatedRideAssignedReq ->
       Maybe DMerchant.Merchant ->
@@ -537,7 +539,8 @@ rideStartedReqHandler ::
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds,
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "blackListedJobs" r [Text]
   ) =>
   ValidatedRideStartedReq ->
   m ()
@@ -653,7 +656,8 @@ rideCompletedReqHandler ::
     HasField "hotSpotExpiry" r Seconds,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   ValidatedRideCompletedReq ->
   m ()
@@ -929,7 +933,8 @@ cancellationTransaction ::
     EventStreamFlow m r,
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   DRB.Booking ->
   Maybe DRide.Ride ->

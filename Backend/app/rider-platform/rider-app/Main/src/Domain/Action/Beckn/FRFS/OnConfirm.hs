@@ -109,7 +109,8 @@ validateRequest ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   DOrder ->
   m (Merchant, Booking.FRFSTicketBooking, [DFRFSQuoteCategory.FRFSQuoteCategory])
@@ -150,7 +151,8 @@ onConfirmFailure ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   BecknConfig ->
   Booking.FRFSTicketBooking ->

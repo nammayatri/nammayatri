@@ -25,7 +25,8 @@ kaalChakraAction ::
   ( EsqDBFlow m r,
     SchedulerFlow r,
     MonadFlow m,
-    CacheFlow m r
+    CacheFlow m r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Maybe (Id DMOC.MerchantOperatingCity) ->
   Id DPerson.Person ->
@@ -48,7 +49,8 @@ scheduleTagActionNotificationJob ::
   ( MonadFlow m,
     SchedulerFlow r,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id DPerson.Person ->
   DRN.TagActionNotificationConfig ->

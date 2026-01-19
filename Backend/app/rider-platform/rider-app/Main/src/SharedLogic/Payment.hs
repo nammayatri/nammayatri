@@ -87,7 +87,8 @@ orderStatusHandler ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   FulfillmentStatusHandler m ->
   DOrder.PaymentServiceType ->
@@ -127,7 +128,8 @@ orderStatusHandlerWithRefunds ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   FulfillmentStatusHandler m ->
   DOrder.PaymentServiceType ->
@@ -404,7 +406,8 @@ initiateRefundWithPaymentStatusRespSync ::
     EsqDBReplicaFlow m r,
     ServiceFlow m r,
     EncFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id Person.Person ->
   Id DOrder.PaymentOrder ->
@@ -428,7 +431,8 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
         EsqDBReplicaFlow m r,
         ServiceFlow m r,
         EncFlow m r,
-        SchedulerFlow r
+        SchedulerFlow r,
+        HasField "blackListedJobs" r [Text]
       ) =>
       Person.Person ->
       DOrder.PaymentOrder ->
@@ -466,7 +470,8 @@ markRefundPendingAndSyncOrderStatus ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id Merchant.Merchant ->
   Id Person.Person ->
@@ -511,7 +516,8 @@ syncOrderStatus ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id Merchant.Merchant ->
   Id Person.Person ->

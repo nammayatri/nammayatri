@@ -67,7 +67,8 @@ sendDriverReferralPayoutJobData ::
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'DriverReferralPayout ->
   m ExecutionResult
