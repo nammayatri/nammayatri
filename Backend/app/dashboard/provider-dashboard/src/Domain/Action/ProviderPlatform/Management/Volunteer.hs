@@ -36,10 +36,10 @@ postVolunteerCreate merchantShortId opCity apiTokenInfo req = do
     transaction
     (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.volunteerDSL.postVolunteerCreate) req)
 
-getVolunteerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow API.Types.ProviderPlatform.Management.Volunteer.VolunteerListRes)
-getVolunteerList merchantShortId opCity apiTokenInfo limit offset volunteerId vendorId isActive = do
+getVolunteerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.Volunteer.VolunteerListRes)
+getVolunteerList merchantShortId opCity apiTokenInfo limit offset volunteerId vendorId isActive place = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.volunteerDSL.getVolunteerList) limit offset volunteerId vendorId isActive
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.volunteerDSL.getVolunteerList) limit offset volunteerId vendorId isActive place
 
 postVolunteerUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.Volunteer.UpdateVolunteerReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postVolunteerUpdate merchantShortId opCity apiTokenInfo volunteerId vendorId req = do
