@@ -130,9 +130,6 @@ type PostMerchantConfigOperatingCityCreateHelper =
 
 type PostMerchantConfigSpecialLocationUpsert =
   ( "config" :> "specialLocation" :> "upsert"
-      :> QueryParam
-           "upsertInDriverApp"
-           Kernel.Prelude.Bool
       :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
       :> Post
            '[JSON]
@@ -156,7 +153,7 @@ type GetMerchantConfigGeometryList =
   )
 
 type PutMerchantConfigGeometryUpdate =
-  ( "config" :> "geometry" :> "update" :> QueryParam "updateInDriver" Kernel.Prelude.Bool
+  ( "config" :> "geometry" :> "update"
       :> Kernel.ServantMultipart.MultipartForm
            Kernel.ServantMultipart.Tmp
            Dashboard.Common.Merchant.UpdateGeometryReq
@@ -276,19 +273,17 @@ data MerchantAPIs = MerchantAPIs
     postMerchantServiceUsageConfigSmsUpdate :: Dashboard.Common.Merchant.SmsServiceUsageConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigOperatingCityCreate :: Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.CreateMerchantOperatingCityRes,
     postMerchantConfigSpecialLocationUpsert ::
-      Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-        ( Data.ByteString.Lazy.ByteString,
-          Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
-        ) ->
-        EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
+      ( Data.ByteString.Lazy.ByteString,
+        Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
+      ) ->
+      EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
     getMerchantConfigSpecialLocationList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.SpecialLocationType -> EulerHS.Types.EulerClient SpecialLocationResp,
     getMerchantConfigGeometryList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient GeometryResp,
     putMerchantConfigGeometryUpdate ::
-      Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-        ( Data.ByteString.Lazy.ByteString,
-          Dashboard.Common.Merchant.UpdateGeometryReq
-        ) ->
-        EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+      ( Data.ByteString.Lazy.ByteString,
+        Dashboard.Common.Merchant.UpdateGeometryReq
+      ) ->
+      EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantSpecialLocationUpsert :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> Dashboard.Common.Merchant.UpsertSpecialLocationReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     deleteMerchantSpecialLocationDelete :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantSpecialLocationGatesUpsert :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Dashboard.Common.Merchant.UpsertSpecialLocationGateReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
