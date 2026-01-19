@@ -44,6 +44,7 @@ data AppCfg = AppCfg
     hedisClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
+    hedisSecondaryClusterCfg :: HedisCfg,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     port :: Int,
@@ -89,6 +90,7 @@ data AppEnv = AppEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
+    secondaryHedisClusterEnv :: Maybe HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     isShuttingDown :: Shutdown,
@@ -131,6 +133,12 @@ buildAppEnv AppCfg {..} = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg publicTransportBapPrefix
+  secondaryHedisClusterEnv <-
+    Kernel.Prelude.try (connectHedisCluster hedisSecondaryClusterCfg publicTransportBapPrefix) >>= \case
+      Left (e :: SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
+        pure Nothing
+      Right env -> pure (Just env)
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
@@ -145,6 +153,7 @@ releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
+  Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 

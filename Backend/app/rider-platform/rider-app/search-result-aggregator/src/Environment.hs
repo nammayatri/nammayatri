@@ -15,7 +15,7 @@
 module Environment where
 
 import Kernel.Prelude
-import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster)
+import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
@@ -35,6 +35,7 @@ data AppCfg = AppCfg
     hedisCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
+    hedisSecondaryClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisClusterCfg :: HedisCfg,
@@ -57,6 +58,7 @@ data AppEnv = AppEnv
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisClusterEnv :: HedisEnv,
+    secondaryHedisClusterEnv :: Maybe HedisEnv,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -91,6 +93,12 @@ buildAppEnv AppCfg {..} = do
     if cutOffHedisCluster
       then pure hedisEnv
       else connectHedisCluster hedisClusterCfg riderAppPrefix
+  secondaryHedisClusterEnv <-
+    Kernel.Prelude.try (connectHedisCluster hedisSecondaryClusterCfg riderAppPrefix) >>= \case
+      Left (e :: SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
+        pure Nothing
+      Right env -> pure (Just env)
   let url = Nothing
   return $ AppEnv {..}
 
@@ -98,6 +106,7 @@ releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   releaseKafkaConsumerEnv kafkaConsumerEnv
+  Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 
