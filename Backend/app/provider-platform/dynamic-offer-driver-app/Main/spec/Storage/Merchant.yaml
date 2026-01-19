@@ -133,6 +133,7 @@ Merchant:
     cipherText: "''"
     signatureExpiry: "300"
     signingPrivateKey: "''"
+    signingPublicKey: "''"
 
   excludedFields:
     - merchantId
