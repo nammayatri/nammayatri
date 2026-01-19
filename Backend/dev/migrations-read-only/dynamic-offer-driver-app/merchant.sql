@@ -65,3 +65,13 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN signing_public_key text ;
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN signing_private_key text ;
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN signature_expiry int ;
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN cipher_text text  default '';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signing_public_key SET DEFAULT '';
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signing_public_key SET NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signing_private_key SET DEFAULT '';
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signature_expiry SET DEFAULT 300;
+ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN signature_expiry SET NOT NULL;
