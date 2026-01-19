@@ -14,6 +14,7 @@
 
 module Environment where
 
+import Control.Exception (try)
 import Control.Monad.Catch (bracket)
 import Kernel.Mock.ExternalAPI
 import Kernel.Storage.Hedis
@@ -37,6 +38,7 @@ data AppCfg = AppCfg
     hedisMigrationStage :: Bool,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
+    hedisSecondaryClusterCfg :: HedisCfg,
     cutOffHedisCluster :: Bool,
     statusWaitTimeSec :: Seconds,
     callbackWaitTimeMilliSec :: Milliseconds,
@@ -60,6 +62,7 @@ data AppEnv = AppEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
+    secondaryHedisClusterEnv :: Maybe HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     loggerEnv :: LoggerEnv,
@@ -91,6 +94,12 @@ buildAppEnv config@AppCfg {..} = do
     if cutOffHedisCluster
       then pure hedisEnv
       else connectHedisCluster hedisClusterCfg ("mock_public_transport_provider_platform" <>)
+  secondaryHedisClusterEnv <-
+    try (connectHedisCluster hedisSecondaryClusterCfg ("mock_public_transport_provider_platform" <>)) >>= \case
+      Left (e :: SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
+        pure Nothing
+      Right env -> pure (Just env)
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
   let authManagerSettings = prepareAuthManager config ["Authorization"] selfId uniqueKeyId (\lvl msg -> logOutputIO loggerEnv lvl msg requestId sessionId)
   authManager <- newManager authManagerSettings
@@ -101,6 +110,7 @@ releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
+  maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
   releaseLoggerEnv loggerEnv
 
 withAppEnv :: AppCfg -> (AppEnv -> IO ()) -> IO ()

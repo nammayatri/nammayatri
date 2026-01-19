@@ -99,7 +99,7 @@ findByDriver (Id driverId) = do
   if isDriverValid
     then do
       let startTime = T.addUTCTime (-60) now -- conservative 1min lookback time to accomodate different configs for SearchRequestForDriver expiry
-      srfdIds <- Hedis.withCrossAppRedis $ Hedis.zRangeByScore (searchReqestForDriverkey driverId) (utcToMilliseconds startTime) (utcToMilliseconds now)
+      srfdIds <- Hedis.runInSecondaryRedis $ Hedis.withCrossAppRedis $ Hedis.zRangeByScore (searchReqestForDriverkey driverId) (utcToMilliseconds startTime) (utcToMilliseconds now)
       findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.id $ Se.In (map TE.decodeUtf8 srfdIds), Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing
     else do
       findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing

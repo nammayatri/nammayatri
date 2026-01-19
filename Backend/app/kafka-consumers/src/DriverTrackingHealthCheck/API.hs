@@ -40,7 +40,8 @@ healthCheck ::
     HasField "enablePrometheusMetricLogging" r Bool,
     HasField "hedisNonCriticalEnv" r Redis.HedisEnv,
     HasField "hedisNonCriticalClusterEnv" r Redis.HedisEnv,
-    HasField "hedisClusterEnv" r Redis.HedisEnv
+    HasField "hedisClusterEnv" r Redis.HedisEnv,
+    HasField "secondaryHedisClusterEnv" r (Maybe Redis.HedisEnv)
   ) =>
   FlowHandlerR r Text
 healthCheck = withFlowHandlerAPI' do
