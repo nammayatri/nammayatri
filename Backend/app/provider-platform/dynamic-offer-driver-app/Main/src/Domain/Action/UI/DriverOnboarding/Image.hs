@@ -46,13 +46,13 @@ import EulerHS.Types (base64Decode, base64Encode)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Verification.Interface as VI
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant.Multipart
 import SharedLogic.DriverOnboarding
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC

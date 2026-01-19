@@ -22,7 +22,13 @@ import qualified Lib.Types.SpecialLocation
 import Servant
 import Servant.Client
 
-data GeometryAPIEntity = GeometryAPIEntity {region :: Kernel.Prelude.Text, state :: Kernel.Types.Beckn.Context.IndianState, city :: Kernel.Types.Beckn.Context.City, geom :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data GeometryAPIEntity = GeometryAPIEntity
+  { region :: Kernel.Prelude.Text,
+    state :: Kernel.Types.Beckn.Context.IndianState,
+    city :: Kernel.Types.Beckn.Context.City,
+    geom :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    platform :: Platform
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -43,6 +49,12 @@ data MerchantUpdateReq = MerchantUpdateReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data Platform
+  = Rider
+  | Driver
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SchedulerTriggerReq = SchedulerTriggerReq {scheduledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, jobName :: Kernel.Prelude.Maybe JobName, jobData :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -50,7 +62,11 @@ data SchedulerTriggerReq = SchedulerTriggerReq {scheduledAt :: Kernel.Prelude.Ma
 instance Kernel.Types.HideSecrets.HideSecrets SchedulerTriggerReq where
   hideSecrets = Kernel.Prelude.identity
 
-type SpecialLocationResp = [Lib.Queries.SpecialLocation.SpecialLocationFull]
+type SpecialLocationResp = [SpecialLocationWithPlatform]
+
+data SpecialLocationWithPlatform = SpecialLocationWithPlatform {location :: Lib.Queries.SpecialLocation.SpecialLocationFull, platform :: Platform}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype UpsertTicketConfigReq = UpsertTicketConfigReq {file :: EulerHS.Prelude.FilePath}
   deriving stock (Generic)
@@ -114,10 +130,13 @@ type PostMerchantConfigOperatingCityCreateHelper =
 
 type PostMerchantConfigSpecialLocationUpsert =
   ( "config" :> "specialLocation" :> "upsert"
-      :> Kernel.ServantMultipart.MultipartForm
-           Kernel.ServantMultipart.Tmp
-           Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
-      :> Post '[JSON] Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities
+      :> QueryParam
+           "upsertInDriverApp"
+           Kernel.Prelude.Bool
+      :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
+      :> Post
+           '[JSON]
+           Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities
   )
 
 type GetMerchantConfigSpecialLocationList =
@@ -128,10 +147,16 @@ type GetMerchantConfigSpecialLocationList =
       :> Get '[JSON] SpecialLocationResp
   )
 
-type GetMerchantConfigGeometryList = ("config" :> "geometry" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] GeometryResp)
+type GetMerchantConfigGeometryList =
+  ( "config" :> "geometry" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "allCities"
+           Kernel.Prelude.Bool
+      :> Get '[JSON] GeometryResp
+  )
 
 type PutMerchantConfigGeometryUpdate =
-  ( "config" :> "geometry" :> "update"
+  ( "config" :> "geometry" :> "update" :> QueryParam "updateInDriver" Kernel.Prelude.Bool
       :> Kernel.ServantMultipart.MultipartForm
            Kernel.ServantMultipart.Tmp
            Dashboard.Common.Merchant.UpdateGeometryReq
@@ -251,13 +276,19 @@ data MerchantAPIs = MerchantAPIs
     postMerchantServiceUsageConfigSmsUpdate :: Dashboard.Common.Merchant.SmsServiceUsageConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigOperatingCityCreate :: Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.CreateMerchantOperatingCityRes,
     postMerchantConfigSpecialLocationUpsert ::
+      Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
       ( Data.ByteString.Lazy.ByteString,
         Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
       ) ->
       EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
     getMerchantConfigSpecialLocationList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.SpecialLocationType -> EulerHS.Types.EulerClient SpecialLocationResp,
-    getMerchantConfigGeometryList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient GeometryResp,
-    putMerchantConfigGeometryUpdate :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.Merchant.UpdateGeometryReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMerchantConfigGeometryList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient GeometryResp,
+    putMerchantConfigGeometryUpdate ::
+      Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+      ( Data.ByteString.Lazy.ByteString,
+        Dashboard.Common.Merchant.UpdateGeometryReq
+      ) ->
+      EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantSpecialLocationUpsert :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> Dashboard.Common.Merchant.UpsertSpecialLocationReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     deleteMerchantSpecialLocationDelete :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantSpecialLocationGatesUpsert :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Dashboard.Common.Merchant.UpsertSpecialLocationGateReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

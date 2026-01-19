@@ -126,6 +126,8 @@ apis:
   - POST: # UpsertSpecialLocationCsvAPI
       endpoint: /config/specialLocation/upsert/
       auth: ApiAuthV2
+      query:
+        - upsertInDriverApp: Bool
       multipart:
         type: UpsertSpecialLocationCsvReq
       response:
@@ -149,11 +151,14 @@ apis:
       query:
         - limit: Int
         - offset: Int
+        - allCities: Bool
       response:
         type: GeometryResp
   - PUT: # PutMerchantConfigGeometryUpdate
       endpoint: /config/geometry/update
       auth: ApiAuthV2
+      query:
+        - updateInDriver: Bool
       multipart:
         type: UpdateGeometryReq
       response:
@@ -304,7 +309,12 @@ types:
     - derive: "'HideSecrets"
   SpecialLocationResp:
     - recordType: Type
-    - type: [SpecialLocationFull]
+    - type: [SpecialLocationWithPlatform]
+  SpecialLocationWithPlatform:
+    - location: SpecialLocationFull
+    - platform: Platform
+  Platform:
+    - enum: "Rider, Driver"
   GeometryResp:
     - recordType: Type
     - type: [GeometryAPIEntity]
@@ -313,6 +323,7 @@ types:
     - state: IndianState
     - city: City
     - geom: Maybe Text
+    - platform: Platform
   JobName:
     - enum: "NyRegularMasterTrigger"
 

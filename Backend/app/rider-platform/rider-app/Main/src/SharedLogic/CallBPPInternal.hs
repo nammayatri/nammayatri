@@ -15,10 +15,9 @@
 module SharedLogic.CallBPPInternal where
 
 import API.Types.UI.FavouriteDriver
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
-import Data.Text as T
--- import qualified Domain.Types.Estimate as Estimate
-
+import Data.Text as T hiding (filter, map)
 import Data.Time.Calendar (Day)
 import Domain.Types.Common
 import qualified Domain.Types.FeedbackForm as DFF
@@ -30,11 +29,14 @@ import Kernel.External.Maps.Types
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Slack.Types
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common hiding (Error)
 import qualified Kernel.Utils.Servant.Client as EC
+import Lib.Queries.SpecialLocation (SpecialLocationFull)
+import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (throwError)
 import Tools.Metrics (CoreMetrics)
 
@@ -1038,3 +1040,204 @@ customerCancellationDuesWaiveOff ::
 customerCancellationDuesWaiveOff apiKey internalUrl merchantId bookingId rideId waiveOffAmount = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (customerCancellationDuesWaiveOffClient merchantId (Just apiKey) (CustomerCancellationDuesWaiveOffReq rideId bookingId waiveOffAmount)) "CustomerCancellationDuesWaiveOff" customerCancellationDuesWaiveOffApi
+
+---------------------------------------------------------------------
+-- Special Location Upsert
+---------------------------------------------------------------------
+
+data SpecialLocationUpsertReq = SpecialLocationUpsertReq
+  { locationGeoms :: [(Text, FilePath)],
+    gateGeoms :: [(Text, FilePath)],
+    file :: FilePath
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp SpecialLocationUpsertReq where
+  fromMultipart form = do
+    let locationGeoms' = map (\f -> (fdFileName f, fdPayload f)) (filter (\f -> fdInputName f == T.pack "locationGeoms") $ files form)
+        gateGeoms' = map (\f -> (fdFileName f, fdPayload f)) (filter (\f -> fdInputName f == T.pack "gateGeoms") $ files form)
+    csvFile <- fmap fdPayload (lookupFile "file" form)
+    return $ SpecialLocationUpsertReq locationGeoms' gateGeoms' csvFile
+
+instance ToMultipart Tmp SpecialLocationUpsertReq where
+  toMultipart form =
+    MultipartData
+      []
+      ( [FileData "file" (T.pack form.file) "" form.file]
+          <> map (\(fileName, fp) -> FileData "locationGeoms" fileName (T.pack fp) fp) form.locationGeoms
+          <> map (\(fileName, fp) -> FileData "gateGeoms" fileName (T.pack fp) fp) form.gateGeoms
+      )
+
+newtype SpecialLocationUpsertResp = SpecialLocationUpsertResp
+  { unprocessedEntities :: [Text]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type SpecialLocationUpsertAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "city" Context.City
+    :> "specialLocation"
+    :> "upsert"
+    :> MultipartForm Tmp SpecialLocationUpsertReq
+    :> Post '[JSON] SpecialLocationUpsertResp
+
+specialLocationUpsertClient :: Text -> Context.City -> (LBS.ByteString, SpecialLocationUpsertReq) -> EulerClient SpecialLocationUpsertResp
+specialLocationUpsertClient = client specialLocationUpsertApi
+
+specialLocationUpsertApi :: Proxy SpecialLocationUpsertAPI
+specialLocationUpsertApi = Proxy
+
+upsertSpecialLocation ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Merchant ->
+  Context.City ->
+  FilePath ->
+  [(Text, FilePath)] ->
+  [(Text, FilePath)] ->
+  m SpecialLocationUpsertResp
+upsertSpecialLocation merchant city csvFile locationGeoms gateGeoms = do
+  let internalUrl = merchant.driverOfferBaseUrl
+  let merchantId = merchant.driverOfferMerchantId
+  let req = SpecialLocationUpsertReq locationGeoms gateGeoms csvFile
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (specialLocationUpsertClient merchantId city ("XXX00XXX", req)) "SpecialLocationUpsert" specialLocationUpsertApi
+
+---------------------------------------------------------------------
+-- Special Location List
+---------------------------------------------------------------------
+
+type SpecialLocationListAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "city" Context.City
+    :> "specialLocation"
+    :> "list"
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "locationType" SL.SpecialLocationType
+    :> Get '[JSON] [SpecialLocationFull]
+
+specialLocationListClient :: Text -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> EulerClient [SpecialLocationFull]
+specialLocationListClient = client specialLocationListApi
+
+specialLocationListApi :: Proxy SpecialLocationListAPI
+specialLocationListApi = Proxy
+
+getSpecialLocationList ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe SL.SpecialLocationType ->
+  m (Maybe [SpecialLocationFull])
+getSpecialLocationList merchant city mbLimit mbOffset mbSpecialLocationType = do
+  let internalUrl = merchant.driverOfferBaseUrl
+  let merchantId = merchant.driverOfferMerchantId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  result <- try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (specialLocationListClient merchantId city mbLimit mbOffset mbSpecialLocationType) "SpecialLocationList" specialLocationListApi
+  case result of
+    Left _ -> pure Nothing
+    Right locations -> pure (Just locations)
+
+---------------------------------------------------------------------
+-- Geometry List
+---------------------------------------------------------------------
+
+type GeometryListAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "city" Context.City
+    :> "geometry"
+    :> "list"
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "allCities" Bool
+    :> Get '[JSON] [GeometryAPIEntity]
+
+data GeometryAPIEntity = GeometryAPIEntity
+  { region :: Text,
+    state :: Context.IndianState,
+    city :: Context.City,
+    geom :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+geometryListClient :: Text -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> EulerClient [GeometryAPIEntity]
+geometryListClient = client geometryListApi
+
+geometryListApi :: Proxy GeometryListAPI
+geometryListApi = Proxy
+
+getGeometryList ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Bool ->
+  m (Maybe [GeometryAPIEntity])
+getGeometryList merchant city mbLimit mbOffset mbAllCities = do
+  let internalUrl = merchant.driverOfferBaseUrl
+  let merchantId = merchant.driverOfferMerchantId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  result <- try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (geometryListClient merchantId city mbLimit mbOffset mbAllCities) "GeometryList" geometryListApi
+  case result of
+    Left _ -> pure Nothing
+    Right geoms -> pure (Just geoms)
+
+---------------------------------------------------------------------
+-- Geometry Update
+---------------------------------------------------------------------
+
+data GeometryUpdateReq = GeometryUpdateReq
+  { region :: Text,
+    newGeom :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type GeometryUpdateAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "city" Context.City
+    :> "geometry"
+    :> "update"
+    :> ReqBody '[JSON] GeometryUpdateReq
+    :> Put '[JSON] APISuccess
+
+geometryUpdateClient :: Text -> Context.City -> GeometryUpdateReq -> EulerClient APISuccess
+geometryUpdateClient = client geometryUpdateApi
+
+geometryUpdateApi :: Proxy GeometryUpdateAPI
+geometryUpdateApi = Proxy
+
+updateGeometry ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Merchant ->
+  Context.City ->
+  Text ->
+  Text ->
+  m ()
+updateGeometry merchant city region newGeom = do
+  let internalUrl = merchant.driverOfferBaseUrl
+  let merchantId = merchant.driverOfferMerchantId
+  let req = GeometryUpdateReq region newGeom
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  void $ try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (geometryUpdateClient merchantId city req) "GeometryUpdate" geometryUpdateApi
