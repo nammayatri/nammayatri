@@ -15,16 +15,21 @@ import Tools.Auth
 
 data ParkingBookingReq = ParkingBookingReq
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     entityId :: Data.Text.Text,
     parkingEndTime :: Kernel.Prelude.UTCTime,
     parkingStartTime :: Kernel.Prelude.UTCTime,
     slotNumber :: Data.Text.Text,
-    vehicleNumber :: Data.Text.Text,
-    customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person
+    vehicleNumber :: Data.Text.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ParkingBookingResponse = ParkingBookingResponse {orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder, parkingLotId :: Data.Text.Text, paymentLink :: Data.Text.Text, orderShortId :: Data.Text.Text}
+data ParkingBookingResponse = ParkingBookingResponse
+  { orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+    orderShortId :: Data.Text.Text,
+    parkingLotId :: Data.Text.Text,
+    paymentLink :: Data.Text.Text
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
