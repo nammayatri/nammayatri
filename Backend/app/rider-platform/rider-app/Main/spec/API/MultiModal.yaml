@@ -727,6 +727,14 @@ apis:
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
+  - GET:
+      endpoint: /vehiclesByServiceTier/{serviceTier}
+      auth: TokenAuth
+      params:
+        serviceTier: BecknV2.FRFS.Enums.ServiceTierType
+      response:
+        type: "[Text]"
+
 
   - POST:
       endpoint: /storeTowerInfo

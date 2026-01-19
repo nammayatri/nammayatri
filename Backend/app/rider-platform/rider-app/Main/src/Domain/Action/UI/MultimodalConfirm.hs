@@ -41,6 +41,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
     postMultimodalSetRouteName,
     postMultimodalUpdateBusLocation,
+    getVehiclesByServiceTier,
     postStoreTowerInfo,
   )
 where
@@ -2209,6 +2210,18 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         Left err -> do
           logError $ "SetOnboarding OTPRest failed: " <> show err
           return Nothing
+
+getVehiclesByServiceTier ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Spec.ServiceTierType ->
+  Environment.Flow [Kernel.Prelude.Text]
+getVehiclesByServiceTier (_personId, _merchantId) serviceTier = do
+  personId <- _personId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  OTPRest.getVehiclesByServiceType integratedBPPConfig serviceTier
 
 postMultimodalUpdateBusLocation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
