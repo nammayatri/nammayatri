@@ -11,6 +11,7 @@ module Domain.Action.UI.Pass
     getMultimodalPassTransactions,
     createPassReconEntry,
     postMultimodalPassActivateToday,
+    postMultimodalPassActivateTodayUtil,
     postMultimodalPassSelectUtil,
     postMultimodalPassUploadProfilePicture,
   )
@@ -1061,8 +1062,22 @@ postMultimodalPassActivateToday ::
     Maybe DT.Day ->
     Environment.Flow APISuccess.APISuccess
   )
-postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber mbStartDate = do
+postMultimodalPassActivateToday = postMultimodalPassActivateTodayUtil False
+
+postMultimodalPassActivateTodayUtil ::
+  Bool ->
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Int ->
+    Maybe DT.Day ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) passNumber mbStartDate = do
   purchasedPass <- QPurchasedPass.findByPassNumber passNumber >>= fromMaybeM (InvalidRequest "Pass not found")
+  unless isDashboard $ do
+    personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+    unless (purchasedPass.personId == personId) $ throwError AccessDenied
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   let today = DT.utctDay istTime
   normalizedMbStartDate <- case mbStartDate of
@@ -1091,7 +1106,9 @@ postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber mbSt
     throwError (InvalidRequest "Cannot activate pass: date range overlaps with another active or prebooked pass")
 
   QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
-  QPurchasedPassPayment.updatePurchaseDataByPurchasedPassIdAndStartEndDate purchasedPass.id purchasedPass.startDate purchasedPass.endDate newStartDate newEndDate newStatus
+  allPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusAndStartDate (Just 1) Nothing purchasedPass.id [DPurchasedPass.Active, DPurchasedPass.PreBooked] purchasedPass.startDate
+  whenJust (listToMaybe allPayments) $ \payment -> do
+    QPurchasedPassPayment.updateStatusAndDatesById newStartDate newEndDate newStatus payment.id
   return APISuccess.Success
 
 postMultimodalPassUploadProfilePicture ::

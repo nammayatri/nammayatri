@@ -142,7 +142,8 @@ PurchasedPassPayment:
       where:
         and:
           - purchasedPassId
-          - status
+          - in:
+            - status
           - gte:
             - endDate
       orderBy:
@@ -173,6 +174,23 @@ PurchasedPassPayment:
           - purchasedPassId
           - startDate
           - endDate
+
+    findAllByPurchasedPassIdAndStatusAndStartDate:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - purchasedPassId
+          - in:
+            - status
+          - startDate
+      orderBy:
+        field: createdAt
+        order: desc
+
+    updateStatusAndDatesById:
+      kvFunction: updateWithKV
+      params: [startDate, endDate, status]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
