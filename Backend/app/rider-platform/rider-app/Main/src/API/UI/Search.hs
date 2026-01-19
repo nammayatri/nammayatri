@@ -727,7 +727,8 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
               toArrivalTime = Just endTime,
               toDepartureTime = Just endTime,
               entrance = Nothing,
-              exit = Nothing
+              exit = Nothing,
+              providerRouteId = Nothing
             },
           startTime,
           endTime

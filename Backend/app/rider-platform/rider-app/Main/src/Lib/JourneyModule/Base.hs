@@ -1114,7 +1114,8 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
             toArrivalTime = Nothing,
             toDepartureTime = Nothing,
             entrance = Nothing,
-            exit = Nothing
+            exit = Nothing,
+            providerRouteId = Nothing
           }
 
     mkExtendLegKey = "Extend:Leg:For:JourneyId-" <> journeyId.getId
@@ -1252,7 +1253,8 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation _ = do
           toArrivalTime = Nothing,
           toDepartureTime = Nothing,
           entrance = Nothing,
-          exit = Nothing
+          exit = Nothing,
+          providerRouteId = Nothing
         }
 
     getAddress DLocation.LocationAPIEntity {..} = LA.LocationAddress {..}

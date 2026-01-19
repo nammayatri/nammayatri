@@ -756,8 +756,8 @@ getBestOneWayRoute vehicleCategory routes mbOriginStopCode mbDestinationStopCode
     findConditionalRoute fns xs = find (\r -> all (\fn -> fn r.legs) fns) xs
     firstJust xs = foldr (<|>) Nothing xs
 
-mkMultiModalRoute :: UTCTime -> Maybe MultiModalTypes.MultiModalLeg -> MultiModalTypes.GeneralVehicleType -> NonEmpty MultiModalTypes.MultiModalRouteDetails -> Maybe HighPrecMeters -> MultiModalTypes.MultiModalRoute
-mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode routeDetails mbDistance = do
+mkMultiModalRoute :: UTCTime -> Maybe MultiModalTypes.MultiModalLeg -> MultiModalTypes.GeneralVehicleType -> NonEmpty MultiModalTypes.MultiModalRouteDetails -> Maybe HighPrecMeters -> Maybe Text -> MultiModalTypes.MultiModalRoute
+mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode routeDetails mbDistance mbProviderRouteId = do
   let firstRouteDetails = NonEmpty.head routeDetails
   let lastRouteDetails = NonEmpty.last routeDetails
   let duration = nominalDiffTimeToSeconds $ diffUTCTime (fromMaybe currentTimeIST lastRouteDetails.toArrivalTime) (fromMaybe currentTimeIST firstRouteDetails.fromArrivalTime)
@@ -780,7 +780,8 @@ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode routeDetails mbDistance =
             toArrivalTime = lastRouteDetails.toArrivalTime,
             toDepartureTime = lastRouteDetails.toDepartureTime,
             entrance = Nothing,
-            exit = Nothing
+            exit = Nothing,
+            providerRouteId = mbProviderRouteId
           }
   let legs = maybe [leg] (\pl -> [pl, leg]) mbPreliminaryLeg
   MultiModalTypes.MultiModalRoute
@@ -875,7 +876,7 @@ buildOneWayBusScanRouteDetails routeCode originStopCode destinationStopCode (Jus
       routeDetails <- routeDetailsM
       let (_, currentTimeIST) = getISTTimeInfo currentTime
       let mode = MultiModalTypes.Bus
-      return $ [mkMultiModalRoute currentTimeIST Nothing mode (NonEmpty.fromList [routeDetails]) Nothing]
+      return $ [mkMultiModalRoute currentTimeIST Nothing mode (NonEmpty.fromList [routeDetails]) Nothing Nothing]
 
 buildMultimodalRouteDetails ::
   ( CacheFlow m r,
@@ -1067,7 +1068,7 @@ buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) 
       currentTime <- getCurrentTime
       let (_, currentTimeIST) = getISTTimeInfo currentTime
       mbPreliminaryLeg <- getPreliminaryLeg (routeDetails.fromStopDetails >>= (.name)) routeDetails.startLocation
-      return [mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList [routeDetails]) Nothing]
+      return [mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList [routeDetails]) Nothing Nothing]
     Nothing -> return []
 buildSingleModeDirectRoutes _ _ _ _ _ _ _ _ _ = return []
 
@@ -1092,10 +1093,10 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
     else do
       go allSubwayRoutes
   where
-    processRoute viaRoutes = do
+    processRoute viaRoute = do
       disableViaPointTimetableCheck <- asks (.disableViaPointTimetableCheck)
-      let viaPoints = viaRoutes.viaPoints
-          routeDistance = metersToHighPrecMeters viaRoutes.distance
+      let viaPoints = viaRoute.viaPoints
+          routeDistance = metersToHighPrecMeters viaRoute.distance
       routeDetailsWithDistance <- mapM (\(osc, dsc) -> measureLatency (buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc disableViaPointTimetableCheck True) "buildMultimodalRouteDetails") viaPoints
       logDebug $ "buildTrainAllViaRoutes routeDetailsWithDistance: " <> show routeDetailsWithDistance
       -- ensure that atleast one train route is possible or two stops are less than 1km apart so that user can walk to other station e.g. Chennai Park to Central station
@@ -1118,7 +1119,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
               currentTime <- getCurrentTime
               let (_, currentTimeIST) = getISTTimeInfo currentTime
               mbPreliminaryLeg <- getPreliminaryLeg (rD.fromStopDetails >>= (.name)) rD.startLocation
-              return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails) (Just routeDistance)
+              return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails) (Just routeDistance) (Just viaRoute.routeCode)
         else return Nothing
     go [] = return ([], [])
     go (x : xs) = do

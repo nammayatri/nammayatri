@@ -51,6 +51,7 @@ data JourneyLeg = JourneyLeg
     multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     osmEntrance :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
     osmExit :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
+    providerRouteId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeDetails :: [Domain.Types.RouteDetails.RouteDetails],
     sequenceNumber :: Kernel.Prelude.Int,
     startLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,

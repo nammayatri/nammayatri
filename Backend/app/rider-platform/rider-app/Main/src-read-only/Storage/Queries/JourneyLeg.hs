@@ -114,6 +114,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.multimodalSearchRequestId multimodalSearchRequestId,
       Se.Set Beam.osmEntrance (osmEntrance >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.osmExit (osmExit >>= Just . Data.Aeson.toJSON),
+      Se.Set Beam.providerRouteId providerRouteId,
       Se.Set Beam.sequenceNumber (Just sequenceNumber),
       Se.Set Beam.startLocationLat (startLocation & (.latitude)),
       Se.Set Beam.startLocationLon (startLocation & (.longitude)),

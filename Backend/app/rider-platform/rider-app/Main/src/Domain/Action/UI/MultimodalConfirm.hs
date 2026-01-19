@@ -64,11 +64,11 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
+import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
-import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
@@ -1319,7 +1319,6 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
       let vehicleCategory = castTravelModeToVehicleCategory leg.mode
       let mbAgencyId = leg.agency >>= (.gtfsId)
       mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
-      mbQuote <- maybe (pure Nothing) (QFRFSQuote.findById . Id) leg.legPricingId
       let mbRouteDetail = leg.routeDetails & listToMaybe
       let mbFomStopCode = mbRouteDetail >>= (.fromStopCode)
       let mbToStopCode = mbRouteDetail >>= (.toStopCode)
@@ -1347,7 +1346,7 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
               duration = leg.duration,
               distance = leg.distance,
               journeyLegId = leg.id,
-              providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId)
+              providerRouteId = leg.providerRouteId
             }
 
     mkJourneyLegRouteDetails :: RD.RouteDetails -> Maybe JLU.JourneyLegRouteDetails
