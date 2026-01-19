@@ -531,6 +531,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       let updatedVehicleVariant = case input.vehicleCategory of
             Just DVC.TRUCK -> DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight vehicleVariant
             _ -> vehicleVariant
+      logInfo $ "createVehicleRC: Creating RC with verificationStatus=MANUAL_VERIFICATION_REQUIRED, vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
       return $
         DVRC.VehicleRegistrationCertificate
           { id,
@@ -576,6 +577,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of
         Just vehicleRC -> do
+          logInfo $ "initiateRCCreation: Upserting RC with verificationStatus=" <> show vehicleRC.verificationStatus <> ", failedRules=" <> show vehicleRC.failedRules <> ", registrationNumber=" <> show vehicleRC.unencryptedCertificateNumber <> ", vehicleVariant=" <> show vehicleRC.vehicleVariant <> ", vehicleClass=" <> show vehicleRC.vehicleClass
           -- upsert vehicleRC
           RCQuery.upsert vehicleRC
           rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" rcVerificationResponse.registrationNumber))

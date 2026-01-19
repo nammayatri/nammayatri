@@ -390,9 +390,16 @@ buildRC merchantId merchantOperatingCityId input failedRules = do
   rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe DVC.CAR input.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
   mEncryptedRC <- encrypt `mapM` input.registrationNumber
   let mbFitnessExpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
-  return $ createRC merchantId merchantOperatingCityId input rCConfigs id now failedRules <$> mEncryptedRC <*> mbFitnessExpiry
+  mbRC <- case (mEncryptedRC, mbFitnessExpiry) of
+    (Just certificateNumber, Just expiry) -> do
+      rc <- createRC merchantId merchantOperatingCityId input rCConfigs id now failedRules certificateNumber expiry
+      logInfo $ "buildRC: Created RC with verificationStatus=" <> show rc.verificationStatus <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
+      return $ Just rc
+    _ -> return Nothing
+  return mbRC
 
 createRC ::
+  VerificationFlow m r =>
   Id DTM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   CreateRCInput ->
@@ -402,16 +409,16 @@ createRC ::
   [Text] ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
-  VehicleRegistrationCertificate
+  m VehicleRegistrationCertificate
 createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
-  let (verificationStatus, reviewRequired, variant, mbVehicleModel) = validateRCStatus input rcconfigs now expiry
-      airConditioned = input.airConditioned
+  (verificationStatus, reviewRequired, variant, mbVehicleModel) <- validateRCStatus input rcconfigs now expiry
+  let airConditioned = input.airConditioned
       updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
         Just DVC.BUS -> if airConditioned == Just True then Just DV.BUS_AC else Just DV.BUS_NON_AC
         Just DVC.TRUCK -> Just $ DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight (fromMaybe DV.DELIVERY_LIGHT_GOODS_VEHICLE variant)
         _ -> variant
       finalVerificationStatus = if null failedRules then verificationStatus else Documents.INVALID
-  VehicleRegistrationCertificate
+  pure $ VehicleRegistrationCertificate
     { id,
       documentImageId = input.documentImageId,
       certificateNumber,
@@ -453,16 +460,22 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
       vehicleImageId = Nothing
     }
 
-validateRCStatus :: CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
+validateRCStatus :: VerificationFlow m r => CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> m (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
 validateRCStatus input rcconfigs now expiry = do
   case rcconfigs.supportedVehicleClasses of
-    DVC.RCValidClasses [] -> (Documents.INVALID, Nothing, Nothing, Nothing)
+    DVC.RCValidClasses [] -> pure (Documents.INVALID, Nothing, Nothing, Nothing)
     DVC.RCValidClasses vehicleClassVariantMap -> do
       let validCOVsCheck = rcconfigs.vehicleClassCheckType
-      let (isCOVValid, reviewRequired, variant, mbVehicleModel) = maybe (False, Nothing, Nothing, Nothing) (isValidCOVRC input.airConditioned input.oxygen input.ventilator input.vehicleClassCategory input.seatingCapacity input.manufacturer input.bodyType input.manufacturerModel vehicleClassVariantMap validCOVsCheck) (input.vehicleClass <|> input.vehicleClassCategory)
+      let mbVehicleClassOrCategory = input.vehicleClass <|> input.vehicleClassCategory
+      logInfo $ "validateRCStatus: vehicleClass=" <> show input.vehicleClass <> ", vehicleClassCategory=" <> show input.vehicleClassCategory <> ", mbVehicleClassOrCategory=" <> show mbVehicleClassOrCategory <> ", vehicleClassCheckType=" <> show validCOVsCheck <> ", vehicleClassVariantMap size=" <> show (length vehicleClassVariantMap)
+      let (isCOVValid, reviewRequired, variant, mbVehicleModel) = maybe (False, Nothing, Nothing, Nothing) (isValidCOVRC input.airConditioned input.oxygen input.ventilator input.vehicleClassCategory input.seatingCapacity input.manufacturer input.bodyType input.manufacturerModel vehicleClassVariantMap validCOVsCheck) mbVehicleClassOrCategory
+      logInfo $ "validateRCStatus: isCOVValid=" <> show isCOVValid <> ", checkExpiry=" <> show rcconfigs.checkExpiry <> ", expiry=" <> show expiry <> ", now < expiry=" <> show (now < expiry)
       let validInsurance = True -- (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
-      if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (Documents.VALID, reviewRequired, variant, mbVehicleModel) else (Documents.INVALID, reviewRequired, variant, mbVehicleModel)
-    _ -> (Documents.INVALID, Nothing, Nothing, Nothing)
+      let expiryCheck = (not rcconfigs.checkExpiry) || now < expiry
+      let finalStatus = if expiryCheck && isCOVValid && validInsurance then Documents.VALID else Documents.INVALID
+      logInfo $ "validateRCStatus: Setting verificationStatus=" <> show finalStatus <> " (expiryCheck=" <> show expiryCheck <> ", isCOVValid=" <> show isCOVValid <> ", validInsurance=" <> show validInsurance <> ")"
+      pure $ if finalStatus == Documents.VALID then (Documents.VALID, reviewRequired, variant, mbVehicleModel) else (Documents.INVALID, reviewRequired, variant, mbVehicleModel)
+    _ -> pure (Documents.INVALID, Nothing, Nothing, Nothing)
 
 isValidCOVRC :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> [DVC.VehicleClassVariantMap] -> DVC.VehicleClassCheckType -> Text -> (Bool, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
 isValidCOVRC mbAirConditioned mbOxygen mbVentilator mVehicleCategory capacity manufacturer bodyType manufacturerModel vehicleClassVariantMap validCOVsCheck cov = do
