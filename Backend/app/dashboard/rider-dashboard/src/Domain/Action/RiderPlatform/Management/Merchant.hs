@@ -190,11 +190,11 @@ postMerchantTicketConfigUpsert merchantShortId opCity apiTokenInfo req = do
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantTicketConfigUpsert)) req
 
-postMerchantConfigSpecialLocationUpsert :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq -> Environment.Flow Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities)
-postMerchantConfigSpecialLocationUpsert merchantShortId opCity apiTokenInfo req = do
+postMerchantConfigSpecialLocationUpsert :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq -> Environment.Flow Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities)
+postMerchantConfigSpecialLocationUpsert merchantShortId opCity apiTokenInfo mbUpsertInDriverApp req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigSpecialLocationUpsert)) req
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigSpecialLocationUpsert) mbUpsertInDriverApp) req
 
 postMerchantSchedulerTrigger :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.SchedulerTriggerReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMerchantSchedulerTrigger merchantShortId opCity apiTokenInfo req = do
@@ -266,13 +266,13 @@ getMerchantConfigSpecialLocationList merchantShortId opCity apiTokenInfo limit o
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSpecialLocationList) limit offset specialLocationType
 
-getMerchantConfigGeometryList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow Common.GeometryResp)
-getMerchantConfigGeometryList merchantShortId opCity apiTokenInfo limit offset = do
+getMerchantConfigGeometryList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow Common.GeometryResp)
+getMerchantConfigGeometryList merchantShortId opCity apiTokenInfo limit offset allCities = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigGeometryList) limit offset
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigGeometryList) limit offset allCities
 
-putMerchantConfigGeometryUpdate :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.UpdateGeometryReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-putMerchantConfigGeometryUpdate merchantShortId opCity apiTokenInfo req = do
+putMerchantConfigGeometryUpdate :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Common.UpdateGeometryReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+putMerchantConfigGeometryUpdate merchantShortId opCity apiTokenInfo updateInDriver req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.putMerchantConfigGeometryUpdate)) req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.putMerchantConfigGeometryUpdate) updateInDriver) req

@@ -103,6 +103,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.JobScheduler (RiderJobType (NyRegularMaster))
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
@@ -1376,7 +1377,10 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoHasGeom :: Text,
     gateInfoCanQueueUpOnGate :: Text,
     gateInfoType :: Text,
-    priority :: Text
+    priority :: Text,
+    pickupPriority :: Text,
+    dropPriority :: Text,
+    specialLocationId :: Text
   }
   deriving (Show)
 
@@ -1399,9 +1403,12 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "gate_info_can_queue_up_on_gate"
       <*> r .: "gate_info_type"
       <*> r .: "priority"
+      <*> r .: "pickup_priority"
+      <*> r .: "drop_priority"
+      <*> r .: "special_location_id"
 
-postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
-postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
+postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
+postMerchantConfigSpecialLocationUpsert merchantShortId opCity mbUpsertInDriverApp req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   flatSpecialLocationAndGateInfo <- readCsv req.file req.locationGeoms req.gateGeoms merchantOpCity
@@ -1418,7 +1425,17 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       )
       []
       groupedSpecialLocationAndGateInfo
-  return $ Common.APISuccessWithUnprocessedEntities unprocessedEntities
+  -- If upsertInDriverApp QueryParam is true, call the driver app with CSV data
+  driverAppUnprocessed <-
+    if fromMaybe False mbUpsertInDriverApp
+      then do
+        result <- withTryCatch "callDriverAppSpecialLocationUpsert" $ do
+          CallBPPInternal.upsertSpecialLocation merchant opCity req.file req.locationGeoms req.gateGeoms
+        case result of
+          Left err -> return ["Driver app upsert failed: " <> show err]
+          Right resp -> return resp.unprocessedEntities
+      else return []
+  return $ Common.APISuccessWithUnprocessedEntities (unprocessedEntities <> driverAppUnprocessed)
   where
     readCsv csvFile locationGeomFiles gateGeomFiles merchantOpCity = do
       csvData <- L.runIO $ BS.readFile csvFile
@@ -1426,7 +1443,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> V.imapM (makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity) v >>= (pure . V.toList)
 
-    makeSpecialLocation :: [(Text, FilePath)] -> [(Text, FilePath)] -> DMOC.MerchantOperatingCity -> Int -> SpecialLocationCSVRow -> Flow (Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))
+    makeSpecialLocation :: [(Text, FilePath)] -> [(Text, FilePath)] -> DMOC.MerchantOperatingCity -> Int -> SpecialLocationCSVRow -> Flow (Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Maybe Text)
     makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       now <- getCurrentTime
       city :: Context.City <- readCSVField idx row.city "City"
@@ -1437,6 +1454,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       category :: Text <- cleanCSVField idx row.category "Category"
       let locationType :: Maybe SL.SpecialLocationType = readMaybeCSVField idx row.locationType "Location Type"
           priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
+          mbSpecialLocationId :: Maybe Text = cleanField row.specialLocationId
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       gateInfoId <- generateGUID
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
@@ -1487,50 +1505,56 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 createdAt = now,
                 updatedAt = now
               }
-      return (city, locationName, (specialLocation, gateInfo))
+      return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 
-    groupSpecialLocationAndGates :: [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))] -> [[(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))]]
+    groupSpecialLocationAndGates :: [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Maybe Text)] -> [[(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Maybe Text)]]
     groupSpecialLocationAndGates = DL.groupBy (\a b -> fst2 a == fst2 b) . DL.sortBy (compare `on` fst2)
       where
-        fst2 (c, l, _) = (c, l)
+        fst2 (c, l, _, _) = (c, l)
 
-    runValidationOnSpecialLocationAndGatesGroup :: DMOC.MerchantOperatingCity -> [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))] -> Flow ()
+    runValidationOnSpecialLocationAndGatesGroup :: DMOC.MerchantOperatingCity -> [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Maybe Text)] -> Flow ()
     runValidationOnSpecialLocationAndGatesGroup _ [] = throwError $ InvalidRequest "Empty Special Location Group"
     runValidationOnSpecialLocationAndGatesGroup _merchantOpCity (x : _) = do
-      let (city, _locationName, (_specialLocation, _)) = x
+      let (city, _locationName, (_specialLocation, _), _) = x
       if (city /= opCity)
         then throwError $ InvalidRequest ("Can't process special location for different city: " <> show city <> ", please login with this city in dashboard")
         else do
           -- TODO :: Add Validation for Overlapping Geometries
           return ()
 
-    processSpecialLocationAndGatesGroup :: DMOC.MerchantOperatingCity -> [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo))] -> Flow ()
+    processSpecialLocationAndGatesGroup :: DMOC.MerchantOperatingCity -> [(Context.City, Text, (DSL.SpecialLocation, DGI.GateInfo), Maybe Text)] -> Flow ()
     processSpecialLocationAndGatesGroup _ [] = throwError $ InvalidRequest "Empty Special Location Group"
     processSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates@(x : _) = do
       void $ runValidationOnSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates
-      let (_city, locationName, (specialLocation, _)) = x
-      specialLocationId <-
-        QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId
-          |<|>| QSL.findByLocationName locationName
-            >>= \case
-              Just spl -> do
-                void $
-                  runTransaction $ do
-                    QSL.deleteById spl.id
-                    QGI.deleteAll spl.id
-                return $ spl.id
-              Nothing -> generateGUID
+      let (_city, locationName, (specialLocation, _), mbSpecialLocationIdFromCsv) = x
+      mbExisting <- QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId |<|>| QSL.findByLocationName locationName
+      whenJust mbExisting $ \spl -> do
+        void $
+          runTransaction $ do
+            QSL.deleteById spl.id
+            QGI.deleteAll spl.id
+      specialLocationId <- case mbSpecialLocationIdFromCsv of
+        Just splIdFromCsv -> return $ Id splIdFromCsv
+        Nothing -> maybe generateGUID (return . (.id)) mbExisting
       void $ runTransaction $ QSLG.create $ specialLocation {DSL.id = specialLocationId}
       mapM_
-        (\(_, _, (_, gateInfo)) -> runTransaction $ QGIG.create $ gateInfo {DGI.specialLocationId = specialLocationId})
+        (\(_, _, (_, gateInfo), _) -> runTransaction $ QGIG.create $ gateInfo {DGI.specialLocationId = specialLocationId})
         specialLocationAndGates
 
-getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Flow [QSL.SpecialLocationFull]
+getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Flow [Common.SpecialLocationWithPlatform]
 getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset mbSpecialLocationType = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
 
-  QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset mbSpecialLocationType
+  -- Fetch rider special locations
+  riderLocations <- QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset mbSpecialLocationType
+  let riderLocationsWithPlatform = map (\loc -> Common.SpecialLocationWithPlatform {location = loc, platform = Common.Rider}) riderLocations
+
+  -- Fetch driver special locations via internal API
+  mbDriverLocations <- CallBPPInternal.getSpecialLocationList merchant opCity mbLimit mbOffset mbSpecialLocationType
+  let driverLocationsWithPlatform = maybe [] (map (\loc -> Common.SpecialLocationWithPlatform {location = loc, platform = Common.Driver})) mbDriverLocations
+
+  return $ riderLocationsWithPlatform <> driverLocationsWithPlatform
 
 postMerchantSchedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
 postMerchantSchedulerTrigger merchantShortId opCity req = do
@@ -1585,28 +1609,56 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
         whiteListError = Nothing
       }
 
-getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.GeometryResp
-getMerchantConfigGeometryList merchantShortId opCity mbLimit mbOffset = do
+getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Flow Common.GeometryResp
+getMerchantConfigGeometryList merchantShortId opCity mbLimit mbOffset mbAllCities = do
   merchant <- findMerchantByShortId merchantShortId
   void $ CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  geoms <- QGEO.findAllGeometries opCity mbLimit mbOffset
-  return $ map toResponse geoms
+
+  -- Fetch rider geometries (for all cities if allCities=true)
+  riderGeoms <- case mbAllCities of
+    Just True -> QGEO.findAllGeometriesForMerchant merchant.id mbLimit mbOffset
+    _ -> QGEO.findAllGeometries opCity mbLimit mbOffset
+  let riderResponse = map (toResponseFromGeom Common.Rider) riderGeoms
+
+  -- Fetch driver geometries via internal API
+  mbDriverGeoms <- CallBPPInternal.getGeometryList merchant opCity mbLimit mbOffset mbAllCities
+  let driverResponse = maybe [] (map (toResponseFromInternal Common.Driver)) mbDriverGeoms
+
+  return $ riderResponse <> driverResponse
   where
-    toResponse :: DGEO.Geometry -> Common.GeometryAPIEntity
-    toResponse geom =
+    toResponseFromGeom :: Common.Platform -> DGEO.Geometry -> Common.GeometryAPIEntity
+    toResponseFromGeom sourcePlatform geom =
       Common.GeometryAPIEntity
         { region = geom.region,
           state = geom.state,
           city = geom.city,
-          geom = geom.geom
+          geom = geom.geom,
+          platform = sourcePlatform
         }
 
-putMerchantConfigGeometryUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateGeometryReq -> Flow APISuccess
-putMerchantConfigGeometryUpdate merchantShortId opCity req = do
+    toResponseFromInternal :: Common.Platform -> CallBPPInternal.GeometryAPIEntity -> Common.GeometryAPIEntity
+    toResponseFromInternal sourcePlatform geom =
+      Common.GeometryAPIEntity
+        { region = geom.region,
+          state = geom.state,
+          city = geom.city,
+          geom = geom.geom,
+          platform = sourcePlatform
+        }
+
+putMerchantConfigGeometryUpdate :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Common.UpdateGeometryReq -> Flow APISuccess
+putMerchantConfigGeometryUpdate merchantShortId opCity mbUpdateInDriver req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let cityParam = merchantOpCity.city
       stateParam = merchantOpCity.state
   newGeom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Not able to convert the given KML to PostGis geom")
+
+  -- Update rider geometry
   QGEO.updateGeometry cityParam stateParam req.region (T.pack newGeom)
+
+  -- If updateInDriver is true, also update driver geometry via internal API
+  when (fromMaybe False mbUpdateInDriver) $ do
+    void $ CallBPPInternal.updateGeometry merchant opCity req.region (T.pack newGeom)
+
   return Success
