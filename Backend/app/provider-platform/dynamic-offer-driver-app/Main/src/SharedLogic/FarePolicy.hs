@@ -76,19 +76,22 @@ makeFarePolicyByEstOrQuoteIdKey estOrQuoteId = "CachedQueries:FarePolicy:EstOrQu
 
 getFarePolicyByEstOrQuoteIdWithoutFallback :: (CacheFlow m r) => Text -> m (Maybe FarePolicyD.FullFarePolicy)
 getFarePolicyByEstOrQuoteIdWithoutFallback estOrQuoteId = do
-  Hedis.safeGet (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
-    Nothing -> do
-      logWarning $ "Fare Policy Not Found for quote id: " <> estOrQuoteId
-      return Nothing
-    Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+  Hedis.runInSecondaryRedis $
+    Hedis.withCrossAppRedis $
+      Hedis.safeGet (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
+        Nothing -> do
+          logWarning $ "Fare Policy Not Found for quote id: " <> estOrQuoteId
+          return Nothing
+        Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
 
 getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> m FarePolicyD.FullFarePolicy
 getFarePolicyByEstOrQuoteId mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId mbBookingStartTime isDashboardRequest mbAppDynamicLogicVersion txnId configInExperimentVersions = do
-  Hedis.safeGet (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
-    Nothing -> do
-      logWarning "Old Fare Policy Not Found, Hence using new fare policy."
-      getFarePolicy mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration merchantOpCityId (fromMaybe False isDashboardRequest) tripCategory vehicleServiceTier area mbBookingStartTime mbAppDynamicLogicVersion txnId configInExperimentVersions
-    Just a -> return $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+  Hedis.runInSecondaryRedis $
+    Hedis.safeGet (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
+      Nothing -> do
+        logWarning "Old Fare Policy Not Found, Hence using new fare policy."
+        getFarePolicy mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration merchantOpCityId (fromMaybe False isDashboardRequest) tripCategory vehicleServiceTier area mbBookingStartTime mbAppDynamicLogicVersion txnId configInExperimentVersions
+      Just a -> return $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
 
 cacheFarePolicyByQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> FarePolicyD.FullFarePolicy -> m ()
 cacheFarePolicyByQuoteId quoteId fp = do
