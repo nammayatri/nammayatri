@@ -117,7 +117,8 @@ onConfirm ::
     HasField "storeRidesTimeLimit" r Int,
     HasBAPMetrics m r,
     EventStreamFlow m r,
-    HasFlowEnv m r '["isMetroTestTransaction" ::: Bool]
+    HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
+    HasField "blackListedJobs" r [Text]
   ) =>
   ValidatedOnConfirmReq ->
   m ()

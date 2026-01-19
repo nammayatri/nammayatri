@@ -20,7 +20,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Tools.Metrics as Metrics
 
 select ::
-  FRFSConfirmFlow m r c =>
+  (FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text]) =>
   Merchant ->
   MerchantOperatingCity ->
   BecknConfig ->
@@ -53,7 +53,7 @@ select merchant merchantOperatingCity bapConfig quote quoteCategories crisSdkRes
       onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote quoteCategories
       processOnSelect integratedBPPConfig onSelectReq crisSdkResponse isSingleMode mbEnableOffer
   where
-    processOnSelect :: (FRFSConfirmFlow m r c) => IntegratedBPPConfig -> DOnSelect -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> m ()
+    processOnSelect :: (FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text]) => IntegratedBPPConfig -> DOnSelect -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> m ()
     processOnSelect integratedBPPConfig onSelectReq crisSdkResp mbSingleMode enableOffer = do
       (merchant', quote', _) <- DOnSelect.validateRequest onSelectReq
       DOnSelect.onSelect onSelectReq merchant' quote' mbSingleMode enableOffer crisSdkResp integratedBPPConfig

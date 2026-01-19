@@ -35,7 +35,7 @@ import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Tools.Metrics as Metrics
 
-validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnSelect -> m (Merchant.Merchant, DQuote.FRFSQuote, DIBC.IntegratedBPPConfig)
+validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r ) => DOnSelect -> m (Merchant.Merchant, DQuote.FRFSQuote, DIBC.IntegratedBPPConfig)
 validateRequest DOnSelect {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   quote <- runInReplica $ Qquote.findById (Id messageId) >>= fromMaybeM (QuoteDoesNotExist messageId)
@@ -44,7 +44,7 @@ validateRequest DOnSelect {..} = do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   return (merchant, quote, integratedBppConfig)
 
-onSelect :: (FRFSConfirmFlow m r c) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> Maybe Bool -> Maybe CrisSdkResponse -> DIBC.IntegratedBPPConfig -> m ()
+onSelect :: (FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text]) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> Maybe Bool -> Maybe CrisSdkResponse -> DIBC.IntegratedBPPConfig -> m ()
 onSelect onSelectReq merchant quote isSingleMode mbEnableOffer crisSdkResponse integratedBppConfig = do
   logDebug $ "onSelect isSingleMode: " <> show isSingleMode <> " mbEnableOffer: " <> show mbEnableOffer <> " crisSdkResponse: " <> show crisSdkResponse
   Metrics.finishMetrics Metrics.SELECT_FRFS merchant.name onSelectReq.transactionId quote.merchantOperatingCityId.getId

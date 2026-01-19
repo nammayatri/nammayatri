@@ -32,7 +32,8 @@ updateCrisUtsDataJob ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'UpdateCrisUtsData ->
   m ExecutionResult

@@ -118,7 +118,8 @@ initiateDriverSearchBatch ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "blackListedJobs" r [Text]
   ) =>
   DriverSearchBatchInput m ->
   m ()

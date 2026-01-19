@@ -74,7 +74,8 @@ data SchedulerConfig = SchedulerConfig
     enablePrometheusMetricLogging :: Bool,
     cacConfig :: CacConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
-    inMemConfig :: InMemConfig
+    inMemConfig :: InMemConfig,
+    blackListedJobs :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -121,7 +122,8 @@ data SchedulerEnv = SchedulerEnv
     cacConfig :: CacConfig,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     inMemEnv :: InMemEnv,
-    url :: Maybe Text
+    url :: Maybe Text,
+    blackListedJobs :: [Text]
   }
   deriving (Generic)
 
@@ -138,7 +140,7 @@ type SchedulerM = FlowR SchedulerEnv
 
 type HasJobInfoMap r = HasField "jobInfoMap" r (M.Map Text Bool)
 
-type JobCreatorEnv r = (HasJobInfoMap r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text)
+type JobCreatorEnv r = (HasJobInfoMap r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "blackListedJobs" r [Text])
 
 type JobCreator r m = (JobCreatorEnv r, JobMonad r m)
 
@@ -146,7 +148,7 @@ type JobExecutorEnv r = (HasField "streamName" r Text, HasField "maxShards" r In
 
 type JobExecutor r m = (JobExecutorEnv r, JobMonad r m)
 
-type JobMonad r m = (HasSchemaName SchedulerJobT, HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m, EsqDBFlow m r)
+type JobMonad r m = (HasSchemaName SchedulerJobT, HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m, EsqDBFlow m r, HasField "blackListedJobs" r [Text])
 
 runSchedulerM :: HasSchemaName SystemConfigsT => SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
 runSchedulerM schedulerConfig env action = do

@@ -36,7 +36,8 @@ postRideSafetyNotification ::
     MonadFlow m,
     EsqDBFlow m r,
     SchedulerFlow r,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'PostRideSafetyNotification ->
   m ExecutionResult

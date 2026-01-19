@@ -128,7 +128,8 @@ cancelRideImpl ::
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->

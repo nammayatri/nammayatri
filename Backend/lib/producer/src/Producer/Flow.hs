@@ -189,7 +189,7 @@ getTime producerTimestampKey = do
     Just lastTime -> lastTime
     Nothing -> begTime
 
-getAllPendingJobs :: (JobProcessor t) => Flow [AnyJob t]
+getAllPendingJobs :: (JobProcessor t, HasField "blackListedJobs" AppEnv [Text]) => Flow [AnyJob t]
 getAllPendingJobs = do
   reviveThreshold <- asks (.reviveThreshold)
   currentTime <- getCurrentTime

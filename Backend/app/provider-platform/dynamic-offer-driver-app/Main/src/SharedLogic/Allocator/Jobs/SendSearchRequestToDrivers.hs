@@ -92,7 +92,8 @@ sendSearchRequestToDrivers ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal]
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -199,7 +200,8 @@ sendSearchRequestToDrivers' ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal]
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasField "blackListedJobs" r [Text]
   ) =>
   DriverPoolConfig ->
   SearchTry ->
