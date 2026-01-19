@@ -503,7 +503,8 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
   let rcReq =
         DomainRC.DriverRCReq
           { vehicleRegistrationCertNumber = req.vehicleRegistrationCertNumber,
-            imageId = cast req.imageId,
+            imageId = Just (cast req.imageId),
+            udinNumber = Nothing,
             operatingCity = req.operatingCity,
             dateOfRegistration = req.dateOfRegistration,
             airConditioned = req.airConditioned,

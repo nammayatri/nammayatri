@@ -88,7 +88,7 @@ defaultFleetDocumentTypes :: [DVC.DocumentType]
 defaultFleetDocumentTypes = [DVC.AadhaarCard, DVC.PanCard, DVC.GSTCertificate, DVC.BusinessLicense]
 
 defaultVehicleDocumentTypes :: [DVC.DocumentType]
-defaultVehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer]
+defaultVehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer, DVC.TtenCertificate]
 
 notifyErrorToSupport ::
   Person ->
@@ -361,7 +361,7 @@ data CreateRCInput = CreateRCInput
     fitnessUpto :: Maybe UTCTime,
     fleetOwnerId :: Maybe Text,
     vehicleCategory :: Maybe DVC.VehicleCategory,
-    documentImageId :: Id Domain.Image,
+    documentImageId :: Maybe (Id Domain.Image),
     vehicleClass :: Maybe Text,
     vehicleClassCategory :: Maybe Text,
     insuranceValidity :: Maybe UTCTime,
@@ -383,16 +383,17 @@ data CreateRCInput = CreateRCInput
     unladdenWeight :: Maybe Float
   }
 
-buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> [Text] -> m (Maybe VehicleRegistrationCertificate)
-buildRC merchantId merchantOperatingCityId input failedRules = do
+buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> [Text] -> Bool -> m (Maybe VehicleRegistrationCertificate)
+buildRC merchantId merchantOperatingCityId input failedRules isTtenVerification = do
   now <- getCurrentTime
   id <- generateGUID
-  rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe DVC.CAR input.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
+  let doctype = if isTtenVerification then DVC.TtenCertificate else DVC.VehicleRegistrationCertificate
+  rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId doctype (fromMaybe DVC.CAR input.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show doctype))
   mEncryptedRC <- encrypt `mapM` input.registrationNumber
   let mbFitnessExpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
   mbRC <- case (mEncryptedRC, mbFitnessExpiry) of
     (Just certificateNumber, Just expiry) -> do
-      rc <- createRC merchantId merchantOperatingCityId input rCConfigs id now failedRules certificateNumber expiry
+      rc <- createRC merchantId merchantOperatingCityId input rCConfigs id now doctype failedRules certificateNumber expiry
       logInfo $ "buildRC: Created RC with verificationStatus=" <> show rc.verificationStatus <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
       return $ Just rc
     _ -> return Nothing
@@ -406,11 +407,12 @@ createRC ::
   DVC.DocumentVerificationConfig ->
   Id VehicleRegistrationCertificate ->
   UTCTime ->
+  DVC.DocumentType ->
   [Text] ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   m VehicleRegistrationCertificate
-createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
+createRC merchantId merchantOperatingCityId input rcconfigs id now doctype failedRules certificateNumber expiry = do
   (verificationStatus, reviewRequired, variant, mbVehicleModel) <- validateRCStatus input rcconfigs now expiry
   let airConditioned = input.airConditioned
       updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
@@ -418,48 +420,47 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         Just DVC.TRUCK -> Just $ DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight (fromMaybe DV.DELIVERY_LIGHT_GOODS_VEHICLE variant)
         _ -> variant
       finalVerificationStatus = if null failedRules then verificationStatus else Documents.INVALID
-  pure $
-    VehicleRegistrationCertificate
-      { id,
-        documentImageId = input.documentImageId,
-        certificateNumber,
-        fitnessExpiry = expiry,
-        permitExpiry = input.permitValidityUpto,
-        pucExpiry = input.pucValidityUpto,
-        vehicleClass = input.vehicleClass,
-        vehicleVariant = updVariant,
-        vehicleManufacturer = input.manufacturer <|> input.manufacturerModel,
-        vehicleCapacity = input.seatingCapacity,
-        vehicleModel = mbVehicleModel,
-        vehicleColor = input.color,
-        vehicleDoors = Nothing,
-        vehicleSeatBelts = Nothing,
-        manufacturerModel = input.manufacturerModel,
-        vehicleEnergyType = input.fuelType,
-        reviewedAt = Nothing,
-        reviewRequired,
-        insuranceValidity = input.insuranceValidity,
-        mYManufacturing = input.mYManufacturing,
-        verificationStatus = finalVerificationStatus,
-        fleetOwnerId = input.fleetOwnerId,
-        merchantId = Just merchantId,
-        merchantOperatingCityId = Just merchantOperatingCityId,
-        userPassedVehicleCategory = input.vehicleCategory,
-        airConditioned = airConditioned,
-        oxygen = input.oxygen,
-        ventilator = input.ventilator,
-        luggageCapacity = Nothing,
-        vehicleRating = Nothing,
-        failedRules = failedRules,
-        dateOfRegistration = input.dateOfRegistration,
-        vehicleModelYear = input.vehicleModelYear,
-        rejectReason = Nothing,
-        createdAt = now,
-        unencryptedCertificateNumber = input.registrationNumber,
-        approved = Just False,
-        updatedAt = now,
-        vehicleImageId = Nothing
-      }
+  VehicleRegistrationCertificate
+    { id,
+      documentImageId = input.documentImageId,
+      certificateNumber,
+      fitnessExpiry = expiry,
+      permitExpiry = input.permitValidityUpto,
+      pucExpiry = input.pucValidityUpto,
+      vehicleClass = input.vehicleClass,
+      vehicleVariant = if doctype == DVC.TtenCertificate then Just DV.E_RICKSHAW else updVariant,
+      vehicleManufacturer = input.manufacturer <|> input.manufacturerModel,
+      vehicleCapacity = input.seatingCapacity,
+      vehicleModel = mbVehicleModel,
+      vehicleColor = input.color,
+      vehicleDoors = Nothing,
+      vehicleSeatBelts = Nothing,
+      manufacturerModel = input.manufacturerModel,
+      vehicleEnergyType = input.fuelType,
+      reviewedAt = Nothing,
+      reviewRequired,
+      insuranceValidity = input.insuranceValidity,
+      mYManufacturing = input.mYManufacturing,
+      verificationStatus = if doctype == DVC.TtenCertificate then Documents.VALID else finalVerificationStatus,
+      fleetOwnerId = input.fleetOwnerId,
+      merchantId = Just merchantId,
+      merchantOperatingCityId = Just merchantOperatingCityId,
+      userPassedVehicleCategory = input.vehicleCategory,
+      airConditioned = airConditioned,
+      oxygen = input.oxygen,
+      ventilator = input.ventilator,
+      luggageCapacity = Nothing,
+      vehicleRating = Nothing,
+      failedRules = failedRules,
+      dateOfRegistration = input.dateOfRegistration,
+      vehicleModelYear = input.vehicleModelYear,
+      rejectReason = Nothing,
+      createdAt = now,
+      unencryptedCertificateNumber = input.registrationNumber,
+      approved = Just False,
+      updatedAt = now,
+      vehicleImageId = Nothing
+    }
 
 validateRCStatus :: VerificationFlow m r => CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> m (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
 validateRCStatus input rcconfigs now expiry = do
@@ -603,6 +604,7 @@ makeIdfyVerificationReqRecord DIdfy.IdfyVerification {..} =
   VerificationReqRecord
     { id = id.getId,
       verificaitonResponse = idfyResponse,
+      documentImageId1 = fromMaybe "" documentImageId1,
       ..
     }
 
@@ -611,6 +613,7 @@ makeHVVerificationReqRecord DHV.HyperVergeVerification {..} =
   VerificationReqRecord
     { id = id.getId,
       verificaitonResponse = hypervergeResponse,
+      documentImageId1 = fromMaybe "" documentImageId1,
       ..
     }
 
@@ -713,6 +716,7 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.VehicleBackInterior -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBackInterior
   Domain.Types.DocumentVerificationConfig.Odometer -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.Odometer
   Domain.Types.DocumentVerificationConfig.InspectionHub -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.InspectionHub
+  Domain.Types.DocumentVerificationConfig.TtenCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.TtenCertificate
   -- Netherlands Document Types
   Domain.Types.DocumentVerificationConfig.KIWADriverCard -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.KIWADriverCard
   Domain.Types.DocumentVerificationConfig.KIWATaxiPermit -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.KIWATaxiPermit

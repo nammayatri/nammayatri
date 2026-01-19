@@ -43,8 +43,10 @@ findById ::
   (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m (Maybe Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate))
-findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
+findByImageId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image) -> m (Maybe Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate))
+findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId <$> documentImageId)]
 
 findByRCIdAndFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -104,10 +106,10 @@ updateVentilator ::
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
 updateVentilator ventilator id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.ventilator ventilator, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image) -> m ())
 updateVerificationStatus verificationStatus documentImageId = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
+  updateOneWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId <$> documentImageId)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -123,7 +125,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.certificateNumberEncrypted (certificateNumber & unEncrypted . encrypted),
       Se.Set Beam.certificateNumberHash (certificateNumber & hash),
       Se.Set Beam.dateOfRegistration dateOfRegistration,
-      Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
+      Se.Set Beam.documentImageId (Kernel.Types.Id.getId <$> documentImageId),
       Se.Set Beam.failedRules failedRules,
       Se.Set Beam.fitnessExpiry fitnessExpiry,
       Se.Set Beam.fleetOwnerId fleetOwnerId,

@@ -18,7 +18,7 @@ import qualified Tools.Beam.UtilsTH
 data IdfyVerificationE e = IdfyVerification
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     docType :: Domain.Types.DocumentVerificationConfig.DocumentType,
-    documentImageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
+    documentImageId1 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     documentNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -41,9 +41,9 @@ data IdfyVerificationE e = IdfyVerification
   }
   deriving (Generic)
 
-type IdfyVerification = IdfyVerificationE ('AsEncrypted)
+type IdfyVerification = IdfyVerificationE 'AsEncrypted
 
-type DecryptedIdfyVerification = IdfyVerificationE ('AsUnencrypted)
+type DecryptedIdfyVerification = IdfyVerificationE 'AsUnencrypted
 
 instance EncryptedItem IdfyVerification where
   type Unencrypted IdfyVerification = (DecryptedIdfyVerification, HashSalt)
@@ -111,4 +111,4 @@ instance EncryptedItem' IdfyVerification where
 
 data ImageExtractionValidation = Success | Skipped | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ImageExtractionValidation))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ImageExtractionValidation)

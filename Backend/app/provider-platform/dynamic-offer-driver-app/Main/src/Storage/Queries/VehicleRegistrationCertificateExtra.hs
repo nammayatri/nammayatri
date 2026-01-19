@@ -90,8 +90,8 @@ findByRCAndExpiry certNumber expiry = do
 findAllById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
 findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds]
 
-findAllByImageId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Image] -> m [VehicleRegistrationCertificate]
-findAllByImageId imageIds = findAllWithKV [Se.Is BeamVRC.documentImageId $ Se.In $ map (.getId) imageIds]
+findAllByImageId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Maybe (Id Image)] -> m [VehicleRegistrationCertificate]
+findAllByImageId imageIds = findAllWithKV [Se.Is BeamVRC.documentImageId $ Se.In $ map (Just . (.getId)) $ catMaybes imageIds]
 
 findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCWrapper certNumber = do
@@ -336,7 +336,7 @@ updateVerificationStatusAndRejectReason ::
   (Documents.VerificationStatus -> Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateVerificationStatusAndRejectReason verificationStatus rejectReason (Kernel.Types.Id.Id imageId) = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set BeamVRC.verificationStatus verificationStatus, Se.Set BeamVRC.rejectReason (Just rejectReason), Se.Set BeamVRC.updatedAt _now] [Se.Is BeamVRC.documentImageId $ Se.Eq imageId]
+  updateOneWithKV [Se.Set BeamVRC.verificationStatus verificationStatus, Se.Set BeamVRC.rejectReason (Just rejectReason), Se.Set BeamVRC.updatedAt _now] [Se.Is BeamVRC.documentImageId $ Se.Eq (Just imageId)]
 
 findAllValidRcByFleetOwnerIdAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe Text -> Maybe DbHash -> m [VehicleRegistrationCertificate]
 findAllValidRcByFleetOwnerIdAndSearchString limit offset (Id merchantId') fleetOwnerId mbSearchString mbSearchStringHash = do

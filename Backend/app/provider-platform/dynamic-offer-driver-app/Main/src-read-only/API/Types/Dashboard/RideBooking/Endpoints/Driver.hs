@@ -215,7 +215,7 @@ data PlatformFee = PlatformFee
 
 data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPIEntity
   { registrationCertificateId :: Kernel.Types.Id.Id Dashboard.Common.Driver.VehicleRegistrationCertificate,
-    documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    documentImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     certificateNumber :: Kernel.Prelude.Text,
     fitnessExpiry :: Kernel.Prelude.UTCTime,
     permitExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

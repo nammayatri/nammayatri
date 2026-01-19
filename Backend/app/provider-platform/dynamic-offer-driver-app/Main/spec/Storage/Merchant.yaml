@@ -567,6 +567,7 @@ MerchantServiceUsageConfig:
     updatedAt: UTCTime
     createdAt: UTCTime
     verificationProvidersPriorityList: "[VerificationService]"
+    totoVerificationPriorityList: "Maybe [VerificationService]"
     createBankAccount: PaymentService
     retryBankAccountLink: PaymentService
     getBankAccount: PaymentService
@@ -620,6 +621,7 @@ MerchantServiceUsageConfig:
     snapToRoadProvidersList: "text[]"
     sendSearchRequestToDriver: "text[]"
     verificationProvidersPriorityList: "text[]"
+    totoVerificationPriorityList: "text[]"
     driverBackgroundVerificationService: character varying(30)
     serviceName: VARCHAR(50)
     rectifyDistantPointsFailure: text
@@ -632,6 +634,7 @@ MerchantServiceUsageConfig:
     getExophone: "'Exotel'"
     snapToRoadProvidersList: '''{"OSRM", "Google"}'''
     verificationProvidersPriorityList: '''{"Idfy"}'''
+    totoVerificationPriorityList: '''{"Tten"}'''
     rectifyDistantPointsFailure: "'OSRM'"
     createBankAccount: "'Stripe'"
     retryBankAccountLink: "'Stripe'"

@@ -139,7 +139,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   commonDocumentsData <- runInReplica (QCommonDriverOnboardingDocuments.findByDriverId (Just (cast driverId)))
   let commonDocuments = map toCommonDocumentItem commonDocumentsData
   allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) $ mapMaybe listToMaybe dlImgs))
-  allRCImgs <- runInReplica (QRC.findAllByImageId (map (Id) vehRegImgs))
+  allRCImgs <- runInReplica (QRC.findAllByImageId (map (Just . Id) vehRegImgs))
   allDLDetails <- mapM convertDLToDLDetails allDlImgs
   allRCDetails <- mapM convertRCToRCDetails allRCImgs
   ssnEntry <- QSSN.findByDriverId (cast driverId)
@@ -204,7 +204,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
       pure $
         Common.RCDetails
           { vehicleRegistrationCertNumber = certificateNumberDec,
-            imageId = rc.documentImageId.getId,
+            imageId = maybe "" getId rc.documentImageId,
             operatingCity = show city,
             vehicleCategory = show <$> rc.userPassedVehicleCategory,
             airConditioned = rc.airConditioned,
@@ -279,6 +279,7 @@ mapDocumentType Common.VehicleLeft = Domain.VehicleLeft
 mapDocumentType Common.VehicleRight = Domain.VehicleRight
 mapDocumentType Common.Odometer = Domain.Odometer
 mapDocumentType Common.InspectionHub = Domain.InspectionHub
+mapDocumentType Common.TtenCertificate = Domain.TtenCertificate
 -- Netherlands Document Types
 mapDocumentType Common.KIWADriverCard = Domain.KIWADriverCard
 mapDocumentType Common.KIWATaxiPermit = Domain.KIWATaxiPermit
@@ -468,7 +469,8 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
     ( DriverRCReq
-        { imageId = cast imageId,
+        { imageId = Just (cast imageId),
+          udinNumber = Nothing,
           vehicleCategory = vehicleCategoryToPass,
           vehicleDetails = vehicleDetailsToPass,
           isRCImageValidated = Nothing,
@@ -534,7 +536,7 @@ getDriverRegistrationDocumentsInfo _merchantShortId _opCity _driverId = throwErr
 approveAndUpdateRC :: Common.RCApproveDetails -> Flow ()
 approveAndUpdateRC req = do
   let imageId = Id req.documentImageId.getId
-  rc <- QRC.findByImageId imageId >>= fromMaybeM (InternalError "RC not found by image id")
+  rc <- QRC.findByImageId (Just imageId) >>= fromMaybeM (InternalError "RC not found by image id")
   certificateNumber <- mapM encrypt req.vehicleNumberPlate
   let udpatedRC =
         rc

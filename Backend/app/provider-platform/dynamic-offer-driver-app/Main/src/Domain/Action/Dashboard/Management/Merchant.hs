@@ -976,6 +976,7 @@ castDDocumentType = \case
   DVC.FinnishIDResidencePermit -> Common.FinnishIDResidencePermit
   DVC.BusinessRegistrationExtract -> Common.BusinessRegistrationExtract
   DVC.PersonalId -> Common.PersonalId
+  DVC.TtenCertificate -> Common.TtenCertificate
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1067,6 +1068,7 @@ castDocumentType = \case
   Common.FinnishIDResidencePermit -> DVC.FinnishIDResidencePermit
   Common.BusinessRegistrationExtract -> DVC.BusinessRegistrationExtract
   Common.PersonalId -> DVC.PersonalId
+  Common.TtenCertificate -> DVC.TtenCertificate
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::

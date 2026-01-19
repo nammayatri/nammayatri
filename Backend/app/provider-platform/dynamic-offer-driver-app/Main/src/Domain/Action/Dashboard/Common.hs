@@ -98,7 +98,8 @@ runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet bul
   let rcReq =
         DomainRC.DriverRCReq
           { vehicleRegistrationCertNumber = req.registrationNo,
-            imageId = imageId,
+            imageId = Just imageId,
+            udinNumber = Nothing,
             operatingCity = show operatingCity, -- Fixed
             dateOfRegistration = Nothing,
             airConditioned = req.airConditioned,

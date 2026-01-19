@@ -90,7 +90,7 @@ updateByPrimaryKey (Domain.Types.IdfyVerification.IdfyVerification {..}) = do
   updateWithKV
     [ Se.Set Beam.airConditioned airConditioned,
       Se.Set Beam.docType docType,
-      Se.Set Beam.documentImageId1 (Kernel.Types.Id.getId documentImageId1),
+      Se.Set Beam.documentImageId1 (Kernel.Types.Id.getId <$> documentImageId1),
       Se.Set Beam.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
       Se.Set Beam.documentNumberEncrypted (documentNumber & unEncrypted . encrypted),
       Se.Set Beam.documentNumberHash (documentNumber & hash),
@@ -119,7 +119,7 @@ instance FromTType' Beam.IdfyVerification Domain.Types.IdfyVerification.IdfyVeri
         Domain.Types.IdfyVerification.IdfyVerification
           { airConditioned = airConditioned,
             docType = docType,
-            documentImageId1 = Kernel.Types.Id.Id documentImageId1,
+            documentImageId1 = Kernel.Types.Id.Id <$> documentImageId1,
             documentImageId2 = Kernel.Types.Id.Id <$> documentImageId2,
             documentNumber = EncryptedHashed (Encrypted documentNumberEncrypted) documentNumberHash,
             driverDateOfBirth = driverDateOfBirth,
@@ -146,7 +146,7 @@ instance ToTType' Beam.IdfyVerification Domain.Types.IdfyVerification.IdfyVerifi
     Beam.IdfyVerificationT
       { Beam.airConditioned = airConditioned,
         Beam.docType = docType,
-        Beam.documentImageId1 = Kernel.Types.Id.getId documentImageId1,
+        Beam.documentImageId1 = Kernel.Types.Id.getId <$> documentImageId1,
         Beam.documentImageId2 = Kernel.Types.Id.getId <$> documentImageId2,
         Beam.documentNumberEncrypted = documentNumber & unEncrypted . encrypted,
         Beam.documentNumberHash = documentNumber & hash,

@@ -263,7 +263,7 @@ mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOf
     Domain.IdfyVerification
       { id,
         driverId = person.id,
-        documentImageId1 = imageId1,
+        documentImageId1 = Just imageId1,
         documentImageId2 = imageId2,
         requestId,
         imageExtractionValidation = imageExtractionValidation,
@@ -292,7 +292,7 @@ mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driver
     Domain.HyperVergeVerification
       { id,
         driverId = person.id,
-        documentImageId1 = imageId1,
+        documentImageId1 = Just imageId1,
         documentImageId2 = imageId2,
         requestId,
         docType = DTO.DriverLicense,

@@ -19,7 +19,7 @@ import qualified Tools.Beam.UtilsTH
 data HyperVergeVerificationE e = HyperVergeVerification
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     docType :: Domain.Types.DocumentVerificationConfig.DocumentType,
-    documentImageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
+    documentImageId1 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     documentNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -43,9 +43,9 @@ data HyperVergeVerificationE e = HyperVergeVerification
   }
   deriving (Generic)
 
-type HyperVergeVerification = HyperVergeVerificationE ('AsEncrypted)
+type HyperVergeVerification = HyperVergeVerificationE 'AsEncrypted
 
-type DecryptedHyperVergeVerification = HyperVergeVerificationE ('AsUnencrypted)
+type DecryptedHyperVergeVerification = HyperVergeVerificationE 'AsUnencrypted
 
 instance EncryptedItem HyperVergeVerification where
   type Unencrypted HyperVergeVerification = (DecryptedHyperVergeVerification, HashSalt)

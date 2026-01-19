@@ -140,6 +140,7 @@ data DocumentType
   | FinnishIDResidencePermit
   | BusinessRegistrationExtract
   | PersonalId
+  | TtenCertificate
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

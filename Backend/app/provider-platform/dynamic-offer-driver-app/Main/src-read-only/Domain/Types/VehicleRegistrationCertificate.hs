@@ -22,7 +22,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     certificateNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    documentImageId :: Kernel.Types.Id.Id Domain.Types.Image.Image,
+    documentImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     failedRules :: [Kernel.Prelude.Text],
     fitnessExpiry :: Kernel.Prelude.UTCTime,
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

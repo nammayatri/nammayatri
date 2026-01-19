@@ -17,7 +17,7 @@ import Tools.Beam.UtilsTH
 data IdfyVerificationT f = IdfyVerificationT
   { airConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     docType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
-    documentImageId1 :: B.C f Kernel.Prelude.Text,
+    documentImageId1 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     documentImageId2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     documentNumberEncrypted :: B.C f Kernel.Prelude.Text,
     documentNumberHash :: B.C f Kernel.External.Encryption.DbHash,

@@ -636,7 +636,7 @@ buildVehicleRCAPIEntity VehicleRegistrationCertificate {..} = do
   pure
     Common.VehicleRegistrationCertificateAPIEntity
       { registrationCertificateId = cast @VehicleRegistrationCertificate @Common.VehicleRegistrationCertificate id,
-        documentImageId = cast @Image @Common.Image documentImageId,
+        documentImageId = cast @Image @Common.Image <$> documentImageId,
         certificateNumber = certificateNumber',
         verificationStatus = castVerificationStatus verificationStatus,
         vehicleVariant = DCommon.castVehicleVariantDashboard vehicleVariant,
@@ -822,7 +822,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
     throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
 
   let createRCInput = createRCInputFromVehicle req mbFleetOwnerId
-  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput failures
+  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput failures False
   case mbNewRC of
     Just newRC -> do
       when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
@@ -865,7 +865,7 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} mbFleetOwnerId =
       airConditioned,
       oxygen,
       ventilator,
-      documentImageId = "",
+      documentImageId = Just "",
       vehicleClass = Just vehicleClass,
       vehicleClassCategory = Nothing,
       insuranceValidity = Nothing,

@@ -257,7 +257,7 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
   (dlDetails, rcDetails) <-
     case prefillData of
       Just True -> do
-        let vehRegImgIds = map (.id) $ IQuery.filterImagesByPersonAndType driverImagesInfo merchantId DVC.VehicleRegistrationCertificate
+        let vehRegImgIds = map (Just . (.id)) $ IQuery.filterImagesByPersonAndType driverImagesInfo merchantId DVC.VehicleRegistrationCertificate
         dl <- runInReplica $ DLQuery.findByDriverId personId <&> maybeToList
         allRCImgs <- runInReplica $ RCQuery.findAllByImageId vehRegImgIds
         allDLDetails <- mapM convertDLToDLDetails dl
@@ -326,7 +326,7 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
       pure $
         RCDetails
           { vehicleRegistrationCertNumber = certificateNumberDec,
-            imageId = rc.documentImageId.getId,
+            imageId = maybe "" getId rc.documentImageId,
             operatingCity = show driverImagesInfo.merchantOperatingCity.city,
             vehicleCategory = show <$> rc.userPassedVehicleCategory,
             airConditioned = rc.airConditioned,
