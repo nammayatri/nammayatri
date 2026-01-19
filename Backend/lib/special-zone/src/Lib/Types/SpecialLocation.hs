@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
 import Text.Show
+import Kernel.Utils.TH
 
 data Merchant
 
@@ -60,7 +61,10 @@ data GatesInfo = GatesInfo
 data SpecialLocationType
   = Open
   | Closed
-  deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
+  | FixedRoute -- Areas without geometry for fixed route pricing
+  deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''SpecialLocationType)
 
 data Area
   = Pickup (Id SpecialLocation)

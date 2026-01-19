@@ -355,12 +355,12 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   logTagInfo "dashboard -> postMerchantConfigCommonUpdate : " (show merchant.id)
   pure Success
 
-getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow [QSL.SpecialLocationFull]
-getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset = do
+getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Flow [QSL.SpecialLocationFull]
+getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset mbLocationType = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
 
-  QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset
+  QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset mbLocationType
 
 postMerchantSchedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
 postMerchantSchedulerTrigger merchantShortId opCity req = do

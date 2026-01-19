@@ -58,6 +58,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             estimatedRideDuration = estimatedRideDuration,
             estimatedRideStaticDuration = estimatedRideStaticDuration,
             fromLocation = fromLocation',
+            fromSpecialLocationId = fromSpecialLocationId,
             hasMultimodalSearch = hasMultimodalSearch,
             hasStops = hasStops,
             id = Kernel.Types.Id.Id id,
@@ -87,6 +88,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             startTime = startTime,
             stops = stops',
             toLocation = toLocation',
+            toSpecialLocationId = toSpecialLocationId,
             totalRidesCount = totalRidesCount,
             validTill = validTill,
             vehicleCategory = vehicleCategory
@@ -127,6 +129,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.estimatedRideDuration = estimatedRideDuration,
         Beam.estimatedRideStaticDuration = estimatedRideStaticDuration,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
+        Beam.fromSpecialLocationId = fromSpecialLocationId,
         Beam.hasMultimodalSearch = hasMultimodalSearch,
         Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
@@ -156,6 +159,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.selectedPaymentMethodId = selectedPaymentMethodId,
         Beam.startTime = startTime,
         Beam.toLocationId = Kernel.Types.Id.getId <$> (toLocation <&> (.id)),
+        Beam.toSpecialLocationId = toSpecialLocationId,
         Beam.totalRidesCount = totalRidesCount,
         Beam.validTill = validTill,
         Beam.vehicleCategory = vehicleCategory

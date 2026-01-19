@@ -52,6 +52,7 @@ data SearchRequest = SearchRequest
     estimatedRideDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedRideStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocation :: Domain.Types.Location.Location,
+    fromSpecialLocationId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     hasMultimodalSearch :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
@@ -81,13 +82,14 @@ data SearchRequest = SearchRequest
     startTime :: Kernel.Prelude.UTCTime,
     stops :: [Domain.Types.Location.Location],
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
+    toSpecialLocationId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     totalRidesCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory
   }
   deriving (Generic, Show)
 
-data RiderPreferredOption = Rental | OneWay | InterCity | Ambulance | Delivery | PublicTransport deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data RiderPreferredOption = Rental | OneWay | InterCity | Ambulance | Delivery | PublicTransport | FixedRoute deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SearchMode = NORMAL | RESERVE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

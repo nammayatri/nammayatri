@@ -473,3 +473,9 @@ ALTER TABLE atlas_app.search_request ADD COLUMN bus_location_data json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN selected_payment_instrument text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN to_special_location_id text ;
+ALTER TABLE atlas_app.search_request ADD COLUMN from_special_location_id text ;
