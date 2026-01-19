@@ -15,6 +15,7 @@
 
 module Storage.Queries.GeometryGeom
   ( findAllGeometries,
+    findAllGeometriesForMerchant,
     updateGeometry,
   )
 where
@@ -75,6 +76,27 @@ instance FromTType' (Text, Context.City, Context.IndianState, Text, Maybe Text) 
             region = gRegion,
             geom = gGeom
           }
+
+-- | Find all geometries across all cities for a merchant (for allCities=true).
+-- Queries all geometries without city filter, ordered by id descending.
+findAllGeometriesForMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id merchant -> Maybe Int -> Maybe Int -> m [Geometry]
+findAllGeometriesForMerchant _merchantId mbLimit mbOffset = do
+  let limitVal = fromMaybe 100 mbLimit
+      offsetVal = fromMaybe 0 mbOffset
+  dbConf <- getReplicaBeamConfig
+  result <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (fromIntegral limitVal) $
+            B.offset_ (fromIntegral offsetVal) $
+              B.orderBy_ (\(gId, _, _, _, _) -> B.desc_ gId) $
+                fmap
+                  ( \BeamG.GeometryT {..} ->
+                      (id, city, state, region, getGeomAsGeoJSON)
+                  )
+                  $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] result)
 
 -- | Update geometry using raw Beam update that doesn't return rows.
 -- Uses L.updateRows with B.update' to avoid type mismatch error that occurs with updateWithKV

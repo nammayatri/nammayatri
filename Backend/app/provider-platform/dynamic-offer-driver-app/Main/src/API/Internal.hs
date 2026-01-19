@@ -20,6 +20,8 @@ import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
 import qualified API.Internal.FleetBookingInformation as FleetBookingInformation
 import qualified API.Internal.FleetVehiclesAssociation as FleetVehiclesAssociation
+import qualified API.Internal.GeometryList as GeometryList
+import qualified API.Internal.GeometryUpdate as GeometryUpdate
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
 import qualified API.Internal.Multimodal as Multimodal
 import qualified API.Internal.PickupInstruction as PickupInstruction
@@ -29,6 +31,8 @@ import qualified API.Internal.QuoteRespond as QuoteRespond
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import qualified API.Internal.Ride as Ride
+import qualified API.Internal.SpecialLocationList as SpecialLocationList
+import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
 import qualified API.Internal.ViolationDetection as ViolationDetection
 import Environment
@@ -64,6 +68,10 @@ type API =
            :<|> FleetBookingInformation.API
            :<|> FleetVehiclesAssociation.API
            :<|> CancellationDues.CustomerCancellationDuesWaiveOffAPI
+           :<|> SpecialLocationList.API
+           :<|> SpecialLocationUpsert.API
+           :<|> GeometryList.API
+           :<|> GeometryUpdate.API
        )
 
 handler :: FlowServer API
@@ -95,3 +103,7 @@ handler =
     :<|> FleetBookingInformation.handler
     :<|> FleetVehiclesAssociation.handler
     :<|> CancellationDues.handler
+    :<|> SpecialLocationList.handler
+    :<|> SpecialLocationUpsert.handler
+    :<|> GeometryList.handler
+    :<|> GeometryUpdate.handler

@@ -26,9 +26,9 @@ import Kernel.External.Maps (LatLong)
 import Kernel.Prelude hiding (show)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
+import Kernel.Utils.TH
 import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
 import Text.Show
-import Kernel.Utils.TH
 
 data Merchant
 

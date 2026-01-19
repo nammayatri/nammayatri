@@ -62,6 +62,8 @@ library
       API.Internal.FeedbackForm
       API.Internal.FleetBookingInformation
       API.Internal.FleetVehiclesAssociation
+      API.Internal.GeometryList
+      API.Internal.GeometryUpdate
       API.Internal.KnowYourDriver
       API.Internal.Multimodal
       API.Internal.PickupInstruction
@@ -71,6 +73,8 @@ library
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.Internal.Ride
+      API.Internal.SpecialLocationList
+      API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
       API.Internal.ViolationDetection
       API.UI
@@ -216,6 +220,7 @@ library
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
+      Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Cac
@@ -462,6 +467,7 @@ library
       SharedLogic.ScheduledNotifications
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
+      SharedLogic.SpecialLocationUpsert
       SharedLogic.SyncRide
       SharedLogic.TollsDetector
       SharedLogic.Type
