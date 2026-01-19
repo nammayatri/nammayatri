@@ -40,6 +40,7 @@ imports:
   WhiteListOperatingCityRes: Dashboard.Common.Merchant
   ServiceTierType: Dashboard.Common
   Centesimal: Kernel.Types.Common
+  SpecialLocationType: Lib.Types.SpecialLocation
 
 module: Merchant
 
@@ -383,6 +384,7 @@ apis:
       query:
         - limit: Int
         - offset: Int
+        - locationType: SpecialLocationType
       response:
         type: SpecialLocationResp
   - GET: # GetMerchantConfigGeometryList

@@ -151,7 +151,9 @@ data DSearchReq = DSearchReq
     isReserveRide :: Maybe Bool,
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
     reserveRideEstimate :: Maybe DBppEstimate.BppEstimate,
-    numberOfLuggages :: Maybe Int
+    numberOfLuggages :: Maybe Int,
+    fromSpecialLocationId :: Maybe (Id SL.SpecialLocation), -- Fixed route: from area ID
+    toSpecialLocationId :: Maybe (Id SL.SpecialLocation) -- Fixed route: to area ID
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo
@@ -248,8 +250,8 @@ handler ValidatedDSearchReq {..} sReq = do
   fromLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
   stops <- mapM (\stop -> buildSearchReqLocation merchant.id merchantOpCityId sessiontoken stop.address sReq.customerLanguage stop.gps) sReq.stops
   (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbIsCustomerPrefferedSearchRoute, mbIsBlockedRoute, mbTollCharges, mbTollNames, mbTollIds, mbIsAutoRickshawAllowed, mbIsTwoWheelerAllowed) <-
-    case sReq.dropLocation of
-      Just dropLoc -> do
+    case (sReq.dropLocation, sReq.fromSpecialLocationId, sReq.toSpecialLocationId) of
+      (Just dropLoc, Nothing, Nothing) -> do
         serviceableRoute <- getRouteServiceability merchant.id merchantOpCityId cityDistanceUnit sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes sReq.transactionId
         let estimatedDistance = serviceableRoute.routeDistance
             estimatedDuration = serviceableRoute.routeDuration
@@ -282,7 +284,7 @@ handler ValidatedDSearchReq {..} sReq = do
   localTime <- getLocalCurrentTime localTimeZoneSeconds
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOpCityId)
   (_, mbVersion) <- getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
-  allFarePoliciesProduct <- combineFarePoliciesProducts <$> (mapM (\tripCategory -> getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap) possibleTripOption.tripCategories)
+  allFarePoliciesProduct <- combineFarePoliciesProducts <$> (mapM (\tripCategory -> getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap) possibleTripOption.tripCategories)
   mbVehicleServiceTier <- getVehicleServiceTierForMeterRideSearch isMeterRideSearch driverIdForSearch configVersionMap
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
@@ -820,7 +822,7 @@ validateRequest merchant sReq = do
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   let (cityDistanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sReq.transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
-  (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation sourceCity merchant
+  (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation sReq.toSpecialLocationId sourceCity merchant
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
       isMeterRideSearch = sReq.isMeterRideSearch
@@ -851,13 +853,13 @@ getIsInterCity merchantId apiKey IsIntercityReq {..} = do
   let bapCity = nearestOperatingCity.city
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
-  (isInterCity, isCrossCity, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong sourceCity merchant
+  (isInterCity, isCrossCity, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong Nothing sourceCity merchant
   return $ IsIntercityResp {..}
 
-checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text)
-checkForIntercityOrCrossCity transporterConfig mbDropLocation sourceCity merchant = do
-  case mbDropLocation of
-    Just dropLoc -> do
+checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> Maybe (Id SL.SpecialLocation) -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text)
+checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocationId sourceCity merchant = do
+  case (mbDropLocation, mbToSpecialLocationId) of
+    (Just dropLoc, Nothing) -> do
       (destinationCityState, mbDestinationTravelCityName) <- getDestinationCity merchant dropLoc -- This checks for destination serviceability too
       if destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.AnyCity
         then return (False, False, Nothing)
@@ -871,7 +873,7 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation sourceCity merchan
                 then return (True, True, mbDestinationTravelCityName)
                 else return (True, False, mbDestinationTravelCityName)
             else throwError (RideNotServiceableInState $ show destinationCityState.state)
-    Nothing -> pure (False, False, Nothing)
+    _ -> pure (False, False, Nothing)
 
 getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
 getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do

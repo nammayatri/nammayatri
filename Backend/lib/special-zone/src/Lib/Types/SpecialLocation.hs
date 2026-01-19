@@ -26,6 +26,7 @@ import Kernel.External.Maps (LatLong)
 import Kernel.Prelude hiding (show)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
+import Kernel.Utils.TH
 import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
 import Text.Show
 
@@ -60,7 +61,10 @@ data GatesInfo = GatesInfo
 data SpecialLocationType
   = Open
   | Closed
-  deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
+  | FixedRoute -- Areas without geometry for fixed route pricing
+  deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''SpecialLocationType)
 
 data Area
   = Pickup (Id SpecialLocation)

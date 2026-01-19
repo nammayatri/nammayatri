@@ -34,6 +34,7 @@ imports:
   FilePath: EulerHS.Prelude
   WhiteListOperatingCityReq: Dashboard.Common.Merchant
   WhiteListOperatingCityRes: Dashboard.Common.Merchant
+  SpecialLocationType: Lib.Types.SpecialLocation
 
 module: Merchant
 
@@ -139,6 +140,7 @@ apis:
       query:
         - limit: Int
         - offset: Int
+        - locationType: SpecialLocationType
       response:
         type: SpecialLocationResp
   - GET: # GetMerchantConfigGeometryList

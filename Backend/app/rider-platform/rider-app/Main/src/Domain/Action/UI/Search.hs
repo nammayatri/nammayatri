@@ -93,8 +93,6 @@ import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Metrics.BAPMetrics.Types
 
--- import Kernel.Utils.Common (encodeToText)
-
 type SearchRequestFlow m r =
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -161,6 +159,8 @@ extractSearchDetails now = \case
         currentLocation = Nothing,
         busLocationData = [],
         numberOfLuggages = numberOfLuggages,
+        fromSpecialLocationId = Nothing,
+        toSpecialLocationId = Nothing,
         ..
       }
   RentalSearch RentalSearchReq {..} ->
@@ -179,6 +179,8 @@ extractSearchDetails now = \case
         currentLocation = Nothing,
         busLocationData = [],
         numberOfLuggages = numberOfLuggages,
+        fromSpecialLocationId = Nothing,
+        toSpecialLocationId = Nothing,
         ..
       }
   InterCitySearch InterCitySearchReq {..} ->
@@ -194,6 +196,8 @@ extractSearchDetails now = \case
         currentLocation = Nothing,
         busLocationData = [],
         numberOfLuggages = numberOfLuggages,
+        fromSpecialLocationId = Nothing,
+        toSpecialLocationId = Nothing,
         ..
       }
   AmbulanceSearch OneWaySearchReq {..} ->
@@ -213,6 +217,8 @@ extractSearchDetails now = \case
         currentLocation = Nothing,
         busLocationData = [],
         numberOfLuggages = numberOfLuggages,
+        fromSpecialLocationId = Nothing,
+        toSpecialLocationId = Nothing,
         ..
       }
   DeliverySearch OneWaySearchReq {..} ->
@@ -232,6 +238,8 @@ extractSearchDetails now = \case
         currentLocation = Nothing,
         busLocationData = [],
         numberOfLuggages = numberOfLuggages,
+        fromSpecialLocationId = Nothing,
+        toSpecialLocationId = Nothing,
         ..
       }
   PTSearch PublicTransportSearchReq {..} ->
@@ -253,7 +261,37 @@ extractSearchDetails now = \case
         originStopCode = Just originStopCode,
         busLocationData = fromMaybe [] busLocationData,
         numberOfLuggages = Nothing,
+        fromSpecialLocationId = Nothing,
+        toSpecialLocationId = Nothing,
         ..
+      }
+  FixedRouteSearch FixedRouteSearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = SearchRequest.FixedRoute,
+        origin = origin,
+        stops = [destination],
+        hasStops = Nothing,
+        driverIdentifier_ = Nothing,
+        roundTrip = False,
+        isSourceManuallyMoved = Nothing,
+        isSpecialLocation = Nothing,
+        startTime = fromMaybe now startTime,
+        returnTime = Nothing,
+        isReallocationEnabled = Nothing,
+        fareParametersInRateCard = Nothing,
+        quotesUnifiedFlow = Nothing,
+        placeNameSource = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        busLocationData = [],
+        numberOfLuggages = numberOfLuggages,
+        routeCode = Nothing,
+        vehicleCategory = Nothing,
+        platformType = Nothing,
+        currentLocation = Nothing,
+        recentLocationId = Nothing,
+        fromSpecialLocationId = Just fromSpecialLocationId,
+        toSpecialLocationId = Just toSpecialLocationId
       }
 
 {-
@@ -300,10 +338,10 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   let txnCity = show merchant.defaultCity
 
   let sourceLatLong = origin.gps
-  let stopsLatLong = map (.gps) stops
+  let stopsLatLong = if isJust fromSpecialLocationId then [] else map (.gps) stops
   originCity <- Serviceability.validateServiceability sourceLatLong stopsLatLong person
 
-  unless justMultimodalSearch $ updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation
+  unless (justMultimodalSearch || null stopsLatLong) $ updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation
 
   -- merchant operating city of search-request-origin-location
   merchantOperatingCity <-
@@ -363,6 +401,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       justMultimodalSearch
       multimodalSearchRequestId
       busLocationData
+      fromSpecialLocationId
+      toSpecialLocationId
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -396,7 +436,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages,
+        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages (searchRequest.fromSpecialLocationId) (searchRequest.toSpecialLocationId),
         ..
       }
   where
@@ -424,7 +464,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber numberOfLuggages = do
+    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber numberOfLuggages mbFromSpecialLocationId mbToSpecialLocationId = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       let reserveTag = case searchRequest.searchMode of
@@ -445,7 +485,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                      (Beckn.IS_REALLOCATION_ENABLED, Just $ show isReallocationEnabled),
                      (Beckn.FARE_PARAMETERS_IN_RATECARD, Just $ show fareParametersInRateCard),
                      (Beckn.DRIVER_IDENTITY, searchRequest.driverIdentifier <&> LT.toStrict . AT.encodeToLazyText),
-                     (Beckn.IS_MULTIMODAL_SEARCH, Just $ show justMultimodalSearch)
+                     (Beckn.IS_MULTIMODAL_SEARCH, Just $ show justMultimodalSearch),
+                     (Beckn.FROM_SPECIAL_LOCATION_ID, mbFromSpecialLocationId),
+                     (Beckn.TO_SPECIAL_LOCATION_ID, mbToSpecialLocationId)
                    ],
             Beckn.paymentTags =
               [ (Beckn.SETTLEMENT_AMOUNT, Nothing),
@@ -500,6 +542,16 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
               shortestRouteDistance = Nothing,
               shortestRouteDuration = Nothing,
               shortestRouteStaticDuration = Nothing,
+              shortestRouteInfo = Nothing,
+              multipleRoutes = Nothing
+            }
+      FixedRouteSearch _ -> do
+        return $
+          RouteDetails
+            { longestRouteDistance = Just 0,
+              shortestRouteDistance = Just 0,
+              shortestRouteDuration = Just 0,
+              shortestRouteStaticDuration = Just 0,
               shortestRouteInfo = Nothing,
               multipleRoutes = Nothing
             }
@@ -602,8 +654,10 @@ buildSearchRequest ::
   Bool ->
   Maybe Text ->
   [BusLocation] ->
+  Maybe Text ->
+  Maybe Text ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE

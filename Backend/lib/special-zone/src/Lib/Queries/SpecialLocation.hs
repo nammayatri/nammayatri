@@ -153,8 +153,9 @@ findAllSpecialLocationsWithGeoJSON ::
   Text ->
   Maybe Int ->
   Maybe Int ->
+  Maybe D.SpecialLocationType ->
   m [SpecialLocationFull]
-findAllSpecialLocationsWithGeoJSON mocId mbLimit mbOffset = do
+findAllSpecialLocationsWithGeoJSON mocId mbLimit mbOffset mbLocationType = do
   mbRes <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
@@ -162,7 +163,9 @@ findAllSpecialLocationsWithGeoJSON mocId mbLimit mbOffset = do
         ( specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
             ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
         )
-
+          &&. case mbLocationType of
+            Just locationType -> specialLocation ^. SpecialLocationLocationType ==. just (val locationType)
+            Nothing -> val True
       orderBy [asc (specialLocation ^. SpecialLocationPriority)]
 
       forM_ mbLimit (limit . fromIntegral)
