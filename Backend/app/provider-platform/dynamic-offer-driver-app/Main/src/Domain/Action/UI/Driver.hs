@@ -1740,6 +1740,11 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       unlessM (validateSearchTryActive searchTry.id) $ do
         logError ("RideRequestAlreadyAcceptedOrCancelled " <> "in respond quote for searchTryId:" <> getId searchTry.id <> " estimateId:" <> estimateId <> " driverId:" <> getId driver.id <> " and srfdId:" <> getId sReqFD.id)
         throwError (RideRequestAlreadyAcceptedOrCancelled sReqFD.id.getId)
+      driverFCMPulledList <-
+        if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
+          then runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
+          else pure []
+      pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id transporterConfig
       fareParams <- do
         FCV2.calculateFareParametersV2
           CalculateFareParametersParams
@@ -1777,11 +1782,6 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
       triggerQuoteEvent QuoteEventData {quote = driverQuote}
       void $ QDrQt.create driverQuote
-      driverFCMPulledList <-
-        if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
-          then runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
-          else pure []
-      pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
       sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
       return driverFCMPulledList
       where
@@ -1806,15 +1806,15 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   when isBookingAssignmentInprogress' $ throwError RideRequestAlreadyAccepted
   isBookingCancelled' <- CS.isBookingCancelled booking.id
   when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
-  CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
   unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
-  mFleetAssociation <- QFDA.findByDriverId driver.id True
-  whenJust mbSearchTry $ \searchTry -> QST.updateStatus DST.COMPLETED searchTry.id
-  (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id)
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id (mkPrice (Just quote.currency) quote.estimatedFare) (Just transporterConfig)
       Nothing -> pure []
+  CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
+  whenJust mbSearchTry $ \searchTry -> QST.updateStatus DST.COMPLETED searchTry.id
+  mFleetAssociation <- QFDA.findByDriverId driver.id True
+  (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id)
   uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
   handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
   when uBooking.isScheduled $ do

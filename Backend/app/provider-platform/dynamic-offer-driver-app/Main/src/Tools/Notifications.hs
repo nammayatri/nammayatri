@@ -643,9 +643,8 @@ notifyDriverClearedFare ::
   Id DMOC.MerchantOperatingCity ->
   Person ->
   Id SearchTry ->
-  Price ->
   m ()
-notifyDriverClearedFare merchantOpCityId driver sReqId _ = do
+notifyDriverClearedFare merchantOpCityId driver sReqId = do
   notificationData <- buildClearedFareNotificationData merchantOpCityId driver.id driver.deviceToken sReqId
   runWithServiceConfigForProviders merchantOpCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
 
