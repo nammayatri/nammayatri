@@ -66,6 +66,7 @@ Estimate:
       updatedAt: UTCTime
       merchantId: Maybe (Id Merchant)
       merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+      commissionCharges: Maybe HighPrecMoney
 
     beamFields:
       farePolicy:

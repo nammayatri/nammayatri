@@ -64,6 +64,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.businessDiscount businessDiscount,
+      Se.Set Beam.commissionCharges commissionCharges,
       Se.Set Beam.congestionMultiplier congestionMultiplier,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
@@ -126,6 +127,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
       Just
         Domain.Types.Estimate.Estimate
           { businessDiscount = businessDiscount,
+            commissionCharges = commissionCharges,
             congestionMultiplier = congestionMultiplier,
             createdAt = createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
@@ -178,6 +180,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   toTType' (Domain.Types.Estimate.Estimate {..}) = do
     Beam.EstimateT
       { Beam.businessDiscount = businessDiscount,
+        Beam.commissionCharges = commissionCharges,
         Beam.congestionMultiplier = congestionMultiplier,
         Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,

@@ -73,6 +73,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.coinsRewardedOnGoldTierRide coinsRewardedOnGoldTierRide,
+      Se.Set Beam.commissionCharges commissionCharges,
       Se.Set Beam.conditionalCharges (Kernel.Prelude.Just $ Kernel.Prelude.show conditionalCharges),
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.customerCancellationDues (Kernel.Prelude.Just customerCancellationDues),

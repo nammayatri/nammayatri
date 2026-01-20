@@ -113,7 +113,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     conditionalCharges :: [DAC.ConditionalChargesCategories],
     isSafetyPlus :: Bool,
     coinsRewardedOnGoldTierRide :: Maybe Int,
-    safetyPlusCharges :: Maybe HighPrecMoney
+    safetyPlusCharges :: Maybe HighPrecMoney,
+    commissionCharges :: Maybe HighPrecMoney
   }
   deriving (Generic, ToSchema, Show)
 
@@ -196,6 +197,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           isSafetyPlus = fromMaybe False nearbyReq.isSafetyPlus,
           coinsRewardedOnGoldTierRide = nearbyReq.coinsRewardedOnGoldTierRide,
           safetyPlusCharges = Just safetyCharges,
+          commissionCharges = nearbyReq.commissionCharges,
           ..
         }
   where
