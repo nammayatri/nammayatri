@@ -66,3 +66,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN coins_rewarded_on_gol
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN react_bundle_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN commission_charges double precision ;

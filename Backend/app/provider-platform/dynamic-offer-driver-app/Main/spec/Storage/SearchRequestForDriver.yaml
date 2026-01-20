@@ -108,6 +108,7 @@ SearchRequestForDriver:
     driverTagScore: Maybe Value
     conditionalCharges: "[ConditionalChargesCategories]"
     coinsRewardedOnGoldTierRide: Maybe Int
+    commissionCharges: Maybe HighPrecMoney
 
   beamType:
     clientBundleVersion: Maybe Text

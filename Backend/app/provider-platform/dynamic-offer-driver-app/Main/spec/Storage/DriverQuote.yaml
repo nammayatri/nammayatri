@@ -67,6 +67,7 @@ DriverQuote:
     createdAt : UTCTime
     updatedAt : UTCTime
     coinsRewardedOnGoldTierRide: Maybe Int
+    commissionCharges: Maybe HighPrecMoney
 
   beamType:
     tripCategory: Maybe TripCategory
