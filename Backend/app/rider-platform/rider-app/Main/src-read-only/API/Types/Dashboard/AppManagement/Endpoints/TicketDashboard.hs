@@ -131,12 +131,12 @@ type TicketDashboardSeatManagement =
 data TicketDashboardAPIs = TicketDashboardAPIs
   { ticketDashboardUploadAsset ::
       Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
-        Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-        Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole ->
-        ( Data.ByteString.Lazy.ByteString,
-          UploadPublicFileRequest
-        ) ->
-        EulerHS.Types.EulerClient UploadPublicFileResponse,
+      Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+      Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole ->
+      ( Data.ByteString.Lazy.ByteString,
+        UploadPublicFileRequest
+      ) ->
+      EulerHS.Types.EulerClient UploadPublicFileResponse,
     ticketDashboardDeleteAsset :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> DeletePublicFileRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     ticketDashboardCurrentSeatStatus :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> CurrentSeatStatusReq -> EulerHS.Types.EulerClient CurrentSeatStatusResp,
     ticketDashboardSeatManagement :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> SeatManagementReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess

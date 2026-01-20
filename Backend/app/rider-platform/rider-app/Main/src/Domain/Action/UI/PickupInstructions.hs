@@ -95,7 +95,7 @@ instance ToMultipart Tmp API.PickupInstructionsReq where
       )
 
 validateAudioContentType :: Text -> Either String FileType
-validateAudioContentType = \case
+validateAudioContentType contentType = case contentType of
   "audio/wave" -> Right Audio
   "audio/wav" -> Right Audio
   "audio/mpeg" -> Right Audio
@@ -113,7 +113,11 @@ validateAudioContentType = \case
   "audio/x-wav" -> Right Audio
   "audio/x-ms-wma" -> Right Audio
   "audio/vnd.wave" -> Right Audio
-  _ -> Right Audio -- Accept any audio/* MIME type
+  _ ->
+    -- Accept any audio/* MIME type, reject others
+    if "audio/" `T.isPrefixOf` contentType
+      then Right Audio
+      else Left $ "Unsupported content type: " <> T.unpack contentType <> ". Only audio/* MIME types are accepted."
 
 -- Map MIME type to file extension
 mimeTypeToExtension :: Text -> Text
@@ -211,7 +215,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
       -- Upload to S3
       result <- withTryCatch "Storage:put:postPickupinstructions" $ Storage.put (T.unpack filePath) audioData
       case result of
-        Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
+        Left err -> throwError $ InternalError ("Storage Upload Failed: " <> show err)
         Right _ -> pure ()
       logDebug $ "PickupInstructions: S3 upload successful"
       -- Create media file entry

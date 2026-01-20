@@ -385,7 +385,7 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- Storage.createFilePath "odometer-reading/" ("rideId-" <> rideId.getId) fileType contentType
+  filePath <- Storage.createFilePath "/odometer-reading/" ("rideId-" <> rideId.getId) fileType ("." <> contentType)
   let fileUrl =
         config.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "issue"
@@ -434,7 +434,7 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- Storage.createFilePath "delivery/" ("rideId-" <> rideId.getId) Image contentType
+  filePath <- Storage.createFilePath "/delivery/" ("rideId-" <> rideId.getId) Image ("." <> contentType)
   let fileUrl =
         config.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "issue"

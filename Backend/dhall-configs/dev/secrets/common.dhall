@@ -20,8 +20,8 @@ let mockGCSConfig = globalCommon.GCSConfig.GCSMockConf mockGCSConfig1
 
 let mockStorageConfig =
       { primaryStorage = globalCommon.StorageProvider.StorageS3 mockS3Config
-      , secondaryStorage =
-          Some (globalCommon.StorageProvider.StorageGCS mockGCSConfig)
+      , secondaryStorage = Some
+          (globalCommon.StorageProvider.StorageGCS mockGCSConfig)
       , enableMultiCloudWrite = False
       }
 

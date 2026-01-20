@@ -105,6 +105,7 @@ library
     , servant-openapi3
     , servant-server
     , string-conversions
+    , temporary
     , text
     , time
     , unix

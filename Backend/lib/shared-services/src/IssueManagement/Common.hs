@@ -32,8 +32,8 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id, ShortId)
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Sequelize.SQLObject (SQLObject (..), ToSQLObject (convertToSQLObject))
-import Storage.Types (FileType (..))
 import Servant hiding (Summary)
+import Storage.Types (FileType (..))
 import qualified Text.Show
 
 data Identifier = CUSTOMER | DRIVER

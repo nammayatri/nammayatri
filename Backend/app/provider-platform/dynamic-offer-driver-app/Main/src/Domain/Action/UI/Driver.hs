@@ -1972,7 +1972,7 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
 
   result <- withTryCatch "Storage:put:driverPhotoUpload" $ Storage.put (T.unpack filePath) image
   case result of
-    Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
+    Left err -> throwError $ InternalError ("Storage Upload Failed: " <> show err)
     Right _ -> do
       case imageType_ of
         ProfilePhoto -> whenJust person.faceImageId $ \mediaFileId -> do

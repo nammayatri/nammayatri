@@ -84,6 +84,7 @@ dependencies:
   - unix
   - string-conversions
   - filepath
+  - temporary
   - euler-hs
   - unordered-containers
   - amazonka

@@ -47,10 +47,10 @@ import Kernel.Utils.Common
 import System.Directory (removeFile)
 import qualified System.Directory as Dir
 import System.FilePath.Posix as Path
-import qualified System.Posix.Files as Posix
-import qualified System.Posix.IO as Posix
+import qualified System.IO as IO
+import qualified System.IO.Temp as Temp
 import System.Process
-import Prelude (head, lines, read)
+import Prelude (lines, read)
 
 get'' ::
   ( CoreMetrics m,
@@ -60,12 +60,11 @@ get'' ::
   String ->
   m Text
 get'' bucketName path = withLogTag "GCS" $ do
-  let tmpPath = getTmpPath path
-  let cmd = "gsutil cp gs://" <> T.unpack bucketName <> "/" <> path <> " " <> tmpPath
-  liftIO $ callCommand cmd
-  result <- liftIO $ readFile tmpPath
-  liftIO $ removeFile tmpPath
-  return result
+  liftIO $
+    Temp.withSystemTempFile "gcs-download-" $ \tmpPath tmpHandle -> do
+      IO.hClose tmpHandle -- Close handle so gsutil can write to it
+      callProcess "gsutil" ["cp", "gs://" <> T.unpack bucketName <> "/" <> path, tmpPath]
+      readFile tmpPath
 
 put'' ::
   ( CoreMetrics m,
@@ -76,16 +75,12 @@ put'' ::
   Text ->
   m ()
 put'' bucketName path img = withLogTag "GCS" $ do
-  let tmpPath = getTmpPath path
-  liftIO $ writeFile_ tmpPath img
-  let cmd = "gsutil cp " <> tmpPath <> " gs://" <> T.unpack bucketName <> "/" <> path
-  liftIO $ callCommand cmd
-  liftIO $ removeFile tmpPath
-  where
-    writeFile_ path_ img_ = do
-      fd <- Posix.createFile path_ Posix.accessModes
-      _ <- Posix.fdWrite fd (T.unpack img_)
-      Posix.closeFd fd
+  liftIO $
+    Temp.withSystemTempFile "gcs-upload-" $ \tmpPath tmpHandle -> do
+      IO.hPutStr tmpHandle (T.unpack img)
+      IO.hFlush tmpHandle
+      IO.hClose tmpHandle
+      callProcess "gsutil" ["cp", tmpPath, "gs://" <> T.unpack bucketName <> "/" <> path]
 
 putRaw'' ::
   ( CoreMetrics m,
@@ -97,11 +92,12 @@ putRaw'' ::
   String ->
   m ()
 putRaw'' bucketName path bs _contentType = withLogTag "GCS" $ do
-  let tmpPath = getTmpPath path
-  liftIO $ BS.writeFile tmpPath bs
-  let cmd = "gsutil -h \"Content-Type:" <> _contentType <> "\" cp " <> tmpPath <> " gs://" <> T.unpack bucketName <> "/" <> path
-  liftIO $ callCommand cmd
-  liftIO $ removeFile tmpPath
+  liftIO $
+    Temp.withSystemTempFile "gcs-upload-raw-" $ \tmpPath tmpHandle -> do
+      BS.hPut tmpHandle bs
+      IO.hFlush tmpHandle
+      IO.hClose tmpHandle
+      callProcess "gsutil" ["-h", "Content-Type:" <> _contentType, "cp", tmpPath, "gs://" <> T.unpack bucketName <> "/" <> path]
 
 delete'' ::
   ( CoreMetrics m,
@@ -111,11 +107,7 @@ delete'' ::
   String ->
   m ()
 delete'' bucketName path = withLogTag "GCS" $ do
-  let cmd = "gsutil rm gs://" <> T.unpack bucketName <> "/" <> path
-  liftIO $ callCommand cmd
-
-getTmpPath :: String -> String
-getTmpPath = (<>) "/tmp/" . T.unpack . DL.last . T.split (== '/') . T.pack
+  liftIO $ callProcess "gsutil" ["rm", "gs://" <> T.unpack bucketName <> "/" <> path]
 
 mockPut ::
   (MonadIO m, Log m) =>
@@ -185,9 +177,16 @@ generateUploadUrl'' ::
   m Text
 generateUploadUrl'' bucketName path expires = withLogTag "GCS" $ do
   -- GCS signed URL generation using gsutil
-  let cmd = "gsutil signurl -d " <> show (toInteger expires) <> "s -m PUT gs://" <> T.unpack bucketName <> "/" <> path
-  result <- liftIO $ readProcess "sh" ["-c", cmd] ""
-  return $ T.pack $ head $ lines result
+  let expiresStr = show (toInteger expires) <> "s"
+      gsUri = "gs://" <> T.unpack bucketName <> "/" <> path
+  result <- liftIO $ readProcess "gsutil" ["signurl", "-d", expiresStr, "-m", "PUT", gsUri] ""
+  -- Parse table output: skip header line and extract URL from last column of data row
+  let resultLines = T.lines $ T.pack result
+      dataLines = drop 1 resultLines -- Skip header
+      url = case dataLines of
+        (dataLine : _) -> T.strip $ DL.last $ T.words dataLine
+        [] -> ""
+  return url
 
 -- | Generate a pre-signed URL for downloading
 generateDownloadUrl'' ::
@@ -199,9 +198,16 @@ generateDownloadUrl'' ::
   m Text
 generateDownloadUrl'' bucketName path expires = withLogTag "GCS" $ do
   -- GCS signed URL generation using gsutil
-  let cmd = "gsutil signurl -d " <> show (toInteger expires) <> "s -m GET gs://" <> T.unpack bucketName <> "/" <> path
-  result <- liftIO $ readProcess "sh" ["-c", cmd] ""
-  return $ T.pack $ head $ lines result
+  let expiresStr = show (toInteger expires) <> "s"
+      gsUri = "gs://" <> T.unpack bucketName <> "/" <> path
+  result <- liftIO $ readProcess "gsutil" ["signurl", "-d", expiresStr, "-m", "GET", gsUri] ""
+  -- Parse table output: skip header line and extract URL from last column of data row
+  let resultLines = T.lines $ T.pack result
+      dataLines = drop 1 resultLines -- Skip header
+      url = case dataLines of
+        (dataLine : _) -> T.strip $ DL.last $ T.words dataLine
+        [] -> ""
+  return url
 
 mockGenerateUploadUrl ::
   (MonadIO m, Log m) =>
@@ -234,8 +240,8 @@ headRequest'' ::
   m ObjectStatus
 headRequest'' bucketName path = withLogTag "GCS" $ do
   -- GCS stat using gsutil
-  let cmd = "gsutil stat gs://" <> T.unpack bucketName <> "/" <> path
-  result <- liftIO $ readProcess "sh" ["-c", cmd] ""
+  let gsUri = "gs://" <> T.unpack bucketName <> "/" <> path
+  result <- liftIO $ readProcess "gsutil" ["stat", gsUri] ""
   let lines' = lines result
       fileSizeInBytes = extractFileSize lines'
       entityTag = EntityTag $ extractETag lines'

@@ -360,7 +360,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
           }
   result <- withTryCatch "Storage:put:uploadSosMedia" $ Storage.put (T.unpack filePath) mediaFile
   case result of
-    Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
+    Left err -> throwError $ InternalError ("Storage Upload Failed: " <> show err)
     Right _ -> do
       MFQuery.create fileEntity
       let updatedMediaFiles = sosDetails.mediaFiles <> [mediaFileId]

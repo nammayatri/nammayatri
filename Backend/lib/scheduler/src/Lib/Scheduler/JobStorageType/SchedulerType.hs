@@ -32,7 +32,6 @@ import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST
 import qualified Lib.Scheduler.JobStorageType.Redis.Queries as RQ
 import Lib.Scheduler.Types
 
-
 whenCreateNotBlocked :: (JobCreator r m) => Text -> m () -> m ()
 whenCreateNotBlocked jobType createJobCb = do
   jobIsBlackListed >>= bool createJobCb (fork "Incementing Blocked Job Counter: " $ incrementSchedulerJobDisabledCounter ("Scheduler_" <> jobType))
@@ -41,7 +40,6 @@ whenCreateNotBlocked jobType createJobCb = do
     jobIsBlackListed = do
       blackListedJobs <- asks (.blackListedJobs)
       return $ jobType `elem` blackListedJobs
-
 
 createJob ::
   forall t (e :: t) m r.

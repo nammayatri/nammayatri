@@ -55,12 +55,12 @@ testStorageOperations = do
   -- Test 5: Generate pre-signed upload URL
   logInfo "Testing Storage.generateUploadUrl..."
   uploadUrl <- Storage.generateUploadUrl testPath expires
-  logInfo $ "✓ Storage.generateUploadUrl completed. URL: " <> uploadUrl
+  logInfo "✓ Storage.generateUploadUrl completed"
 
   -- Test 6: Generate pre-signed download URL
   logInfo "Testing Storage.generateDownloadUrl..."
   downloadUrl <- Storage.generateDownloadUrl testPath expires
-  logInfo $ "✓ Storage.generateDownloadUrl completed. URL: " <> downloadUrl
+  logInfo "✓ Storage.generateDownloadUrl completed"
 
   -- Test 7: Delete file (from both if multi-cloud enabled)
   logInfo "Testing Storage.delete..."
