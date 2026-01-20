@@ -3,7 +3,7 @@ imports:
   Person: Domain.Types.Person
   PickupInstructions: Domain.Types.PickupInstructions
   APISuccess: Kernel.Types.APISuccess
-  FileType: AWS.S3
+  FileType: Storage.Types
   FilePath: EulerHS.Prelude
 
 module: PickupInstructions

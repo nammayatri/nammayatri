@@ -1,9 +1,10 @@
 module Domain.Action.UI.RidePayment where
 
 import qualified API.Types.UI.RidePayment
-import AWS.S3 as S3
+import qualified Data.ByteString.Base64 as B64
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as TE
 import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Types.Booking
 import qualified Domain.Types.FareBreakup
@@ -38,12 +39,14 @@ import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTrans
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Payment as Payment
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
+import Storage.Types (FileType (..))
 import Tools.Error
 import qualified Tools.Payment as Payment
 
@@ -371,11 +374,12 @@ postPaymentRefundRequestCreate (mbPersonId, _) rideId req = do
         throwError (InvalidRequest $ "Could not request refund more than transaction amount: " <> show transaction.amount)
 
     evidenceS3Path <- forM req.evidence $ \evidence -> do
-      imageExtension <- validateContentType
+      (imageExtension, contentType) <- validateContentType
       path <- createPath booking.merchantId personId rideId refundPurpose imageExtension
-      fork "S3 Put Image" do
+      evidenceBytes <- B64.decode (TE.encodeUtf8 evidence) & fromEitherM (\err -> InvalidRequest $ "Failed to decode base64 evidence: " <> show err)
+      fork "Storage Put Image" do
         Redis.withLockRedis (imageS3Lock path) 5 $
-          S3.put (Text.unpack path) evidence
+          Storage.putRaw (Text.unpack path) evidenceBytes (Text.unpack contentType)
       pure path
     refundRequest <- buildRefundRequest orderId booking refundPurpose transaction evidenceS3Path req
     QRefundRequest.create refundRequest
@@ -386,9 +390,9 @@ postPaymentRefundRequestCreate (mbPersonId, _) rideId req = do
       fileType <- req.fileType & fromMaybeM (InvalidRequest "fileType is required")
       reqContentType <- req.reqContentType & fromMaybeM (InvalidRequest "reqContentType is required")
       case fileType of
-        S3.Image -> case reqContentType of
-          "image/png" -> pure "png"
-          "image/jpeg" -> pure "jpg"
+        Image -> case reqContentType of
+          "image/png" -> pure ("png", reqContentType)
+          "image/jpeg" -> pure ("jpg", reqContentType)
           _ -> throwError $ FileFormatNotSupported reqContentType
         _ -> throwError $ FileFormatNotSupported reqContentType
 
@@ -429,15 +433,15 @@ buildRefundRequest orderId booking refundPurpose transaction evidenceS3Path API.
       }
 
 createPath ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
   DRefundRequest.RefundPurpose ->
   Text ->
-  m Text
+  Environment.Flow Text
 createPath merchantId personId rideId refundPurpose imageExtension = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
+  storageConfig <- asks (.storageConfig)
+  let pathPrefix = Storage.getPathPrefixFromProvider storageConfig.primaryStorage
   now <- getCurrentTime
   let fileName = Text.replace (Text.singleton ':') (Text.singleton '-') (Text.pack $ iso8601Show now)
   return
@@ -550,7 +554,7 @@ fetchEvidenceFromS3 :: DRefundRequest.RefundRequest -> Environment.Flow (Maybe T
 fetchEvidenceFromS3 refundRequest = forM refundRequest.evidenceS3Path $ \evidenceS3Path -> do
   eImage <-
     Redis.whenWithLockRedisAndReturnValue (imageS3Lock evidenceS3Path) 60 $
-      S3.get $ Text.unpack evidenceS3Path
+      Storage.get (Text.unpack evidenceS3Path)
   case eImage of
     Left _err -> do
       logError $ "Evidence image locked: " <> refundRequest.orderId.getId

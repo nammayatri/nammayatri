@@ -9,7 +9,7 @@ imports:
   GetFileResponse: Domain.Types.MerchantOnboarding
   Value: Data.Aeson
   File: Dashboard.Common
-  FileType: AWS.S3
+  FileType: Storage.Types
   FilePath: Kernel.Prelude
   DashboardSideHandler: Domain.Types.MerchantOnboarding.Handler
 

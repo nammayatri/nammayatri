@@ -37,6 +37,7 @@ library
       GCP.GCS.Types
       Storage.Flow
       Storage.Types
+      StorageFlowTests
   other-modules:
       Paths_beckn_services
   hs-source-dirs:

@@ -21,10 +21,8 @@ let mockGCSConfig = globalCommon.GCSConfig.GCSMockConf mockGCSConfig1
 let mockStorageConfig =
       { primaryStorage = globalCommon.StorageProvider.StorageS3 mockS3Config
       , secondaryStorage =
-          Some
-            globalCommon.StorageProvider
-            (globalCommon.StorageProvider.StorageGCS mockGCSConfig)
-      , enableMultiCloudWrite = True
+          Some (globalCommon.StorageProvider.StorageGCS mockGCSConfig)
+      , enableMultiCloudWrite = False
       }
 
 let InfoBIPConfig = { username = "xxxxx", password = "xxxxx", token = "xxxxx" }

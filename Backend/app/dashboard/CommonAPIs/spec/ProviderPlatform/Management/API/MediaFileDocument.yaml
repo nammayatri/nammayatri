@@ -1,5 +1,5 @@
 imports:
-  FileType: AWS.S3
+  FileType: Storage.Types
   MediaFileDocument: Dashboard.Common.MediaFileDocument
   MediaFileDocumentType: Dashboard.Common.MediaFileDocument
 

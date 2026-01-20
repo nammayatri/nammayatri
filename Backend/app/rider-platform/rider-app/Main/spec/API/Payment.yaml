@@ -9,7 +9,7 @@ imports:
   RefundRequestStatus: Domain.Types.RefundRequest
   RefundRequestCode: Domain.Types.RefundRequest
   RefundPurpose: Domain.Types.RefundRequest
-  FileType: AWS.S3
+  FileType: Storage.Types
 
 module: RidePayment
 types:

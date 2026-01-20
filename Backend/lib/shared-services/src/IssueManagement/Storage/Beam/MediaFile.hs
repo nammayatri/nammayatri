@@ -14,11 +14,11 @@
 
 module IssueManagement.Storage.Beam.MediaFile where
 
-import AWS.S3 (FileType (..))
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import IssueManagement.Tools.UtilsTH hiding (Generic)
 import Kernel.Prelude
+import Storage.Types (FileType (..))
 
 data MediaFileT f = MediaFileT
   { id :: B.C f Text,

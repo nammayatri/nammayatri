@@ -3,7 +3,6 @@
 
 module API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding where
 
-import qualified AWS.S3
 import qualified Dashboard.Common
 import qualified Data.Aeson
 import qualified Data.ByteString.Lazy
@@ -22,12 +21,13 @@ import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
+import qualified Storage.Types
 
 data ApproveResponse = ApproveResponse {success :: Kernel.Prelude.Bool, handler :: Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.Handler.DashboardSideHandler}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UploadFileRequest = UploadFileRequest {file :: Kernel.Prelude.FilePath, reqContentType :: Kernel.Prelude.Text, fileType :: AWS.S3.FileType}
+data UploadFileRequest = UploadFileRequest {file :: Kernel.Prelude.FilePath, reqContentType :: Kernel.Prelude.Text, fileType :: Storage.Types.FileType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -190,13 +190,13 @@ data MerchantOnboardingAPIs = MerchantOnboardingAPIs
     merchantOnboardingStepApprove :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> EulerHS.Types.EulerClient ApproveResponse,
     merchantOnboardingStepUploadFile ::
       Kernel.Prelude.Text ->
-      Kernel.Prelude.Text ->
-      Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-      Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole ->
-      ( Data.ByteString.Lazy.ByteString,
-        UploadFileRequest
-      ) ->
-      EulerHS.Types.EulerClient UploadFileResponse,
+        Kernel.Prelude.Text ->
+        Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+        Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole ->
+        ( Data.ByteString.Lazy.ByteString,
+          UploadFileRequest
+        ) ->
+        EulerHS.Types.EulerClient UploadFileResponse,
     merchantOnboardingReject :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     merchantOnboadingListAll :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI],
     merchantOnboardingStepList :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep],
