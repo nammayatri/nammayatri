@@ -145,7 +145,9 @@ getStatus ::
   Flow DPayment.PaymentStatusResp
 getStatus (personId, merchantId) orderId = do
   paymentOrder <- QOrder.findById orderId |<|>| QOrder.findByShortId (ShortId orderId.getId) >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
-  SPayment.syncOrderStatus merchantId personId paymentOrder
+  let paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
+      fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
+  SPayment.syncOrderStatus fulfillmentHandler merchantId personId paymentOrder
 
 -- order status s2s -----------------------------------------------------
 getStatusS2S :: Id DOrder.PaymentOrder -> Id DP.Person -> Id DM.Merchant -> Maybe Data.Text.Text -> Flow DPayment.PaymentStatusResp
@@ -260,20 +262,21 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
           fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
       SPayment.orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
 
-    mkFulfillmentHandler paymentServiceType merchantId orderId paymentStatusResp = case paymentServiceType of
-      DOrder.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
-      DOrder.FRFSBusBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
-      DOrder.FRFSMultiModalBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
-      DOrder.FRFSPassPurchase -> do
-        status <- DPayment.getTransactionStatus paymentStatusResp
-        Pass.passOrderStatusHandler orderId merchantId status
-      DOrder.ParkingBooking -> do
-        status <- DPayment.getTransactionStatus paymentStatusResp
-        ParkingBooking.parkingBookingOrderStatusHandler orderId merchantId status
-      DOrder.BBPS -> do
-        paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler merchantId paymentStatusResp
-        pure (paymentFulfillStatus, Nothing, Nothing)
-      _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
+mkFulfillmentHandler :: Payment.PaymentServiceType -> Id DM.Merchant -> Id DOrder.PaymentOrder -> SPayment.FulfillmentStatusHandler Flow
+mkFulfillmentHandler paymentServiceType merchantId orderId paymentStatusResp = case paymentServiceType of
+  DOrder.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+  DOrder.FRFSBusBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+  DOrder.FRFSMultiModalBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
+  DOrder.FRFSPassPurchase -> do
+    status <- DPayment.getTransactionStatus paymentStatusResp
+    Pass.passOrderStatusHandler orderId merchantId status
+  DOrder.ParkingBooking -> do
+    status <- DPayment.getTransactionStatus paymentStatusResp
+    ParkingBooking.parkingBookingOrderStatusHandler orderId merchantId status
+  DOrder.BBPS -> do
+    paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler merchantId paymentStatusResp
+    pure (paymentFulfillStatus, Nothing, Nothing)
+  _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
 mkOrderStatusCheckKey orderId status = "lockKey:orderId:" <> orderId <> ":status" <> show status

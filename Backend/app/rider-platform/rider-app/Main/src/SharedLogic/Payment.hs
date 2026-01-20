@@ -487,7 +487,9 @@ markRefundPendingAndSyncOrderStatus merchantId personId orderId = do
     DOrder.FRFSPassPurchase -> markPassesRefundPending paymentOrder
     DOrder.ParkingBooking -> markParkingRefundPending paymentOrder
     _ -> pure ()
-  syncOrderStatus merchantId personId paymentOrder
+  -- Hardcoded refund handler since this is only used for refund scenarios
+  let refundFulfillmentHandler _ = pure (DPayment.FulfillmentRefundPending, Nothing, Nothing)
+  syncOrderStatus refundFulfillmentHandler merchantId personId paymentOrder
   where
     markBookingsRefundPending paymentOrder = do
       bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
@@ -519,11 +521,12 @@ syncOrderStatus ::
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text]
   ) =>
+  FulfillmentStatusHandler m ->
   Id Merchant.Merchant ->
   Id Person.Person ->
   DOrder.PaymentOrder ->
   m DPayment.PaymentStatusResp
-syncOrderStatus merchantId personId paymentOrder = do
+syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
   person <- QPerson.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
   let paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
@@ -534,9 +537,7 @@ syncOrderStatus merchantId personId paymentOrder = do
         return $ ticketBooking <&> (.ticketPlaceId)
       _ -> return Nothing
   let orderStatusCall = TPayment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion
-  -- Hardcoded refund handler since this is only used for refund scenarios
-  let refundFulfillmentHandler _ = pure (DPayment.FulfillmentRefundPending, Nothing, Nothing)
-  orderStatusHandler refundFulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+  orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
 
 -------------------------------------------------------------------------------------------------------
 ------------------------------------- Payment Utility Functions ---------------------------------------
