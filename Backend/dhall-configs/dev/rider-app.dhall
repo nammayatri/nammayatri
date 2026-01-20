@@ -455,5 +455,5 @@ in  { esqDBCfg
     , frfsMetricsRateLimitWindowSec = +60
     , corporatePartnerApiToken = sec.corporatePartnerApiToken
     , noSignatureSubscribers
-    , blackListedJobs = []
+    , blackListedJobs = [] : List Text
     }

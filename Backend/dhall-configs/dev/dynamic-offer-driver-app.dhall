@@ -494,5 +494,5 @@ in  { esqDBCfg
     , driverFleetLocationListAPIRateLimitOptions
     , noSignatureSubscribers
     , bapHostRedirectMap
-    , blackListedJobs = []
+    , blackListedJobs = [] : List Text
     }

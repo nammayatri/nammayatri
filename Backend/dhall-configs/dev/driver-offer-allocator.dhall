@@ -44,7 +44,7 @@ let schedulerConfig =
       , cacConfig = appCfg.cacConfig
       , inMemConfig
       , hedisSecondaryClusterCfg = appCfg.hedisSecondaryClusterCfg
-      , blackListedJobs = []
+      , blackListedJobs = [] : List Text
       }
 
 in  { appCfg =
