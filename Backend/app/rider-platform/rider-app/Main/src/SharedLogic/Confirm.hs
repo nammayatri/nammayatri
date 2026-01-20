@@ -151,7 +151,7 @@ confirm DConfirmReq {..} = do
     _ -> pure ()
   -- when (searchRequest.validTill < now) $
   --   throwError SearchRequestExpired
-  unless (searchRequest.riderId == personId) $ throwError AccessDenied
+  unless (searchRequest.riderId == personId) $ QSReq.updateRiderId personId searchRequest.id
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
       stops = searchRequest.stops
@@ -159,7 +159,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode
+  (booking, bookingParties) <- buildBooking personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
@@ -179,7 +179,7 @@ confirm DConfirmReq {..} = do
   void $ QRideB.createBooking booking
   void $ QBPL.createMany bookingParties
   unless isScheduled $
-    void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
+    void $ QPFS.updateStatus personId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
   whenJust mbEsimateId $ QEstimate.updateStatus DEstimate.COMPLETED
   confirmResDetails <- case quote.tripCategory of
     Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties
@@ -293,6 +293,7 @@ buildBooking ::
     CacheFlow m r,
     HasFlowEnv m r '["version" ::: DeploymentVersion]
   ) =>
+  Id DP.Person ->
   DSReq.SearchRequest ->
   Text ->
   DQuote.Quote ->
@@ -308,7 +309,7 @@ buildBooking ::
   [LYT.ConfigVersionMap] ->
   Maybe DMPM.PaymentMode ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode = do
+buildBooking riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id
@@ -333,7 +334,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           startTime = searchRequest.startTime,
           returnTime = searchRequest.returnTime,
           roundTrip = searchRequest.roundTrip,
-          riderId = searchRequest.riderId,
+          riderId,
           fromLocation = fromLoc,
           initialPickupLocation = fromLoc,
           estimatedFare = quote.estimatedFare,

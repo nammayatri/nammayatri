@@ -1,3 +1,4 @@
+-- ONLY FOR LOCAL TESTING --
 update atlas_driver_offer_bpp.transporter_config set consider_drivers_for_search = false;
 
 INSERT INTO atlas_driver_offer_bpp.special_location (id, location_name, category, gates, geom, created_at, merchant_operating_city_id, updated_at, location_type, merchant_id)

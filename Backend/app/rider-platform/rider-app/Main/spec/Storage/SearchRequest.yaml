@@ -238,6 +238,11 @@ SearchRequest:
       params: [id, totalRidesCount]
       where: riderId
 
+    updateRiderId:
+      kvFunction: updateOneWithKV
+      params: [riderId]
+      where: id
+
     updateAllJourneysLoaded:
       kvFunction: updateOneWithKV
       params: [allJourneysLoaded]
