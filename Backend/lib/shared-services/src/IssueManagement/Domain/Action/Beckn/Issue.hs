@@ -35,6 +35,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
+import Slack.Types (SlackNotificationConfig)
 
 data DIssue = DIssue
   { issueId :: Text,
@@ -110,7 +111,7 @@ handler ::
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     EncFlow m r,
-    HasField "sosAlertsTopicARN" r Text
+    HasField "slackNotificationConfig" r SlackNotificationConfig
   ) =>
   ValidatedDIssue ->
   ServiceHandle m ->
@@ -127,7 +128,7 @@ openBecknIssue ::
   ( EsqDBReplicaFlow m r,
     EncFlow m r,
     BeamFlow m r,
-    HasField "sosAlertsTopicARN" r Text
+    HasField "slackNotificationConfig" r SlackNotificationConfig
   ) =>
   ValidatedDIssue ->
   ServiceHandle m ->

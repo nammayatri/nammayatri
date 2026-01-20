@@ -147,6 +147,7 @@ dependencies:
   - amazonka-core
   - amazonka-ses
   - amazonka-sns
+  - google-cloud-pubsub
   - beam-core
   - beam-postgres
   - postgresql-simple

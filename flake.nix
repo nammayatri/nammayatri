@@ -71,6 +71,9 @@
     amazonka-git.url = "github:brendanhay/amazonka?ref=2.0.0";
     amazonka-git.flake = false;
 
+    google-cloud-haskell.url = "github:tusharad/google-cloud-haskell";
+    google-cloud-haskell.flake = false;
+
     json-logic-hs.url = "github:nammayatri/json-logic-hs";
     json-logic-hs.flake = false;
   };

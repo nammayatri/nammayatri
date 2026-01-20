@@ -24,6 +24,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (Unauthorized, throwError)
+import Slack.Types (SlackNotificationConfig)
 
 type IssueAPI =
   Common.OnDemandAPI
@@ -37,7 +38,7 @@ issue ::
     HasShortDurationRetryCfg r c,
     BeamFlow m r,
     EsqDBReplicaFlow m r,
-    HasField "sosAlertsTopicARN" r Text,
+    HasField "slackNotificationConfig" r SlackNotificationConfig,
     EncFlow m r
   ) =>
   Id Merchant ->

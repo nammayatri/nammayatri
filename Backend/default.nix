@@ -83,6 +83,8 @@
           unicode-data.source = "0.3.1";
           namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
           json-logic-hs.source = inputs.json-logic-hs;
+          google-cloud-pubsub.source = inputs.google-cloud-haskell + /lib/google-cloud-pubsub;
+          google-cloud-common.source = inputs.google-cloud-haskell + /lib/google-cloud-common;
         };
         settings = {
           alchemist.custom = cacConfig;
@@ -128,6 +130,8 @@
           base32.jailbreak = true;
           amazonka-core.check = false;
           cryptostore.check = false;
+          google-cloud-pubsub.check = false;
+          google-cloud-common.check = false;
         };
       };
 

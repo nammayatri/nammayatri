@@ -68,6 +68,7 @@ import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
+import Slack.Types (SlackNotificationConfig)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -152,6 +153,7 @@ data AppCfg = AppCfg
     iosValidateEnpoint :: Text,
     quoteRespondCoolDown :: Int,
     sosAlertsTopicARN :: Text,
+    slackNotificationConfig :: SlackNotificationConfig,
     ondcRegistryUrl :: BaseUrl,
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
@@ -264,6 +266,7 @@ data AppEnv = AppEnv
     passettoContext :: PassettoContext,
     quoteRespondCoolDown :: Int,
     sosAlertsTopicARN :: Text,
+    slackNotificationConfig :: SlackNotificationConfig,
     psqlConn :: PG.Connection,
     serviceClickhouseCfg :: ClickhouseCfg,
     dashboardClickhouseCfg :: ClickhouseCfg,

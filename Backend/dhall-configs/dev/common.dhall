@@ -42,6 +42,18 @@ let internalEndPointMap =
 let sosAlertsTopicARN =
       "arn:aws:chatbot::463356420488:chat-configuration/slack-channel/sos-notifications"
 
+
+
+
+let CloudManager = < AWS | GCP >
+
+let slackNotificationConfig =
+      { cloudManager = CloudManager.AWS
+      , snsTopicArn = Some sosAlertsTopicARN
+      , gcpProjectId = None Text
+      , gcpTopicId = None Text
+      }
+
 let SchedulerType = < RedisBased | DbBased >
 
 let urlShortnerConfig =
@@ -89,8 +101,11 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , internalEndPointMap
     , urlShortnerConfig
     , sosAlertsTopicARN
+    , slackNotificationConfig
+    , CloudManager
     , ondcRegistryUrl
     , ondcGatewayUrl
     , nyRegistryUrl
     , nyGatewayUrl
     }
+

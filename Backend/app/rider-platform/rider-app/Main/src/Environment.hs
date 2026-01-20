@@ -82,6 +82,7 @@ import Tools.Metrics
 import Tools.Streaming.Kafka
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
+import Slack.Types (SlackNotificationConfig)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -161,6 +162,7 @@ data AppCfg = AppCfg
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     sosAlertsTopicARN :: Text,
+    slackNotificationConfig :: SlackNotificationConfig,
     ondcRegistryUrl :: BaseUrl,
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
@@ -271,6 +273,7 @@ data AppEnv = AppEnv
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     passettoContext :: PassettoContext,
     sosAlertsTopicARN :: Text,
+    slackNotificationConfig :: SlackNotificationConfig,
     psqlConn :: PG.Connection,
     ondcRegistryUrl :: BaseUrl,
     ondcGatewayUrl :: BaseUrl,

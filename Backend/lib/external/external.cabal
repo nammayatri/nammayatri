@@ -41,6 +41,9 @@ library
       Email.Types
       KafkaLogs.TransactionLogs
       Slack.AWS.Flow
+      Slack.Flow
+      Slack.GCP.Flow
+      Slack.Types
       TransactionLogs.Interface
       TransactionLogs.Interface.ONDC
       TransactionLogs.Interface.Types
@@ -118,6 +121,7 @@ library
     , fast-logger
     , generic-lens
     , geojson
+    , google-cloud-pubsub
     , hedis
     , hex-text
     , hspec
