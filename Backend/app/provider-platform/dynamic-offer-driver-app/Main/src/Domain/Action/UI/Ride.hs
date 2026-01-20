@@ -331,7 +331,7 @@ stopAction rideId pt stopLocId action = do
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
       let currentPassStop = LatLong stopInfo.stopStartLatLng.lat stopInfo.stopStartLatLng.lon
-      existingStops <- Redis.get (VID.mkReachedStopKey rideId)
+      existingStops <- Redis.runInMultiCloudRedis False $ Redis.get (VID.mkReachedStopKey rideId)
       case existingStops of
         Just reachedStopList -> do
           unless (currentPassStop `elem` reachedStopList) $ do
