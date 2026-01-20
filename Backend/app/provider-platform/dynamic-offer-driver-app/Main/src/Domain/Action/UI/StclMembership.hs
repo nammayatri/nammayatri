@@ -1,8 +1,9 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.UI.StclMembership (postSubmitApplication) where
+module Domain.Action.UI.StclMembership (postSubmitApplication, getMembership) where
 
 import qualified API.Types.UI.StclMembership as APITypes
+import Data.Text (takeEnd)
 import qualified Data.Text as T
 import qualified Data.Time
 import qualified Domain.Types.Merchant
@@ -115,4 +116,105 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
         APITypes.status = Domain.SUBMITTED,
         APITypes.message = "Your application has been submitted successfully",
         APITypes.submittedAt = now
+      }
+
+getMembership ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.Flow APITypes.MembershipDetailsResp
+  )
+getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
+  -- Extract and validate driver ID from authentication token
+  driverId' <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
+
+  -- Query database
+  memberships <- QStclMembership.findByDriverId driverId'
+  membership@Domain.StclMembership {..} <- case memberships of
+    [] -> throwError $ InvalidRequest "No membership application found for this driver"
+    (m : _) -> pure m
+
+  -- Helper function to mask sensitive data (show last 4 digits with XXXX prefix)
+  let maskSensitiveData :: Kernel.Prelude.Text -> Kernel.Prelude.Text
+      maskSensitiveData value =
+        let len = T.length value
+            last4 = if len >= 4 then takeEnd 4 value else value
+            xCount = max 0 (len - 4)
+         in T.replicate xCount "X" <> last4
+
+  -- Decrypt and mask sensitive fields
+  decryptedAadhar <- decrypt membership.aadharNumber
+  decryptedPAN <- decrypt membership.panNumber
+  decryptedMobile <- decrypt membership.mobileNumber
+  decryptedAccountNumber <- decrypt membership.accountNumber
+  decryptedIFSC <- decrypt membership.ifscCode
+  decryptedNomineeAadhar <- decrypt membership.nomineeAadhar
+
+  let maskedAadhar = maskSensitiveData decryptedAadhar
+      maskedPAN = maskSensitiveData decryptedPAN
+      maskedMobile = maskSensitiveData decryptedMobile
+      maskedAccountNumber = maskSensitiveData decryptedAccountNumber
+      maskedIFSC = maskSensitiveData decryptedIFSC
+      maskedNomineeAadhar = maskSensitiveData decryptedNomineeAadhar
+
+  -- Convert VehicleType Text back to enum
+  vehicleTypeEnum <- case membership.vehicleType of
+    "2Wheeler" -> pure APITypes.TwoWheeler
+    "3Wheeler" -> pure APITypes.ThreeWheeler
+    "4Wheeler" -> pure APITypes.FourWheeler
+    _ -> throwError $ InvalidRequest $ "Invalid vehicle type: " <> membership.vehicleType
+
+  -- Convert FuelType Text list back to enum list
+  let parseFuelType :: Kernel.Prelude.Text -> Environment.Flow APITypes.FuelType
+      parseFuelType fuelText = case fuelText of
+        "EV" -> pure APITypes.EV
+        "Petrol" -> pure APITypes.Petrol
+        "Diesel" -> pure APITypes.Diesel
+        "CNG" -> pure APITypes.CNG
+        "Other" -> pure APITypes.Other
+        _ -> throwError $ InvalidRequest $ "Invalid fuel type: " <> fuelText
+  fuelTypesEnum <- traverse parseFuelType membership.fuelTypes
+
+  -- Build response
+  return $
+    APITypes.MembershipDetailsResp
+      { APITypes.id = Kernel.Types.Id.getId membership.id,
+        APITypes.driverId = Kernel.Types.Id.getId membership.driverId,
+        APITypes.aadharNumber = maskedAadhar,
+        APITypes.panNumber = maskedPAN,
+        APITypes.mobileNumber = maskedMobile,
+        APITypes.address =
+          APITypes.Address
+            { APITypes.streetAddress1 = membership.addressStreetAddress1,
+              APITypes.streetAddress2 = membership.addressStreetAddress2,
+              APITypes.city = membership.addressCity,
+              APITypes.stateName = membership.addressState,
+              APITypes.postalCode = membership.addressPostalCode
+            },
+        APITypes.bankDetails =
+          APITypes.BankDetails
+            { APITypes.bankName = membership.bankName,
+              APITypes.branch = membership.bankBranch,
+              APITypes.accountNumber = maskedAccountNumber,
+              APITypes.ifscCode = maskedIFSC
+            },
+        APITypes.vehicleInfo =
+          APITypes.VehicleInfo
+            { APITypes.vehicleType = vehicleTypeEnum,
+              APITypes.fuelTypes = fuelTypesEnum
+            },
+        APITypes.nomineeInfo =
+          APITypes.NomineeInfo
+            { APITypes.nomineeName = membership.nomineeName,
+              APITypes.nomineeAadhar = maskedNomineeAadhar
+            },
+        APITypes.declaration =
+          APITypes.Declaration
+            { APITypes.place = membership.declarationPlace,
+              APITypes.date = membership.declarationDate,
+              APITypes.signature = membership.declarationSignature,
+              ..
+            },
+        ..
       }

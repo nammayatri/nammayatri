@@ -55,6 +55,28 @@ types:
     status: ApplicationStatus
     message: Text
     submittedAt: UTCTime
+  MembershipDetailsResp:
+    id: Text
+    driverId: Text
+    applicationId: Text
+    firstName: Text
+    lastName: Text
+    memberCategory: Text
+    numberOfShares: Int
+    dateOfBirth: Day
+    aadharNumber: Text
+    panNumber: Text
+    mobileNumber: Text
+    emailId: Text
+    fatherMotherName: Text
+    address: Address
+    bankDetails: BankDetails
+    vehicleInfo: VehicleInfo
+    nomineeInfo: NomineeInfo
+    declaration: Declaration
+    status: ApplicationStatus
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
 apis:
   - POST:
@@ -64,4 +86,9 @@ apis:
         type: MembershipApplicationReq
       response:
         type: MembershipApplicationResp
+  - GET:
+      endpoint: /membership
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: MembershipDetailsResp
 
