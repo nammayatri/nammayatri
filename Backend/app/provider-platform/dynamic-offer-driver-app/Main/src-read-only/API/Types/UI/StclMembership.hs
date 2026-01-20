@@ -62,6 +62,32 @@ data MembershipApplicationResp = MembershipApplicationResp {applicationId :: Ker
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data MembershipDetailsResp = MembershipDetailsResp
+  { aadharNumber :: Kernel.Prelude.Text,
+    address :: Address,
+    applicationId :: Kernel.Prelude.Text,
+    bankDetails :: BankDetails,
+    createdAt :: Kernel.Prelude.UTCTime,
+    dateOfBirth :: Data.Time.Day,
+    declaration :: Declaration,
+    driverId :: Kernel.Prelude.Text,
+    emailId :: Kernel.Prelude.Text,
+    fatherMotherName :: Kernel.Prelude.Text,
+    firstName :: Kernel.Prelude.Text,
+    id :: Kernel.Prelude.Text,
+    lastName :: Kernel.Prelude.Text,
+    memberCategory :: Kernel.Prelude.Text,
+    mobileNumber :: Kernel.Prelude.Text,
+    nomineeInfo :: NomineeInfo,
+    numberOfShares :: Kernel.Prelude.Int,
+    panNumber :: Kernel.Prelude.Text,
+    status :: Domain.Types.StclMembership.ApplicationStatus,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleInfo :: VehicleInfo
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data NomineeInfo = NomineeInfo {nomineeAadhar :: Kernel.Prelude.Text, nomineeName :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

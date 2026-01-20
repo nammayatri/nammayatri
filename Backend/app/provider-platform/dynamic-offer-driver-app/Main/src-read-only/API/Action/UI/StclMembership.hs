@@ -22,10 +22,18 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "submitApplication" :> ReqBody ('[JSON]) API.Types.UI.StclMembership.MembershipApplicationReq :> Post ('[JSON]) API.Types.UI.StclMembership.MembershipApplicationResp)
+type API =
+  ( TokenAuth :> "submitApplication" :> ReqBody ('[JSON]) API.Types.UI.StclMembership.MembershipApplicationReq
+      :> Post
+           ('[JSON])
+           API.Types.UI.StclMembership.MembershipApplicationResp
+      :<|> TokenAuth
+      :> "membership"
+      :> Get ('[JSON]) API.Types.UI.StclMembership.MembershipDetailsResp
+  )
 
 handler :: Environment.FlowServer API
-handler = postSubmitApplication
+handler = postSubmitApplication :<|> getMembership
 
 postSubmitApplication ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -36,3 +44,12 @@ postSubmitApplication ::
     Environment.FlowHandler API.Types.UI.StclMembership.MembershipApplicationResp
   )
 postSubmitApplication a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.StclMembership.postSubmitApplication (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getMembership ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.FlowHandler API.Types.UI.StclMembership.MembershipDetailsResp
+  )
+getMembership a1 = withFlowHandlerAPI $ Domain.Action.UI.StclMembership.getMembership (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
