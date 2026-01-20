@@ -454,7 +454,7 @@ zipItemsWithPrice items breakup = do
     baseFare <- baseFareForItem itemId breakup
     finalWithToll <- addPrice baseFare toll
     finalPrice <- subtractPrice finalWithToll offer
-    pure (item, finalPrice)
+    pure (item, fromMaybe finalPrice (item.itemPrice >>= Utils.parsePrice))
 
 sumPrices :: (MonadThrow m, Log m) => [Price] -> m Price
 sumPrices prices = withCurrencyCheckingList prices $ \mbCurrency amounts -> mkPrice mbCurrency (sum amounts)
