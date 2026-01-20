@@ -25,6 +25,7 @@ import Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
+import qualified Domain.Types.PaymentInvoice as DPI
 import Domain.Types.Person
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.Ride as DRide
@@ -307,7 +308,8 @@ data CancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData
   { bookingId :: Id Booking,
     personId :: Id Person,
     cancellationAmount :: PriceAPIEntity,
-    rideId :: Id DRide.Ride
+    rideId :: Id DRide.Ride,
+    noShowCharge :: Maybe DPI.PaymentPurpose
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

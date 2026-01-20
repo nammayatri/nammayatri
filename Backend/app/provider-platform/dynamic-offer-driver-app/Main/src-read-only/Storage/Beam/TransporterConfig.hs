@@ -129,6 +129,7 @@ data TransporterConfigT f = TransporterConfigT
     editLocDriverPermissionNeeded :: B.C f Kernel.Prelude.Bool,
     editLocTimeThreshold :: B.C f Kernel.Types.Common.Seconds,
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
+    enableCustomerNoShowCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
     enableExistingVehicleInBulkUpload :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableFaceVerification :: B.C f Kernel.Prelude.Bool,

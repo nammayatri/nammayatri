@@ -983,6 +983,7 @@ TransporterConfig:
     driverDistanceToPickupThresholdOnCancel: Meters
     numOfCancellationsAllowed: Int
     canAddCancellationFee: Bool
+    enableCustomerNoShowCharges: Maybe Bool
     allowDefaultPlanAllocation: Bool
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
@@ -1250,7 +1251,7 @@ TransporterConfig:
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
-    fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig {fcmUrl = fcmUrl', fcmServiceAccount = fcmServiceAccount, fcmTokenKeyPrefix = fcmTokenKeyPrefix}|E
+    fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig {fcmUrl = fcmUrl', fcmServiceAccount = fcmServiceAccount, fcmTokenKeyPrefix = fcmTokenKeyPrefix, fcmNotificationObj = Nothing}|E
     feedbackNotificationConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< feedbackNotificationConfig|E
     driverPaymentCycleBuffer: Kernel.Utils.Common.secondsToNominalDiffTime|I
@@ -1462,6 +1463,7 @@ TransporterConfig:
     numOfCancellationsAllowed: "3"
     driverDistanceToPickupThresholdOnCancel: "50"
     canAddCancellationFee: "false"
+    enableCustomerNoShowCharges: "NULL"
     allowDefaultPlanAllocation: "false"
     notificationRetryEligibleErrorCodes: "ARRAY['UC1', 'UC2', 'UC5', 'NU']"
     notificationRetryCountThreshold: "3"

@@ -26,5 +26,16 @@ newtype OnCancelBuildReq
 data DBookingCancelledReqV2 = DBookingCancelledReqV2
   { booking :: DRB.Booking,
     cancellationSource :: SBCR.CancellationSource,
-    cancellationFee :: Maybe Common.PriceAPIEntity
+    cancellationFee :: Maybe Common.PriceAPIEntity,
+    cancellationChargeEntity :: Maybe CancellationChargeEntity
   }
+
+data CancellationChargeEntity = CancellationChargeEntity
+  { validCancellation :: Bool,
+    cancellationCharges :: Common.HighPrecMoney,
+    rideType :: RideType
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data RideType = Cash | Card
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema, Read)

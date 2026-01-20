@@ -38,7 +38,7 @@ data InvoicePaymentStatus = PENDING | CAPTURED | FAILED deriving (Show, Eq, Ord,
 
 data InvoiceType = PAYMENT | REFUNDS deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data PaymentPurpose = RIDE | TIP | RIDE_TIP | CANCELLATION_FEE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PaymentPurpose = RIDE | TIP | RIDE_TIP | CANCELLATION_FEE | NO_SHOW_CHARGES deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''InvoicePaymentStatus)
 

@@ -34,12 +34,18 @@ type API =
       :> Header "token" Text
       :> ReqBody '[JSON] Domain.CustomerCancellationDuesSyncReq
       :> Post '[JSON] APISuccess
+    :<|> Capture "merchantId" (Id Merchant)
+      :> "driverCancellationNotification"
+      :> Header "token" Text
+      :> ReqBody '[JSON] Domain.DriverCancellationNotificationReq
+      :> Post '[JSON] APISuccess
 
 handler :: FlowServer API
 handler =
   disputeCancellationDues
     :<|> getCancellationDuesDetails
     :<|> customerCancellationDuesSync
+    :<|> sendDriverCancellationNotification
 
 disputeCancellationDues :: Id Merchant -> Context.City -> Maybe Text -> Domain.CancellationDuesReq -> FlowHandler APISuccess
 disputeCancellationDues merchantId merchantCity apiKey = withFlowHandlerAPI . Domain.disputeCancellationDues merchantId merchantCity apiKey
@@ -49,3 +55,6 @@ getCancellationDuesDetails merchantId merchantCity apiKey = withFlowHandlerAPI .
 
 customerCancellationDuesSync :: Id Merchant -> Context.City -> Maybe Text -> Domain.CustomerCancellationDuesSyncReq -> FlowHandler APISuccess
 customerCancellationDuesSync merchantId merchantCity apiKey = withFlowHandlerAPI . Domain.customerCancellationDuesSync merchantId merchantCity apiKey
+
+sendDriverCancellationNotification :: Id Merchant -> Maybe Text -> Domain.DriverCancellationNotificationReq -> FlowHandler APISuccess
+sendDriverCancellationNotification merchantId apiKey = withFlowHandlerAPI . Domain.sendDriverCancellationNotification merchantId apiKey

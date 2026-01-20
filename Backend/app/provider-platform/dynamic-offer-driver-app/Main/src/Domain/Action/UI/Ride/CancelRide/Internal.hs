@@ -39,6 +39,7 @@ import qualified Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude hiding (whenJust)
+import Kernel.External.Encryption (EncTools)
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map, notElem)
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -58,6 +59,7 @@ import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import Passetto.Client (PassettoContext)
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
@@ -89,6 +91,7 @@ import Tools.DynamicLogic
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
+import Tools.Metrics (SendSearchRequestToDriverMetricsContainer)
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
@@ -128,7 +131,11 @@ cancelRideImpl ::
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasFlowEnv m r '["passettoContext" ::: PassettoContext],
+    HasFlowEnv m r '["encTools" ::: EncTools],
+    HasFlowEnv m r '["version" ::: Metrics.DeploymentVersion],
+    HasFlowEnv m r '["ssrMetrics" ::: SendSearchRequestToDriverMetricsContainer]
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
@@ -151,7 +158,8 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 >>= fromMaybeM (MerchantNotFound merchantId.getId)
             transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
             noShowCharges <- withTryCatch "noShowCharges:cancelRideImpl" $ do
-              if transporterConfig.canAddCancellationFee
+              let isNoShowChargesEnabled = fromMaybe False transporterConfig.enableCustomerNoShowCharges
+              if transporterConfig.canAddCancellationFee && isNoShowChargesEnabled
                 then do
                   rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
                   let tagsForCancellationCharges = [validCustomerCancellation, validUserNoShowCancellation]
@@ -160,14 +168,16 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                           then DCT.CancellationByDriver
                           else DCT.CancellationByCustomer
                   if any (`elem` rideTags) tagsForCancellationCharges
-                    then getCancellationCharges booking ride cancellationType bookingCReason.reasonCode
-                    else return Nothing
-                else return Nothing
-            userNoShowCharges <- case noShowCharges of
+                    then do
+                      charges <- getCancellationCharges booking ride cancellationType bookingCReason.reasonCode
+                      return (charges, rideTags)
+                    else return (Nothing, rideTags)
+                else return (Nothing, [])
+            (userNoShowCharges, rideTags) <- case noShowCharges of
               Left e -> do
                 logError $ "Error in getting no show charges - " <> show e
-                return Nothing
-              Right (charges :: Maybe PriceAPIEntity) -> return charges
+                return (Nothing, [])
+              Right (chargesAndTags :: (Maybe PriceAPIEntity, [LYT.TagNameValue])) -> return chargesAndTags
             -- calculateNoShowCharges booking ride else return Nothing
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
             vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
@@ -185,7 +195,6 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 DC.driverCoinsEvent ride.driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver (fromMaybe (DTCR.CancellationReasonCode "OTHER") bookingCReason.reasonCode)) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
 
             fork "cancelRide - Notify driver" $ do
-              rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
               triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
               triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
               when (bookingCReason.source == SBCR.ByDriver) $ do

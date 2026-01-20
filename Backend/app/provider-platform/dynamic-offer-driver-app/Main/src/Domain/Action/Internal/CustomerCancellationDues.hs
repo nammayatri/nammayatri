@@ -31,12 +31,15 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMM
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.DailyStats as QDailyStats
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
+import qualified Tools.Notifications as Notify
 
 data CancellationDuesReq = CancellationDuesReq
   { customerMobileNumber :: Text,
@@ -59,6 +62,14 @@ data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
     cancellationChargesWithCurrency :: Maybe PriceAPIEntity,
     disputeChancesUsed :: Maybe Int,
     paymentMadeToDriver :: Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data DriverCancellationNotificationReq = DriverCancellationNotificationReq
+  { rideId :: Text,
+    bookingId :: Text,
+    cancellationAmount :: PriceAPIEntity,
+    paymentStatus :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -224,4 +235,29 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
       when (riderDetails.disputeChancesUsed >= disputeChancesUsedReq) $ do
         QRD.updateDisputeChancesUsed disputeChancesUsedReq riderDetails.id
     (_, _) -> throwError DisputeChancesOrCancellationDuesHasToBeNull
+  return Success
+
+sendDriverCancellationNotification ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id Merchant ->
+  Maybe Text ->
+  DriverCancellationNotificationReq ->
+  m APISuccess
+sendDriverCancellationNotification merchantId apiKey req = do
+  merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  unless (Just merchant.internalApiKey == apiKey) $
+    throwError $ AuthBlocked "Invalid BPP internal api key"
+  ride <- QRide.findById (Id req.rideId) >>= fromMaybeM (RideDoesNotExist req.rideId)
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  let notificationKey = if req.paymentStatus == "SUCCESS" then "DRIVER_CANCELLATION_CHARGES_SUCCESS" else "DRIVER_CANCELLATION_CHARGES_PENDING"
+  mbMerchantPN <- CPN.findMatchingMerchantPN driver.merchantOperatingCityId notificationKey Nothing Nothing driver.language Nothing
+  case mbMerchantPN of
+    Just merchantPN -> do
+      let entityData = Notify.NotifReq {entityId = req.rideId, title = merchantPN.title, message = merchantPN.body}
+      Notify.notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
+    Nothing -> do
+      logInfo $ "MerchantPushNotification not found for " <> notificationKey <> ", skipping driver notification for rideId: " <> req.rideId
   return Success

@@ -33,6 +33,7 @@ import qualified Domain.Types.CancellationReason as DTCR
 import qualified Domain.Types.Common as DTC
 -- import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.OnCancel as OC
 import qualified Domain.Types.Ride as SRide
 -- import qualified Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.SearchRequestForDriver as Domain
@@ -114,7 +115,7 @@ cancel ::
   DM.Merchant ->
   SRB.Booking ->
   Maybe ST.SearchTry ->
-  Flow (Bool, Maybe PriceAPIEntity)
+  Flow (Bool, Maybe PriceAPIEntity, Maybe OC.CancellationChargeEntity)
 cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
@@ -164,20 +165,20 @@ cancel req merchant booking mbActiveSearchTry = do
 
     if isReallocated
       then do
-        return (isReallocated, Nothing)
+        return (isReallocated, Nothing, Nothing)
       else do
-        cancellationCharges <- withTryCatch "cancellationCharges" $ do
+        cancellationChargesResult <- withTryCatch "cancellationCharges" $ do
           case mbRide of
             Just ride -> do
-              rideTags <- updateNammaTagsForCancelledRide booking ride bookingCR transporterConfig
-              when (validDriverCancellation `elem` rideTags) $ do
+              tags <- updateNammaTagsForCancelledRide booking ride bookingCR transporterConfig
+              when (validDriverCancellation `elem` tags) $ do
                 let windowSize = toInteger $ fromMaybe 7 transporterConfig.cancellationRateWindow
                 void $ SCR.incrementCancelledCount ride.driverId windowSize
-              case booking.riderId of
+              charges <- case booking.riderId of
                 Just riderId -> do
                   riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
                   void $ QRD.updateCancelledRidesCount riderId.getId
-                  if validCustomerCancellation `elem` rideTags
+                  if validCustomerCancellation `elem` tags
                     then do
                       QRD.updateValidCancellationsCount riderId.getId
                       charges' <- case ride.cancellationFeeIfCancelled of
@@ -197,22 +198,42 @@ cancel req merchant booking mbActiveSearchTry = do
                       return charges'
                     else return Nothing
                 Nothing -> return Nothing
-            Nothing -> return Nothing
-        logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation charges: " <> show cancellationCharges)
-        cancelCharges <- case cancellationCharges of
-          Left e -> do
-            logError $ "Error in getting cancellation charges - " <> show e
-            return Nothing
-          Right (charges :: Maybe HighPrecMoney) -> do
-            void $ case mbRide of
+              return (charges, tags)
+            Nothing -> return (Nothing, [])
+
+        let (mbCharges, rideTags) = case cancellationChargesResult of
+              Right result -> result
+              Left _ -> (Nothing, [])
+        logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation charges: " <> show mbCharges)
+        cancelCharges <- do
+          void $ case mbCharges of
+            Just charges -> case mbRide of
               Just ride -> do
                 logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation charges onCancel: " <> show charges)
-                QRide.updateCancellationChargesOnCancel charges ride.id
+                QRide.updateCancellationChargesOnCancel (Just charges) ride.id
               Nothing -> return ()
-            return ((\chargess -> Just PriceAPIEntity {amount = chargess, currency = booking.currency}) =<< charges)
+            Nothing -> return ()
+          return ((\chargess -> Just PriceAPIEntity {amount = chargess, currency = booking.currency}) =<< mbCharges)
 
         logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellationCharges: " <> show cancelCharges)
         logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
+
+        mbCancellationChargeEntity <- case (cancelCharges, mbRide) of
+          (Just charges, Just ride) -> do
+            let isValidCancellation = validUserNoShowCancellation `elem` rideTags || validCustomerCancellation `elem` rideTags
+                rideType = if ride.onlinePayment then OC.Card else OC.Cash
+                isNoShowChargesEnabled = fromMaybe False transporterConfig.enableCustomerNoShowCharges
+            if isNoShowChargesEnabled && isValidCancellation
+              then
+                return $
+                  Just $
+                    OC.CancellationChargeEntity
+                      { validCancellation = isValidCancellation,
+                        cancellationCharges = charges.amount,
+                        rideType = rideType
+                      }
+              else return Nothing
+          _ -> return Nothing
 
         -- cancellationCharge <- do
         --   case mbRide of
@@ -230,7 +251,7 @@ cancel req merchant booking mbActiveSearchTry = do
         --   _ -> logInfo "RiderId or Cancellation charge not found"
 
         whenJust mbActiveSearchTry $ cancelSearch merchant.id
-        return (isReallocated, cancelCharges)
+        return (isReallocated, cancelCharges, mbCancellationChargeEntity)
   where
     buildBookingCancellationReason disToPickup currentLocation mbRide = do
       return $

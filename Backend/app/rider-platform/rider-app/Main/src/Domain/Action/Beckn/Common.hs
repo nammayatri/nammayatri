@@ -43,6 +43,7 @@ import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
@@ -87,6 +88,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
@@ -987,13 +989,38 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
     void $ QRide.updateCancellationChargesOnCancel (maybe Nothing (Just . (.amount)) cancellationFee) ride.id
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "RiderConfig not found")
+
+  fork "Create Cancellation Invoice" $ do
+    whenJust cancellationFee $ \fee -> do
+      whenJust mbRide $ \ride -> do
+        SPInvoice.createCancellationPaymentInvoice booking ride fee
+        when (cancellationSource == DBCR.ByDriver) $ do
+          merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+          unless ride.onlinePayment $ do
+            fork "Notify Driver - Cash Ride Cancellation Charges" $ do
+              void $
+                CallBPPInternal.sendDriverCancellationNotification
+                  (merchant.driverOfferApiKey)
+                  (merchant.driverOfferBaseUrl)
+                  (merchant.driverOfferMerchantId)
+                  (ride.bppRideId.getId)
+                  (booking.id.getId)
+                  fee
+                  "SUCCESS"
+
   fork "Cancellation Settlement" $ do
     whenJust cancellationFee $ \fee -> do
       case (riderConfig.settleCancellationFeeBeforeNextRide, mbRide) of
         (Just True, Just ride) -> do
-          -- creating cancellation execution job which charges cancellation fee from users stripe account
           let scheduleAfter = riderConfig.cancellationPaymentDelay
-              cancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData {bookingId = booking.id, personId = booking.riderId, cancellationAmount = fee, rideId = ride.id}
+              cancelExecutePaymentIntentJobData =
+                CancelExecutePaymentIntentJobData
+                  { bookingId = booking.id,
+                    personId = booking.riderId,
+                    cancellationAmount = fee,
+                    rideId = ride.id,
+                    noShowCharge = Just DPI.NO_SHOW_CHARGES
+                  }
           logDebug $ "Scheduling cancel execute payment intent job for order: " <> show scheduleAfter
           createJobIn @_ @'CancelExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (cancelExecutePaymentIntentJobData :: CancelExecutePaymentIntentJobData)
         (_, Just ride) -> do

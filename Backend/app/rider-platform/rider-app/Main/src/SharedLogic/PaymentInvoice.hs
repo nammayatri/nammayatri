@@ -3,6 +3,8 @@
 module SharedLogic.PaymentInvoice
   ( generateInvoiceNumber,
     buildPaymentInvoiceForOrder,
+    buildPaymentInvoiceForCancellation,
+    createCancellationPaymentInvoice,
   )
 where
 
@@ -15,12 +17,19 @@ import Domain.Types.PaymentInvoice (InvoicePaymentStatus (..), InvoiceType (..),
 import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude hiding (length, replicate)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Types.Common (PriceAPIEntity)
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, Currency, EsqDBFlow, HighPrecMoney, MonadFlow, generateGUID, getCurrentTime, nominalDiffTimeToSeconds)
+import Kernel.Utils.Common (CacheFlow, Currency, EsqDBFlow, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logInfo, nominalDiffTimeToSeconds)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import Lib.Payment.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.PaymentInvoice as QPaymentInvoice
 import qualified Storage.Queries.PaymentInvoiceExtra as QPaymentInvoiceExtra
+import Tools.Error
 import Prelude (length, map, replicate)
 
 -- | Generate invoice number for payment invoice
@@ -113,6 +122,7 @@ showPurpose = \case
   TIP -> "T" -- Tip
   RIDE_TIP -> "TRF" -- Tip + Ride Fare
   CANCELLATION_FEE -> "C" -- Cancellation
+  NO_SHOW_CHARGES -> "NC" -- No Show Charges
 
 -- | Show InvoiceType as abbreviated string for invoice number
 showInvoiceType :: DPI.InvoiceType -> Text
@@ -145,6 +155,42 @@ padLeft len char str =
    in if padding > 0
         then Prelude.replicate padding char ++ str
         else str
+
+buildPaymentInvoiceForCancellation ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
+  ShortId DMerchant.Merchant ->
+  Id DRide.Ride ->
+  Maybe (Id DOrder.PaymentOrder) ->
+  DBooking.Booking ->
+  HighPrecMoney ->
+  Currency ->
+  PaymentInstrument ->
+  DPI.PaymentPurpose ->
+  UTCTime ->
+  m DPI.PaymentInvoice
+buildPaymentInvoiceForCancellation merchantShortId rideId mbPaymentOrderId booking cancellationAmount currency paymentMethod paymentPurpose now = do
+  let paymentStatus = case paymentMethod of
+        Cash -> DPI.FAILED
+        _ -> DPI.PENDING
+  invoiceNumber <- generateInvoiceNumber merchantShortId paymentPurpose DPI.PAYMENT now
+  invoiceId <- Id <$> generateGUID
+  return $
+    DPI.PaymentInvoice
+      { id = invoiceId,
+        rideId = rideId,
+        paymentOrderId = mbPaymentOrderId,
+        paymentStatus = paymentStatus,
+        paymentMethod = paymentMethod,
+        paymentPurpose = paymentPurpose,
+        invoiceType = DPI.PAYMENT,
+        invoiceNumber = invoiceNumber,
+        amount = cancellationAmount,
+        currency = currency,
+        createdAt = now,
+        updatedAt = now,
+        merchantId = Just booking.merchantId,
+        merchantOperatingCityId = Just booking.merchantOperatingCityId
+      }
 
 -- | Build PaymentInvoice for a payment order (caller persists via QPaymentInvoice.create)
 -- This is called when a payment order is created
@@ -196,3 +242,33 @@ buildPaymentInvoiceForOrder merchantShortId rideId mbPaymentOrderId booking mbTi
         merchantId = Just booking.merchantId,
         merchantOperatingCityId = Just booking.merchantOperatingCityId
       }
+
+createCancellationPaymentInvoice ::
+  ( MonadFlow m,
+    BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    Redis.HedisFlow m r
+  ) =>
+  DBooking.Booking ->
+  DRide.Ride ->
+  PriceAPIEntity ->
+  m ()
+createCancellationPaymentInvoice booking ride cancellationFee = do
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  now <- getCurrentTime
+  mbPaymentOrder <- QPaymentOrder.findById (cast ride.id)
+  let paymentMethod = fromMaybe Cash booking.paymentInstrument
+      paymentPurpose = DPI.NO_SHOW_CHARGES
+  paymentInvoice <-
+    buildPaymentInvoiceForCancellation
+      merchant.shortId
+      ride.id
+      (mbPaymentOrder <&> (.id))
+      booking
+      cancellationFee.amount
+      cancellationFee.currency
+      paymentMethod
+      paymentPurpose
+      now
+  QPaymentInvoice.create paymentInvoice
+  logInfo $ "Created payment invoice for cancellation charges: rideId=" <> ride.id.getId <> ", amount=" <> show cancellationFee.amount <> ", paymentPurpose=" <> show paymentPurpose <> ", paymentMethod=" <> show paymentMethod

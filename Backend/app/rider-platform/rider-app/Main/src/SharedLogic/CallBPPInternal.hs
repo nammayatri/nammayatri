@@ -1062,3 +1062,43 @@ customerCancellationDuesWaiveOff ::
 customerCancellationDuesWaiveOff apiKey internalUrl merchantId bookingId rideId waiveOffAmount = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (customerCancellationDuesWaiveOffClient merchantId (Just apiKey) (CustomerCancellationDuesWaiveOffReq rideId bookingId waiveOffAmount)) "CustomerCancellationDuesWaiveOff" customerCancellationDuesWaiveOffApi
+
+data DriverCancellationNotificationReq = DriverCancellationNotificationReq
+  { rideId :: Text,
+    bookingId :: Text,
+    cancellationAmount :: PriceAPIEntity,
+    paymentStatus :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type SendDriverCancellationNotificationAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> "driverCancellationNotification"
+    :> Header "token" Text
+    :> ReqBody '[JSON] DriverCancellationNotificationReq
+    :> Post '[JSON] APISuccess
+
+sendDriverCancellationNotificationClient :: Text -> Maybe Text -> DriverCancellationNotificationReq -> EulerClient APISuccess
+sendDriverCancellationNotificationClient = client sendDriverCancellationNotificationApi
+
+sendDriverCancellationNotificationApi :: Proxy SendDriverCancellationNotificationAPI
+sendDriverCancellationNotificationApi = Proxy
+
+sendDriverCancellationNotification ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Text ->
+  PriceAPIEntity ->
+  Text ->
+  m APISuccess
+sendDriverCancellationNotification apiKey internalUrl merchantId rideId bookingId cancellationAmount paymentStatus = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sendDriverCancellationNotificationClient merchantId (Just apiKey) (DriverCancellationNotificationReq rideId bookingId cancellationAmount paymentStatus)) "SendDriverCancellationNotification" sendDriverCancellationNotificationApi

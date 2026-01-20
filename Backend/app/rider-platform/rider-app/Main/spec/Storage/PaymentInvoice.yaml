@@ -17,7 +17,7 @@ PaymentInvoice:
       enum: "PENDING,CAPTURED,FAILED"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
     PaymentPurpose:
-      enum: "RIDE,TIP,RIDE_TIP,CANCELLATION_FEE"
+      enum: "RIDE,TIP,RIDE_TIP,CANCELLATION_FEE,NO_SHOW_CHARGES"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
     InvoiceType:
       enum: "PAYMENT,REFUNDS"

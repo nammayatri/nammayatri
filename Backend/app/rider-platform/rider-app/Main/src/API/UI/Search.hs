@@ -191,6 +191,13 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   checkSearchRateLimit personId
   fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
   merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
+
+  when (merchant.onlinePayment) $ do
+    cancellationDuesRes <- DCancel.getCancellationDuesDetails Nothing (personId, cast merchantId)
+    whenJust cancellationDuesRes.cancellationDues $ \dues ->
+      when (dues.amount > 0) $
+        throwError $ InvalidRequest "You have pending cancellation dues. Please clear your dues before booking a new ride."
+
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --BEGIN
   whenJust merchant.stuckRideAutoCancellationBuffer $ \stuckRideAutoCancellationBuffer -> do
