@@ -147,3 +147,17 @@ updateCompletedRidesCount riderId = do
       Se.Set BeamRD.updatedAt now
     ]
     [Se.Is BeamRD.id (Se.Eq riderId)]
+
+-- | Updates all relevant fields when cancellation dues are paid
+-- Sets cancellationDues to 0, adds to cancellationDuesPaid, and increments payment count
+updateOnCancellationDuesPayment :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Text -> m ()
+updateOnCancellationDuesPayment amountPaid riderId = do
+  now <- getCurrentTime
+  riderDetails <- findOneWithKV [Se.Is BeamRD.id (Se.Eq riderId)] >>= fromMaybeM (RiderDetailsNotFound riderId)
+  updateOneWithKV
+    [ Se.Set BeamRD.cancellationDues (riderDetails.cancellationDues - amountPaid), -- Reset dues to 0 after payment
+      Se.Set BeamRD.cancellationDuesPaid (Just (riderDetails.cancellationDuesPaid + amountPaid)),
+      Se.Set BeamRD.noOfTimesCanellationDuesPaid (Just (riderDetails.noOfTimesCanellationDuesPaid + 1)),
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
