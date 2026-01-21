@@ -39,16 +39,20 @@ let internalEndPointMap =
       , { mapKey = "http://localhost:3000", mapValue = "http://localhost:3000" }
       ]
 
-let sosAlertsTopicARN =
-      "arn:aws:chatbot::463356420488:chat-configuration/slack-channel/sos-notifications"
+let sosAlertsTopicARN = "arn:aws:chatbot::463356420488:chat-configuration/slack-channel/sos-notifications"
+let GCPProjectId = "ny-sandbox"
+let GCPTopicId = "slack-alerts"
+let sendGridUrl = "https://api.sendgrid.com/v3/mail/send"
 
-let CloudManager = < AWS | GCP >
 
-let slackNotificationConfig =
-      { cloudManager = CloudManager.AWS
-      , snsTopicArn = Some sosAlertsTopicARN
-      , gcpProjectId = None Text
-      , gcpTopicId = None Text
+let emailServiceConfig =
+      { sendGridUrl = Some sendGridUrl
+      }
+
+let SlackNotificationConfig =
+      { snsTopicArn = Some sosAlertsTopicARN
+      , gcpProjectId = Some GCPProjectId
+      , gcpTopicId = Some GCPTopicId
       }
 
 let SchedulerType = < RedisBased | DbBased >
@@ -98,8 +102,6 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , internalEndPointMap
     , urlShortnerConfig
     , sosAlertsTopicARN
-    , slackNotificationConfig
-    , CloudManager
     , ondcRegistryUrl
     , ondcGatewayUrl
     , nyRegistryUrl

@@ -42,6 +42,7 @@ where
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
+import qualified Email.Types
 import Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
 import qualified Data.ByteString.Lazy.Char8 as BSL
@@ -703,6 +704,7 @@ data AuthData = AuthData
 
 triggerUpdateAuthDataOtp ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "emailServiceConfig" r Email.Types.EmailServiceConfig,
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -748,6 +750,7 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
   where
     storeAndSendOTP ::
       ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+        HasField "emailServiceConfig" r Email.Types.EmailServiceConfig,
         CacheFlow m r,
         EsqDBFlow m r,
         EncFlow m r

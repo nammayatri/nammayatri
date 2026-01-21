@@ -22,7 +22,7 @@ import qualified Domain.Types.Booking.API as DBAPI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RideStatus as DRide
-import qualified Email.AWS.Flow as Email
+import qualified Email.Flow as Email
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
@@ -70,7 +70,8 @@ generateInvoice ::
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasField "emailServiceConfig" r Email.EmailServiceConfig
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   GenerateInvoiceReq ->
@@ -211,7 +212,8 @@ generateAndEmailInvoice ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    Log m
+    Log m,
+    HasField "emailServiceConfig" r Email.EmailServiceConfig
   ) =>
   Id Text ->
   DP.Person ->
@@ -250,7 +252,9 @@ generateAndEmailInvoice invoiceId person bookingAPIEntities merchantId email = d
       bodyText = buildInvoiceEmailBody invoiceId.getId
       fileName = "invoice_" <> invoiceId.getId <> ".pdf"
 
-  liftIO $ Email.sendEmailWithAttachment fromEmail [email] subject bodyText pdfPath fileName
+  emailServiceConfig <- asks (.emailServiceConfig)
+
+  liftIO $ Email.sendEmailWithAttachment emailServiceConfig fromEmail [email] subject bodyText pdfPath fileName
 
   logInfo $ "Invoice PDF generated and emailed successfully for invoiceId: " <> invoiceId.getId
 

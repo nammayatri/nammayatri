@@ -24,11 +24,18 @@ import qualified Slack.AWS.Flow as AWS
 import qualified Slack.GCP.Flow as GCP
 import Slack.Types
 
+
+import Kernel.Types.Version (CloudType (..))
+import Kernel.Utils.App (lookupCloudType)
+
 publishMessage :: SlackNotificationConfig -> T.Text -> IO ()
-publishMessage config message = case config.cloudManager of
-  AWS -> case config.snsTopicArn of
-    Just topicArn -> AWS.publishMessage topicArn message
-    Nothing -> error "AWS SNS Topic ARN not configured in slackNotificationConfig"
-  GCP -> case (config.gcpProjectId, config.gcpTopicId) of
-    (Just projectId, Just topicId) -> GCP.publishMessage projectId topicId message
-    _ -> error "GCP Pub/Sub project/topic not configured in slackNotificationConfig"
+publishMessage config message = do
+  cloudType <- lookupCloudType
+  case cloudType of
+    AWS -> case config.snsTopicArn of
+      Just topicArn -> AWS.publishMessage topicArn message
+      Nothing -> error "AWS SNS Topic ARN not configured in slackNotificationConfig"
+    GCP -> case (config.gcpProjectId, config.gcpTopicId) of
+      (Just projectId, Just topicId) -> GCP.publishMessage projectId topicId message
+      _ -> error "GCP Pub/Sub project/topic not configured in slackNotificationConfig"
+    UNAVAILABLE -> error "CloudType UNAVAILABLE: Cannot route slack message"

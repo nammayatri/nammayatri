@@ -38,6 +38,7 @@ where
 import Data.OpenApi hiding (email, info, name, url)
 import Data.Text hiding (elem)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
+import qualified Email.Types
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
@@ -579,6 +580,7 @@ checkPersonExists entityId =
 
 resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "emailServiceConfig" r Email.Types.EmailServiceConfig,
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,

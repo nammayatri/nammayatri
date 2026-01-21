@@ -151,6 +151,9 @@ dependencies:
   - beam-core
   - beam-postgres
   - postgresql-simple
+  - http-client
+  - http-client-tls
+  - http-types
 
 ghc-options:
   - -fwrite-ide-info
