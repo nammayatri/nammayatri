@@ -31,3 +31,14 @@ findAllByPassCategoryId passCategoryId = do
     (Se.Asc Beam.order)
     Nothing
     Nothing
+
+findAllByPassEnums ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [DPassType.PassEnum] ->
+  m [DPassType.PassType]
+findAllByPassEnums passEnums = do
+  findAllWithOptionsKV
+    [Se.Is Beam.passEnum $ Se.In (map Just passEnums)]
+    (Se.Asc Beam.order)
+    Nothing
+    Nothing

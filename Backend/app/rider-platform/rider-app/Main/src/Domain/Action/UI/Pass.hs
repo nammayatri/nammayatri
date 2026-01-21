@@ -13,6 +13,7 @@ module Domain.Action.UI.Pass
     postMultimodalPassActivateTodayUtil,
     postMultimodalPassSelectUtil,
     postMultimodalPassUploadProfilePicture,
+    buildPurchasedPassAPIEntity,
   )
 where
 
@@ -428,6 +429,7 @@ buildPassTypeAPIEntity passType =
       name = passType.name,
       catchline = passType.catchline,
       title = passType.title,
+      passEnum = passType.passEnum,
       description = passType.description
     }
 
@@ -754,7 +756,9 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   -- PurchasedPassAPIEntity will inform the UI which passes need device switching.
   -- Previously, passes from other devices were hidden if any pass (even Pending)
   -- existed for the current device, preventing users from switching older active passes.
-  mapM (buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today) allActivePurchasedPasses
+  purchasedPassAPIEntities <- mapM (buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today) allActivePurchasedPasses
+  let isInactiveTouristPass p = p.passEntity.passType.passEnum == Just DPassType.TouristPass && p.status /= DPurchasedPass.Active
+  pure $ filter (not . isInactiveTouristPass) purchasedPassAPIEntities
 
 postMultimodalPassVerify ::
   ( ( Maybe (Id.Id DP.Person),

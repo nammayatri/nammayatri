@@ -73,6 +73,7 @@ data PassTypeAPIEntity = PassTypeAPIEntity
     description :: Data.Maybe.Maybe Data.Text.Text,
     id :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
     name :: Data.Maybe.Maybe Data.Text.Text,
+    passEnum :: Data.Maybe.Maybe Domain.Types.PassType.PassEnum,
     title :: Data.Text.Text
   }
   deriving stock (Generic, Show)

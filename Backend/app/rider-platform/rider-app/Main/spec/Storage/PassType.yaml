@@ -16,10 +16,20 @@ PassType:
     order: Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    passEnum: Maybe PassEnum
+
+  types:
+    PassEnum:
+      enum: "TouristPass, RegularPass"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   constraints:
     id: PrimaryKey
     passCategoryId: !SecondaryKey
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PassEnum>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <PassEnum>
 
   extraOperations:
     - EXTRA_QUERY_FILE

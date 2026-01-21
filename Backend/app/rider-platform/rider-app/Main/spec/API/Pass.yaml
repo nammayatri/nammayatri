@@ -3,6 +3,7 @@ imports:
   Maybe: Data.Maybe
   PassCategory: Domain.Types.PassCategory
   PassType: Domain.Types.PassType
+  PassEnum: Domain.Types.PassType
   Pass: Domain.Types.Pass
   PassDocumentType: Domain.Types.Pass
   PurchasedPass: Domain.Types.PurchasedPass
@@ -30,6 +31,7 @@ types:
     catchline: Maybe Text
     title: Text
     description: Maybe Text
+    passEnum: Maybe PassEnum
     derive: "Show"
 
   PassAPIEntity:
