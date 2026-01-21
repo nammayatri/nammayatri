@@ -543,3 +543,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN kafka_topic_name text  default 'gp
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN static_customer_id_threshold_day date ;

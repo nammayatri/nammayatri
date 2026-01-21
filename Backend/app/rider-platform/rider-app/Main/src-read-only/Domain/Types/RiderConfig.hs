@@ -139,6 +139,7 @@ data RiderConfig = RiderConfig
     sourceOfServiceTier :: Domain.Types.RiderConfig.ServiceTierSource,
     specialVehicleNotificationConfigs :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.SpecialVehicleNotificationConfig],
     specialZoneRadius :: Kernel.Prelude.Int,
+    staticCustomerIdThresholdDay :: Kernel.Prelude.Maybe Data.Time.Day,
     suburbanBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     suburbanTicketAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     suburbanFareCachingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

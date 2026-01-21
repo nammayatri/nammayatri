@@ -194,7 +194,7 @@ RiderConfig:
     nearbyBusRadiusBucketStep: Maybe Meters
     singleModeWalkSpeed: Maybe Double
     kafkaTopicName: Text
-
+    staticCustomerIdThresholdDay: Maybe Day
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -246,6 +246,7 @@ RiderConfig:
     sourceOfServiceTier: Maybe ServiceTierSource
     enableRideEndOffers: Maybe Bool
     kafkaTopicName: Maybe Text
+    staticCustomerIdThresholdDay: Maybe Day
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -305,6 +306,7 @@ RiderConfig:
     sourceOfServiceTier: fromMaybe (Domain.Types.RiderConfig.NANDI) sourceOfServiceTier|E
     enableRideEndOffers: fromMaybe False enableRideEndOffers|E
     kafkaTopicName: fromMaybe "gps-data" kafkaTopicName|E
+    staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -356,6 +358,7 @@ RiderConfig:
     sourceOfServiceTier: Just sourceOfServiceTier|E
     enableRideEndOffers: Just enableRideEndOffers|E
     kafkaTopicName: Just kafkaTopicName|E
+    staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
 
 
   default:
@@ -451,6 +454,7 @@ RiderConfig:
     serviceTierRelationshipCfg: "json"
     metricsBlacklistPatterns: text []
     ptCircuitBreakerConfig: "json"
+    staticCustomerIdThresholdDay: date
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
