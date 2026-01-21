@@ -329,7 +329,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       when (searchRequest.isMeterRideSearch == Just True) $ do
         quoteForMeterRide <- listToMaybe quotes & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")
-        void $ DConfirm.confirm' (searchRequest.riderId, merchant.id) quoteForMeterRide.id Nothing Nothing Nothing
+        void $ DConfirm.confirm' (searchRequest.riderId, merchant.id) quoteForMeterRide.id Nothing Nothing Nothing Nothing
 
       whenJust mbRequiredEstimate $ \requiredEstimate -> do
         shouldAutoSelect <- SLCF.createFares requestId.getId requiredEstimate.id.getId

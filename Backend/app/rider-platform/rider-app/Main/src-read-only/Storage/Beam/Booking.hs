@@ -50,6 +50,7 @@ data BookingT f = BookingT
     commission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     configInExperimentVersions :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    dashboardAgentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     discount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
