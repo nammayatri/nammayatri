@@ -27,6 +27,13 @@ apis:
       migrate:
         endpoint: RBooking RideStatusEndPoint
         userActionType: ApiAuth APP_BACKEND CUSTOMERS BOOKING_STATUS
+  - GET: # BookingInfoAPIUsingOTP
+      endpoint: /{bookingCode}/booking
+      auth: NoAuth
+      params:
+        bookingCode: Text
+      response:
+        type: BookingAPIEntity
   - GET: # CustomerBookingListAPI
       endpoint: /list/{customerId}
       auth: ApiAuthV2

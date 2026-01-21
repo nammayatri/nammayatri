@@ -13,7 +13,8 @@
 -}
 
 module SharedLogic.MessageBuilder
-  ( BuildSendOTPMessageReq (..),
+  ( buildSendSmsReq,
+    BuildSendOTPMessageReq (..),
     BuildSOSAlertMessageReq (..),
     buildSendOTPMessage,
     BuildSendBookingOTPMessageReq (..),

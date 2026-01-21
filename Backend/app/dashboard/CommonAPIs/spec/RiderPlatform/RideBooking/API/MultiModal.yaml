@@ -1,5 +1,6 @@
 imports:
   BookingStatus: Domain.Types.BookingStatus
+  MessageKey: Domain.Types.MerchantMessage
   Person: Domain.Types.Person
   BookingListResV2: Domain.Action.UI.Booking
   Integer: EulerHS.Prelude
@@ -65,6 +66,8 @@ types:
   CustomerSendMessageReq:
     title: Text
     message: Text
+    messageKey: Maybe MessageKey
+    variables: Maybe [(Kernel.Prelude.Text, Kernel.Prelude.Text)]
     channel: MediaChannel
   MediaChannel:
     - enum: WHATSAPP, PUSH_NOTIFICATION, SMS
