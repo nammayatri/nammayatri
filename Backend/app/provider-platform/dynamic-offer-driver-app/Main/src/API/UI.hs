@@ -200,4 +200,3 @@ handler =
     :<|> SubscriptionTransaction.handler
     :<|> Penalty.handler
     :<|> StclMembership.handler
-    
