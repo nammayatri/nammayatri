@@ -1,6 +1,7 @@
 module Domain.Action.RiderPlatform.RideBooking.Booking
   ( postBookingStatus,
     getBookingList,
+    getBookingBooking,
   )
 where
 
@@ -32,3 +33,8 @@ getBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Ker
 getBookingList merchantShortId opCity apiTokenInfo customerId limit offset onlyActive status = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingList) customerId limit offset onlyActive status
+
+getBookingBooking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.Flow Domain.Types.Booking.API.BookingAPIEntity)
+getBookingBooking merchantShortId opCity bookingOtp = do
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
+  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingBooking) bookingOtp

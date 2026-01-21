@@ -35,7 +35,7 @@ import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Tools.Metrics as Metrics
 
-validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r ) => DOnSelect -> m (Merchant.Merchant, DQuote.FRFSQuote, DIBC.IntegratedBPPConfig)
+validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnSelect -> m (Merchant.Merchant, DQuote.FRFSQuote, DIBC.IntegratedBPPConfig)
 validateRequest DOnSelect {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   quote <- runInReplica $ Qquote.findById (Id messageId) >>= fromMaybeM (QuoteDoesNotExist messageId)

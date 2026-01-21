@@ -19,7 +19,7 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-type API = ("booking" :> (PostBookingStatus :<|> GetBookingList))
+type API = ("booking" :> (PostBookingStatus :<|> GetBookingBooking :<|> GetBookingList))
 
 type PostBookingStatus =
   ( "ridebooking" :> Capture "rideBookingId" (Kernel.Types.Id.Id Domain.Types.Booking.Booking)
@@ -28,6 +28,8 @@ type PostBookingStatus =
            (Kernel.Types.Id.Id Domain.Types.Person.Person)
       :> Post '[JSON] Domain.Types.Booking.API.BookingAPIEntity
   )
+
+type GetBookingBooking = (Capture "bookingCode" Kernel.Prelude.Text :> "booking" :> Get '[JSON] Domain.Types.Booking.API.BookingAPIEntity)
 
 type GetBookingList =
   ( "list" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> QueryParam "limit" EulerHS.Prelude.Integer
@@ -45,16 +47,18 @@ type GetBookingList =
 
 data BookingAPIs = BookingAPIs
   { postBookingStatus :: Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Domain.Types.Booking.API.BookingAPIEntity,
+    getBookingBooking :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Types.Booking.API.BookingAPIEntity,
     getBookingList :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListRes
   }
 
 mkBookingAPIs :: (Client EulerHS.Types.EulerClient API -> BookingAPIs)
 mkBookingAPIs bookingClient = (BookingAPIs {..})
   where
-    postBookingStatus :<|> getBookingList = bookingClient
+    postBookingStatus :<|> getBookingBooking :<|> getBookingList = bookingClient
 
 data BookingUserActionType
   = POST_BOOKING_STATUS
+  | GET_BOOKING_BOOKING
   | GET_BOOKING_LIST
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

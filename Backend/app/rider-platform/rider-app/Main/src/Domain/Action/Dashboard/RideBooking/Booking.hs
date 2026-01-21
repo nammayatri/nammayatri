@@ -1,6 +1,7 @@
 module Domain.Action.Dashboard.RideBooking.Booking
   ( postBookingStatus,
     getBookingList,
+    getBookingBooking,
   )
 where
 
@@ -14,8 +15,12 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
+import Kernel.Utils.Common
 import qualified Kernel.Types.Id
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.Queries.Booking as SQB
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Tools.Error
 
 postBookingStatus ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -26,6 +31,20 @@ postBookingStatus ::
 postBookingStatus merchantShortId _opCity bookingId personId = do
   m <- findMerchantByShortId merchantShortId
   Domain.Action.UI.Booking.bookingStatus bookingId (personId, m.id)
+
+getBookingBooking ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Text ->
+  Environment.Flow Domain.Types.Booking.API.BookingAPIEntity
+getBookingBooking merchantShortId _opCity bookingCode = do
+  apiRateLimitOptions <- asks (.apiRateLimitOptions)
+  checkSlidingWindowLimitWithOptions bookingOtpKey apiRateLimitOptions
+  m <- findMerchantByShortId merchantShortId
+  booking <- SQB.findById (Kernel.Types.Id.Id bookingCode) >>= fromMaybeM (BookingNotFound bookingCode) -- later change it to invoice number or something
+  Domain.Action.UI.Booking.bookingStatus booking.id (booking.riderId, m.id)
+  where
+    bookingOtpKey = "booking-code-" <> bookingCode
 
 getBookingList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
