@@ -25,6 +25,7 @@ instance FromTType' Beam.PassType Domain.Types.PassType.PassType where
             name = name,
             order = order,
             passCategoryId = Kernel.Types.Id.Id passCategoryId,
+            passEnum = passEnum,
             title = title,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -41,6 +42,7 @@ instance ToTType' Beam.PassType Domain.Types.PassType.PassType where
         Beam.name = name,
         Beam.order = order,
         Beam.passCategoryId = Kernel.Types.Id.getId passCategoryId,
+        Beam.passEnum = passEnum,
         Beam.title = title,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

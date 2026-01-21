@@ -196,3 +196,25 @@ findAllByPersonIdAndPassTypeIdAndStatus personId merchantId passTypeId statuses 
           Se.Is Beam.status $ Se.In statuses
         ]
     ]
+
+findAllActiveByPersonIdWithFiltersV2 ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Maybe [Id DPassType.PassType] ->
+  Maybe Day ->
+  Maybe Day ->
+  Maybe Int ->
+  Maybe Int ->
+  m [DPurchasedPass.PurchasedPass]
+findAllActiveByPersonIdWithFiltersV2 personId merchantId mbPassTypeIds mbFromDate mbToDate mbLimit mbOffset = do
+  let baseConds = [Se.Is Beam.personId $ Se.Eq (getId personId), Se.Is Beam.merchantId $ Se.Eq (getId merchantId), Se.Is Beam.status $ Se.Eq DPurchasedPass.Active]
+  let passTypeConds =
+        case mbPassTypeIds of
+          Just ids | not (null ids) -> [Se.Is Beam.passTypeId $ Se.In (map getId ids)]
+          _ -> []
+      fromDateCond = maybe [] (\d -> [Se.Is Beam.startDate $ Se.GreaterThanOrEq d]) mbFromDate
+      toDateCond = maybe [] (\d -> [Se.Is Beam.startDate $ Se.LessThanOrEq d]) mbToDate
+      conds = baseConds ++ passTypeConds ++ fromDateCond ++ toDateCond
+
+  findAllWithOptionsKV conds (Se.Desc Beam.createdAt) mbLimit mbOffset

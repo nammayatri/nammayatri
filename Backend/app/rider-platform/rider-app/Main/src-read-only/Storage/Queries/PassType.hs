@@ -35,6 +35,7 @@ updateByPrimaryKey (Domain.Types.PassType.PassType {..}) = do
       Se.Set Beam.name name,
       Se.Set Beam.order order,
       Se.Set Beam.passCategoryId (Kernel.Types.Id.getId passCategoryId),
+      Se.Set Beam.passEnum passEnum,
       Se.Set Beam.title title,
       Se.Set Beam.updatedAt _now
     ]
