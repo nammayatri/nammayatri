@@ -27,7 +27,10 @@ where
 
 import qualified API.Types.UI.Payment as PaymentAPI
 import Control.Applicative ((<|>))
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as DBL
 import qualified Data.Text
+import qualified Data.Text.Encoding as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -228,6 +231,7 @@ juspayWebhookHandler ::
   Value ->
   Flow AckResponse
 juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData value = do
+  logDebug $ "juspayWebhookHandler called with merchantShortId: " <> show merchantShortId <> " mbCity: " <> show mbCity <> " mbServiceType: " <> show mbServiceType <> " mbPlaceId: " <> show mbPlaceId <> " value: " <> T.decodeUtf8 (DBL.toStrict $ A.encode value)
   paymentServiceConfig <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Payment.Juspay
   orderWebhookResponse <- Juspay.orderStatusWebhook paymentServiceConfig DPayment.juspayWebhookService authData value
   osr <- case orderWebhookResponse of
