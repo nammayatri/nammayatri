@@ -133,7 +133,7 @@ data DriverVehicleDetails = DriverVehicleDetails
 data DriverRCReq = DriverRCReq
   { vehicleRegistrationCertNumber :: Text,
     imageId :: Maybe (Id Image.Image),
-    udinNumber :: Maybe Text, -- For TTEN certificate validation
+    udinNumber :: Maybe Text, -- For TTEN certificate validation (TOTO)
     operatingCity :: Text,
     dateOfRegistration :: Maybe UTCTime, -- updatable
     vehicleCategory :: Maybe DVC.VehicleCategory,
@@ -224,8 +224,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
   let isTtenCertificate = isNothing req.imageId && isJust req.udinNumber
-  let docType = if isTtenCertificate then ODC.TtenCertificate else ODC.VehicleRegistrationCertificate
-  documentVerificationConfig <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId docType (fromMaybe DVC.CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show docType))
+  documentVerificationConfig <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId ODC.VehicleRegistrationCertificate (fromMaybe DVC.CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.VehicleRegistrationCertificate))
   unless isTtenCertificate $ do
     let checkPrefixOfRCNumber = null documentVerificationConfig.rcNumberPrefixList || prefixMatchedResult req.vehicleRegistrationCertNumber documentVerificationConfig.rcNumberPrefixList
     unless checkPrefixOfRCNumber $ throwError (InvalidRequest "RC number prefix is not valid")
@@ -250,7 +249,9 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
           && (isNothing req.isRCImageValidated || req.isRCImageValidated == Just False)
       )
       $ do
-        image <- getImage (fromJust req.imageId)
+        -- Throwing error if imageId is not present
+        imageId <- maybe (throwError (InvalidRequest "Image ID is required")) return req.imageId
+        image <- getImage imageId
         resp <-
           Verification.extractRCImage person.merchantId merchantOpCityId $
             Verification.ExtractImageReq {image1 = image, image2 = Nothing, driverId = person.id.getId}
@@ -260,12 +261,12 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
             let rcNumber = removeSpaceAndDash <$> Just req.vehicleRegistrationCertNumber
             -- disable this check for debugging with mock-idfy
             unless (extractRCNumber == rcNumber) $
-              throwImageError (fromJust req.imageId) $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
-          Nothing -> throwImageError (fromJust req.imageId) ImageExtractionFailed
+              throwImageError imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
+          Nothing -> throwImageError imageId ImageExtractionFailed
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
     Redis.set (makeFleetOwnerKey req.vehicleRegistrationCertNumber) fleetOwnerId.getId
   encryptedRC <- encrypt req.vehicleRegistrationCertNumber
-  let imageExtractionValidation = bool Domain.Skipped Domain.Success (isNothing req.dateOfRegistration && not isTtenCertificate)
+  let imageExtractionValidation = bool Domain.Skipped Domain.Success (isNothing req.dateOfRegistration && (documentVerificationConfig.checkExtraction || not isTtenCertificate))
   Redis.whenWithLockRedis (rcVerificationLockKey req.vehicleRegistrationCertNumber) 60 $ do
     case req.vehicleDetails of
       Just vDetails@DriverVehicleDetails {..} -> do
@@ -436,7 +437,8 @@ onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbI
           mbVentilator = mbVerificationReq >>= (.ventilator)
           mbImageExtractionValidation' = mbImageExtractionValidation <|> (mbVerificationReq <&> (.imageExtractionValidation))
           mbEncryptedRC' = mbEncryptedRC <|> (mbVerificationReq <&> (.documentNumber))
-      void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (mbVerificationReq <&> (.documentImageId1)) Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation' mbEncryptedRC' imageId mbRetryCnt mbReqStatus
+          mbDocumentImageId = mbVerificationReq >>= (.documentImageId1)
+      void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation' mbEncryptedRC' imageId mbRetryCnt mbReqStatus
       return Ack
 
 onVerifyRCHandler :: VerificationFlow m r => Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe (Id Image.Image) -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Maybe (Id Image.Image) -> Maybe Int -> Maybe Text -> m ()
@@ -452,8 +454,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     Nothing -> pure []
     Just rules -> validateRCResponse rcValidationReq rules
   let mbReqStatus = if null failures then mbReqStatus' else Just "failed"
-      isTtenVerification = rcVerificationResponse.vehicleCategory == Just "TOTO"
-      vehicleCategory' = if isTtenVerification then Just DVC.TOTO else mbVehicleCategory
+      isExcludedVehicleCategoryFromVerification = maybe False (`elem` (map show $ fromMaybe [] transporterConfig.vehicleCategoryExcludedFromVerification)) rcVerificationResponse.vehicleCategory
+      vehicleCategory' = if isExcludedVehicleCategoryFromVerification then Just DVC.TOTO else mbVehicleCategory
       rcInput = createRCInput vehicleCategory' mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
       checks =
         if transporterConfig.rcExpiryChecks == Just True
@@ -478,9 +480,9 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       Just vehicleVariant ->
         maybeM
           (return Nothing)
-          ((Just <$>) . createVehicleRC person.merchantId person.merchantOperatingCityId rcInput vehicleVariant allFailures isTtenVerification)
+          ((Just <$>) . createVehicleRC person.merchantId person.merchantOperatingCityId rcInput vehicleVariant allFailures isExcludedVehicleCategoryFromVerification)
           (encrypt `mapM` rcVerificationResponse.registrationNumber)
-      Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput allFailures isTtenVerification
+      Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput allFailures isExcludedVehicleCategoryFromVerification
   if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
     then do
       flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
@@ -535,11 +537,12 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     readFromJson _ = Nothing
 
     createVehicleRC :: MonadFlow m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> DV.VehicleVariant -> [Text] -> Bool -> EncryptedHashedField 'AsEncrypted Text -> m DVRC.VehicleRegistrationCertificate
-    createVehicleRC merchantId merchantOperatingCityId input vehicleVariant failedRules isTtenVerification certificateNumber = do
+    createVehicleRC merchantId merchantOperatingCityId input vehicleVariant failedRules isExcludedVehicleCategoryFromVerification certificateNumber = do
       now <- getCurrentTime
       id <- generateGUID
       let updatedVehicleVariant = case input.vehicleCategory of
             Just DVC.TRUCK -> DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight vehicleVariant
+            Just DVC.TOTO -> DV.E_RICKSHAW
             _ -> vehicleVariant
       logInfo $ "createVehicleRC: Creating RC with verificationStatus=MANUAL_VERIFICATION_REQUIRED, vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
       return $
@@ -551,7 +554,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             permitExpiry = input.permitValidityUpto,
             pucExpiry = input.pucValidityUpto,
             vehicleClass = input.vehicleClass,
-            vehicleVariant = if isTtenVerification then Just DV.E_RICKSHAW else Just updatedVehicleVariant,
+            vehicleVariant = Just updatedVehicleVariant,
             vehicleManufacturer = input.manufacturer <|> input.manufacturerModel,
             vehicleCapacity = input.seatingCapacity,
             vehicleModel = input.manufacturerModel,
@@ -561,7 +564,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             reviewedAt = Nothing,
             reviewRequired = Nothing,
             insuranceValidity = input.insuranceValidity,
-            verificationStatus = if isTtenVerification then Documents.VALID else Documents.MANUAL_VERIFICATION_REQUIRED,
+            verificationStatus = if isExcludedVehicleCategoryFromVerification then Documents.VALID else Documents.MANUAL_VERIFICATION_REQUIRED,
             fleetOwnerId = input.fleetOwnerId,
             merchantId = Just merchantId,
             mYManufacturing = input.mYManufacturing,

@@ -108,7 +108,7 @@ verifyRC _ merchantOptCityId mbRemPriorityList req = do
   let isTtenVerification =
         case listToMaybe configuredTotoList of
           Just VT.Tten -> True
-          _            -> False
+          _ -> False
 
   mbToken' <-
     if isTtenVerification
@@ -117,15 +117,15 @@ verifyRC _ merchantOptCityId mbRemPriorityList req = do
           throwError $ InvalidRequest "UDIN number is required for TTEN verification"
 
         token <- getOrCreateTtenToken merchantOptCityId
-        logDebug $ "token: " <> show token
         return (Just token)
       else return Nothing
-  let reqWithToken = req { token = mbToken' }
+  let reqWithToken = req {token = mbToken'}
   let finalPriorityList =
         fromMaybe
-          (if isTtenVerification
+          ( if isTtenVerification
               then fromMaybe [VT.Tten] merchantServiceUsageConfig.totoVerificationPriorityList
-              else merchantServiceUsageConfig.verificationProvidersPriorityList)
+              else merchantServiceUsageConfig.verificationProvidersPriorityList
+          )
           mbRemPriorityList
   Verification.verifyRC (getServiceConfig merchantOptCityId) finalPriorityList reqWithToken
   where

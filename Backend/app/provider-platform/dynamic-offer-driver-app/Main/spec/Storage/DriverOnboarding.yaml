@@ -224,7 +224,7 @@ DriverLicense:
   fields:
     id: Id DriverLicense
     driverId: Id Person
-    documentImageId1: Id Image
+    documentImageId1: Maybe (Id Image)
     documentImageId2: Maybe (Id Image)
     driverDob: Maybe UTCTime
     driverName: Maybe Text
@@ -543,7 +543,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,TtenCertificate"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
     DocumentCategory:
@@ -1345,25 +1345,3 @@ CommonDriverOnboardingDocuments:
       kvFunction: updateWithKV
       params: [rejectReason, verificationStatus, updatedAt]
       where: id
-
-TtenVerification:
-  tableName: tten_verification
-  fields:
-    id: Id TtenVerification
-    driverId: Id Person
-    ttenNumber: EncryptedHashedField e Text
-    ttenResponse: Maybe Value
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    createdAt: UTCTime
-    updatedAt: UTCTime
-  constraints:
-    id: PrimaryKey
-    driverId: SecondaryKey
-  queries:
-    findById:
-      kvFunction: findOneWithKV
-      where: id
-    findByDriverId:
-      kvFunction: findAllWithKV
-      where: driverId

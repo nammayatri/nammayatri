@@ -42,10 +42,10 @@ updateMerchantIdByDriverId merchantId driverId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image) -> m ())
 updateVerificationStatus verificationStatus documentImageId1 = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId1 $ Se.Eq (Kernel.Types.Id.getId documentImageId1)]
+  updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId1 $ Se.Eq (Kernel.Types.Id.getId <$> documentImageId1)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverLicense.DriverLicense -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -58,7 +58,7 @@ updateByPrimaryKey (Domain.Types.DriverLicense.DriverLicense {..}) = do
       Se.Set Beam.consent consent,
       Se.Set Beam.consentTimestamp consentTimestamp,
       Se.Set Beam.dateOfIssue dateOfIssue,
-      Se.Set Beam.documentImageId1 (Kernel.Types.Id.getId documentImageId1),
+      Se.Set Beam.documentImageId1 (Kernel.Types.Id.getId <$> documentImageId1),
       Se.Set Beam.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
       Se.Set Beam.driverDob driverDob,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),

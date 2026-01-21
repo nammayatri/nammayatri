@@ -131,7 +131,7 @@ data DriverInfoRes = DriverInfoRes
 
 data DriverLicenseAPIEntity = DriverLicenseAPIEntity
   { driverLicenseId :: Kernel.Types.Id.Id Dashboard.Common.Driver.DriverLicense,
-    documentImageId1 :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    documentImageId1 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -102,7 +102,7 @@ data DLDetails = DLDetails
     operatingCity :: Kernel.Prelude.Text,
     driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     classOfVehicles :: [Kernel.Prelude.Text],
-    imageId1 :: Kernel.Prelude.Text,
+    imageId1 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     imageId2 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dateOfIssue :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     createdAt :: Kernel.Prelude.UTCTime
@@ -156,7 +156,6 @@ data DocumentType
   | FinnishIDResidencePermit
   | BusinessRegistrationExtract
   | PersonalId
-  | TtenCertificate
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

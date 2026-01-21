@@ -601,7 +601,7 @@ buildDriverLicenseAPIEntity DriverLicense {..} = do
   pure
     Common.DriverLicenseAPIEntity
       { driverLicenseId = cast @DriverLicense @Common.DriverLicense id,
-        documentImageId1 = cast @Image @Common.Image documentImageId1,
+        documentImageId1 = (cast @Image @Common.Image) <$> documentImageId1,
         documentImageId2 = (cast @Image @Common.Image) <$> documentImageId2,
         licenseNumber = licenseNumber',
         verificationStatus = castVerificationStatus verificationStatus,

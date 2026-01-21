@@ -194,7 +194,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
             operatingCity = show city,
             driverDateOfBirth = dl.driverDob,
             classOfVehicles = dl.classOfVehicles,
-            imageId1 = dl.documentImageId1.getId,
+            imageId1 = getId <$> dl.documentImageId1,
             imageId2 = getId <$> dl.documentImageId2,
             createdAt = dl.createdAt,
             dateOfIssue = dl.dateOfIssue
@@ -279,7 +279,6 @@ mapDocumentType Common.VehicleLeft = Domain.VehicleLeft
 mapDocumentType Common.VehicleRight = Domain.VehicleRight
 mapDocumentType Common.Odometer = Domain.Odometer
 mapDocumentType Common.InspectionHub = Domain.InspectionHub
-mapDocumentType Common.TtenCertificate = Domain.TtenCertificate
 -- Netherlands Document Types
 mapDocumentType Common.KIWADriverCard = Domain.KIWADriverCard
 mapDocumentType Common.KIWATaxiPermit = Domain.KIWATaxiPermit
@@ -432,7 +431,7 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
     DriverDLReq
-      { imageId1 = cast imageId1,
+      { imageId1 = Just (cast imageId1),
         imageId2 = fmap cast imageId2,
         vehicleCategory = vehicleCategory,
         nameOnCardFromSdk = Nothing,
@@ -747,7 +746,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
             DDL.verificationStatus = VALID
           }
   QDL.updateByPrimaryKey updatedDL
-  void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (flip (QImage.updateVerificationStatusByIdAndType VALID) Domain.DriverLicense)) (Just dl.documentImageId1, dl.documentImageId2)
+  void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (flip (QImage.updateVerificationStatusByIdAndType VALID) Domain.DriverLicense)) (dl.documentImageId1, dl.documentImageId2)
   fork "call status Handler" $
     void $ DStatus.statusHandler (dl.driverId, merchantId, merchantOpCityId) (Just True) Nothing Nothing (Just False) Nothing Nothing
 
@@ -940,7 +939,7 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
         Domain.DriverLicense -> do
           dl <- QDL.findByImageId imageId >>= fromMaybeM (InternalError "DL not found by image id")
           QDL.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
-          void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason))) (Just dl.documentImageId1, dl.documentImageId2)
+          void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason))) (dl.documentImageId1, dl.documentImageId2)
         Domain.VehicleRegistrationCertificate -> do
           QRC.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId

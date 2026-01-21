@@ -49,6 +49,7 @@ imports:
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   Role: Domain.Types.Person
   Base64: Kernel.Types.Base64
+
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -1125,6 +1126,7 @@ TransporterConfig:
     payoutRideMoneyToDriver: Maybe Bool
     payoutRideScheduleTimeBuffer: Maybe Seconds
     allowedPaymentInstrumentForPayout: Maybe [PaymentInstrument]
+    vehicleCategoryExcludedFromVerification: "Maybe [VehicleCategory]"
 
   beamType:
     currency: Maybe Currency
@@ -1187,6 +1189,7 @@ TransporterConfig:
     isMLBasedDynamicPricingEnabled: Maybe Bool
     cancellationRateSlabConfig: Maybe Value
     feedbackNotificationConfig: Maybe Value
+    vehicleCategoryExcludedFromVerification: "Maybe [Text]"
 
   beamFields:
     fcmConfig:
@@ -1267,6 +1270,7 @@ TransporterConfig:
     driverWalletConfig: Just . Data.Aeson.toJSON|I
     subscriptionConfig: Just . Data.Aeson.toJSON|I
     feedbackNotificationConfig: Data.Aeson.toJSON <$> feedbackNotificationConfig|E
+    vehicleCategoryExcludedFromVerification: (Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification|E
 
   intermediateTransformers:
     fromTType:
@@ -1347,6 +1351,7 @@ TransporterConfig:
     analyticsConfig: Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId|IM
     driverWalletConfig: Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId|IM
     subscriptionConfig: Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId|IM
+    vehicleCategoryExcludedFromVerification: (mapMaybe (readMaybe . Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1411,6 +1416,7 @@ TransporterConfig:
     driverWalletConfig: json
     subscriptionConfig: json
     feedbackNotificationConfig: json
+    vehicleCategoryExcludedFromVerification: "text[]"
 
   default:
     mediaFileUrlPattern: |-
@@ -1562,6 +1568,7 @@ TransporterConfig:
     subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}'' :: json'
     enableMobileNumberValidation: "false"
     allowRcUnlinkWhenDriverOffline: "false"
+    vehicleCategoryExcludedFromVerification: "'{TOTO}'"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
