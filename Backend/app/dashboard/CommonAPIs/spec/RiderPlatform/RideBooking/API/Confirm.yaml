@@ -27,6 +27,20 @@ apis:
         - isAdvancedBookingEnabled: Bool
       response:
         type: ConfirmRes
+      helperApi:
+        - POST:
+            endpoint: /rideSearch/{customerId}/quotes/{quoteId}/confirm
+            params:
+              customerId: Id Person
+              quoteId: Id Quote
+            query:
+              - agentId: Text
+              - paymentMethodId: PaymentMethodId
+              - paymentInstrument: PaymentInstrument
+              - isAdvancedBookingEnabled: Bool
+            auth: ApiAuthV2
+            response:
+              type: ConfirmRes
       migrate:
         endpoint: ConfirmAPI ConfirmEndPoint
         userActionType: ApiAuth APP_BACKEND CUSTOMERS CONFIRM

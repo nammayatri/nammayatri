@@ -101,7 +101,7 @@ let smsConfig =
         , otpHash = sec.smsOtpHash
         , token = None Text
         }
-      , useFakeSms = None Natural
+      , useFakeSms = Some 7891
       , url = "http://localhost:4343"
       , sender = "JUSPAY"
       }
