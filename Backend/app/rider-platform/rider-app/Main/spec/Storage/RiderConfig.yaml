@@ -193,6 +193,7 @@ RiderConfig:
     subwayRestrictionEndTime: Maybe TimeOfDay
     nearbyBusRadiusBucketStep: Maybe Meters
     singleModeWalkSpeed: Maybe Double
+    staticCustomerIdThresholdDay: Maybe Day
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -243,6 +244,7 @@ RiderConfig:
     refundStatusUpdateRetries: Maybe Int
     sourceOfServiceTier: Maybe ServiceTierSource
     enableRideEndOffers: Maybe Bool
+    staticCustomerIdThresholdDay: Maybe Day
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -301,6 +303,7 @@ RiderConfig:
     refundStatusUpdateRetries: fromMaybe 5 refundStatusUpdateRetries|E
     sourceOfServiceTier: fromMaybe (Domain.Types.RiderConfig.NANDI) sourceOfServiceTier|E
     enableRideEndOffers: fromMaybe False enableRideEndOffers|E
+    staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -351,6 +354,7 @@ RiderConfig:
     refundStatusUpdateRetries: Just refundStatusUpdateRetries|E
     sourceOfServiceTier: Just sourceOfServiceTier|E
     enableRideEndOffers: Just enableRideEndOffers|E
+    staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
 
 
   default:
@@ -445,6 +449,7 @@ RiderConfig:
     serviceTierRelationshipCfg: "json"
     metricsBlacklistPatterns: text []
     ptCircuitBreakerConfig: "json"
+    staticCustomerIdThresholdDay: date
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
