@@ -18,6 +18,7 @@ module Domain.Action.Dashboard.NammaTag
     getNammaTagTimeBounds,
     getNammaTagAppDynamicLogicVersions,
     getNammaTagAppDynamicLogicDomains,
+    getNammaTagAppDynamicLogicGetDomainSchema,
     getNammaTagQueryAll,
     postNammaTagUpdateCustomerTag,
     postNammaTagConfigPilotGetVersion,
@@ -64,6 +65,9 @@ import Kernel.Utils.Common
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
+import qualified Lib.Yudhishthira.SchemaInstances ()
+import Lib.Yudhishthira.SchemaTH
+import Lib.Yudhishthira.SchemaUtils
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
@@ -83,6 +87,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.UiRiderConfig as UIRC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.UiRiderConfig as SQU
+import Storage.Queries.UiRiderConfigExtra ()
 import qualified Tools.ConfigPilot as TC
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
@@ -94,6 +99,16 @@ $(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
 $(YTH.generateGenericDefault ''DTM.MerchantConfig)
 $(YTH.generateGenericDefault ''DTPN.MerchantPushNotification)
 $(YTH.generateGenericDefault ''DFRFS.FRFSConfig)
+
+$(genToSchema ''DTR.RiderConfig)
+$(genToSchema ''CumulativeOfferReq)
+$(genToSchema ''DTP.PayoutConfig)
+$(genToSchema ''DTRN.RideRelatedNotificationConfig)
+$(genToSchema ''DTM.MerchantConfig)
+$(genToSchema ''DTPN.MerchantPushNotification)
+$(genToSchema ''DFRFS.FRFSConfig)
+$(genToSchema ''PickupETA.PickupETAInput)
+$(genToSchema ''EstimateTagsData)
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagTagCreate _merchantShortId _opCity req = YudhishthiraFlow.postTagCreate req
@@ -285,6 +300,79 @@ getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return LYTU.allValu
 
 getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.Chakra -> Environment.Flow LYTU.ChakraQueryResp
 getNammaTagQueryAll _merchantShortId _opCity = YudhishthiraFlow.getNammaTagQueryAll
+
+getNammaTagAppDynamicLogicGetDomainSchema :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.LogicDomain -> Environment.Flow LYTU.DomainSchemaResp
+getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
+  case domain of
+    LYTU.UI_RIDER {} -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "UiRiderConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @UiRiderConfig))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON defaultConfig,
+            LYTU.schema = toInlinedSchemaValue (Proxy @UiRiderConfig)
+          }
+    LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
+      def' <- fromMaybeM (InvalidRequest "RiderConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTR.RiderConfig))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
+            LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTR.RiderConfig))
+          }
+    LYTU.ESTIMATE_TAGS ->
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (def :: EstimateTagsData),
+            LYTU.schema = toInlinedSchemaValue (Proxy @EstimateTagsData)
+          }
+    LYTU.CUMULATIVE_OFFER_POLICY -> do
+      defaultVal <- fromMaybeM (InvalidRequest "CumulativeOfferReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @CumulativeOfferReq))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON defaultVal,
+            LYTU.schema = toInlinedSchemaValue (Proxy @CumulativeOfferReq)
+          }
+    LYTU.PICKUP_ETA_CALCULATION ->
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (def :: PickupETA.PickupETAInput),
+            LYTU.schema = toInlinedSchemaValue (Proxy @PickupETA.PickupETAInput)
+          }
+    LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
+      def' <- fromMaybeM (InvalidRequest "PayoutConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
+            LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTP.PayoutConfig))
+          }
+    LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfig -> do
+      def' <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
+            LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTRN.RideRelatedNotificationConfig))
+          }
+    LYTU.RIDER_CONFIG LYTU.MerchantConfig -> do
+      def' <- fromMaybeM (InvalidRequest "MerchantConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTM.MerchantConfig))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
+            LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTM.MerchantConfig))
+          }
+    LYTU.RIDER_CONFIG LYTU.MerchantPushNotification -> do
+      def' <- fromMaybeM (InvalidRequest "MerchantPushNotification not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
+            LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTPN.MerchantPushNotification))
+          }
+    LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
+      def' <- fromMaybeM (InvalidRequest "FRFSConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DFRFS.FRFSConfig))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
+            LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DFRFS.FRFSConfig))
+          }
+    _ -> throwError $ InvalidRequest "Domain schema not available"
 
 postNammaTagUpdateCustomerTag :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Common.User -> LYTU.UpdateTagReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagUpdateCustomerTag merchantShortId opCity userId req = do

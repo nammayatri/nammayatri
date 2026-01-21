@@ -21,6 +21,7 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagTimeBounds,
     getNammaTagAppDynamicLogicVersions,
     getNammaTagAppDynamicLogicDomains,
+    getNammaTagAppDynamicLogicGetDomainSchema,
     getNammaTagQueryAll,
     postNammaTagConfigPilotGetVersion,
     postNammaTagConfigPilotGetConfig,
@@ -64,6 +65,9 @@ import Kernel.Utils.Common
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
+import qualified Lib.Yudhishthira.SchemaInstances ()
+import Lib.Yudhishthira.SchemaTH
+import Lib.Yudhishthira.SchemaUtils
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.Common as C
@@ -92,6 +96,17 @@ $(YTH.generateGenericDefault ''DTM.MerchantMessage) -- TODO ERROR
 $(YTH.generateGenericDefault ''DTPN.MerchantPushNotification)
 
 $(YTH.generateGenericDefault ''DTD.DriverPoolConfig)
+
+$(genToSchema ''DTP.PayoutConfig)
+$(genToSchema ''DTRN.RideRelatedNotificationConfig)
+$(genToSchema ''DTPN.MerchantPushNotification)
+$(genToSchema ''DTD.DriverPoolConfig)
+$(genToSchema ''TaggedDriverPoolInput)
+$(genToSchema ''CancellationCoinData)
+$(genToSchema ''DynamicPricingData)
+$(genToSchema ''UserCancellationDuesData)
+$(genToSchema ''GpsTollBehavior.GpsTollBehaviorData)
+$(genToSchema ''UserCancellationDuesWaiveOffData)
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateNammaTagRequest -> Environment.Flow LYT.CreateNammaTagResponse)
 postNammaTagTagCreate _merchantShortId _opCity req = do
@@ -315,6 +330,75 @@ getNammaTagAppDynamicLogicVersions _merchantShortId _opCity = YudhishthiraFlow.g
 
 getNammaTagAppDynamicLogicDomains :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow LYT.AppDynamicLogicDomainResp
 getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return LYT.allValues
+
+getNammaTagAppDynamicLogicGetDomainSchema :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.LogicDomain -> Environment.Flow LYT.DomainSchemaResp
+getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
+  case domain of
+    LYT.POOLING ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: TaggedDriverPoolInput),
+            LYT.schema = toInlinedSchemaValue (Proxy @TaggedDriverPoolInput)
+          }
+    LYT.CANCELLATION_COIN_POLICY ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: CancellationCoinData),
+            LYT.schema = toInlinedSchemaValue (Proxy @CancellationCoinData)
+          }
+    LYT.DYNAMIC_PRICING_UNIFIED ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: DynamicPricingData),
+            LYT.schema = toInlinedSchemaValue (Proxy @DynamicPricingData)
+          }
+    LYT.USER_CANCELLATION_DUES ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: UserCancellationDuesData),
+            LYT.schema = toInlinedSchemaValue (Proxy @UserCancellationDuesData)
+          }
+    LYT.GPS_TOLL_BEHAVIOR ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: GpsTollBehavior.GpsTollBehaviorData),
+            LYT.schema = toInlinedSchemaValue (Proxy @GpsTollBehavior.GpsTollBehaviorData)
+          }
+    LYT.USER_CANCELLATION_DUES_WAIVE_OFF ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: UserCancellationDuesWaiveOffData),
+            LYT.schema = toInlinedSchemaValue (Proxy @UserCancellationDuesWaiveOffData)
+          }
+    LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "DriverPoolConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTD.DriverPoolConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DTD.DriverPoolConfig))
+          }
+    LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "PayoutConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DTP.PayoutConfig))
+          }
+    LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DTRN.RideRelatedNotificationConfig))
+          }
+    LYT.DRIVER_CONFIG LYT.MerchantPushNotification -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "MerchantPushNotification default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DTPN.MerchantPushNotification))
+          }
+    _ -> throwError $ InvalidRequest "Domain schema not available"
 
 getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.Chakra -> Environment.Flow LYT.ChakraQueryResp
 getNammaTagQueryAll _merchantShortId _opCity = YudhishthiraFlow.getNammaTagQueryAll

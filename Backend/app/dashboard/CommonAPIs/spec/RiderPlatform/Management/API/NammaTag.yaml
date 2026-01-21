@@ -18,6 +18,7 @@ imports:
   LogicRolloutReq: Lib.Yudhishthira.Types
   TimeBoundResp: Lib.Yudhishthira.Types
   Chakra: Lib.Yudhishthira.Types
+  DomainSchemaResp: Lib.Yudhishthira.Types
   ChakraQueryResp: Lib.Yudhishthira.Types
   AppDynamicLogicDomainResp: Lib.Yudhishthira.Types
   AppDynamicLogicVersionResp: Lib.Yudhishthira.Types
@@ -33,6 +34,7 @@ imports:
   UiDevicePlatformReq: Lib.Yudhishthira.Types
   VerifyNammaTagRequest: Lib.Yudhishthira.Types
   VerifyNammaTagResponse: Lib.Yudhishthira.Types
+  Value: Data.Aeson
 
 
 module: NammaTag
@@ -193,6 +195,13 @@ apis:
         type: AppDynamicLogicDomainResp
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - GET:
+      endpoint: /appDynamicLogic/getDomainSchema
+      auth: ApiAuthV2
+      mandatoryQuery:
+        domain: LogicDomain
+      response:
+        type: DomainSchemaResp
   - GET:
       endpoint: /query/all
       auth: ApiAuthV2

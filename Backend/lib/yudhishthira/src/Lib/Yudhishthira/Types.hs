@@ -54,6 +54,7 @@ module Lib.Yudhishthira.Types
     ExperimentStatus (..),
     TableDataResp (..),
     ConfigDetailsResp (..),
+    DomainSchemaResp (..),
     ConfigVersionMap (..),
     Config (..),
     ConfigTypeChoice (..),
@@ -76,7 +77,7 @@ where
 
 import Control.Lens.Operators hiding ((.=))
 import Data.Aeson
-import Data.OpenApi as OpenApi hiding (TagName, description, name, tags, version)
+import Data.OpenApi as OpenApi hiding (TagName, description, name, schema, tags, version)
 import qualified Data.Text as T
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Types (Language (..))
@@ -391,6 +392,12 @@ data RevertReq = RevertReq
 
 data TableDataResp = TableDataResp
   { configs :: [Value]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data DomainSchemaResp = DomainSchemaResp
+  { defaultValue :: Value,
+    schema :: Value
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

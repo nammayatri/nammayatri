@@ -33,6 +33,9 @@ library
       Lib.Yudhishthira.Event.KaalChakra.Parse
       Lib.Yudhishthira.Event.KaalChakra.Template
       Lib.Yudhishthira.Flow.Dashboard
+      Lib.Yudhishthira.SchemaInstances
+      Lib.Yudhishthira.SchemaTH
+      Lib.Yudhishthira.SchemaUtils
       Lib.Yudhishthira.Storage.Beam.BeamFlow
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout

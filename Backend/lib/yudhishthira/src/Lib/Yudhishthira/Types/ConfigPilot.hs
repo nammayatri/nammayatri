@@ -60,6 +60,9 @@ data Config a = Config
   }
   deriving (Eq, Generic, ToJSON, FromJSON, Show, Ord)
 
+instance ToSchema a => ToSchema (Config a) where
+  declareNamedSchema _ = genericDeclareNamedSchema defaultSchemaOptions (Proxy @(Config a))
+
 data Person
 
 data UiDevicePlatformReq = UiDevicePlatformReq
