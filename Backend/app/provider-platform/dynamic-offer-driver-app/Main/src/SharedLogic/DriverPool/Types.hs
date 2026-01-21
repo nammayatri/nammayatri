@@ -245,6 +245,14 @@ data TaggedDriverPoolInput = TaggedDriverPoolInput
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+instance Default TaggedDriverPoolInput where
+  def =
+    TaggedDriverPoolInput
+      { drivers = [],
+        needOnRideDrivers = False,
+        batchNum = 0
+      }
+
 data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWithFlags
   { driverPoolWithActualDistResult :: [DriverPoolWithActualDistResult],
     poolType :: PoolType,
