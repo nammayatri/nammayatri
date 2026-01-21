@@ -213,6 +213,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             overlayBatchSize = overlayBatchSize,
             pastDaysRideCounter = pastDaysRideCounter,
             payoutBatchLimit = payoutBatchLimit,
+            payoutRideMoneyToDriver = False,
             pickupLocThreshold = pickupLocThreshold,
             placeNameCacheExpiryDays = placeNameCacheExpiryDays,
             popupDelayToAddAsPenalty = popupDelayToAddAsPenalty,

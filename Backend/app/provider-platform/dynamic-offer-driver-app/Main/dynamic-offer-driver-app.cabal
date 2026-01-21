@@ -190,6 +190,7 @@ library
       Domain.Action.Dashboard.RideBooking.DriverRegistration
       Domain.Action.Dashboard.RideBooking.Maps
       Domain.Action.Dashboard.RideBooking.MeterRide
+      Domain.Action.Dashboard.RideBooking.Payout
       Domain.Action.Dashboard.RideBooking.Ride
       Domain.Action.Dashboard.RideBooking.SearchRequest
       Domain.Action.Dashboard.RideBooking.Volunteer
@@ -388,6 +389,7 @@ library
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
+      SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout
       SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver
@@ -830,6 +832,7 @@ library
       API.Action.Dashboard.RideBooking.DriverRegistration
       API.Action.Dashboard.RideBooking.Maps
       API.Action.Dashboard.RideBooking.MeterRide
+      API.Action.Dashboard.RideBooking.Payout
       API.Action.Dashboard.RideBooking.Ride
       API.Action.Dashboard.RideBooking.SearchRequest
       API.Action.Dashboard.RideBooking.Volunteer
@@ -884,11 +887,13 @@ library
       API.Types.Dashboard.RideBooking.Endpoints.DriverRegistration
       API.Types.Dashboard.RideBooking.Endpoints.Maps
       API.Types.Dashboard.RideBooking.Endpoints.MeterRide
+      API.Types.Dashboard.RideBooking.Endpoints.Payout
       API.Types.Dashboard.RideBooking.Endpoints.Ride
       API.Types.Dashboard.RideBooking.Endpoints.SearchRequest
       API.Types.Dashboard.RideBooking.Endpoints.Volunteer
       API.Types.Dashboard.RideBooking.Maps
       API.Types.Dashboard.RideBooking.MeterRide
+      API.Types.Dashboard.RideBooking.Payout
       API.Types.Dashboard.RideBooking.Ride
       API.Types.Dashboard.RideBooking.SearchRequest
       API.Types.Dashboard.RideBooking.Volunteer
@@ -1049,6 +1054,7 @@ library
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.Route
       Domain.Types.RouteTripStopMapping
+      Domain.Types.ScheduledPayout
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
@@ -1210,6 +1216,7 @@ library
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.Route
       Storage.Beam.RouteTripStopMapping
+      Storage.Beam.ScheduledPayout
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
@@ -1464,6 +1471,7 @@ library
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.Route
       Storage.Queries.RouteTripStopMapping
+      Storage.Queries.ScheduledPayout
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver

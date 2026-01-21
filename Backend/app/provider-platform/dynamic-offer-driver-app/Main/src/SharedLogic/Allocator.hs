@@ -33,6 +33,7 @@ import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
@@ -77,6 +78,7 @@ data AllocatorJobType
   | CheckDashCamInstallationStatus
   | MediaFileDocumentComplete
   | SendFeedbackPN
+  | SpecialZonePayout
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -119,6 +121,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SCheckDashCamInstallationStatus jobData = AnyJobInfo <$> restoreJobInfo SCheckDashCamInstallationStatus jobData
   restoreAnyJobInfo SMediaFileDocumentComplete jobData = AnyJobInfo <$> restoreJobInfo SMediaFileDocumentComplete jobData
   restoreAnyJobInfo SSendFeedbackPN jobData = AnyJobInfo <$> restoreJobInfo SSendFeedbackPN jobData
+  restoreAnyJobInfo SSpecialZonePayout jobData = AnyJobInfo <$> restoreJobInfo SSpecialZonePayout jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -450,3 +453,12 @@ data SendFeedbackPNJobData = SendFeedbackPNJobData
 instance JobInfoProcessor 'SendFeedbackPN
 
 type instance JobContent 'SendFeedbackPN = SendFeedbackPNJobData
+
+newtype SpecialZonePayoutJobData = SpecialZonePayoutJobData
+  { scheduledPayoutId :: Id DSP.ScheduledPayout
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SpecialZonePayout
+
+type instance JobContent 'SpecialZonePayout = SpecialZonePayoutJobData

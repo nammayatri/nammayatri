@@ -1,0 +1,52 @@
+imports:
+  Ride: Domain.Types.Ride
+  Booking: Domain.Types.Booking
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+ScheduledPayout:
+  tableName: scheduled_payout
+  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+  types:
+    ScheduledPayoutStatus:
+      enum: "PENDING,PROCESSING,PROCESSED,FAILED,CANCELLED"
+  fields:
+    id: Id ScheduledPayout
+    rideId: Text
+    bookingId: Text
+    driverId: Text
+    amount: Maybe HighPrecMoney
+    status: ScheduledPayoutStatus
+    retryCount: Maybe Int
+    cancelReason: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    rideId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByRideId:
+      kvFunction: findOneWithKV
+      where: rideId
+
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+
+    updateStatusWithReasonByRideId:
+      kvFunction: updateOneWithKV
+      params: [status, cancelReason]
+      where: rideId
+
+    incrementRetryCountByRideId:
+      kvFunction: updateOneWithKV
+      params: [retryCount]
+      where: rideId
