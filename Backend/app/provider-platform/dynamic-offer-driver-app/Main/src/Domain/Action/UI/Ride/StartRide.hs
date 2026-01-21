@@ -35,6 +35,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.TransporterConfig as DTConf
 import Environment (Flow)
 import EulerHS.Prelude
@@ -51,6 +52,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
+import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
+import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (..))
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -61,6 +64,7 @@ import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.ScheduledPayout as QSP
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
@@ -205,6 +209,31 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
+
+      -- Schedule payout for special zone rides if enabled
+      when (isJust booking.specialLocationTag && transporterConfig.payoutRideMoneyToDriver) $ do
+        scheduledPayoutId <- Id <$> generateGUID
+        let scheduledPayout =
+              DSP.ScheduledPayout
+                { id = scheduledPayoutId,
+                  rideId = ride.id.getId,
+                  bookingId = booking.id.getId,
+                  driverId = driverId.getId,
+                  amount = Just booking.estimatedFare,
+                  status = DSP.PENDING,
+                  retryCount = Nothing,
+                  cancelReason = Nothing,
+                  createdAt = now,
+                  updatedAt = now,
+                  merchantId = Just booking.providerId,
+                  merchantOperatingCityId = Just ride.merchantOperatingCityId
+                }
+        QSP.create scheduledPayout
+
+        let scheduledTime = addUTCTime (2 * 60 * 60) now
+        let jobData = SpecialZonePayoutJobData {scheduledPayoutId = scheduledPayoutId}
+        QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
+
       pure APISuccess.Success
   where
     isValidRideStatus status = status `elem` [DRide.NEW, DRide.UPCOMING]

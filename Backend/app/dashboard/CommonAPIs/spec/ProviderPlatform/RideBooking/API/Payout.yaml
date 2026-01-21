@@ -1,0 +1,48 @@
+module: Payout
+
+apis:
+  # Agent: Get payout status by rideId (no auth - agent queries for driver)
+  - GET:
+      endpoint: /{rideId}/status
+      name: GetPayoutStatus
+      auth: NoAuth
+      params:
+        rideId: Text
+      response:
+        type: PayoutStatusResp
+
+  # Admin: Cancel payout before 2 hours
+  - POST:
+      endpoint: /{rideId}/cancel
+      name: PostPayoutCancel
+      auth: ApiAuthV2
+      params:
+        rideId: Text
+      request:
+        type: PayoutCancelReq
+      response:
+        type: APISuccess
+
+  # Admin: Retry failed payout
+  - POST:
+      endpoint: /{rideId}/retry
+      name: PostPayoutRetry
+      auth: ApiAuthV2
+      params:
+        rideId: Text
+      response:
+        type: APISuccess
+
+types:
+  PayoutStatusResp:
+    - status: PayoutStatus
+    - amount: Maybe HighPrecMoney
+    - rideId: Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - derive: "'HideSecrets"
+  PayoutCancelReq:
+    - reason: Text
+    - derive: "'HideSecrets"
+  PayoutStatus:
+    enum: "PENDING,PROCESSING,PROCESSED,FAILED,CANCELLED"

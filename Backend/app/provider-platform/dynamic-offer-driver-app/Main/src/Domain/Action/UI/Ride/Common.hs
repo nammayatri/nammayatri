@@ -4,6 +4,7 @@
 -- Common types and functions to break import cycles between UI.Ride, UI.Ride.EndRide, and Dashboard.Ride
 module Domain.Action.UI.Ride.Common
   ( DriverRideRes (..),
+    PayoutInfo (..),
     mkDriverRideRes,
     Stop (..),
     DeliveryPersonDetailsAPIEntity (..),
@@ -16,7 +17,7 @@ where
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor ((<&>))
 import Data.List (find)
-import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Maybe (fromMaybe, listToMaybe, isJust)
 import Data.OpenApi (ToSchema)
 import Data.Text (Text)
 import Data.Time (UTCTime, diffUTCTime)
@@ -49,6 +50,8 @@ import SharedLogic.Type (BillingCategory)
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.ScheduledPayout as QSP
+import qualified Domain.Types.ScheduledPayout as DSP
 import Prelude hiding (id)
 
 -- DeliveryPersonDetailsAPIEntity type (match Ride.hs)
@@ -70,6 +73,14 @@ data Stop = Stop
 data BookingType = CURRENT | ADVANCED
   deriving stock (Eq, Show, Generic, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- Payout info for special zone rides
+data PayoutInfo = PayoutInfo
+  { payoutStatus :: DSP.ScheduledPayoutStatus,
+    payoutAmount :: Maybe HighPrecMoney,
+    payoutScheduledAt :: UTCTime  -- createdAt, frontend calculates expectedAt = scheduledAt + 2h
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 -- DriverRideRes type (partial, add all fields as in Ride.hs)
 data DriverRideRes = DriverRideRes
@@ -163,7 +174,8 @@ data DriverRideRes = DriverRideRes
     riderMobileNumber :: Maybe Text,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     paymentMode :: Maybe DMPM.PaymentMode,
-    commissionCharges :: Maybe HighPrecMoney
+    commissionCharges :: Maybe HighPrecMoney,
+    payoutInfo :: Maybe PayoutInfo  -- Payout info for special zone rides
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -192,6 +204,18 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
   cancellationReason <- if ride.status == DRide.CANCELLED then runInReplica (QBCR.findByRideId (Just ride.id)) else pure Nothing
+
+  -- Fetch payout info for special zone rides
+  mbPayoutInfo <- if isJust booking.specialLocationTag
+    then do
+      mbPayout <- QSP.findByRideId ride.id.getId
+      pure $ mbPayout <&> \payout -> PayoutInfo
+        { payoutStatus = payout.status,
+          payoutAmount = payout.amount,
+          payoutScheduledAt = payout.createdAt
+        }
+    else pure Nothing
+
   return $
     DriverRideRes
       { id = ride.id,
@@ -284,7 +308,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         billingCategory = booking.billingCategory,
         paymentInstrument = booking.paymentInstrument,
         paymentMode = booking.paymentMode,
-        commissionCharges = ride.commission
+        commissionCharges = ride.commission,
+        payoutInfo = mbPayoutInfo
       }
 
 -- calculateLocations moved from UI.Ride
