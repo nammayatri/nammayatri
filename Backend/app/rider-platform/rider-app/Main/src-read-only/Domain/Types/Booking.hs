@@ -45,6 +45,7 @@ data Booking = Booking
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
+    dashboardAgentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,

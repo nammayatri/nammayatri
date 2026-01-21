@@ -77,6 +77,7 @@ import TransactionLogs.Types
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
     quote :: DQuote.Quote,
+    dashboardAgentId :: Maybe Text,
     paymentMethodId :: Maybe Payment.PaymentMethodId,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     merchant :: DM.Merchant
@@ -156,7 +157,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions
+  (booking, bookingParties) <- buildBooking personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions dashboardAgentId
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
@@ -304,8 +305,9 @@ buildBooking ::
   Bool ->
   Maybe Text ->
   [LYT.ConfigVersionMap] ->
+  Maybe Text ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions = do
+buildBooking riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions dashboardAgentId = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id
@@ -375,6 +377,7 @@ buildBooking riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now
           isMultimodalSearch = searchRequest.isMultimodalSearch,
           multimodalSearchRequestId = searchRequest.multimodalSearchRequestId,
           vehicleCategory = searchRequest.vehicleCategory,
+          dashboardAgentId,
           ..
         },
       bookingParties

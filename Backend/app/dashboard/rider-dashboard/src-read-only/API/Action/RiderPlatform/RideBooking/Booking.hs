@@ -27,10 +27,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("booking" :> (PostBookingStatus :<|> GetBookingBooking :<|> GetBookingList))
+type API = ("booking" :> (PostBookingStatus :<|> GetBookingBooking :<|> GetBookingList :<|> GetBookingAgentL1List :<|> GetBookingAgentL2List))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postBookingStatus merchantId city :<|> getBookingBooking merchantId city :<|> getBookingList merchantId city
+handler merchantId city = postBookingStatus merchantId city :<|> getBookingBooking merchantId city :<|> getBookingList merchantId city :<|> getBookingAgentL1List merchantId city :<|> getBookingAgentL2List merchantId city
 
 type PostBookingStatus =
   ( ApiAuth
@@ -50,6 +50,22 @@ type GetBookingList =
       :> API.Types.Dashboard.RideBooking.Booking.GetBookingList
   )
 
+type GetBookingAgentL1List =
+  ( ApiAuth
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.BOOKING / 'API.Types.Dashboard.RideBooking.Booking.GET_BOOKING_AGENT_L1_LIST)
+      :> API.Types.Dashboard.RideBooking.Booking.GetBookingAgentL1List
+  )
+
+type GetBookingAgentL2List =
+  ( ApiAuth
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.BOOKING / 'API.Types.Dashboard.RideBooking.Booking.GET_BOOKING_AGENT_L2_LIST)
+      :> API.Types.Dashboard.RideBooking.Booking.GetBookingAgentL2List
+  )
+
 postBookingStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler Domain.Types.Booking.API.BookingAPIEntity)
 postBookingStatus merchantShortId opCity apiTokenInfo rideBookingId customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Booking.postBookingStatus merchantShortId opCity apiTokenInfo rideBookingId customerId
 
@@ -58,3 +74,9 @@ getBookingBooking merchantShortId opCity bookingCode = withFlowHandlerAPI' $ Dom
 
 getBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
 getBookingList merchantShortId opCity apiTokenInfo customerId limit offset onlyActive status = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Booking.getBookingList merchantShortId opCity apiTokenInfo customerId limit offset onlyActive status
+
+getBookingAgentL1List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
+getBookingAgentL1List merchantShortId opCity apiTokenInfo limit offset status fromDate toDate = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Booking.getBookingAgentL1List merchantShortId opCity apiTokenInfo limit offset status fromDate toDate
+
+getBookingAgentL2List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
+getBookingAgentL2List merchantShortId opCity apiTokenInfo limit offset status fromDate toDate = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Booking.getBookingAgentL2List merchantShortId opCity apiTokenInfo limit offset status fromDate toDate

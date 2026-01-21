@@ -248,6 +248,7 @@ Booking:
     driverInsuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
     multimodalSearchRequestId: Maybe Text
+    dashboardAgentId: Maybe Text
 
   beamFields:
     estimatedDistance:
@@ -463,6 +464,12 @@ Booking:
     findByQuoteId:
       kvFunction: findOneWithKV
       where: quoteId
+    findByDashboardAgentId:
+      kvFunction: findAllWithOptionsKV
+      where: dashboardAgentId
+      orderBy:
+        field: createdAt
+        order: desc
 
 BookingPartiesLink:
   fields:

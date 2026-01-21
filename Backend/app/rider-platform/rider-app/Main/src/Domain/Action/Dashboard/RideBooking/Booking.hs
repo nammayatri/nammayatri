@@ -2,6 +2,8 @@ module Domain.Action.Dashboard.RideBooking.Booking
   ( postBookingStatus,
     getBookingList,
     getBookingBooking,
+    getBookingAgentL1List,
+    getBookingAgentL2List,
   )
 where
 
@@ -57,4 +59,35 @@ getBookingList ::
   Environment.Flow Domain.Action.UI.Booking.BookingListRes
 getBookingList merchantShortId _opCity personId mbLimit mbOffset mbOnlyActive bookingStatus = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.Booking.bookingList (personId, m.id) mbLimit mbOffset mbOnlyActive bookingStatus Nothing Nothing Nothing []
+  Domain.Action.UI.Booking.bookingList (Just personId, m.id) Nothing False mbLimit mbOffset mbOnlyActive bookingStatus Nothing Nothing Nothing []
+
+getBookingAgentL1List ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
+  Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
+  Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Environment.Flow Domain.Action.UI.Booking.BookingListRes
+getBookingAgentL1List merchantShortId _opCity mbAgentId mbLimit mbOffset mbBookingStatus mbFromDate mbToDate = do
+  m <- findMerchantByShortId merchantShortId
+  let mbFromDateMS = mbFromDate <&> round . utcToMilliseconds
+      mbToDateMS = mbToDate <&> round . utcToMilliseconds
+  Domain.Action.UI.Booking.bookingList (Nothing, m.id) mbAgentId True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS []
+
+getBookingAgentL2List ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
+  Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
+  Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Environment.Flow Domain.Action.UI.Booking.BookingListRes
+getBookingAgentL2List merchantShortId _opCity mbLimit mbOffset mbBookingStatus mbFromDate mbToDate = do
+  m <- findMerchantByShortId merchantShortId
+  let mbFromDateMS = mbFromDate <&> round . utcToMilliseconds
+      mbToDateMS = mbToDate <&> round . utcToMilliseconds
+  Domain.Action.UI.Booking.bookingList (Nothing, m.id) Nothing True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS []

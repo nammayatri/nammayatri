@@ -18,6 +18,9 @@ import qualified Storage.Beam.Booking as Beam
 import Storage.Queries.BookingExtra as ReExport
 import Storage.Queries.Transformers.Booking
 
+findByDashboardAgentId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.Booking.Booking])
+findByDashboardAgentId limit offset dashboardAgentId = do findAllWithOptionsKV [Se.Is Beam.dashboardAgentId $ Se.Eq dashboardAgentId] (Se.Desc Beam.createdAt) limit offset
+
 findByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote) -> m (Maybe Domain.Types.Booking.Booking))
 findByQuoteId quoteId = do findOneWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId <$> quoteId)]
 
