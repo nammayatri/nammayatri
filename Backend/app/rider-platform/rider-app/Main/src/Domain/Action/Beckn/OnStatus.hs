@@ -45,6 +45,7 @@ import Kernel.Tools.Logging
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Payment as SPayment
@@ -134,7 +135,7 @@ data DUpdatedRide = DUpdatedRide
     rideOldStatus :: DRide.RideStatus
   }
 
-buildRideEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DB.Booking -> (DRide.Ride -> DRide.Ride) -> DCommon.BookingDetails -> m RideEntity
+buildRideEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["cloudType" ::: Maybe CloudType]) => DB.Booking -> (DRide.Ride -> DRide.Ride) -> DCommon.BookingDetails -> m RideEntity
 buildRideEntity booking updRide newRideInfo = do
   mbExistingRide <- B.runInReplica $ QRide.findByBPPRideId newRideInfo.bppRideId
   case mbExistingRide of
@@ -236,7 +237,7 @@ validateRequest ::
     EventStreamFlow m r,
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "cloudType" ::: Maybe CloudType],
     HasField "hotSpotExpiry" r Seconds
   ) =>
   DOnStatusReq ->
@@ -278,7 +279,7 @@ validateRequest req@DOnStatusReq {..} = do
       let validatedRideDetails = ValidatedBookingReallocationDetails request
       return ValidatedOnStatusReq {..}
 
-buildNewRide :: (MonadFlow m, EncFlow m r) => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
+buildNewRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["cloudType" ::: Maybe CloudType]) => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
 buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   id <- generateGUID
   shortId <- generateShortId
@@ -297,6 +298,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   driverPhoneNumber' <- encrypt driverMobileNumber
   driverAlternateNumber' <- mapM encrypt driverAlternatePhoneNumber
+  cloudType <- asks (.cloudType)
   let createdAt = now
       updatedAt = now
       merchantId = Just booking.merchantId
@@ -358,7 +360,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       commission = booking.commission
       pickupSpeedInMPS = Nothing
       refundRequestStatus = Nothing
-  pure $ DRide.Ride {..}
+  pure $ DRide.Ride {cloudType = cloudType, ..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

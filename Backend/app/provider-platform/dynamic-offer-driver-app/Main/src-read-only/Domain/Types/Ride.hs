@@ -39,6 +39,7 @@ data Ride = Ride
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
     clientId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     commission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,

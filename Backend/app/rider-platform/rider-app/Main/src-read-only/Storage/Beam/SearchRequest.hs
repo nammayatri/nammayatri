@@ -38,6 +38,7 @@ data SearchRequestT f = SearchRequestT
     clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientReactNativeVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType),
     configInExperimentVersions :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),

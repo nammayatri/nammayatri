@@ -129,6 +129,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
       Se.Set Beam.clientId clientId,
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
+      Se.Set Beam.cloudType cloudType,
       Se.Set Beam.description description,
       Se.Set Beam.deviceToken deviceToken,
       Se.Set Beam.driverTag (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType driverTag),

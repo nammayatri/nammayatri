@@ -202,6 +202,7 @@ authWithOtp ::
 authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash = do
   let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just (City.City "Kochi")} :: AuthReq else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
   deploymentVersion <- asks (.version)
+  cloudType <- asks (.cloudType)
   runRequestValidation validateInitiateLoginReq req
   let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
 
@@ -221,13 +222,13 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
         mobileNumberHash <- getDbHash mobileNumber
         person <-
           QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard) return
         return (person, otpChannel)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
           QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.DRIVER
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard) return
         return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
 
@@ -239,7 +240,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
   let mkId = getId merchantId
   token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SMS SR.OTP
   _ <- QR.create token
-  QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId
+  QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId cloudType
   let otpCode = SR.authValueHash token
   whenNothing_ useFakeOtpM $ do
     SOTP.sendOTP
@@ -376,12 +377,13 @@ makePerson ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe CloudType ->
   Id DO.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Bool ->
   Maybe SP.Role ->
   m SP.Person
-makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp merchantId merchantOperatingCityId isDashboard mbRole = do
+makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp mbCloudType merchantId merchantOperatingCityId isDashboard mbRole = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   let identifierType = fromMaybe SP.MOBILENUMBER req.identifierType
@@ -446,7 +448,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         driverTag = Just [safetyCohortNewTag],
         maskedMobileDigits = fmap (takeEnd 4) req.mobileNumber,
         nyClubConsent = Just False,
-        reactBundleVersion = mbReactBundleVersion
+        reactBundleVersion = mbReactBundleVersion,
+        cloudType = mbCloudType
       }
 
 makeSession ::
@@ -494,10 +497,10 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchan
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
-createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard = do
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe CloudType -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
+createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp mbCloudType merchantId merchantOpCityId isDashboard = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing
+  person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp mbCloudType merchantId merchantOpCityId isDashboard Nothing
   void $ QP.create person
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
   pure person
@@ -731,6 +734,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
   countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for signature auth")
   mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for signature auth")
   deploymentVersion <- asks (.version)
+  cloudType <- asks (.cloudType)
   merchant <-
     QMerchant.findByShortId (ShortId req.merchantId)
       >>= fromMaybeM (MerchantNotFound (req.merchantId))
@@ -740,7 +744,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
   mobileNumberHash <- getDbHash mobileNumberDecrypted
   person <-
     QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
-      >>= maybe (createDriverWithDetails reqWithMobileNumber mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId False) return -- Simple fallback for create, refining
+      >>= maybe (createDriverWithDetails reqWithMobileNumber mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice (Just $ deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId False) return -- Simple fallback for create, refining
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
@@ -749,7 +753,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
   -- Authentication flow
   token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SIGNATURE SR.DIRECT
   _ <- QR.create token
-  void $ QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchantOpCityId
+  void $ QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchantOpCityId cloudType
   -- Verification flow
   fork "generating the referral code for driver" $ do
     void $ generateReferralCode (Just person.role) (person.id, person.merchantId, merchantOpCityId)

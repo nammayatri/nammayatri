@@ -139,3 +139,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN payment_mode text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN toll_ids text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN cloud_type text ;

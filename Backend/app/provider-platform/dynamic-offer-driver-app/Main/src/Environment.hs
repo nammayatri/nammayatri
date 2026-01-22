@@ -45,6 +45,7 @@ import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Common (CacheConfig, fromMaybeM, logError, throwError)
 import Kernel.Utils.Dhall (FromDhall)
@@ -169,7 +170,8 @@ data AppCfg = AppCfg
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
     noSignatureSubscribers :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
-    blackListedJobs :: [Text]
+    blackListedJobs :: [Text],
+    cloudType :: Maybe CloudType
   }
   deriving (Generic, FromDhall)
 
@@ -287,7 +289,8 @@ data AppEnv = AppEnv
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
     noSignatureSubscribers :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
-    blackListedJobs :: [Text]
+    blackListedJobs :: [Text],
+    cloudType :: Maybe CloudType
   }
   deriving (Generic)
 

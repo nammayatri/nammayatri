@@ -72,6 +72,7 @@ import Kernel.Types.Confidence
 import qualified Kernel.Types.Flow
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SW
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
@@ -284,7 +285,7 @@ data ValidatedDriverArrivedReq = ValidatedDriverArrivedReq
     booking :: DRB.Booking
   }
 
-buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion], HasFlowEnv m r '["isMetroTestTransaction" ::: Bool]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> UTCTime -> DRide.RideStatus -> m DRide.Ride
+buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion], HasFlowEnv m r '["isMetroTestTransaction" ::: Bool], HasFlowEnv m r '["cloudType" ::: Maybe CloudType]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> UTCTime -> DRide.RideStatus -> m DRide.Ride
 buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
   let BookingDetails {..} = bookingDetails
   guid <- generateGUID
@@ -313,6 +314,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         )
           <$> bookingDetails.driverImage
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
+  cloudType <- asks (.cloudType)
   return
     DRide.Ride
       { id = guid,
@@ -376,11 +378,12 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         -- Commission is provider-side data, calculated on BPP. On BAP side, it remains Nothing.
         -- If commission is needed on BAP, it should be calculated here or received from BPP.
         commission = booking.commission,
+        cloudType = cloudType,
         ..
       }
 
 rideAssignedReqHandler ::
-  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
     HasField "storeRidesTimeLimit" r Int,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -426,7 +429,7 @@ rideAssignedReqHandler req = do
       rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId timeDiffEvent booking.configInExperimentVersions
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now)
     assignRideUpdate ::
-      ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
+      ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
         HasField "storeRidesTimeLimit" r Int,
         CacheFlow m r,
         EsqDBFlow m r,

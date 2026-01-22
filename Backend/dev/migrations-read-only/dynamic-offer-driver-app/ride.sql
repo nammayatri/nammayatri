@@ -255,3 +255,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_toll_ids text[] ;
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_gps_turned_off boolean ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN final_fare_policy_id character(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cloud_type text ;

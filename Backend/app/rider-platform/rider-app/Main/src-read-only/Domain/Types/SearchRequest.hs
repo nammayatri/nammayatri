@@ -40,6 +40,7 @@ data SearchRequest = SearchRequest
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
     clientReactNativeVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
     customerExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,

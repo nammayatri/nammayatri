@@ -368,3 +368,9 @@ ALTER TABLE atlas_app.ride ADD COLUMN pickup_speed_in_mps double precision ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN refund_request_status text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN cloud_type text ;

@@ -42,6 +42,7 @@ data PersonT f = PersonT
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientReactNativeVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType),
     comments :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currentCity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City),

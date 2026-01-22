@@ -1368,10 +1368,11 @@ findOrCreatePersonForDirectBooking merchantId req = do
   case existingPerson of
     Just person -> return person.id
     Nothing -> do
+      cloudType <- asks (.cloudType)
       -- Create new person using Registration.createPersonWithPhoneNumber pattern
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       let authReq = buildAuthReqForDirectBooking req countryCode merchant
-      person <- Registration.createPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing
+      person <- Registration.createPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant Nothing
       return person.id
 
 -- Build AuthReq for direct booking person creation
@@ -2180,7 +2181,8 @@ postTicketDashboardRegister merchant req = do
               ( MerchantOperatingCityNotFound $
                   "merchantId: " <> merchant.id.getId <> " ,city: " <> show merchant.defaultCity
               )
-      person <- Registration.buildPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant merchant.defaultCity merchantOperatingCityId Nothing
+      cloudType <- asks (.cloudType)
+      person <- Registration.buildPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant merchant.defaultCity merchantOperatingCityId Nothing
       QP.create (person {Domain.Types.Person.role = Domain.Types.Person.TICKET_DASHBOARD_USER})
       return $
         API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp

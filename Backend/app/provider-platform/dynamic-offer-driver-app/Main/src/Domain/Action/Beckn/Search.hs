@@ -73,6 +73,7 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithoutGeoJson)
@@ -531,7 +532,8 @@ buildSearchRequest ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
-    HasField "searchRequestExpirationSecondsForMultimodal" r NominalDiffTime
+    HasField "searchRequestExpirationSecondsForMultimodal" r NominalDiffTime,
+    HasField "cloudType" r (Maybe CloudType)
   ) =>
   DSearchReq ->
   Context.City ->
@@ -565,6 +567,7 @@ buildSearchRequest ::
 buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId cancellationDues fromLocation mbToLocation mbDistance mbDuration specialLocationTag area tollCharges tollNames tollIds isCustomerPrefferedSearchRoute isBlockedRoute currency distanceUnit fromLocGeohash toLocGeohash dynamicPricingLogicVersion stops' mbDriverInfo configVersionMap = do
   uuid <- generateGUID
   now <- getCurrentTime
+  cloudType <- asks (.cloudType)
   validTill <-
     case isMultimodalSearch of
       Just True -> do
@@ -605,6 +608,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         parcelQuantity = Nothing,
         preferSafetyPlus = False,
         numberOfLuggages = numberOfLuggages,
+        cloudType = cloudType,
         ..
       }
 

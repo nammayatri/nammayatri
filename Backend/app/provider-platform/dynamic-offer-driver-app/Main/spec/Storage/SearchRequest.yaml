@@ -22,6 +22,7 @@ imports:
   TagNameValue: Lib.Yudhishthira.Types
   ParcelType: Domain.Types.ParcelType
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+  CloudType: Kernel.Types.Version
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
@@ -84,6 +85,7 @@ SearchRequest:
     isReserveRide: Maybe Bool
     numberOfLuggages: Maybe Int
     paymentMode: Maybe PaymentMode
+    cloudType: Maybe CloudType
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime

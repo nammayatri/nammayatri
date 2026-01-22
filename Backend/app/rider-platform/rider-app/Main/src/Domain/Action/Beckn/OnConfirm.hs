@@ -41,6 +41,7 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -102,7 +103,7 @@ data ValidatedBookingConfirmedReq = ValidatedBookingConfirmedReq
   }
 
 onConfirm ::
-  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "cloudType" ::: Maybe CloudType],
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,

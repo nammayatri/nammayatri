@@ -479,3 +479,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN selected_payment_instrument text
 
 ALTER TABLE atlas_app.search_request ADD COLUMN to_special_location_id text ;
 ALTER TABLE atlas_app.search_request ADD COLUMN from_special_location_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN cloud_type text ;
