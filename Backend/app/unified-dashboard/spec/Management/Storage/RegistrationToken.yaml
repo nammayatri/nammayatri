@@ -1,0 +1,54 @@
+# RegistrationToken - for OTP-based login flows
+
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  City: Kernel.Types.Beckn.Context
+  UTCTime: Kernel.Prelude
+  Id: Kernel.Types.Id
+  Text: Data.Text
+  Int: Kernel.Prelude
+  Bool: Kernel.Prelude
+  Maybe: Kernel.Prelude
+
+RegistrationToken:
+  tableName: registration_token
+  fields:
+    id: Id RegistrationToken
+    personId: Id Person
+    merchantId: Id Merchant
+    operatingCity: City
+    token: Text
+    enabled: Bool
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    token: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByToken:
+      kvFunction: findOneWithKV
+      where: token
+    findAllByPersonId:
+      kvFunction: findAllWithKV
+      where: personId
+    findAllByPersonIdAndMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [personId, merchantId]
+    findAllByMerchantIdAndCity:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, operatingCity]
+    findAllByPersonIdAndMerchantIdAndCity:
+      kvFunction: findAllWithKV
+      where:
+        and: [personId, merchantId, operatingCity]
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+

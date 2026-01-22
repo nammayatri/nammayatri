@@ -1,0 +1,111 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  Person: Domain.Types.Person
+  Role: Domain.Types.Role
+  City: Kernel.Types.Beckn.Context
+  Id: Kernel.Types.Id
+  ShortId: Kernel.Types.Id
+  Text: Data.Text
+  Integer: Kernel.Prelude
+  Int: Kernel.Prelude
+  Maybe: Kernel.Prelude
+  Bool: Kernel.Prelude
+  UTCTime: Kernel.Prelude
+  APISuccess: Kernel.Types.APISuccess
+  Summary: Kernel.External.Verification.SafetyPortal.Types
+  RoleAPIEntity: Domain.Types.Role
+  AvailableCitiesForMerchant: Domain.Types.Merchant
+
+module: Merchant
+apiPrefix: "/merchant"
+
+types:
+  CreateMerchantWithAdminReq:
+    recordType: Data
+    shortId: Text
+    is2faMandatory: Bool
+    defaultOperatingCity: City
+    supportedOperatingCities: "[City]"
+    domain: Text
+    website: Text
+    adminEmail: Text
+    adminPassword: Text
+    adminFirstName: Text
+    adminLastName: Text
+    adminMobileCountryCode: Text
+    adminMobileNumber: Text
+  CreateMerchantReq:
+    recordType: Data
+    shortId: Text
+    is2faMandatory: Bool
+    defaultOperatingCity: City
+    supportedOperatingCities: "[City]"
+    domain: Text
+    website: Text
+  ChangeMerchantEnableStateReq:
+    recordType: Data
+    enable: Bool
+    merchantShortId: Text
+  MerchantAPIEntity:
+    recordType: Data
+    id: Id Merchant
+    shortId: ShortId Merchant
+    domain: Maybe Text
+    website: Maybe Text
+    authToken: Maybe Text
+    supportedOperatingCities: "[City]"
+    defaultOperatingCity: City
+    adminList: "[(Text, Text)]"
+    enabled: Maybe Bool
+  PersonAPIEntity:
+    recordType: Data
+    id: Id Person
+    firstName: Text
+    lastName: Text
+    role: RoleAPIEntity
+    email: Maybe Text
+    mobileNumber: Text
+    mobileCountryCode: Text
+    availableMerchants: "[ShortId Merchant]"
+    availableCitiesForMerchant: "Maybe [AvailableCitiesForMerchant]"
+    registeredAt: UTCTime
+  ListMerchantResp:
+    recordType: Data
+    list: "[MerchantAPIEntity]"
+    summary: Summary
+
+apis:
+  - POST:
+      endpoint: /create/withAdmin
+      auth: ApiAuthV3
+      name: CreateMerchantWithAdmin
+      request:
+        type: CreateMerchantWithAdminReq
+      response:
+        type: PersonAPIEntity
+  - POST:
+      endpoint: /create
+      auth: ApiAuthV3
+      name: CreateMerchant
+      request:
+        type: CreateMerchantReq
+      response:
+        type: MerchantAPIEntity
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV3
+      name: ListMerchants
+      query:
+        - limit: Int
+        - offset: Int
+        - shortId: Text
+      response:
+        type: ListMerchantResp
+  - POST:
+      endpoint: /change/enableState
+      auth: ApiAuthV3
+      name: ChangeMerchantEnableState
+      request:
+        type: ChangeMerchantEnableStateReq
+      response:
+        type: APISuccess
