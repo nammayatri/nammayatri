@@ -116,6 +116,7 @@ import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import qualified Storage.CachedQueries.PayoutSplitConfig as CQPSC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
@@ -796,16 +797,28 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
             unless (null vendorSplitDetails) $ do
               let vendorData = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue, vendor.maxVendorFeeAmount)) vendorSplitDetails
                   -- Pass vendor fee along with its maxVendorFeeAmount limit for cumulative validation
-                  vendorFeesWithLimit = DL.map (\(vendorId, amount, maxLimit) -> (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now (vendorId, amount, maxLimit), maxLimit)) vendorData
+                  vendorFeesWithLimit = DL.map (\(vendorId, amount, maxLimit) -> (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now (Just DVF.Normal) (vendorId, amount, maxLimit), maxLimit)) vendorData
               unless (null vendorFeesWithLimit) $ do
                 case lastDriverFee of
                   Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFeeWithMaxLimit merchantOpCityId vendorFeesWithLimit
                   _ -> QVF.createManyWithMaxLimit vendorFeesWithLimit
 
+        fork "Updating payout vendor fees" $
+          when (fromMaybe False (subscriptionConfig >>= (.enablePayoutSettlement))) $ do
+            whenJust booking.area $ \area -> do
+              let vehicleVariant = Variant.castServiceTierToVariant booking.vehicleServiceTier
+              mbPayoutSplitConfig <- CQPSC.findByAreaCityAndVariant area merchantOpCityId vehicleVariant
+              whenJust mbPayoutSplitConfig $ \config -> do
+                let payoutVendorFee = mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now (Just DVF.Payout) (config.vendorId, toRational config.vendorSplitAmount, Nothing)
+                case lastDriverFee of
+                  Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> do
+                    QVF.updateManyVendorFee merchantOpCityId [payoutVendorFee]
+                  _ -> QVF.createMany [payoutVendorFee]
+
         plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing currentVehicleCategory
         fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
         scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now
-    mkVendorFee driverFeeId now (vendorId, amount, _) = DVF.VendorFee {amount = HighPrecMoney amount, driverFeeId = driverFeeId, vendorId = vendorId, createdAt = now, updatedAt = now}
+    mkVendorFee driverFeeId now splitMethod (vendorId, amount, _) = DVF.VendorFee {amount = HighPrecMoney amount, driverFeeId = driverFeeId, vendorId = vendorId, createdAt = now, updatedAt = now, splitMethod = splitMethod, isVendorFeeProcessedAt = Nothing}
     isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge = do
       let notOnFreeTrial = not isOnFreeTrial
       if isSpecialZoneCharge
@@ -853,6 +866,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> UTCTime -> m ()
 scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
+  -- Schedule driver fee calculation jobs
   void $
     case transporterConfig.driverFeeCalculationTime of
       Nothing -> pure ()
@@ -880,6 +894,34 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
               setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId driverFee.serviceName dfCalculationJobTs
               setDriverFeeBillNumberKey merchantOpCityId 1 36000 (driverFee.serviceName)
             _ -> pure ()
+
+  -- Schedule weekly payout settlement jobs
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing driverFee.serviceName  >>= fromMaybeM (InternalError $ "No subscription config found" <> show driverFee.serviceName)
+  when (fromMaybe False subscriptionConfig.enablePayoutSettlement) $ do
+    let startDay = fromMaybe 0 subscriptionConfig.payoutSettlementWeekStartDay -- Default: Monday
+        startTime = fromMaybe 0 subscriptionConfig.payoutSettlementWeekStartTime -- Default: 00:00:00
+        scheduleTime = fromMaybe 3600 subscriptionConfig.payoutSettlementJobScheduleTime -- Default: 1 hour after week ends
+        timeDiffFromUtcNominal = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+        (weekStartTime, weekEndTime) =
+          getWeeklyPayoutCycleBoundaries
+            startDay
+            startTime
+            timeDiffFromUtcNominal
+            now
+    whenWithLockRedis (mkLockKeyForPayoutSettlement weekStartTime weekEndTime merchantOpCityId) 60 $ do
+      isJobScheduled <- getPayoutSettlementJobCache weekStartTime weekEndTime merchantOpCityId
+      let jobScheduleTs = diffUTCTime (addUTCTime scheduleTime weekEndTime) now
+      case isJobScheduled of
+        Nothing -> do
+          createJobIn @_ @'VendorPayoutSettlementMasterJob (Just merchantId) (Just merchantOpCityId) jobScheduleTs $
+            VendorPayoutSettlementMasterJobData
+              { merchantId = merchantId,
+                merchantOperatingCityId = merchantOpCityId,
+                startTime = weekStartTime,
+                endTime = weekEndTime
+              }
+          setPayoutSettlementJobCache weekStartTime weekEndTime merchantOpCityId jobScheduleTs
+        _ -> pure ()
 
 mkDriverFee ::
   ( MonadFlow m,
@@ -965,6 +1007,7 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
         cancellationPenaltyAmount = Nothing,
         addedToFeeId = Nothing,
         collectedAtVendorId = Nothing,
+        driverConsideredInPayoutSettlementAt = Nothing,
         ..
       }
   where
@@ -1019,3 +1062,36 @@ setDriverFeeBillNumberKey merchantOpCityId count expTime serviceName = Hedis.set
 
 mkLockKeyForDriverFeeCalculation :: UTCTime -> UTCTime -> Id MerchantOperatingCity -> Text
 mkLockKeyForDriverFeeCalculation startTime endTime merchantOpCityId = "DriverFeeCalculation:Lock:MerchantId:" <> merchantOpCityId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
+
+-- Weekly Payout Settlement Cycle Calculation
+-- Calculates the current week's boundaries based on configured start day
+getWeeklyPayoutCycleBoundaries ::
+  Int -> -- weekStartDay (0=Monday, 1=Tuesday, ..., 6=Sunday)
+  NominalDiffTime -> -- weekStartTime (time of day in seconds)
+  NominalDiffTime -> -- timeDiffFromUtc (timezone offset)
+  UTCTime -> -- now
+  (UTCTime, UTCTime) -- (weekStartTime, weekEndTime)
+getWeeklyPayoutCycleBoundaries weekStartDay weekStartTime timeDiffFromUtc now = do
+  let weekDuration = 7 * 86400
+      localNow = addUTCTime timeDiffFromUtc now
+      localDay = utctDay localNow
+      currentDayOfWeek = (fromEnum (dayOfWeek localDay) + 6) `mod` 7
+      daysToSubtract = (currentDayOfWeek - weekStartDay) `mod` 7
+      mostRecentStartDay = addDays (negate $ fromIntegral daysToSubtract) localDay
+      potentialStartLocal = addUTCTime weekStartTime (UTCTime mostRecentStartDay (secondsToDiffTime 0))
+      startTimeLocal = if localNow >= potentialStartLocal then potentialStartLocal else addUTCTime (negate weekDuration) potentialStartLocal
+      endTimeLocal = addUTCTime weekDuration startTimeLocal
+  (startTimeLocal, endTimeLocal)
+
+mkPayoutSettlementJobCacheKey :: UTCTime -> UTCTime -> Id MerchantOperatingCity -> Text
+mkPayoutSettlementJobCacheKey startTime endTime merchantOpCityId = "PayoutSettlement:MerchantOpCityId:" <> merchantOpCityId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
+
+getPayoutSettlementJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id MerchantOperatingCity -> m (Maybe Bool)
+getPayoutSettlementJobCache startTime endTime merchantOpCityId = Hedis.get (mkPayoutSettlementJobCacheKey startTime endTime merchantOpCityId)
+
+setPayoutSettlementJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id MerchantOperatingCity -> NominalDiffTime -> m ()
+setPayoutSettlementJobCache startTime endTime merchantOpCityId expTime = do
+  Hedis.setExp (mkPayoutSettlementJobCacheKey startTime endTime merchantOpCityId) True (round $ expTime + 86399)
+
+mkLockKeyForPayoutSettlement :: UTCTime -> UTCTime -> Id MerchantOperatingCity -> Text
+mkLockKeyForPayoutSettlement startTime endTime merchantOpCityId = "PayoutSettlement:Lock:MerchantOpCityId:" <> merchantOpCityId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime

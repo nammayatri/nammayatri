@@ -70,6 +70,10 @@ SubscriptionConfig:
     disabledVariantsForSubscription: "Maybe [Domain.Types.VehicleVariant.VehicleVariant]"
     sendManualPaymentLinkJobMaxDelay: Maybe Data.Time.NominalDiffTime
     manualPaymentLinkRateLimitExpirySeconds: Maybe Data.Time.NominalDiffTime
+    enablePayoutSettlement: Maybe Bool
+    payoutSettlementWeekStartDay: Maybe Int
+    payoutSettlementWeekStartTime: Maybe Data.Time.NominalDiffTime
+    payoutSettlementJobScheduleTime: Maybe Data.Time.NominalDiffTime
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
@@ -95,6 +99,9 @@ SubscriptionConfig:
     waiveOffOfferDescription :  Kernel.Prelude.fromMaybe "NAN" |I
     sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 43200|I
     manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 21600|I
+    enablePayoutSettlement: Kernel.Prelude.Just . Kernel.Prelude.fromMaybe False|I
+    payoutSettlementWeekStartTime: Kernel.Utils.Common.secondsToNominalDiffTime <$>|I
+    payoutSettlementJobScheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime <$>|I
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -115,6 +122,8 @@ SubscriptionConfig:
     waiveOffOfferDescription : Kernel.Prelude.Just|I
     sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 43200)|I
     manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 21600)|I
+    payoutSettlementWeekStartTime: Kernel.Utils.Common.nominalDiffTimeToSeconds <$>|I
+    payoutSettlementJobScheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds <$>|I
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -135,6 +144,10 @@ SubscriptionConfig:
     waiveOffOfferDescription : Maybe Text
     sendManualPaymentLinkJobMaxDelay: Maybe Seconds
     manualPaymentLinkRateLimitExpirySeconds: Maybe Seconds
+    enablePayoutSettlement: Maybe Bool
+    payoutSettlementWeekStartDay: Maybe Int
+    payoutSettlementWeekStartTime: Maybe Seconds
+    payoutSettlementJobScheduleTime: Maybe Seconds
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -164,6 +177,10 @@ SubscriptionConfig:
     showManualPlansInUI: "false"
     sendManualPaymentLinkJobMaxDelay: "43200"
     manualPaymentLinkRateLimitExpirySeconds: "21600"
+    enablePayoutSettlement: "false"
+    payoutSettlementWeekStartDay: "0"
+    payoutSettlementWeekStartTime: "0"
+    payoutSettlementJobScheduleTime: "3600"
 
   sqlType:
    executionEnabledForVehicleCategories: text[]

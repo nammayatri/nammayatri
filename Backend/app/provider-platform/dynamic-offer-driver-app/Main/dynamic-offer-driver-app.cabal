@@ -387,7 +387,9 @@ library
       SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
+      SharedLogic.Allocator.Jobs.Payout.CalculatePayoutVendorSettlement
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
+      SharedLogic.Allocator.Jobs.Payout.SchedulePayoutVendorSettlementJobs
       SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver
@@ -562,6 +564,7 @@ library
       Storage.CachedQueries.Merchant.Overlay
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.TransporterConfig
+      Storage.CachedQueries.PayoutSplitConfig
       Storage.CachedQueries.PlanExtra
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.ReelsData
@@ -684,6 +687,8 @@ library
       Storage.Queries.OperationHubExtra
       Storage.Queries.OperationHubRequestsExtra
       Storage.Queries.PayoutConfigExtra
+      Storage.Queries.PayoutInstanceCalculationExtra
+      Storage.Queries.PayoutSplitConfigExtra
       Storage.Queries.Person.GetNearestDrivers
       Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
       Storage.Queries.Person.GetNearestGoHomeDrivers
@@ -753,6 +758,7 @@ library
       Storage.Queries.VehicleRegistrationCertificateExtra
       Storage.Queries.VehicleRouteMappingExtra
       Storage.Queries.VendorFeeExtra
+      Storage.Queries.VendorSettlementExtra
       Storage.Queries.VolunteerExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
@@ -1029,6 +1035,8 @@ library
       Domain.Types.OperationHubRequests
       Domain.Types.Overlay
       Domain.Types.PayoutConfig
+      Domain.Types.PayoutInstanceCalculation
+      Domain.Types.PayoutSplitConfig
       Domain.Types.Person
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
@@ -1077,6 +1085,7 @@ library
       Domain.Types.VehicleRouteMapping
       Domain.Types.VehicleServiceTier
       Domain.Types.VendorFee
+      Domain.Types.VendorSettlement
       Domain.Types.VendorSplitDetails
       Domain.Types.Volunteer
       Domain.Types.WhiteListOrg
@@ -1189,6 +1198,8 @@ library
       Storage.Beam.OperationHubRequests
       Storage.Beam.Overlay
       Storage.Beam.PayoutConfig
+      Storage.Beam.PayoutInstanceCalculation
+      Storage.Beam.PayoutSplitConfig
       Storage.Beam.Person
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
@@ -1237,6 +1248,7 @@ library
       Storage.Beam.VehicleRouteMapping
       Storage.Beam.VehicleServiceTier
       Storage.Beam.VendorFee
+      Storage.Beam.VendorSettlement
       Storage.Beam.VendorSplitDetails
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
@@ -1411,6 +1423,8 @@ library
       Storage.Queries.OrphanInstances.OperationHub
       Storage.Queries.OrphanInstances.OperationHubRequests
       Storage.Queries.OrphanInstances.PayoutConfig
+      Storage.Queries.OrphanInstances.PayoutInstanceCalculation
+      Storage.Queries.OrphanInstances.PayoutSplitConfig
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.Plan
       Storage.Queries.OrphanInstances.PurchaseHistory
@@ -1438,10 +1452,13 @@ library
       Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
       Storage.Queries.OrphanInstances.VehicleRouteMapping
       Storage.Queries.OrphanInstances.VendorFee
+      Storage.Queries.OrphanInstances.VendorSettlement
       Storage.Queries.OrphanInstances.Volunteer
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
+      Storage.Queries.PayoutInstanceCalculation
+      Storage.Queries.PayoutSplitConfig
       Storage.Queries.Person
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan
@@ -1490,6 +1507,7 @@ library
       Storage.Queries.VehicleRouteMapping
       Storage.Queries.VehicleServiceTier
       Storage.Queries.VendorFee
+      Storage.Queries.VendorSettlement
       Storage.Queries.VendorSplitDetails
       Storage.Queries.Volunteer
       Storage.Queries.WhiteListOrg

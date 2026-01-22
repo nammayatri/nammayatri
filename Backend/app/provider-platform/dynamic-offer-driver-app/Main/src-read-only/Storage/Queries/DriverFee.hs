@@ -103,6 +103,7 @@ updateByPrimaryKey (Domain.Types.DriverFee.DriverFee {..}) = do
       Se.Set Beam.collectedAtVendorId collectedAtVendorId,
       Se.Set Beam.collectedBy collectedBy,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
+      Se.Set Beam.driverConsideredInPayoutSettlementAt driverConsideredInPayoutSettlementAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.endTime endTime,
       Se.Set Beam.feeType feeType,

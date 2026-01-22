@@ -52,7 +52,9 @@ import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDri
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
+import SharedLogic.Allocator.Jobs.Payout.CalculatePayoutVendorSettlement (calculatePayoutVendorSettlementCashCollected, calculatePayoutVendorSettlementOnlineCollection)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
+import SharedLogic.Allocator.Jobs.Payout.SchedulePayoutVendorSettlementJobs (schedulePayoutVendorSettlementJobs)
 import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP (checkExotelCallStatusAndNotifyBAP)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (sendScheduledRideAssignedOnUpdate)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver, sendTagActionNotification)
@@ -132,6 +134,9 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . installationStatus)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . mediaFileDocumentComplete)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendFeedbackPN)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . schedulePayoutVendorSettlementJobs)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . calculatePayoutVendorSettlementCashCollected)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . calculatePayoutVendorSettlementOnlineCollection)
     }
 
 runDriverOfferAllocator ::

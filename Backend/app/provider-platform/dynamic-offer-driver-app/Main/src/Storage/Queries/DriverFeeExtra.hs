@@ -962,3 +962,45 @@ findAllCancellationPenaltiesInDisputeWindow serviceName merchantId merchantOpera
           Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId)
         ]
     ]
+
+findAllCashCollectedFeesInRangeWithStatusAndServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe (Id Merchant) ->
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  [DriverFeeStatus] ->
+  Maybe Int ->
+  ServiceNames ->
+  Text ->
+  m [DriverFee]
+findAllCashCollectedFeesInRangeWithStatusAndServiceName mbMerchantId merchantOperatingCityId startTime endTime status mbLimit serviceName vendorId =
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.collectedAtVendorId $ Se.Eq (Just vendorId),
+          Se.Is BeamDF.driverConsideredInPayoutSettlementAt $ Se.Eq Nothing,
+          Se.Is BeamDF.status $ Se.In status,
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, RECURRING_INVOICE]
+        ]
+          <> [Se.Is BeamDF.merchantId $ Se.Eq $ getId (fromJust mbMerchantId) | isJust mbMerchantId]
+    ]
+    (Se.Desc BeamDF.endTime)
+    mbLimit
+    Nothing
+
+-- Update driver considered in payout settlement timestamp
+updateDriverConsideredInPayoutSettlementAt ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe UTCTime ->
+  Id DriverFee ->
+  m ()
+updateDriverConsideredInPayoutSettlementAt settledAt driverFeeId = do
+  updateWithKV
+    [ Se.Set BeamDF.driverConsideredInPayoutSettlementAt settledAt
+    ]
+    [ Se.Is BeamDF.id $ Se.Eq (getId driverFeeId)
+    ]

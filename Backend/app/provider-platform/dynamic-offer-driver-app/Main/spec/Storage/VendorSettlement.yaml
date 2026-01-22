@@ -1,0 +1,45 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+
+VendorSettlement:
+  derives: "Generic,Show,FromJSON,ToJSON"
+  tableName: vendor_settlement
+
+  types:
+    VendorSettlementStatus:
+      enum: "Pending,Settled,SettleInNext"
+      derive: "HttpInstance"
+    VendorSettlementMode:
+      enum: "Manual,Online"
+      derive: "HttpInstance"
+
+  fields:
+    id : Id VendorSettlement
+    fromVendorId : Text
+    toVendorId : Text
+    runningBalance : HighPrecMoney
+    status : VendorSettlementStatus
+    settlementMode : VendorSettlementMode
+    settlementDate : Maybe UTCTime
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+    fromVendorId: PrimaryKey
+    toVendorId: PrimaryKey
+
+
+  excludedFields: [merchantId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  default:
+    status: "'Pending'"
+    settlementMode: "'Manual'"
+    createdAt: CURRENT_TIMESTAMP
+    updatedAt: CURRENT_TIMESTAMP
