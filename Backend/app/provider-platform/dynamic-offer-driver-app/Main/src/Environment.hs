@@ -46,7 +46,7 @@ import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version (CloudType)
-import Kernel.Utils.App (lookupDeploymentVersion)
+import Kernel.Utils.App (lookupDeploymentVersion, lookupCloudType)
 import Kernel.Utils.Common (CacheConfig, fromMaybeM, logError, throwError)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
@@ -313,6 +313,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
+  cloudType <- Just <$> lookupCloudType
   passettoContext <- uncurry mkDefPassettoContext encTools.service
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname

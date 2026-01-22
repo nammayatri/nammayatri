@@ -65,7 +65,7 @@ getDriverLoc rideId = do
       then CallBPP.callGetDriverLocation ride.trackingUrl
       else do
         withLongRetry $ CallBPP.callTrack booking ride
-        trackingLoc :: OnTrack.TrackingLocation <- Redis.get (Common.mkRideTrackingRedisKey ride.id.getId) >>= fromMaybeM (InvalidRequest "Driver location not updated")
+        trackingLoc :: OnTrack.TrackingLocation <- (Redis.runInMultiCloudRedis False $ Redis.get (Common.mkRideTrackingRedisKey ride.id.getId)) >>= fromMaybeM (InvalidRequest "Driver location not updated")
         return $
           CallBPP.GetLocationRes
             { currPoint = MapSearch.LatLong {lat = trackingLoc.gps.lat, lon = trackingLoc.gps.lon},
