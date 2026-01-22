@@ -59,6 +59,7 @@ getConfigJSON = \case
     Call.ExotelConfig cfg -> toJSON cfg
     Call.TwillioCallConfig cfg -> toJSON cfg
     Call.TataClickToCallConfig cfg -> toJSON cfg
+    Call.OzonetelConfig cfg -> toJSON cfg
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig cfg -> toJSON cfg
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
@@ -129,6 +130,7 @@ getServiceName = \case
     Call.ExotelConfig _ -> Domain.CallService Call.Exotel
     Call.TwillioCallConfig _ -> Domain.CallService Call.TwillioCall
     Call.TataClickToCallConfig _ -> Domain.CallService Call.TataClickToCall
+    Call.OzonetelConfig _ -> Domain.CallService Call.Ozonetel
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig _ -> Domain.AadhaarVerificationService AadhaarVerification.Gridline
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
@@ -202,6 +204,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> eitherValue configJSON
   Domain.CallService Call.TwillioCall -> Domain.CallServiceConfig . Call.TwillioCallConfig <$> eitherValue configJSON
   Domain.CallService Call.TataClickToCall -> Domain.CallServiceConfig . Call.TataClickToCallConfig <$> eitherValue configJSON
+  Domain.CallService Call.Ozonetel -> Domain.CallServiceConfig . Call.OzonetelConfig <$> eitherValue configJSON
   Domain.CallService Call.Knowlarity -> Left "No Config Found For Knowlarity."
   Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> eitherValue configJSON
   Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
