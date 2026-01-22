@@ -263,6 +263,4 @@ ALTER TABLE atlas_app.person ADD COLUMN customer_test_payment_id text ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.person ALTER COLUMN business_email_hash TYPE text;
-ALTER TABLE atlas_app.person ALTER COLUMN business_email_encrypted TYPE text;
 ALTER TABLE atlas_app.person ADD COLUMN cloud_type text ;
