@@ -28,7 +28,6 @@ instance FromTType' Beam.Transaction Domain.Types.Transaction.Transaction where
             response = response,
             responseError = responseError,
             serverName = serverName,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             updatedAt = updatedAt
           }
 
@@ -46,6 +45,5 @@ instance ToTType' Beam.Transaction Domain.Types.Transaction.Transaction where
         Beam.response = response,
         Beam.responseError = responseError,
         Beam.serverName = serverName,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.updatedAt = updatedAt
       }

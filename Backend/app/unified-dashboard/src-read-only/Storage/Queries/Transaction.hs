@@ -56,7 +56,6 @@ updateByPrimaryKey (Domain.Types.Transaction.Transaction {..}) = do
       Se.Set Beam.response response,
       Se.Set Beam.responseError responseError,
       Se.Set Beam.serverName serverName,
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

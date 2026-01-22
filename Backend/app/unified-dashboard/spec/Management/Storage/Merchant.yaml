@@ -70,6 +70,14 @@ Merchant:
     findByShortId:
       kvFunction: findOneWithKV
       where: shortId
+    findAllByShortIds:
+      kvFunction: findAllWithKV
+      where:
+        in: [shortId]
+    updateEnableStatus:
+      kvFunction: updateWithKV
+      params: [enabled]
+      where: shortId
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -22,6 +22,9 @@ RegistrationToken:
     enabled: Bool
     createdAt: UTCTime
 
+  excludedFields:
+    - merchantOperatingCityId
+
   constraints:
     id: PrimaryKey
     token: SecondaryKey
@@ -51,4 +54,19 @@ RegistrationToken:
     deleteById:
       kvFunction: deleteWithKV
       where: id
+    deleteAllByPersonId:
+      kvFunction: deleteWithKV
+      where: personId
+    deleteAllByPersonIdAndMerchantId:
+      kvFunction: deleteWithKV
+      where:
+        and: [personId, merchantId]
+    deleteAllByMerchantIdAndCity:
+      kvFunction: deleteWithKV
+      where:
+        and: [merchantId, operatingCity]
+    deleteAllByPersonIdAndMerchantIdAndCity:
+      kvFunction: deleteWithKV
+      where:
+        and: [personId, merchantId, operatingCity]
 

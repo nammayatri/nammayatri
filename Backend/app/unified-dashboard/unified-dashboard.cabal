@@ -156,10 +156,12 @@ library
     , bytestring
     , containers
     , cryptonite
+    , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
     , http-client
     , http-client-tls
+    , http-types
     , mobility-core
     , openapi3
     , passetto-client
@@ -168,6 +170,7 @@ library
     , random
     , record-dot-preprocessor
     , record-hasfield
+    , rider-app
     , sequelize
     , servant-client
     , servant-openapi3
@@ -179,6 +182,7 @@ library
     , time
     , unordered-containers
     , utf8-string
+    , wai
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)
@@ -242,10 +246,12 @@ executable unified-dashboard-exe
     , bytestring
     , containers
     , cryptonite
+    , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
     , http-client
     , http-client-tls
+    , http-types
     , mobility-core
     , openapi3
     , passetto-client
@@ -254,6 +260,7 @@ executable unified-dashboard-exe
     , random
     , record-dot-preprocessor
     , record-hasfield
+    , rider-app
     , sequelize
     , servant-client
     , servant-openapi3
@@ -266,6 +273,7 @@ executable unified-dashboard-exe
     , unified-dashboard
     , unordered-containers
     , utf8-string
+    , wai
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)

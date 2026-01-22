@@ -23,6 +23,21 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantAccess.MerchantAccess] -> m ())
 createMany = traverse_ create
 
+deleteAllByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteAllByPersonId personId = do deleteWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+
+deleteAllByPersonIdAndMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ())
+deleteAllByPersonIdAndMerchantId personId merchantId = do
+  deleteWithKV
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
+        ]
+    ]
+
+deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantAccess.MerchantAccess -> m ())
+deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findAllByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ([Domain.Types.MerchantAccess.MerchantAccess]))
 findAllByMerchantId merchantId = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]
 
@@ -71,7 +86,6 @@ updateByPrimaryKey (Domain.Types.MerchantAccess.MerchantAccess {..}) = do
       Se.Set Beam.operatingCity operatingCity,
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.secretKey secretKey,
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -89,7 +103,6 @@ instance FromTType' Beam.MerchantAccess Domain.Types.MerchantAccess.MerchantAcce
             operatingCity = operatingCity,
             personId = Kernel.Types.Id.Id personId,
             secretKey = secretKey,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             updatedAt = updatedAt
           }
 
@@ -104,6 +117,5 @@ instance ToTType' Beam.MerchantAccess Domain.Types.MerchantAccess.MerchantAccess
         Beam.operatingCity = operatingCity,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.secretKey = secretKey,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.updatedAt = updatedAt
       }
