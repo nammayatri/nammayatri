@@ -33,6 +33,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: Kernel.Types.Common.HighPrecMeters,
     allowDashboardToPassVehicleDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDefaultPlanAllocation :: Kernel.Prelude.Bool,
+    allowDisableDriverToTakeSpecialZoneRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDriverToUseFleetRcs :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateAadhaar :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateGst :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

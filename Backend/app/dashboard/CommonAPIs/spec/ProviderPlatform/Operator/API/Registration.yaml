@@ -21,6 +21,21 @@ apis:
             type: OperatorRegisterReq
           response:
             type: OperatorRegisterResp
+  - POST:
+      endpoint: /dashboard/register
+      auth: ApiAuthV2
+      request:
+        type: CreateDashboardOperatorReq
+      response:
+        type: APISuccess
+      helperApi:
+      - POST:
+          endpoint: /dashboard/register
+          auth: ApiAuthV2
+          request:
+            type: CreateDashboardOperatorReq
+          response:
+            type: OperatorRegisterResp
 types:
   OperatorRegisterReq:
     firstName: Text
@@ -34,6 +49,20 @@ types:
   OperatorRegisterResp:
     recordType: NewType
     personId: Id Operator
+
+  CreateDashboardOperatorReq:
+    firstName: Text
+    lastName: Text
+    roleId: Text
+    email: Text
+    mobileNumber: Text
+    mobileCountryCode: Text
+    password: Text
+    fleetAssignment: Maybe CreateDashboardOperatorFleetAssignmentReq
+
+  CreateDashboardOperatorFleetAssignmentReq:
+    fleetOwnerMobileNo: Text
+    fleetOwnerMobileCountryCode: Text
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
