@@ -25,7 +25,6 @@ module Domain.Action.UI.Ride
   )
 where
 
-import AWS.S3 as S3
 import qualified Beckn.ACL.Update as ACL
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
@@ -64,6 +63,7 @@ import qualified SharedLogic.Person as SLP
 import qualified SharedLogic.Serviceability as Serviceability
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Location as QL
@@ -100,7 +100,7 @@ data EditLocationResp = EditLocationResp
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 getDriverPhoto :: Text -> Flow Text
-getDriverPhoto filePath = S3.get $ Text.unpack filePath
+getDriverPhoto filePath = Storage.get $ Text.unpack filePath
 
 getRideStatus ::
   ( CacheFlow m r,

@@ -12,7 +12,6 @@
 
 module IssueManagement.Common (module IssueManagement.Common, module Domain.Types.VehicleVariant) where
 
-import qualified AWS.S3 as S3
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -34,6 +33,7 @@ import Kernel.Types.Id (Id, ShortId)
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Sequelize.SQLObject (SQLObject (..), ToSQLObject (convertToSQLObject))
 import Servant hiding (Summary)
+import Storage.Types (FileType (..))
 import qualified Text.Show
 
 data Identifier = CUSTOMER | DRIVER
@@ -294,7 +294,7 @@ data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKI
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data MandatoryUploads = MandatoryUploads
-  { fileType :: S3.FileType,
+  { fileType :: FileType,
     limit :: Int
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)

@@ -1,7 +1,6 @@
 module Domain.Action.UI.Sos where
 
 import API.Types.UI.Sos
-import AWS.S3 as S3
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.Foldable as Foldable
@@ -58,6 +57,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Sos as CQSos
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QP
@@ -65,6 +65,7 @@ import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.Sos as QSos
+import Storage.Types (FileType (..))
 import qualified Tools.Call as Call
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -72,7 +73,7 @@ import Tools.Ticket as Ticket
 
 data SOSVideoUploadReq = SOSVideoUploadReq
   { payload :: FilePath,
-    fileType :: S3.FileType,
+    fileType :: FileType,
     fileExtension :: Text
   }
   deriving stock (Eq, Show, Generic)
@@ -88,10 +89,10 @@ instance FromMultipart Tmp SOSVideoUploadReq where
     return $ SOSVideoUploadReq file fileType fileExtension
     where
       validateContentType = \case
-        "video/mp4" -> Right S3.Video
-        "audio/wave" -> Right S3.Audio
-        "audio/mpeg" -> Right S3.Audio
-        "audio/mp4" -> Right S3.Audio
+        "video/mp4" -> Right Video
+        "audio/wave" -> Right Audio
+        "audio/mpeg" -> Right Audio
+        "audio/mp4" -> Right Audio
         _ -> Left "Unsupported file format"
 
       getFileExtension :: Text -> Text
@@ -342,7 +343,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
   when (fileSize > fromIntegral riderConfig.videoFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile payload
-  filePath <- createFilePath "/sos/" ("sos-" <> getId sosId) fileType fileExtension
+  filePath <- Storage.createFilePath "/sos/" ("sos-" <> getId sosId) fileType fileExtension
   mediaFileId <- generateGUID
   now <- getCurrentTime
   let fileUrl =
@@ -357,9 +358,9 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
             s3FilePath = Just filePath,
             createdAt = now
           }
-  result <- withTryCatch "S3:put:uploadSosMedia" $ S3.put (T.unpack filePath) mediaFile
+  result <- withTryCatch "Storage:put:uploadSosMedia" $ Storage.put (T.unpack filePath) mediaFile
   case result of
-    Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
+    Left err -> throwError $ InternalError ("Storage Upload Failed: " <> show err)
     Right _ -> do
       MFQuery.create fileEntity
       let updatedMediaFiles = sosDetails.mediaFiles <> [mediaFileId]

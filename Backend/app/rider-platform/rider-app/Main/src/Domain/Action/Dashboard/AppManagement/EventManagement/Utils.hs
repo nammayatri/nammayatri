@@ -1,7 +1,6 @@
 module Domain.Action.Dashboard.AppManagement.EventManagement.Utils where
 
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
-import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant
@@ -14,6 +13,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.RiderConfig as QRC
 import System.IO (hFileSize)
@@ -30,9 +30,9 @@ uploadAssetHelper _merchantShortId _opCity ticketPlaceId file reqContentType = d
   m <- findMerchantByShortId _merchantShortId
   moCity <- CQMOC.findByMerchantIdAndCity m.id m.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
   riderConfig <- QRC.findByMerchantOperatingCityId moCity.id >>= fromMaybeM (RiderConfigNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
-  filePath <- S3.createFilePublicPath "ticket-assets" ("ticket-place/" <> ticketPlaceId.getId) uuid fileExtension
+  filePath <- Storage.createFilePublicPath "ticket-assets" ("ticket-place/" <> ticketPlaceId.getId) uuid fileExtension
   logDebug $ "filePath: " <> show filePath
-  _ <- fork "S3 put file" $ S3.putPublicRaw (T.unpack filePath) documentFile (T.unpack reqContentType)
+  _ <- fork "Storage put file" $ Storage.putRaw (T.unpack filePath) documentFile (T.unpack reqContentType)
   let url = fromMaybe mempty (riderConfig.ticketAssetDomain) <> filePath
   return $ API.Types.Dashboard.AppManagement.TicketDashboard.UploadPublicFileResponse {publicUrl = url}
 
@@ -46,7 +46,7 @@ deleteAsset :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOpe
 deleteAsset moCityId req = do
   riderConfig <- QRC.findByMerchantOperatingCityId moCityId >>= fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId: " <> show moCityId)
   let filePath = fromMaybe req.assetId $ T.stripPrefix (fromMaybe mempty (riderConfig.ticketAssetDomain)) req.assetId
-  void $ fork "S3 delete file" $ S3.deletePublic (T.unpack filePath)
+  void $ fork "Storage delete file" $ Storage.delete (T.unpack filePath)
 
 getExtension :: Text -> Environment.Flow Text
 getExtension = \case

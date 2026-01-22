@@ -98,7 +98,6 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import API.UI.Issue (driverIssueHandle)
-import AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
@@ -275,6 +274,7 @@ import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.DailyStats as CHDS
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingExtra as QBE
 import qualified Storage.Queries.DailyStats as SQDS
@@ -306,6 +306,8 @@ import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Storage.Queries.VendorFee as QVF
+import Storage.Types (FileType (..))
+import qualified Storage.Types as StorageTypes
 import qualified Tools.Auth as Auth
 import Tools.Error
 import Tools.Event
@@ -668,7 +670,7 @@ data DriverStatsRes = DriverStatsRes
 
 data DriverPhotoUploadReq = DriverPhotoUploadReq
   { image :: Text,
-    fileType :: S3.FileType,
+    fileType :: FileType,
     reqContentType :: Text,
     brisqueFeatures :: [Double],
     imageType :: Maybe ImageType,
@@ -787,7 +789,7 @@ getInformationV2 ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasField "s3Env" r (S3.S3Env m)
+    HasField "storageConfig" r StorageTypes.StorageConfig
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
@@ -816,7 +818,7 @@ getInformation ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasField "s3Env" r (S3.S3Env m)
+    HasField "storageConfig" r StorageTypes.StorageConfig
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
@@ -1061,7 +1063,7 @@ deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   QDHL.deleteById driverHomeLocationId
   return APISuccess.Success
 
-buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity) -> Plan.ServiceNames -> m DriverEntityRes
+buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "storageConfig" r StorageTypes.StorageConfig, EsqDBFlow m r) => (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity) -> Plan.ServiceNames -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName = do
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   vehicleMB <- QVehicle.findById person.id
@@ -1235,8 +1237,8 @@ updateDriver ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasField "s3Env" r (S3.S3Env m),
-    HasField "version" r DeploymentVersion
+    HasField "version" r DeploymentVersion,
+    HasField "storageConfig" r StorageTypes.StorageConfig
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Version ->
@@ -1963,15 +1965,15 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
     let req = IF.FaceValidationReq {file = image, brisqueFeatures}
     void $ validateFaceImage merchantId merchantOpCityId req
 
-  filePath <- S3.createFilePath basePath ("driver-" <> getId driverId) fileType imageExtension
+  filePath <- Storage.createFilePath basePath ("driver-" <> getId driverId) fileType imageExtension
   let fileUrl =
         transporterConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" domain
           & T.replace "<FILE_PATH>" filePath
 
-  result <- withTryCatch "S3:put:driverPhotoUpload" $ S3.put (T.unpack filePath) image
+  result <- withTryCatch "Storage:put:driverPhotoUpload" $ Storage.put (T.unpack filePath) image
   case result of
-    Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
+    Left err -> throwError $ InternalError ("Storage Upload Failed: " <> show err)
     Right _ -> do
       case imageType_ of
         ProfilePhoto -> whenJust person.faceImageId $ \mediaFileId -> do
@@ -1990,14 +1992,14 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
   where
     validateContentType = do
       case fileType of
-        S3.Image -> case reqContentType of
+        Image -> case reqContentType of
           "image/png" -> pure "png"
           "image/jpeg" -> pure "jpg"
           _ -> throwError $ FileFormatNotSupported reqContentType
         _ -> throwError $ FileFormatNotSupported reqContentType
 
 fetchDriverPhoto :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> Flow Text
-fetchDriverPhoto _ filePath = S3.get $ T.unpack filePath
+fetchDriverPhoto _ filePath = Storage.get $ T.unpack filePath
 
 createMediaEntry :: Id SP.Person -> Common.AddLinkAsMedia -> Text -> ImageType -> Maybe VehicleRegistrationCertificate -> Flow APISuccess
 createMediaEntry driverId Common.AddLinkAsMedia {..} filePath imageType mbRc = do
@@ -2018,7 +2020,7 @@ createMediaEntry driverId Common.AddLinkAsMedia {..} filePath imageType mbRc = d
       return $
         Domain.MediaFile
           { id,
-            _type = S3.Image,
+            _type = Image,
             url = fileUrl,
             s3FilePath = Just filePath,
             createdAt = now

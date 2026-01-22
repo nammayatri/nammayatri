@@ -49,7 +49,6 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
   )
 where
 
-import AWS.S3 as S3
 import Control.Applicative ((<|>))
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import Data.Aeson hiding (Success)
@@ -97,6 +96,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as DGQuery
 import qualified Storage.Queries.DriverInformation as DIQuery
@@ -276,7 +276,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
       unless (imageMetadata.imageType == ODC.VehicleRegistrationCertificate) $
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) "")
       Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
-        S3.get $ T.unpack imageMetadata.s3Path
+        Storage.get $ T.unpack imageMetadata.s3Path
 
     buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel =
       Verification.RCVerificationResponse
@@ -332,7 +332,7 @@ getDocumentImage personId imageId_ expectedDocType = do
   unless (imageMetadata.imageType == expectedDocType) $
     throwError (ImageInvalidType (show expectedDocType) "")
   Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
-    S3.get $ T.unpack imageMetadata.s3Path
+    Storage.get $ T.unpack imageMetadata.s3Path
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Flow ()
 verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation = do

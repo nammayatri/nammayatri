@@ -2,7 +2,6 @@
 
 module API.Types.UI.RidePayment where
 
-import qualified AWS.S3
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.RefundRequest
 import qualified Domain.Types.Ride
@@ -12,6 +11,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
+import qualified Storage.Types
 import Tools.Auth
 
 newtype AddTipRequest = AddTipRequest {amount :: Kernel.Types.Common.PriceAPIEntity}
@@ -30,7 +30,7 @@ data RefundRequestReq = RefundRequestReq
   { code :: Domain.Types.RefundRequest.RefundRequestCode,
     description :: Kernel.Prelude.Text,
     evidence :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    fileType :: Kernel.Prelude.Maybe AWS.S3.FileType,
+    fileType :: Kernel.Prelude.Maybe Storage.Types.FileType,
     reqContentType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     requestedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
   }

@@ -3,7 +3,7 @@ imports:
   File: Dashboard.Common
   Summary: Dashboard.Common
   Receiver: Dashboard.Common
-  FileType: AWS.S3
+  FileType: Storage.Types
   Language: Kernel.External.Types
 
 module: Message

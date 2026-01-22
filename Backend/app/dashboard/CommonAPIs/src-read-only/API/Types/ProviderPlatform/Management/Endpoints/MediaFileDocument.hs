@@ -3,7 +3,6 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.MediaFileDocument where
 
-import qualified AWS.S3
 import qualified Dashboard.Common.MediaFileDocument
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -16,6 +15,7 @@ import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
+import qualified Storage.Types
 
 data MediaFileDocumentReq = MediaFileDocumentReq {mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.MediaFileDocument.MediaFileDocument}
   deriving stock (Generic)
@@ -47,14 +47,14 @@ data MediaFileDocumentTResp = MediaFileDocumentTResp {mediaFileDocumentId :: Ker
 
 data UploadMediaFileDocumentReq = UploadMediaFileDocumentReq
   { mediaFileDocumentType :: Dashboard.Common.MediaFileDocument.MediaFileDocumentType,
-    fileType :: AWS.S3.FileType,
+    fileType :: Storage.Types.FileType,
     reqContentType :: Kernel.Prelude.Text,
     rcNumber :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UploadMediaFileDocumentTReq = UploadMediaFileDocumentTReq {mediaFileDocumentType :: Dashboard.Common.MediaFileDocument.MediaFileDocumentType, fileType :: AWS.S3.FileType, reqContentType :: Kernel.Prelude.Text}
+data UploadMediaFileDocumentTReq = UploadMediaFileDocumentTReq {mediaFileDocumentType :: Dashboard.Common.MediaFileDocument.MediaFileDocumentType, fileType :: Storage.Types.FileType, reqContentType :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

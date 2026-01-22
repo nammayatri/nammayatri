@@ -2,7 +2,6 @@
 
 module IssueManagement.Domain.Action.Dashboard.Issue where
 
-import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
@@ -13,7 +12,7 @@ import EulerHS.Prelude (withFile)
 import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
-import IssueManagement.Common
+import IssueManagement.Common hiding (Image)
 import qualified IssueManagement.Common.Dashboard.Issue as Common
 import IssueManagement.Domain.Action.UI.Issue (ServiceHandle)
 import qualified IssueManagement.Domain.Action.UI.Issue as UIR
@@ -57,6 +56,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, generateShortId, throwError)
 import Kernel.Utils.Logging
+import qualified Storage.Flow as Storage
+import Storage.Types (FileType (Image))
+import qualified Storage.Types as StorageTypes
 
 -- Temporary Solution for backward Comaptibility (Remove after 1 successfull release)
 getDefaultMerchantOperatingCityId :: BeamFlow m r => ServiceHandle m -> Identifier -> m (Id MerchantOperatingCity)
@@ -488,9 +490,9 @@ issueAddComment merchantShortId opCity issueReportId issueHandle req = do
             merchantId = Just merchantOpCity.merchantId
           }
 
-issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => ShortId Merchant -> Text -> m Text
+issueFetchMedia :: (HasField "storageConfig" r StorageTypes.StorageConfig, MonadReader r m, BeamFlow m r) => ShortId Merchant -> Text -> m Text
 issueFetchMedia _ filePath =
-  S3.get $ T.unpack filePath
+  Storage.get $ T.unpack filePath
 
 ticketStatusCallBack ::
   ( Esq.EsqDBReplicaFlow m r,
@@ -829,7 +831,7 @@ updateIssueOption merchantShortId city issueOptionId req issueHandle identifier 
             ..
           }
 
-upsertIssueMessage :: (BeamFlow m r, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => ShortId Merchant -> Context.City -> Common.UpsertIssueMessageReq -> ServiceHandle m -> Identifier -> m Common.UpsertIssueMessageRes
+upsertIssueMessage :: (BeamFlow m r, MonadTime m, MonadReader r m, HasField "storageConfig" r StorageTypes.StorageConfig) => ShortId Merchant -> Context.City -> Common.UpsertIssueMessageReq -> ServiceHandle m -> Identifier -> m Common.UpsertIssueMessageRes
 upsertIssueMessage merchantShortId city req issueHandle identifier = do
   existingIssueMessage <-
     traverse
@@ -863,7 +865,7 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
       { messageId = updatedIssueMessage.id
       }
   where
-    mkIssueMessage :: (BeamFlow m r, Common.MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => Maybe DIM.IssueMessage -> MerchantOperatingCity -> ServiceHandle m -> m DIM.IssueMessage
+    mkIssueMessage :: (BeamFlow m r, Common.MonadTime m, MonadReader r m, HasField "storageConfig" r StorageTypes.StorageConfig) => Maybe DIM.IssueMessage -> MerchantOperatingCity -> ServiceHandle m -> m DIM.IssueMessage
     mkIssueMessage mbIssueMessage merchantOperatingCity iHandle = do
       (mbOptionId, mbCategoryId) <- getAndValidateOptionAndCategoryId mbIssueMessage
       mbParentCategory <- findIssueCategory mbOptionId mbCategoryId
@@ -956,7 +958,7 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
       Just message -> message.messageType
       Nothing -> maybe DIM.Terminal (bool DIM.Intermediate DIM.FAQ . ((== DIC.FAQ) . (.categoryType))) mbParentCategory
 
-    uploadMessageMediaFiles :: (BeamFlow m r, Common.MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => Id DIM.IssueMessage -> [Id DMF.MediaFile] -> MerchantOperatingCity -> DIM.IssueMessageType -> ServiceHandle m -> m [Id DMF.MediaFile]
+    uploadMessageMediaFiles :: (BeamFlow m r, Common.MonadTime m, MonadReader r m, HasField "storageConfig" r StorageTypes.StorageConfig) => Id DIM.IssueMessage -> [Id DMF.MediaFile] -> MerchantOperatingCity -> DIM.IssueMessageType -> ServiceHandle m -> m [Id DMF.MediaFile]
     uploadMessageMediaFiles issueMessageId existingMediaFiles merchantOpCity messageType iHandle = do
       case messageType of
         DIM.FAQ -> do
@@ -969,13 +971,13 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
                   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
                     throwError $ FileSizeExceededError (show fileSize)
                   mediaFile <- L.runIO $ base64Encode <$> BS.readFile fileData.file
-                  filePath <- S3.createFilePath "issue-media/faqMedia/" ("messageId-" <> issueMessageId.getId) S3.Image contentType
+                  filePath <- Storage.createFilePath "issue-media/faqMedia/" ("messageId-" <> issueMessageId.getId) Image contentType
                   let fileUrl =
                         config.mediaFileUrlPattern
                           & T.replace "<DOMAIN>" "issue"
                           & T.replace "<FILE_PATH>" filePath
-                  _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
-                  UIR.createMediaEntry fileUrl S3.Image filePath <&> (.fileId)
+                  _ <- fork "Storage Put Issue Media File" $ Storage.put (T.unpack filePath) mediaFile
+                  UIR.createMediaEntry fileUrl Image filePath <&> (.fileId)
               )
               (fromMaybe [] req.mediaFiles)
           return $ bool (existingMediaFiles <> mediaFileIds) mediaFileIds (fromMaybe False req.deleteExistingFiles)

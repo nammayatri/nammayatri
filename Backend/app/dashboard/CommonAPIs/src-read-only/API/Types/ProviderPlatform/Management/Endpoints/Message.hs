@@ -3,7 +3,6 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.Message where
 
-import qualified AWS.S3
 import qualified Dashboard.Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy
@@ -21,8 +20,9 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import Servant
 import Servant.Client
+import qualified Storage.Types
 
-data AddLinkAsMedia = AddLinkAsMedia {url :: Kernel.Prelude.Text, fileType :: AWS.S3.FileType}
+data AddLinkAsMedia = AddLinkAsMedia {url :: Kernel.Prelude.Text, fileType :: Storage.Types.FileType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -64,7 +64,7 @@ data InputType
   deriving stock (Eq, Show, Generic, Kernel.Prelude.Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MediaFile = MediaFile {_type :: AWS.S3.FileType, link :: Kernel.Prelude.Text}
+data MediaFile = MediaFile {_type :: Storage.Types.FileType, link :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -148,7 +148,7 @@ data SendMessageRequest = SendMessageRequest {csvFile :: Kernel.Prelude.Maybe Ke
 instance Kernel.Types.HideSecrets.HideSecrets SendMessageRequest where
   hideSecrets = Kernel.Prelude.identity
 
-data UploadFileRequest = UploadFileRequest {file :: Kernel.Prelude.FilePath, reqContentType :: Kernel.Prelude.Text, fileType :: AWS.S3.FileType}
+data UploadFileRequest = UploadFileRequest {file :: Kernel.Prelude.FilePath, reqContentType :: Kernel.Prelude.Text, fileType :: Storage.Types.FileType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

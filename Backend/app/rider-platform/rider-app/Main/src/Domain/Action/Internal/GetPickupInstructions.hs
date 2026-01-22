@@ -14,7 +14,6 @@
 
 module Domain.Action.Internal.GetPickupInstructions where
 
-import qualified AWS.S3 as S3
 import qualified Data.Geohash as Geohash
 import qualified Data.Text as T
 import Domain.Types.Booking ()
@@ -28,6 +27,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.IssueManagement ()
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PickupInstructions as QPickupInstructions
 import qualified Storage.Queries.Ride as QRide
@@ -93,7 +93,7 @@ getPickupInstructions bppRideId apiKey = do
             Just mediaFile -> case mediaFile.s3FilePath of
               Just s3Path -> do
                 logInfo $ "GetPickupInstructions: Found media file, fetching from S3: " <> s3Path
-                result <- withTryCatch "S3:get:getPickupInstructions" $ S3.get $ T.unpack s3Path
+                result <- withTryCatch "Storage:get:getPickupInstructions" $ Storage.get $ T.unpack s3Path
                 case result of
                   Left err -> do
                     logError $ "GetPickupInstructions: Failed to fetch audio from S3: " <> show err

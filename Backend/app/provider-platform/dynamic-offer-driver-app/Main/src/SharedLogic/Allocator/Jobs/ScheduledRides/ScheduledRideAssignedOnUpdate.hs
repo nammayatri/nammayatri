@@ -14,7 +14,6 @@
 
 module SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate where
 
-import qualified AWS.S3 as S3
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
@@ -61,7 +60,6 @@ sendScheduledRideAssignedOnUpdate ::
     CacheFlow m r,
     HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -267,7 +265,6 @@ cancelOrReallocate ::
     CacheFlow m r,
     HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],

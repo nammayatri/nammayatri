@@ -3,7 +3,6 @@
 
 module API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding where
 
-import qualified AWS.S3
 import qualified Dashboard.Common
 import qualified Data.Aeson
 import qualified Data.ByteString.Lazy
@@ -22,12 +21,13 @@ import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
+import qualified Storage.Types
 
 data ApproveResponse = ApproveResponse {success :: Kernel.Prelude.Bool, handler :: Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.Handler.DashboardSideHandler}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UploadFileRequest = UploadFileRequest {file :: Kernel.Prelude.FilePath, reqContentType :: Kernel.Prelude.Text, fileType :: AWS.S3.FileType}
+data UploadFileRequest = UploadFileRequest {file :: Kernel.Prelude.FilePath, reqContentType :: Kernel.Prelude.Text, fileType :: Storage.Types.FileType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

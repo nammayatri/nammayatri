@@ -3,7 +3,6 @@
 
 module API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard where
 
-import qualified AWS.S3
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -20,6 +19,7 @@ import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
+import qualified Storage.Types
 
 data CurrentSeatStatusReq = CurrentSeatStatusReq {serviceCategory :: Kernel.Prelude.Text, date :: Data.Time.Calendar.Day}
   deriving stock (Generic)
@@ -47,7 +47,7 @@ data SeatManagementReq = SeatManagementReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UploadPublicFileRequest = UploadPublicFileRequest {file :: Kernel.Prelude.FilePath, reqContentType :: Kernel.Prelude.Text, fileType :: AWS.S3.FileType}
+data UploadPublicFileRequest = UploadPublicFileRequest {file :: Kernel.Prelude.FilePath, reqContentType :: Kernel.Prelude.Text, fileType :: Storage.Types.FileType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

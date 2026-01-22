@@ -24,7 +24,6 @@ module Domain.Action.UI.DriverOnboarding.DriverLicense
   )
 where
 
-import qualified AWS.S3 as S3
 import Control.Applicative (liftA2, (<|>))
 import qualified Data.Text as T
 import Data.Time (nominalDay, utctDay)
@@ -62,6 +61,7 @@ import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverLicense as Query
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
@@ -209,7 +209,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
       unless (imageMetadata.imageType == DTO.DriverLicense) $
         throwError (ImageInvalidType (show DTO.DriverLicense) "")
-      S3.get $ T.unpack imageMetadata.s3Path
+      Storage.get $ T.unpack imageMetadata.s3Path
 
     -- unlinkDLFromDriver :: Id Person.Person -> Flow ()
     -- unlinkDLFromDriver pId = do

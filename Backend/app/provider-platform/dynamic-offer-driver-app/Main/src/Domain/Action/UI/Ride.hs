@@ -31,7 +31,6 @@ module Domain.Action.UI.Ride
   )
 where
 
-import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM hiding (filter)
 import Data.List (sortOn)
@@ -86,6 +85,7 @@ import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as FDV
@@ -99,6 +99,7 @@ import qualified Storage.Queries.RideDetails as QRD
 import Storage.Queries.RiderDetails as QRID
 import qualified Storage.Queries.StopInformation as QSI
 import Storage.Queries.Vehicle as QVeh
+import Storage.Types (FileType (..))
 import qualified Text.Read as TR (read)
 import Tools.Error
 import qualified Tools.Notifications as TN
@@ -136,7 +137,7 @@ data StopAction = DEPART | ARRIVE
 data UploadOdometerReq = UploadOdometerReq
   { file :: FilePath,
     reqContentType :: Text,
-    fileType :: S3.FileType
+    fileType :: FileType
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -384,21 +385,21 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- S3.createFilePath "odometer-reading/" ("rideId-" <> rideId.getId) fileType contentType
+  filePath <- Storage.createFilePath "/odometer-reading/" ("rideId-" <> rideId.getId) fileType ("." <> contentType)
   let fileUrl =
         config.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "issue"
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 Put Odometer Reading File" $ S3.put (T.unpack filePath) mediaFile
+  _ <- fork "Storage Put Odometer Reading File" $ Storage.put (T.unpack filePath) mediaFile
   createMediaEntry fileUrl filePath
   where
     validateContentType = do
       case fileType of
-        S3.Audio | reqContentType == "audio/wave" -> pure "wav"
-        S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
-        S3.Audio | reqContentType == "audio/mp4" -> pure "mp4"
-        S3.Image | reqContentType == "image/png" -> pure "png"
-        S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
+        Audio | reqContentType == "audio/wave" -> pure "wav"
+        Audio | reqContentType == "audio/mpeg" -> pure "mp3"
+        Audio | reqContentType == "audio/mp4" -> pure "mp4"
+        Image | reqContentType == "image/png" -> pure "png"
+        Image | reqContentType == "image/jpeg" -> pure "jpg"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
     createMediaEntry url filePath = do
@@ -433,12 +434,12 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- S3.createFilePath "delivery/" ("rideId-" <> rideId.getId) S3.Image contentType
+  filePath <- Storage.createFilePath "/delivery/" ("rideId-" <> rideId.getId) Image ("." <> contentType)
   let fileUrl =
         config.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "issue"
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 Put Delivery Image File" $ S3.put (T.unpack filePath) mediaFile
+  _ <- fork "Storage Put Delivery Image File" $ Storage.put (T.unpack filePath) mediaFile
   now <- getCurrentTime
   fileId <- createMediaEntry fileUrl filePath now
   let deliveryFileIds = fromMaybe [fileId] (ride.deliveryFileIds <&> (\dFileIds -> dFileIds ++ [fileId]))
@@ -462,7 +463,7 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
           return $
             MediaFile.MediaFile
               { id,
-                _type = S3.Image,
+                _type = Image,
                 url = fileUrl,
                 s3FilePath = Just filePath,
                 createdAt = now

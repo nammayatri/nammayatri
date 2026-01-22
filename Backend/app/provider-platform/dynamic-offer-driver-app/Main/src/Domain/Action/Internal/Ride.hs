@@ -14,7 +14,6 @@
 
 module Domain.Action.Internal.Ride where
 
-import qualified AWS.S3 as S3
 import qualified Data.Text as T
 import Domain.Types.Ride
 import Domain.Utils
@@ -26,6 +25,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Error
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -40,4 +40,4 @@ getDeliveryImage rideId apiKey = do
   latestDeliveryFileId <- ride.deliveryFileIds >>= safeLast & fromMaybeM DeliveryImageNotFound
   mediaFile <- QMF.findById latestDeliveryFileId >>= fromMaybeM (FileDoNotExist latestDeliveryFileId.getId)
   mediaFilePath <- mediaFile.s3FilePath & fromMaybeM (FileDoNotExist latestDeliveryFileId.getId)
-  S3.get $ T.unpack mediaFilePath
+  Storage.get $ T.unpack mediaFilePath

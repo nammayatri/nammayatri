@@ -55,6 +55,7 @@ import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import SharedLogic.CallInternalMLPricing (MLPricingInternal)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
+import qualified Storage.Types as StorageTypes
 import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types
@@ -126,6 +127,7 @@ data HandlerEnv = HandlerEnv
     appBackendBapInternal :: AppBackendBapInternal,
     mlPricingInternal :: MLPricingInternal,
     inMemEnv :: CF.InMemEnv,
+    storageConfig :: StorageTypes.StorageConfig,
     url :: Maybe Text,
     blackListedJobs :: [Text]
   }

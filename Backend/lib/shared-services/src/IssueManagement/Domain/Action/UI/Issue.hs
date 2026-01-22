@@ -1,6 +1,5 @@
 module IssueManagement.Domain.Action.UI.Issue where
 
-import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
@@ -13,7 +12,8 @@ import EulerHS.Prelude (withFile)
 import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
-import IssueManagement.Common as Reexport
+import IssueManagement.Common as Reexport hiding (Audio, Image)
+import qualified IssueManagement.Common as CommonTypes (MessageType (Audio, Image, Text))
 import qualified IssueManagement.Common.UI.Issue as Common
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as D
 import qualified IssueManagement.Domain.Types.Issue.IssueConfig as D
@@ -45,6 +45,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified "external" Slack.AWS.Flow as Slack
+import qualified Storage.Flow as Storage
+import Storage.Types (FileType (Audio, Image))
+import qualified Storage.Types as StorageTypes
 import Text.Regex.TDFA (AllTextMatches (..), getAllTextMatches, (=~))
 
 data ServiceHandle m = ServiceHandle
@@ -270,7 +273,7 @@ issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifie
             createdAt = issueReport.createdAt
           }
 
-createMediaEntry :: BeamFlow m r => Text -> S3.FileType -> Text -> m Common.IssueMediaUploadRes
+createMediaEntry :: BeamFlow m r => Text -> FileType -> Text -> m Common.IssueMediaUploadRes
 createMediaEntry url fileType filePath = do
   fileEntity <- mkFile url
   _ <- QMF.create fileEntity
@@ -292,7 +295,7 @@ issueMediaUpload' ::
   ( BeamFlow m r,
     MonadTime m,
     MonadReader r m,
-    HasField "s3Env" r (S3.S3Env m),
+    HasField "storageConfig" r StorageTypes.StorageConfig,
     EsqDBReplicaFlow m r
   ) =>
   (Id Person, Id Merchant, Id MerchantOperatingCity) ->
@@ -308,28 +311,28 @@ issueMediaUpload' (personId, merchantId, merchantOperatingCityId) issueHandle Co
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- S3.createFilePath (domain <> "/") identifier fileType contentType
+  filePath <- Storage.createFilePath (domain <> "/") identifier fileType contentType
   let fileUrl =
         config.mediaFileUrlPattern
           & T.replace "<DOMAIN>" domain
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
+  _ <- fork "Storage Put Issue Media File" $ Storage.put (T.unpack filePath) mediaFile
   createMediaEntry fileUrl fileType filePath
   where
     validateContentType = do
       case fileType of
-        S3.Audio | reqContentType == "audio/wave" -> pure "wav"
-        S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
-        S3.Audio | reqContentType == "audio/mp4" -> pure "mp4"
-        S3.Image | reqContentType == "image/png" -> pure "png"
-        S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
+        Audio | reqContentType == "audio/wave" -> pure "wav"
+        Audio | reqContentType == "audio/mpeg" -> pure "mp3"
+        Audio | reqContentType == "audio/mp4" -> pure "mp4"
+        Image | reqContentType == "image/png" -> pure "png"
+        Image | reqContentType == "image/jpeg" -> pure "jpg"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
 issueMediaUpload ::
   ( BeamFlow m r,
     MonadTime m,
     MonadReader r m,
-    HasField "s3Env" r (S3.S3Env m),
+    HasField "storageConfig" r StorageTypes.StorageConfig,
     EsqDBReplicaFlow m r
   ) =>
   (Id Person, Id Merchant) ->
@@ -344,26 +347,26 @@ issueMediaUpload (personId, merchantId) issueHandle Common.IssueMediaUploadReq {
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- S3.createFilePath "issue-media/" ("driver-" <> personId.getId) fileType contentType
+  filePath <- Storage.createFilePath "issue-media/" ("driver-" <> personId.getId) fileType contentType
   let fileUrl =
         config.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "issue"
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
+  _ <- fork "Storage Put Issue Media File" $ Storage.put (T.unpack filePath) mediaFile
   createMediaEntry fileUrl fileType filePath
   where
     validateContentType = do
       case fileType of
-        S3.Audio | reqContentType == "audio/wave" -> pure "wav"
-        S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
-        S3.Audio | reqContentType == "audio/mp4" -> pure "mp4"
-        S3.Image | reqContentType == "image/png" -> pure "png"
-        S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
+        Audio | reqContentType == "audio/wave" -> pure "wav"
+        Audio | reqContentType == "audio/mpeg" -> pure "mp3"
+        Audio | reqContentType == "audio/mp4" -> pure "mp4"
+        Image | reqContentType == "image/png" -> pure "png"
+        Image | reqContentType == "image/jpeg" -> pure "jpg"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
-fetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => (Id Person, Id Merchant) -> Text -> m Text
+fetchMedia :: (HasField "storageConfig" r StorageTypes.StorageConfig, MonadReader r m, BeamFlow m r) => (Id Person, Id Merchant) -> Text -> m Text
 fetchMedia _personId filePath =
-  S3.get $ T.unpack filePath
+  Storage.get $ T.unpack filePath
 
 createIssueReport ::
   ( EsqDBReplicaFlow m r,
@@ -1094,11 +1097,11 @@ recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier =
     )
     issueReport.chats
   where
-    mediaTypeToMessageType :: S3.FileType -> MessageType
+    mediaTypeToMessageType :: FileType -> MessageType
     mediaTypeToMessageType = \case
-      S3.Audio -> Audio
-      S3.Image -> Image
-      _ -> Text
+      Audio -> CommonTypes.Audio
+      Image -> CommonTypes.Image
+      _ -> CommonTypes.Text
 
     fst_ (x, _, _) = x
 
@@ -1118,8 +1121,8 @@ mkMediaFiles =
   foldr'
     ( \mediaFile mediaFileList -> do
         case mediaFile._type of
-          S3.Audio -> Common.MediaFile_ S3.Audio mediaFile.url : mediaFileList
-          S3.Image -> Common.MediaFile_ S3.Image mediaFile.url : mediaFileList
+          Audio -> Common.MediaFile_ Audio mediaFile.url : mediaFileList
+          Image -> Common.MediaFile_ Image mediaFile.url : mediaFileList
           _ -> mediaFileList
     )
     []

@@ -409,6 +409,7 @@ in  { esqDBCfg
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
     , s3PublicConfig = common.s3PublicConfig
+    , storageConfig = common.storageConfig
     , migrationPath =
       [ "dev/migrations-read-only/dynamic-offer-driver-app"
       ,   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text

@@ -2,7 +2,6 @@ module Domain.Action.UI.DriverOnboardingV2 where
 
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
-import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
 import Crypto.Random (getRandomBytes)
 import qualified Data.List as DL
@@ -74,6 +73,7 @@ import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Flow as Storage
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
 import qualified Storage.Queries.Booking as QBooking
@@ -223,7 +223,7 @@ getDriverVehiclePhotosB64 (_, merchantId, _) back_ backInterior_ front_ frontInt
       if fromMaybe False shouldFetch
         then do
           images <- runInReplica $ ImageQuery.findImagesByRCAndType merchantId (Just rc.id.getId) imageType $ if fromMaybe True onlyLatest then Just 1 else Nothing
-          mapM (\img -> S3.get $ T.unpack img.s3Path) images
+          mapM (\img -> Storage.get $ T.unpack img.s3Path) images
         else pure []
 
 getDriverRateCard ::
@@ -676,7 +676,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       unless (imageMetadata.imageType == DTO.PanCard) $
         throwError (ImageInvalidType (show DTO.PanCard) "")
       Redis.withLockRedisAndReturnValue (VRC.imageS3Lock (imageMetadata.s3Path)) 5 $
-        S3.get $ T.unpack imageMetadata.s3Path
+        Storage.get $ T.unpack imageMetadata.s3Path
     checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m ()
     checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
       (txnId, valStatus) <- CME.fromMaybeM (Image.throwValidationError (Just imageId1) Nothing (Just "Cannot find necessary data for SDK response!!!!")) (return $ (,) <$> transactionId <*> validationStatus)
@@ -791,7 +791,7 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
       unless (imageMetadata.imageType == DTO.GSTCertificate) $
         throwError (ImageInvalidType (show DTO.GSTCertificate) "")
       Redis.withLockRedisAndReturnValue (VRC.imageS3Lock (imageMetadata.s3Path)) 5 $
-        S3.get $ T.unpack imageMetadata.s3Path
+        Storage.get $ T.unpack imageMetadata.s3Path
     callIdfy :: Text -> Flow Documents.VerificationStatus
     callIdfy personId = do
       image1 <- getImage req.imageId1
@@ -859,7 +859,7 @@ getDriverRegisterGetLiveSelfie ::
 getDriverRegisterGetLiveSelfie (mbPersonId, _, _) requiredStatus = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   imageEntity <- ImageQuery.findByPersonIdImageTypeAndValidationStatus personId DTO.ProfilePhoto requiredStatus >>= fromMaybeM (ImageNotFound $ "Selfie image with requiredStatus = " <> show requiredStatus <> " for personId = " <> show personId)
-  image <- S3.get $ T.unpack imageEntity.s3Path
+  image <- Storage.get $ T.unpack imageEntity.s3Path
   return $ API.Types.UI.DriverOnboardingV2.GetLiveSelfieResp image
 
 postDriverRegisterAadhaarCard ::

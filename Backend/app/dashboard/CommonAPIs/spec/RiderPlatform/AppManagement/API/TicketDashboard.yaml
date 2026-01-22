@@ -16,7 +16,7 @@ imports:
   GetFileResponse: Domain.Types.MerchantOnboarding
   TicketPlaceDashboardDetails: Domain.Types.TicketDashboard
   File: Dashboard.Common
-  FileType: AWS.S3
+  FileType: Storage.Types
   FilePath: Kernel.Prelude
 
 importPackageOverrides:

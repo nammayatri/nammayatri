@@ -33,6 +33,11 @@ library
       AWS.S3.SignatureAuth
       AWS.S3.Types
       AWS.S3.Utils
+      GCP.GCS.Flow
+      GCP.GCS.Types
+      Storage.Flow
+      Storage.Types
+      StorageFlowTests
   other-modules:
       Paths_beckn_services
   hs-source-dirs:
@@ -100,6 +105,7 @@ library
     , servant-openapi3
     , servant-server
     , string-conversions
+    , temporary
     , text
     , time
     , unix
