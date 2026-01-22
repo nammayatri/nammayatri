@@ -109,6 +109,7 @@ getServiceNameConfigJSON = \case
     Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
     Call.TwillioCallConfig cfg -> (Domain.CallService Call.TwillioCall, toJSON cfg)
     Call.TataClickToCallConfig cfg -> (Domain.CallService Call.TataClickToCall, toJSON cfg)
+    Call.OzonetelConfig cfg -> (Domain.CallService Call.Ozonetel, toJSON cfg)
   Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
     Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
     Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)

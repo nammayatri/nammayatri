@@ -21,6 +21,7 @@ module Domain.Action.UI.Call
     GetCustomerMobileNumberResp,
     GetDriverMobileNumberResp,
     GetCallStatusRes,
+    AddOzonetelCampaignDataReq (..),
     initiateCallToCustomer,
     callStatusCallback,
     getCallStatus,
@@ -29,6 +30,7 @@ module Domain.Action.UI.Call
     getDriverMobileNumber,
     getCallTwillioAccessToken,
     getCallTwillioConnectedEntityTwiml,
+    addCampaignData,
   )
 where
 
@@ -62,9 +64,11 @@ import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Exotel.Types
 import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import qualified Kernel.External.Call.Interface.Types as CallTypes
+import qualified Kernel.External.Call.Ozonetel.Types as Ozonetel
 import Kernel.External.Encryption as KE
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (SchedulerFlow)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
@@ -74,6 +78,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
+import Kernel.Utils.Servant.Client ()
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Servant (FromHttpApiData (..))
@@ -90,7 +95,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Text.XML as XML
-import Tools.Call
+import Tools.Call hiding (addCampaignData)
 import Tools.Error
 import Tools.Notifications
 import TransactionLogs.Types
@@ -119,6 +124,13 @@ instance FromHttpApiData EntityType where
 
 newtype CallRes = CallRes
   { callId :: Id SCS.CallStatus
+  }
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
+
+-- | Simplified request for adding Ozonetel campaign data (only name and phoneNumber from frontend)
+data AddOzonetelCampaignDataReq = AddOzonetelCampaignDataReq
+  { name :: Text,
+    phoneNumber :: Text
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
@@ -649,3 +661,39 @@ sendFCMToBPPOnFailedCallStatus callStatus idInfo = do
                 sound = Nothing
               }
       return notificationData
+
+-- | Add campaign data to Ozonetel
+addCampaignData ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    CoreMetrics m,
+    MonadFlow m,
+    MonadReader r m
+  ) =>
+  AddOzonetelCampaignDataReq ->
+  Id DMOC.MerchantOperatingCity ->
+  m Ozonetel.OzonetelAddCampaignDataResp
+addCampaignData req merchantOpCityId = do
+  -- Get Ozonetel config from merchant service config
+  merchantServConfig <- QMSC.findByServiceAndCity (DMSC.CallService Call.Ozonetel) merchantOpCityId >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Call" "Ozonetel")
+  case merchantServConfig.serviceConfig of
+    DMSC.CallServiceConfig config ->
+      case config of
+        Call.OzonetelConfig ozonetelCfg -> do
+          let buildingRequest = buildRequest req ozonetelCfg
+          logInfo $ "Adding campaign data to Ozonetel: " <> show buildingRequest
+          Call.addCampaignData (Call.OzonetelConfig ozonetelCfg) buildingRequest
+        _ -> throwError $ InternalError "Ozonetel config not found"
+    _ -> throwError $ InternalError "Call service config not found"
+  where
+    buildRequest campaignReq ozonetelCfg =
+      Ozonetel.OzonetelAddCampaignDataReq
+        { campaignName = ozonetelCfg.campaignName,
+          userName = ozonetelCfg.userName,
+          checkDuplicate = ozonetelCfg.checkDuplicate,
+          action = ozonetelCfg.action,
+          phoneNumber = campaignReq.phoneNumber,
+          name = campaignReq.name
+        }
+
