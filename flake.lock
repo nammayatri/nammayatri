@@ -1822,17 +1822,14 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1762323148,
-        "narHash": "sha256-kwYzyCXQaivGZXIO6TDk+aDE9cvGM7isOtNyc0guuXA=",
-        "owner": "nammayatri",
-        "repo": "namma-dsl",
-        "rev": "ed196921a27eb79508e2361244239cc2c0826a8d",
-        "type": "github"
+        "lastModified": 1768295822,
+        "narHash": "sha256-YdoNgN2RovPzyLFITpToAYw4iP6XZUk+HvnPQf9NqWs=",
+        "path": "/Users/utkarsh/Desktop/namma-dsl",
+        "type": "path"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "namma-dsl",
-        "type": "github"
+        "path": "/Users/utkarsh/Desktop/namma-dsl",
+        "type": "path"
       }
     },
     "nix": {
@@ -3596,17 +3593,14 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1767609977,
-        "narHash": "sha256-y7tnMmaA03iNKoAiTHjBaTwdCoTRahwcMj0ltzlyFWg=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "49e7e17d6507e6b25984584a4984e6fb5196cc60",
-        "type": "github"
+        "lastModified": 1768993408,
+        "narHash": "sha256-CEXAo1AyYUjpULSAkU8itk48d7tIGoEHd1cr1VbWZvU=",
+        "path": "/Users/utkarsh/Desktop/shared-kernel",
+        "type": "path"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "path": "/Users/utkarsh/Desktop/shared-kernel",
+        "type": "path"
       }
     },
     "systems": {

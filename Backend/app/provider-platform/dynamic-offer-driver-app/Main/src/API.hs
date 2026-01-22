@@ -19,6 +19,7 @@ import qualified API.Dashboard as Dashboard
 import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.UI as UI
+import qualified API.UnifiedDashboard as UnifiedDashboard
 import qualified Data.ByteString as BS
 import Data.OpenApi
 import qualified Domain.Action.UI.DriverOnboarding.DigiLockerCallback as DigiLockerCallback
@@ -89,6 +90,7 @@ type MainAPI =
          )
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
+    :<|> UnifiedDashboard.APIV2
     :<|> Internal.API
 
 driverOfferAPI :: Proxy DriverOfferAPI
@@ -111,6 +113,7 @@ mainServer =
     :<|> juspayPayoutWebhookHandlerV2
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
+    :<|> UnifiedDashboard.handlerV2
     :<|> Internal.handler
 
 driverOfferServer :: FlowServer DriverOfferAPI

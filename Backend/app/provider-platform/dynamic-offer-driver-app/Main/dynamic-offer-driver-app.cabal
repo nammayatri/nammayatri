@@ -102,6 +102,7 @@ library
       API.UI.Route
       API.UI.Transporter
       API.UI.Whatsapp
+      API.UnifiedDashboard
       App
       App.Server
       Beckn.ACL.Cancel
@@ -308,6 +309,7 @@ library
       Domain.Action.UI.VehicleInfo
       Domain.Action.UI.Whatsapp
       Domain.Action.UI.WMB
+      Domain.Action.UnifiedDashboard.Provider.Person
       Domain.Types.Beckn.Status
       Domain.Types.Cac
       Domain.Types.CacType
@@ -854,6 +856,8 @@ library
       API.Action.UI.VehicleDetails
       API.Action.UI.VehicleInfo
       API.Action.UI.WMB
+      API.Action.UnifiedDashboard.Provider
+      API.Action.UnifiedDashboard.Provider.Person
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Driver
       API.Types.Dashboard.AppManagement.DriverSubscription
@@ -882,6 +886,9 @@ library
       API.Types.Dashboard.RideBooking.Ride
       API.Types.Dashboard.RideBooking.SearchRequest
       API.Types.Dashboard.RideBooking.Volunteer
+      API.Types.Provider
+      API.Types.Provider.Endpoints.Person
+      API.Types.Provider.Person
       API.Types.UI.CallFeedback
       API.Types.UI.DemandHotspots
       API.Types.UI.DriverOnboardingV2

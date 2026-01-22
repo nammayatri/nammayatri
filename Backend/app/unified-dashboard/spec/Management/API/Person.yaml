@@ -1,0 +1,214 @@
+imports:
+  Person: Domain.Types.Person
+  Role: Domain.Types.Role
+  Merchant: Domain.Types.Merchant
+  City: Kernel.Types.Beckn.Context
+  Id: Kernel.Types.Id
+  ShortId: Kernel.Types.Id
+  Text: Data.Text
+  Integer: Kernel.Prelude
+  Int: Kernel.Prelude
+  Maybe: Kernel.Prelude
+  Bool: Kernel.Prelude
+  UTCTime: Kernel.Prelude
+  APISuccess: Kernel.Types.APISuccess
+  Summary: Kernel.External.Verification.SafetyPortal.Types
+  AccessMatrix: Domain.Types.AccessMatrix
+  ServerName: Domain.Types.AccessMatrix
+  UserActionType: Domain.Types.AccessMatrix
+  RoleAPIEntity: Domain.Types.Role
+  AvailableCitiesForMerchant: Domain.Types.Merchant
+
+module: Person
+apiPrefix: ""
+
+types:
+  ListPersonResp:
+    recordType: Data
+    list: "[PersonAPIEntity]"
+    summary: Summary
+  PersonAPIEntity:
+    recordType: Data
+    id: Id Person
+    firstName: Text
+    lastName: Text
+    role: RoleAPIEntity
+    email: Maybe Text
+    mobileNumber: Text
+    mobileCountryCode: Text
+    availableMerchants: "[ShortId Merchant]"
+    availableCitiesForMerchant: "Maybe [AvailableCitiesForMerchant]"
+    registeredAt: UTCTime
+  MerchantCityAccessReq:
+    recordType: Data
+    merchantId: ShortId Merchant
+    operatingCity: City
+  MerchantAccessResp:
+    recordType: Data
+    merchantId: ShortId Merchant
+    operatingCity: City
+  ChangeEnabledStatusReq:
+    recordType: Data
+    enabled: Bool
+  ChangeEmailByAdminReq:
+    recordType: Data
+    newEmail: Text
+  ChangePasswordByAdminReq:
+    recordType: Data
+    newPassword: Text
+  ChangeMobileNumberByAdminReq:
+    recordType: Data
+    newMobileNumber: Text
+  ChangePasswordReq:
+    recordType: Data
+    oldPassword: Text
+    newPassword: Text
+  ChangePasswordAfterExpiryReq:
+    recordType: Data
+    email: Text
+    oldPassword: Text
+    newPassword: Text
+  AccessMatrixRowAPIEntity:
+    recordType: Data
+    role: RoleAPIEntity
+    accessMatrixRow: "[AccessMatrixItemAPIEntity]"
+  AccessMatrixItemAPIEntity:
+    recordType: Data
+    serverName: Maybe ServerName
+    userActionType: UserActionType
+
+apis:
+  # Admin endpoints
+  - GET:
+      endpoint: /person/list
+      name: GetPersonList
+      auth: ApiAuthV3
+      query:
+        - searchString: Text
+        - limit: Integer
+        - offset: Integer
+        - personId: Id Person
+      response:
+        type: ListPersonResp
+  - POST:
+      endpoint: /person/{personId}/assignRole/{roleId}
+      name: PostPersonAssignRole
+      auth: ApiAuthV3
+      params:
+        personId: Id Person
+        roleId: Id Role
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /person/{personId}/assignMerchantCityAccess
+      name: PostPersonAssignMerchantCityAccess
+      auth: ApiAuthV3
+      params:
+        personId: Id Person
+      request:
+        type: MerchantCityAccessReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /person/{personId}/resetMerchantAccess
+      name: PostPersonResetMerchantAccess
+      auth: ApiAuthV3
+      params:
+        personId: Id Person
+      request:
+        type: MerchantCityAccessReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /person/{personId}/resetMerchantCityAccess
+      name: PostPersonResetMerchantCityAccess
+      auth: ApiAuthV3
+      params:
+        personId: Id Person
+      request:
+        type: MerchantCityAccessReq
+      response:
+        type: APISuccess
+  - DELETE:
+      endpoint: /person/{personId}
+      name: DeletePerson
+      auth: ApiAuthV3
+      params:
+        personId: Id Person
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /person/{personId}/changeEnabledStatus
+      name: PostPersonChangeEnabledStatus
+      auth: ApiAuthV3
+      params:
+        personId: Id Person
+      request:
+        type: ChangeEnabledStatusReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /person/{personId}/change/email
+      name: PostPersonChangeEmailByAdmin
+      auth: ApiAuthV3
+      params:
+        personId: Id Person
+      request:
+        type: ChangeEmailByAdminReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /person/{personId}/change/password
+      name: PostPersonChangePasswordByAdmin
+      auth: ApiAuthV3
+      params:
+        personId: Id Person
+      request:
+        type: ChangePasswordByAdminReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /person/{personId}/change/mobile
+      name: PostPersonChangeMobileByAdmin
+      auth: ApiAuthV3
+      params:
+        personId: Id Person
+      request:
+        type: ChangeMobileNumberByAdminReq
+      response:
+        type: APISuccess
+  # User endpoints
+  - GET:
+      endpoint: /user/profile
+      name: GetUserProfile
+      auth: ApiAuthV3
+      response:
+        type: PersonAPIEntity
+  - GET:
+      endpoint: /user/getCurrentMerchant
+      name: GetUserCurrentMerchant
+      auth: ApiAuthV3
+      response:
+        type: MerchantAccessResp
+  - POST:
+      endpoint: /user/changePassword
+      name: PostUserChangePassword
+      auth: ApiAuthV3
+      request:
+        type: ChangePasswordReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /user/getAccessMatrix
+      name: GetUserAccessMatrix
+      auth: ApiAuthV3
+      response:
+        type: AccessMatrixRowAPIEntity
+  - POST:
+      endpoint: /user/changePasswordAfterExpiry
+      name: PostUserChangePasswordAfterExpiry
+      auth: ApiAuthV3
+      request:
+        type: ChangePasswordAfterExpiryReq
+      response:
+        type: APISuccess

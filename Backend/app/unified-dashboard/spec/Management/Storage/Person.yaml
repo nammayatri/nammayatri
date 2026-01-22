@@ -1,0 +1,85 @@
+# Person entity - without dashboardAccessType and dashboardType
+# All access control is via AccessMatrix entries based on roleId + serverName + userActionType
+
+imports:
+  Role: Domain.Types.Role
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  UTCTime: Kernel.Prelude
+  Id: Kernel.Types.Id
+  Bool: Kernel.Prelude
+  Text: Data.Text
+  Maybe: Kernel.Prelude
+
+Person:
+  tableName: person
+  fields:
+    id: Id Person
+    firstName: Text
+    lastName: Text
+    roleId: Id Role
+    email: "Maybe (EncryptedHashedField e Text)"
+    mobileNumber: "Maybe (EncryptedHashedField e Text)"
+    mobileCountryCode: Maybe Text
+    passwordHash: Maybe DbHash
+    createdAt: UTCTime
+    receiveNotification: Maybe Bool
+    updatedAt: UTCTime
+    verified: Maybe Bool
+    rejectionReason: Maybe Text
+    rejectedAt: Maybe UTCTime
+    passwordUpdatedAt: UTCTime
+    approvedBy: Maybe (Id Person)
+    rejectedBy: Maybe (Id Person)
+
+  beamFields:
+    email:
+      emailEncrypted: Maybe Text
+      emailHash: Maybe DbHash
+    mobileNumber:
+      mobileNumberEncrypted: Maybe Text
+      mobileNumberHash: Maybe DbHash
+
+  beamType:
+    email: "Maybe Text"
+    mobileNumber: "Maybe Text"
+
+  fromTType:
+    email: EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash|E
+    mobileNumber: EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash|E
+
+  toTType:
+    emailEncrypted: (email <&> unEncrypted . (.encrypted))|E
+    emailHash: (email <&> (.hash))|E
+    mobileNumberEncrypted: (mobileNumber <&> unEncrypted . (.encrypted))|E
+    mobileNumberHash: (mobileNumber <&> (.hash))|E
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByEmailHash:
+      kvFunction: findOneWithKV
+      where: emailHash|B
+    findByEmailAndPassword:
+      kvFunction: findOneWithKV
+      where:
+        and: [emailHash|B, passwordHash|B]
+    findByMobileNumberHash:
+      kvFunction: findOneWithKV
+      where:
+        and: [mobileNumberHash|B, mobileCountryCode]
+    findByMobileNumberAndPassword:
+      kvFunction: findOneWithKV
+      where:
+        and: [mobileNumberHash|B, mobileCountryCode, passwordHash|B]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

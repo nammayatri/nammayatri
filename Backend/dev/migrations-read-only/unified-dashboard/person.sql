@@ -1,0 +1,22 @@
+CREATE TABLE atlas_dashboard.person ();
+
+ALTER TABLE atlas_dashboard.person ADD COLUMN approved_by character varying(36) ;
+ALTER TABLE atlas_dashboard.person ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_dashboard.person ADD COLUMN email_encrypted text ;
+ALTER TABLE atlas_dashboard.person ADD COLUMN email_hash text ;
+ALTER TABLE atlas_dashboard.person ADD COLUMN first_name text NOT NULL;
+ALTER TABLE atlas_dashboard.person ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_dashboard.person ADD COLUMN last_name text NOT NULL;
+ALTER TABLE atlas_dashboard.person ADD COLUMN mobile_country_code text ;
+ALTER TABLE atlas_dashboard.person ADD COLUMN mobile_number_encrypted text ;
+ALTER TABLE atlas_dashboard.person ADD COLUMN mobile_number_hash text ;
+ALTER TABLE atlas_dashboard.person ADD COLUMN password_hash text ;
+ALTER TABLE atlas_dashboard.person ADD COLUMN password_updated_at timestamp with time zone NOT NULL;
+ALTER TABLE atlas_dashboard.person ADD COLUMN receive_notification boolean ;
+ALTER TABLE atlas_dashboard.person ADD COLUMN rejected_at timestamp with time zone ;
+ALTER TABLE atlas_dashboard.person ADD COLUMN rejected_by character varying(36) ;
+ALTER TABLE atlas_dashboard.person ADD COLUMN rejection_reason text ;
+ALTER TABLE atlas_dashboard.person ADD COLUMN role_id character varying(36) NOT NULL;
+ALTER TABLE atlas_dashboard.person ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_dashboard.person ADD COLUMN verified boolean ;
+ALTER TABLE atlas_dashboard.person ADD PRIMARY KEY ( id);

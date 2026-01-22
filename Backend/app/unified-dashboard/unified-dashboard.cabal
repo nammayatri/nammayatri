@@ -1,0 +1,274 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           unified-dashboard
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      API
+      App
+      Domain.Action.Management.Person
+      Domain.Action.Management.Registration
+      Domain.Action.Management.Role
+      Domain.Action.Management.Transaction
+      Domain.Action.Provider.Person
+      Domain.Action.Provider.Registration
+      Domain.Types.AccessMatrix.Singletons
+      Domain.Types.ServerName
+      Environment
+      Storage.Beam.BeamFlow
+      Storage.Beam.Common
+      Storage.Beam.CommonInstances
+      Storage.Queries.PersonExtra
+      Storage.Queries.RoleExtra
+      Storage.Queries.TransactionExtra
+      Tools.Auth.Api
+      Tools.Auth.Common
+      Tools.Auth.Merchant
+      Tools.Beam.UtilsTH
+      Tools.Client
+      Tools.Error
+      Tools.Servant.HeaderAuth
+      Tools.Utils
+      API.Action.Management
+      API.Action.Management.Person
+      API.Action.Management.Registration
+      API.Action.Management.Role
+      API.Action.Management.Transaction
+      API.Action.Provider
+      API.Action.Provider.Person
+      API.Client.Provider
+      API.Types.Management
+      API.Types.Management.Endpoints.Person
+      API.Types.Management.Endpoints.Registration
+      API.Types.Management.Endpoints.Role
+      API.Types.Management.Endpoints.Transaction
+      API.Types.Management.Person
+      API.Types.Management.Registration
+      API.Types.Management.Role
+      API.Types.Management.Transaction
+      Domain.Types.AccessMatrix
+      Domain.Types.Merchant
+      Domain.Types.MerchantAccess
+      Domain.Types.Person
+      Domain.Types.RegistrationToken
+      Domain.Types.Role
+      Domain.Types.Transaction
+      Storage.Beam.AccessMatrix
+      Storage.Beam.Merchant
+      Storage.Beam.MerchantAccess
+      Storage.Beam.Person
+      Storage.Beam.RegistrationToken
+      Storage.Beam.Role
+      Storage.Beam.Transaction
+      Storage.Queries.AccessMatrix
+      Storage.Queries.Merchant
+      Storage.Queries.MerchantAccess
+      Storage.Queries.OrphanInstances.Person
+      Storage.Queries.OrphanInstances.Role
+      Storage.Queries.OrphanInstances.Transaction
+      Storage.Queries.Person
+      Storage.Queries.RegistrationToken
+      Storage.Queries.Role
+      Storage.Queries.Transaction
+  other-modules:
+      API.Action.Management.AccessMatrix
+      API.Types.Management.AccessMatrix
+      API.Types.Management.Endpoints.AccessMatrix
+      Domain.Action.Management.AccessMatrix
+      API.Action.Management.Merchant
+      API.Types.Management.Merchant
+      API.Types.Management.Endpoints.Merchant
+      Domain.Action.Management.Merchant
+      Storage.Queries.MerchantExtra
+      Storage.Queries.OrphanInstances.Merchant
+  hs-source-dirs:
+      src
+      src-read-only
+  default-extensions:
+      AllowAmbiguousTypes
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      TemplateHaskell
+      DerivingStrategies
+      EmptyDataDecls
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -fhide-source-paths -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , base32
+    , beam-core
+    , beam-postgres
+    , beckn-services
+    , beckn-spec
+    , bytestring
+    , containers
+    , cryptonite
+    , esqueleto
+    , euler-hs
+    , http-client
+    , http-client-tls
+    , mobility-core
+    , openapi3
+    , passetto-client
+    , persistent
+    , persistent-postgresql
+    , random
+    , record-dot-preprocessor
+    , record-hasfield
+    , sequelize
+    , servant-client
+    , servant-openapi3
+    , servant-server
+    , shared-services
+    , singletons-th
+    , template-haskell
+    , text
+    , time
+    , unordered-containers
+    , utf8-string
+    , yudhishthira
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4
+
+executable unified-dashboard-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_unified_dashboard
+  hs-source-dirs:
+      server
+  default-extensions:
+      AllowAmbiguousTypes
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      TemplateHaskell
+      DerivingStrategies
+      EmptyDataDecls
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , base32
+    , beam-core
+    , beam-postgres
+    , beckn-services
+    , beckn-spec
+    , bytestring
+    , containers
+    , cryptonite
+    , esqueleto
+    , euler-hs
+    , http-client
+    , http-client-tls
+    , mobility-core
+    , openapi3
+    , passetto-client
+    , persistent
+    , persistent-postgresql
+    , random
+    , record-dot-preprocessor
+    , record-hasfield
+    , sequelize
+    , servant-client
+    , servant-openapi3
+    , servant-server
+    , shared-services
+    , singletons-th
+    , template-haskell
+    , text
+    , time
+    , unified-dashboard
+    , unordered-containers
+    , utf8-string
+    , yudhishthira
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4

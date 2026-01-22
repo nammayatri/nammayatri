@@ -1,0 +1,64 @@
+imports:
+  Person: Dashboard.Common
+  APISuccess: Kernel.Types.APISuccess
+  Text: Data.Text
+  Id: Kernel.Types.Id
+  Maybe: Kernel.Prelude
+
+module: Person
+apiPrefix: ""
+
+types:
+  CreatePersonReq:
+    firstName: Text
+    lastName: Text
+    mobileNumber: Text
+    mobileCountryCode: Text
+    email: Maybe Text
+    password: Maybe Text
+    roleName: Text
+    derive: "'HideSecrets"
+  CreatePersonResp:
+    recordType: NewType
+    personId: Id Person
+  SendOtpReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+  SendOtpResp:
+    recordType: NewType
+    otp: Text
+
+apis:
+  - POST: # Generic Person Creation API
+      endpoint: /person/create
+      auth: ApiAuthV3
+      name: PostPersonCreate
+      request:
+        type: CreatePersonReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /person/create
+            auth: ApiAuthV3
+            request:
+              type: CreatePersonReq
+            response:
+              type: CreatePersonResp
+  - POST: # Send OTP for login
+      endpoint: /user/login/sendOtp
+      name: PostUserLoginSendOtp
+      auth: NoAuth
+      request:
+        type: SendOtpReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /registration/sendOtp
+            auth: NoAuth
+            request:
+              type: SendOtpReq
+            response:
+              type: SendOtpResp
+

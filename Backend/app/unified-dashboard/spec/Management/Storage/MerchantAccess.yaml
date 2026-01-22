@@ -1,0 +1,48 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  City: Kernel.Types.Beckn.Context
+  UTCTime: Kernel.Prelude
+  Id: Kernel.Types.Id
+  ShortId: Kernel.Types.Id
+  Bool: Kernel.Prelude
+  Text: Data.Text
+  Maybe: Kernel.Prelude
+
+MerchantAccess:
+  tableName: merchant_access
+  fields:
+    id: Id MerchantAccess
+    personId: Id Person
+    merchantId: Id Merchant
+    merchantShortId: ShortId Merchant
+    operatingCity: City
+    secretKey: Maybe Text
+    is2faEnabled: Bool
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByPersonIdAndMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [personId, merchantId]
+    findByPersonIdAndMerchantIdAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, merchantId, operatingCity]
+    findAllByPersonId:
+      kvFunction: findAllWithKV
+      where: personId
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+    findAllUserAccountForMerchant:
+      kvFunction: findAllWithKV
+      where: merchantId

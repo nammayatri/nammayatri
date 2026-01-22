@@ -1,0 +1,75 @@
+imports:
+  ServerName: Domain.Types.AccessMatrix
+  City: Kernel.Types.Beckn.Context
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  UTCTime: Kernel.Prelude
+  Id: Kernel.Types.Id
+  ShortId: Kernel.Types.Id
+  Bool: Kernel.Prelude
+  Text: Data.Text
+  Maybe: Kernel.Prelude
+
+Merchant:
+  tableName: merchant
+  fields:
+    id: Id Merchant
+    shortId: ShortId Merchant
+    serverNames: "[ServerName]"
+    is2faMandatory: Bool
+    defaultOperatingCity: City
+    supportedOperatingCities: "[City]"
+    domain: Maybe Text
+    website: Maybe Text
+    authToken: "Maybe (EncryptedHashedField e Text)"
+    enabled: Maybe Bool
+    createdAt: UTCTime
+    requireAdminApprovalForFleetOnboarding: Maybe Bool
+    verifyFleetWhileLogin: Maybe Bool
+    hasFleetMemberHierarchy: Maybe Bool
+    isStrongNameCheckRequired: Maybe Bool
+    singleActiveSessionOnly: Maybe Bool
+
+  beamFields:
+    authToken:
+      authTokenEncrypted: Maybe Text
+      authTokenHash: Maybe DbHash
+
+  beamType:
+    authToken: "Maybe Text"
+
+  fromTType:
+    authToken: EncryptedHashed <$> (Encrypted <$> authTokenEncrypted) <*> authTokenHash|E
+
+  toTType:
+    authTokenEncrypted: (authToken <&> unEncrypted . (.encrypted))|E
+    authTokenHash: (authToken <&> (.hash))|E
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+
+  sqlType:
+    serverNames: text[]
+    supportedOperatingCities: text[]
+
+  constraints:
+    id: PrimaryKey
+    shortId: SecondaryKey
+
+  types:
+    AvailableCitiesForMerchant:
+      recordType: Data
+      merchantShortId: ShortId Merchant
+      operatingCity: "[City]"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByShortId:
+      kvFunction: findOneWithKV
+      where: shortId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
