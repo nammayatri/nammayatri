@@ -1113,6 +1113,7 @@ TransporterConfig:
     allowRcUnlinkWhenDriverOffline: Maybe Bool
     deleteDriverBankAccountWhenLinkToFleet: Maybe Bool
     digilockerEnabled: Maybe Bool
+    enableScheduleReallocation: Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1524,6 +1525,7 @@ TransporterConfig:
     exotelStatusCheckSchedulerDelay: "120"
     cachedDevicesOSForSearchRequest: "'{}'"
     scheduledRideSearchRepeatLimit: "10"
+    enableScheduleReallocation: "false"
     dailyConditionCooldownTimeHours: "24"
     weeklyConditionCooldownTimeHours: "168"
     disableListScheduledBookingAPI: "false"
