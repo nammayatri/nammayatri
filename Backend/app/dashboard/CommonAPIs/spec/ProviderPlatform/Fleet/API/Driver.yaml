@@ -96,6 +96,13 @@ apis:
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLES
 
+  - POST:
+      endpoint: addRidePayoutAccountNumber
+      auth: ApiAuthV2
+      request:
+        type: AddRidePayoutAccountNumberReq
+      response:
+        type: APISuccess
   - POST: # AddVehicleForFleetAPI
       endpoint: /{mobileNo}/fleet/addVehicle
       auth: ApiAuthV2
@@ -219,6 +226,7 @@ apis:
         - mbFleetOwnerId: Text
         - mbIsActive: Bool
         - mbMemberPersonId: Text
+        - mbSendDriverMobileNumber: Bool
       response:
         type: ListVehicleResT
       migrate:
@@ -1230,6 +1238,14 @@ apis:
             response:
               type: OnboardedDriversAndUnlinkedVehiclesRes
 types:
+  AddRidePayoutAccountNumberReq:
+    - driverMobileNumber: Text
+    - driverMobileNumberCountryCode: Text
+    - accountNumber: Text
+    - ifscCode: Text
+    - bankName: Maybe Text
+    - vehicleRegistrationNumber: Text
+    - derive: "'HideSecrets"
   EstimatedRouteDetails:
     - polyline: Maybe Text
     - duration: Maybe Seconds
@@ -1398,6 +1414,8 @@ types:
     - isActive: Maybe Bool
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - driverMobileNumber: Maybe Text
+    - driverMobileCountryCode: Maybe Text
   FleetBadgeRes:
     - recordType: NewType
     - fleetBadgeInfos: [FleetBadgesAPIEntity]

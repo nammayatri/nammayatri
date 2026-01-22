@@ -19,7 +19,10 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Operator.Registration.API)
-handler merchantId city = postOperatorRegister merchantId city
+handler merchantId city = postOperatorRegister merchantId city :<|> postRegistrationDashboardRegister merchantId city
 
 postOperatorRegister :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Operator.Registration.OperatorRegisterReq -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.Registration.OperatorRegisterResp)
 postOperatorRegister a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Operator.Registration.postOperatorRegister a3 a2 a1
+
+postRegistrationDashboardRegister :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Operator.Registration.CreateDashboardOperatorReq -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.Registration.OperatorRegisterResp)
+postRegistrationDashboardRegister a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Operator.Registration.postRegistrationDashboardRegister a3 a2 a1

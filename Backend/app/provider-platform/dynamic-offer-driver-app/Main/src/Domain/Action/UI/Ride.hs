@@ -262,7 +262,7 @@ otpRideCreate driver otpCode booking clientId = do
   when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
-  unless (driverInfo.enabled) $ throwError DriverAccountDisabled
+  unless (driverInfo.enabled || fromMaybe False transporterConfig.allowDisableDriverToTakeSpecialZoneRide) $ throwError DriverAccountDisabled
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False
   mFleetOwnerId <- QFDA.findByDriverId driver.id True

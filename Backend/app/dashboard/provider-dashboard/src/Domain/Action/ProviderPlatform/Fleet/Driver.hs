@@ -69,6 +69,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverDashboardFleetEstimateRoute,
     postDriverFleetTripTransactionsV2,
     getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
+    postDriverAddRidePayoutAccountNumber,
   )
 where
 
@@ -452,12 +453,12 @@ getDriverFleetGetAllBadge merchantShortId opCity apiTokenInfo mblimit mboffset m
   let memberPersonId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllBadge) mblimit mboffset mbSearchString mbFleetOwnerId mbBadgeType mbIsActive (Just memberPersonId)
 
-getDriverFleetGetAllVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Flow Common.ListVehicleResT
-getDriverFleetGetAllVehicle merchantShortId opCity apiTokenInfo mbLimit mbOffset mbRegNumberString mbFleetOwnerId mbIsActive _ = do
+getDriverFleetGetAllVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Bool -> Flow Common.ListVehicleResT
+getDriverFleetGetAllVehicle merchantShortId opCity apiTokenInfo mbLimit mbOffset mbRegNumberString mbFleetOwnerId mbIsActive _ mbSendDriverMobileNumber = do
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let memberPersonId = apiTokenInfo.personId.getId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllVehicle) mbLimit mbOffset mbRegNumberString mbFleetOwnerId mbIsActive (Just memberPersonId)
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetGetAllVehicle) mbLimit mbOffset mbRegNumberString mbFleetOwnerId mbIsActive (Just memberPersonId) mbSendDriverMobileNumber
 
 getDriverFleetGetAllDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Flow Common.FleetListDriverResT
 getDriverFleetGetAllDriver merchantShortId opCity apiTokenInfo mbLimit mbOffset mbMobileNumber mbName mbSearchString mbFleetOwnerId mbIsActive _ = do
@@ -602,3 +603,9 @@ getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles merchantShortId opCity a
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId' <- getFleetOwnerId apiTokenInfo.personId.getId (Just fleetOwnerId)
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles) fleetOwnerId' limit offset
+
+postDriverAddRidePayoutAccountNumber :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AddRidePayoutAccountNumberReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverAddRidePayoutAccountNumber merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $ do Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverAddRidePayoutAccountNumber) req

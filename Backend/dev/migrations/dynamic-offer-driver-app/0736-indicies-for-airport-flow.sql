@@ -1,0 +1,2 @@
+CREATE INDEX idx_driver_ride_payout_bank_account_rc_id ON atlas_driver_offer_bpp.driver_ride_payout_bank_account USING btree (rc_id);
+CREATE INDEX idx_driver_ride_payout_bank_account_driver_id ON atlas_driver_offer_bpp.driver_ride_payout_bank_account USING btree (driver_id);

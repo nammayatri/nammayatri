@@ -1,4 +1,4 @@
-module Domain.Action.ProviderPlatform.Operator.Registration (postOperatorRegister) where
+module Domain.Action.ProviderPlatform.Operator.Registration (postOperatorRegister, postRegistrationDashboardRegister) where
 
 import qualified API.Client.ProviderPlatform.Operator as Client
 import qualified API.Types.ProviderPlatform.Operator.Registration as Common
@@ -9,7 +9,7 @@ import qualified Domain.Types.Person.Type as DP
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
-import Kernel.External.Encryption (encrypt)
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
@@ -45,37 +45,47 @@ postOperatorRegister merchantShortId opCity apiTokenInfo req = do
   transaction <- ST.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   res <- ST.withTransactionStoring transaction do
     Client.callOperatorAPI checkedMerchantId opCity (.registrationDSL.postOperatorRegister) req
-  registerOperator opCity req res.personId merchant
+  registerOperator opCity req.email req.mobileNumber req.mobileCountryCode req.firstName req.lastName Nothing res.personId merchant Nothing
   pure Success
 
 registerOperator ::
   Context.City ->
-  Common.OperatorRegisterReq ->
+  Maybe Text ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
   Id Common.Operator ->
   DM.Merchant ->
+  Maybe Text ->
   Flow ()
-registerOperator opCity req operatorId merchant = do
-  operatorRole <- QRole.findByDashboardAccessType DRole.DASHBOARD_OPERATOR >>= fromMaybeM (RoleNotFound "OPERATOR")
-  operator <- buildOperator req operatorId operatorRole
+registerOperator opCity email mobileNumber mobileCountryCode firstName lastName password operatorId merchant mbRoleId = do
+  operatorRole <-
+    case mbRoleId of
+      Just roleId -> QRole.findById (Id roleId) >>= fromMaybeM (RoleNotFound roleId)
+      Nothing -> QRole.findByDashboardAccessType DRole.DASHBOARD_OPERATOR >>= fromMaybeM (RoleNotFound "OPERATOR")
+  operator <- buildOperator email mobileNumber mobileCountryCode firstName lastName password operatorId operatorRole
   merchantAccess <- DP.buildMerchantAccess operator.id merchant.id merchant.shortId opCity
   QP.create operator
   QAccess.create merchantAccess
 
-buildOperator :: (EncFlow m r) => Common.OperatorRegisterReq -> Id Common.Operator -> DRole.Role -> m DP.Person
-buildOperator req operatorId role = do
+buildOperator :: (EncFlow m r) => Maybe Text -> Text -> Text -> Text -> Text -> Maybe Text -> Id Common.Operator -> DRole.Role -> m DP.Person
+buildOperator emailUnencrypted mobileNumberUnencrypted mobileCountryCode firstName lastName password operatorId role = do
   now <- getCurrentTime
-  mobileNumber <- encrypt req.mobileNumber
-  email <- forM req.email encrypt
+  mobileNumber <- encrypt mobileNumberUnencrypted
+  email <- forM emailUnencrypted encrypt
+  passwordHash <- getDbHash `mapM` password
   return
     DP.Person
       { id = cast @Common.Operator @DP.Person operatorId,
-        firstName = req.firstName,
-        lastName = req.lastName,
+        firstName = firstName,
+        lastName = lastName,
         roleId = role.id,
         email = email,
-        mobileNumber = mobileNumber,
-        mobileCountryCode = req.mobileCountryCode,
-        passwordHash = Nothing,
+        mobileNumber,
+        mobileCountryCode = mobileCountryCode,
+        passwordHash,
         dashboardAccessType = Just role.dashboardAccessType,
         receiveNotification = Nothing,
         createdAt = now,
@@ -98,3 +108,13 @@ validateOperator Common.OperatorRegisterReq {..} =
       validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode,
       validateField "email" email $ InMaybe P.email
     ]
+
+postRegistrationDashboardRegister :: (ShortId DM.Merchant -> Context.City -> ApiTokenInfo -> Common.CreateDashboardOperatorReq -> Flow APISuccess)
+postRegistrationDashboardRegister merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  unlessM (null <$> QP.findByEmailOrMobile (Just req.email) req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone or Email already registered")
+  void $ merchantServerAccessCheck merchant
+  res <- Client.callOperatorAPI checkedMerchantId opCity (.registrationDSL.postRegistrationDashboardRegister) req
+  registerOperator opCity (Just req.email) req.mobileNumber req.mobileCountryCode req.firstName req.lastName (Just req.password) res.personId merchant (Just req.roleId)
+  pure Success

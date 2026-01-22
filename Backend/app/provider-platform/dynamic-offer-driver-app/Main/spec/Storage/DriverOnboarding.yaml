@@ -893,6 +893,28 @@ DriverBankAccount:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+DriverRidePayoutBankAccount:
+  tableName: driver_ride_payout_bank_account
+  fields:
+    id: Id DriverRidePayoutBankAccount
+    bankAccountNumber: EncryptedHashedField e Text
+    bankIfscCode: EncryptedHashedField e Text
+    driverId: Id Person
+    rcId: Id VehicleRegistrationCertificate
+
+  constraints:
+    id: PrimaryKey
+    driverId: "!SecondaryKey" # forcing to be a secondary key
+    rcId: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    findByRcId:
+      kvFunction: findOneWithKV
+      where: rcId
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
 FleetOwnerDocumentVerificationConfig:
   tableName: fleet_owner_document_verification_config
   fields:
