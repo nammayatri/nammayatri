@@ -23,6 +23,7 @@ Refunds:
     createdAt : UTCTime
     updatedAt : UTCTime
     isApiCallSuccess: Maybe Bool
+    arn: Maybe Text
 
   constraints:
     orderId: SecondaryKey
@@ -46,7 +47,7 @@ Refunds:
       where: orderId
     updateRefundsEntryByResponse:
       kvFunction: updateWithKV
-      params: [initiatedBy, idAssignedByServiceProvider, errorMessage, errorCode, status]
+      params: [initiatedBy, idAssignedByServiceProvider, errorMessage, errorCode, status, arn]
       where: id
     updateRefundsEntryByStripeResponse:
       kvFunction: updateWithKV

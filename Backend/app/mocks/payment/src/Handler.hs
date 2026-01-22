@@ -433,7 +433,8 @@ buildOrderStatusResp order mTxn refunds offers = do
           errorMessage = refund.errorMessage,
           errorCode = refund.errorCode,
           initiatedBy = refund.initiatedBy,
-          requestId = getShortId refund.shortId
+          requestId = getShortId refund.shortId,
+          arn = refund.arn
         }
 
 statusToPaymentStatus :: Payment.TransactionStatus -> Juspay.PaymentStatus
@@ -482,7 +483,7 @@ toJuspayRefundsData Payment.RefundsData {..} =
       error_code = errorCode,
       initiated_by = initiatedBy,
       unique_request_id = requestId,
-      arn = Nothing
+      arn = arn
     }
 
 toJuspayCardInfo :: Payment.CardInfo -> Juspay.CardInfo

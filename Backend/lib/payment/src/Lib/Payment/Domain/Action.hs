@@ -1366,7 +1366,8 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         idAssignedByServiceProvider = Nothing,
         initiatedBy = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        arn = Nothing
       }
 
 upsertRefundStatus :: (BeamFlow m r) => DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
@@ -1377,8 +1378,8 @@ upsertRefundStatus order Payment.RefundsData {..} =
           QRefunds.findById (Id requestId)
             >>= \case
               Just refundEntry -> do
-                QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status (Id requestId)
-                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode}
+                QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn (Id requestId)
+                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn}
               Nothing -> do
                 refundEntry <- mkRefundsEntry order.merchantId requestId order.shortId order.amount status
                 QRefunds.create refundEntry

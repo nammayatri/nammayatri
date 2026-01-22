@@ -11,7 +11,8 @@ import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 
 data Refunds = Refunds
-  { createdAt :: Kernel.Prelude.UTCTime,
+  { arn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
     errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds,
