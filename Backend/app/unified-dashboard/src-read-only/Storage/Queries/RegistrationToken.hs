@@ -24,6 +24,33 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RegistrationToken.RegistrationToken] -> m ())
 createMany = traverse_ create
 
+deleteAllByMerchantIdAndCity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> m ())
+deleteAllByMerchantIdAndCity merchantId operatingCity = do deleteWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.operatingCity $ Se.Eq operatingCity]]
+
+deleteAllByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteAllByPersonId personId = do deleteWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+
+deleteAllByPersonIdAndMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ())
+deleteAllByPersonIdAndMerchantId personId merchantId = do
+  deleteWithKV
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
+        ]
+    ]
+
+deleteAllByPersonIdAndMerchantIdAndCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> m ())
+deleteAllByPersonIdAndMerchantIdAndCity personId merchantId operatingCity = do
+  deleteWithKV
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
+          Se.Is Beam.operatingCity $ Se.Eq operatingCity
+        ]
+    ]
+
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken -> m ())
 deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -76,7 +103,6 @@ updateByPrimaryKey (Domain.Types.RegistrationToken.RegistrationToken {..}) = do
       Se.Set Beam.operatingCity operatingCity,
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.token token,
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -93,7 +119,6 @@ instance FromTType' Beam.RegistrationToken Domain.Types.RegistrationToken.Regist
             operatingCity = operatingCity,
             personId = Kernel.Types.Id.Id personId,
             token = token,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             updatedAt = updatedAt
           }
 
@@ -107,6 +132,5 @@ instance ToTType' Beam.RegistrationToken Domain.Types.RegistrationToken.Registra
         Beam.operatingCity = operatingCity,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.token = token,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.updatedAt = updatedAt
       }

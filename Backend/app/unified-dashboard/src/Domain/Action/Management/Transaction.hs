@@ -110,7 +110,6 @@ buildTransaction endpoint serverName apiTokenInfo commonDriverId commonRideId re
         request = encodeToText <$> request,
         response = Nothing,
         responseError = Nothing,
-        merchantOperatingCityId = Nothing,
         createdAt = now,
         updatedAt = now
       }

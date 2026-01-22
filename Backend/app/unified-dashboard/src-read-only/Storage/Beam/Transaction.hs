@@ -23,7 +23,6 @@ data TransactionT f = TransactionT
     response :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
     responseError :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
     serverName :: (B.C f (Kernel.Prelude.Maybe Domain.Types.AccessMatrix.ServerName)),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

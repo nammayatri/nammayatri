@@ -10,6 +10,7 @@ where
 
 import qualified API.Types.Management.Merchant
 import qualified API.Types.Management.Person
+import Data.List (nub)
 import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DMerchant
@@ -33,6 +34,7 @@ import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.MerchantExtra as QMerchantExtra
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Common as Auth
@@ -165,14 +167,18 @@ changeMerchantEnableState ::
   ApiTokenInfo ->
   API.Types.Management.Merchant.ChangeMerchantEnableStateReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-changeMerchantEnableState _ opCity _ req = do
+changeMerchantEnableState _ _opCity _ req = do
   let shortId = Kernel.Types.Id.ShortId req.merchantShortId :: Kernel.Types.Id.ShortId DMerchant.Merchant
   merchant <- QMerchant.findByShortId shortId >>= fromMaybeM (InvalidRequest $ "Merchant with shortId " <> req.merchantShortId <> " not found")
   when (merchant.enabled == Just req.enable) $ throwError (InvalidRequest "Merchant already in the requested state")
 
-  Auth.cleanCachedTokensOfMerchantAndCity merchant.id opCity
-  -- Note: RegistrationToken deletion would need to be added if QR.deleteAllByMerchantIdAndCity exists
-  QMerchantExtra.updateEnableStatus merchant.shortId req.enable
+  -- Invalidate tokens and cached data for all operating cities of the merchant
+  let allOperatingCities = merchant.defaultOperatingCity : merchant.supportedOperatingCities
+  forM_ (nub allOperatingCities) $ \city -> do
+    Auth.cleanCachedTokensOfMerchantAndCity merchant.id city
+    QR.deleteAllByMerchantIdAndCity merchant.id city
+
+  QMerchant.updateEnableStatus (Just req.enable) merchant.shortId
   pure Kernel.Types.APISuccess.Success
 
 -- Helper functions
@@ -227,7 +233,6 @@ buildMerchantAccess personId merchantId merchantShortId city = do
         is2faEnabled = False,
         createdAt = now,
         operatingCity = city,
-        merchantOperatingCityId = Nothing,
         updatedAt = now
       }
 

@@ -26,13 +26,3 @@ findAllMerchants' limit offset = do
     (Se.Desc Beam.createdAt)
     (Just limit)
     (Just offset)
-
-updateEnableStatus ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
-  Kernel.Prelude.Bool ->
-  m ()
-updateEnableStatus mShortId status = do
-  updateWithKV
-    [Se.Set Beam.enabled (Just status)]
-    [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId mShortId)]

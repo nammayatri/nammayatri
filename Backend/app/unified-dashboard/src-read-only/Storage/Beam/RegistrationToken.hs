@@ -19,7 +19,6 @@ data RegistrationTokenT f = RegistrationTokenT
     operatingCity :: (B.C f Kernel.Types.Beckn.Context.City),
     personId :: (B.C f Data.Text.Text),
     token :: (B.C f Data.Text.Text),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

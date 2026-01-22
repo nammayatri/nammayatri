@@ -6,7 +6,6 @@ module Domain.Types.MerchantAccess where
 import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
@@ -23,7 +22,6 @@ data MerchantAccess = MerchantAccess
     operatingCity :: Kernel.Types.Beckn.Context.City,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     secretKey :: Kernel.Prelude.Maybe Data.Text.Text,
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
