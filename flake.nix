@@ -14,12 +14,12 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "path:/Users/utkarsh/Desktop/shared-kernel"; # "github:nammayatri/shared-kernel";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     namma-dsl = {
-      url = "github:nammayatri/namma-dsl";
+      url = "path:/Users/utkarsh/Desktop/namma-dsl"; # "github:nammayatri/namma-dsl";
     };
 
     haskell-cac = {

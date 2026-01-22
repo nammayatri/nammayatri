@@ -1,0 +1,44 @@
+# Transaction - Stores API call transactions for audit and debugging
+# Uses UserActionType directly as endpoint for unified-dashboard
+
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  ServerName: Domain.Types.AccessMatrix
+  UserActionType: Domain.Types.AccessMatrix
+  UTCTime: Kernel.Prelude
+  Id: Kernel.Types.Id
+  Text: Data.Text
+  Maybe: Kernel.Prelude
+
+Transaction:
+  tableName: transaction
+  fields:
+    id: Id Transaction
+    requestorId: Maybe (Id Person)
+    serverName: Maybe ServerName
+    merchantId: Maybe (Id Merchant)
+    commonDriverId: Maybe Text
+    commonRideId: Maybe Text
+    endpoint: UserActionType
+    request: Maybe Text
+    response: Maybe Text
+    responseError: Maybe Text
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    fetchLastTransaction:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [endpoint, serverName]
+      orderBy: createdAt
+      limit: 1
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

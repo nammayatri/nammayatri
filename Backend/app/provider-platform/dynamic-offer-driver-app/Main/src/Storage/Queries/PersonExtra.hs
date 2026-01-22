@@ -628,3 +628,13 @@ findByMobileNumberAndMerchant mobileNumberHash (Id merchantId) =
           Se.Is BeamP.merchantId $ Se.Eq merchantId
         ]
     ]
+
+findByMobileNumberAndMerchantWithCountryCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchantWithCountryCode mobileCountryCode mobileNumberHash (Id merchantId) =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.mobileCountryCode $ Se.Eq (Just mobileCountryCode),
+          Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash),
+          Se.Is BeamP.merchantId $ Se.Eq merchantId
+        ]
+    ]
