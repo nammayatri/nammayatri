@@ -7,6 +7,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator
 import qualified Storage.Queries.ScheduledPayout as QSP
+import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 
 sendSpecialZonePayout ::
   ( EsqDBFlow m r,
@@ -39,29 +40,32 @@ sendSpecialZonePayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
           Just scheduledPayout -> do
             -- 3. Check status (idempotency + cancellation check)
             case scheduledPayout.status of
-              DSP.CANCELLED -> do
-                logInfo $ "Payout was cancelled, skipping: " <> show scheduledPayoutId
+              DSP.FAILED -> do
+                logInfo $ "Payout was cancelled/failed, skipping: " <> show scheduledPayoutId
                 pure Complete
-              DSP.PROCESSED -> do
+              DSP.CREDITED -> do
                 logInfo $ "Payout already processed: " <> show scheduledPayoutId
                 pure Complete
               DSP.PROCESSING -> do
                 logInfo $ "Payout already being processed: " <> show scheduledPayoutId
                 pure Complete
-              DSP.FAILED -> do
-                logInfo $ "Payout failed, needs admin retry: " <> show scheduledPayoutId
+              DSP.AUTO_PAY_FAILED -> do
+                logInfo $ "Payout auto-pay failed, needs admin retry: " <> show scheduledPayoutId
                 pure Complete
-              DSP.PENDING -> do
-                -- 4. Mark as PROCESSING
-                QSP.updateStatusById DSP.PROCESSING scheduledPayoutId
+              DSP.RETRYING -> do
+                logInfo $ "Payout is being retried: " <> show scheduledPayoutId
+                pure Complete
+              DSP.INITIATED -> do
+                -- 4. Mark as PROCESSING with history
+                QSPE.updateStatusWithHistoryById DSP.PROCESSING (Just "Payment in progress") scheduledPayout
 
                 -- 5. Execute payout logic (Placeholder)
                 -- TODO: Call actual payout service here
                 logInfo $ "Processing Special Zone Payout for ride: " <> scheduledPayout.rideId
 
-                -- 6. Update status to PROCESSED (on success)
-                -- TODO: Handle failure case and mark as FAILED
-                QSP.updateStatusById DSP.PROCESSED scheduledPayoutId
+                -- 6. Update status to CREDITED with history (on success)
+                -- TODO: Handle failure case and mark as AUTO_PAY_FAILED
+                QSPE.updateStatusWithHistoryById DSP.CREDITED (Just "Payment credited to bank") scheduledPayout
 
                 logInfo $ "Special Zone Payout processed successfully for id: " <> show scheduledPayoutId
                 pure Complete

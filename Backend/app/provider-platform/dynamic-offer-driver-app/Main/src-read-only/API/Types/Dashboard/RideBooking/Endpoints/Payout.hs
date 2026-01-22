@@ -23,18 +23,30 @@ instance Kernel.Types.HideSecrets.HideSecrets PayoutCancelReq where
   hideSecrets = Kernel.Prelude.identity
 
 data PayoutStatus
-  = PENDING
+  = INITIATED
   | PROCESSING
-  | PROCESSED
+  | CREDITED
+  | AUTO_PAY_FAILED
+  | RETRYING
   | FAILED
-  | CANCELLED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PayoutStatusEvent = PayoutStatusEvent {status :: PayoutStatus, timestamp :: Kernel.Prelude.UTCTime, message :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets PayoutStatusEvent where
+  hideSecrets = Kernel.Prelude.identity
 
 data PayoutStatusResp = PayoutStatusResp
   { status :: PayoutStatus,
     amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     rideId :: Kernel.Prelude.Text,
+    payoutTransactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    expectedCreditTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    statusHistory :: [PayoutStatusEvent],
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -46,16 +58,16 @@ instance Kernel.Types.HideSecrets.HideSecrets PayoutStatusResp where
 
 type API = ("payout" :> (GetPayoutStatus :<|> PostPayoutCancel :<|> PostPayoutRetry))
 
-type GetPayoutStatus = (Capture "rideId" Kernel.Prelude.Text :> "status" :> Get ('[JSON]) PayoutStatusResp)
+type GetPayoutStatus = (Capture "rideId" Kernel.Prelude.Text :> "status" :> Get '[JSON] PayoutStatusResp)
 
-type PostPayoutCancel = (Capture "rideId" Kernel.Prelude.Text :> "cancel" :> ReqBody ('[JSON]) PayoutCancelReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostPayoutCancel = (Capture "rideId" Kernel.Prelude.Text :> "cancel" :> ReqBody '[JSON] PayoutCancelReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostPayoutRetry = (Capture "rideId" Kernel.Prelude.Text :> "retry" :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostPayoutRetry = (Capture "rideId" Kernel.Prelude.Text :> "retry" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data PayoutAPIs = PayoutAPIs
-  { getPayoutStatus :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient PayoutStatusResp),
-    postPayoutCancel :: (Kernel.Prelude.Text -> PayoutCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postPayoutRetry :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { getPayoutStatus :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient PayoutStatusResp,
+    postPayoutCancel :: Kernel.Prelude.Text -> PayoutCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPayoutRetry :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)
@@ -70,4 +82,4 @@ data PayoutUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''PayoutUserActionType)])
+$(Data.Singletons.TH.genSingletons [''PayoutUserActionType])

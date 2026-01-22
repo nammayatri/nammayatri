@@ -14,10 +14,12 @@ import qualified Tools.Beam.UtilsTH
 data ScheduledPayout = ScheduledPayout
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     bookingId :: Kernel.Prelude.Text,
-    cancelReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Prelude.Text,
+    expectedCreditTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout,
+    payoutTransactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideId :: Kernel.Prelude.Text,
     status :: Domain.Types.ScheduledPayout.ScheduledPayoutStatus,
@@ -27,6 +29,6 @@ data ScheduledPayout = ScheduledPayout
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
-data ScheduledPayoutStatus = PENDING | PROCESSING | PROCESSED | FAILED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ScheduledPayoutStatus = INITIATED | PROCESSING | CREDITED | AUTO_PAY_FAILED | RETRYING | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ScheduledPayoutStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledPayoutStatus)

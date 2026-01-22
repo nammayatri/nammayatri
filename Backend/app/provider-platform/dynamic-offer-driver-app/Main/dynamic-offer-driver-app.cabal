@@ -278,6 +278,7 @@ library
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Payout
+      Domain.Action.UI.PayoutDriverStatus
       Domain.Action.UI.Penalty
       Domain.Action.UI.Performance
       Domain.Action.UI.Person
@@ -702,6 +703,7 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
       Storage.Queries.RouteExtra
+      Storage.Queries.ScheduledPayoutExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
@@ -853,6 +855,7 @@ library
       API.Action.UI.MeterRide
       API.Action.UI.OperationHub
       API.Action.UI.Operator
+      API.Action.UI.PayoutDriverStatus
       API.Action.UI.Penalty
       API.Action.UI.PickupInstructions
       API.Action.UI.PriceBreakup
@@ -912,6 +915,7 @@ library
       API.Types.UI.Merchant
       API.Types.UI.MeterRide
       API.Types.UI.OperationHub
+      API.Types.UI.PayoutDriverStatus
       API.Types.UI.Penalty
       API.Types.UI.PickupInstructions
       API.Types.UI.PriceBreakup
@@ -1035,6 +1039,7 @@ library
       Domain.Types.OperationHubRequests
       Domain.Types.Overlay
       Domain.Types.PayoutConfig
+      Domain.Types.PayoutStatusHistory
       Domain.Types.Person
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
@@ -1197,6 +1202,7 @@ library
       Storage.Beam.OperationHubRequests
       Storage.Beam.Overlay
       Storage.Beam.PayoutConfig
+      Storage.Beam.PayoutStatusHistory
       Storage.Beam.Person
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
@@ -1452,6 +1458,7 @@ library
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
+      Storage.Queries.PayoutStatusHistory
       Storage.Queries.Person
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan

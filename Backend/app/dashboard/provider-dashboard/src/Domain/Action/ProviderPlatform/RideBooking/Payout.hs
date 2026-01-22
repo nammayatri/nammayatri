@@ -9,6 +9,7 @@ where
 
 import qualified API.Client.ProviderPlatform.RideBooking
 import qualified API.Types.Dashboard.RideBooking.Payout
+import qualified Dashboard.Common as Common
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
@@ -22,11 +23,10 @@ import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant
-import qualified Dashboard.Common as Common
 
-getPayoutStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.Flow API.Types.Dashboard.RideBooking.Payout.PayoutStatusResp)
-getPayoutStatus merchantShortId opCity rideId = do
-  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
+getPayoutStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.Dashboard.RideBooking.Payout.PayoutStatusResp)
+getPayoutStatus merchantShortId opCity apiTokenInfo rideId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.payoutDSL.getPayoutStatus) rideId
 
 postPayoutCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.Payout.PayoutCancelReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)

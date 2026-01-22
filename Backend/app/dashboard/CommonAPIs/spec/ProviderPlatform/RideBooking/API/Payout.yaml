@@ -1,11 +1,11 @@
 module: Payout
 
 apis:
-  # Agent: Get payout status by rideId (no auth - agent queries for driver)
+  # Dashboard: Get payout status by rideId (admin/agent via API token)
   - GET:
       endpoint: /{rideId}/status
       name: GetPayoutStatus
-      auth: NoAuth
+      auth: ApiAuthV2
       params:
         rideId: Text
       response:
@@ -38,11 +38,20 @@ types:
     - status: PayoutStatus
     - amount: Maybe HighPrecMoney
     - rideId: Text
+    - payoutTransactionId: Maybe Text
+    - expectedCreditTime: Maybe UTCTime
+    - failureReason: Maybe Text
+    - statusHistory: "[PayoutStatusEvent]"
     - createdAt: UTCTime
     - updatedAt: UTCTime
+    - derive: "'HideSecrets"
+  PayoutStatusEvent:
+    - status: PayoutStatus
+    - timestamp: UTCTime
+    - message: Maybe Text
     - derive: "'HideSecrets"
   PayoutCancelReq:
     - reason: Text
     - derive: "'HideSecrets"
   PayoutStatus:
-    enum: "PENDING,PROCESSING,PROCESSED,FAILED,CANCELLED"
+    enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED"

@@ -10,7 +10,7 @@ ScheduledPayout:
   derives: "Generic,Show,Eq,ToJSON,FromJSON"
   types:
     ScheduledPayoutStatus:
-      enum: "PENDING,PROCESSING,PROCESSED,FAILED,CANCELLED"
+      enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED"
   fields:
     id: Id ScheduledPayout
     rideId: Text
@@ -19,7 +19,9 @@ ScheduledPayout:
     amount: Maybe HighPrecMoney
     status: ScheduledPayoutStatus
     retryCount: Maybe Int
-    cancelReason: Maybe Text
+    failureReason: Maybe Text
+    payoutTransactionId: Maybe Text
+    expectedCreditTime: Maybe UTCTime
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -43,7 +45,7 @@ ScheduledPayout:
 
     updateStatusWithReasonByRideId:
       kvFunction: updateOneWithKV
-      params: [status, cancelReason]
+      params: [status, failureReason]
       where: rideId
 
     incrementRetryCountByRideId:

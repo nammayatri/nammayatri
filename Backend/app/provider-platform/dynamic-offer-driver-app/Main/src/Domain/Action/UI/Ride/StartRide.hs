@@ -65,6 +65,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.ScheduledPayout as QSP
+import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
@@ -220,15 +221,18 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                   bookingId = booking.id.getId,
                   driverId = driverId.getId,
                   amount = Just booking.estimatedFare,
-                  status = DSP.PENDING,
+                  status = DSP.INITIATED,
                   retryCount = Nothing,
-                  cancelReason = Nothing,
+                  failureReason = Nothing,
+                  payoutTransactionId = Nothing,
+                  expectedCreditTime = Just (addUTCTime (2 * 60 * 60) now),
                   createdAt = now,
                   updatedAt = now,
                   merchantId = Just booking.providerId,
                   merchantOperatingCityId = Just ride.merchantOperatingCityId
                 }
         QSP.create scheduledPayout
+        QSPE.createInitialHistory scheduledPayout
 
         let scheduledTime = addUTCTime (2 * 60 * 60) now
         let jobData = SpecialZonePayoutJobData {scheduledPayoutId = scheduledPayoutId}

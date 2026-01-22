@@ -36,9 +36,9 @@ updateStatusById status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set 
 updateStatusWithReasonByRideId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.ScheduledPayout.ScheduledPayoutStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
-updateStatusWithReasonByRideId status cancelReason rideId = do
+updateStatusWithReasonByRideId status failureReason rideId = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.cancelReason cancelReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.rideId $ Se.Eq rideId]
+  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.failureReason failureReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.rideId $ Se.Eq rideId]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout -> m (Maybe Domain.Types.ScheduledPayout.ScheduledPayout))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -49,8 +49,10 @@ updateByPrimaryKey (Domain.Types.ScheduledPayout.ScheduledPayout {..}) = do
   updateWithKV
     [ Se.Set Beam.amount amount,
       Se.Set Beam.bookingId bookingId,
-      Se.Set Beam.cancelReason cancelReason,
       Se.Set Beam.driverId driverId,
+      Se.Set Beam.expectedCreditTime expectedCreditTime,
+      Se.Set Beam.failureReason failureReason,
+      Se.Set Beam.payoutTransactionId payoutTransactionId,
       Se.Set Beam.retryCount retryCount,
       Se.Set Beam.rideId rideId,
       Se.Set Beam.status status,
@@ -67,10 +69,12 @@ instance FromTType' Beam.ScheduledPayout Domain.Types.ScheduledPayout.ScheduledP
         Domain.Types.ScheduledPayout.ScheduledPayout
           { amount = amount,
             bookingId = bookingId,
-            cancelReason = cancelReason,
             createdAt = createdAt,
             driverId = driverId,
+            expectedCreditTime = expectedCreditTime,
+            failureReason = failureReason,
             id = Kernel.Types.Id.Id id,
+            payoutTransactionId = payoutTransactionId,
             retryCount = retryCount,
             rideId = rideId,
             status = status,
@@ -84,10 +88,12 @@ instance ToTType' Beam.ScheduledPayout Domain.Types.ScheduledPayout.ScheduledPay
     Beam.ScheduledPayoutT
       { Beam.amount = amount,
         Beam.bookingId = bookingId,
-        Beam.cancelReason = cancelReason,
         Beam.createdAt = createdAt,
         Beam.driverId = driverId,
+        Beam.expectedCreditTime = expectedCreditTime,
+        Beam.failureReason = failureReason,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.payoutTransactionId = payoutTransactionId,
         Beam.retryCount = retryCount,
         Beam.rideId = rideId,
         Beam.status = status,

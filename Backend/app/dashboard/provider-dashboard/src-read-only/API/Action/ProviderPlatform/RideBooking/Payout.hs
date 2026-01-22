@@ -27,26 +27,32 @@ type API = ("payout" :> (GetPayoutStatus :<|> PostPayoutCancel :<|> PostPayoutRe
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = getPayoutStatus merchantId city :<|> postPayoutCancel merchantId city :<|> postPayoutRetry merchantId city
 
-type GetPayoutStatus = API.Types.Dashboard.RideBooking.Payout.GetPayoutStatus
+type GetPayoutStatus =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.PAYOUT / 'API.Types.Dashboard.RideBooking.Payout.GET_PAYOUT_STATUS)
+      :> API.Types.Dashboard.RideBooking.Payout.GetPayoutStatus
+  )
 
 type PostPayoutCancel =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.PAYOUT) / ('API.Types.Dashboard.RideBooking.Payout.POST_PAYOUT_CANCEL))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.PAYOUT / 'API.Types.Dashboard.RideBooking.Payout.POST_PAYOUT_CANCEL)
       :> API.Types.Dashboard.RideBooking.Payout.PostPayoutCancel
   )
 
 type PostPayoutRetry =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.PAYOUT) / ('API.Types.Dashboard.RideBooking.Payout.POST_PAYOUT_RETRY))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.PAYOUT / 'API.Types.Dashboard.RideBooking.Payout.POST_PAYOUT_RETRY)
       :> API.Types.Dashboard.RideBooking.Payout.PostPayoutRetry
   )
 
-getPayoutStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Payout.PayoutStatusResp)
-getPayoutStatus merchantShortId opCity rideId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Payout.getPayoutStatus merchantShortId opCity rideId
+getPayoutStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Payout.PayoutStatusResp)
+getPayoutStatus merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Payout.getPayoutStatus merchantShortId opCity apiTokenInfo rideId
 
 postPayoutCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.Payout.PayoutCancelReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPayoutCancel merchantShortId opCity apiTokenInfo rideId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Payout.postPayoutCancel merchantShortId opCity apiTokenInfo rideId req

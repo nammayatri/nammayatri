@@ -18,3 +18,34 @@ ALTER TABLE atlas_driver_offer_bpp.scheduled_payout ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_driver_offer_bpp.scheduled_payout ADD COLUMN retry_count integer ;
 ALTER TABLE atlas_driver_offer_bpp.scheduled_payout ADD COLUMN cancel_reason text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout ADD COLUMN payout_transaction_id text ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout ADD COLUMN failure_reason text ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout ADD COLUMN expected_credit_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
