@@ -41,7 +41,8 @@ import Kernel.Types.CacheFlow as KTC
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.SlidingWindowLimiter
-import Kernel.Utils.App (lookupDeploymentVersion)
+import Kernel.Types.Version (CloudType)
+import Kernel.Utils.App (lookupCloudType, lookupDeploymentVersion)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
@@ -134,7 +135,8 @@ data HandlerEnv = HandlerEnv
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     noSignatureSubscribers :: [Text],
     isMetroTestTransaction :: Bool,
-    blackListedJobs :: [Text]
+    blackListedJobs :: [Text],
+    cloudType :: Maybe CloudType
   }
   deriving (Generic)
 
@@ -181,6 +183,7 @@ buildHandlerEnv HandlerCfg {..} = do
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   ltsHedisEnv <- connectHedis ltsRedis identity
   let url = Nothing
+  cloudType <- Just <$> lookupCloudType
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
