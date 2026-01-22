@@ -1113,6 +1113,7 @@ TransporterConfig:
     allowRcUnlinkWhenDriverOffline: Maybe Bool
     deleteDriverBankAccountWhenLinkToFleet: Maybe Bool
     digilockerEnabled: Maybe Bool
+    allowDisableDriverToTakeSpecialZoneRide: Maybe Bool
 
   beamType:
     currency: Maybe Currency

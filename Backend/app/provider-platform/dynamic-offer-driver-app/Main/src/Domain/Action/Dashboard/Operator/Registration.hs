@@ -1,7 +1,9 @@
-module Domain.Action.Dashboard.Operator.Registration (postOperatorRegister) where
+module Domain.Action.Dashboard.Operator.Registration (postOperatorRegister, postRegistrationDashboardRegister) where
 
+import qualified API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement as FleetManagementCommon
 import qualified API.Types.ProviderPlatform.Operator.Registration as Common
 import qualified Dashboard.ProviderPlatform.Operator.Registration as DashboardCommon
+import qualified Domain.Action.Dashboard.Operator.FleetManagement as FleetManagement
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.Merchant as DM
@@ -73,3 +75,23 @@ buildOperatorAuthReq merchantId opCity Common.OperatorRegisterReq {..} =
       registrationLon = Nothing,
       otpChannel = Nothing
     }
+
+postRegistrationDashboardRegister ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.CreateDashboardOperatorReq ->
+  Flow Common.OperatorRegisterResp
+postRegistrationDashboardRegister merchantShortId opCity Common.CreateDashboardOperatorReq {..} = do
+  let req =
+        Common.OperatorRegisterReq
+          { email = Just email,
+            firstName = firstName,
+            lastName = lastName,
+            mobileCountryCode = mobileCountryCode,
+            mobileNumber = mobileNumber
+          }
+  res <- postOperatorRegister merchantShortId opCity req
+  whenJust fleetAssignment $ \fl -> do
+    let fleetLinkReq = FleetManagementCommon.FleetOwnerSendOtpReq {mobileNumber = fl.fleetOwnerMobileNo, mobileCountryCode = fl.fleetOwnerMobileCountryCode}
+    void $ FleetManagement.postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity res.personId.getId fleetLinkReq True
+  return res

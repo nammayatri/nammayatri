@@ -5,6 +5,7 @@ module Domain.Action.Dashboard.Operator.FleetManagement
     postFleetManagementFleetUnlink,
     postFleetManagementFleetLinkSendOtp,
     postFleetManagementFleetLinkVerifyOtp,
+    postFleetManagementFleetLinkSendOtpUtil,
     postFleetManagementFleetMemberAssociationCreate,
   )
 where
@@ -183,13 +184,23 @@ postFleetManagementFleetLinkSendOtp ::
   Kernel.Prelude.Text ->
   Common.FleetOwnerSendOtpReq ->
   Environment.Flow Common.FleetOwnerSendOtpRes
-postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
+postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req False
+
+postFleetManagementFleetLinkSendOtpUtil ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Text ->
+  Common.FleetOwnerSendOtpReq ->
+  Bool ->
+  Environment.Flow Common.FleetOwnerSendOtpRes
+postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req skipOtpVerification = do
   let phoneNumber = req.mobileCountryCode <> req.mobileNumber
   sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeFleetLinkHitsCountKey phoneNumber) sendOtpRateLimitOptions
   operator <- checkOperator requestorId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mobileNumberHash <- getDbHash req.mobileNumber
   let enabled = Just True
   fleetOwner <- do
@@ -219,22 +230,27 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
     . throwError
     $ InvalidRequest "Fleet already associated with another operator"
 
-  smsCfg <- asks (.smsCfg)
-  let mbUseFakeOtp = (show <$> useFakeSms smsCfg) <|> fleetOwner.useFakeOtp
-      key = makeFleetLinkOtpKey phoneNumber
-  otpCode <- maybe generateOTPCode return mbUseFakeOtp
-  whenNothing_ mbUseFakeOtp $ do
-    let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
-    (mbSenderHeader, message, templateId) <-
-      buildOperatorJoiningMessage merchantOpCityId $
-        BuildOperatorJoiningMessageReq
-          { operatorName = operatorName,
-            otp = otpCode
-          }
-    let sender = fromMaybe smsCfg.sender mbSenderHeader
-    SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
-
-  Redis.setExp key otpCode 3600
+  if skipOtpVerification
+    then do
+      SA.endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetOwner
+      fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      QFOA.create fleetOperatorAssociation
+    else do
+      smsCfg <- asks (.smsCfg)
+      let mbUseFakeOtp = (show <$> useFakeSms smsCfg) <|> fleetOwner.useFakeOtp
+          key = makeFleetLinkOtpKey phoneNumber
+      otpCode <- maybe generateOTPCode return mbUseFakeOtp
+      whenNothing_ mbUseFakeOtp $ do
+        let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
+        (mbSenderHeader, message, templateId) <-
+          buildOperatorJoiningMessage merchantOpCityId $
+            BuildOperatorJoiningMessageReq
+              { operatorName = operatorName,
+                otp = otpCode
+              }
+        let sender = fromMaybe smsCfg.sender mbSenderHeader
+        SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
+      Redis.setExp key otpCode 3600
   pure $
     Common.FleetOwnerSendOtpRes
       { fleetOwnerId = cast fleetOwner.id,

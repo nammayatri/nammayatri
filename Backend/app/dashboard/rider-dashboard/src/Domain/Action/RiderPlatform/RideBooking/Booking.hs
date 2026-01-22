@@ -8,6 +8,7 @@ module Domain.Action.RiderPlatform.RideBooking.Booking
 where
 
 import qualified API.Client.RiderPlatform.RideBooking
+import Data.Time
 import qualified "rider-app" Domain.Action.UI.Booking
 import qualified "rider-app" Domain.Types.Booking
 import qualified "rider-app" Domain.Types.Booking.API
@@ -24,7 +25,6 @@ import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant
-import Data.Time
 
 postBookingStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Domain.Types.Booking.API.BookingAPIEntity)
 postBookingStatus merchantShortId opCity apiTokenInfo rideBookingId customerId = do

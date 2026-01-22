@@ -583,3 +583,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN analytics_con
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN gps_toll_behavior_window_days int ;
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN digilocker_enabled boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_disable_driver_to_take_special_zone_ride boolean ;

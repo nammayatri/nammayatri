@@ -967,6 +967,7 @@ library
       Domain.Types.DriverQuote
       Domain.Types.DriverRCAssociation
       Domain.Types.DriverReferral
+      Domain.Types.DriverRidePayoutBankAccount
       Domain.Types.DriverSSN
       Domain.Types.DriverStats
       Domain.Types.DriverWallet
@@ -1127,6 +1128,7 @@ library
       Storage.Beam.DriverQuote
       Storage.Beam.DriverRCAssociation
       Storage.Beam.DriverReferral
+      Storage.Beam.DriverRidePayoutBankAccount
       Storage.Beam.DriverSSN
       Storage.Beam.DriverStats
       Storage.Beam.DriverWallet
@@ -1291,6 +1293,7 @@ library
       Storage.Queries.DriverQuote
       Storage.Queries.DriverRCAssociation
       Storage.Queries.DriverReferral
+      Storage.Queries.DriverRidePayoutBankAccount
       Storage.Queries.DriverSSN
       Storage.Queries.DriverStats
       Storage.Queries.DriverWallet

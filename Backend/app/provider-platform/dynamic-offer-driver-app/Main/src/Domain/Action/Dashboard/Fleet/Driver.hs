@@ -78,6 +78,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetScheduledBookingAssign,
     postDriverFleetScheduledBookingCancel,
     postDriverFleetDashboardAnalyticsCache,
+    postDriverAddRidePayoutAccountNumber,
   )
 where
 
@@ -123,6 +124,7 @@ import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLocation as DDL
 import Domain.Types.DriverRCAssociation
+import qualified Domain.Types.DriverRidePayoutBankAccount as DRPB
 import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetBookingInformation ()
@@ -196,6 +198,7 @@ import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
 import qualified Storage.Queries.DriverReferral as QDR
+import qualified Storage.Queries.DriverRidePayoutBankAccount as QDRPB
 import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.FleetBadgeAssociation as QFBA
 import qualified Storage.Queries.FleetBookingAssignments as QFBA
@@ -525,9 +528,11 @@ getDriverFleetGetAllVehicle ::
   Maybe Text ->
   Maybe Bool ->
   Maybe Text ->
+  Maybe Bool ->
   Flow Common.ListVehicleResT
-getDriverFleetGetAllVehicle merchantShortId _ mbLimit mbOffset mbRegNumberString mbFleetOwnerId mbIsActive mbMemberPersonId = do
+getDriverFleetGetAllVehicle merchantShortId _ mbLimit mbOffset mbRegNumberString mbFleetOwnerId mbIsActive mbMemberPersonId mbSendDriverMobileNumber = do
   memberPersonId <- mbMemberPersonId & fromMaybeM (InvalidRequest "Member person id is required")
+  let sendDriverMobileNumber = fromMaybe False mbSendDriverMobileNumber
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   merchant <- findMerchantByShortId merchantShortId
@@ -540,20 +545,21 @@ getDriverFleetGetAllVehicle merchantShortId _ mbLimit mbOffset mbRegNumberString
   case mbIsActive of
     Just True -> do
       activeVehicleList <- QRCAssociation.findAllActiveAssociationByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mbRegNumberString mbRegNumberStringHash
-      vehicles <- traverse (convertToVehicleAPIEntityTFromAssociation fleetNameMap) activeVehicleList
+      vehicles <- traverse (convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap) activeVehicleList
       return $ Common.ListVehicleResT (catMaybes vehicles)
     Just False -> do
       inactiveVehicleList <- QRCAssociation.findAllInactiveAssociationByFleetOwnerIds fleetOwnerIds limit offset mbRegNumberString mbRegNumberStringHash
-      vehicles <- traverse (convertToVehicleAPIEntityTFromAssociation fleetNameMap) inactiveVehicleList
+      vehicles <- traverse (convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap) inactiveVehicleList
       return $ Common.ListVehicleResT (catMaybes vehicles)
     Nothing -> do
       vehicleList <- RCQuery.findAllValidRcByFleetOwnerIdsAndSearchString (toInteger limit) (toInteger offset) merchant.id fleetOwnerIds mbRegNumberString mbRegNumberStringHash
-      vehicles <- traverse (convertToVehicleAPIEntityT fleetNameMap) vehicleList
+      vehicles <- traverse (convertToVehicleAPIEntityT sendDriverMobileNumber fleetNameMap) vehicleList
       return $ Common.ListVehicleResT (catMaybes vehicles)
 
-convertToVehicleAPIEntityTFromAssociation :: Map.Map Text Text -> (DriverRCAssociation, DVRC.VehicleRegistrationCertificate) -> Flow (Maybe Common.VehicleAPIEntityT)
-convertToVehicleAPIEntityTFromAssociation fleetNameMap (association, rc) = do
+convertToVehicleAPIEntityTFromAssociation :: Bool -> Map.Map Text Text -> (DriverRCAssociation, DVRC.VehicleRegistrationCertificate) -> Flow (Maybe Common.VehicleAPIEntityT)
+convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap (association, rc) = do
   certificateNumber' <- decrypt rc.certificateNumber
+  (driverMobileNumber, driverMobileCountryCode) <- getDriverDetailsFromRC sendDriverMobileNumber rc.id
   pure $
     rc.fleetOwnerId >>= \foId ->
       Just $
@@ -564,14 +570,17 @@ convertToVehicleAPIEntityTFromAssociation fleetNameMap (association, rc) = do
             registrationNo = certificateNumber',
             isActive = (Just association.isRcActive),
             fleetOwnerId = foId,
-            fleetOwnerName = fromMaybe "" (Map.lookup foId fleetNameMap)
+            fleetOwnerName = fromMaybe "" (Map.lookup foId fleetNameMap),
+            driverMobileNumber,
+            driverMobileCountryCode
           }
 
-convertToVehicleAPIEntityT :: Map.Map Text Text -> DVRC.VehicleRegistrationCertificate -> Flow (Maybe Common.VehicleAPIEntityT)
-convertToVehicleAPIEntityT fleetNameMap DVRC.VehicleRegistrationCertificate {..} = do
+convertToVehicleAPIEntityT :: Bool -> Map.Map Text Text -> DVRC.VehicleRegistrationCertificate -> Flow (Maybe Common.VehicleAPIEntityT)
+convertToVehicleAPIEntityT sendDriverMobileNumber fleetNameMap DVRC.VehicleRegistrationCertificate {..} = do
   certificateNumber' <- decrypt certificateNumber
   mActiveAssociation <- QRCAssociation.findActiveAssociationByRC id True
   let isActive = isJust mActiveAssociation
+  (driverMobileNumber, driverMobileCountryCode) <- getDriverDetailsFromRC sendDriverMobileNumber id
   pure $
     fleetOwnerId >>= \foId ->
       Just $
@@ -582,8 +591,23 @@ convertToVehicleAPIEntityT fleetNameMap DVRC.VehicleRegistrationCertificate {..}
             registrationNo = certificateNumber',
             isActive = (Just isActive),
             fleetOwnerId = foId,
-            fleetOwnerName = fromMaybe "" (Map.lookup foId fleetNameMap)
+            fleetOwnerName = fromMaybe "" (Map.lookup foId fleetNameMap),
+            driverMobileNumber,
+            driverMobileCountryCode
           }
+
+getDriverDetailsFromRC :: Bool -> Id DVRC.VehicleRegistrationCertificate -> Flow (Maybe Text, Maybe Text)
+getDriverDetailsFromRC sendDriverMobileNumber rcId = do
+  if sendDriverMobileNumber
+    then do
+      mbRCAccountNumber <- QDRPB.findByRcId rcId
+      case mbRCAccountNumber of
+        Just rcAccountNumber -> do
+          person <- QPerson.findById rcAccountNumber.driverId >>= fromMaybeM (PersonDoesNotExist rcAccountNumber.driverId.getId)
+          driverMobileNumber <- decrypt `mapM` person.mobileNumber
+          pure (driverMobileNumber, person.mobileCountryCode)
+        Nothing -> pure (Nothing, Nothing)
+    else pure (Nothing, Nothing)
 
 ---------------------------------------------------------------------
 
@@ -709,6 +733,45 @@ postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequest
   pure Success
   where
     updatedVehicleRegistrationCertificate DVRC.VehicleRegistrationCertificate {..} = DVRC.VehicleRegistrationCertificate {fleetOwnerId = Nothing, ..}
+
+postDriverAddRidePayoutAccountNumber ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.AddRidePayoutAccountNumberReq ->
+  Flow APISuccess
+postDriverAddRidePayoutAccountNumber merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  now <- getCurrentTime
+  bankAccountNumber <- encrypt req.accountNumber
+  bankIfscCode <- encrypt req.ifscCode
+  rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
+  mbAlreadyExists <- QDRPB.findByRcId rc.id
+  whenJust mbAlreadyExists $ \_ -> do
+    throwError (InvalidRequest "Ride Payout Account Number already exists")
+  id <- generateGUID
+  mobileNumberHash <- getDbHash req.driverMobileNumber
+  mbPerson <- QP.findByMobileNumberAndMerchantAndRole req.driverMobileNumberCountryCode mobileNumberHash merchant.id DP.DRIVER
+  person <-
+    case mbPerson of
+      Nothing -> do
+        void $ DRBReg.auth merchantShortId opCity (Common.AuthReq req.driverMobileNumber req.driverMobileNumberCountryCode)
+        QP.findByMobileNumberAndMerchantAndRole req.driverMobileNumberCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound req.driverMobileNumber)
+      Just p -> return p
+  let driverRidePayoutBankAccount =
+        DRPB.DriverRidePayoutBankAccount
+          { bankAccountNumber = bankAccountNumber,
+            bankIfscCode = bankIfscCode,
+            driverId = person.id,
+            id,
+            rcId = rc.id,
+            merchantId = Just merchant.id,
+            merchantOperatingCityId = Just merchantOpCity.id,
+            createdAt = now,
+            updatedAt = now
+          }
+  QDRPB.create driverRidePayoutBankAccount
+  pure Success
 
 ---------------------------------------------------------------------
 postDriverFleetAddVehicles ::
