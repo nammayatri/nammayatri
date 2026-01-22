@@ -30,6 +30,19 @@ findByTicketId ticketId = findOneWithKV [Is BeamIC.ticketId $ Eq ticketId]
 findAllByPersonId :: BeamFlow m r => Id Person -> m [IssueChat]
 findAllByPersonId (Id personId) = findAllWithKV [Is BeamIC.personId $ Eq personId]
 
+findAllByDate :: BeamFlow m r => Maybe T.Day -> Int -> Int -> m [IssueChat]
+findAllByDate mbDate limit offset = do
+  let limit' = min 25 limit
+      whereClause = case mbDate of
+        Just date ->
+          let startTime = T.UTCTime date 0
+              endTime = T.UTCTime (T.addDays 1 date) 0
+           in [ Is BeamIC.createdAt $ GreaterThanOrEq (T.utcToLocalTime T.utc startTime),
+                Is BeamIC.createdAt $ LessThan (T.utcToLocalTime T.utc endTime)
+              ]
+        Nothing -> []
+  findAllWithOptionsKV whereClause (Desc BeamIC.createdAt) (Just limit') (Just offset)
+
 updateChats :: BeamFlow m r => Text -> [Text] -> [Text] -> m ()
 updateChats tId chats mediaFiles = do
   now <- getCurrentTime
