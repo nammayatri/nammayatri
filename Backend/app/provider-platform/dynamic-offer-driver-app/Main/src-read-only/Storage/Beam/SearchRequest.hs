@@ -14,6 +14,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Version
 import qualified Lib.Types.SpecialLocation
 import Tools.Beam.UtilsTH
 import qualified Tools.Maps
@@ -25,6 +26,7 @@ data SearchRequestT f = SearchRequestT
     bapCountry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country),
     bapId :: B.C f Kernel.Prelude.Text,
     bapUri :: B.C f Kernel.Prelude.Text,
+    cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType),
     configInExperimentVersions :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),

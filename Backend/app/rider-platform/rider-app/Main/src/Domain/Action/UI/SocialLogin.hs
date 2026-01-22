@@ -69,7 +69,8 @@ postSocialLogin req = do
           Nothing ->
             (,True) <$> do
               let authReq = buildAuthReq info.email
-              PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing
+              cloudType <- asks (.cloudType)
+              PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant Nothing
       QR.deleteByPersonId person.id
       token <- makeSession person.id.getId merchant.id.getId
       _ <- QR.create token

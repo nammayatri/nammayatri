@@ -6,6 +6,7 @@ imports:
   DbHash: Kernel.External.Encryption
   Centesimal: Kernel.Types.Common
   Version : Kernel.Types.Version
+  CloudType: Kernel.Types.Version
   OptApiMethods: Kernel.External.Whatsapp.Interface.Types
   MerchantConfig: Domain.Types.MerchantConfig
   Language: Kernel.External.Maps
@@ -101,6 +102,7 @@ Person:
     clientBundleVersion : Maybe Version
     clientReactNativeVersion : Maybe Text
     clientConfigVersion : Maybe Version
+    cloudType : Maybe CloudType
     clientDevice : Maybe Device
     backendAppVersion : Maybe Text
     totalRidesCount: Maybe Int
@@ -167,6 +169,7 @@ Person:
     clientBundleVersion: Maybe Text
     clientSdkVersion: Maybe Text
     clientConfigVersion: Maybe Text
+    cloudType: Maybe CloudType
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
     clientModelName: Maybe Text

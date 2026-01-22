@@ -2903,7 +2903,8 @@ fetchOrCreatePerson moc req_ = do
   QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash moc.merchantId DP.DRIVER
     >>= \case
       Nothing -> do
-        person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True
+        cloudType <- asks (.cloudType)
+        person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing Nothing cloudType moc.merchantId moc.id True
         let isNew = True in pure (person, isNew)
       Just person -> do
         QPerson.updateName req_.driverName person.id

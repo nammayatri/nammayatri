@@ -97,10 +97,10 @@ updateEmailByPersonId (Id personId) encEmail = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> Maybe Text -> m ()
-updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice deploymentVersion mbRnVersion =
+updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> Maybe Text -> Maybe CloudType -> m ()
+updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice deploymentVersion mbRnVersion mbCloudType =
   when
-    ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice || isJust mbClientConfigVersion) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbClientConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= Just deploymentVersion))
+    ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice || isJust mbClientConfigVersion || isJust mbCloudType) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbClientConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= Just deploymentVersion || person.cloudType /= mbCloudType))
     do
       now <- getCurrentTime
       updateWithKV
@@ -113,7 +113,8 @@ updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersio
           Se.Set BeamP.clientModelName ((.deviceModel) <$> mbDevice),
           Se.Set BeamP.clientManufacturer ((.deviceManufacturer) =<< mbDevice),
           Se.Set BeamP.backendAppVersion (Just deploymentVersion),
-          Se.Set BeamP.clientReactNativeVersion mbRnVersion
+          Se.Set BeamP.clientReactNativeVersion mbRnVersion,
+          Se.Set BeamP.cloudType mbCloudType
         ]
         [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
 

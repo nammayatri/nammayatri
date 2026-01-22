@@ -18,6 +18,7 @@ imports:
   Device : Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
+  CloudType: Kernel.Types.Version
   TripCategory: Domain.Types.Common
   Confidence: Kernel.Types.Confidence
   VehicleVariant: Domain.Types.VehicleVariant
@@ -111,6 +112,7 @@ Ride:
     reactBundleVersion: Maybe Text
     clientBundleVersion: Maybe Version
     clientConfigVersion: Maybe Version
+    cloudType: Maybe CloudType
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
     clientDevice: Maybe Device
@@ -268,6 +270,7 @@ Ride:
     clientBundleVersion: Maybe Text
     clientSdkVersion: Maybe Text
     clientConfigVersion: Maybe Text
+    cloudType: Maybe CloudType
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
     isAdvanceBooking: Maybe Bool

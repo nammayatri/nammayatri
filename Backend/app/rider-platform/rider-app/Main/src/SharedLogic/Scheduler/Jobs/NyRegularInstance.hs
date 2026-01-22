@@ -14,6 +14,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.App (HasFlowEnv, MonadFlow)
 import Kernel.Types.Common (Seconds, getCurrentTime)
 import Kernel.Types.SlidingWindowLimiter
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common (CacheFlow, type (:::))
 import Kernel.Utils.Logging (logError, logInfo, withLogTag)
 import Kernel.Utils.Servant.Client (RetryCfg)
@@ -51,7 +52,8 @@ runNyRegularInstanceJob ::
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasField "shortDurationRetryCfg" r RetryCfg,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType]
   ) =>
   Job 'NyRegularInstance ->
   m ExecutionResult

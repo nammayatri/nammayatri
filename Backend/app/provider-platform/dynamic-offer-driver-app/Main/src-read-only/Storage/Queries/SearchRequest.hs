@@ -55,6 +55,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.bapCountry bapCountry,
       Se.Set Beam.bapId bapId,
       Se.Set Beam.bapUri (Kernel.Prelude.showBaseUrl bapUri),
+      Se.Set Beam.cloudType cloudType,
       Se.Set Beam.configInExperimentVersions (Just $ toJSON configInExperimentVersions),
       Se.Set Beam.currency (Just currency),
       Se.Set Beam.customerCancellationDues customerCancellationDues,

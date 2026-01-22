@@ -59,7 +59,8 @@ import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
-import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
+import Kernel.Types.Version (CloudType)
+import Kernel.Utils.App (getPodName, lookupCloudType, lookupDeploymentVersion)
 import Kernel.Utils.Common (CacheConfig, fromMaybeM, logError, throwError)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
@@ -292,7 +293,8 @@ data AppEnv = AppEnv
     parkingApiKey :: Text,
     corporatePartnerApiToken :: Text,
     noSignatureSubscribers :: [Text],
-    blackListedJobs :: [Text]
+    blackListedJobs :: [Text],
+    cloudType :: Maybe CloudType
   }
   deriving (Generic)
 
@@ -311,6 +313,7 @@ buildAppEnv cfg@AppCfg {..} = do
   hostname <- getPodName
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
+  cloudType <- Just <$> lookupCloudType
   isShuttingDown <- newEmptyTMVarIO
   passettoContext <- uncurry mkDefPassettoContext encTools.service
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout

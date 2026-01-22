@@ -3,6 +3,7 @@ imports:
   TravelMode: Domain.Types.Common
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Version: Kernel.Types.Version
+  CloudType: Kernel.Types.Version
   Price: Kernel.Types.Common
   Seconds: Kernel.Types.Common
   MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
@@ -73,6 +74,7 @@ SearchRequest:
     clientBundleVersion: Maybe Version
     clientSdkVersion: Maybe Version
     clientConfigVersion: Maybe Version
+    cloudType: Maybe CloudType
     clientReactNativeVersion: Maybe Text
     clientDevice: Maybe Device
     backendConfigVersion: Maybe Version
@@ -120,6 +122,7 @@ SearchRequest:
     clientBundleVersion: Maybe Text
     clientSdkVersion: Maybe Text
     clientConfigVersion: Maybe Text
+    cloudType: Maybe CloudType
     backendConfigVersion: Maybe Text
     riderPreferredOption: Maybe RiderPreferredOption
     clientModelName: Maybe Text

@@ -75,8 +75,9 @@ postSocialLogin req = do
           Nothing ->
             (,True) <$> do
               deploymentVersion <- asks (.version)
+              cloudType <- asks (.cloudType)
               let createPersonInput = buildCreatePersonInput moc.city req.name info.email merchant
-              DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) merchant.id moc.id False
+              DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id moc.id False
       QR.deleteByPersonId (getId person.id)
       token <- makeSession person.id.getId merchant.id.getId moc.id.getId
       _ <- QR.create token

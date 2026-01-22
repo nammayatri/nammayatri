@@ -243,6 +243,7 @@ buildRide ::
 buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
+  cloudType <- asks (.cloudType)
   deploymentVersion <- asks (.version)
   trackingUrl <- buildTrackingUrl guid
   let previousRideToLocation = dinfo >>= (.driverTripEndLocation)
@@ -339,7 +340,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         driverCancellationPenaltyAmount = Nothing,
         cancellationChargesOnCancel = Nothing,
         driverCancellationPenaltyWaivedReason = Nothing,
-        finalFarePolicyId = Nothing
+        finalFarePolicyId = Nothing,
+        cloudType = cloudType
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

@@ -425,11 +425,12 @@ updatePersonVersionsAndMerchantOperatingCity ::
   Maybe Text ->
   Maybe Text ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe CloudType ->
   m ()
-updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbClientId mbDevice' mbBackendApp city = do
+updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbClientId mbDevice' mbBackendApp city cloudType = do
   let mbDevice = getDeviceFromText mbDevice'
-  let isBundleDataPresent = isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion || isJust mbReactBundleVersion
-  let isAnyMismatchPresent = or [person.clientBundleVersion /= mbBundleVersion, person.clientSdkVersion /= mbClientVersion, person.clientConfigVersion /= mbConfigVersion, person.reactBundleVersion /= mbReactBundleVersion, person.clientDevice /= mbDevice, person.backendAppVersion /= mbBackendApp, person.merchantOperatingCityId /= city]
+  let isBundleDataPresent = isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion || isJust mbReactBundleVersion || isJust cloudType
+  let isAnyMismatchPresent = or [person.clientBundleVersion /= mbBundleVersion, person.clientSdkVersion /= mbClientVersion, person.clientConfigVersion /= mbConfigVersion, person.reactBundleVersion /= mbReactBundleVersion, person.clientDevice /= mbDevice, person.backendAppVersion /= mbBackendApp, person.merchantOperatingCityId /= city, person.cloudType /= cloudType]
   when (isBundleDataPresent && isAnyMismatchPresent) $ do
     now <- getCurrentTime
     let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)
@@ -453,7 +454,8 @@ updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVers
         Se.Set BeamP.clientManufacturer mbManufacturer,
         Se.Set BeamP.backendAppVersion mbBackendApp,
         Se.Set BeamP.updatedAt now,
-        Se.Set BeamP.merchantOperatingCityId $ Just city.getId
+        Se.Set BeamP.merchantOperatingCityId $ Just city.getId,
+        Se.Set BeamP.cloudType cloudType
       ]
       [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 

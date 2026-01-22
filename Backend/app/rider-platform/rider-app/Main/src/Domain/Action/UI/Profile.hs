@@ -282,7 +282,7 @@ getIsMultimodalRider enableMultiModalForAllUsers mbTags integratedBPPConfigs =
        in any (isMultimodalRiderTag multimodalTagName) currentTags && not (null integratedBPPConfigs)
 
 getPersonDetails ::
-  (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
   (Id Person.Person, Id Merchant.Merchant) ->
   Maybe Int ->
   Maybe Text ->
@@ -309,8 +309,9 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
     _ -> return Nothing
 
   when ((decPerson.clientBundleVersion /= mbBundleVersion || decPerson.clientSdkVersion /= mbClientVersion || decPerson.clientConfigVersion /= mbClientConfigVersion || decPerson.clientReactNativeVersion /= mbRnVersion || decPerson.clientDevice /= device) && isJust device) do
+    cloudType <- asks (.cloudType)
     deploymentVersion <- asks (.version)
-    void $ QPerson.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion device deploymentVersion.getDeploymentVersion mbRnVersion
+    void $ QPerson.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion device deploymentVersion.getDeploymentVersion mbRnVersion cloudType
   when (isJust decPerson.email && not (isValidEmail decPerson.email)) do
     logDebug $ "Invalid email, updating person email to nothing , Previous emailId: " <> show decPerson.email <> " for person id " <> show personId
     let updatedPerson = person {Person.email = Nothing}

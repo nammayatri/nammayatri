@@ -16,6 +16,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import qualified Lib.Types.SpecialLocation
 import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
@@ -28,6 +29,7 @@ data SearchRequest = SearchRequest
     bapCountry :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country,
     bapId :: Kernel.Prelude.Text,
     bapUri :: Kernel.Types.Common.BaseUrl,
+    cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,

@@ -45,7 +45,8 @@ import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
-import Kernel.Utils.App (lookupDeploymentVersion)
+import Kernel.Types.Version (CloudType)
+import Kernel.Utils.App (lookupDeploymentVersion, lookupCloudType)
 import Kernel.Utils.Common (CacheConfig, fromMaybeM, logError, throwError)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
@@ -169,7 +170,8 @@ data AppCfg = AppCfg
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
     noSignatureSubscribers :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
-    blackListedJobs :: [Text]
+    blackListedJobs :: [Text],
+    cloudType :: Maybe CloudType
   }
   deriving (Generic, FromDhall)
 
@@ -287,7 +289,8 @@ data AppEnv = AppEnv
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
     noSignatureSubscribers :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
-    blackListedJobs :: [Text]
+    blackListedJobs :: [Text],
+    cloudType :: Maybe CloudType
   }
   deriving (Generic)
 
@@ -310,6 +313,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
+  cloudType <- Just <$> lookupCloudType
   passettoContext <- uncurry mkDefPassettoContext encTools.service
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname

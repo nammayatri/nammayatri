@@ -5,6 +5,7 @@ imports:
   DbHash: Kernel.External.Encryption
   Language: Kernel.External.Types
   Version: Kernel.Types.Version
+  CloudType: Kernel.Types.Version
   Device: Kernel.Types.Version
   FCMRecipientToken: Kernel.External.Notification.FCM.Types
   OptApiMethods: Kernel.External.Whatsapp.Interface.Types
@@ -72,6 +73,7 @@ Person:
     reactBundleVersion : Maybe Text
     clientBundleVersion : Maybe Version
     clientConfigVersion : Maybe Version
+    cloudType : Maybe CloudType
     clientDevice : Maybe Device
     backendConfigVersion : Maybe Version
     backendAppVersion : Maybe Text
@@ -107,6 +109,7 @@ Person:
     clientBundleVersion: Maybe Text
     clientSdkVersion: Maybe Text
     clientConfigVersion: Maybe Text
+    cloudType: Maybe CloudType
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
     merchantOperatingCityId: Maybe Text

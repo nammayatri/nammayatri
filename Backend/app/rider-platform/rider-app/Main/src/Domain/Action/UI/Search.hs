@@ -103,7 +103,7 @@ type SearchRequestFlow m r =
     EventStreamFlow m r,
     ClickhouseFlow m r,
     HasBAPMetrics m r,
-    HasFlowEnv m r '["nyGatewayUrl" ::: BaseUrl],
+    HasFlowEnv m r '["nyGatewayUrl" ::: BaseUrl, "cloudType" ::: Maybe CloudType],
     HasFlowEnv m r '["ondcGatewayUrl" ::: BaseUrl],
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["collectRouteData" ::: Bool],
@@ -666,6 +666,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
           else Nothing
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
+  cloudType <- asks (.cloudType)
   deploymentVersion <- asks (.version)
   return
     SearchRequest.SearchRequest
@@ -720,6 +721,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         searchMode = searchMode,
         isMultimodalSearch = Just justMultimodalSearch,
         onSearchFailed = Nothing,
+        cloudType = cloudType,
         ..
       }
   where

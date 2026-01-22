@@ -96,8 +96,8 @@ newtype FavouriteBookingListRes = FavouriteBookingListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingAPIEntity
-bookingStatus bookingId (personId, _merchantId) = do
-  booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+bookingStatus bookingId (personId, _merchantId) = runInMultiCloud $ do
+  booking <- (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
   fork "creating cache for emergency contact SOS" $ emergencyContactSOSCache booking personId
   logInfo $ "booking: test " <> show booking
@@ -105,8 +105,8 @@ bookingStatus bookingId (personId, _merchantId) = do
   SRB.buildBookingAPIEntity booking booking.riderId
 
 bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingStatusAPIEntity
-bookingStatusPolling bookingId _ = do
-  booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+bookingStatusPolling bookingId _ = runInMultiCloud $ do
+  booking <- (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
   logInfo $ "booking: test " <> show booking
   handleConfirmTtlExpiry booking
@@ -170,7 +170,7 @@ getBookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text
 getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList = do
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
-  (rbList, allbookings) <- runInReplica $ QR.findAllByRiderIdAndRide mbPersonId mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList
+  (rbList, allbookings) <- if Just True == mbOnlyActive then runInMultiCloud $ QR.findAllByRiderIdAndRide mbPersonId mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList else  QR.findAllByRiderIdAndRide mbPersonId mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList
   let limit = maybe 10 fromIntegral mbLimit
   if null rbList
     then do

@@ -481,7 +481,8 @@ toJuspayRefundsData Payment.RefundsData {..} =
       error_message = errorMessage,
       error_code = errorCode,
       initiated_by = initiatedBy,
-      unique_request_id = requestId
+      unique_request_id = requestId,
+      arn = Nothing
     }
 
 toJuspayCardInfo :: Payment.CardInfo -> Juspay.CardInfo
