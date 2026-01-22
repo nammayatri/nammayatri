@@ -170,8 +170,7 @@ data AppCfg = AppCfg
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
     noSignatureSubscribers :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
-    blackListedJobs :: [Text],
-    cloudType :: Maybe CloudType
+    blackListedJobs :: [Text]
   }
   deriving (Generic, FromDhall)
 
