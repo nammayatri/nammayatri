@@ -33,7 +33,7 @@ import qualified Domain.Types.ServerName
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..), decrypt, encrypt, getDbHash, unEncrypted)
 import qualified Kernel.External.Verification.SafetyPortal.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -64,39 +64,12 @@ getPersonList ::
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id DPerson.Person) ->
   Environment.Flow API.Types.Management.Person.ListPersonResp
 getPersonList _ _ _ mbSearchString mbLimit mbOffset mbPersonId = do
-  let limitVal = fromIntegral $ fromMaybe 10 mbLimit
-      offsetVal = fromIntegral $ fromMaybe 0 mbOffset
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-
-  -- Find persons based on filters
-  personList <- case mbPersonId of
-    Just personId -> do
-      mbPerson <- B.runInReplica $ QPerson.findById personId
-      pure $ maybe [] (: []) mbPerson
-    Nothing -> do
-      case mbSearchStrDBHash of
-        Just searchHash -> do
-          -- Search by email hash or mobile number hash
-          mbPersonByEmail <- B.runInReplica $ QPerson.findByEmailHash (Just searchHash)
-          mbPersonByMobile <- case mbSearchString of
-            Just _searchStr -> do
-              -- Try to find by mobile number (would need mobileCountryCode, simplified here)
-              pure Nothing
-            Nothing -> pure Nothing
-          pure $ catMaybes [mbPersonByEmail, mbPersonByMobile]
-        Nothing -> do
-          -- List all with pagination
-          B.runInReplica $ QPersonExtra.findAllPersonsWithLimitOffset limitVal offsetVal
-
-  -- Get roles and merchant access for each person
-  res <- forM personList $ \encPerson -> do
-    role <- B.runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (InvalidRequest $ "Role with id " <> show encPerson.roleId.getId <> " does not exist")
-    merchantAccessList <- B.runInReplica $ QAccess.findAllByPersonId encPerson.id
+  personAndRoleList <- B.runInReplica $ QPersonExtra.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
+  res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList, merchantCityAccessList) -> do
     decPerson <- decrypt encPerson
-    let availableCitiesForMerchant = makeAvailableCitiesForMerchant merchantAccessList
-    let availableMerchants = nub $ map (.merchantShortId) merchantAccessList
-    pure $ mkPersonAPIEntity decPerson role availableMerchants (Just availableCitiesForMerchant)
-
+    let availableCitiesForMerchant = makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList
+    pure $ mkPersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant)
   let count = length res
       summary = Kernel.External.Verification.SafetyPortal.Types.Summary {totalCount = 10000, count}
   pure $ API.Types.Management.Person.ListPersonResp {list = res, summary = summary}
@@ -150,12 +123,11 @@ postPersonResetMerchantAccess _ _ _ personId req = do
   merchantAccesses <- QAccess.findByPersonIdAndMerchantId personId merchant.id
   case merchantAccesses of
     [] -> throwError $ InvalidRequest "Server access already denied."
-    _ -> do
+    (x : _) -> do
+      -- this function uses tokens from db, so should be called before transaction
       Auth.cleanCachedTokensByMerchantId personId merchant.id
-      -- Delete all registration tokens for this person and merchant
-      regTokens <- QR.findAllByPersonIdAndMerchantId personId merchant.id
-      for_ regTokens $ \token -> QR.deleteById token.id
-      -- Note: MerchantAccess deletion would need deleteById if available
+      QAccess.deleteById x.id
+      QR.deleteAllByPersonIdAndMerchantId personId merchant.id
       pure Kernel.Types.APISuccess.Success
 
 postPersonResetMerchantCityAccess ::
@@ -172,12 +144,11 @@ postPersonResetMerchantCityAccess _ _ _ personId req = do
   mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
   case mbMerchantAccess of
     Nothing -> throwError $ InvalidRequest "Server access already denied."
-    Just _merchantAccess -> do
+    Just merchantAccess -> do
+      -- this function uses tokens from db, so should be called before transaction
       Auth.cleanCachedTokensByMerchantIdAndCity personId merchant.id req.operatingCity
-      -- Delete all registration tokens for this person, merchant, and city
-      regTokens <- QR.findAllByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
-      for_ regTokens $ \token -> QR.deleteById token.id
-      -- Note: MerchantAccess deletion would need deleteById if available
+      QAccess.deleteById merchantAccess.id
+      QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
       pure Kernel.Types.APISuccess.Success
 
 deletePerson ::
@@ -188,11 +159,10 @@ deletePerson ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 deletePerson _ _ _ personId = do
   void $ B.runInReplica $ QPerson.findById personId >>= fromMaybeM (InvalidRequest $ "Person with id " <> show personId.getId <> " does not exist")
-  -- Delete all registration tokens for this person
-  regTokens <- QR.findAllByPersonId personId
-  for_ regTokens $ \token -> QR.deleteById token.id
+  QAccess.deleteAllByPersonId personId
   Auth.cleanCachedTokens personId
-  -- Note: MerchantAccess and Person deletion would need deleteById/deleteByPrimaryKey if available
+  QR.deleteAllByPersonId personId
+  QPerson.deletePerson personId
   pure Kernel.Types.APISuccess.Success
 
 postPersonChangeEnabledStatus ::
@@ -205,7 +175,7 @@ postPersonChangeEnabledStatus ::
 postPersonChangeEnabledStatus _ opCity apiTokenInfo personId req = do
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (InvalidRequest $ "Person with id " <> show personId.getId <> " does not exist")
   let updatedPerson = person {DPerson.verified = Just req.enabled}
-  B.runInReplica $ QPerson.updateByPrimaryKey updatedPerson
+  QPerson.updateByPrimaryKey updatedPerson
   Auth.cleanCachedTokensByMerchantIdAndCity personId apiTokenInfo.merchant.id opCity
   pure Kernel.Types.APISuccess.Success
 
@@ -217,11 +187,24 @@ postPersonChangeEmailByAdmin ::
   API.Types.Management.Person.ChangeEmailByAdminReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postPersonChangeEmailByAdmin _ _ _ personId req = do
-  void $ QPerson.findById personId >>= fromMaybeM (InvalidRequest $ "Person with id " <> show personId.getId <> " does not exist")
-  encEmail <- encrypt $ T.toLower req.newEmail
   person <- QPerson.findById personId >>= fromMaybeM (InvalidRequest $ "Person with id " <> show personId.getId <> " does not exist")
-  let updatedPerson = person {DPerson.email = Just encEmail}
+  -- Normalize email (lowercase) and compute hash for uniqueness check
+  let normalizedEmail = T.toLower req.newEmail
+  emailHash <- getDbHash normalizedEmail
+  -- Check uniqueness: ensure no other person has this email
+  mbExistingPerson <- B.runInReplica $ QPerson.findByEmailHash (Just emailHash)
+  whenJust mbExistingPerson $ \existingPerson ->
+    unless (existingPerson.id == personId) $
+      throwError $ InvalidRequest "Email already registered"
+  -- Encrypt the normalized email (matching Merchant.hs pattern exactly)
+  encEmail <- encrypt (T.toLower req.newEmail)
+  -- Use our computed hash instead of the one from encrypt for consistency with uniqueness checks
+  let emailField = Just $ encEmail{hash = emailHash}
+  let updatedPerson = person {DPerson.email = emailField}
   QPerson.updateByPrimaryKey updatedPerson
+  -- Cleanup: delete auth token from cache and db to enforce re-authentication after email change
+  Auth.cleanCachedTokens personId
+  QR.deleteAllByPersonId personId
   pure Kernel.Types.APISuccess.Success
 
 postPersonChangePasswordByAdmin ::
@@ -239,6 +222,9 @@ postPersonChangePasswordByAdmin _ _ _ personId req = do
   person <- QPerson.findById personId >>= fromMaybeM (InvalidRequest $ "Person with id " <> show personId.getId <> " does not exist")
   let updatedPerson = person {DPerson.passwordHash = Just newHash, DPerson.passwordUpdatedAt = now}
   QPerson.updateByPrimaryKey updatedPerson
+  -- Cleanup: delete auth token from cache and db to enforce re-authentication after password change
+  Auth.cleanCachedTokens personId
+  QR.deleteAllByPersonId personId
   pure Kernel.Types.APISuccess.Success
 
 postPersonChangeMobileByAdmin ::
@@ -249,11 +235,25 @@ postPersonChangeMobileByAdmin ::
   API.Types.Management.Person.ChangeMobileNumberByAdminReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postPersonChangeMobileByAdmin _ _ _ personId req = do
-  void $ QPerson.findById personId >>= fromMaybeM (InvalidRequest $ "Person with id " <> show personId.getId <> " does not exist")
-  encMobileNum <- encrypt req.newMobileNumber
   person <- QPerson.findById personId >>= fromMaybeM (InvalidRequest $ "Person with id " <> show personId.getId <> " does not exist")
-  let updatedPerson = person {DPerson.mobileNumber = Just encMobileNum}
+  -- Preserve existing mobileCountryCode (required for uniqueness check)
+  mobileCountryCode <- person.mobileCountryCode & fromMaybeM (InvalidRequest "Person must have a mobile country code to update mobile number")
+  -- Compute hash for uniqueness check
+  mobileNumberHash <- getDbHash req.newMobileNumber
+  -- Check uniqueness: ensure no other person has this mobile number with the same country code
+  mbExistingPerson <- B.runInReplica $ QPerson.findByMobileNumberHash (Just mobileNumberHash) (Just mobileCountryCode)
+  whenJust mbExistingPerson $ \existingPerson ->
+    unless (existingPerson.id == personId) $
+      throwError $ InvalidRequest "Phone already registered"
+  -- Encrypt the mobile number (matching previous working pattern exactly)
+  encMobileNum <- encrypt req.newMobileNumber
+  -- Use our computed hash instead of the one from encrypt for consistency with uniqueness checks
+  let mobileNumberField = Just $ encMobileNum{hash = mobileNumberHash}
+  let updatedPerson = person {DPerson.mobileNumber = mobileNumberField, DPerson.mobileCountryCode = Just mobileCountryCode}
   QPerson.updateByPrimaryKey updatedPerson
+  -- Cleanup: delete auth token from cache and db to enforce re-authentication after mobile number change
+  Auth.cleanCachedTokens personId
+  QR.deleteAllByPersonId personId
   pure Kernel.Types.APISuccess.Success
 
 getUserProfile ::
@@ -361,25 +361,19 @@ buildMerchantAccess personId merchantId merchantShortId city = do
         is2faEnabled = False,
         createdAt = now,
         operatingCity = city,
-        merchantOperatingCityId = Nothing,
         updatedAt = now
       }
 
-makeAvailableCitiesForMerchant :: [DAccess.MerchantAccess] -> [DMerchant.AvailableCitiesForMerchant]
-makeAvailableCitiesForMerchant merchantAccessList = do
-  let merchantCityList = sortOn fst $ map (\ma -> (ma.merchantShortId, ma.operatingCity)) merchantAccessList
-  let groupedByMerchant = Data.List.groupBy ((==) `on` fst) merchantCityList
-  if null groupedByMerchant
-    then []
-    else do
-      let merchantAccesslistWithCity =
-            mapMaybe
-              ( \groupItems -> do
-                  (merchantShortId, _) <- listToMaybe groupItems
-                  pure $ DMerchant.AvailableCitiesForMerchant merchantShortId (map snd groupItems)
-              )
-              groupedByMerchant
-      merchantAccesslistWithCity
+makeAvailableCitiesForMerchant :: [Kernel.Types.Id.ShortId DMerchant.Merchant] -> [City.City] -> [DMerchant.AvailableCitiesForMerchant]
+makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList = do
+  let merchantCityList = sortOn (\(x, _) -> x) $ zip merchantAccessList merchantCityAccessList
+  let groupedByMerchant = Data.List.groupBy (\(x, _) (y, _) -> x == y) merchantCityList
+  mapMaybe
+    ( \groupItems -> do
+        (merchantShortId, _) <- listToMaybe groupItems
+        pure $ DMerchant.AvailableCitiesForMerchant merchantShortId (map (\(_, y) -> y) groupItems)
+    )
+    groupedByMerchant
 
 mkPersonAPIEntity ::
   DPerson.DecryptedPerson ->

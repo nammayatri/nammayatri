@@ -80,6 +80,9 @@ Person:
       kvFunction: findOneWithKV
       where:
         and: [mobileNumberHash|B, mobileCountryCode, passwordHash|B]
+    deletePerson:
+      kvFunction: deleteWithKV
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE

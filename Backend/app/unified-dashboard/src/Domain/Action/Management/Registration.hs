@@ -3,6 +3,9 @@
 module Domain.Action.Management.Registration
   ( postUserLogin,
     postUserLoginVerifyOtp,
+    generateToken,
+    generateNewToken,
+    buildRegistrationToken,
   )
 where
 
@@ -125,6 +128,5 @@ buildRegistrationToken personId merchantId city = do
         token = token,
         createdAt = now,
         updatedAt = now,
-        enabled = True,
-        merchantOperatingCityId = Nothing
+        enabled = True
       }

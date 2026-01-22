@@ -46,3 +46,13 @@ MerchantAccess:
     findAllUserAccountForMerchant:
       kvFunction: findAllWithKV
       where: merchantId
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+    deleteAllByPersonId:
+      kvFunction: deleteWithKV
+      where: personId
+    deleteAllByPersonIdAndMerchantId:
+      kvFunction: deleteWithKV
+      where:
+        and: [personId, merchantId]

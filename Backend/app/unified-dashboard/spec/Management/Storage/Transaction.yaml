@@ -26,6 +26,9 @@ Transaction:
     responseError: Maybe Text
     createdAt: UTCTime
 
+  excludedFields:
+    - merchantOperatingCityId
+
   constraints:
     id: PrimaryKey
 
@@ -37,7 +40,9 @@ Transaction:
       kvFunction: findAllWithOptionsKV
       where:
         and: [endpoint, serverName]
-      orderBy: createdAt
+      orderBy:
+        field: createdAt
+        order: desc
       limit: 1
 
   extraOperations:

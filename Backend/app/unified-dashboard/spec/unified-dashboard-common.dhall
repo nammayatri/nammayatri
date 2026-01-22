@@ -29,8 +29,7 @@ let outputPath =
       , _extraBeamQueries = outputPrefixDashboard ++ "Storage/Queries/"
       , _cachedQueries =
           outputPrefixDashboardReadOnly ++ "Storage/CachedQueries"
-      , _extraCachedQueries =
-          outputPrefixDashboardReadOnly ++ "Storage/CachedQueries"
+      , _extraCachedQueries = outputPrefixDashboard ++ "Storage/CachedQueries"
       , _beamTable = outputPrefixDashboardReadOnly ++ "Storage/Beam"
       , _domainHandler =
           outputPrefixDriverApp ++ "Domain/Action/UnifiedDashboard"
@@ -111,16 +110,10 @@ let defaultTypeImportMapper =
       , { _1 = "ServerName", _2 = "Domain.Types.AccessMatrix" }
       , { _1 = "APISuccess", _2 = "Kernel.Types.APISuccess" }
       , { _1 = "Merchant", _2 = "Domain.Types.Merchant" }
-      , { _1 = "MerchantOperatingCity"
-        , _2 = "Domain.Types.MerchantOperatingCity"
-        }
       ]
 
 let extraDefaultFields =
       [ { _1 = "merchantId", _2 = "Maybe (Id Merchant)" }
-      , { _1 = "merchantOperatingCityId"
-        , _2 = "Maybe (Id MerchantOperatingCity)"
-        }
       , { _1 = "createdAt", _2 = "UTCTime" }
       , { _1 = "updatedAt", _2 = "UTCTime" }
       ]

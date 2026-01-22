@@ -11,6 +11,5 @@ ALTER TABLE atlas_dashboard.transaction ADD COLUMN requestor_id character varyin
 ALTER TABLE atlas_dashboard.transaction ADD COLUMN response text ;
 ALTER TABLE atlas_dashboard.transaction ADD COLUMN response_error text ;
 ALTER TABLE atlas_dashboard.transaction ADD COLUMN server_name text ;
-ALTER TABLE atlas_dashboard.transaction ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_dashboard.transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_dashboard.transaction ADD PRIMARY KEY ( id);

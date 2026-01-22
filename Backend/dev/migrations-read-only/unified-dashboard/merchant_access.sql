@@ -11,3 +11,13 @@ ALTER TABLE atlas_dashboard.merchant_access ADD COLUMN secret_key text ;
 ALTER TABLE atlas_dashboard.merchant_access ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_dashboard.merchant_access ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_dashboard.merchant_access ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

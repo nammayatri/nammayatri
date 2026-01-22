@@ -27,6 +27,7 @@ import qualified Kernel.Types.Beckn.Context as City
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter
 import Storage.Beam.CommonInstances ()
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
@@ -35,6 +36,9 @@ import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import qualified Tools.Utils
+
+authHitsCountKey :: DPerson.Person -> Text
+authHitsCountKey person = "UnifiedDashboard:Registration:auth:" <> Kernel.Types.Id.getId person.id <> ":hitsCount"
 
 postPersonCreate :: (Kernel.Types.Id.ShortId DMerchant.Merchant -> City.City -> ApiTokenInfo -> API.Types.Provider.Person.CreatePersonReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postPersonCreate merchantShortId opCity apiTokenInfo req = do
@@ -117,6 +121,8 @@ postUserLoginSendOtp merchantShortId opCity req = do
   person <- QPerson.findByMobileNumberHash (Just mobileNumberHash) (Just req.mobileCountryCode) >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id opCity >>= fromMaybeM AccessDenied
+
+  checkSlidingWindowLimit (authHitsCountKey person)
 
   -- Call BPP to generate OTP and send SMS (via helper API)
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
