@@ -777,7 +777,8 @@ mkDriverFee driverId merchantId merchantOpCityId serviceName plan currency mbCur
         validDays = validDays,
         cancellationPenaltyAmount = Nothing,
         addedToFeeId = Nothing,
-        collectedAtVendorId = Nothing
+        collectedAtVendorId = Nothing,
+        driverConsideredInPayoutSettlementAt = Nothing
       }
 
 getLatestRegistrationFeeAndInvoice ::

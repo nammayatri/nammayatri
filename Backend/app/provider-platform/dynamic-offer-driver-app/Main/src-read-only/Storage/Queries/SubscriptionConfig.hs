@@ -28,7 +28,7 @@ createMany = traverse_ create
 
 findAllServicesUIEnabledByCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Bool -> m [Domain.Types.SubscriptionConfig.SubscriptionConfig])
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Bool -> m ([Domain.Types.SubscriptionConfig.SubscriptionConfig]))
 findAllServicesUIEnabledByCity merchantOperatingCityId isUIEnabled = do
   findAllWithKV
     [ Se.And
@@ -73,6 +73,7 @@ updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = d
       Se.Set Beam.defaultCityVehicleCategory (Kernel.Prelude.Just defaultCityVehicleCategory),
       Se.Set Beam.disabledVariantsForSubscription disabledVariantsForSubscription,
       Se.Set Beam.enableCityBasedFeeSwitch (Kernel.Prelude.Just enableCityBasedFeeSwitch),
+      Se.Set Beam.enablePayoutSettlement enablePayoutSettlement,
       Se.Set Beam.enableServiceUsageChargeDefault (Kernel.Prelude.Just enableServiceUsageChargeDefault),
       Se.Set Beam.eventsEnabledForWebhook (Kernel.Prelude.Just eventsEnabledForWebhook),
       Se.Set Beam.executionEnabledForVehicleCategories executionEnabledForVehicleCategories,
@@ -94,6 +95,9 @@ updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = d
       Se.Set Beam.paymentLinkJobTime (Kernel.Utils.Common.nominalDiffTimeToSeconds paymentLinkJobTime),
       Se.Set Beam.paymentServiceName paymentServiceName,
       Se.Set Beam.payoutServiceName payoutServiceName,
+      Se.Set Beam.payoutSettlementJobScheduleTime (Kernel.Utils.Common.nominalDiffTimeToSeconds <$> payoutSettlementJobScheduleTime),
+      Se.Set Beam.payoutSettlementWeekStartDay payoutSettlementWeekStartDay,
+      Se.Set Beam.payoutSettlementWeekStartTime (Kernel.Utils.Common.nominalDiffTimeToSeconds <$> payoutSettlementWeekStartTime),
       Se.Set Beam.sendDeepLink sendDeepLink,
       Se.Set Beam.sendInAppFcmNotifications sendInAppFcmNotifications,
       Se.Set Beam.sendManualPaymentLinkJobMaxDelay ((Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 43200)) sendManualPaymentLinkJobMaxDelay),
@@ -125,6 +129,7 @@ instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subs
             defaultCityVehicleCategory = Kernel.Prelude.fromMaybe Domain.Types.VehicleCategory.AUTO_CATEGORY defaultCityVehicleCategory,
             disabledVariantsForSubscription = disabledVariantsForSubscription,
             enableCityBasedFeeSwitch = Kernel.Prelude.fromMaybe False enableCityBasedFeeSwitch,
+            enablePayoutSettlement = (Kernel.Prelude.Just . Kernel.Prelude.fromMaybe False) enablePayoutSettlement,
             enableServiceUsageChargeDefault = Kernel.Prelude.fromMaybe True enableServiceUsageChargeDefault,
             eventsEnabledForWebhook = Kernel.Prelude.fromMaybe [] eventsEnabledForWebhook,
             executionEnabledForVehicleCategories = executionEnabledForVehicleCategories,
@@ -146,6 +151,9 @@ instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subs
             paymentLinkJobTime = Kernel.Utils.Common.secondsToNominalDiffTime paymentLinkJobTime,
             paymentServiceName = paymentServiceName,
             payoutServiceName = payoutServiceName,
+            payoutSettlementJobScheduleTime = Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutSettlementJobScheduleTime,
+            payoutSettlementWeekStartDay = payoutSettlementWeekStartDay,
+            payoutSettlementWeekStartTime = Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutSettlementWeekStartTime,
             sendDeepLink = sendDeepLink,
             sendInAppFcmNotifications = sendInAppFcmNotifications,
             sendManualPaymentLinkJobMaxDelay = (Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 43200) sendManualPaymentLinkJobMaxDelay,
@@ -177,6 +185,7 @@ instance ToTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subscr
         Beam.defaultCityVehicleCategory = Kernel.Prelude.Just defaultCityVehicleCategory,
         Beam.disabledVariantsForSubscription = disabledVariantsForSubscription,
         Beam.enableCityBasedFeeSwitch = Kernel.Prelude.Just enableCityBasedFeeSwitch,
+        Beam.enablePayoutSettlement = enablePayoutSettlement,
         Beam.enableServiceUsageChargeDefault = Kernel.Prelude.Just enableServiceUsageChargeDefault,
         Beam.eventsEnabledForWebhook = Kernel.Prelude.Just eventsEnabledForWebhook,
         Beam.executionEnabledForVehicleCategories = executionEnabledForVehicleCategories,
@@ -198,6 +207,9 @@ instance ToTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subscr
         Beam.paymentLinkJobTime = Kernel.Utils.Common.nominalDiffTimeToSeconds paymentLinkJobTime,
         Beam.paymentServiceName = paymentServiceName,
         Beam.payoutServiceName = payoutServiceName,
+        Beam.payoutSettlementJobScheduleTime = Kernel.Utils.Common.nominalDiffTimeToSeconds <$> payoutSettlementJobScheduleTime,
+        Beam.payoutSettlementWeekStartDay = payoutSettlementWeekStartDay,
+        Beam.payoutSettlementWeekStartTime = Kernel.Utils.Common.nominalDiffTimeToSeconds <$> payoutSettlementWeekStartTime,
         Beam.sendDeepLink = sendDeepLink,
         Beam.sendInAppFcmNotifications = sendInAppFcmNotifications,
         Beam.sendManualPaymentLinkJobMaxDelay = (Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 43200)) sendManualPaymentLinkJobMaxDelay,

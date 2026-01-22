@@ -77,6 +77,9 @@ data AllocatorJobType
   | CheckDashCamInstallationStatus
   | MediaFileDocumentComplete
   | SendFeedbackPN
+  | VendorPayoutSettlementMasterJob
+  | VendorPayoutSettlementCashCollected
+  | VendorPayoutSettlementOnlineCollection
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -119,6 +122,10 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SCheckDashCamInstallationStatus jobData = AnyJobInfo <$> restoreJobInfo SCheckDashCamInstallationStatus jobData
   restoreAnyJobInfo SMediaFileDocumentComplete jobData = AnyJobInfo <$> restoreJobInfo SMediaFileDocumentComplete jobData
   restoreAnyJobInfo SSendFeedbackPN jobData = AnyJobInfo <$> restoreJobInfo SSendFeedbackPN jobData
+  restoreAnyJobInfo SVendorPayoutSettlementMasterJob jobData = AnyJobInfo <$> restoreJobInfo SVendorPayoutSettlementMasterJob jobData
+  -- restoreAnyJobInfo SVendorPayoutSettlementInstance jobData = AnyJobInfo <$> restoreJobInfo SVendorPayoutSettlementInstance jobData -- DEPRECATED
+  restoreAnyJobInfo SVendorPayoutSettlementCashCollected jobData = AnyJobInfo <$> restoreJobInfo SVendorPayoutSettlementCashCollected jobData
+  restoreAnyJobInfo SVendorPayoutSettlementOnlineCollection jobData = AnyJobInfo <$> restoreJobInfo SVendorPayoutSettlementOnlineCollection jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -450,3 +457,56 @@ data SendFeedbackPNJobData = SendFeedbackPNJobData
 instance JobInfoProcessor 'SendFeedbackPN
 
 type instance JobContent 'SendFeedbackPN = SendFeedbackPNJobData
+
+data VendorPayoutSettlementMasterJobData = VendorPayoutSettlementMasterJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    startTime :: UTCTime,
+    endTime :: UTCTime
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'VendorPayoutSettlementMasterJob
+
+type instance JobContent 'VendorPayoutSettlementMasterJob = VendorPayoutSettlementMasterJobData
+
+{- DEPRECATED: Split into separate CashCollected and OnlineCollection jobs
+data VendorPayoutSettlementInstanceJobData = VendorPayoutSettlementInstanceJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    vendorId :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'VendorPayoutSettlementInstance
+
+type instance JobContent 'VendorPayoutSettlementInstance = VendorPayoutSettlementInstanceJobData
+-}
+
+data VendorPayoutSettlementCashCollectedJobData = VendorPayoutSettlementCashCollectedJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    vendorId :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'VendorPayoutSettlementCashCollected
+
+type instance JobContent 'VendorPayoutSettlementCashCollected = VendorPayoutSettlementCashCollectedJobData
+
+data VendorPayoutSettlementOnlineCollectionJobData = VendorPayoutSettlementOnlineCollectionJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    vendorId :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'VendorPayoutSettlementOnlineCollection
+
+type instance JobContent 'VendorPayoutSettlementOnlineCollection = VendorPayoutSettlementOnlineCollectionJobData

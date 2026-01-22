@@ -27,6 +27,7 @@ data DriverFeeT f = DriverFeeT
     collectedBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    driverConsideredInPayoutSettlementAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverId :: B.C f Kernel.Prelude.Text,
     endTime :: B.C f Kernel.Prelude.UTCTime,
     feeType :: B.C f Domain.Types.DriverFee.FeeType,

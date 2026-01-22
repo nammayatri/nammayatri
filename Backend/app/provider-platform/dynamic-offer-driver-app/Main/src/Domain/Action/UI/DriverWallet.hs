@@ -292,5 +292,6 @@ postWalletTopup (mbPersonId, merchantId, mocId) req = do
             vehicleNumber = Nothing,
             cancellationPenaltyAmount = Nothing,
             addedToFeeId = Nothing,
-            collectedAtVendorId = Nothing
+            collectedAtVendorId = Nothing,
+            driverConsideredInPayoutSettlementAt = Nothing
           }

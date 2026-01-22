@@ -93,6 +93,8 @@ DriverFee:
     validDays: Maybe Int
     cancellationPenaltyAmount: Maybe HighPrecMoney
     addedToFeeId: Maybe (Id DriverFee)
+    collectedAtVendorId : Maybe Text
+    driverConsideredInPayoutSettlementAt : Maybe UTCTime
 
   derives: "Generic, Show, Eq"
 

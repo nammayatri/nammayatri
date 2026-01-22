@@ -1,0 +1,42 @@
+imports:
+  Text: Data.Text
+  Area: Lib.Types.SpecialLocation
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  VehicleVariant: Domain.Types.VehicleVariant
+  Value: Data.Aeson
+
+PayoutSplitConfig:
+  tableName: payout_split_config
+
+  fields:
+    vendorId : Text
+    bankDetails : Value
+    area: Area
+    vendorSplitAmount : HighPrecMoney
+    vehicleVariant: VehicleVariant|NoRelation
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    vendorId: PrimaryKey
+    area: PrimaryKey
+    vehicleVariant: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
+
+  excludedFields: [merchantId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    findAllByAreasCityAndVariant:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [area]
+          - eq: [merchantOperatingCityId, vehicleVariant]
+
+    findAllDistinctPayoutVendorsByCity:
+      kvFunction: findAllWithKV
+      where:
+        eq: [merchantOperatingCityId]

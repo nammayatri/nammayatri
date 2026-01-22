@@ -129,3 +129,15 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN send_manual_pa
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN manual_payment_link_rate_limit_expiry_seconds integer  default 21600;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN enable_payout_settlement boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN payout_settlement_week_start_time integer  default 0;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN payout_settlement_week_start_day integer  default 0;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN payout_settlement_job_schedule_time integer  default 3600;

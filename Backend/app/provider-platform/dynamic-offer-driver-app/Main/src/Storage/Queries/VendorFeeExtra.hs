@@ -99,7 +99,9 @@ createChildVendorFee parentFee childFee totalFee = do
                   driverFeeId = childFee.id,
                   vendorId = vfee.vendorId,
                   createdAt = now,
-                  updatedAt = now
+                  updatedAt = now,
+                  splitMethod = vfee.splitMethod,
+                  isVendorFeeProcessedAt = vfee.isVendorFeeProcessedAt
                 }
           )
           vendorFees
@@ -159,3 +161,38 @@ updateManyVendorFeeWithMaxLimit merchantOpCityId = traverse_ $ \(vendorFee, maxL
 
 createManyWithMaxLimit :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [(VendorFee, Maybe HighPrecMoney)] -> m ()
 createManyWithMaxLimit = traverse_ $ \(vendorFee, maxLimit) -> createVendorFeeWithMaxLimit vendorFee maxLimit
+
+-- Update vendor fee processed timestamp
+updateIsVendorFeeProcessedAt ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe UTCTime ->
+  Id DriverFee ->
+  Text ->
+  m ()
+updateIsVendorFeeProcessedAt processedAt driverFeeId vendorId = do
+  updateWithKV
+    [ Se.Set Beam.isVendorFeeProcessedAt processedAt
+    ]
+    [ Se.And
+        [ Se.Is Beam.driverFeeId $ Se.Eq (getId driverFeeId),
+          Se.Is Beam.vendorId $ Se.Eq vendorId
+        ]
+    ]
+
+-- Find unprocessed PAYOUT vendor fees by vendorId
+findUnprocessedPayoutVendorFeesByVendorId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Maybe Int ->
+  m [VendorFee]
+findUnprocessedPayoutVendorFeesByVendorId vendorId mbLimit = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.vendorId $ Se.Eq vendorId,
+          Se.Is Beam.splitMethod $ Se.Eq (Just Payout),
+          Se.Is Beam.isVendorFeeProcessedAt $ Se.Eq Nothing
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    mbLimit
+    Nothing

@@ -1,0 +1,26 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+
+PayoutInstanceCalculation:
+  tableName: payout_instance_calculation
+
+  fields:
+    id : Id PayoutInstanceCalculation
+    fromVendorId : Text
+    toVendorId : Text
+    instanceBalance : HighPrecMoney
+    startTime : UTCTime
+    endTime : UTCTime
+
+  constraints:
+    id: PrimaryKey
+    fromVendorId: PrimaryKey
+    toVendorId: PrimaryKey
+    startTime: PrimaryKey
+    endTime: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -31,6 +31,7 @@ data DriverFee = DriverFee
     collectedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
+    driverConsideredInPayoutSettlementAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Driver,
     endTime :: Kernel.Prelude.UTCTime,
     feeType :: Domain.Types.DriverFee.FeeType,

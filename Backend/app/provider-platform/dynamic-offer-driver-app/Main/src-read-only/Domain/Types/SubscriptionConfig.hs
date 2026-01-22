@@ -30,6 +30,7 @@ data SubscriptionConfig = SubscriptionConfig
     defaultCityVehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     disabledVariantsForSubscription :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant],
     enableCityBasedFeeSwitch :: Kernel.Prelude.Bool,
+    enablePayoutSettlement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableServiceUsageChargeDefault :: Kernel.Prelude.Bool,
     eventsEnabledForWebhook :: [Domain.Types.WebhookExtra.WebhookEvent],
     executionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
@@ -51,6 +52,9 @@ data SubscriptionConfig = SubscriptionConfig
     paymentLinkJobTime :: Data.Time.NominalDiffTime,
     paymentServiceName :: Domain.Types.MerchantServiceConfig.ServiceName,
     payoutServiceName :: Kernel.Prelude.Maybe Domain.Types.MerchantServiceConfig.ServiceName,
+    payoutSettlementJobScheduleTime :: Kernel.Prelude.Maybe Data.Time.NominalDiffTime,
+    payoutSettlementWeekStartDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    payoutSettlementWeekStartTime :: Kernel.Prelude.Maybe Data.Time.NominalDiffTime,
     sendDeepLink :: Kernel.Prelude.Bool,
     sendInAppFcmNotifications :: Kernel.Prelude.Bool,
     sendManualPaymentLinkJobMaxDelay :: Kernel.Prelude.Maybe Data.Time.NominalDiffTime,
@@ -70,7 +74,7 @@ data SubscriptionConfig = SubscriptionConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data CurrentPlanEntites = SAFETY_PLUS deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read)
+data CurrentPlanEntites = SAFETY_PLUS deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), (Ord), (Eq), (Read))
 
 data WebhookConfig = WebhookConfig
   { batchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -79,6 +83,6 @@ data WebhookConfig = WebhookConfig
     retryLimit :: Kernel.Prelude.Int,
     webhookDeliveryMode :: Domain.Types.WebhookExtra.WebhookDeliveryType
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, (Eq))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''CurrentPlanEntites)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''CurrentPlanEntites))

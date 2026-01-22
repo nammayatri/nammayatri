@@ -119,7 +119,8 @@ mkCancellationPenaltyFee now merchantId merchantOpCityId driverId penaltyAmount 
           validDays = Nothing,
           currency = currency,
           addedToFeeId = Nothing,
-          collectedAtVendorId = Nothing
+          collectedAtVendorId = Nothing,
+          driverConsideredInPayoutSettlementAt = Nothing
         }
     )
 
