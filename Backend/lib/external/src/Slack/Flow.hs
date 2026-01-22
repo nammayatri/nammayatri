@@ -20,9 +20,9 @@ where
 
 import qualified Data.Text as T
 import Kernel.Prelude
-import Slack.Types
 import qualified Slack.AWS.Flow as AWS
 import qualified Slack.GCP.Flow as GCP
+import Slack.Types
 
 publishMessage :: SlackNotificationConfig -> T.Text -> IO ()
 publishMessage config message = case config.cloudManager of

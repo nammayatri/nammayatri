@@ -30,6 +30,11 @@ findByRideId rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq rideId]
 incrementRetryCountByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> m ())
 incrementRetryCountByRideId retryCount rideId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.retryCount retryCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.rideId $ Se.Eq rideId]
 
+updatePayoutTransactionIdById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout -> m ())
+updatePayoutTransactionIdById payoutTransactionId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.payoutTransactionId payoutTransactionId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ScheduledPayout.ScheduledPayoutStatus -> Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout -> m ())
 updateStatusById status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 

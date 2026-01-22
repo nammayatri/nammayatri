@@ -18,8 +18,8 @@ module Slack.GCP.Flow
 where
 
 import qualified Data.Text as T
-import Kernel.Prelude
 import qualified Google.Cloud.PubSub.Topic as PubSub
+import Kernel.Prelude
 
 publishMessage :: T.Text -> T.Text -> T.Text -> IO ()
 publishMessage projectId topicId message = do

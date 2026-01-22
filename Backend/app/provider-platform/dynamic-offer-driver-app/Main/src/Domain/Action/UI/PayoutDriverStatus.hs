@@ -60,4 +60,3 @@ convertHistory h =
       timestamp = h.createdAt,
       message = h.message
     }
-

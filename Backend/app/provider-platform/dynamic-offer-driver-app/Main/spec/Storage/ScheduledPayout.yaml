@@ -52,3 +52,8 @@ ScheduledPayout:
       kvFunction: updateOneWithKV
       params: [retryCount]
       where: rideId
+
+    updatePayoutTransactionIdById:
+      kvFunction: updateOneWithKV
+      params: [payoutTransactionId]
+      where: id

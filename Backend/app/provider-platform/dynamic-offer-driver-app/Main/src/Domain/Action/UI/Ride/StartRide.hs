@@ -213,30 +213,33 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
       -- Schedule payout for special zone rides if enabled
       when (isJust booking.specialLocationTag && transporterConfig.payoutRideMoneyToDriver) $ do
-        scheduledPayoutId <- Id <$> generateGUID
-        let scheduledPayout =
-              DSP.ScheduledPayout
-                { id = scheduledPayoutId,
-                  rideId = ride.id.getId,
-                  bookingId = booking.id.getId,
-                  driverId = driverId.getId,
-                  amount = Just booking.estimatedFare,
-                  status = DSP.INITIATED,
-                  retryCount = Nothing,
-                  failureReason = Nothing,
-                  payoutTransactionId = Nothing,
-                  expectedCreditTime = Just (addUTCTime (2 * 60 * 60) now),
-                  createdAt = now,
-                  updatedAt = now,
-                  merchantId = Just booking.providerId,
-                  merchantOperatingCityId = Just ride.merchantOperatingCityId
-                }
-        QSP.create scheduledPayout
-        QSPE.createInitialHistory scheduledPayout
+        -- Checking iff duplicate is there.
+        existingPayout <- QSP.findByRideId ride.id.getId
+        when (isNothing existingPayout) $ do
+          scheduledPayoutId <- Id <$> generateGUID
+          let scheduledPayout =
+                DSP.ScheduledPayout
+                  { id = scheduledPayoutId,
+                    rideId = ride.id.getId,
+                    bookingId = booking.id.getId,
+                    driverId = driverId.getId,
+                    amount = Just booking.estimatedFare,
+                    status = DSP.INITIATED,
+                    retryCount = Nothing,
+                    failureReason = Nothing,
+                    payoutTransactionId = Nothing,
+                    expectedCreditTime = Just (addUTCTime (2 * 60 * 60) now),
+                    createdAt = now,
+                    updatedAt = now,
+                    merchantId = Just booking.providerId,
+                    merchantOperatingCityId = Just ride.merchantOperatingCityId
+                  }
+          QSP.create scheduledPayout
+          QSPE.createInitialHistory scheduledPayout
 
-        let scheduledTime = addUTCTime (2 * 60 * 60) now
-        let jobData = SpecialZonePayoutJobData {scheduledPayoutId = scheduledPayoutId}
-        QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
+          let scheduledTime = addUTCTime (2 * 60 * 60) now
+          let jobData = SpecialZonePayoutJobData {scheduledPayoutId = scheduledPayoutId}
+          QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
 
       pure APISuccess.Success
   where

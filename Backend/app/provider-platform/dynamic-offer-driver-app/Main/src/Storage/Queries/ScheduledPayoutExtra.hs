@@ -2,9 +2,12 @@ module Storage.Queries.ScheduledPayoutExtra where
 
 import qualified Domain.Types.PayoutStatusHistory as DPSH
 import qualified Domain.Types.ScheduledPayout as DSP
+import Kernel.Beam.Functions (updateOneWithKV)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Sequelize as Se
+import qualified Storage.Beam.ScheduledPayout as Beam
 import qualified Storage.Queries.PayoutStatusHistory as QPSH
 import qualified Storage.Queries.ScheduledPayout as QSP
 
@@ -65,3 +68,15 @@ getStatusMessage DSP.CREDITED = "Payment credited to bank"
 getStatusMessage DSP.AUTO_PAY_FAILED = "Auto-pay failed"
 getStatusMessage DSP.RETRYING = "Retrying payment..."
 getStatusMessage DSP.FAILED = "Payment failed/cancelled"
+
+-- | Update the payout transaction ID after receiving it from the payout service
+updatePayoutTransactionId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  Id DSP.ScheduledPayout ->
+  m ()
+updatePayoutTransactionId txnId scheduledPayoutId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.payoutTransactionId txnId, Se.Set Beam.updatedAt now]
+    [Se.Is Beam.id $ Se.Eq (getId scheduledPayoutId)]

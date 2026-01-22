@@ -19,12 +19,12 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout as SpecialZonePayout
 import qualified Storage.Queries.PayoutStatusHistory as QPSH
 import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import Tools.Error
 
--- | Get payout status by rideId (no auth - for agent)
 getPayoutStatus ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
@@ -97,11 +97,10 @@ postPayoutRetry _merchantShortId _opCity rideId = do
   logInfo $ "Retrying payout for rideId: " <> rideId
 
   -- Mark as RETRYING with history
-  QSPE.updateStatusWithHistoryById DSP.RETRYING (Just "Retrying payment...") payout
+  QSPE.updateStatusWithHistoryById DSP.RETRYING (Just "Admin initiated retry...") payout
 
-  -- TODO: Call actual payout service and handle success/failure
-  -- For now, mark as CREDITED (placeholder for actual implementation)
-  QSPE.updateStatusWithHistoryById DSP.CREDITED (Just "Payment credited to bank") payout
+  -- Execute the same payout logic as in SpecialZonePayout
+  _ <- SpecialZonePayout.executeSpecialZonePayout payout
 
   logInfo $ "Payout retry completed for rideId: " <> rideId
   pure Kernel.Types.APISuccess.Success

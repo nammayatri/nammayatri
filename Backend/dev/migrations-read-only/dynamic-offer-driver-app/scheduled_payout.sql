@@ -27,25 +27,3 @@ ALTER TABLE atlas_driver_offer_bpp.scheduled_payout ADD COLUMN failure_reason te
 ALTER TABLE atlas_driver_offer_bpp.scheduled_payout ADD COLUMN expected_credit_time timestamp with time zone ;
 
 
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
