@@ -161,6 +161,11 @@ sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
   let sortOn _fos (_, _, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration) = case mbSortOn of
         Just Common.ONLINE_TOTAL_EARNING -> castSortBy mbSortDesc onlineTotalEarning
         Just Common.CASH_TOTAL_EARNING -> castSortBy mbSortDesc cashTotalEarning
+        Just Common.TOTAL_EARNING_GROSS -> castSortBy mbSortDesc (onlineTotalEarning CH.+. cashTotalEarning)
+        Just Common.PLATFORM_FEE_TOTAL -> castSortBy mbSortDesc (cashPlatformFees CH.+. onlinePlatformFees)
+        Just Common.TOTAL_EARNING_NET -> castSortBy mbSortDesc ((onlineTotalEarning CH.+. cashTotalEarning) CH.-. (cashPlatformFees CH.+. onlinePlatformFees))
+        Just Common.IN_APP_EARNING_NET -> castSortBy mbSortDesc (onlineTotalEarning CH.-. onlinePlatformFees)
+        Just Common.CASH_EARNING_NET -> castSortBy mbSortDesc (cashTotalEarning CH.-. cashPlatformFees)
         Just Common.CASH_PLATFORM_FEES -> castSortBy mbSortDesc cashPlatformFees
         Just Common.ONLINE_PLATFORM_FEES -> castSortBy mbSortDesc onlinePlatformFees
         Just Common.ONLINE_DURATION -> castSortBy mbSortDesc onlineDuration
@@ -251,6 +256,11 @@ sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay 
         Just Common.TOTAL_RATING_SCORE -> castSortBy mbSortDesc totalRatingScore
         Just Common.RIDE_DURATION -> castSortBy mbSortDesc rideDuration
         Just Common.TOTAL_RATING_COUNT -> castSortBy mbSortDesc totalRatingCount
+        Just Common.ACCEPTANCE_RATE -> castSortBy mbSortDesc (acceptationRequestCount CH./. totalRequestCount)
+        Just Common.RATING -> castSortBy mbSortDesc (totalRatingScore CH./. totalRatingCount)
+        Just Common.COMPLETION_RATE -> castSortBy mbSortDesc (completedRides CH./. totalRequestCount)
+        Just Common.UTILIZATION -> castSortBy mbSortDesc (rideDuration CH./. onlineDuration)
+        Just Common.EARNING_PER_KM -> castSortBy mbSortDesc ((onlineTotalEarning CH.+. cashTotalEarning) CH./. totalDistance)
         _ -> castSortBy mbSortDesc completedRides
 
   res <-

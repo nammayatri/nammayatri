@@ -3675,8 +3675,8 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId fleetOwnerId req = d
     QDriverInfo.updateDob personId (Just (UTCTime dob 0))
   pure Success
 
-getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Int -> Maybe Int -> Day -> Day -> Flow Common.FleetVehicleStatsRes
-getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbVehicleNo mbLimit mbOffset fromDay toDay = do
+getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Common.FleetVehicleStatsSortOn -> Day -> Day -> Flow Common.FleetVehicleStatsRes
+getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbVehicleNo mbLimit mbOffset mbSortDesc mbSortOn fromDay toDay = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -3690,7 +3690,7 @@ getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbVehicleNo m
     Nothing -> pure Nothing
   agg <- case transporterConfig.analyticsConfig.useDbForEarningAndMetrics of
     True -> QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromDay toDay
-    _ -> CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromDay toDay
+    _ -> CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset mbSortDesc mbSortOn fromDay toDay
   let rcIds = map (\vehicleStat -> Id vehicleStat.rcId) agg
   vehicleRegistrationCertificates <- VRCQuery.findAllById rcIds
   let vehicleMap = Map.fromList $ map (\rc -> (rc.id.getId, rc)) vehicleRegistrationCertificates
