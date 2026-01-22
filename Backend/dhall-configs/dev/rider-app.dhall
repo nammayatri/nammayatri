@@ -8,6 +8,8 @@ let ondcUrl = "https://analytics-api.aws.ondc.org/v1/api/push-txn-logs"
 
 let sosAlertsTopicARN = common.sosAlertsTopicARN
 
+let slackNotificationConfig = common.slackNotificationConfig
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -439,6 +441,7 @@ in  { esqDBCfg
     , isMetroTestTransaction = False
     , urlShortnerConfig = common.urlShortnerConfig
     , sosAlertsTopicARN
+    , slackNotificationConfig
     , ondcRegistryUrl = common.ondcRegistryUrl
     , ondcGatewayUrl = common.ondcGatewayUrl
     , nyRegistryUrl = common.nyRegistryUrl

@@ -6,6 +6,8 @@ let globalCommon = ../generic/common.dhall
 
 let sosAlertsTopicARN = common.sosAlertsTopicARN
 
+let slackNotificationConfig = common.slackNotificationConfig
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -480,6 +482,7 @@ in  { esqDBCfg
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , quoteRespondCoolDown = +10
     , sosAlertsTopicARN
+    , slackNotificationConfig
     , ondcRegistryUrl = common.ondcRegistryUrl
     , ondcGatewayUrl = common.ondcGatewayUrl
     , nyRegistryUrl = common.nyRegistryUrl

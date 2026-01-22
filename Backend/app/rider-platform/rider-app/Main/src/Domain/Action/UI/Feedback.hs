@@ -55,7 +55,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.Person as SLP
 import qualified SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
-import qualified Slack.AWS.Flow as Slack
+import qualified Slack.Flow as Slack
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.FeedbackForm as CQFF
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -161,10 +161,10 @@ feedback request personId = do
       case createTicketResp of
         Left err -> logTagError "Create Ticket API failed - " $ show err
         Right resp -> logTagInfo "Created Ticket for Customer L0 Feedback : TicketId - " resp.ticketId
-      sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
+      slackConfig <- asks (.slackNotificationConfig)
       desc <- generateSlackMessage person ride unencryptedMobileNumber (T.pack $ show city) request.rating feedbackDetails
       let message = createJsonMessage desc
-      void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
+      void $ L.runIO $ Slack.publishMessage slackConfig message
   pure
     FeedbackRes
       { wasOfferedAssistance = request.wasOfferedAssistance,

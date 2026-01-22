@@ -1489,6 +1489,22 @@
         "type": "github"
       }
     },
+    "google-cloud-haskell": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1757601782,
+        "narHash": "sha256-2y47nFBDKl3iJgkoM+40VUtn1nhIHgX+5Vv7x2bATWk=",
+        "owner": "tusharad",
+        "repo": "google-cloud-haskell",
+        "rev": "cd051e5ab9c20dcfd2d2ffa68d0c6b69703fd459",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tusharad",
+        "repo": "google-cloud-haskell",
+        "type": "github"
+      }
+    },
     "haskell-cac": {
       "inputs": {
         "common": [
@@ -3354,6 +3370,7 @@
         "beckn-gateway": "beckn-gateway",
         "common": "common",
         "easy-purescript-nix": "easy-purescript-nix",
+        "google-cloud-haskell": "google-cloud-haskell",
         "haskell-cac": "haskell-cac",
         "haskell-flake": [
           "common",

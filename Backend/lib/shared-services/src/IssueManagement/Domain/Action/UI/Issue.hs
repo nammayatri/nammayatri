@@ -44,7 +44,8 @@ import qualified Kernel.Types.Beckn.City as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified "external" Slack.AWS.Flow as Slack
+import qualified "external" Slack.Flow as Slack
+import Slack.Types (SlackNotificationConfig)
 import Text.Regex.TDFA (AllTextMatches (..), getAllTextMatches, (=~))
 
 data ServiceHandle m = ServiceHandle
@@ -369,7 +370,7 @@ createIssueReport ::
   ( EsqDBReplicaFlow m r,
     EncFlow m r,
     BeamFlow m r,
-    HasField "sosAlertsTopicARN" r Text
+    HasField "slackNotificationConfig" r SlackNotificationConfig
   ) =>
   (Id Person, Id Merchant) ->
   Maybe Language ->
@@ -416,10 +417,10 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
   let isLOFeedback = (identifier == CUSTOMER) && checkForLOFeedback config.sensitiveWords config.sensitiveWordsForExactMatch (Just description)
   when isLOFeedback $
     fork "notify on slack" $ do
-      sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
+      slackConfig <- asks (.slackNotificationConfig)
       msg <- generateMsg moCity mbRide mbRideInfoRes person description
       let message = createJsonMessage msg
-      void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
+      void $ L.runIO $ Slack.publishMessage slackConfig message
   _ <- QIR.create issueReport
   when shouldCreateTicket $ do
     ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config uploadedMediaFiles now issueHandle
