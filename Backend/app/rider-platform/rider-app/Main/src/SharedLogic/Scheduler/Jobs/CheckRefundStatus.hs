@@ -65,7 +65,8 @@ checkRefundStatusJob ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'CheckRefundStatus ->
   m ExecutionResult
@@ -110,7 +111,8 @@ processRefundStatus ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   DRefunds.Refunds ->
   DP.Person ->
@@ -121,7 +123,7 @@ processRefundStatus refundEntry person paymentOrder = do
       paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
   if refundEntry.status `elem` nonTerminalStatuses
     then do
-      let orderStatusCall = Payment.orderStatus person.merchantId person.merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
+      let orderStatusCall = Payment.orderStatus person.merchantId person.merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion Nothing
           walletPostingCall = TWallet.walletPosting person.merchantId person.merchantOperatingCityId
       paymentStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall (Just walletPostingCall)
       let matchingRefund = find (\refund -> refund.requestId == refundEntry.id.getId) paymentStatusResponse.refunds

@@ -52,7 +52,7 @@ data CallEventReq = CallEventReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-logCallEvent :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, CacheFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => CallEventReq -> m APISuccess.APISuccess
+logCallEvent :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, CacheFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool), HasField "blackListedJobs" r [Text]) => CallEventReq -> m APISuccess.APISuccess
 logCallEvent CallEventReq {..} = do
   when (callType == "ANONYMOUS_CALLER") $ callOnClickTracker rideId
   sendCallDataToKafka Nothing (Just rideId) (Just callType) Nothing Nothing User (Just exophoneNumber)
@@ -67,7 +67,7 @@ sendCallDataToKafka vendor mRideId callType callSid callStatus triggeredBy exoph
       triggerExophoneEvent $ ExophoneEventData vendor callType (Just rideId) callSid callStatus ride.merchantId triggeredBy (Just booking.riderId) exophoneNumber
     Nothing -> triggerExophoneEvent $ ExophoneEventData vendor callType Nothing callSid callStatus Nothing triggeredBy Nothing exophoneNumber
 
-callOnClickTracker :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => Id Ride.Ride -> m ()
+callOnClickTracker :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool), HasField "blackListedJobs" r [Text]) => Id Ride.Ride -> m ()
 callOnClickTracker rideId = do
   ride <- runInReplica $ QRide.findById (ID.Id rideId.getId) >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

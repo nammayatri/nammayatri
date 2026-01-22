@@ -533,3 +533,14 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN metro_ticket_allowed boolean;
 ALTER TABLE atlas_app.rider_config ADD COLUMN suburban_ticket_allowed boolean;
 ALTER TABLE atlas_app.rider_config ADD COLUMN bus_ticket_allowed boolean;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN kafka_topic_name text  default 'gps-data';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN static_customer_id_threshold_day date ;

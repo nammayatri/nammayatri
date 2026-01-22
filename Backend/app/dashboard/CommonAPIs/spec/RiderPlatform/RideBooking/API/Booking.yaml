@@ -27,6 +27,13 @@ apis:
       migrate:
         endpoint: RBooking RideStatusEndPoint
         userActionType: ApiAuth APP_BACKEND CUSTOMERS BOOKING_STATUS
+  - GET: # BookingInfoAPIUsingOTP
+      endpoint: /{bookingCode}/booking
+      auth: NoAuth
+      params:
+        bookingCode: Text
+      response:
+        type: BookingAPIEntity
   - GET: # CustomerBookingListAPI
       endpoint: /list/{customerId}
       auth: ApiAuthV2
@@ -41,5 +48,39 @@ apis:
         type: BookingListRes
       migrate:
         userActionType: ApiAuth APP_BACKEND CUSTOMERS BOOKINGLIST
-
+  - GET: # AgentBookingListAPI
+      endpoint: /agentL1/list
+      auth: ApiAuthV2
+      query:
+        - limit: Integer
+        - offset: Integer
+        - status: BookingStatus
+        - fromDate: UTCTime
+        - toDate: UTCTime
+      response:
+        type: BookingListRes
+      helperApi:
+        - GET:
+            endpoint: /agentL1/list
+            query:
+              - agentId: Text
+              - limit: Integer
+              - offset: Integer
+              - status: BookingStatus
+              - fromDate: UTCTime
+              - toDate: UTCTime
+            auth: ApiAuthV2 # TODO remove
+            response:
+              type: BookingListRes
+  - GET: # AgentBookingListAPI
+      endpoint: /agentL2/list
+      auth: ApiAuthV2
+      query:
+        - limit: Integer
+        - offset: Integer
+        - status: BookingStatus
+        - fromDate: UTCTime
+        - toDate: UTCTime
+      response:
+        type: BookingListRes
 types: {}

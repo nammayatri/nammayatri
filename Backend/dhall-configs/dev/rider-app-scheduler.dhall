@@ -42,6 +42,7 @@ let schedulerConfig =
       , kafkaProducerCfg = appCfg.kafkaProducerCfg
       , cacConfig = appCfg.cacConfig
       , inMemConfig
+      , blackListedJobs = [] : List Text
       }
 
 in  { appCfg =

@@ -305,7 +305,8 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             paymentFulfillmentStatus = Just FulfillmentPending,
             domainEntityId = Nothing,
             domainTransactionId = Nothing,
-            effectAmount = Nothing
+            effectAmount = Nothing,
+            isMockPayment = Just False
           }
 
     buildTransaction ::
@@ -455,8 +456,9 @@ createOrderService ::
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   Maybe (Wallet.CreateWalletReq -> m Wallet.CreateWalletResp) ->
+  Bool ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall mbCreateWalletCall = do
+createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall mbCreateWalletCall _isMockPayment = do
   logInfo $ "CreateOrderService: "
   -- Apply test- prefix if isTestTransaction is True and not already prefixed (idempotent)
   let updatedOrderShortId =
@@ -472,7 +474,7 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp
+      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp _isMockPayment
       QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
@@ -606,8 +608,9 @@ buildPaymentOrder ::
   DOrder.PaymentServiceType ->
   Payment.CreateOrderReq ->
   Payment.CreateOrderResp ->
+  Bool ->
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req resp = do
+buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req resp isMockPayment = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
   let paymentOrderValidTill = mbPaymentOrderValidity <&> (\validity -> addUTCTime (intToNominalDiffTime validity.getSeconds) now)
@@ -653,7 +656,8 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             paymentFulfillmentStatus = Just FulfillmentPending,
             domainEntityId = Nothing,
             domainTransactionId = Nothing,
-            effectAmount = Nothing
+            effectAmount = Nothing,
+            isMockPayment = Just isMockPayment
           }
   buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
   pure mkPaymentOrder
@@ -1258,7 +1262,8 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             paymentFulfillmentStatus = Just FulfillmentPending,
             domainEntityId = Nothing,
             domainTransactionId = Nothing,
-            effectAmount = Nothing
+            effectAmount = Nothing,
+            isMockPayment = Just False
           }
 
 --- refunds api ----

@@ -35,7 +35,8 @@ crisReconJob ::
     EsqDBFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
-    ServiceFlow m r
+    ServiceFlow m r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'CrisRecon ->
   m ExecutionResult

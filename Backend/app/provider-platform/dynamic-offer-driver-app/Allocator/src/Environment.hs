@@ -126,7 +126,8 @@ data HandlerEnv = HandlerEnv
     appBackendBapInternal :: AppBackendBapInternal,
     mlPricingInternal :: MLPricingInternal,
     inMemEnv :: CF.InMemEnv,
-    url :: Maybe Text
+    url :: Maybe Text,
+    blackListedJobs :: [Text]
   }
   deriving (Generic)
 

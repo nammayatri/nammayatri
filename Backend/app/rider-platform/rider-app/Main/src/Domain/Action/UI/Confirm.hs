@@ -64,15 +64,17 @@ confirm ::
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id DP.Person ->
   Id DQuote.Quote ->
+  Maybe Text ->
   Maybe Payment.PaymentMethodId ->
   Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
   m SConfirm.DConfirmRes
-confirm personId quoteId paymentMethodId paymentInstrument isAdvanceBookingEnabled = do
+confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAdvanceBookingEnabled = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   merchant <- CQM.findById quote.merchantId >>= fromMaybeM (MerchantNotFound quote.merchantId.getId)
   SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId

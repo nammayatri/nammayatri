@@ -164,3 +164,8 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN toll_ids text[] ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN personal_discount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN commission_charges double precision ;

@@ -108,4 +108,5 @@ in  { hedisCfg
     , cacConfig
     , inMemConfig
     , hedisSecondaryClusterCfg
+    , blackListedJobs = [] : List Text
     }

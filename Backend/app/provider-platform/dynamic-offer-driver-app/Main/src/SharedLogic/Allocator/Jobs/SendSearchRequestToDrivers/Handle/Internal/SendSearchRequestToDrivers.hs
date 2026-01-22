@@ -354,6 +354,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 conditionalCharges = additionalChargesEligiblFor,
                 isSafetyPlus = Just isEligibleForSafetyPlusCharge,
                 coinsRewardedOnGoldTierRide = driverCoinsRewardedOnGoldTierRideRequest,
+                commissionCharges = tripQuoteDetail.commissionCharges,
                 ..
               }
       pure searchRequestForDriver

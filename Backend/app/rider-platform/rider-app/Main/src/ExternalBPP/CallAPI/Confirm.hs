@@ -44,7 +44,8 @@ confirm ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Merchant ->
   MerchantOperatingCity ->
@@ -115,7 +116,8 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
         HasFlowEnv m r '["smsCfg" ::: SmsConfig],
         HasFlowEnv m r '["googleSAPrivateKey" ::: String],
         HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-        HasField "isMetroTestTransaction" r Bool
+        HasField "isMetroTestTransaction" r Bool,
+        HasField "blackListedJobs" r [Text]
       ) =>
       DOrder ->
       m ()

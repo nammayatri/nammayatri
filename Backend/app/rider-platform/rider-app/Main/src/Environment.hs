@@ -176,7 +176,8 @@ data AppCfg = AppCfg
     disableViaPointTimetableCheck :: Bool,
     parkingApiKey :: Text,
     corporatePartnerApiToken :: Text,
-    noSignatureSubscribers :: [Text]
+    noSignatureSubscribers :: [Text],
+    blackListedJobs :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -287,7 +288,8 @@ data AppEnv = AppEnv
     url :: Maybe Text,
     parkingApiKey :: Text,
     corporatePartnerApiToken :: Text,
-    noSignatureSubscribers :: [Text]
+    noSignatureSubscribers :: [Text],
+    blackListedJobs :: [Text]
   }
   deriving (Generic)
 

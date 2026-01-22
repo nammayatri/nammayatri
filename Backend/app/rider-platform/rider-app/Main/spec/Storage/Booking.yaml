@@ -251,6 +251,7 @@ Booking:
     multimodalSearchRequestId: Maybe Text
     commission: Maybe HighPrecMoney
     paymentMode: Maybe PaymentMode
+    dashboardAgentId: Maybe Text
 
   beamFields:
     estimatedDistance:
@@ -466,6 +467,12 @@ Booking:
     findByQuoteId:
       kvFunction: findOneWithKV
       where: quoteId
+    findByDashboardAgentId:
+      kvFunction: findAllWithOptionsKV
+      where: dashboardAgentId
+      orderBy:
+        field: createdAt
+        order: desc
 
 BookingPartiesLink:
   fields:

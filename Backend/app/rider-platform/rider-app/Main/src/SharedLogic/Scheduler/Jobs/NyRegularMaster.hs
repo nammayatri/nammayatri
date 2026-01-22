@@ -24,7 +24,8 @@ runNyRegularMasterJob ::
     EsqDBFlow m r,
     SchedulerFlow r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'NyRegularMaster ->
   m ExecutionResult
@@ -67,7 +68,8 @@ processSubscription ::
     EsqDBFlow m r,
     SchedulerFlow r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Time.UTCTime ->
   Time.UTCTime ->
@@ -105,7 +107,8 @@ createNyRegularInstanceJob ::
     EsqDBFlow m r,
     SchedulerFlow r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Int ->
   Time.NominalDiffTime ->

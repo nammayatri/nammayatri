@@ -120,3 +120,8 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN vehicle_number text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN frfs_ticket_booking_payment_id_for_ticket_generation text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_mock_payment boolean ;

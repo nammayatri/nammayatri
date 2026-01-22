@@ -268,7 +268,8 @@ data TripQuoteDetail = TripQuoteDetail
     petCharges :: Maybe HighPrecMoney,
     priorityCharges :: Maybe HighPrecMoney,
     estimateOrQuoteId :: Text,
-    eligibleForUpgrade :: Bool
+    eligibleForUpgrade :: Bool,
+    commissionCharges :: Maybe HighPrecMoney
   }
 
 data DriverSearchBatchInput m = DriverSearchBatchInput

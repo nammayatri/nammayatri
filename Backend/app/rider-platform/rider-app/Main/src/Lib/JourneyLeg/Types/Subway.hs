@@ -44,7 +44,8 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
     crisSdkResponse :: Maybe CrisSdkResponse,
     isSingleMode :: Maybe Bool,
     mbEnableOffer :: Maybe Bool,
-    categorySelectionReq :: [FRFSCategorySelectionReq]
+    categorySelectionReq :: [FRFSCategorySelectionReq],
+    mbIsMockPayment :: Maybe Bool
   }
 
 data SubwayLegRequestCancelData = SubwayLegRequestCancelData

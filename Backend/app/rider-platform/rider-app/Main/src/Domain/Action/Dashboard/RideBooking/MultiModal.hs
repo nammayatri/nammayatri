@@ -18,6 +18,7 @@ import qualified "this" Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
@@ -30,8 +31,12 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Error
 import Servant
 import SharedLogic.Merchant (findMerchantByShortId)
+import SharedLogic.MessageBuilder (buildSendSmsReq)
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Notifications as TNotifications
+import Tools.SMS as Sms hiding (Success)
+import qualified Tools.Whatsapp as Whatsapp
 
 getMultiModalList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe [Domain.Types.BookingStatus.BookingStatus] -> Kernel.Prelude.Maybe [Domain.Types.Journey.JourneyStatus] -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Booking.API.BookingRequestType -> Maybe Text -> Environment.Flow Domain.Action.UI.Booking.BookingListResV2)
 getMultiModalList merchantShortId _opCity limit offset bookingOffset journeyOffset customerPhoneNo countryCode email fromDate toDate rideStatus journeyStatus isPaymentSuccess bookingRequestType customerId = do
@@ -44,15 +49,32 @@ postMultiModalSendMessage _merchantShortId _opCity customerId req = do
   pure Kernel.Types.APISuccess.Success
 
 notifyCustomerFromDashboard ::
-  (ServiceFlow m r, EsqDBFlow m r, KEsqueleto.EsqDBReplicaFlow m r) =>
   Text ->
   API.Types.Dashboard.RideBooking.MultiModal.CustomerSendMessageReq ->
-  m ()
+  Environment.Flow ()
 notifyCustomerFromDashboard customerId req = do
   person <- QPerson.findById (Kernel.Types.Id.Id customerId) >>= fromMaybeM (PersonNotFound customerId)
   case req.channel of
-    API.Types.Dashboard.RideBooking.MultiModal.WHATSAPP -> pure ()
-    API.Types.Dashboard.RideBooking.MultiModal.SMS -> pure ()
+    API.Types.Dashboard.RideBooking.MultiModal.WHATSAPP -> do
+      whenJust req.messageKey $ \messageKey -> do
+        mbMerchantMessage <- QMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing
+        whenJust mbMerchantMessage $ \merchantMessage -> do
+          mbPhoneNumber <- decrypt `mapM` person.mobileNumber
+          whenJust mbPhoneNumber $ \phoneNumber -> do
+            let variables = map (Just . snd) (fromMaybe [] req.variables)
+            void $ Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId variables Nothing Nothing)
+    API.Types.Dashboard.RideBooking.MultiModal.SMS -> do
+      whenJust req.messageKey $ \messageKey -> do
+        mbMerchantMessage <- QMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing
+        whenJust mbMerchantMessage $ \merchantMessage -> do
+          mbPhoneNumber <- decrypt `mapM` person.mobileNumber
+          whenJust mbPhoneNumber $ \phoneNumber -> do
+            let countryCode = fromMaybe "+91" person.mobileCountryCode
+                phoneNumberWithCountryCode = countryCode <> phoneNumber
+            withLogTag ("sending SMS" <> Kernel.Types.Id.getId person.id) $ do
+              buildSmsReq <- buildSendSmsReq merchantMessage (fromMaybe [] req.variables)
+              Sms.sendSMS person.merchantId person.merchantOperatingCityId (buildSmsReq phoneNumberWithCountryCode)
+                >>= Sms.checkSmsResult
     API.Types.Dashboard.RideBooking.MultiModal.PUSH_NOTIFICATION -> do
       let notificationData =
             Notification.NotificationReq

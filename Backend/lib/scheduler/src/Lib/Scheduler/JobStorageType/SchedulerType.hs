@@ -32,6 +32,15 @@ import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST
 import qualified Lib.Scheduler.JobStorageType.Redis.Queries as RQ
 import Lib.Scheduler.Types
 
+whenCreateNotBlocked :: (JobCreator r m) => Text -> m () -> m ()
+whenCreateNotBlocked jobType createJobCb = do
+  jobIsBlackListed >>= bool createJobCb (fork "Incementing Blocked Job Counter: " $ incrementSchedulerJobDisabledCounter ("Scheduler_" <> jobType))
+  where
+    jobIsBlackListed :: (JobCreator r m) => m Bool
+    jobIsBlackListed = do
+      blackListedJobs <- asks (.blackListedJobs)
+      return $ jobType `elem` blackListedJobs
+
 createJob ::
   forall t (e :: t) m r.
   (JobFlow t e, JobCreator r m) =>
@@ -44,19 +53,20 @@ createJob merchantId merchantOperatingCityId jobData = do
   schedulerType <- asks (.schedulerType)
   uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
-  case schedulerType of
-    RedisBased -> do
-      longRunning <- isLongRunning jobType
-      logDebug $ "LONG RUNNING " <> show longRunning
-      if longRunning
-        then do
-          DBQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
-          RQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
-        else do
-          RQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
-    DbBased -> do
-      logDebug "DB BASED JOB "
-      DBQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
+  whenCreateNotBlocked jobType $
+    case schedulerType of
+      RedisBased -> do
+        longRunning <- isLongRunning jobType
+        logDebug $ "LONG RUNNING " <> show longRunning
+        if longRunning
+          then do
+            DBQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
+            RQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
+          else do
+            RQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
+      DbBased -> do
+        logDebug "DB BASED JOB "
+        DBQ.createJob @t @e merchantId merchantOperatingCityId uuid maxShards jobData
 
 createJobIn ::
   forall t (e :: t) m r.
@@ -71,7 +81,7 @@ createJobIn merchantId merchantOperatingCityId inTime jobData = do
   schedulerType <- asks (.schedulerType)
   uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
-  case schedulerType of
+  whenCreateNotBlocked jobType $ case schedulerType of
     RedisBased -> do
       longRunning <- isLongRunning jobType
       logDebug $ "LONG RUNNING " <> show longRunning
@@ -97,7 +107,7 @@ createJobInWithCheck ::
   Maybe Int ->
   JobContent e ->
   m ()
-createJobInWithCheck merchantId merchantOperatingCityId inTime minScheduleTime maxScheduleTime jobType upperLimit jobData = do
+createJobInWithCheck merchantId merchantOperatingCityId inTime minScheduleTime maxScheduleTime jobType upperLimit jobData = whenCreateNotBlocked jobType $ do
   jobs <- DBQ.getJobByTypeTimeAndData @t @e jobType minScheduleTime maxScheduleTime jobData
   case upperLimit of
     Just uL -> do
@@ -127,7 +137,7 @@ createJobByTime merchantId merchantOperatingCityId byTime jobData = do
   schedulerType <- asks (.schedulerType)
   uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
-  case schedulerType of
+  whenCreateNotBlocked jobType $ case schedulerType of
     RedisBased -> do
       longRunning <- isLongRunning jobType
       logDebug $ "LONG RUNNING " <> show longRunning

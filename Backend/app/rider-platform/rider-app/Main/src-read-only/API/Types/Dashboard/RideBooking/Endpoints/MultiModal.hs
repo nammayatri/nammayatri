@@ -9,6 +9,7 @@ import qualified "this" Domain.Action.UI.Booking
 import qualified "this" Domain.Types.Booking.API
 import qualified "beckn-spec" Domain.Types.BookingStatus
 import qualified "this" Domain.Types.Journey
+import qualified Domain.Types.MerchantMessage
 import qualified "this" Domain.Types.Person
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Prelude
@@ -28,7 +29,13 @@ data CustomerCommentsResp = CustomerCommentsResp {comments :: Kernel.Prelude.May
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CustomerSendMessageReq = CustomerSendMessageReq {channel :: MediaChannel, message :: Kernel.Prelude.Text, title :: Kernel.Prelude.Text}
+data CustomerSendMessageReq = CustomerSendMessageReq
+  { channel :: MediaChannel,
+    message :: Kernel.Prelude.Text,
+    messageKey :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageKey,
+    title :: Kernel.Prelude.Text,
+    variables :: Kernel.Prelude.Maybe [(Kernel.Prelude.Text, Kernel.Prelude.Text)]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

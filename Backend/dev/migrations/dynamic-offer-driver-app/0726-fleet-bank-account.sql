@@ -37,3 +37,5 @@ VALUES
         now(),
         now()
     );
+
+insert into atlas_driver_offer_bpp.fleet_member_association (enabled, fleet_member_id, fleet_owner_id, is_fleet_owner) values (true, 'favorit-fleet-owner-0000000000000000', 'favorit-fleet-owner-0000000000000000', true);

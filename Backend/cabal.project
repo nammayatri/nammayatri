@@ -21,6 +21,7 @@ packages:
   app/mocks/rider-platform
   app/kafka-consumers
   app/mocks/idfy
+  app/mocks/payment
   app/mocks/google
   app/rider-platform/public-transport-rider-platform/Main
   app/rider-platform/public-transport-rider-platform/search-consumer

@@ -220,14 +220,16 @@ postMultimodalConfirm ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
-postMultimodalConfirm (_mbPersonId, _merchantId) journeyId forcedBookLegOrder journeyConfirmReq = do
+postMultimodalConfirm (_mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment journeyConfirmReq = do
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journey.id
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
-  void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey journeyConfirmReq.enableOffer
+      isMockPayment = fromMaybe False mbIsMockPayment
+  void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey journeyConfirmReq.enableOffer (Just isMockPayment)
   -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`.
   -- Note: INPROGRESS journey status indicates that the tracking has started.
   if isAllFRFSLegSkipped legs confirmElements
@@ -295,7 +297,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
                     Just paymentOrder -> do
                       let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
                           merchantOperatingCityId = fromMaybe booking.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-                          orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
+                          orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
                           fulfillmentHandler = mkFulfillmentHandler paymentServiceType paymentOrder.id
                       void $ SPayment.orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
                       createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode
@@ -386,11 +388,11 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing
           }
-  let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
-  DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall)
+  let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
+      createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
+  DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (fromMaybe False paymentOrder.isMockPayment)
 
 -- TODO :: To be deprecated @Kavyashree
 postMultimodalPaymentUpdateOrder ::
@@ -2216,14 +2218,17 @@ postMultimodalUpdateBusLocation ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   ApiTypes.UpdateBusLocationReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalUpdateBusLocation _ mbBusOTP req = do
+postMultimodalUpdateBusLocation (mbPersonId, _) mbBusOTP req = do
   busOTP <- mbBusOTP & fromMaybeM (InvalidRequest "busOTP query parameter is required")
-
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   deviceMappings <- QDeviceVehicleMapping.findByVehicleNo busOTP
   deviceMapping <-
     fromMaybeM
       (InvalidRequest "Device not found for provided busOTP")
       (listToMaybe deviceMappings)
+
+  personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
 
   now <- getCurrentTime
 
@@ -2254,7 +2259,9 @@ postMultimodalUpdateBusLocation _ mbBusOTP req = do
             signalQuality = "Good"
           }
 
-  let topicName = "gps_live_data"
+  let topicName = riderConfig.kafkaTopicName
+
+  logInfo $ "Pushing bus location to Kafka for deviceId: " <> deviceMapping.deviceId <> " on topic: " <> topicName
   let key = deviceMapping.deviceId
 
   fork "Pushing bus location to Kafka" $ do

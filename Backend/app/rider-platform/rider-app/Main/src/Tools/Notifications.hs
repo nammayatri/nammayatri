@@ -504,7 +504,7 @@ data RideCompleteParam = RideCompleteParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnRideCompleted ::
-  (ServiceFlow m r, SchedulerFlow r) =>
+  (ServiceFlow m r, SchedulerFlow r, HasField "blackListedJobs" r [Text]) =>
   SRB.Booking ->
   SRide.Ride ->
   [Person.Person] ->

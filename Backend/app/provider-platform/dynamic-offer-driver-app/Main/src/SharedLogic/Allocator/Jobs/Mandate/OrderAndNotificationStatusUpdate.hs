@@ -33,7 +33,8 @@ notificationAndOrderStatusUpdate ::
     EventStreamFlow m r,
     HasShortDurationRetryCfg r c,
     SchedulerFlow r,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'OrderAndNotificationStatusUpdate ->
   m ExecutionResult

@@ -208,3 +208,9 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN react_bu
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN commission_charges double precision ;

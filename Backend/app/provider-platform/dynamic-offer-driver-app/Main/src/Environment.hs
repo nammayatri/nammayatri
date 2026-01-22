@@ -166,7 +166,8 @@ data AppCfg = AppCfg
     inMemConfig :: KTC.InMemConfig,
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
     noSignatureSubscribers :: [Text],
-    bapHostRedirectMap :: BapHostRedirectMap
+    bapHostRedirectMap :: BapHostRedirectMap,
+    blackListedJobs :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -282,7 +283,8 @@ data AppEnv = AppEnv
     url :: Maybe Text,
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
     noSignatureSubscribers :: [Text],
-    bapHostRedirectMap :: BapHostRedirectMap
+    bapHostRedirectMap :: BapHostRedirectMap,
+    blackListedJobs :: [Text]
   }
   deriving (Generic)
 

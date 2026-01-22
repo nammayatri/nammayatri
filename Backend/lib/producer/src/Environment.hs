@@ -64,7 +64,8 @@ data AppCfg = AppCfg
     kvConfigUpdateFrequency :: Int,
     runReviver :: Bool,
     kafkaProducerCfg :: KafkaProducerCfg,
-    inMemConfig :: CF.InMemConfig
+    inMemConfig :: CF.InMemConfig,
+    blackListedJobs :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -105,7 +106,8 @@ data AppEnv = AppEnv
     sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     inMemEnv :: CF.InMemEnv,
-    url :: Maybe Text
+    url :: Maybe Text,
+    blackListedJobs :: [Text]
   }
   deriving (Generic)
 

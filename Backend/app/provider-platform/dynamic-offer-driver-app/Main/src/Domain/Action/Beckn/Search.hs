@@ -281,6 +281,9 @@ handler ValidatedDSearchReq {..} sReq = do
             (\(_, _, _, isAutoRickshawAllowed, _) -> isAutoRickshawAllowed) <$> mbTollChargesAndNames,
             join ((\(_, _, _, _, isTwoWheelerAllowed) -> isTwoWheelerAllowed) <$> mbTollChargesAndNames)
           )
+      (Just dropLoc, Just _, Just _) -> do
+        toLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
+        return (Nothing, Just toLocation, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
   let localTimeZoneSeconds = transporterConfig.timeDiffFromUtc
   localTime <- getLocalCurrentTime localTimeZoneSeconds
@@ -762,6 +765,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
   estimateId <- Id <$> generateGUID
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
+  commissionCharges <- FCV2.calculateCommission minFareParams (Just fullFarePolicy)
   let pickupChargesMaxx = case fullFarePolicy.farePolicyDetails of
         DFP.ProgressiveDetails progressiveDetails ->
           if progressiveDetails.pickupCharges.pickupChargesMin == progressiveDetails.pickupCharges.pickupChargesMax then 0 else progressiveDetails.pickupCharges.pickupChargesMax - progressiveDetails.pickupCharges.pickupChargesMin
@@ -1060,4 +1064,8 @@ transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
   let personalDiscount = case (farePolicy, fareParams) of
         (Just farePolicy', Just params) -> if isJust farePolicy'.personalDiscountPercentage then calculateBusinessDiscount params (fromMaybe 0.0 farePolicy'.personalDiscountPercentage) else Nothing
         _ -> Nothing
-  return DEst.Estimate {..}
+  return
+    DEst.Estimate
+      { commissionCharges = Nothing,
+        ..
+      }

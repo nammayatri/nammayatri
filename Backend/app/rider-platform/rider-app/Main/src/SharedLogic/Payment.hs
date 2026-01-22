@@ -87,7 +87,8 @@ orderStatusHandler ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   FulfillmentStatusHandler m ->
   DOrder.PaymentServiceType ->
@@ -127,7 +128,8 @@ orderStatusHandlerWithRefunds ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   FulfillmentStatusHandler m ->
   DOrder.PaymentServiceType ->
@@ -404,7 +406,8 @@ initiateRefundWithPaymentStatusRespSync ::
     EsqDBReplicaFlow m r,
     ServiceFlow m r,
     EncFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id Person.Person ->
   Id DOrder.PaymentOrder ->
@@ -415,7 +418,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   processRefund person paymentOrder paymentServiceType
   let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-      orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
+      orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
       walletPostingCall = TWallet.walletPosting (cast paymentOrder.merchantId) merchantOperatingCityId
   paymentStatusResp <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall (Just walletPostingCall)
   refundStatusHandler paymentOrder paymentServiceType
@@ -428,7 +431,8 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
         EsqDBReplicaFlow m r,
         ServiceFlow m r,
         EncFlow m r,
-        SchedulerFlow r
+        SchedulerFlow r,
+        HasField "blackListedJobs" r [Text]
       ) =>
       Person.Person ->
       DOrder.PaymentOrder ->
@@ -466,7 +470,8 @@ markRefundPendingAndSyncOrderStatus ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id Merchant.Merchant ->
   Id Person.Person ->
@@ -482,7 +487,9 @@ markRefundPendingAndSyncOrderStatus merchantId personId orderId = do
     DOrder.FRFSPassPurchase -> markPassesRefundPending paymentOrder
     DOrder.ParkingBooking -> markParkingRefundPending paymentOrder
     _ -> pure ()
-  syncOrderStatus merchantId personId paymentOrder
+  -- Hardcoded refund handler since this is only used for refund scenarios
+  let refundFulfillmentHandler _ = pure (DPayment.FulfillmentRefundPending, Nothing, Nothing)
+  syncOrderStatus refundFulfillmentHandler merchantId personId paymentOrder
   where
     markBookingsRefundPending paymentOrder = do
       bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
@@ -511,13 +518,15 @@ syncOrderStatus ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text]
   ) =>
+  FulfillmentStatusHandler m ->
   Id Merchant.Merchant ->
   Id Person.Person ->
   DOrder.PaymentOrder ->
   m DPayment.PaymentStatusResp
-syncOrderStatus merchantId personId paymentOrder = do
+syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
   person <- QPerson.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
   let paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
@@ -527,10 +536,8 @@ syncOrderStatus merchantId personId paymentOrder = do
         ticketBooking <- QTB.findById (cast paymentOrder.id)
         return $ ticketBooking <&> (.ticketPlaceId)
       _ -> return Nothing
-  let orderStatusCall = TPayment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion
-  -- Hardcoded refund handler since this is only used for refund scenarios
-  let refundFulfillmentHandler _ = pure (DPayment.FulfillmentRefundPending, Nothing, Nothing)
-  orderStatusHandler refundFulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+  let orderStatusCall = TPayment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
+  orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
 
 -------------------------------------------------------------------------------------------------------
 ------------------------------------- Payment Utility Functions ---------------------------------------

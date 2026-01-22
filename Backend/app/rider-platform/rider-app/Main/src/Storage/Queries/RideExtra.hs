@@ -386,41 +386,46 @@ findRiderIdByRideId rideId = do
   booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
   pure $ Booking.riderId <$> booking
 
-findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> Maybe UTCTime -> Maybe UTCTime -> [BookingStatus] -> m ([Booking], [Booking])
-findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList = do
+findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id Person) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> Maybe UTCTime -> Maybe UTCTime -> [BookingStatus] -> m ([Booking], [Booking])
+findAllByRiderIdAndRide mbPersonId mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList = do
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit
   let offset' = maybe 0 fromIntegral mbOffset
   bookings' <-
     findAllWithOptionsKV
       [ Se.And
-          ( [Se.Is BeamB.riderId $ Se.Eq personId]
+          ( ([Se.Is BeamB.riderId $ Se.Eq (getId $ fromJust mbPersonId) | isJust mbPersonId])
+              <> ([Se.Is BeamB.dashboardAgentId $ Se.Eq mbAgentId | isJust mbAgentId])
               <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED] | isOnlyActive])
               <> ([Se.Is BeamB.status $ Se.Eq (fromJust mbBookingStatus) | isJust mbBookingStatus])
               <> ([Se.Is BeamB.clientId $ Se.Eq (getId <$> mbClientId) | isJust mbClientId])
               <> ([Se.Is BeamB.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate) | isJust mbFromDate])
               <> ([Se.Is BeamB.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate])
               <> ([Se.Is BeamB.status $ Se.In mbBookingStatusList | not (null mbBookingStatusList)])
+              <> ([Se.Is BeamB.isDashboardRequest $ Se.Eq (Just onlyDashboard)])
           )
       ]
       (if isOnlyActive then Se.Asc BeamB.startTime else Se.Desc BeamB.startTime)
       (Just limit')
       (Just offset')
   otherActivePartyBooking <-
-    if isOnlyActive && null bookings'
-      then do
-        bookingPartyLink <- QBPL.findOneActivePartyByRiderId (Id personId)
-        case bookingPartyLink of
-          Just bpl -> do
-            booking <- maybeToList <$> QB.findById bpl.bookingId
-            pure $
-              filter
-                ( \bk ->
-                    (isNothing mbBookingStatus || Just (bk.status) == mbBookingStatus) && (isNothing mbClientId || bk.clientId == mbClientId) && (isNothing mbFromDate || isNothing mbToDate || (fromJust mbFromDate <= bk.createdAt && bk.createdAt <= fromJust mbToDate))
-                )
-                booking
-          Nothing -> pure []
-      else pure []
+    case mbPersonId of
+      Just personId -> do
+        if isOnlyActive && null bookings'
+          then do
+            bookingPartyLink <- QBPL.findOneActivePartyByRiderId personId
+            case bookingPartyLink of
+              Just bpl -> do
+                booking <- maybeToList <$> QB.findById bpl.bookingId
+                pure $
+                  filter
+                    ( \bk ->
+                        (isNothing mbBookingStatus || Just (bk.status) == mbBookingStatus) && (isNothing mbClientId || bk.clientId == mbClientId) && (isNothing mbFromDate || isNothing mbToDate || (fromJust mbFromDate <= bk.createdAt && bk.createdAt <= fromJust mbToDate))
+                    )
+                    booking
+              Nothing -> pure []
+          else pure []
+      Nothing -> pure []
   let bookings = bookings' <> otherActivePartyBooking
   rides <- findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings]] (Se.Desc BeamR.createdAt) Nothing Nothing
   let filteredBookings = matchBookingsWithRides bookings rides

@@ -166,7 +166,8 @@ endRideTransaction ::
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id DP.Driver ->
   SRB.Booking ->
