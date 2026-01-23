@@ -138,7 +138,7 @@ executeSpecialZonePayout scheduledPayout = do
               uid <- generateGUID
               phoneNo <- mapM decrypt person.mobileNumber
               merchantOperatingCity <- CQMOC.findById opCityId >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
-              let entityName = DLP.MANUAL -- can get later for now manual
+              let entityName = DLP.SPECIAL_ZONE_PAYOUT -- initially it was manual but for webhook we need to use this (isko aur dekh sakte hai)
                   createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) vpa "FULFILL_ONLY" False
               case merchantId of
                 Nothing -> do
@@ -160,9 +160,8 @@ executeSpecialZonePayout scheduledPayout = do
                       QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) scheduledPayout
                       pure Complete
                     Right (mbPayoutResp, mbPayoutOrder) -> do
-                      -- TODO : Revisit this logic
                       let payoutOrderId = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
-                          -- Extract transactionRef from response: fulfillments[].transactions[].transactionRef
+                          -- Extract transactionRef from response if available
                           mbTransactionRef = do
                             resp <- mbPayoutResp
                             fulfillment <- listToMaybe =<< resp.fulfillments
@@ -170,9 +169,10 @@ executeSpecialZonePayout scheduledPayout = do
                             pure txn.transactionRef
                           transactionRef = fromMaybe payoutOrderId mbTransactionRef
 
-                      -- Update scheduled payout with actual transaction reference
-                      QSPE.updatePayoutTransactionId (Just transactionRef) scheduledPayout.id
+                      -- Update scheduled payout with payout order ID -- we can do this when webhook arrive uske liye lookup
+                      QSPE.updatePayoutTransactionId (Just payoutOrderId) scheduledPayout.id
 
-                      QSPE.updateStatusWithHistoryById DSP.CREDITED (Just $ "Payment credited to bank. TxnRef: " <> transactionRef) scheduledPayout
-                      logInfo $ "Special Zone Payout processed successfully for id: " <> show scheduledPayout.id <> " | transactionRef: " <> transactionRef
+                      -- Keep as PROCESSING - actual status will be updated by Juspay webhook
+                      QSPE.updateStatusWithHistoryById DSP.PROCESSING (Just $ "Payout request sent to Juspay. OrderId: " <> payoutOrderId <> ", TxnRef: " <> transactionRef) scheduledPayout
+                      logInfo $ "Special Zone Payout request submitted for id: " <> show scheduledPayout.id <> " | orderId: " <> payoutOrderId
                       pure Complete

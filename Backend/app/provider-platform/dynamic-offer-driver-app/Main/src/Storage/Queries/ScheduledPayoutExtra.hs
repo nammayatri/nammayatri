@@ -80,3 +80,25 @@ updatePayoutTransactionId txnId scheduledPayoutId = do
   updateOneWithKV
     [Se.Set Beam.payoutTransactionId txnId, Se.Set Beam.updatedAt now]
     [Se.Is Beam.id $ Se.Eq (getId scheduledPayoutId)]
+
+-- | Find ScheduledPayout by payout order ID (stored in payoutTransactionId field)
+-- This is a convenience wrapper around the generated findByPayoutTransactionId
+findByPayoutOrderId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  m (Maybe DSP.ScheduledPayout)
+findByPayoutOrderId orderId = QSP.findByPayoutTransactionId (Just orderId)
+
+-- | Update status with history using just the orderId - for webhook handler
+-- This is a convenience function that fetches the ScheduledPayout and calls updateStatusWithHistoryById
+updateStatusWithHistoryByPayoutOrderId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DSP.ScheduledPayoutStatus ->
+  Maybe Text ->
+  Text ->
+  m ()
+updateStatusWithHistoryByPayoutOrderId newStatus message orderId = do
+  mbScheduledPayout <- findByPayoutOrderId orderId
+  case mbScheduledPayout of
+    Nothing -> pure () -- Payout not found, skip
+    Just sp -> updateStatusWithHistoryById newStatus message sp

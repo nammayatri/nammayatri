@@ -31,6 +31,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Plan as DP
+import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
@@ -66,6 +67,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.DriverWallet as QDW
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -204,6 +206,11 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                         then ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
                         else ("Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
                 Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
+          Just DPayment.SPECIAL_ZONE_PAYOUT -> do
+            -- Handle Special Zone Payout webhook
+            let newStatus = castPayoutOrderStatusToScheduledPayoutStatus payoutStatus
+                statusMsg = "Juspay webhook: " <> show payoutStatus
+            QSPE.updateStatusWithHistoryByPayoutOrderId newStatus (Just statusMsg) payoutOrderId
           _ -> pure ()
       pure ()
     IPayout.BadStatusResp -> pure ()
@@ -260,6 +267,20 @@ casPayoutOrderStatusToDFeeStatus payoutOrderStatus =
     Payout.FULFILLMENTS_CANCELLED -> DDF.REFUND_MANUAL_REVIEW_REQUIRED
     Payout.FULFILLMENTS_MANUAL_REVIEW -> DDF.REFUND_MANUAL_REVIEW_REQUIRED
     _ -> DDF.REFUND_PENDING
+
+-- | Cast Juspay payout order status to ScheduledPayoutStatus for Special Zone Payouts
+castPayoutOrderStatusToScheduledPayoutStatus :: Payout.PayoutOrderStatus -> DSP.ScheduledPayoutStatus
+castPayoutOrderStatusToScheduledPayoutStatus payoutOrderStatus =
+  case payoutOrderStatus of
+    Payout.SUCCESS -> DSP.CREDITED
+    Payout.FULFILLMENTS_SUCCESSFUL -> DSP.CREDITED
+    Payout.ERROR -> DSP.FAILED
+    Payout.FAILURE -> DSP.FAILED
+    Payout.FULFILLMENTS_FAILURE -> DSP.FAILED
+    Payout.CANCELLED -> DSP.FAILED
+    Payout.FULFILLMENTS_CANCELLED -> DSP.FAILED
+    Payout.FULFILLMENTS_MANUAL_REVIEW -> DSP.PROCESSING -- Keep processing for manual review
+    _ -> DSP.PROCESSING
 
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId

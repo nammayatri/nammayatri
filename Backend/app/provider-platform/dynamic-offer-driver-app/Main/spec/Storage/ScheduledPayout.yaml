@@ -57,3 +57,7 @@ ScheduledPayout:
       kvFunction: updateOneWithKV
       params: [payoutTransactionId]
       where: id
+
+    findByPayoutTransactionId:
+      kvFunction: findOneWithKV
+      where: payoutTransactionId
