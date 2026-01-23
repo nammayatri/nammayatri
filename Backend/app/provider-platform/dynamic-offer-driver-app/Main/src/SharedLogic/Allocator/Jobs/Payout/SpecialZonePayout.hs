@@ -138,7 +138,7 @@ executeSpecialZonePayout scheduledPayout = do
               uid <- generateGUID
               phoneNo <- mapM decrypt person.mobileNumber
               merchantOperatingCity <- CQMOC.findById opCityId >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
-              let entityName = DLP.SPECIAL_ZONE_PAYOUT -- initially it was manual but for webhook we need to use this (isko aur dekh sakte hai)
+              let entityName = DLP.SPECIAL_ZONE_PAYOUT
                   createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) vpa "FULFILL_ONLY" False
               case merchantId of
                 Nothing -> do

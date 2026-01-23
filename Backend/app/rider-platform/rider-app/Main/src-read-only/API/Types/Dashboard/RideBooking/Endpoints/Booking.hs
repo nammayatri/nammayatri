@@ -50,7 +50,10 @@ type GetBookingAgentL1List =
       :> QueryParam
            "status"
            Domain.Types.BookingStatus.BookingStatus
-      :> QueryParam "fromDate" Kernel.Prelude.UTCTime
+      :> QueryParam "customerPhoneNo" Kernel.Prelude.Text
+      :> QueryParam
+           "fromDate"
+           Kernel.Prelude.UTCTime
       :> QueryParam
            "toDate"
            Kernel.Prelude.UTCTime
@@ -65,6 +68,9 @@ type GetBookingAgentL1ListHelper =
            "offset"
            EulerHS.Prelude.Integer
       :> QueryParam "status" Domain.Types.BookingStatus.BookingStatus
+      :> QueryParam
+           "customerPhoneNo"
+           Kernel.Prelude.Text
       :> QueryParam
            "fromDate"
            Kernel.Prelude.UTCTime
@@ -81,7 +87,10 @@ type GetBookingAgentL2List =
       :> QueryParam
            "status"
            Domain.Types.BookingStatus.BookingStatus
-      :> QueryParam "fromDate" Kernel.Prelude.UTCTime
+      :> QueryParam "customerPhoneNo" Kernel.Prelude.Text
+      :> QueryParam
+           "fromDate"
+           Kernel.Prelude.UTCTime
       :> QueryParam
            "toDate"
            Kernel.Prelude.UTCTime
@@ -94,8 +103,8 @@ data BookingAPIs = BookingAPIs
   { postBookingStatus :: Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Domain.Types.Booking.API.BookingAPIEntity,
     getBookingBooking :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Types.Booking.API.BookingAPIEntity,
     getBookingList :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListRes,
-    getBookingAgentL1List :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListRes,
-    getBookingAgentL2List :: Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListRes
+    getBookingAgentL1List :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListRes,
+    getBookingAgentL2List :: Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListRes
   }
 
 mkBookingAPIs :: (Client EulerHS.Types.EulerClient API -> BookingAPIs)

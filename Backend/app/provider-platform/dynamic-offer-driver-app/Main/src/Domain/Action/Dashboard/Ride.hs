@@ -14,6 +14,7 @@
 
 module Domain.Action.Dashboard.Ride
   ( getRideList,
+    getRideAgentList,
     getRideListV2,
     rideInfo,
     rideSync,
@@ -102,6 +103,40 @@ getRideList ::
   Maybe UTCTime ->
   Flow Common.RideListRes
 getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto = do
+  getRideListUtil Nothing merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto Nothing
+
+getRideAgentList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Common.BookingStatus ->
+  Maybe Currency ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe (ShortId Common.Ride) ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Flow Common.RideListRes
+getRideAgentList = getRideListUtil (Just True)
+
+getRideListUtil ::
+  Maybe Bool ->
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Common.BookingStatus ->
+  Maybe Currency ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe (ShortId Common.Ride) ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Flow Common.RideListRes
+getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto mbVehicleNo = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   whenJust mbCurrency $ \currency -> do
@@ -124,8 +159,8 @@ getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mb
   enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
   rideItems <-
     if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
-      then BppT.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to
-      else QRide.findAllRideItems merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto
+      then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to mbVehicleNo
+      else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto mbVehicleNo
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems

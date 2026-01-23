@@ -42,12 +42,12 @@ getBookingBooking merchantShortId opCity bookingOtp = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingBooking) bookingOtp
 
-getBookingAgentL1List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Domain.Types.BookingStatus.BookingStatus) -> Kernel.Prelude.Maybe UTCTime -> Kernel.Prelude.Maybe UTCTime -> Environment.Flow Domain.Action.UI.Booking.BookingListRes)
-getBookingAgentL1List merchantShortId opCity apiTokenInfo limit offset status fromDate toDate = do
+getBookingAgentL1List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Domain.Types.BookingStatus.BookingStatus) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe UTCTime -> Kernel.Prelude.Maybe UTCTime -> Environment.Flow Domain.Action.UI.Booking.BookingListRes)
+getBookingAgentL1List merchantShortId opCity apiTokenInfo limit offset status mbCustomerPhoneNo fromDate toDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingAgentL1List) (Just apiTokenInfo.personId.getId) limit offset status fromDate toDate
+  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingAgentL1List) (Just apiTokenInfo.personId.getId) limit offset status mbCustomerPhoneNo fromDate toDate
 
-getBookingAgentL2List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Domain.Types.BookingStatus.BookingStatus) -> Kernel.Prelude.Maybe UTCTime -> Kernel.Prelude.Maybe UTCTime -> Environment.Flow Domain.Action.UI.Booking.BookingListRes)
-getBookingAgentL2List merchantShortId opCity apiTokenInfo limit offset status fromDate toDate = do
+getBookingAgentL2List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Domain.Types.BookingStatus.BookingStatus) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe UTCTime -> Kernel.Prelude.Maybe UTCTime -> Environment.Flow Domain.Action.UI.Booking.BookingListRes)
+getBookingAgentL2List merchantShortId opCity apiTokenInfo limit offset status mbCustomerPhoneNo fromDate toDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingAgentL2List) limit offset status fromDate toDate
+  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingAgentL2List) limit offset status mbCustomerPhoneNo fromDate toDate

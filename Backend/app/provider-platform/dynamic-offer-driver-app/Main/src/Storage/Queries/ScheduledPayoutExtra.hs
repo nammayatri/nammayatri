@@ -10,6 +10,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.ScheduledPayout as Beam
 import qualified Storage.Queries.PayoutStatusHistory as QPSH
 import qualified Storage.Queries.ScheduledPayout as QSP
+import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 
 -- | Update ScheduledPayout status and record history entry in one call
 -- This centralizes all status updates to also track history
@@ -69,6 +70,20 @@ getStatusMessage DSP.AUTO_PAY_FAILED = "Auto-pay failed"
 getStatusMessage DSP.RETRYING = "Retrying payment..."
 getStatusMessage DSP.FAILED = "Payment failed/cancelled"
 
+-- | Cast Juspay payout order status to ScheduledPayoutStatus for Special Zone Payouts
+castPayoutOrderStatusToScheduledPayoutStatus :: Payout.PayoutOrderStatus -> DSP.ScheduledPayoutStatus
+castPayoutOrderStatusToScheduledPayoutStatus payoutOrderStatus =
+  case payoutOrderStatus of
+    Payout.SUCCESS -> DSP.CREDITED
+    Payout.FULFILLMENTS_SUCCESSFUL -> DSP.CREDITED
+    Payout.ERROR -> DSP.FAILED
+    Payout.FAILURE -> DSP.FAILED
+    Payout.FULFILLMENTS_FAILURE -> DSP.FAILED
+    Payout.CANCELLED -> DSP.FAILED
+    Payout.FULFILLMENTS_CANCELLED -> DSP.FAILED
+    Payout.FULFILLMENTS_MANUAL_REVIEW -> DSP.PROCESSING -- Keep processing for manual review
+    _ -> DSP.PROCESSING
+
 -- | Update the payout transaction ID after receiving it from the payout service
 updatePayoutTransactionId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -80,25 +95,3 @@ updatePayoutTransactionId txnId scheduledPayoutId = do
   updateOneWithKV
     [Se.Set Beam.payoutTransactionId txnId, Se.Set Beam.updatedAt now]
     [Se.Is Beam.id $ Se.Eq (getId scheduledPayoutId)]
-
--- | Find ScheduledPayout by payout order ID (stored in payoutTransactionId field)
--- This is a convenience wrapper around the generated findByPayoutTransactionId
-findByPayoutOrderId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Text ->
-  m (Maybe DSP.ScheduledPayout)
-findByPayoutOrderId orderId = QSP.findByPayoutTransactionId (Just orderId)
-
--- | Update status with history using just the orderId - for webhook handler
--- This is a convenience function that fetches the ScheduledPayout and calls updateStatusWithHistoryById
-updateStatusWithHistoryByPayoutOrderId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  DSP.ScheduledPayoutStatus ->
-  Maybe Text ->
-  Text ->
-  m ()
-updateStatusWithHistoryByPayoutOrderId newStatus message orderId = do
-  mbScheduledPayout <- findByPayoutOrderId orderId
-  case mbScheduledPayout of
-    Nothing -> pure () -- Payout not found, skip
-    Just sp -> updateStatusWithHistoryById newStatus message sp

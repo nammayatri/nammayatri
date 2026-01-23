@@ -280,6 +280,7 @@ let AllocatorJobType =
       | CheckDashCamInstallationStatus
       | MediaFileDocumentComplete
       | SendFeedbackPN
+      | SpecialZonePayout
       >
 
 let jobInfoMapx =
