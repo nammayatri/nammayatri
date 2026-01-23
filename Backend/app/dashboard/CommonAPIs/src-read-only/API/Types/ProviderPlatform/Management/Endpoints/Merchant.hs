@@ -1084,9 +1084,9 @@ data MerchantAPIs = MerchantAPIs
     postMerchantUpdateOnboardingVehicleVariantMapping :: (Data.ByteString.Lazy.ByteString, UpdateOnboardingVehicleVariantMappingReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigSpecialLocationUpsert ::
       ( Data.ByteString.Lazy.ByteString,
-          Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
-        ) ->
-        EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
+        Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
+      ) ->
+      EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
     getMerchantConfigSpecialLocationList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.SpecialLocationType -> EulerHS.Types.EulerClient SpecialLocationResp,
     getMerchantConfigGeometryList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient GeometryResp,
     putMerchantConfigGeometryUpdate :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.Merchant.UpdateGeometryReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
