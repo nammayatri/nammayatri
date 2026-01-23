@@ -9,6 +9,7 @@ module Domain.Action.UI.Dispatcher
     getDispatcherGetVehiclesByDepotId,
     getDispatcherGetDepotNameById,
     getDispatcherHistory,
+    getDispatcherHistoryByDepotCode,
     getFleetOverrideInfo,
     delFleetOverrideInfo,
   )
@@ -216,3 +217,53 @@ getDispatcherHistory (mbPersonId, _merchantId) mbLimit mbOffset = do
           API.Types.UI.Dispatcher.updatedAt = updatedAt,
           API.Types.UI.Dispatcher.waybillNo = fromMaybe "" waybillNo
         }
+
+-- | Get dispatcher history by depotCode
+getHistoryByDepotCode ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.Flow [API.Types.UI.Dispatcher.DispatcherHistoryRes]
+  )
+getHistoryByDepotCode (mbPersonId, _merchantId) depotCode mbLimit mbOffset = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  _ <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let limit = fromMaybe 15 mbLimit
+      offset = fromMaybe 0 mbOffset
+  historyRecords <- B.runInReplica $ QDH.findByDepotId (Just limit) (Just offset) depotCode
+  pure $ map convertToHistoryRes historyRecords
+  where
+    convertToHistoryRes :: Domain.Types.DispatcherHistory.DispatcherHistory -> API.Types.UI.Dispatcher.DispatcherHistoryRes
+    convertToHistoryRes Domain.Types.DispatcherHistory.DispatcherHistory {..} =
+      API.Types.UI.Dispatcher.DispatcherHistoryRes
+        { API.Types.UI.Dispatcher.id = Kernel.Types.Id.getId id,
+          API.Types.UI.Dispatcher.dispatcherId = Kernel.Types.Id.getId dispatcherId,
+          API.Types.UI.Dispatcher.currentVehicle = currentVehicle,
+          API.Types.UI.Dispatcher.replacedVehicle = replacedVehicle,
+          API.Types.UI.Dispatcher.historyDriverCode = fromMaybe "" driverCode,
+          API.Types.UI.Dispatcher.historyConductorCode = fromMaybe "" conductorCode,
+          API.Types.UI.Dispatcher.depotId = depotId,
+          API.Types.UI.Dispatcher.reasonTag = reasonTag,
+          API.Types.UI.Dispatcher.reasonContent = reasonContent,
+          API.Types.UI.Dispatcher.createdAt = createdAt,
+          API.Types.UI.Dispatcher.updatedAt = updatedAt,
+          API.Types.UI.Dispatcher.waybillNo = fromMaybe "" waybillNo
+        }
+
+-- | API wrapper used by the HTTP handler; accepts optional depotCode query param
+getDispatcherHistoryByDepotCode ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.Flow [API.Types.UI.Dispatcher.DispatcherHistoryRes]
+  )
+getDispatcherHistoryByDepotCode (mbPersonId, _merchantId) mbDepotCode mbLimit mbOffset = do
+  case mbDepotCode of
+    Nothing -> pure []
+    Just depotCode -> getHistoryByDepotCode (mbPersonId, _merchantId) depotCode mbLimit mbOffset

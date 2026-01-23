@@ -9,6 +9,7 @@ import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -20,6 +21,9 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DispatcherHistory.DispatcherHistory] -> m ())
 createMany = traverse_ create
+
+findByDepotId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> m ([Domain.Types.DispatcherHistory.DispatcherHistory]))
+findByDepotId limit offset depotId = do findAllWithOptionsDb [Se.And [Se.Is Beam.depotId $ Se.Eq depotId]] (Se.Desc Beam.createdAt) limit offset
 
 findByDispatcherId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.DispatcherHistory.DispatcherHistory]))
 findByDispatcherId limit offset dispatcherId = do findAllWithOptionsDb [Se.And [Se.Is Beam.dispatcherId $ Se.Eq (Kernel.Types.Id.getId dispatcherId)]] (Se.Desc Beam.createdAt) limit offset

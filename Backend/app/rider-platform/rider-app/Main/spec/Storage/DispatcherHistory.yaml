@@ -39,6 +39,7 @@ DispatcherHistory:
   constraints:
     id: PrimaryKey
     dispatcherId: SecondaryKey
+    depotId: SecondaryKey
 
   queries:
     findById:
@@ -49,6 +50,14 @@ DispatcherHistory:
       kvFunction: findAllWithOptionsDb
       where:
         and: [dispatcherId]
+      orderBy:
+        field: createdAt
+        order: desc
+
+    findByDepotId:
+      kvFunction: findAllWithOptionsDb
+      where:
+        and: [depotId]
       orderBy:
         field: createdAt
         order: desc

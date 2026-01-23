@@ -90,3 +90,13 @@ apis:
         offset: Int
       response:
         type: "[DispatcherHistoryRes]"
+
+  - GET:
+      endpoint: /dispatcher/historyByDepotCode
+      auth: TokenAuth
+      query:
+        depotCode: Text
+        limit: Int
+        offset: Int
+      response:
+        type: "[DispatcherHistoryRes]"
