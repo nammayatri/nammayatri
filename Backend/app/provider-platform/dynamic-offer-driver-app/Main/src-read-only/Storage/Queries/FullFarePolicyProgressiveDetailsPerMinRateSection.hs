@@ -20,6 +20,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection.FullFarePolicyProgressiveDetailsPerMinRateSection] -> m ())
 createMany = traverse_ create
 
+deleteAllByFarePolicyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Text -> m ()
+deleteAllByFarePolicyId farePolicyId = deleteWithKV [Se.Is Beam.farePolicyId $ Se.Eq farePolicyId]
+
 findAllByFarePolicyId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> m [Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection.FullFarePolicyProgressiveDetailsPerMinRateSection])

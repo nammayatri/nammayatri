@@ -17,6 +17,7 @@ module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails where
 
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.FarePolicy as Domain
+import qualified Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection as FullMinDomain
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -27,18 +28,43 @@ import Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QueriesFPPDP
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as QueriesFPMin
+import qualified Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection as QueriesFullFPMin
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyProgressiveDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPPD.farePolicyId $ Se.Eq farePolicyId']
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FullFarePolicyProgressiveDetails -> m ()
 create farePolicyProgressiveDetails = do
-  mapM_ QueriesFPPDP.create (map (fst farePolicyProgressiveDetails,) (NE.toList (snd farePolicyProgressiveDetails).perExtraKmRateSections))
+  let fpId = fst farePolicyProgressiveDetails
+      details = snd farePolicyProgressiveDetails
+  -- Create perExtraKmRateSections
+  mapM_ QueriesFPPDP.create (map (fpId,) (NE.toList details.perExtraKmRateSections))
+  -- Create perMinRateSections if present
+  whenJust details.perMinRateSections $ \sections -> do
+    now <- getCurrentTime
+    let fullSections = mkFullPerMinRateSections (KTI.getId fpId) details.currency now sections
+    QueriesFullFPMin.createMany fullSections
   createWithKV farePolicyProgressiveDetails
+  where
+    mkFullPerMinRateSections :: Text -> Currency -> UTCTime -> NonEmpty Domain.FPProgressiveDetailsPerMinRateSection -> [FullMinDomain.FullFarePolicyProgressiveDetailsPerMinRateSection]
+    mkFullPerMinRateSections fpIdText currency now sections =
+      map
+        ( \s ->
+            FullMinDomain.FullFarePolicyProgressiveDetailsPerMinRateSection
+              { farePolicyId = fpIdText,
+                rideDurationInMin = s.rideDurationInMin,
+                perMinRate = s.perMinRate.amount,
+                currency = currency,
+                createdAt = now,
+                updatedAt = now
+              }
+        )
+        (NE.toList sections)
 
 delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
 delete farePolicyId = do
   QueriesFPPDP.deleteAll' farePolicyId
+  QueriesFullFPMin.deleteAllByFarePolicyId (KTI.getId farePolicyId)
   deleteWithKV [Se.Is BeamFPPD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
 
 instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where

@@ -20,6 +20,7 @@ module Environment
     AppCfg (..),
     AppEnv (..),
     BAPs (..),
+    SFTPConfig (..),
     buildAppEnv,
     releaseAppEnv,
     cacheRegistryKey,
@@ -85,6 +86,16 @@ import Tools.Streaming.Kafka
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
 import Email.Types (EmailServiceConfig)
+
+-- | SFTP configuration for partner invoice data export
+data SFTPConfig = SFTPConfig
+  { host :: Text,
+    port :: Int,
+    username :: Text,
+    privateKeyPath :: Text,
+    remotePath :: Text
+  }
+  deriving (Generic, FromDhall, Show)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -182,7 +193,8 @@ data AppCfg = AppCfg
     parkingApiKey :: Text,
     corporatePartnerApiToken :: Text,
     noSignatureSubscribers :: [Text],
-    blackListedJobs :: [Text]
+    blackListedJobs :: [Text],
+    sftpConfig :: SFTPConfig
   }
   deriving (Generic, FromDhall)
 
@@ -297,7 +309,8 @@ data AppEnv = AppEnv
     corporatePartnerApiToken :: Text,
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
-    cloudType :: Maybe CloudType
+    cloudType :: Maybe CloudType,
+    sftpConfig :: SFTPConfig
   }
   deriving (Generic)
 

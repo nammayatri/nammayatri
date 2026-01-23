@@ -28,6 +28,7 @@ in
               wget
               zbar
               wkhtmltopdf-bin
+              openssh # For SFTP CLI support
             ];
             name = "beckn-root";
             pathsToLink = [

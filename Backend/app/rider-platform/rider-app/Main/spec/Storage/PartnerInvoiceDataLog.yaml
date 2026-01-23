@@ -1,0 +1,61 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Booking: Domain.Types.Booking
+  Person: Domain.Types.Person
+
+PartnerInvoiceDataLog:
+  tableName: partner_invoice_data_log
+
+  derives: Generic, Show, Eq
+
+  fields:
+    id: Id PartnerInvoiceDataLog
+    bookingId: Id Booking
+    personId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    requestedAt: UTCTime
+    exportedAt: Maybe UTCTime
+    createdAt: UTCTime
+
+  sqlType:
+    id: character(36)
+    bookingId: character(36)
+    personId: character(36)
+    merchantId: character(36)
+    merchantOperatingCityId: character(36)
+    requestedAt: timestamp with time zone
+    exportedAt: timestamp with time zone
+    createdAt: timestamp with time zone
+
+  constraints:
+    id: PrimaryKey
+    bookingId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findUnexportedSince:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - exportedAt: Nothing|CB
+          - gte:
+            - requestedAt
+
+    findByBookingId:
+      kvFunction: findOneWithKV
+      where: bookingId
+
+    markAsExported:
+      kvFunction: updateWithKV
+      params:
+        - exportedAt
+      where: id
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey
