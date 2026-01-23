@@ -28,7 +28,6 @@ import EulerHS.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.External.LocationTrackingService.Types
