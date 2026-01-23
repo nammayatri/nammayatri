@@ -56,7 +56,9 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     putMerchantConfigGeometryUpdate,
     getMerchantConfigSpecialLocationList,
     postMerchantConfigDriverPoolUpsert,
+    getMerchantConfigDriverPoolList,
     postMerchantConfigVehicleServiceTierCreate,
+    getMerchantConfigVehicleServiceTierList,
   )
 where
 
@@ -532,3 +534,13 @@ postMerchantConfigVehicleServiceTierCreate merchantShortId opCity apiTokenInfo r
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigVehicleServiceTierCreate) req
+
+getMerchantConfigDriverPoolList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Common.DriverPoolConfigListRes)
+getMerchantConfigDriverPoolList merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigDriverPoolList)
+
+getMerchantConfigVehicleServiceTierList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Common.VehicleServiceTierListRes)
+getMerchantConfigVehicleServiceTierList merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigVehicleServiceTierList)
