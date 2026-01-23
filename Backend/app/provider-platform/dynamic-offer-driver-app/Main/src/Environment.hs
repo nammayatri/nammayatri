@@ -61,7 +61,6 @@ import SharedLogic.CallBAPInternal
 import SharedLogic.CallInternalMLPricing
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
-import Slack.Types (SlackNotificationConfig)
 import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
 import System.Environment (lookupEnv)
