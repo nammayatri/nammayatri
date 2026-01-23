@@ -14,9 +14,7 @@ where
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
-import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
-import Kernel.Storage.Beam.SystemConfigs (SystemConfigsT)
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Tools.Logging (withDynamicLogLevel)
 import Kernel.Types.Id
@@ -30,12 +28,14 @@ import qualified SharedLogic.KaalChakra.Actions as Actions
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.Person as QPerson
+import Kernel.Tools.Metrics.CoreMetrics (HasCoreMetrics)
 
 type ChakraJobs m r =
   ( EsqDBFlow m r,
     CacheFlow m r,
     JobCreator r m,
     HasJobInfoMap r,
+    HasCoreMetrics r,
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
   )
 

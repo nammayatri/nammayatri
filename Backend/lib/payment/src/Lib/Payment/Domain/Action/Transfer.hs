@@ -96,7 +96,7 @@ createTransferService merchantId merchantOperatingCityId entityName entityId cre
           }
 
 transferProccessingKey :: Id DTransfer.TransferEntity -> Text
-transferProccessingKey transferEntityId = "Transfer:Processing:TransferId" <> transferEntityId.getId
+transferProccessingKey transferEntityId = "Transfer:Processing:TransferId:" <> transferEntityId.getId
 
 getStripeErrorCode :: PInterface.StripeError -> Maybe Text
 getStripeErrorCode = \case
