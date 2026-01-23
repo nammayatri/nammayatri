@@ -454,7 +454,9 @@ zipItemsWithPrice items breakup = do
     baseFare <- baseFareForItem itemId breakup
     finalWithToll <- addPrice baseFare toll
     finalPrice <- subtractPrice finalWithToll offer
-    pure (item, finalPrice)
+    quantity <- item.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybeM (InvalidRequest "Item Quantity not found")
+    let totalPrice = modifyPrice finalPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quantity)
+    pure (item, fromMaybe totalPrice (item.itemPrice >>= Utils.parsePrice))
 
 sumPrices :: (MonadThrow m, Log m) => [Price] -> m Price
 sumPrices prices = withCurrencyCheckingList prices $ \mbCurrency amounts -> mkPrice mbCurrency (sum amounts)
