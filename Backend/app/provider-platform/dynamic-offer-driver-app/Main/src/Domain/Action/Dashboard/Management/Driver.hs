@@ -61,6 +61,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
     postDriverVehicleAppendSelectedServiceTiers,
+    postDriverVehicleUpsertSelectedServiceTiers,
   )
 where
 
@@ -1390,7 +1391,6 @@ postDriverVehicleAppendSelectedServiceTiers merchantShortId opCity driverId req 
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  -- Validate that each requested service tier exists in vehicle_service_tier for this city
   forM_ req.selected_service_tiers $ \serviceTier -> do
     CQVST.findByServiceTierTypeAndCityId serviceTier merchantOpCityId Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show serviceTier)
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
@@ -1399,3 +1399,60 @@ postDriverVehicleAppendSelectedServiceTiers merchantShortId opCity driverId req 
   QVehicle.updateSelectedServiceTiers newTiers personId
   logTagInfo "dashboard -> appendSelectedServiceTiers : " (show personId <> " added tiers: " <> show req.selected_service_tiers)
   pure Success
+
+---------------------------------------------------------------------
+postDriverVehicleUpsertSelectedServiceTiers :: ShortId DM.Merchant -> Context.City -> Common.UpsertDriverServiceTiersCsvReq -> Flow APISuccess
+postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  csvData <- readCsvAndGetDriverServiceTiers req.file
+
+  results <- forM csvData $ \row -> do
+    withTryCatch "processDriverServiceTierRow" (processRow merchant merchantOpCityId row)
+
+  let successCount = length [() | Right _ <- results]
+      failureCount = length [() | Left _ <- results]
+
+  logTagInfo
+    "dashboard -> upsertSelectedServiceTiers : "
+    ("Processed " <> show (length csvData) <> " rows. Success: " <> show successCount <> ", Failures: " <> show failureCount)
+
+  pure Success
+  where
+    readCsvAndGetDriverServiceTiers :: FilePath -> Flow [Dashboard.Common.DriverServiceTiersCsvRow]
+    readCsvAndGetDriverServiceTiers csvFile = do
+      csvData <- liftIO $ BS.readFile csvFile
+      case decodeByName (LBS.fromStrict csvData) :: Either String (V.Vector BS.ByteString, V.Vector Dashboard.Common.DriverServiceTiersCsvRow) of
+        Left err -> throwError (InvalidRequest $ "CSV parsing error: " <> show err)
+        Right (_, v) -> pure $ V.toList v
+
+    processRow :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Dashboard.Common.DriverServiceTiersCsvRow -> Flow ()
+    processRow merchant merchantOpCityId (Dashboard.Common.DriverServiceTiersCsvRow driverIdText serviceTiersText) = do
+      serviceTiers <- case parseServiceTiers serviceTiersText of
+        Left err -> throwError (InvalidRequest $ "Failed to parse service tiers for driver " <> driverIdText <> ": " <> err)
+        Right tiers -> pure tiers
+
+      let driverId = Id driverIdText :: Id Common.Driver
+          personId = cast @Common.Driver @DP.Person driverId
+
+      driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $
+        throwError (PersonDoesNotExist personId.getId)
+
+      let appendReq = Common.AppendSelectedServiceTiersReq {selected_service_tiers = serviceTiers}
+      void $ postDriverVehicleAppendSelectedServiceTiers merchant.shortId opCity driverId appendReq
+
+      logTagInfo
+        "dashboard -> upsertSelectedServiceTiers : "
+        ("Updated driver " <> driverIdText <> " with tiers: " <> show serviceTiers)
+
+    parseServiceTiers :: Text -> Either Text [Dashboard.Common.ServiceTierType]
+    parseServiceTiers tiersText = do
+      let tiersList = map T.strip $ T.splitOn "," tiersText
+      mapM parseServiceTier tiersList
+
+    parseServiceTier :: Text -> Either Text Dashboard.Common.ServiceTierType
+    parseServiceTier tierText =
+      case readMaybe (T.unpack tierText) of
+        Just tier -> Right tier
+        Nothing -> Left $ "Invalid service tier: " <> tierText
