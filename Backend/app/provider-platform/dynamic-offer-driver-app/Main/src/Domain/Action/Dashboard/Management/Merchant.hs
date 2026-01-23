@@ -35,6 +35,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigDriverPoolUpdate,
     postMerchantConfigDriverPoolCreate,
     postMerchantConfigDriverPoolUpsert,
+    getMerchantConfigDriverPoolList,
     getMerchantConfigDriverIntelligentPool,
     postMerchantConfigDriverIntelligentPoolUpdate,
     getMerchantConfigOnboardingDocument,
@@ -52,6 +53,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
     getMerchantConfigVehicleServiceTier,
+    getMerchantConfigVehicleServiceTierList,
     postMerchantConfigVehicleServiceTierUpdate,
     postMerchantConfigVehicleServiceTierCreate,
     getMerchantConfigSpecialLocationList,
@@ -460,6 +462,40 @@ castDPoolSortingType = \case
   DriverPool.Tagged -> Common.Tagged
 
 ---------------------------------------------------------------------
+getMerchantConfigDriverPoolList :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverPoolConfigListRes
+getMerchantConfigDriverPoolList merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  configs <- CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
+  pure $ mkDriverPoolConfigListItem <$> configs
+
+mkDriverPoolConfigListItem :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigListItem
+mkDriverPoolConfigListItem DDPC.DriverPoolConfig {..} =
+  Common.DriverPoolConfigListItem
+    { poolSortingType = castDPoolSortingType poolSortingType,
+      distanceBasedBatchSplit = mkBatchSplitByPickupDistance <$> distanceBasedBatchSplit,
+      onRideBatchSplitConfig = mkBatchSplitByPickupDistanceOnRide <$> onRideBatchSplitConfig,
+      onRideRadiusConfig = mkOnRideRadiusConfig distanceUnit <$> onRideRadiusConfig,
+      timeBounds = show timeBounds,
+      ..
+    }
+
+mkBatchSplitByPickupDistance :: DriverPool.BatchSplitByPickupDistance -> Common.BatchSplitByPickupDistance
+mkBatchSplitByPickupDistance DriverPool.BatchSplitByPickupDistance {..} =
+  Common.BatchSplitByPickupDistance {..}
+
+mkBatchSplitByPickupDistanceOnRide :: DriverPool.BatchSplitByPickupDistanceOnRide -> Common.BatchSplitByPickupDistanceOnRide
+mkBatchSplitByPickupDistanceOnRide DriverPool.BatchSplitByPickupDistanceOnRide {..} =
+  Common.BatchSplitByPickupDistanceOnRide {..}
+
+mkOnRideRadiusConfig :: DistanceUnit -> DriverPool.OnRideRadiusConfig -> Common.OnRideRadiusConfig
+mkOnRideRadiusConfig distUnit DriverPool.OnRideRadiusConfig {..} =
+  Common.OnRideRadiusConfig
+    { onRideRadiusWithUnit = Just $ convertMetersToDistance distUnit onRideRadius,
+      ..
+    }
+
+---------------------------------------------------------------------
 postMerchantConfigDriverPoolUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -747,6 +783,17 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
                     DDPC.enableForwardBatching = config.enableForwardBatching,
                     DDPC.batchSizeOnRide = config.batchSizeOnRide,
                     DDPC.enableUnifiedPooling = config.enableUnifiedPooling,
+                    DDPC.distanceBasedBatchSplit = config.distanceBasedBatchSplit,
+                    DDPC.scheduleTryTimes = config.scheduleTryTimes,
+                    DDPC.onRideBatchSplitConfig = config.onRideBatchSplitConfig,
+                    DDPC.onRideRadiusConfig = config.onRideRadiusConfig,
+                    DDPC.thresholdToIgnoreActualDistanceThreshold = config.thresholdToIgnoreActualDistanceThreshold,
+                    DDPC.timeBounds = config.timeBounds,
+                    DDPC.selfRequestIfRiderIsDriver = config.selfRequestIfRiderIsDriver,
+                    DDPC.batchSizeOnRideWithStraightLineDistance = config.batchSizeOnRideWithStraightLineDistance,
+                    DDPC.currentRideTripCategoryValidForForwardBatching = config.currentRideTripCategoryValidForForwardBatching,
+                    DDPC.useOneToOneOsrmMapping = config.useOneToOneOsrmMapping,
+                    DDPC.dynamicBatchSize = config.dynamicBatchSize,
                     DDPC.updatedAt = config.updatedAt
                   }
           CQDPC.update updatedConfig
@@ -3587,6 +3634,16 @@ mkVehicleServiceTierItem DVST.VehicleServiceTier {..} =
     { vehicleIconUrl = fmap showBaseUrl vehicleIconUrl,
       ..
     }
+
+getMerchantConfigVehicleServiceTierList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow Common.VehicleServiceTierListRes
+getMerchantConfigVehicleServiceTierList merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  configs <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+  pure $ mkVehicleServiceTierItem <$> configs
 
 postMerchantConfigVehicleServiceTierUpdate ::
   ShortId DM.Merchant ->
