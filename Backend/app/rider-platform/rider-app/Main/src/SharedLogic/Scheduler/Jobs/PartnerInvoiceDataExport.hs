@@ -20,6 +20,7 @@ import qualified Data.ByteString.Lazy as BL
 import Data.Char (isAlphaNum)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Char (isAlphaNum)
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
 import Environment (SFTPConfig (..))
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -34,6 +35,7 @@ import qualified Storage.Queries.PartnerInvoiceDataLog as QPartnerInvoiceDataLog
 import System.Directory (removeFile)
 import System.IO (hClose, hPutStr, openTempFile)
 import System.Process (callProcess)
+import Control.Exception (try)
 
 -- | Data structure for JSON export
 data ExportRecord = ExportRecord
