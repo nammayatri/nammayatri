@@ -36,6 +36,7 @@ data EntityName
   | INVALID
   | DRIVER_WALLET_TRANSACTION
   | DRIVER_WALLET_TOPUP
+  | SPECIAL_ZONE_PAYOUT
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -24,6 +24,7 @@ module Domain.Action.ProviderPlatform.Management.Ride
     getRideFareBreakUp,
     getRideListV2,
     postRideWaiverRideCancellationPenalty,
+    getRideAgentList,
   )
 where
 
@@ -138,3 +139,8 @@ postRideWaiverRideCancellationPenalty :: (ShortId DM.Merchant -> City.City -> Ap
 postRideWaiverRideCancellationPenalty merchantShortId opCity apiTokenInfo rideId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideWaiverRideCancellationPenalty) rideId req
+
+getRideAgentList :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Common.BookingStatus -> Maybe Currency -> Maybe Text -> Maybe Text -> Maybe Kernel.Prelude.UTCTime -> Maybe Int -> Maybe Int -> Maybe (ShortId Common.Ride) -> Maybe UTCTime -> Maybe Text -> Flow Common.RideListRes)
+getRideAgentList merchantShortId opCity apiTokenInfo bookingStatus currency customerPhoneNo driverPhoneNo from limit offset rideShortId to vehicleNo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideAgentList) bookingStatus currency customerPhoneNo driverPhoneNo from limit offset rideShortId to vehicleNo

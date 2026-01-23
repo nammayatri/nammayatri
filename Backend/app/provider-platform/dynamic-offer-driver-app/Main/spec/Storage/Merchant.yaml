@@ -1113,6 +1113,8 @@ TransporterConfig:
     deleteDriverBankAccountWhenLinkToFleet: Maybe Bool
     digilockerEnabled: Maybe Bool
     allowDisableDriverToTakeSpecialZoneRide: Maybe Bool
+    payoutRideMoneyToDriver: Maybe Bool
+    payoutRideScheduleTimeBuffer: Maybe Seconds
 
   beamType:
     currency: Maybe Currency
@@ -1263,7 +1265,7 @@ TransporterConfig:
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
-    fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig {fcmUrl = fcmUrl', fcmServiceAccount = fcmServiceAccount, fcmTokenKeyPrefix = fcmTokenKeyPrefix}|E
+    fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig {fcmUrl = fcmUrl', fcmServiceAccount = fcmServiceAccount, fcmTokenKeyPrefix = fcmTokenKeyPrefix, fcmNotificationObj = Nothing }|E
     feedbackNotificationConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< feedbackNotificationConfig|E
     driverPaymentCycleBuffer: Kernel.Utils.Common.secondsToNominalDiffTime|I

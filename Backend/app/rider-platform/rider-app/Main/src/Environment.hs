@@ -74,6 +74,7 @@ import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
+import Slack.Types (SlackNotificationConfig)
 import Storage.CachedQueries.Merchant as CM
 import qualified Storage.Queries.BecknConfig as QBC
 import System.Environment as SE

@@ -180,6 +180,7 @@ $(TH.mkClickhouseInstances ''BppTransactionJoinT 'SELECT_FINAL_MODIFIER)
 
 findAllRideItems ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Maybe Bool ->
   Merchant ->
   MerchantOperatingCity ->
   Int ->
@@ -191,8 +192,9 @@ findAllRideItems ::
   UTCTime ->
   UTCTime ->
   UTCTime ->
+  Maybe Text ->
   m [QRE.RideItem]
-findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to = do
+findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to mbVehicleNo = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -208,6 +210,7 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
                     CH.&&. CH.whenJust_ mbRideShortId (\rsid -> bppTransaction.rideShortId CH.==. rsid)
                     CH.&&. CH.whenJust_ mbCustomerPhoneDBHash (\cpdh -> bppTransaction.riderDetailsMobileNumberHash CH.==. (Text.pack . show . unDbHash) cpdh)
                     CH.&&. CH.whenJust_ mbDriverPhoneDBHash (\dpdh -> bppTransaction.rideDetailsDriverNumberHash CH.==. Just ((Text.pack . show . unDbHash) dpdh))
+                    CH.&&. CH.whenJust_ mbVehicleNo (\vehicleNo -> bppTransaction.rideDetailsVehicleNumber CH.==. vehicleNo)
                     CH.&&. CH.whenJust_ mbBookingStatus (`mkBookingStatusCond` bppTransaction)
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bppTransactionJoinTTable)
