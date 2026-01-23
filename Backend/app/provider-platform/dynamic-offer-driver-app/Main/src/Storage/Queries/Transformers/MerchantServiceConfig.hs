@@ -71,6 +71,8 @@ getConfigJSON = \case
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
+  Domain.RidePayoutServiceConfig payoutCfg -> case payoutCfg of
+    Payout.JuspayConfig cfg -> toJSON cfg
   Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
@@ -135,6 +137,8 @@ getServiceName = \case
     Payout.JuspayConfig _ -> Domain.PayoutService Payout.Juspay
   Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> Domain.RentalPayoutService Payout.Juspay
+  Domain.RidePayoutServiceConfig payoutCfg -> case payoutCfg of
+    Payout.JuspayConfig _ -> Domain.RidePayoutService Payout.Juspay
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> case cfg.serviceMode of
       Just Juspay.AA -> Domain.RentalPaymentService Payment.AAJuspay
@@ -199,6 +203,8 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.PayoutService Payout.AAJuspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPayoutService Payout.Juspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPayoutService Payout.AAJuspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
+  Domain.RidePayoutService Payout.Juspay -> Domain.RidePayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
+  Domain.RidePayoutService Payout.AAJuspay -> Domain.RidePayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.AAJuspay -> Domain.RentalPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.Juspay -> Domain.RentalPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService Payment.Stripe -> Domain.RentalPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON

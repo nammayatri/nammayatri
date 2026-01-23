@@ -199,6 +199,8 @@ data TransporterConfigT f = TransporterConfigT
     overlayBatchSize :: B.C f Kernel.Prelude.Int,
     pastDaysRideCounter :: B.C f Kernel.Prelude.Int,
     payoutBatchLimit :: B.C f Kernel.Prelude.Int,
+    payoutRideMoneyToDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    payoutRideScheduleTimeBuffer :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     pickupLocThreshold :: B.C f Kernel.Types.Common.Meters,
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     popupDelayToAddAsPenalty :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),

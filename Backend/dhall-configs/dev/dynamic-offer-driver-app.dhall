@@ -266,6 +266,8 @@ let AllocatorJobType =
       | ScheduledFCMS
       | CheckDashCamInstallationStatus
       | MediaFileDocumentComplete
+      | SendFeedbackPN
+      | SpecialZonePayout
       >
 
 let jobInfoMapx =
@@ -317,6 +319,8 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.MediaFileDocumentComplete, mapValue = True }
+      , { mapKey = AllocatorJobType.SendFeedbackPN, mapValue = True }
+      , { mapKey = AllocatorJobType.SpecialZonePayout, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

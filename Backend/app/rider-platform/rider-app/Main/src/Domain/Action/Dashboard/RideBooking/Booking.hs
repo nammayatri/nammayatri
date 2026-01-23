@@ -15,6 +15,7 @@ import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (getDbHash)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
@@ -22,6 +23,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Booking as SQB
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
 postBookingStatus ::
@@ -68,14 +70,22 @@ getBookingAgentL1List ::
   Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
   Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
   Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Environment.Flow Domain.Action.UI.Booking.BookingListRes
-getBookingAgentL1List merchantShortId _opCity mbAgentId mbLimit mbOffset mbBookingStatus mbFromDate mbToDate = do
+getBookingAgentL1List merchantShortId _opCity mbAgentId mbLimit mbOffset mbBookingStatus mbCustomerPhoneNo mbFromDate mbToDate = do
   m <- findMerchantByShortId merchantShortId
   let mbFromDateMS = mbFromDate <&> round . utcToMilliseconds
       mbToDateMS = mbToDate <&> round . utcToMilliseconds
-  Domain.Action.UI.Booking.bookingList (Nothing, m.id) mbAgentId True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS []
+  mbPersonId <-
+    case mbCustomerPhoneNo of
+      Just customerPhoneNo -> do
+        mobileNumberHash <- getDbHash customerPhoneNo
+        mbPerson <- QPerson.findByMobileNumberAndMerchantId "+91" mobileNumberHash m.id
+        return $ mbPerson <&> (.id)
+      Nothing -> return Nothing
+  Domain.Action.UI.Booking.bookingList (mbPersonId, m.id) mbAgentId True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS []
 
 getBookingAgentL2List ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -83,11 +93,19 @@ getBookingAgentL2List ::
   Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
   Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
   Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Environment.Flow Domain.Action.UI.Booking.BookingListRes
-getBookingAgentL2List merchantShortId _opCity mbLimit mbOffset mbBookingStatus mbFromDate mbToDate = do
+getBookingAgentL2List merchantShortId _opCity mbLimit mbOffset mbBookingStatus mbCustomerPhoneNo mbFromDate mbToDate = do
   m <- findMerchantByShortId merchantShortId
   let mbFromDateMS = mbFromDate <&> round . utcToMilliseconds
       mbToDateMS = mbToDate <&> round . utcToMilliseconds
-  Domain.Action.UI.Booking.bookingList (Nothing, m.id) Nothing True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS []
+  mbPersonId <-
+    case mbCustomerPhoneNo of
+      Just customerPhoneNo -> do
+        mobileNumberHash <- getDbHash customerPhoneNo
+        mbPerson <- QPerson.findByMobileNumberAndMerchantId "+91" mobileNumberHash m.id
+        return $ mbPerson <&> (.id)
+      Nothing -> return Nothing
+  Domain.Action.UI.Booking.bookingList (mbPersonId, m.id) Nothing True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS []

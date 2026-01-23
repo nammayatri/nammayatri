@@ -1,0 +1,57 @@
+module: Payout
+
+apis:
+  # Dashboard: Get payout status by rideId (admin/agent via API token)
+  - GET:
+      endpoint: /{rideId}/status
+      name: GetPayoutStatus
+      auth: ApiAuthV2
+      params:
+        rideId: Text
+      response:
+        type: PayoutStatusResp
+
+  # Admin: Cancel payout before 2 hours
+  - POST:
+      endpoint: /{rideId}/cancel
+      name: PostPayoutCancel
+      auth: ApiAuthV2
+      params:
+        rideId: Text
+      request:
+        type: PayoutCancelReq
+      response:
+        type: APISuccess
+
+  # Admin: Retry failed payout
+  - POST:
+      endpoint: /{rideId}/retry
+      name: PostPayoutRetry
+      auth: ApiAuthV2
+      params:
+        rideId: Text
+      response:
+        type: APISuccess
+
+types:
+  PayoutStatusResp:
+    - status: PayoutStatus
+    - amount: Maybe HighPrecMoney
+    - rideId: Text
+    - payoutTransactionId: Maybe Text
+    - expectedCreditTime: Maybe UTCTime
+    - failureReason: Maybe Text
+    - statusHistory: "[PayoutStatusEvent]"
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - derive: "'HideSecrets"
+  PayoutStatusEvent:
+    - status: PayoutStatus
+    - timestamp: UTCTime
+    - message: Maybe Text
+    - derive: "'HideSecrets"
+  PayoutCancelReq:
+    - reason: Text
+    - derive: "'HideSecrets"
+  PayoutStatus:
+    enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED"

@@ -510,6 +510,7 @@ roundToMidnightUTCToDate (UTCTime day _) = UTCTime (addDays 1 day) 0
 
 findAllRideItems ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe Bool ->
   Merchant ->
   DMOC.MerchantOperatingCity ->
   Int ->
@@ -521,8 +522,9 @@ findAllRideItems ::
   UTCTime ->
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe Text ->
   m [RideItem]
-findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbFrom mbTo = do
+findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbFrom mbTo mbVehicleNo = do
   case mbRideShortId of
     Just rideShortId -> do
       ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
@@ -534,14 +536,15 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
     Nothing -> do
       zippedRides <- case mbTo of
         Just toDate | roundToMidnightUTCToDate toDate >= now -> do
-          case (mbDriverPhoneDBHash, mbCustomerPhoneDBHash) of
-            (Just driverPhoneDBHash, _) -> do
+          case (mbDriverPhoneDBHash, mbVehicleNo, mbCustomerPhoneDBHash) of
+            (Just driverPhoneDBHash, _, _) -> do
               rideDetails <-
                 findAllFromKvRedis
                   [ Se.And
                       ( [Se.Is BeamRD.driverNumberHash $ Se.Eq $ Just driverPhoneDBHash, Se.Is BeamRD.merchantId $ Se.Eq $ Just $ getId merchant.id]
                           <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
                           <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
+                          <> [Se.Is BeamRD.vehicleNumber $ Se.Eq (fromJust mbVehicleNo) | isJust mbVehicleNo]
                       )
                   ]
                   Nothing
@@ -549,7 +552,29 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
               bookings <- findAllFromKvRedis [Se.Is BeamB.id $ Se.In (getId . Ride.bookingId <$> rides)] Nothing
               riderDetails <- findAllWithKV [Se.Is BeamRDR.id $ Se.In $ mapMaybe (fmap getId . Booking.riderId) bookings]
               pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
-            (_, Just customerPhoneDBHash) -> do
+            (_, Just vehicleNo, _) -> do
+              rideDetails <-
+                findAllFromKvRedis
+                  [ Se.And
+                      ( [Se.Is BeamRD.merchantId $ Se.Eq $ Just $ getId merchant.id]
+                          <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
+                          <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
+                          <> [Se.Is BeamRD.vehicleNumber $ Se.Eq vehicleNo]
+                      )
+                  ]
+                  Nothing
+              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.Is BeamR.id $ Se.In $ getId . RideDetails.id <$> rideDetails] Nothing
+              bookings <-
+                findAllFromKvRedis
+                  [ Se.And
+                      ( [Se.Is BeamB.id $ Se.In (getId . Ride.bookingId <$> rides)]
+                          <> [Se.Is BeamB.isDashboardRequest $ Se.Eq isDashboardRequest | isJust isDashboardRequest]
+                      )
+                  ]
+                  Nothing
+              riderDetails <- findAllWithKV [Se.Is BeamRDR.id $ Se.In $ mapMaybe (fmap getId . Booking.riderId) bookings]
+              pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
+            (_, _, Just customerPhoneDBHash) -> do
               riderDetails <- findAllWithKV [Se.Is BeamRDR.mobileNumberHash $ Se.Eq customerPhoneDBHash, Se.Is BeamRDR.merchantId $ Se.Eq $ getId merchant.id]
               bookings <-
                 findAllFromKvRedis
@@ -557,6 +582,7 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
                       ( [Se.Is BeamB.riderId $ Se.In (Just . getId . RiderDetails.id <$> riderDetails)]
                           <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC $ fromJust mbFrom | isJust mbFrom]
                           <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate $ fromJust mbTo | isJust mbTo]
+                          <> [Se.Is BeamB.isDashboardRequest $ Se.Eq isDashboardRequest | isJust isDashboardRequest]
                       )
                   ]
                   Nothing
@@ -576,9 +602,11 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
                   ( \(booking, ride, rideDetails, riderDetails) ->
                       booking.providerId B.==?. B.val_ (getId merchant.id)
                         B.&&?. (booking.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ booking.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\dr -> booking.isDashboardRequest B.==?. B.val_ (Just dr)) isDashboardRequest
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehicleNo -> rideDetails.vehicleNumber B.==?. B.val_ vehicleNo) mbVehicleNo
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus

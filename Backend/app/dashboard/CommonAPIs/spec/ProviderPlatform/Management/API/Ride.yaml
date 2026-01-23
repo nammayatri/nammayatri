@@ -30,6 +30,22 @@ apis:
         type: RideListRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_LIST
+  - GET: # RideListAPI
+      endpoint: /agent/list
+      query:
+        limit: Int
+        offset: Int
+        bookingStatus: BookingStatus
+        rideShortId: ShortId Ride
+        customerPhoneNo: Text
+        driverPhoneNo: Text
+        vehicleNo: Text
+        currency: Currency
+        from: UTCTime
+        to: UTCTime
+      auth: ApiAuthV2
+      response:
+        type: RideListRes
   - GET: # RideListV2API
       endpoint: /listV2
       query:

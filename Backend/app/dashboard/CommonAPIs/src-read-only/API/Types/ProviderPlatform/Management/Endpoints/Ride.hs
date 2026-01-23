@@ -428,7 +428,7 @@ data WaiverRideCancellationPenaltyReq = WaiverRideCancellationPenaltyReq {reason
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("ride" :> (GetRideList :<|> GetRideListV2 :<|> PostRideEndMultiple :<|> PostRideCancelMultiple :<|> GetRideInfo :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp :<|> PostRideWaiverRideCancellationPenalty))
+type API = ("ride" :> (GetRideList :<|> GetRideAgentList :<|> GetRideListV2 :<|> PostRideEndMultiple :<|> PostRideCancelMultiple :<|> GetRideInfo :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp :<|> PostRideWaiverRideCancellationPenalty))
 
 type GetRideList =
   ( "list" :> QueryParam "bookingStatus" BookingStatus :> QueryParam "currency" Kernel.Types.Common.Currency
@@ -449,6 +449,33 @@ type GetRideList =
       :> QueryParam
            "to"
            Kernel.Prelude.UTCTime
+      :> Get
+           '[JSON]
+           RideListRes
+  )
+
+type GetRideAgentList =
+  ( "agent" :> "list" :> QueryParam "bookingStatus" BookingStatus :> QueryParam "currency" Kernel.Types.Common.Currency
+      :> QueryParam
+           "customerPhoneNo"
+           Kernel.Prelude.Text
+      :> QueryParam "driverPhoneNo" Kernel.Prelude.Text
+      :> QueryParam "from" Kernel.Prelude.UTCTime
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "rideShortId"
+           (Kernel.Types.Id.ShortId Dashboard.Common.Ride)
+      :> QueryParam
+           "to"
+           Kernel.Prelude.UTCTime
+      :> QueryParam
+           "vehicleNo"
+           Kernel.Prelude.Text
       :> Get
            '[JSON]
            RideListRes
@@ -511,6 +538,7 @@ type PostRideWaiverRideCancellationPenalty =
 
 data RideAPIs = RideAPIs
   { getRideList :: Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListRes,
+    getRideAgentList :: Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RideListRes,
     getRideListV2 :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe RideStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListResV2,
     postRideEndMultiple :: MultipleRideEndReq -> EulerHS.Types.EulerClient MultipleRideEndResp,
     postRideCancelMultiple :: MultipleRideCancelReq -> EulerHS.Types.EulerClient MultipleRideCancelResp,
@@ -526,10 +554,11 @@ data RideAPIs = RideAPIs
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    getRideList :<|> getRideListV2 :<|> postRideEndMultiple :<|> postRideCancelMultiple :<|> getRideInfo :<|> postRideSync :<|> postRideSyncMultiple :<|> postRideRoute :<|> getRideKaptureList :<|> getRideFareBreakUp :<|> postRideWaiverRideCancellationPenalty = rideClient
+    getRideList :<|> getRideAgentList :<|> getRideListV2 :<|> postRideEndMultiple :<|> postRideCancelMultiple :<|> getRideInfo :<|> postRideSync :<|> postRideSyncMultiple :<|> postRideRoute :<|> getRideKaptureList :<|> getRideFareBreakUp :<|> postRideWaiverRideCancellationPenalty = rideClient
 
 data RideUserActionType
   = GET_RIDE_LIST
+  | GET_RIDE_AGENT_LIST
   | GET_RIDE_LIST_V2
   | POST_RIDE_END_MULTIPLE
   | POST_RIDE_CANCEL_MULTIPLE
