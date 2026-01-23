@@ -42,9 +42,6 @@ let internalEndPointMap =
 let sosAlertsTopicARN =
       "arn:aws:chatbot::463356420488:chat-configuration/slack-channel/sos-notifications"
 
-
-
-
 let CloudManager = < AWS | GCP >
 
 let slackNotificationConfig =
@@ -108,4 +105,3 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , nyRegistryUrl
     , nyGatewayUrl
     }
-

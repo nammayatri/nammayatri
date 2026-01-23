@@ -15,6 +15,7 @@
 
 module Domain.Action.Dashboard.Management.Ride
   ( getRideList,
+    getRideAgentList,
     getRideListV2,
     postRideEndMultiple,
     postRideCancelMultiple,
@@ -66,6 +67,22 @@ getRideList ::
   Maybe UTCTime ->
   Flow Common.RideListRes
 getRideList = DRide.getRideList
+
+getRideAgentList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Common.BookingStatus ->
+  Maybe Currency ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe (ShortId Common.Ride) ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Flow Common.RideListRes
+getRideAgentList = DRide.getRideAgentList
 
 postRideEndMultiple :: ShortId DM.Merchant -> Context.City -> Common.MultipleRideEndReq -> Flow Common.MultipleRideEndResp
 postRideEndMultiple merchantShortId opCity req = do

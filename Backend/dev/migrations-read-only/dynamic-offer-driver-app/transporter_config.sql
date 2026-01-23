@@ -589,3 +589,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN digilocker_enab
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_disable_driver_to_take_special_zone_ride boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_ride_schedule_time_buffer integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_ride_money_to_driver boolean ;

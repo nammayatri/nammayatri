@@ -770,6 +770,8 @@ postDriverAddRidePayoutAccountNumber merchantShortId opCity req = do
             createdAt = now,
             updatedAt = now
           }
+  let payoutVpa = req.accountNumber <> "@" <> req.ifscCode <> ".ifsc.npci"
+  QDriverInfo.updatePayoutVpaAndStatusByDriverIds (Just payoutVpa) (Just DI.MANUALLY_ADDED) [person.id]
   QDRPB.create driverRidePayoutBankAccount
   pure Success
 

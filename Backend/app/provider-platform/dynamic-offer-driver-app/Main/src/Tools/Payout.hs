@@ -55,6 +55,7 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mR
   case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig vsc -> func vsc getRoutingId req
     DMSC.RentalPayoutServiceConfig vsc -> func vsc getRoutingId req
+    DMSC.RidePayoutServiceConfig vsc -> func vsc getRoutingId req
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getRoutingId = do

@@ -46,7 +46,7 @@ import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version (CloudType)
-import Kernel.Utils.App (lookupDeploymentVersion, lookupCloudType)
+import Kernel.Utils.App (lookupCloudType, lookupDeploymentVersion)
 import Kernel.Utils.Common (CacheConfig, fromMaybeM, logError, throwError)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
@@ -63,13 +63,13 @@ import SharedLogic.CallBAPInternal
 import SharedLogic.CallInternalMLPricing
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
+import Slack.Types (SlackNotificationConfig)
 import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
 import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
-import Slack.Types (SlackNotificationConfig)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,

@@ -55,6 +55,7 @@ apis:
         - limit: Integer
         - offset: Integer
         - status: BookingStatus
+        - customerPhoneNo: Text
         - fromDate: UTCTime
         - toDate: UTCTime
       response:
@@ -67,6 +68,7 @@ apis:
               - limit: Integer
               - offset: Integer
               - status: BookingStatus
+              - customerPhoneNo: Text
               - fromDate: UTCTime
               - toDate: UTCTime
             auth: ApiAuthV2 # TODO remove
@@ -79,6 +81,7 @@ apis:
         - limit: Integer
         - offset: Integer
         - status: BookingStatus
+        - customerPhoneNo: Text
         - fromDate: UTCTime
         - toDate: UTCTime
       response:

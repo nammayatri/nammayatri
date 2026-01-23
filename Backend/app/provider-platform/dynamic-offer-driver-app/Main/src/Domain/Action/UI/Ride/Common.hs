@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- Common types and functions to break import cycles between UI.Ride, UI.Ride.EndRide, and Dashboard.Ride
 module Domain.Action.UI.Ride.Common
@@ -192,6 +194,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
   cancellationReason <- if ride.status == DRide.CANCELLED then runInReplica (QBCR.findByRideId (Just ride.id)) else pure Nothing
+
   return $
     DriverRideRes
       { id = ride.id,

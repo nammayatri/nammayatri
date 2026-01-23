@@ -76,6 +76,8 @@ getConfigJSON = \case
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
+  Domain.RidePayoutServiceConfig payoutCfg -> case payoutCfg of
+    Payout.JuspayConfig cfg -> toJSON cfg
   Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
@@ -144,6 +146,8 @@ getServiceName = \case
     Payout.JuspayConfig _ -> Domain.PayoutService Payout.Juspay
   Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> Domain.RentalPayoutService Payout.Juspay
+  Domain.RidePayoutServiceConfig payoutCfg -> case payoutCfg of
+    Payout.JuspayConfig _ -> Domain.RidePayoutService Payout.Juspay
   Domain.RentalPaymentServiceConfig paymentCfg -> Domain.RentalPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.CautioPaymentServiceConfig paymentCfg -> Domain.CautioPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
@@ -217,6 +221,8 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.RentalPayoutService Payout.Juspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPayoutService Payout.AAJuspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPaymentService paymentServiceName -> Domain.RentalPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+  Domain.RidePayoutService Payout.Juspay -> Domain.RidePayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
+  Domain.RidePayoutService Payout.AAJuspay -> Domain.RidePayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.CautioPaymentService paymentServiceName -> Domain.CautioPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON

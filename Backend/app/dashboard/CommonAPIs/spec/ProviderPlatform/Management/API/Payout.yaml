@@ -156,7 +156,7 @@ types:
   PayoutFlagReason:
     - enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists,RideConstraintInvalid"
   EntityName:
-    - enum: "MANUAL,DRIVER_DAILY_STATS,BACKLOG,DAILY_STATS_VIA_DASHBOARD,RETRY_VIA_DASHBOARD,DRIVER_FEE,INVALID,DRIVER_WALLET_TRANSACTION,DRIVER_WALLET_TOPUP"
+    - enum: "MANUAL,DRIVER_DAILY_STATS,BACKLOG,DAILY_STATS_VIA_DASHBOARD,RETRY_VIA_DASHBOARD,DRIVER_FEE,INVALID,DRIVER_WALLET_TRANSACTION,DRIVER_WALLET_TOPUP,SPECIAL_ZONE_PAYOUT"
   PayoutHistoryItem:
     - driverName: Text
     - driverPhoneNo: Text
