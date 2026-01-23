@@ -468,6 +468,7 @@ library
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
       SharedLogic.Scheduler.Jobs.NyRegularInstance
       SharedLogic.Scheduler.Jobs.NyRegularMaster
+      SharedLogic.Scheduler.Jobs.PartnerInvoiceDataExport
       SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck
       SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
       SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
@@ -908,6 +909,7 @@ library
       Domain.Types.OnSearchEvent
       Domain.Types.ParcelDetails
       Domain.Types.ParkingTransaction
+      Domain.Types.PartnerInvoiceDataLog
       Domain.Types.PartnerOrganization
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
@@ -1061,6 +1063,7 @@ library
       Storage.Beam.OnSearchEvent
       Storage.Beam.ParcelDetails
       Storage.Beam.ParkingTransaction
+      Storage.Beam.PartnerInvoiceDataLog
       Storage.Beam.PartnerOrganization
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
@@ -1281,6 +1284,7 @@ library
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.ParcelDetails
       Storage.Queries.ParkingTransaction
+      Storage.Queries.PartnerInvoiceDataLog
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation

@@ -27,11 +27,13 @@ import Domain.Types.Booking as DBooking
 import qualified Domain.Types.Booking.API as DBAPI
 import Domain.Types.Location (Location (..), LocationAPIEntity (..))
 import Domain.Types.LocationAddress (LocationAddress (..))
+-- import qualified Domain.Types.Ride as DRide
+-- import qualified Domain.Types.ServiceTierType as DSTT
+
+import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RideStatus as DRide
 import qualified Environment
--- import qualified Domain.Types.Ride as DRide
--- import qualified Domain.Types.ServiceTierType as DSTT
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
@@ -42,6 +44,7 @@ import Kernel.Utils.Common
 import Servant hiding (MissingHeader, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.PartnerInvoiceDataLog as QPartnerInvoiceDataLog
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
@@ -176,6 +179,23 @@ postCorporateInvoiceData mbApiKey req = do
               }
 
       email <- mapM decrypt person.email
+
+      -- Log this API call for SFTP export
+      logId <- Id <$> generateGUID
+      now <- getCurrentTime
+      let logEntry =
+            DPIL.PartnerInvoiceDataLog
+              { id = logId,
+                bookingId = req.bookingId,
+                personId = person.id,
+                merchantId = booking.merchantId,
+                merchantOperatingCityId = booking.merchantOperatingCityId,
+                requestedAt = now,
+                exportedAt = Nothing,
+                createdAt = now,
+                updatedAt = now
+              }
+      void $ QPartnerInvoiceDataLog.create logEntry
 
       pure
         PBSAPI.InvoiceDataRes
