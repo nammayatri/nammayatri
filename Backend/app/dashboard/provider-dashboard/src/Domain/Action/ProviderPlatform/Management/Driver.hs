@@ -57,6 +57,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
     postDriverVehicleAppendSelectedServiceTiers,
+    postDriverVehicleUpsertSelectedServiceTiers,
   )
 where
 
@@ -379,3 +380,9 @@ postDriverVehicleAppendSelectedServiceTiers merchantShortId opCity apiTokenInfo 
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverVehicleAppendSelectedServiceTiers) driverId req
+
+postDriverVehicleUpsertSelectedServiceTiers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertDriverServiceTiersCsvReq -> Environment.Flow APISuccess
+postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverVehicleUpsertSelectedServiceTiers)) req)

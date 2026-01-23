@@ -32,6 +32,7 @@ imports:
   Merchant: Dashboard.Common
   MerchantOperatingCity: Dashboard.Common
   ServiceTierType: Dashboard.Common
+  UpsertDriverServiceTiersCsvReq: Dashboard.Common.Driver
 
 module: Driver
 
@@ -472,6 +473,14 @@ apis:
         driverId: Id Driver
       request:
         type: AppendSelectedServiceTiersReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /vehicle/upsertSelectedServiceTiers
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertDriverServiceTiersCsvReq
       response:
         type: APISuccess
 
