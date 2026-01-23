@@ -747,6 +747,17 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
                     DDPC.enableForwardBatching = config.enableForwardBatching,
                     DDPC.batchSizeOnRide = config.batchSizeOnRide,
                     DDPC.enableUnifiedPooling = config.enableUnifiedPooling,
+                    DDPC.distanceBasedBatchSplit = config.distanceBasedBatchSplit,
+                    DDPC.scheduleTryTimes = config.scheduleTryTimes,
+                    DDPC.onRideBatchSplitConfig = config.onRideBatchSplitConfig,
+                    DDPC.onRideRadiusConfig = config.onRideRadiusConfig,
+                    DDPC.thresholdToIgnoreActualDistanceThreshold = config.thresholdToIgnoreActualDistanceThreshold,
+                    DDPC.timeBounds = config.timeBounds,
+                    DDPC.selfRequestIfRiderIsDriver = config.selfRequestIfRiderIsDriver,
+                    DDPC.batchSizeOnRideWithStraightLineDistance = config.batchSizeOnRideWithStraightLineDistance,
+                    DDPC.currentRideTripCategoryValidForForwardBatching = config.currentRideTripCategoryValidForForwardBatching,
+                    DDPC.useOneToOneOsrmMapping = config.useOneToOneOsrmMapping,
+                    DDPC.dynamicBatchSize = config.dynamicBatchSize,
                     DDPC.updatedAt = config.updatedAt
                   }
           CQDPC.update updatedConfig
