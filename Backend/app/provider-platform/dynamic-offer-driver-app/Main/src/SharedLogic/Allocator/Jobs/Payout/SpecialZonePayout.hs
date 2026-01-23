@@ -173,6 +173,6 @@ executeSpecialZonePayout scheduledPayout = do
                       QSPE.updatePayoutTransactionId (Just payoutOrderId) scheduledPayout.id
 
                       -- Keep as PROCESSING - actual status will be updated by Juspay webhook
-                      QSPE.updateStatusWithHistoryById DSP.PROCESSING (Just $ "Payout request sent to Juspay. OrderId: " <> payoutOrderId <> ", TxnRef: " <> transactionRef) scheduledPayout
+                      QSPE.updateStatusWithHistoryById DSP.PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderId <> ", TxnRef: " <> transactionRef) scheduledPayout
                       logInfo $ "Special Zone Payout request submitted for id: " <> show scheduledPayout.id <> " | orderId: " <> payoutOrderId
                       pure Complete

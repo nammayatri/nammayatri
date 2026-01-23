@@ -22,8 +22,18 @@ import Kernel.Utils.Common
 import qualified SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout as SpecialZonePayout
 import qualified Storage.Queries.PayoutStatusHistory as QPSH
 import qualified Storage.Queries.ScheduledPayout as QSP
-import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
+import qualified Storage.Queries.ScheduledPayoutExtra as QSP
+import qualified Storage.CachedQueries.Merchant as QM
 import Tools.Error
+import qualified Kernel.External.Payout.Interface.Types as IPayout
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPO
+import Storage.Beam.Payment ()
+import qualified Tools.Payout as Payout
+import qualified Kernel.External.Payout.Types as TPayout
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
+import Data.Maybe (listToMaybe)
+import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 
 getPayoutStatus ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -32,10 +42,30 @@ getPayoutStatus ::
   Environment.Flow API.PayoutStatusResp
 getPayoutStatus _merchantShortId _opCity rideId = do
   payout <- QSP.findByRideId rideId >>= fromMaybeM (InvalidRequest "Payout not found for this ride")
+  merchantId <- payout.merchantId & fromMaybeM (InvalidRequest "Merchant not found")
+  merchantOpCityId <- payout.merchantOperatingCityId & fromMaybeM (InvalidRequest "Merchant Operating City not found")
+  payoutOrders <- QPO.findAllByEntityNameAndEntityIds (Just 1) (Just 0) (Just DPayment.SPECIAL_ZONE_PAYOUT) [Just payout.id.getId]
+  updatedStatus <- do
+    case (listToMaybe payoutOrders) of
+      Just payoutOrder -> do
+        let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = Nothing}
+            createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchantOpCityId (DEMSC.RidePayoutService TPayout.Juspay) (Just payout.driverId)
+        resp <- DPayment.payoutStatusService (Kernel.Types.Id.cast merchantId) (Kernel.Types.Id.Id payout.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall
+        let newStatus = QSP.castPayoutOrderStatusToScheduledPayoutStatus resp.status
+        if (payout.status /= newStatus && payout.status /= DSP.CREDITED)
+          then do
+            let statusMsg = "Order Status Updated: " <> show resp.status
+            QSP.updateStatusWithHistoryById newStatus (Just statusMsg) payout
+            pure newStatus
+          else pure payout.status
+      Nothing -> do
+        logError $ "Payout Order not found for scheduled payoutId: " <> show payout.id
+        pure payout.status
+
   statusHistory <- QPSH.findByScheduledPayoutId Nothing Nothing payout.id
   pure $
     API.PayoutStatusResp
-      { status = convertStatus payout.status,
+      { status = convertStatus updatedStatus,
         amount = payout.amount,
         rideId = payout.rideId,
         payoutTransactionId = payout.payoutTransactionId,
@@ -68,7 +98,7 @@ postPayoutCancel _merchantShortId _opCity rideId req = do
 
   -- Update status to FAILED with reason and record history
   QSP.updateStatusWithReasonByRideId DSP.FAILED (Just req.reason) rideId
-  QSPE.updateStatusWithHistoryById DSP.FAILED (Just $ "Cancelled: " <> req.reason) payout
+  QSP.updateStatusWithHistoryById DSP.FAILED (Just $ "Cancelled: " <> req.reason) payout
 
   logInfo $ "Payout cancelled for rideId: " <> rideId <> " reason: " <> req.reason
   pure Kernel.Types.APISuccess.Success
@@ -97,7 +127,7 @@ postPayoutRetry _merchantShortId _opCity rideId = do
   logInfo $ "Retrying payout for rideId: " <> rideId
 
   -- Mark as RETRYING with history
-  QSPE.updateStatusWithHistoryById DSP.RETRYING (Just "Admin initiated retry...") payout
+  QSP.updateStatusWithHistoryById DSP.RETRYING (Just "Admin initiated retry...") payout
 
   -- Execute the same payout logic as in SpecialZonePayout
   _ <- SpecialZonePayout.executeSpecialZonePayout payout

@@ -51,7 +51,7 @@ getPayoutStatus (mbPersonId, merchantId, merchantOpCityId) rideId = do
     case (listToMaybe payoutOrders) of
       Just payoutOrder -> do
         let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = Nothing}
-            createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchantOpCityId (DEMSC.PayoutService TPayout.Juspay) (Just payout.driverId)
+            createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchantOpCityId (DEMSC.RidePayoutService TPayout.Juspay) (Just payout.driverId)
         resp <- DPayment.payoutStatusService (Kernel.Types.Id.cast merchantId) (Kernel.Types.Id.Id payout.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall
         let newStatus = QSP.castPayoutOrderStatusToScheduledPayoutStatus resp.status
         if (payout.status /= newStatus && payout.status /= DSP.CREDITED)

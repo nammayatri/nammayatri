@@ -333,6 +333,7 @@ let jobInfoMapx =
         }
       , { mapKey = AllocatorJobType.MediaFileDocumentComplete, mapValue = True }
       , { mapKey = AllocatorJobType.SendFeedbackPN, mapValue = True }
+      , { mapKey = AllocatorJobType.SpecialZonePayout, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =
