@@ -29,7 +29,7 @@ import Kernel.External.Whatsapp.Interface as Reexport hiding
     whatsAppOtpApi,
     whatsAppSendMessageWithTemplateIdAPI,
   )
-import qualified Kernel.External.Whatsapp.Interface as GupShup
+import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
@@ -38,12 +38,33 @@ import Kernel.Utils.Common
 import qualified Storage.Cac.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 
-whatsAppOptAPI :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GupShup.OptApiReq -> m APISuccess
+whatsAppOptAPI :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Whatsapp.OptApiReq -> m APISuccess
 whatsAppOptAPI _merchantId merchantOpCityId req = do
-  void $ GupShup.whatsAppOptApi handler req
+  void $ Whatsapp.whatsAppOptApi handler req
   return Success
   where
-    handler = GupShup.WhatsappHandler {..}
+    handler = Whatsapp.WhatsappHandler {..}
+
+    getProvidersPriorityList = do
+      merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      let whatsappServiceProviders = merchantConfig.whatsappProvidersPriorityList
+      when (null whatsappServiceProviders) $ throwError $ InternalError ("No whatsapp service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
+      logDebug $ "whatsappServiceProviders: " <> show whatsappServiceProviders
+      pure whatsappServiceProviders
+
+    getProviderConfig provider = do
+      merchantWhatsappServiceConfig <-
+        QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId
+          >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      logDebug $ "merchantWhatsappServiceConfig.serviceConfig: " <> show merchantWhatsappServiceConfig
+      case merchantWhatsappServiceConfig.serviceConfig of
+        DMSC.WhatsappServiceConfig msc -> pure msc
+        _ -> throwError $ InternalError "Unknown Service Config"
+
+whatsAppOtpApi :: ServiceFlow m r => Id MerchantOperatingCity -> Whatsapp.SendOtpApiReq -> m Whatsapp.SendOtpApiResp
+whatsAppOtpApi merchantOpCityId = Whatsapp.whatsAppOtpApi handler
+  where
+    handler = Whatsapp.WhatsappHandler {..}
 
     getProvidersPriorityList = do
       merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
@@ -59,29 +80,10 @@ whatsAppOptAPI _merchantId merchantOpCityId req = do
         DMSC.WhatsappServiceConfig msc -> pure msc
         _ -> throwError $ InternalError "Unknown Service Config"
 
-whatsAppOtpApi :: ServiceFlow m r => Id MerchantOperatingCity -> GupShup.SendOtpApiReq -> m GupShup.SendOtpApiResp
-whatsAppOtpApi merchantOpCityId = GupShup.whatsAppOtpApi handler
+whatsAppSendMessageWithTemplateIdAPI :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq -> m SendOtpApiResp
+whatsAppSendMessageWithTemplateIdAPI merchantId merchantOpCityId = Whatsapp.whatsAppSendMessageWithTemplateIdAPI handler
   where
-    handler = GupShup.WhatsappHandler {..}
-
-    getProvidersPriorityList = do
-      merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-      let whatsappServiceProviders = merchantConfig.whatsappProvidersPriorityList
-      when (null whatsappServiceProviders) $ throwError $ InternalError ("No whatsapp service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
-      pure whatsappServiceProviders
-
-    getProviderConfig provider = do
-      merchantWhatsappServiceConfig <-
-        QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId
-          >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-      case merchantWhatsappServiceConfig.serviceConfig of
-        DMSC.WhatsappServiceConfig msc -> pure msc
-        _ -> throwError $ InternalError "Unknown Service Config"
-
-whatsAppSendMessageWithTemplateIdAPI :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GupShup.SendWhatsAppMessageWithTemplateIdApIReq -> m SendOtpApiResp
-whatsAppSendMessageWithTemplateIdAPI merchantId merchantOpCityId = GupShup.whatsAppSendMessageWithTemplateIdAPI handler
-  where
-    handler = GupShup.WhatsappHandler {..}
+    handler = Whatsapp.WhatsappHandler {..}
 
     getProvidersPriorityList = do
       merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)

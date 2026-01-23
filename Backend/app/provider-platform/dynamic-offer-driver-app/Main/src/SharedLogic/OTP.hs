@@ -84,6 +84,7 @@ sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mb
       withLogTag ("personId_" <> getId personId) $ do
         void $ Whatsapp.whatsAppOptAPI merchantId merchantOpCityId (Whatsapp.OptApiReq {phoneNumber = phoneNumber, method = Whatsapp.OPT_IN})
         result <- Whatsapp.whatsAppOtpApi merchantOpCityId (Whatsapp.SendOtpApiReq {sendTo = phoneNumber, var1 = otpCode})
+        logDebug $ "Whatsapp OTP result: " <> show result
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
     EMAIL -> do
       receiverEmail <- mbEmail & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
