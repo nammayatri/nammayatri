@@ -461,6 +461,7 @@ library
       SharedLogic.ScheduledNotifications
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
+      SharedLogic.StateEntryPermitDetector
       SharedLogic.SyncRide
       SharedLogic.TollsDetector
       SharedLogic.Type

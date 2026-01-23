@@ -78,6 +78,8 @@ calculateFareUtil ::
 calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong mbDistance mbDuration mbRoute tripCategory mbVehicleServiceTier configsInExperimentVersions = do
   now <- getCurrentTime
   transporterConfig <- CCT.findByMerchantOpCityId merchanOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
+  merchantOperatingCity <- CQMM.findById merchanOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchanOperatingCityId.getId)
+  let cityDistanceUnit = merchantOperatingCity.distanceUnit
   let mbFromLocGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (pickupLatlong.lat, pickupLatlong.lon)
   let mbToLocGeohash = T.pack <$> ((\dropLatLong -> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (dropLatLong.lat, dropLatLong.lon)) =<< mbDropLatLong)
   fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong mbDropLatLong Nothing mbFromLocGeohash mbToLocGeohash mbDistance mbDuration Nothing tripCategory configsInExperimentVersions
@@ -87,21 +89,21 @@ calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong 
   let mbTollIds = (\(_, _, tollIds, _, _) -> tollIds) <$> mbTollChargesAndNames
   let mbIsAutoRickshawAllowed = (\(_, _, _, mbIsAutoRickshawAllowed', _) -> mbIsAutoRickshawAllowed') <$> mbTollChargesAndNames
   let mbIsTwoWheelerAllowed = join ((\(_, _, _, _, isTwoWheelerAllowed) -> isTwoWheelerAllowed) <$> mbTollChargesAndNames)
-  let allFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed fareProducts.farePolicies
-  estimates <- mapMaybeM (\fp -> buildEstimateHelper fp mbTollCharges mbTollNames mbTollIds now transporterConfig.currency) allFarePolicies
+  let allFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier fareProducts.farePolicies
+  estimates <- mapMaybeM (\fp -> buildEstimateHelper fp mbTollCharges mbTollNames mbTollIds now transporterConfig.currency cityDistanceUnit) allFarePolicies
   let estimateAPIEntity = map buildEstimateApiEntity estimates
   return API.Types.UI.FareCalculator.FareResponse {estimatedFares = estimateAPIEntity}
   where
-    buildEstimateHelper fp mbTollCharges mbTollNames mbTollIds now currency = do
+    buildEstimateHelper fp mbTollCharges mbTollNames mbTollIds now currency distanceUnit = do
       CQVST.findByServiceTierTypeAndCityIdInRideFlow fp.vehicleServiceTier merchanOperatingCityId configsInExperimentVersions
         >>= \case
           Just vehicleServiceTierItem -> do
-            estimate <- DBS.buildEstimate merchantId merchanOperatingCityId currency Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames mbTollIds Nothing Nothing 0 mbDuration False vehicleServiceTierItem fp
+            estimate <- DBS.buildEstimate merchantId merchanOperatingCityId currency distanceUnit Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames mbTollIds Nothing Nothing 0 mbDuration Nothing False vehicleServiceTierItem fp
             return $ Just estimate
           Nothing -> return Nothing
 
-    selectFarePolicy distance' duration' mbIsAutoRickshawAllowed' mbIsTwoWheelerAllowed' =
-      filter (\farePolicy -> isValid farePolicy mbVehicleServiceTier)
+    selectFarePolicy distance' duration' mbIsAutoRickshawAllowed' mbIsTwoWheelerAllowed' mbVehicleServiceTier' =
+      filter (\farePolicy -> isValid farePolicy mbVehicleServiceTier')
       where
         isValid farePolicy (Just vehicleServiceTier) = farePolicy.vehicleServiceTier == vehicleServiceTier && checkDistanceBounds farePolicy && checkExtendUpto farePolicy && (autosAllowedOnTollRoute farePolicy || bikesAllowedOnTollRoute farePolicy)
         isValid farePolicy Nothing = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && (autosAllowedOnTollRoute farePolicy || bikesAllowedOnTollRoute farePolicy)

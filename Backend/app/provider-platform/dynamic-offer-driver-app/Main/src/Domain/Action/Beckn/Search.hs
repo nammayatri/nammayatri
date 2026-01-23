@@ -20,6 +20,7 @@ module Domain.Action.Beckn.Search
     IsIntercityReq (..),
     IsIntercityResp (..),
     getNearestOperatingAndSourceCity,
+    checkForIntercityOrCrossCity,
     handler,
     validateRequest,
     buildEstimate,
@@ -91,6 +92,7 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
+import qualified SharedLogic.StateEntryPermitDetector as SEPD
 import SharedLogic.TollsDetector
 import Storage.Beam.Yudhishthira ()
 import Storage.Cac.DriverPoolConfig as CDP
@@ -249,6 +251,9 @@ handler ValidatedDSearchReq {..} sReq = do
   let toLocGeohash = join $ fmap (\(LatLong lat lng) -> T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (lat, lng)) sReq.dropLocation
   fromLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
   stops <- mapM (\stop -> buildSearchReqLocation merchant.id merchantOpCityId sessiontoken stop.address sReq.customerLanguage stop.gps) sReq.stops
+  -- Build journey segments for state entry permit charges calculation
+  let journeySegments = SEPD.buildJourneySegments sReq.pickupLocation (map (.gps) sReq.stops) sReq.dropLocation
+  logDebug $ "Journey segments for state entry permit charges: " <> show (length journeySegments)
   (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbIsCustomerPrefferedSearchRoute, mbIsBlockedRoute, mbTollCharges, mbTollNames, mbTollIds, mbIsAutoRickshawAllowed, mbIsTwoWheelerAllowed) <-
     case sReq.dropLocation of
       Just dropLoc -> do
@@ -287,6 +292,52 @@ handler ValidatedDSearchReq {..} sReq = do
   allFarePoliciesProduct <- combineFarePoliciesProducts <$> (mapM (\tripCategory -> getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap) possibleTripOption.tripCategories)
   mbVehicleServiceTier <- getVehicleServiceTierForMeterRideSearch isMeterRideSearch driverIdForSearch configVersionMap
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
+  -- Calculate segment-based stateEntryPermitCharges for stops crossing city boundaries
+  -- Only apply for Intracity and Cross City rides (not for Intercity rides)
+  -- Case 1: Intracity Ride - even though source and destination are in same city, if any stop
+  --         lies outside the city, we check each segment that crosses cities and apply charges
+  -- Case 2: Cross City Ride - apply charges for segments that cross cities
+  -- Case 3: Intercity Ride - don't apply segment-based charges
+  let (isOverallIntercity, isOverallCrossCity) = SEPD.determineOverallRideType possibleTripOption.tripCategories
+  segmentChargeResults <-
+    if isOverallIntercity && not isOverallCrossCity
+      then return [] -- Case 3: Intercity - don't apply segment-based charges
+      else do
+        -- Case 1 & 2: Intracity or Cross City - check each segment individually
+        -- For Intracity: even if overall ride is intracity, segments that cross cities are detected
+        -- For Cross City: segments that cross cities are detected
+        forM journeySegments $ \segment -> do
+          -- Get source city and nearest operating city for segment start point
+          segmentSourceCityResult <- getNearestOperatingAndSourceCity merchant segment.segmentFrom
+          -- Get merchant operating city for the segment
+          segmentMerchantOpCity <- CQMOC.getMerchantOpCity merchant (Just segmentSourceCityResult.nearestOperatingCity.city)
+          -- Check if THIS segment crosses city boundaries (independent of overall ride type)
+          -- This handles the case where an Intracity ride has stops outside the city
+          (segmentIsIntercity, segmentIsCrossCity, mbSegmentDestinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig (Just segment.segmentTo) segmentSourceCityResult.sourceCity merchant
+          -- Get fare policy for this segment (using segment start and end points)
+          -- Only apply charges if THIS segment crosses cities
+          mbSegmentFarePolicy <-
+            if segmentIsIntercity || segmentIsCrossCity
+              then do
+                -- Calculate geohashes for segment
+                let segmentFromGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (segment.segmentFrom.lat, segment.segmentFrom.lon)
+                    segmentToGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (segment.segmentTo.lat, segment.segmentTo.lon)
+                -- Construct trip category for this segment (similar to getPossibleTripOption logic)
+                let segmentTripCategories = SEPD.constructSegmentTripCategories segmentIsIntercity segmentIsCrossCity mbSegmentDestinationTravelCityName possibleTripOption.isScheduled
+                -- Get fare policies for this segment using the constructed trip category and default area
+                case listToMaybe segmentTripCategories of
+                  Just segmentTripCategory -> do
+                    segmentFarePoliciesProduct <- getAllFarePoliciesProduct merchant.id segmentMerchantOpCity.id sReq.isDashboardRequest segment.segmentFrom (Just segment.segmentTo) (Just (TransactionId (Id sReq.transactionId))) segmentFromGeohash segmentToGeohash Nothing Nothing mbVersion segmentTripCategory configVersionMap
+                    -- Select a fare policy for the segment using parent journey parameters (distance, duration, vehicle restrictions)
+                    -- The fare policy product is calculated for the segment, but we use parent journey parameters for filtering
+                    let segmentFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier segmentFarePoliciesProduct.farePolicies
+                    return $ listToMaybe segmentFarePolicies
+                  Nothing -> return Nothing
+              else return Nothing -- No city crossing, no charge needed
+          SEPD.calculateSegmentStateEntryPermitCharge segmentIsIntercity segmentIsCrossCity mbSegmentFarePolicy segment
+  -- Calculate total stateEntryPermitCharges from segments
+  let mbSegmentStateEntryPermitCharges = SEPD.calculateTotalStateEntryPermitCharges segmentChargeResults
+  logDebug $ "Segment-based stateEntryPermitCharges: " <> show mbSegmentStateEntryPermitCharges
   now <- getCurrentTime
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneGateId, mbDefaultDriverExtra)
@@ -331,8 +382,9 @@ handler ValidatedDSearchReq {..} sReq = do
       else return (Nothing, farePolicies)
   -- This is to filter the fare policies based on the driverId, if passed during search
   -- (driverPool, selectedFarePolicies) <- maybe (pure (driverPool', selectedFarePolicies')) (filterFPsForDriverId (driverPool', selectedFarePolicies')) searchReq.driverIdForSearch
-  let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration
-  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
+  -- Pass segment-based stateEntryPermitCharges to buildEstimate and buildQuote functions
+  let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration mbSegmentStateEntryPermitCharges
+  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute mbSegmentStateEntryPermitCharges
   (estimates', quotes) <- foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc) ([], []) selectedFarePolicies
 
   let mbAutoMaxFare = find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates' <&> (.maxFare)
@@ -624,11 +676,12 @@ buildQuote ::
   Maybe [Text] ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe HighPrecMoney ->
   Bool ->
   DVST.VehicleServiceTier ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
-buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag tollCharges tollNames _tollIds isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
+buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag tollCharges tollNames _tollIds isCustomerPrefferedSearchRoute isBlockedRoute mbStateEntryPermitCharges nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
   fareParams <-
     FCV2.calculateFareParametersV2
@@ -653,6 +706,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           estimatedRideDuration = searchRequest.estimatedDuration,
           timeDiffFromUtc = Nothing,
           tollCharges = tollCharges,
+          stateEntryPermitCharges = mbStateEntryPermitCharges,
           currency = searchRequest.currency,
           noOfStops = length searchRequest.stops,
           shouldApplyBusinessDiscount = False,
@@ -709,11 +763,12 @@ buildEstimate ::
   Maybe Bool ->
   Int ->
   Maybe Seconds ->
+  Maybe HighPrecMoney ->
   Bool ->
   DVST.VehicleServiceTier ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames tollIds isCustomerPrefferedSearchRoute isBlockedRoute noOfStops mbEstimatedDuration nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
+buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames tollIds isCustomerPrefferedSearchRoute isBlockedRoute noOfStops mbEstimatedDuration mbStateEntryPermitCharges nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
       isAmbulanceEstimate = isAmbulanceTrip fullFarePolicy.tripCategory
   (minFareParams, maxFareParams) <- do
@@ -739,6 +794,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               estimatedRideDuration = mbEstimatedDuration,
               timeDiffFromUtc = Nothing,
               tollCharges = tollCharges,
+              stateEntryPermitCharges = mbStateEntryPermitCharges,
               noOfStops,
               currency,
               distanceUnit,
@@ -853,7 +909,7 @@ getIsInterCity merchantId apiKey IsIntercityReq {..} = do
   (isInterCity, isCrossCity, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong sourceCity merchant
   return $ IsIntercityResp {..}
 
-checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text)
+checkForIntercityOrCrossCity :: ServiceFlow m r => DTMT.TransporterConfig -> Maybe LatLong -> CityState -> DM.Merchant -> m (Bool, Bool, Maybe Text)
 checkForIntercityOrCrossCity transporterConfig mbDropLocation sourceCity merchant = do
   case mbDropLocation of
     Just dropLoc -> do
@@ -926,7 +982,7 @@ data CityState = CityState
     state :: Context.IndianState
   }
 
-getNearestOperatingAndSourceCity :: DM.Merchant -> LatLong -> Flow NearestOperatingAndSourceCity
+getNearestOperatingAndSourceCity :: ServiceFlow m r => DM.Merchant -> LatLong -> m NearestOperatingAndSourceCity
 getNearestOperatingAndSourceCity merchant pickupLatLong = do
   let geoRestriction = merchant.geofencingConfig.origin
   let merchantCityState = CityState {city = merchant.city, state = merchant.state}
@@ -955,7 +1011,7 @@ getNearestOperatingAndSourceCity merchant pickupLatLong = do
           let operatingCityState = CityState {city = g.city, state = g.state}
           return $ NearestOperatingAndSourceCity {nearestOperatingCity = operatingCityState, sourceCity = operatingCityState}
 
-getDestinationCity :: DM.Merchant -> LatLong -> Flow (CityState, Maybe Text)
+getDestinationCity :: ServiceFlow m r => DM.Merchant -> LatLong -> m (CityState, Maybe Text)
 getDestinationCity merchant dropLatLong = do
   let geoRestriction = merchant.geofencingConfig.destination
   case geoRestriction of

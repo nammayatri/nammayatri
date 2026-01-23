@@ -342,6 +342,7 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
             petCharges = Nothing, ----------check
             shouldApplyBusinessDiscount = False,
             tollCharges = Nothing, ------fix it in future
+            stateEntryPermitCharges = Nothing,
             noOfStops = 0, ------fix it in future
             currency,
             distanceUnit,

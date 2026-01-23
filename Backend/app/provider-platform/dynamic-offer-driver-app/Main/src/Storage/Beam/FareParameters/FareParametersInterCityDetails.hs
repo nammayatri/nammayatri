@@ -22,7 +22,6 @@ data FareParametersInterCityDetailsT f = FareParametersInterCityDetailsT
     pickupCharge :: B.C f HighPrecMoney,
     currency :: B.C f Currency,
     extraDistanceFare :: B.C f HighPrecMoney,
-    stateEntryPermitCharges :: B.C f (Maybe HighPrecMoney),
     extraTimeFare :: B.C f HighPrecMoney
   }
   deriving (Generic, B.Beamable)

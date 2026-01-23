@@ -49,6 +49,7 @@ data FareParametersT f = FareParametersT
     govtChargesAmount :: B.C f (Maybe HighPrecMoney),
     customerCancellationDues :: B.C f (Maybe HighPrecMoney),
     tollCharges :: B.C f (Maybe HighPrecMoney),
+    stateEntryPermitCharges :: B.C f (Maybe HighPrecMoney),
     congestionCharge :: B.C f (Maybe Money),
     congestionChargeViaDp :: B.C f (Maybe HighPrecMoney),
     congestionChargeAmount :: B.C f (Maybe HighPrecMoney),

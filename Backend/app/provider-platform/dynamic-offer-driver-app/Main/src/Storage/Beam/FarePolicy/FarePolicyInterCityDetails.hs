@@ -33,7 +33,6 @@ data FarePolicyInterCityDetailsT f = FarePolicyInterCityDetailsT
     perDayMaxAllowanceInMins :: B.C f (Maybe Minutes),
     defaultWaitTimeAtDestination :: B.C f Minutes,
     currency :: B.C f Currency,
-    stateEntryPermitCharges :: B.C f (Maybe HighPrecMoney),
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
   }
   deriving (Generic, B.Beamable)

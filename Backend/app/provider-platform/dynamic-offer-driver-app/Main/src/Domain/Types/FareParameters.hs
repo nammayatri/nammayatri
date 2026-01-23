@@ -41,6 +41,7 @@ data FareParameters = FareParameters
     fareParametersDetails :: FareParametersDetails,
     customerCancellationDues :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
+    stateEntryPermitCharges :: Maybe HighPrecMoney,
     congestionCharge :: Maybe HighPrecMoney,
     petCharges :: Maybe HighPrecMoney,
     businessDiscount :: Maybe HighPrecMoney,
@@ -125,7 +126,6 @@ data FParamsInterCityDetails = FParamsInterCityDetails
     pickupCharge :: HighPrecMoney,
     currency :: Currency,
     extraDistanceFare :: HighPrecMoney,
-    stateEntryPermitCharges :: Maybe HighPrecMoney,
     extraTimeFare :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)

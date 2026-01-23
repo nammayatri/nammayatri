@@ -60,6 +60,7 @@ data FarePolicyT f = FarePolicyT
     fixedCardCharge :: B.C f (Maybe HighPrecMoney),
     description :: B.C f (Maybe Text),
     driverCancellationPenaltyAmount :: B.C f (Maybe HighPrecMoney),
+    stateEntryPermitCharges :: B.C f (Maybe HighPrecMoney),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     merchantId :: B.C f (Maybe Text),

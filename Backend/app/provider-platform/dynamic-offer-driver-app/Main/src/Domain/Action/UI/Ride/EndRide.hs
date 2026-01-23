@@ -29,9 +29,12 @@ where
 
 import qualified Beckn.OnDemand.Utils.Common as BODUC
 import Data.Either.Extra (eitherToMaybe)
+import qualified Data.Geohash as Geohash
+import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
+import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as DUIRideCommon
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
@@ -59,7 +62,9 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude (roundToIntegral)
+import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
@@ -82,19 +87,23 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.BehaviourManagement.GpsTollBehavior as GpsTollBehavior
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FareCalculatorV2 as FareV2
 import qualified SharedLogic.FarePolicy as FarePolicy
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
+import qualified SharedLogic.StateEntryPermitDetector as SEPD
 import qualified SharedLogic.TollsDetector as TollsDetector
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as MerchantS
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -230,7 +239,7 @@ type EndRideFlow m r =
   )
 
 driverEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -241,7 +250,7 @@ driverEndRide handle rideId req = do
     $ DriverReq req
 
 callBasedEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
@@ -249,7 +258,7 @@ callBasedEndRide ::
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -262,7 +271,7 @@ dashboardEndRide handle rideId req = do
   return APISuccess.Success
 
 cronJobEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CronJobEndRideReq ->
@@ -275,7 +284,7 @@ cronJobEndRide handle rideId req = do
   return APISuccess.Success
 
 endRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
@@ -298,7 +307,7 @@ endRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) do
     mkLockKey = "EndTransaction:RID:-" <> rideId.getId
 
 endRideHandler ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
@@ -676,7 +685,7 @@ determineMetroRideType mbSplLocTag sureMetro sureWarriorMetro =
         toMetro = destTag == Just sureMetro || destTag == Just sureWarriorMetro
     Nothing -> DCT.None
 
-recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
+recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, ServiceFlow m r, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thresholdConfig recomputeWithLatestPricing tripEndPoint = do
   tripEndTime <- getCurrentTime
   let merchantId = booking.providerId
@@ -704,6 +713,66 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
     then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
     else do
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
+      -- Recalculate stateEntryPermitCharges based on actual stops taken
+      -- Build segments from actual pickup, stops, and trip end point
+      let sortedStops = sortOn (.stopOrder) stopsInfo
+          actualStopLocations = map (.stopStartLatLng) sortedStops
+          pickupLocation = getCoordinates booking.fromLocation
+          journeySegments = SEPD.buildJourneySegmentsFromActualStops pickupLocation actualStopLocations tripEndPoint
+      logDebug $ "EndRide: Building " <> show (length journeySegments) <> " journey segments from actual stops"
+      -- Calculate segment-based stateEntryPermitCharges for stops crossing city boundaries
+      -- Only apply for Intracity and Cross City rides (not for Intercity rides)
+      -- Case 1: Intracity Ride - even though source and destination are in same city, if any stop
+      --         lies outside the city, we check each segment that crosses cities and apply charges
+      -- Case 2: Cross City Ride - apply charges for segments that cross cities
+      -- Case 3: Intercity Ride - don't apply segment-based charges
+      let (isOverallIntercity, isOverallCrossCity) = SEPD.determineOverallRideType [booking.tripCategory]
+      mbSegmentStateEntryPermitCharges <-
+        if null journeySegments || length journeySegments <= 1
+          then return farePolicy.stateEntryPermitCharges -- No stops or single segment, use existing
+          else
+            if isOverallIntercity && not isOverallCrossCity
+              then return farePolicy.stateEntryPermitCharges -- Case 3: Intercity - don't apply segment-based charges
+              else do
+                -- Case 1 & 2: Intracity or Cross City - check each segment individually
+                -- For Intracity: even if overall ride is intracity, segments that cross cities are detected
+                -- For Cross City: segments that cross cities are detected
+                -- Get merchant for segment calculations
+                merchant <- getMerchant merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+                -- Calculate charges for each segment
+                segmentChargeResults <- forM journeySegments $ \segment -> do
+                  -- Get source city and nearest operating city for segment start point
+                  segmentSourceCityResult <- DSearch.getNearestOperatingAndSourceCity merchant segment.segmentFrom
+                  -- Get merchant operating city for the segment
+                  segmentMerchantOpCityForSegment <- CQMOC.getMerchantOpCity merchant (Just segmentSourceCityResult.nearestOperatingCity.city)
+                  -- Check if THIS segment crosses city boundaries (independent of overall ride type)
+                  -- This handles the case where an Intracity ride has stops outside the city
+                  (segmentIsIntercity, segmentIsCrossCity, mbSegmentDestinationTravelCityName) <- DSearch.checkForIntercityOrCrossCity thresholdConfig (Just segment.segmentTo) segmentSourceCityResult.sourceCity merchant
+                  -- Get fare policy for this segment (using segment start and end points)
+                  -- Only apply charges if THIS segment crosses cities
+                  mbSegmentFarePolicy <-
+                    if segmentIsIntercity || segmentIsCrossCity
+                      then do
+                        -- Calculate geohashes for segment
+                        let segmentFromGeohash = Text.pack <$> Geohash.encode (fromMaybe 5 thresholdConfig.dpGeoHashPercision) (segment.segmentFrom.lat, segment.segmentFrom.lon)
+                            segmentToGeohash = Text.pack <$> Geohash.encode (fromMaybe 5 thresholdConfig.dpGeoHashPercision) (segment.segmentTo.lat, segment.segmentTo.lon)
+                        -- Construct trip category for this segment (similar to getPossibleTripOption logic)
+                        -- For EndRide, we use isScheduled = False as we're recalculating after the ride
+                        let segmentTripCategories = SEPD.constructSegmentTripCategories segmentIsIntercity segmentIsCrossCity mbSegmentDestinationTravelCityName False
+                        -- Get fare policies for this segment using the constructed trip category and default area
+                        case listToMaybe segmentTripCategories of
+                          Just segmentTripCategory -> do
+                            segmentFarePoliciesProduct <- SFP.getAllFarePoliciesProduct merchantId segmentMerchantOpCityForSegment.id booking.isDashboardRequest segment.segmentFrom (Just segment.segmentTo) (Just (TransactionId (Id booking.transactionId))) segmentFromGeohash segmentToGeohash Nothing Nothing booking.dynamicPricingLogicVersion segmentTripCategory booking.configInExperimentVersions
+                            -- Select a fare policy for the segment (filter by vehicle service tier to match booking)
+                            let segmentFarePolicies = filter (\fp -> fp.vehicleServiceTier == booking.vehicleServiceTier) segmentFarePoliciesProduct.farePolicies
+                            return $ listToMaybe segmentFarePolicies
+                          Nothing -> return Nothing
+                      else return Nothing -- No city crossing, no charge needed
+                  SEPD.calculateSegmentStateEntryPermitCharge segmentIsIntercity segmentIsCrossCity mbSegmentFarePolicy segment
+                -- Calculate total stateEntryPermitCharges from segments
+                let totalSegmentCharges = SEPD.calculateTotalStateEntryPermitCharges segmentChargeResults
+                return totalSegmentCharges
+      logDebug $ "EndRide: stateEntryPermitCharges from segments: " <> show mbSegmentStateEntryPermitCharges
       fareParams <-
         calculateFareParameters
           Fare.CalculateFareParametersParams
@@ -726,6 +795,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
               tollCharges = ride.tollCharges,
+              stateEntryPermitCharges = mbSegmentStateEntryPermitCharges,
               vehicleAge = vehicleAge,
               currency = booking.currency,
               noOfStops = length ride.stops,
@@ -783,7 +853,7 @@ getDistanceDiff booking distance = do
   pure $ metersToHighPrecMeters rideDistanceDifference
 
 calculateFinalValuesForCorrectDistanceCalculations ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
+  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, ServiceFlow m r, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
@@ -832,7 +902,7 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
       TN.sendOverlay booking.merchantOperatingCityId driver $ TN.mkOverlayReq overlay
 
 calculateFinalValuesForFailedDistanceCalculations ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, ServiceFlow m r, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
 calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig = do
   let tripStartPoint = case ride.tripStartPos of
         Nothing -> getCoordinates booking.fromLocation

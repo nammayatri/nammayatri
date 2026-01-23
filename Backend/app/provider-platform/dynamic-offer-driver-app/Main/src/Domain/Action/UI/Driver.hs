@@ -1759,6 +1759,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
               tollCharges = searchReq.tollCharges,
+              stateEntryPermitCharges = Nothing,
               estimatedRideDuration = searchReq.estimatedDuration,
               nightShiftOverlapChecking = DTC.isFixedNightCharge searchTry.tripCategory,
               estimatedCongestionCharge = Nothing,

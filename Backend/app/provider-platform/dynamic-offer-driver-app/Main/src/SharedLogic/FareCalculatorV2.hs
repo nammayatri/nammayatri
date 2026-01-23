@@ -252,8 +252,7 @@ buildComponentMap FareParameters {..} =
               (DistanceFareComponent, det.distanceFare),
               (PickupChargeComponent, det.pickupCharge),
               (ExtraDistanceFareComponent, det.extraDistanceFare),
-              (ExtraTimeFareComponent, det.extraTimeFare),
-              (StateEntryPermitChargesComponent, maybeZero det.stateEntryPermitCharges)
+              (ExtraTimeFareComponent, det.extraTimeFare)
             ]
         DFParams.AmbulanceDetails det ->
           Map.fromList
