@@ -16,7 +16,6 @@ module SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout where
 
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.ScheduledPayout as DSP
-import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Types as PT
 import Kernel.Prelude
@@ -31,12 +30,10 @@ import Lib.Scheduler
 import SharedLogic.Allocator
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
-import qualified Storage.Queries.Vehicle as QV
 import qualified Tools.Payout as TP
 
 sendSpecialZonePayout ::
@@ -123,80 +120,59 @@ executeSpecialZonePayout scheduledPayout = do
       QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Driver has no payout VPA configured") scheduledPayout
       pure Complete
     Just vpa -> do
-      -- 4. Get payout config
-      mbVehicle <- QV.findById driverId
-      let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-
       case merchantOpCityId of
         Nothing -> do
           logWarning $ "No merchant operating city for payout: " <> show scheduledPayout.id
           QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Missing merchant operating city") scheduledPayout
           pure Complete
         Just opCityId -> do
-          mbPayoutConfig <- CPC.findByPrimaryKey opCityId vehicleCategory Nothing
-          case mbPayoutConfig of
-            Nothing -> do
-              logWarning $ "No payout config found for category: " <> show vehicleCategory
-              QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Payout config not found") scheduledPayout
+          -- 6. Get amount and create payout order
+          let amount = fromMaybe 0 scheduledPayout.amount
+          if amount <= 0
+            then do
+              logWarning $ "Invalid payout amount: " <> show amount
+              QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Invalid payout amount") scheduledPayout
               pure Complete
-            Just payoutConfig -> do
-              -- 5. Validate payout is enabled
-              unless payoutConfig.isPayoutEnabled $ do
-                logInfo $ "Payout is disabled for this merchant"
-                QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Payout disabled for merchant") scheduledPayout
+            else do
+              -- 7. Create payout order
+              uid <- generateGUID
+              phoneNo <- mapM decrypt person.mobileNumber
+              merchantOperatingCity <- CQMOC.findById opCityId >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
+              let entityName = DLP.MANUAL -- can get later for now manual
+                  createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) vpa "FULFILL_ONLY" False
+              case merchantId of
+                Nothing -> do
+                  logWarning $ "No merchant ID for payout: " <> show scheduledPayout.id
+                  QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Missing merchant ID") scheduledPayout
+                  pure Complete
+                Just mId -> do
+                  -- 8. Call payout service
+                  logInfo $ "Calling payout service for driver: " <> driverId.getId <> " | amount: " <> show amount <> " | orderId: " <> uid
+                  payoutServiceName <- TP.decidePayoutService (DEMSC.RidePayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+                  let createPayoutOrderCall = TP.createPayoutOrder mId opCityId payoutServiceName (Just person.id.getId)
 
-              if not payoutConfig.isPayoutEnabled
-                then pure Complete
-                else do
-                  -- 6. Get amount and create payout order
-                  let amount = fromMaybe 0 scheduledPayout.amount
-                  if amount <= 0
-                    then do
-                      logWarning $ "Invalid payout amount: " <> show amount
-                      QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Invalid payout amount") scheduledPayout
+                  result <- try $ Payout.createPayoutService (cast mId) (Just $ cast opCityId) (cast driverId) (Just [scheduledPayout.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+
+                  case result of
+                    Left (err :: SomeException) -> do
+                      -- 9. Handle failure
+                      logError $ "Payout service call failed: " <> show err
+                      QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) scheduledPayout
                       pure Complete
-                    else do
-                      -- 7. Create payout order
-                      uid <- generateGUID
-                      phoneNo <- mapM decrypt person.mobileNumber
-                      merchantOperatingCity <- CQMOC.findById opCityId >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
+                    Right (mbPayoutResp, mbPayoutOrder) -> do
+                      -- TODO : Revisit this logic
+                      let payoutOrderId = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
+                          -- Extract transactionRef from response: fulfillments[].transactions[].transactionRef
+                          mbTransactionRef = do
+                            resp <- mbPayoutResp
+                            fulfillment <- listToMaybe =<< resp.fulfillments
+                            txn <- listToMaybe =<< fulfillment.transactions
+                            pure txn.transactionRef
+                          transactionRef = fromMaybe payoutOrderId mbTransactionRef
 
-                      let entityName = DLP.MANUAL -- can get later for now manual
-                          createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
+                      -- Update scheduled payout with actual transaction reference
+                      QSPE.updatePayoutTransactionId (Just transactionRef) scheduledPayout.id
 
-                      case merchantId of
-                        Nothing -> do
-                          logWarning $ "No merchant ID for payout: " <> show scheduledPayout.id
-                          QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Missing merchant ID") scheduledPayout
-                          pure Complete
-                        Just mId -> do
-                          -- 8. Call payout service
-                          logInfo $ "Calling payout service for driver: " <> driverId.getId <> " | amount: " <> show amount <> " | orderId: " <> uid
-                          payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
-                          let createPayoutOrderCall = TP.createPayoutOrder mId opCityId payoutServiceName (Just person.id.getId)
-
-                          result <- try $ Payout.createPayoutService (cast mId) (Just $ cast opCityId) (cast driverId) (Just [scheduledPayout.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
-
-                          case result of
-                            Left (err :: SomeException) -> do
-                              -- 9. Handle failure
-                              logError $ "Payout service call failed: " <> show err
-                              QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) scheduledPayout
-                              pure Complete
-                            Right (mbPayoutResp, mbPayoutOrder) -> do
-                              -- ye wala flow thoda different hai idk kya bheju to ek baar isko dekh lena.
-                              let payoutOrderId = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
-                                  -- Extract transactionRef from response: fulfillments[].transactions[].transactionRef
-                                  mbTransactionRef = do
-                                    resp <- mbPayoutResp
-                                    fulfillment <- listToMaybe =<< resp.fulfillments
-                                    txn <- listToMaybe =<< fulfillment.transactions
-                                    pure txn.transactionRef
-                                  transactionRef = fromMaybe payoutOrderId mbTransactionRef
-
-                              -- Update scheduled payout with actual transaction reference
-                              QSPE.updatePayoutTransactionId (Just transactionRef) scheduledPayout.id
-
-                              QSPE.updateStatusWithHistoryById DSP.CREDITED (Just $ "Payment credited to bank. TxnRef: " <> transactionRef) scheduledPayout
-                              logInfo $ "Special Zone Payout processed successfully for id: " <> show scheduledPayout.id <> " | transactionRef: " <> transactionRef
-                              pure Complete
+                      QSPE.updateStatusWithHistoryById DSP.CREDITED (Just $ "Payment credited to bank. TxnRef: " <> transactionRef) scheduledPayout
+                      logInfo $ "Special Zone Payout processed successfully for id: " <> show scheduledPayout.id <> " | transactionRef: " <> transactionRef
+                      pure Complete

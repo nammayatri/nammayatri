@@ -30,6 +30,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.API.DriversLocation as DriversLocationAPI
 import SharedLogic.External.LocationTrackingService.Types
@@ -37,7 +38,6 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
-import Kernel.Types.Version (CloudType(..))
 
 newtype DTrackReq = TrackReq
   { bookingId :: Id DBooking.Booking
@@ -91,7 +91,8 @@ callMultiCloudDriverLocation ride = do
     Just UNAVAILABLE -> callBothClouds ltsCfg.url ltsCfg.secondaryUrl req
     Just ct
       | Just ct == ride.cloudType -> callDriverLocationAPI ltsCfg.url req
-      | otherwise -> maybe
+      | otherwise ->
+        maybe
           (logError "Secondary URL not configured for cross-cloud tracking" >> pure [])
           (`callDriverLocationAPI` req)
           ltsCfg.secondaryUrl
@@ -99,15 +100,17 @@ callMultiCloudDriverLocation ride = do
     callBothClouds primaryUrl mbSecondaryUrl req = do
       primaryAwaitable <- awaitableFork "primaryLTS" $ callDriverLocationAPI primaryUrl req
       mbSecondaryAwaitable <- forM mbSecondaryUrl $ \url -> awaitableFork "secondaryLTS" $ callDriverLocationAPI url req
-      primaryRes <- L.await Nothing primaryAwaitable >>= \case
-        Left err -> throwError $ InternalError $ "Failed to call driversLocation API for primary url: " <> show primaryUrl <> ", error: " <> show err
-        Right result -> pure result
+      primaryRes <-
+        L.await Nothing primaryAwaitable >>= \case
+          Left err -> throwError $ InternalError $ "Failed to call driversLocation API for primary url: " <> show primaryUrl <> ", error: " <> show err
+          Right result -> pure result
       secondaryRes <- maybe (pure []) handleSecondaryResult mbSecondaryAwaitable
       pure $ primaryRes <> secondaryRes
       where
-        handleSecondaryResult awaitable = L.await Nothing awaitable >>= \case
-          Left err -> logError ("Failed to call driversLocation API for secondary url, error: " <> show err) >> pure []
-          Right result -> pure result
+        handleSecondaryResult awaitable =
+          L.await Nothing awaitable >>= \case
+            Left err -> logError ("Failed to call driversLocation API for secondary url, error: " <> show err) >> pure []
+            Right result -> pure result
 
     callDriverLocationAPI url req =
       withShortRetry $

@@ -45,6 +45,7 @@ data ServiceName
   | CautioPaymentService Payment.PaymentService
   | PayoutService Payout.PayoutService
   | RentalPayoutService Payout.PayoutService
+  | RidePayoutService Payout.PayoutService
   | IssueTicketService Ticket.IssueTicketService
   | NotificationService Notification.NotificationService
   | TokenizationService Tokenize.TokenizationService
@@ -71,6 +72,7 @@ instance Show ServiceName where
   show (CautioPaymentService s) = "CautioPayment_" <> show s
   show (PayoutService s) = "Payout_" <> show s
   show (RentalPayoutService s) = "RentalPayout_" <> show s
+  show (RidePayoutService s) = "RidePayout_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
   show (NotificationService s) = "Notification_" <> show s
   show (TokenizationService s) = "Tokenization_" <> show s
@@ -133,6 +135,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "RentalPayout_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (RidePayoutService v1, r2)
+                 | r1 <- stripPrefix "RidePayout_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (IssueTicketService v1, r2)
                  | r1 <- stripPrefix "Ticket_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -183,6 +189,7 @@ data ServiceConfigD (s :: UsageSafety)
   | CautioPaymentServiceConfig !PaymentServiceConfig
   | PayoutServiceConfig !PayoutServiceConfig
   | RentalPayoutServiceConfig !PayoutServiceConfig
+  | RidePayoutServiceConfig !PayoutServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   | NotificationServiceConfig !NotificationServiceConfig
   | TokenizationServiceConfig !Tokenize.TokenizationServiceConfig
