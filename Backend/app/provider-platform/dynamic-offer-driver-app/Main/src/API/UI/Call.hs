@@ -31,6 +31,7 @@ import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment
 import Kernel.External.Call.Exotel.Types (ExotelCallStatus)
+import qualified Kernel.External.Call.Ozonetel.Types as Ozonetel
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType)
@@ -47,10 +48,10 @@ instance Accept XML where
 instance MimeRender XML Text where
   mimeRender _ = fromStrict . encodeUtf8
 
-type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI :<|> BackendBasedDriverCallApi :<|> SDKBasedCallAPI
+type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI :<|> BackendBasedDriverCallApi :<|> SDKBasedCallAPI :<|> OzonetelCampaignAPI
 
 handler :: FlowServer API
-handler = backendBasedCallHandler :<|> frontendBasedCallHandler :<|> backendBasedDriverCallHandler :<|> sdkBasedCallHandler
+handler = backendBasedCallHandler :<|> frontendBasedCallHandler :<|> backendBasedDriverCallHandler :<|> sdkBasedCallHandler :<|> addCampaignDataHandler
 
 -------- Initiate a call (Exotel) APIs --------
 type BackendBasedCallAPI =
@@ -124,6 +125,14 @@ type SDKBasedCallAPI =
            :> Get '[XML] Text
        )
 
+type OzonetelCampaignAPI =
+  "ozonetel"
+    :> "campaign"
+    :> "add"
+    :> TokenAuth
+    :> ReqBody '[JSON] DCall.AddOzonetelCampaignDataReq
+    :> Post '[JSON] Ozonetel.OzonetelAddCampaignDataResp
+
 frontendBasedCallHandler :: FlowServer FrontendBasedCallAPI
 frontendBasedCallHandler =
   getCustomerMobileNumber
@@ -135,6 +144,9 @@ backendBasedDriverCallHandler =
 
 sdkBasedCallHandler :: FlowServer SDKBasedCallAPI
 sdkBasedCallHandler = getCallTwillioAccessToken :<|> getCallTwillioConnectedEntityTwiml
+
+addCampaignDataHandler :: FlowServer OzonetelCampaignAPI
+addCampaignDataHandler = addCampaignData
 
 -- | Try to initiate a call driver -> customer
 initiateCallToCustomer :: Id SRide.Ride -> (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DCall.CallRes
@@ -160,3 +172,6 @@ getCallTwillioAccessToken rideId entity deviceType = withFlowHandlerAPI $ DCall.
 
 getCallTwillioConnectedEntityTwiml :: Id SRide.Ride -> DCall.EntityType -> FlowHandler Text
 getCallTwillioConnectedEntityTwiml rideId entity = withFlowHandlerAPI $ DCall.getCallTwillioConnectedEntityTwiml rideId entity
+
+addCampaignData :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DCall.AddOzonetelCampaignDataReq -> FlowHandler Ozonetel.OzonetelAddCampaignDataResp
+addCampaignData (personId, _, merchantOpCityId) req = withFlowHandlerAPI . withPersonIdLogTag personId $ DCall.addCampaignData req merchantOpCityId
