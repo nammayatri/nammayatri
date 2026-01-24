@@ -6,6 +6,7 @@ module Domain.Types.TransporterConfig (module Domain.Types.TransporterConfig, mo
 
 import Data.Aeson
 import Domain.Types.Common (UsageSafety (..))
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import Domain.Types.Extra.TransporterConfig as ReExport
 import qualified Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.Location
@@ -37,6 +38,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     allowDuplicateAadhaar :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateGst :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicatePan :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allowedPaymentInstrumentForPayout :: Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument],
     allowedReferralEntities :: [Domain.Types.Person.Role],
     analyticsConfig :: Domain.Types.TransporterConfig.AnalyticsConfig,
     approxRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,

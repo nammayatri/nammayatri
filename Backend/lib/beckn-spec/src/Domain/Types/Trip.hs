@@ -366,6 +366,15 @@ isEndOtpRequired (InterCity _ _) = True
 isEndOtpRequired (Delivery _) = True
 isEndOtpRequired _ = False
 
+isRideOtpTrip :: TripCategory -> Bool
+isRideOtpTrip (OneWay OneWayRideOtp) = True
+isRideOtpTrip (CrossCity OneWayRideOtp _) = True
+isRideOtpTrip (InterCity OneWayRideOtp _) = True
+isRideOtpTrip (Delivery OneWayRideOtp) = True
+isRideOtpTrip (RideShare RideOtp) = True
+isRideOtpTrip (Rental RideOtp) = True
+isRideOtpTrip _ = False
+
 -- Move it to configs later if required
 isOdometerReadingsRequired :: TripCategory -> Bool
 isOdometerReadingsRequired (Rental _) = False

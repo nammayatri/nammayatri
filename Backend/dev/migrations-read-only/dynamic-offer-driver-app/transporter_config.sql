@@ -584,3 +584,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_disable_d
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_ride_schedule_time_buffer integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_ride_money_to_driver boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allowed_payment_instrument_for_payout text[] ;

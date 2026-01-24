@@ -227,6 +227,7 @@ buildComponentMap FareParameters {..} =
             (NightShiftChargeComponent, maybeZero nightShiftCharge),
             (InsuranceChargeComponent, maybeZero insuranceCharge),
             (StopChargeComponent, maybeZero stopCharges),
+            (LuggageChargeComponent, maybeZero luggageCharge),
             (CustomerCancellationChargeComponent, maybeZero customerCancellationDues),
             (PlatformFeeComponent, maybeZero platformFee),
             (RideVatComponent, maybeZero rideVat),

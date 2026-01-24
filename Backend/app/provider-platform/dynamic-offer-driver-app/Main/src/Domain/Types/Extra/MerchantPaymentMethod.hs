@@ -13,14 +13,14 @@ import Kernel.Prelude
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import qualified Text.Show
 import qualified Text.Show as Show
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForEnumAndList)
 
 -- Extra code goes here --
 
 data PaymentType = ON_FULFILLMENT | POSTPAID
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, Ord)
 
-data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash
+data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash | BoothOnline
   deriving (Generic, Eq, Ord)
 
 instance ToJSON PaymentInstrument where
@@ -51,6 +51,7 @@ instance Show PaymentInstrument where
   show UPI = "UPI"
   show NetBanking = "NetBanking"
   show Cash = "Cash"
+  show BoothOnline = "BoothOnline"
 
 instance Read PaymentInstrument where
   readsPrec d' =
@@ -73,6 +74,9 @@ instance Read PaymentInstrument where
                ]
             ++ [ (Cash, r1)
                  | r1 <- stripPrefix "Cash" r
+               ]
+            ++ [ (BoothOnline, r1)
+                 | r1 <- stripPrefix "BoothOnline" r
                ]
       )
     where
@@ -97,8 +101,8 @@ instance ToParamSchema PaymentInstrument where
     mempty
       & title ?~ "PaymentInstrument"
       & type_ ?~ OpenApiString
-      & format ?~ "Card_<CardType>,Wallet_<WalletType>,UPI,NetBanking,Cash"
-      & enum_ ?~ map (String . T.pack . show) [Card DefaultCardType, Wallet DefaultWalletType, UPI, NetBanking, Cash]
+      & format ?~ "Card_<CardType>,Wallet_<WalletType>,UPI,NetBanking,Cash,BoothOnline"
+      & enum_ ?~ map (String . T.pack . show) [Card DefaultCardType, Wallet DefaultWalletType, UPI, NetBanking, Cash, BoothOnline]
 
 data CardType = DefaultCardType
   deriving (Generic, Show, Read, Eq, ToSchema, Ord, ToParamSchema)
@@ -136,6 +140,6 @@ data PaymentMethodInfo = PaymentMethodInfo
 
 $(mkBeamInstancesForEnum ''PaymentType)
 
-$(mkBeamInstancesForEnum ''PaymentInstrument)
+$(mkBeamInstancesForEnumAndList ''PaymentInstrument)
 
 $(mkBeamInstancesForEnum ''PaymentCollector)
