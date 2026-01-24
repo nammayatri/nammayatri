@@ -69,7 +69,6 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
-import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType (..))
