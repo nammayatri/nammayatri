@@ -46,6 +46,7 @@ imports:
   LLMChatCompletionService: ChatCompletion.Types
   ServiceName: Domain.Types.Extra.MerchantServiceConfig
   GatewayAndRegistryService: Domain.Types
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   Role: Domain.Types.Person
   Base64: Kernel.Types.Base64
 Merchant:
@@ -1115,6 +1116,7 @@ TransporterConfig:
     allowDisableDriverToTakeSpecialZoneRide: Maybe Bool
     payoutRideMoneyToDriver: Maybe Bool
     payoutRideScheduleTimeBuffer: Maybe Seconds
+    allowedPaymentInstrumentForPayout: Maybe [PaymentInstrument]
 
   beamType:
     currency: Maybe Currency

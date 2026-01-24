@@ -162,6 +162,7 @@ data FareChargeComponent
   | NightShiftChargeComponent
   | InsuranceChargeComponent
   | StopChargeComponent
+  | LuggageChargeComponent
   | PlatformFeeComponent
   | CustomerCancellationChargeComponent
   | -- Progressive details

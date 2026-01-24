@@ -274,7 +274,7 @@ select2 personId estimateId req@DSelectReq {..} = do
 
   -- Select Transaction
   -- TODO :: This Delivery transaction still throws error inside, can be refactored later upon scale.
-  when (merchant.onlinePayment && paymentInstrument /= Just DMPM.Cash) $ do
+  when (merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]) $ do
     SPayment.updateDefaultPersonPaymentMethodId person paymentMethodId -- Make payment method as default payment method for customer
   merchantPaymentMethod <- maybe (return Nothing) (QMPM.findById . Id) req.paymentMethodId
   let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod

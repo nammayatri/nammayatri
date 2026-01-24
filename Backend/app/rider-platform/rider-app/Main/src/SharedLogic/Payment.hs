@@ -512,7 +512,8 @@ validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
       let paymentInstrument = fromMaybe DMPM.Cash mbPaymentInstrument
       case paymentInstrument of
         DMPM.Cash -> pure ()
-        _ -> throwError (InvalidRequest "Only Cash payment instrument supported")
+        DMPM.BoothOnline -> pure ()
+        _ -> throwError (InvalidRequest "Only Cash and BoothOnline payment instruments supported")
 
 isOnlinePayment :: Maybe Merchant.Merchant -> Booking.Booking -> Bool
 isOnlinePayment mbMerchant booking = maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument /= Just DMPM.Cash

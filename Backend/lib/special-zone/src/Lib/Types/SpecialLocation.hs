@@ -62,6 +62,8 @@ data SpecialLocationType
   = Open
   | Closed
   | FixedRoute -- Areas without geometry for fixed route pricing
+  | FixedRoutePickup
+  | FixedRouteDrop
   deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''SpecialLocationType)

@@ -353,6 +353,7 @@ incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride booking
   -- Otherwise, it's online payment
   let isOnlinePayment = case booking.paymentInstrument of
         Just DMPM.Cash -> False
+        Just DMPM.BoothOnline -> False
         Nothing -> ride.onlinePayment
         _ -> True
 
