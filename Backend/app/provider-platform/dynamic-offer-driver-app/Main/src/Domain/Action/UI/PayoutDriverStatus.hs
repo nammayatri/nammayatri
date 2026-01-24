@@ -3,29 +3,29 @@
 module Domain.Action.UI.PayoutDriverStatus (getPayoutStatus) where
 
 import qualified API.Types.UI.PayoutDriverStatus as API
+import Data.Maybe (listToMaybe)
+import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PayoutStatusHistory as DPSH
-import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person
 import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Payout.Interface.Types as IPayout
+import qualified Kernel.External.Payout.Types as TPayout
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPO
+import Storage.Beam.Payment ()
 import qualified Storage.Queries.PayoutStatusHistory as QPSH
 import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSP
 import Tools.Error
-import qualified Kernel.External.Payout.Interface.Types as IPayout
-import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPO
-import Storage.Beam.Payment ()
 import qualified Tools.Payout as Payout
-import qualified Kernel.External.Payout.Types as TPayout
-import qualified Lib.Payment.Domain.Action as DPayment
-import qualified Lib.Payment.Domain.Types.Common as DPayment
-import Data.Maybe (listToMaybe)
 
 getPayoutStatus ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

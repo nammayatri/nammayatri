@@ -10,7 +10,7 @@ mkPaymentMethodInfo MerchantPaymentMethod {..} = PaymentMethodInfo {..}
 
 getPostpaidPaymentUrl :: MerchantPaymentMethod -> Maybe Text
 getPostpaidPaymentUrl mpm = do
-  if mpm.paymentType == ON_FULFILLMENT && mpm.collectedBy == BPP && mpm.paymentInstrument /= Cash
+  if mpm.paymentType == ON_FULFILLMENT && mpm.collectedBy == BPP && mpm.paymentInstrument `notElem` [Cash, BoothOnline]
     then Just $ mkDummyPaymentUrl mpm
     else Nothing
 

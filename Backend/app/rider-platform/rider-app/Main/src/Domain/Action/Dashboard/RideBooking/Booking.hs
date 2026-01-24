@@ -15,15 +15,15 @@ import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (getDbHash)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
-import Kernel.External.Encryption (getDbHash)
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Booking as SQB
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
 postBookingStatus ::

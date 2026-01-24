@@ -30,6 +30,7 @@ import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -37,6 +38,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.TransporterConfig as DTConf
+import Domain.Types.Trip
 import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
@@ -57,6 +59,8 @@ import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (.
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FareCalculatorV2 as FCV2
+import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Ride (calculateEstimatedEndTimeRange)
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Cac.TransporterConfig as SCTC
@@ -212,34 +216,44 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
 
       -- Schedule payout for special zone rides if enabled
-      when (booking.isDashboardRequest && fromMaybe False transporterConfig.payoutRideMoneyToDriver) $ do
-        -- Checking iff duplicate is there.
-        whenJust transporterConfig.payoutRideScheduleTimeBuffer $ \buffer -> do
-          existingPayout <- QSP.findByRideId ride.id.getId
-          let scheduledTime = addUTCTime (secondsToNominalDiffTime buffer) now
-          when (isNothing existingPayout) $ do
-            scheduledPayoutId <- Id <$> generateGUID
-            let scheduledPayout =
-                  DSP.ScheduledPayout
-                    { id = scheduledPayoutId,
-                      rideId = ride.id.getId,
-                      bookingId = booking.id.getId,
-                      driverId = driverId.getId,
-                      amount = Just booking.estimatedFare,
-                      status = DSP.INITIATED,
-                      retryCount = Nothing,
-                      failureReason = Nothing,
-                      payoutTransactionId = Nothing,
-                      expectedCreditTime = Just scheduledTime,
-                      createdAt = now,
-                      updatedAt = now,
-                      merchantId = Just booking.providerId,
-                      merchantOperatingCityId = Just ride.merchantOperatingCityId
-                    }
-            QSP.create scheduledPayout
-            QSPE.createInitialHistory scheduledPayout
-            let jobData = SpecialZonePayoutJobData {scheduledPayoutId = scheduledPayoutId}
-            QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
+      let paymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
+      when
+        ( booking.isDashboardRequest
+            && isRideOtpTrip booking.tripCategory
+            && fromMaybe False transporterConfig.payoutRideMoneyToDriver
+            && paymentInstrument `elem` (fromMaybe [] transporterConfig.allowedPaymentInstrumentForPayout)
+        )
+        $ do
+          -- Checking iff duplicate is there.
+          whenJust transporterConfig.payoutRideScheduleTimeBuffer $ \buffer -> do
+            existingPayout <- QSP.findByRideId ride.id.getId
+            let scheduledTime = addUTCTime (secondsToNominalDiffTime buffer) now
+            mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+            commission <- FCV2.calculateCommission booking.fareParams mbFarePolicy
+            let payoutAmount = maybe booking.estimatedFare (\c -> booking.estimatedFare - c) commission
+            when (isNothing existingPayout) $ do
+              scheduledPayoutId <- Id <$> generateGUID
+              let scheduledPayout =
+                    DSP.ScheduledPayout
+                      { id = scheduledPayoutId,
+                        rideId = ride.id.getId,
+                        bookingId = booking.id.getId,
+                        driverId = driverId.getId,
+                        amount = Just payoutAmount,
+                        status = DSP.INITIATED,
+                        retryCount = Nothing,
+                        failureReason = Nothing,
+                        payoutTransactionId = Nothing,
+                        expectedCreditTime = Just scheduledTime,
+                        createdAt = now,
+                        updatedAt = now,
+                        merchantId = Just booking.providerId,
+                        merchantOperatingCityId = Just ride.merchantOperatingCityId
+                      }
+              QSP.create scheduledPayout
+              QSPE.createInitialHistory scheduledPayout
+              let jobData = SpecialZonePayoutJobData {scheduledPayoutId = scheduledPayoutId}
+              QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
 
       pure APISuccess.Success
   where

@@ -19,7 +19,7 @@ import Data.Aeson.Types
 import Data.OpenApi
 import Kernel.Prelude
 
-data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash
+data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash | BoothOnline
   deriving (Generic, Show)
 
 instance ToJSON PaymentInstrument where

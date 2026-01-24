@@ -4,16 +4,16 @@
 
 module Lib.Yudhishthira.SchemaTH (genToSchema) where
 
-import Language.Haskell.TH
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.List as DL
+import qualified Data.Map.Strict as Map
 import Data.OpenApi (ToSchema)
+import qualified Data.Set as Set
+import Data.Time.LocalTime (TimeOfDay)
+import qualified Data.Vector as Vector
 import Kernel.Prelude hiding (Type)
 import qualified Kernel.Types.Id
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import qualified Data.Vector as Vector
-import Data.Time.LocalTime (TimeOfDay)
-import qualified Data.List as DL
+import Language.Haskell.TH
 
 -- | Generates 'ToSchema' instances for the given type and its fields recursively.
 genToSchema :: Name -> Q [Dec]
@@ -25,20 +25,20 @@ genToSchemaInternal seen name
   | isPrimitive name = pure []
   | isTypeConstructor name = pure []
   | otherwise = do
-      exists <- isInstance ''ToSchema [ConT name]
-      if exists
-        then pure []
-        else do
-          info <- reify name
-          let newSeen = name : seen
-          case info of
-            TyConI (DataD _ _ _ _ cons _) -> do
-              innerDecs <- concat <$> mapM (genToSchemaForCon newSeen) cons
-              pure $ innerDecs ++ [StandaloneDerivD Nothing [] (AppT (ConT ''ToSchema) (ConT name))]
-            TyConI (NewtypeD _ _ _ _ con _) -> do
-              innerDecs <- genToSchemaForCon newSeen con
-              pure $ innerDecs ++ [StandaloneDerivD Nothing [] (AppT (ConT ''ToSchema) (ConT name))]
-            _ -> pure []
+    exists <- isInstance ''ToSchema [ConT name]
+    if exists
+      then pure []
+      else do
+        info <- reify name
+        let newSeen = name : seen
+        case info of
+          TyConI (DataD _ _ _ _ cons _) -> do
+            innerDecs <- concat <$> mapM (genToSchemaForCon newSeen) cons
+            pure $ innerDecs ++ [StandaloneDerivD Nothing [] (AppT (ConT ''ToSchema) (ConT name))]
+          TyConI (NewtypeD _ _ _ _ con _) -> do
+            innerDecs <- genToSchemaForCon newSeen con
+            pure $ innerDecs ++ [StandaloneDerivD Nothing [] (AppT (ConT ''ToSchema) (ConT name))]
+          _ -> pure []
 
 isPrimitive :: Name -> Bool
 isPrimitive name =

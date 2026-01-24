@@ -17,7 +17,7 @@ toInlinedSchemaValue proxy =
   let (defs, sch) = runDeclare (declareSchema proxy) mempty
       jsonSch = toJSON sch
       jsonDefs = toJSON defs
-  in resolveRefs jsonDefs jsonSch
+   in resolveRefs jsonDefs jsonSch
 
 resolveRefs :: Value -> Value -> Value
 resolveRefs defs val = case val of
@@ -25,16 +25,16 @@ resolveRefs defs val = case val of
     case KeyMap.lookup "$ref" km of
       Just (String ref) ->
         let refPrefix = "#/components/schemas/"
-        in if refPrefix `T.isPrefixOf` ref
-           then
-             let refName = T.drop (T.length refPrefix) ref
-             in case defs of
-                  Object defsKm ->
-                    case KeyMap.lookup (Key.fromText refName) defsKm of
-                      Just refVal -> resolveRefs defs refVal -- Recursive resolve in case of nested refs
-                      Nothing -> val -- Should not happen in a valid schema
-                  _ -> val
-           else val
+         in if refPrefix `T.isPrefixOf` ref
+              then
+                let refName = T.drop (T.length refPrefix) ref
+                 in case defs of
+                      Object defsKm ->
+                        case KeyMap.lookup (Key.fromText refName) defsKm of
+                          Just refVal -> resolveRefs defs refVal -- Recursive resolve in case of nested refs
+                          Nothing -> val -- Should not happen in a valid schema
+                      _ -> val
+              else val
       _ -> Object $ KeyMap.map (resolveRefs defs) km
   Array valArr -> Array $ fmap (resolveRefs defs) valArr
   _ -> val

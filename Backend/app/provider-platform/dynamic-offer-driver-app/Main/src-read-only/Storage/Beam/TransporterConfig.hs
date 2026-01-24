@@ -6,6 +6,7 @@ module Storage.Beam.TransporterConfig where
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.TransporterConfig
 import qualified Domain.Types.UtilsTH
@@ -34,6 +35,7 @@ data TransporterConfigT f = TransporterConfigT
     allowDuplicateGst :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowDuplicatePan :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowRcUnlinkWhenDriverOffline :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    allowedPaymentInstrumentForPayout :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument]),
     allowedReferralEntities :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     analyticsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     approxRideDistanceDiffThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,

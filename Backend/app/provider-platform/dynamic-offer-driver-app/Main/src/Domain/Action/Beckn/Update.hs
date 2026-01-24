@@ -126,7 +126,7 @@ handler (UPaymentCompletedReq req@PaymentCompletedReq {}) = do
     throwError $ InvalidRequest "Payment completed update available only for ON_FULFILLMENT payments."
   unless (req.paymentMethodInfo.collectedBy == DMPM.BAP) $
     throwError $ InvalidRequest "Payment completed update available only when BAP collect payment."
-  when (req.paymentMethodInfo.paymentInstrument == DMPM.Cash) $
+  when (req.paymentMethodInfo.paymentInstrument `elem` [DMPM.Cash, DMPM.BoothOnline]) $
     throwError $ InvalidRequest "Payment completed update not available for cash"
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   paymentMethodId <- booking.paymentMethodId & fromMaybeM (InvalidRequest "Payment method not specified for this booking.")

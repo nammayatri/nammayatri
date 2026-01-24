@@ -67,8 +67,8 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.DriverWallet as QDW
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import qualified Storage.Queries.ScheduledPayout as QSPE
+import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import qualified Tools.Notifications as Notify

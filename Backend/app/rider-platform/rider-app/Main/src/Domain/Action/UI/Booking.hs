@@ -176,7 +176,8 @@ getBookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text
 getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList = do
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
-  (rbList, allbookings) <- if Just True == mbOnlyActive then runInMultiCloud $ QR.findAllByRiderIdAndRide mbPersonId mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList else QR.findAllByRiderIdAndRide mbPersonId mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList
+  let mbOnlyDashboard = if onlyDashboard then Just True else Nothing
+  (rbList, allbookings) <- if Just True == mbOnlyActive then runInMultiCloud $ QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList else QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList
   let limit = maybe 10 fromIntegral mbLimit
   if null rbList
     then do

@@ -144,7 +144,7 @@ confirm DConfirmReq {..} = do
   (bppQuoteId, mbEsimateId) <- getBppQuoteId now quote.quoteDetails
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  when (merchant.onlinePayment && paymentInstrument /= Just DMPM.Cash) $ do
+  when (merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]) $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     SPayment.updateDefaultPersonPaymentMethodId person paymentMethodId -- Make payment method as default payment method for customer
   activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
@@ -197,7 +197,7 @@ confirm DConfirmReq {..} = do
           pure (Just $ mkPaymentMethodInfo merchantPaymentMethod, False)
         Nothing -> do
           -- 2. paymentMethodId which provided by Stripe SDK
-          if merchant.onlinePayment && paymentInstrument /= Just DMPM.Cash
+          if merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]
             then pure (Nothing, True)
             else pure (Nothing, False)
 

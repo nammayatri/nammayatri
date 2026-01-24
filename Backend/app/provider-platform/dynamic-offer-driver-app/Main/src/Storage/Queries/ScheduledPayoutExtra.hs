@@ -3,6 +3,7 @@ module Storage.Queries.ScheduledPayoutExtra where
 import qualified Domain.Types.PayoutStatusHistory as DPSH
 import qualified Domain.Types.ScheduledPayout as DSP
 import Kernel.Beam.Functions (updateOneWithKV)
+import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -10,7 +11,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.ScheduledPayout as Beam
 import qualified Storage.Queries.PayoutStatusHistory as QPSH
 import qualified Storage.Queries.ScheduledPayout as QSP
-import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 
 -- | Update ScheduledPayout status and record history entry in one call
 -- This centralizes all status updates to also track history

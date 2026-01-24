@@ -344,6 +344,7 @@ createDriverWalletTransaction ride booking transporterConfig = do
         Just paymentMethod -> do
           case paymentMethod.paymentInstrument of
             Cash -> pure (0, gstDeduction) -- OFFLINE
+            BoothOnline -> pure (0, gstDeduction) -- OFFLINE
             _ -> pure (collectionAmount - gstDeduction, 0) -- ONLINE
     let newRunningBalance = lastRunningBalance + merchantPayable - driverPayable
     let driverWallet =

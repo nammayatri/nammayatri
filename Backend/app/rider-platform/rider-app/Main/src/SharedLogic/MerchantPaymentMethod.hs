@@ -16,7 +16,7 @@ mkBknPaymentParams mbPaymentMethodInfo bapConfig riderConfig = do
   if riderConfig.enableOnlinePaymentRide == Just True
     then case mbPaymentMethodInfo of
       Just paymentMethodInfo ->
-        if paymentMethodInfo.paymentInstrument == Cash
+        if paymentMethodInfo.paymentInstrument == Cash || paymentMethodInfo.paymentInstrument == BoothOnline
           then Nothing
           else decodeFromText =<< bapConfig.paymentParamsJson
       Nothing -> Nothing

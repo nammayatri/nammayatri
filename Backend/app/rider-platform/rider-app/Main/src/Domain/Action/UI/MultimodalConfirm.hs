@@ -1857,24 +1857,27 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       logDebug $ "postMultimodalRouteServiceability: Branch=AlternateRoutes, userRequestedRouteCode=" <> show userRequestedRouteCode <> ", alternateRoutes=" <> show alternateRoutes <> ", routeCount=" <> show (length alternateRoutes) <> ", busesForRoutes=" <> show (map (\r -> (r.routeId, map (.vehicleNumber) r.buses)) busesForRoutes)
       alterateLiveVehicleData <-
         catMaybes
-          <$> JMU.measureLatency (mapM
-            ( \routeInfo -> do
-                route <- OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId >>= fromMaybeM (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
-                schedules <- getBusScheduleInfo =<< OTPRest.getRouteBusSchedule routeInfo.routeId integratedBPPConfig
-                logDebug $ "postMultimodalRouteServiceability: AlternateRoute getRouteBusSchedule routeId=" <> routeInfo.routeId <> ", scheduleCount=" <> show (length schedules) <> ", schedules=" <> show (map (\s -> (s.vehicleNumber, s.eta)) schedules)
-                liveVehicles <- getLiveVehicles routeInfo.buses
-                logDebug $ "postMultimodalRouteServiceability: AlternateRoute routeId=" <> routeInfo.routeId <> ", shortName=" <> route.shortName <> ", buses=" <> show (map (.vehicleNumber) routeInfo.buses) <> ", schedules=" <> show (map (.vehicleNumber) schedules) <> ", liveVehicles=" <> show (map (.number) liveVehicles)
-                return $
-                  Just $
-                    API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
-                      { liveVehicles,
-                        schedules,
-                        routeCode = routeInfo.routeId,
-                        routeShortName = route.shortName,
-                        alternateRouteInfo = Nothing
-                      }
+          <$> JMU.measureLatency
+            ( mapM
+                ( \routeInfo -> do
+                    route <- OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId >>= fromMaybeM (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
+                    schedules <- getBusScheduleInfo =<< OTPRest.getRouteBusSchedule routeInfo.routeId integratedBPPConfig
+                    logDebug $ "postMultimodalRouteServiceability: AlternateRoute getRouteBusSchedule routeId=" <> routeInfo.routeId <> ", scheduleCount=" <> show (length schedules) <> ", schedules=" <> show (map (\s -> (s.vehicleNumber, s.eta)) schedules)
+                    liveVehicles <- getLiveVehicles routeInfo.buses
+                    logDebug $ "postMultimodalRouteServiceability: AlternateRoute routeId=" <> routeInfo.routeId <> ", shortName=" <> route.shortName <> ", buses=" <> show (map (.vehicleNumber) routeInfo.buses) <> ", schedules=" <> show (map (.vehicleNumber) schedules) <> ", liveVehicles=" <> show (map (.number) liveVehicles)
+                    return $
+                      Just $
+                        API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+                          { liveVehicles,
+                            schedules,
+                            routeCode = routeInfo.routeId,
+                            routeShortName = route.shortName,
+                            alternateRouteInfo = Nothing
+                          }
+                )
+                busesForRoutes
             )
-            busesForRoutes) ("postMultimodalRouteServiceability: mapM processAlternateRoutes count:" <> show (length busesForRoutes))
+            ("postMultimodalRouteServiceability: mapM processAlternateRoutes count:" <> show (length busesForRoutes))
       logDebug $ "postMultimodalRouteServiceability: Completed AlternateLiveRoutesInfo, routes=" <> show (map (\r -> (r.routeCode, r.routeShortName, map (.number) r.liveVehicles, map (.vehicleNumber) r.schedules)) alterateLiveVehicleData)
       return $ ApiTypes.AlternateLiveRoutesInfo alterateLiveVehicleData
     Just routeBusData -> do
@@ -1884,18 +1887,21 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       alternateRouteInfo <- catMaybes <$> JMU.measureLatency (mapM (OTPRest.getRouteByRouteId integratedBPPConfig) alternateRoutes) ("postMultimodalRouteServiceability: mapM OTPRest.getRouteByRouteId alternateRoutes count:" <> show (length alternateRoutes))
       logDebug $ "postMultimodalRouteServiceability: Branch=LiveRoute, routeId=" <> routeBusData.routeId <> ", shortName=" <> selectedRoute.shortName <> ", buses=" <> show (map (.vehicleNumber) routeBusData.buses) <> ", liveVehicles=" <> show (map (.number) liveVehicles) <> ", alternateRoutes=" <> show alternateRoutes <> ", alternateRouteInfo=" <> show (map (\r -> (r.code, r.shortName)) alternateRouteInfo)
       alternateRouteDetails <-
-        JMU.measureLatency (mapM
-          ( \route -> do
-              isLive <- CQMMB.hasLiveVehicles route.code integratedBPPConfig
-              logDebug $ "postMultimodalRouteServiceability: AlternateRoute routeCode=" <> route.code <> ", shortName=" <> route.shortName <> ", isLive=" <> show isLive
-              return $
-                API.Types.UI.MultimodalConfirm.AlternateRouteDetails
-                  { routeCode = route.code,
-                    routeShortName = route.shortName,
-                    isLive
-                  }
+        JMU.measureLatency
+          ( mapM
+              ( \route -> do
+                  isLive <- CQMMB.hasLiveVehicles route.code integratedBPPConfig
+                  logDebug $ "postMultimodalRouteServiceability: AlternateRoute routeCode=" <> route.code <> ", shortName=" <> route.shortName <> ", isLive=" <> show isLive
+                  return $
+                    API.Types.UI.MultimodalConfirm.AlternateRouteDetails
+                      { routeCode = route.code,
+                        routeShortName = route.shortName,
+                        isLive
+                      }
+              )
+              alternateRouteInfo
           )
-          alternateRouteInfo) ("postMultimodalRouteServiceability: mapM alternateRouteDetails count:" <> show (length alternateRouteInfo))
+          ("postMultimodalRouteServiceability: mapM alternateRouteDetails count:" <> show (length alternateRouteInfo))
       schedules <- getBusScheduleInfo =<< JMU.measureLatency (OTPRest.getRouteBusSchedule routeBusData.routeId integratedBPPConfig) ("postMultimodalRouteServiceability: OTPRest.getRouteBusSchedule routeId:" <> routeBusData.routeId)
       logDebug $ "postMultimodalRouteServiceability: getRouteBusSchedule routeId=" <> routeBusData.routeId <> ", scheduleCount=" <> show (length schedules) <> ", schedules=" <> show (map (\s -> (s.vehicleNumber, s.eta)) schedules)
       logDebug $ "postMultimodalRouteServiceability: Completed LiveRouteInfo, routeId=" <> routeBusData.routeId <> ", liveVehicles=" <> show (map (\v -> (v.number, v.serviceTierType, v.position)) liveVehicles) <> ", schedules=" <> show (map (\s -> (s.vehicleNumber, s.serviceTierType, s.eta)) schedules) <> ", alternateRouteDetails=" <> show (map (\r -> (r.routeCode, r.routeShortName, r.isLive)) alternateRouteDetails)

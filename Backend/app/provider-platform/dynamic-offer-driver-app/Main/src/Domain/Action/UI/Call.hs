@@ -68,11 +68,11 @@ import qualified Kernel.External.Call.Ozonetel.Types as Ozonetel
 import Kernel.External.Encryption as KE
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (SchedulerFlow)
-import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType (..))
@@ -696,4 +696,3 @@ addCampaignData req merchantOpCityId = do
           phoneNumber = campaignReq.phoneNumber,
           name = campaignReq.name
         }
-
