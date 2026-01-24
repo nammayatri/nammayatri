@@ -1091,8 +1091,7 @@ specialLocationUpsertApi = Proxy
 upsertSpecialLocation ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasRequestId r
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Merchant ->
   Context.City ->
@@ -1131,8 +1130,7 @@ specialLocationListApi = Proxy
 getSpecialLocationList ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasRequestId r
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Merchant ->
   Context.City ->
@@ -1181,8 +1179,7 @@ geometryListApi = Proxy
 getGeometryList ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasRequestId r
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Merchant ->
   Context.City ->
@@ -1227,8 +1224,7 @@ geometryUpdateApi = Proxy
 updateGeometry ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasRequestId r
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Merchant ->
   Context.City ->
