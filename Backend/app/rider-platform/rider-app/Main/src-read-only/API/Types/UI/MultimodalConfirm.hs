@@ -184,6 +184,10 @@ data KafKaPacket = KafKaPacket
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data LegRouteWithLiveVehicle = LegRouteWithLiveVehicle {legOrder :: Kernel.Prelude.Int, routeWithLiveVehicles :: [RouteWithLiveVehicle]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Domain.Types.RouteDetails.AvailableRoutesByTier]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -302,19 +306,22 @@ data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [Availabl
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data RouteCodesWithLeg = RouteCodesWithLeg {legOrder :: Kernel.Prelude.Int, routeCodes :: [Kernel.Prelude.Text]}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RouteServiceabilityReq = RouteServiceabilityReq
-  { destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { callOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     onlySelectedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routeCodes :: Kernel.Prelude.Maybe [RouteCodesWithLeg],
     serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteServiceabilityResp
-  = LiveRouteInfo RouteWithLiveVehicle
-  | AlternateLiveRoutesInfo [RouteWithLiveVehicle]
+data RouteServiceabilityResp = RouteServiceabilityResp {legs :: [LegRouteWithLiveVehicle]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

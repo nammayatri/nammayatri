@@ -1039,6 +1039,7 @@ data MultimodalError
   | StopDoesNotHaveLocation Text
   | CategoriesAndTotalPriceMismatch Text Text
   | NoSelectedCategoryFound Text
+  | NoValidBusRoute Text Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MultimodalError
@@ -1063,12 +1064,14 @@ instance IsBaseError MultimodalError where
     StopDoesNotHaveLocation reason -> Just $ "Stop does not have location: " <> reason
     CategoriesAndTotalPriceMismatch categoriesTotalPrice totalPrice -> Just $ "Categories and total price mismatch: " <> categoriesTotalPrice <> " and " <> totalPrice
     NoSelectedCategoryFound quoteId -> Just $ "No selected category found in quote categories, quoteId : " <> quoteId
+    NoValidBusRoute source dest -> Just $ "No valid bus route found between " <> source <> " and " <> dest
 
 instance IsHTTPError MultimodalError where
   toErrorCode = \case
     InvalidStationChange _ _ -> "INVALID_STATION_CHANGE"
     NoValidMetroRoute _ _ -> "NO_VALID_METRO_ROUTE"
     MetroLegNotFound _ -> "METRO_LEG_NOT_FOUND"
+    NoValidBusRoute _ _ -> "NO_VALID_BUS_ROUTE"
     NoValidSubwayRoute _ _ -> "NO_VALID_SUBWAY_ROUTE"
     SubwayLegNotFound _ -> "SUBWAY_LEG_NOT_FOUND"
     InvalidLegOrder _ -> "INVALID_LEG_ORDER"
@@ -1090,6 +1093,7 @@ instance IsHTTPError MultimodalError where
     NoValidMetroRoute _ _ -> E400
     MetroLegNotFound _ -> E400
     NoValidSubwayRoute _ _ -> E400
+    NoValidBusRoute _ _ -> E400
     SubwayLegNotFound _ -> E400
     InvalidLegOrder _ -> E400
     OSRMFailure _ -> E500
