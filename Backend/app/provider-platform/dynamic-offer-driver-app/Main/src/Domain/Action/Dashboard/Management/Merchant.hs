@@ -3674,6 +3674,8 @@ postMerchantConfigVehicleServiceTierUpdate merchantShortId opCity serviceTierTyp
   CQVST.clearCacheByServiceTier merchantOpCityId serviceTierType
   whenJust existingConfig.vehicleCategory $ \cat ->
     CQVST.clearCacheByVehicleCategory merchantOpCityId (Just cat)
+  whenJust updatedConfig.vehicleCategory $ \cat ->
+    CQVST.clearCacheByVehicleCategory merchantOpCityId (Just cat)
 
   logTagInfo "dashboard -> postMerchantConfigVehicleServiceTierUpdate : " $
     show merchant.id <> " serviceTierType: " <> show serviceTierType
@@ -3705,7 +3707,7 @@ validateVehicleServiceTierUpdate merchantOpCityId existing req = do
     when isBase $ do
       existingBaseTier <-
         CQVST.findBaseServiceTierTypeByCategoryAndCityId
-          existing.vehicleCategory
+          (req.vehicleCategory <|> existing.vehicleCategory)
           merchantOpCityId
           Nothing
       case existingBaseTier of
@@ -3759,7 +3761,8 @@ applyVehicleServiceTierUpdate existing req =
       DVST.priority = fromMaybe existing.priority req.priority,
       DVST.stopFcmThreshold = req.stopFcmThreshold <|> existing.stopFcmThreshold,
       DVST.stopFcmSuppressCount = req.stopFcmSuppressCount <|> existing.stopFcmSuppressCount,
-      DVST.scheduleBookingListEligibilityTags = req.scheduleBookingListEligibilityTags <|> existing.scheduleBookingListEligibilityTags
+      DVST.scheduleBookingListEligibilityTags = req.scheduleBookingListEligibilityTags <|> existing.scheduleBookingListEligibilityTags,
+      DVST.vehicleCategory = req.vehicleCategory <|> existing.vehicleCategory
     }
 
 getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.GeometryResp

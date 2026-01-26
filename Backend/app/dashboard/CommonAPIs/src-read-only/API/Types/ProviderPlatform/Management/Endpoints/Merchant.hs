@@ -703,6 +703,7 @@ data VehicleServiceTierConfigUpdateReq = VehicleServiceTierConfigUpdateReq
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     baseVehicleServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory,
     fareAdditionPerKmOverBaseServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

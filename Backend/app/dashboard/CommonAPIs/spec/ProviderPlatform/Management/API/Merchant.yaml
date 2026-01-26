@@ -1052,6 +1052,7 @@ types:
     - vehicleRating: Maybe Double
     - priority: Maybe Int
     - baseVehicleServiceTier: Maybe Bool
+    - vehicleCategory: Maybe VehicleCategory
     - fareAdditionPerKmOverBaseServiceTier: Maybe Int
     - oxygen: Maybe Double
     - ventilator: Maybe Int
