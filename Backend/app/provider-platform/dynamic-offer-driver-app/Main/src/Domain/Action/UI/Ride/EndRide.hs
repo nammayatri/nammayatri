@@ -19,6 +19,7 @@ module Domain.Action.UI.Ride.EndRide
     DashboardEndRideReq (..),
     CronJobEndRideReq (..),
     EndRideResp (..),
+    EndRideFlow,
     callBasedEndRide,
     buildEndRideHandle,
     driverEndRide,
@@ -50,7 +51,6 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.Yudhishthira as Y
-import Environment (Flow)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
@@ -175,7 +175,12 @@ data ServiceHandle m = ServiceHandle
     uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m ()
   }
 
-buildEndRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id DRide.Ride) -> Flow (ServiceHandle Flow)
+buildEndRideHandle ::
+  LocUpd.LocationUpdateFlow m r c =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe (Id DRide.Ride) ->
+  m (ServiceHandle m)
 buildEndRideHandle merchantId merchantOpCityId rideId = do
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId rideId True Nothing
   return $

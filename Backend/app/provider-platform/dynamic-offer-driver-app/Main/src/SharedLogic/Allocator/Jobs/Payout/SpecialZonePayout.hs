@@ -14,9 +14,12 @@
 
 module SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout where
 
+import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
+import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.ScheduledPayout as DSP
 import Kernel.External.Encryption (decrypt)
+import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Payout.Types as PT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -24,6 +27,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.LocationUpdates
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
@@ -32,6 +36,7 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import qualified Tools.Payout as TP
@@ -43,7 +48,9 @@ sendSpecialZonePayout ::
     CacheFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    RideEnd.EndRideFlow m r,
+    LocationUpdateFlow m r c
   ) =>
   Job 'SpecialZonePayout ->
   m ExecutionResult
@@ -76,6 +83,12 @@ sendSpecialZonePayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
               DSP.CREDITED -> do
                 logInfo $ "Payout already processed: " <> show scheduledPayoutId
                 pure Complete
+              DSP.CASH_PAID -> do
+                logInfo $ "Payout already marked as cash paid: " <> show scheduledPayoutId
+                pure Complete
+              DSP.CASH_PENDING -> do
+                logInfo $ "Payout already marked as cash pending: " <> show scheduledPayoutId
+                pure Complete
               DSP.PROCESSING -> do
                 logInfo $ "Payout already being processed: " <> show scheduledPayoutId
                 pure Complete
@@ -84,6 +97,9 @@ sendSpecialZonePayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                 pure Complete
               DSP.RETRYING -> do
                 logInfo $ "Payout is being retried: " <> show scheduledPayoutId
+                pure Complete
+              DSP.CANCELLED -> do
+                logInfo $ "Payout was cancelled, skipping: " <> show scheduledPayoutId
                 pure Complete
               DSP.INITIATED -> do
                 -- 4. Execute payout logic
@@ -96,7 +112,9 @@ executeSpecialZonePayout ::
     CacheFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    RideEnd.EndRideFlow m r,
+    LocationUpdateFlow m r c
   ) =>
   DSP.ScheduledPayout ->
   m ExecutionResult
@@ -111,6 +129,24 @@ executeSpecialZonePayout scheduledPayout = do
   -- 2. Fetch driver info
   driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  mbRide <- QRide.findById (Id scheduledPayout.rideId)
+
+  case (mbRide, merchantId, merchantOpCityId) of
+    (Just ride, Just mId, Just mocId) -> do
+      when (ride.status == Ride.INPROGRESS) $ do
+        let driverReq =
+              RideEnd.DriverEndRideReq
+                { endRideOtp = Nothing,
+                  point = LatLong {lat = 0.0, lon = 0.0}, -- fix this
+                  requestor = person,
+                  uiDistanceCalculationWithAccuracy = Nothing,
+                  uiDistanceCalculationWithoutAccuracy = Nothing,
+                  odometer = Nothing,
+                  driverGpsTurnedOff = Nothing
+                }
+        shandle <- RideEnd.buildEndRideHandle mId mocId (Just ride.id)
+        void $ RideEnd.driverEndRide shandle ride.id driverReq
+    _ -> pure ()
 
   -- 3. Check if driver has VPA for payout
   case driverInfo.payoutVpa of

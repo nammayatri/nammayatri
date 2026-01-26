@@ -34,6 +34,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.FareBreakup as QFareBreakup
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.SafetySettings as QSafety
 import Tools.Error
@@ -78,7 +79,8 @@ data OnInitRes = OnInitRes
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,
-    tripCategory :: Maybe TripCategory
+    tripCategory :: Maybe TripCategory,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument
   }
   deriving (Generic, Show)
 
@@ -131,6 +133,7 @@ onInit req = do
             mbToLocation = mbToLocation,
             mbRiderName = decRider.firstName,
             transactionId = booking.transactionId,
+            paymentInstrument = booking.paymentInstrument,
             merchant = merchant,
             nightSafetyCheck = checkSafetySettingConstraint (Just safetySettings.enableUnexpectedEventsCheck) riderConfig now,
             enableFrequentLocationUpdates = checkSafetySettingConstraint safetySettings.aggregatedRideShareSetting riderConfig now,

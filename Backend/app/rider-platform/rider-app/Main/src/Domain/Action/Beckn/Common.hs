@@ -185,6 +185,7 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
 
 data RideStartedReq = RideStartedReq
   { bookingDetails :: BookingDetails,
+    transactionId :: Text,
     tripStartLocation :: Maybe LatLong,
     endOtp_ :: Maybe Text,
     startOdometerReading :: Maybe Centesimal,
@@ -208,6 +209,7 @@ data ValidatedRideStartedReq = ValidatedRideStartedReq
 
 data RideCompletedReq = RideCompletedReq
   { bookingDetails :: BookingDetails,
+    transactionId :: Text,
     fare :: Price,
     totalFare :: Price,
     fareBreakups :: [DFareBreakup],
@@ -249,20 +251,23 @@ data ValidatedFarePaidReq = ValidatedFarePaidReq
 data BookingCancelledReq = BookingCancelledReq
   { bookingDetails :: Maybe BookingDetails,
     bppBookingId :: Id DRB.BPPBooking,
-    cancellationSource :: DBCR.CancellationSource
+    cancellationSource :: DBCR.CancellationSource,
+    transactionId :: Text
   }
 
 data ValidatedBookingCancelledReq = ValidatedBookingCancelledReq
   { bookingDetails :: Maybe BookingDetails,
     bppBookingId :: Id DRB.BPPBooking,
     cancellationSource :: DBCR.CancellationSource,
+    transactionId :: Text,
     booking :: DRB.Booking,
     mbRide :: Maybe DRide.Ride
   }
 
 data BookingReallocationReq = BookingReallocationReq ----need to use in future
   { bookingDetails :: BookingDetails,
-    reallocationSource :: DBCR.CancellationSource
+    reallocationSource :: DBCR.CancellationSource,
+    transactionId :: Text
   }
 
 data ValidatedBookingReallocationReq = ValidatedBookingReallocationReq ----need to use in future
@@ -274,7 +279,8 @@ data ValidatedBookingReallocationReq = ValidatedBookingReallocationReq ----need 
 
 data DriverArrivedReq = DriverArrivedReq
   { bookingDetails :: BookingDetails,
-    arrivalTime :: Maybe UTCTime
+    arrivalTime :: Maybe UTCTime,
+    transactionId :: Text
   }
 
 data ValidatedDriverArrivedReq = ValidatedDriverArrivedReq
@@ -1065,8 +1071,7 @@ validateRideStartedReq ::
   m ValidatedRideStartedReq
 validateRideStartedReq RideStartedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  (ride, booking) <- getRideAndBooking bppBookingId transactionId
   unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == DRide.NEW || ride.status == DRide.UPCOMING) $ throwError (RideInvalidStatus $ show ride.status)
   let estimatedEndTimeRange = mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd
@@ -1086,8 +1091,7 @@ validateDriverArrivedReq ::
   m ValidatedDriverArrivedReq
 validateDriverArrivedReq DriverArrivedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  (ride, booking) <- getRideAndBooking bppBookingId transactionId
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("The ride has already started." <> Text.pack (show ride.status))
   return $ ValidatedDriverArrivedReq {..}
   where
@@ -1105,8 +1109,7 @@ validateRideCompletedReq ::
   m (Either ValidatedRideCompletedReq ValidatedFarePaidReq)
 validateRideCompletedReq RideCompletedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  booking <- QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bookingDetails.bppBookingId.getId)
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  (ride, booking) <- getRideAndBooking bppBookingId transactionId
   let bookingCanBeCompleted = booking.status == DRB.TRIP_ASSIGNED
       rideCanBeCompleted = ride.status == DRide.INPROGRESS
       bookingAlreadyCompleted = booking.status == DRB.COMPLETED
@@ -1140,7 +1143,12 @@ validateBookingCancelledReq ::
   m ValidatedBookingCancelledReq
 validateBookingCancelledReq BookingCancelledReq {..} = do
   let isInitiatedByCronJob = maybe False (.isInitiatedByCronJob) bookingDetails
-  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+  mBooking <- QRB.findByBPPBookingId bppBookingId
+  booking <- case mBooking of
+    Nothing -> do
+      logInfo $ "Booking not found for bppBookingId: " <> bppBookingId.getId
+      QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "TransactionId: " <> transactionId)
+    Just booking -> return booking
   mbRide <- QRide.findActiveByRBId booking.id
   let isRideCancellable = maybe False (\ride -> ride.status `notElem` [DRide.INPROGRESS, DRide.CANCELLED]) mbRide
       bookingAlreadyCancelled = booking.status == DRB.CANCELLED
@@ -1467,3 +1475,14 @@ createRecentLocationForTaxi booking = do
                   DTRL.fromGeohash = fromGeohash
                 }
         SQRL.create recentLocation
+
+getRideAndBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DRB.BPPBooking -> Text -> m (DRide.Ride, DRB.Booking)
+getRideAndBooking bppBookingId transactionId = do
+  mBooking <- QRB.findByBPPBookingId bppBookingId
+  booking <- case mBooking of
+    Nothing -> do
+      logInfo $ "Booking not found for bppBookingId: " <> bppBookingId.getId
+      QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "TransactionId: " <> transactionId)
+    Just booking -> return booking
+  ride <- QRide.findByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "bookingId: " <> bppBookingId.getId)
+  return (ride, booking)

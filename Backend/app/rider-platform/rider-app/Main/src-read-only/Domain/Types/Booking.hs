@@ -49,6 +49,7 @@ data Booking = Booking
     dashboardAgentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    displayBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverInsuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,

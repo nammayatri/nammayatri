@@ -4,6 +4,7 @@ module Domain.Action.Dashboard.RideBooking.Payout
   ( getPayoutStatus,
     postPayoutCancel,
     postPayoutRetry,
+    postPayoutMarkCashPaid,
   )
 where
 
@@ -52,7 +53,7 @@ getPayoutStatus _merchantShortId _opCity rideId = do
             createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchantOpCityId (DEMSC.RidePayoutService TPayout.Juspay) (Just payout.driverId)
         resp <- DPayment.payoutStatusService (Kernel.Types.Id.cast merchantId) (Kernel.Types.Id.Id payout.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall
         let newStatus = QSP.castPayoutOrderStatusToScheduledPayoutStatus resp.status
-        if (payout.status /= newStatus && payout.status /= DSP.CREDITED)
+        if (payout.status /= newStatus && payout.status `notElem` [DSP.CREDITED, DSP.CASH_PAID, DSP.CASH_PENDING])
           then do
             let statusMsg = "Order Status Updated: " <> show resp.status
             QSP.updateStatusWithHistoryById newStatus (Just statusMsg) payout
@@ -143,6 +144,9 @@ convertStatus DSP.CREDITED = API.CREDITED
 convertStatus DSP.AUTO_PAY_FAILED = API.AUTO_PAY_FAILED
 convertStatus DSP.RETRYING = API.RETRYING
 convertStatus DSP.FAILED = API.FAILED
+convertStatus DSP.CANCELLED = API.CANCELLED
+convertStatus DSP.CASH_PAID = API.CASH_PAID
+convertStatus DSP.CASH_PENDING = API.CASH_PENDING
 
 -- Helper to convert domain status history to API status event
 convertHistory :: DPSH.PayoutStatusHistory -> API.PayoutStatusEvent
@@ -152,3 +156,20 @@ convertHistory h =
       timestamp = h.createdAt,
       message = h.message
     }
+
+postPayoutMarkCashPaid ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Text ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postPayoutMarkCashPaid _merchantShortId _opCity rideId = do
+  payout <- QSP.findByRideId rideId >>= fromMaybeM (InvalidRequest "Payout not found for this ride")
+  when (payout.status == DSP.CREDITED) $ do
+    throwError $ InvalidRequest "Payout is already credited online via bank!"
+  when (payout.status == DSP.PROCESSING) $ do
+    throwError $ InvalidRequest "Payout is already being processed for online credit!"
+  when (payout.status == DSP.CASH_PAID) $ do
+    throwError $ InvalidRequest "Payout is already marked as cash paid!"
+  QSP.updateStatusWithHistoryById DSP.CASH_PAID (Just "Cash Paid Marked!") payout
+  logInfo $ "Cash paid marked for rideId: " <> rideId
+  pure Kernel.Types.APISuccess.Success

@@ -34,6 +34,7 @@ data BookingT f = BookingT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    displayBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distanceToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     dynamicPricingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

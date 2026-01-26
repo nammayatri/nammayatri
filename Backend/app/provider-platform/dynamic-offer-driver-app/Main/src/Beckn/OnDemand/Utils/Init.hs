@@ -55,11 +55,22 @@ castPaymentCollector "BAP" = return DMPM.BAP
 castPaymentCollector "BPP" = return DMPM.BPP
 castPaymentCollector _ = throwM $ InvalidRequest "Unknown Payment Collector"
 
-castPaymentInstrument :: MonadFlow m => Spec.PaymentParams -> m DMPM.PaymentInstrument
-castPaymentInstrument params = do
-  if isJust $ params.paymentParamsVirtualPaymentAddress
-    then return DMPM.UPI
-    else return DMPM.Cash -- TODO: add other payment instruments supported by ONDC
+castPaymentInstrument :: MonadFlow m => Spec.PaymentParams -> Maybe [Spec.TagGroup] -> m DMPM.PaymentInstrument
+castPaymentInstrument params mPaymentTags = do
+  -- First try to get payment instrument from tags (for newer BAP versions)
+  case getPaymentInstrumentFromTags mPaymentTags of
+    Just instrument -> return instrument
+    Nothing ->
+      -- Fallback to VPA detection for backward compatibility
+      if isJust $ params.paymentParamsVirtualPaymentAddress
+        then return DMPM.UPI
+        else return DMPM.Cash
+
+-- Helper to extract payment instrument from tags
+getPaymentInstrumentFromTags :: Maybe [Spec.TagGroup] -> Maybe DMPM.PaymentInstrument
+getPaymentInstrumentFromTags mTags = do
+  tagValue <- Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.PAYMENT_INSTRUMENT mTags
+  readMaybe $ T.unpack tagValue
 
 getMaxEstimateDistance :: [Spec.TagGroup] -> Maybe HighPrecMeters
 getMaxEstimateDistance tagGroups = do
@@ -78,5 +89,5 @@ mkPaymentMethodInfo Spec.Payment {..} = do
   _params <- paymentParams & fromMaybeM (InvalidRequest "Payment Params not found")
   collectedBy <- paymentCollectedBy & fromMaybeM (InvalidRequest "Payment Params not found") >>= castPaymentCollector
   pType <- fmap (fromMaybe DMPM.ON_FULFILLMENT . decodeFromText) (paymentType & fromMaybeM (InvalidRequest "Payment Params not found"))
-  paymentInstrument <- castPaymentInstrument _params
+  paymentInstrument <- castPaymentInstrument _params paymentTags
   return $ Just $ DMPM.PaymentMethodInfo {paymentType = pType, ..}

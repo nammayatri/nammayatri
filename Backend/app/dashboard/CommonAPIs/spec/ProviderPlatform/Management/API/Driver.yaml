@@ -383,6 +383,13 @@ apis:
         endpoint: DriverAPI UpdateRCInvalidStatusEndPoint65454
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_RC_INVALID_STATUS
+  - POST:
+      endpoint: /updateRCInvalidStatusByRCNumber
+      auth: ApiAuthV2
+      request:
+        type: UpdateRCInvalidStatusByRCNumberReq
+      response:
+        type: APISuccess
   - POST: # UpdateVehicleVariantAPI
       endpoint: /updateVehicleVariant/{driverId}
       auth: ApiAuthV2
@@ -671,6 +678,10 @@ types:
     - derive: "'HideSecrets"
   UpdateRCInvalidStatusReq:
     - rcId: Text
+    - vehicleVariant: VehicleVariant
+    - derive: "'HideSecrets"
+  UpdateRCInvalidStatusByRCNumberReq:
+    - rcNumber: Text
     - vehicleVariant: VehicleVariant
     - derive: "'HideSecrets"
   UpdateVehicleVariantReq:

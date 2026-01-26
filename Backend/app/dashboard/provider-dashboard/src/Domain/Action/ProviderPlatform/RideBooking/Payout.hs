@@ -4,6 +4,7 @@ module Domain.Action.ProviderPlatform.RideBooking.Payout
   ( getPayoutStatus,
     postPayoutCancel,
     postPayoutRetry,
+    postPayoutMarkCashPaid,
   )
 where
 
@@ -40,3 +41,9 @@ postPayoutRetry merchantShortId opCity apiTokenInfo rideId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing (Kernel.Prelude.Just (Kernel.Types.Id.Id rideId :: Kernel.Types.Id.Id Common.Ride)) SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.payoutDSL.postPayoutRetry) rideId)
+
+postPayoutMarkCashPaid :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPayoutMarkCashPaid merchantShortId opCity apiTokenInfo rideId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing (Kernel.Prelude.Just (Kernel.Types.Id.Id rideId :: Kernel.Types.Id.Id Common.Ride)) SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.payoutDSL.postPayoutMarkCashPaid) rideId)

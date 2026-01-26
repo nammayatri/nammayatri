@@ -250,6 +250,7 @@ Booking:
     multimodalSearchRequestId: Maybe Text
     dashboardAgentId: Maybe Text
     commission: Maybe HighPrecMoney
+    displayBookingId: Maybe Text
 
   beamFields:
     estimatedDistance:
@@ -361,6 +362,7 @@ Booking:
     estimatedDistanceValue: double precision
     vehicleIconUrl: character varying(255)
     configInExperimentVersions: "json"
+    displayBookingId: character varying(25)
 
   default:
     fareProductType: "'ONE_WAY'"

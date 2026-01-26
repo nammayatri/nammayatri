@@ -84,7 +84,8 @@ data InitReq = InitReq
     initReqDetails :: Maybe InitReqDetails,
     isAdvanceBookingEnabled :: Maybe Bool,
     isInsured :: Maybe Bool,
-    insuredAmount :: Maybe Text
+    insuredAmount :: Maybe Text,
+    displayBookingId :: Maybe Text
   }
 
 data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
@@ -191,6 +192,7 @@ handler merchantId req validatedReq = do
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
       commission <- FCV2.calculateCommission driverQuote.fareParams mbFarePolicy
       let bapUri = showBaseUrl req.bapUri
+          displayBookingId = req.displayBookingId
       (initiatedAs, senderDetails, receiverDetails) <- do
         case tripCategory of
           Delivery _ -> do

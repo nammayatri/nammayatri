@@ -11,7 +11,7 @@ VALUES
   , now()
   , 'favorit0-0000-0000-0000-00000000city'
   , now(),
-  'FixedRoute',
+  'FixedRoutePickup',
   'favorit0-0000-0000-0000-00000favorit'
   );
 
@@ -25,7 +25,7 @@ VALUES
   , now()
   , 'favorit0-0000-0000-0000-00000000city'
   , now(),
-  'FixedRoute',
+  'FixedRouteDrop',
   'favorit0-0000-0000-0000-00000favorit'
   );
 

@@ -97,6 +97,7 @@ data BecknTagGroup
   | RIDE_DETAILS_INFO
   | SAFETY_PLUS_INFO
   | INSURANCE_INFO
+  | BOOKING_INFO
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -345,6 +346,8 @@ data BecknTag
   | DELAY_INTEREST
   | STATIC_TERMS
   | SETTLEMENT_AMOUNT
+  | -- Stripe tags --
+    PAYMENT_INSTRUMENT
   | -- ## Fulfillment tags ##
     -- ROUTE_INFO
     ENCODED_POLYLINE
@@ -490,6 +493,7 @@ data BecknTag
   | RESERVED_PRICING_TAG
   | FROM_SPECIAL_LOCATION_ID -- Fixed route: origin area ID
   | TO_SPECIAL_LOCATION_ID -- Fixed route: destination area ID
+  | DISPLAY_BOOKING_ID -- Human-readable booking ID shared between BAP and BPP
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -559,6 +563,7 @@ instance CompleteTag BecknTag where
     BUYER_FINDER_FEES_PERCENTAGE -> BUYER_FINDER_FEES
     SETTLEMENT_AMOUNT -> SETTLEMENT_TERMS
     SETTLEMENT_WINDOW -> SETTLEMENT_TERMS
+    PAYMENT_INSTRUMENT -> SETTLEMENT_TERMS
     DELAY_INTEREST -> SETTLEMENT_TERMS
     SETTLEMENT_BASIS -> SETTLEMENT_TERMS
     MANDATORY_ARBITRATION -> SETTLEMENT_TERMS
@@ -601,6 +606,7 @@ instance CompleteTag BecknTag where
     IS_INSURED -> INSURANCE_INFO
     INSURED_AMOUNT -> INSURANCE_INFO
     NYREGULAR_SUBSCRIPTION_CHARGE -> GENERAL_INFO
+    DISPLAY_BOOKING_ID -> BOOKING_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

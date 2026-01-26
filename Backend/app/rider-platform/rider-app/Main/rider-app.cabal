@@ -390,6 +390,7 @@ library
       SharedLogic.Cancel
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
+      SharedLogic.DisplayBookingId
       SharedLogic.EstimateTags
       SharedLogic.External.BbpsService.Flow
       SharedLogic.External.LocationTrackingService.API.NearbyDrivers

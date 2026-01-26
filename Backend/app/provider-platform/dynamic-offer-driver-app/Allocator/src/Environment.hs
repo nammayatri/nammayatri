@@ -57,6 +57,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
+import Tools.Metrics.ARDUBPPMetrics.Types
 import TransactionLogs.Types
 
 data HandlerCfg = HandlerCfg
@@ -124,7 +125,16 @@ data HandlerEnv = HandlerEnv
     appBackendBapInternal :: AppBackendBapInternal,
     mlPricingInternal :: MLPricingInternal,
     inMemEnv :: CF.InMemEnv,
-    url :: Maybe Text
+    bppMetrics :: BPPMetricsContainer,
+    snapToRoadSnippetThreshold :: HighPrecMeters,
+    droppedPointsThreshold :: HighPrecMeters,
+    osrmMatchThreshold :: HighPrecMeters,
+    maxStraightLineRectificationThreshold :: HighPrecMeters,
+    loggerConfig :: LoggerConfig,
+    url :: Maybe Text,
+    dashboardClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseEnv :: ClickhouseEnv,
+    kafkaClickhouseEnv :: ClickhouseEnv
   }
   deriving (Generic)
 
@@ -156,7 +166,10 @@ buildHandlerEnv HandlerCfg {..} = do
       else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>)
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
+  bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
+  dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
+  kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
   let s3Env = buildS3Env s3Config
   let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds

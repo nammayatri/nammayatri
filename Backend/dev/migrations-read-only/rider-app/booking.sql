@@ -422,3 +422,9 @@ ALTER TABLE atlas_app.booking ADD COLUMN dashboard_agent_id text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN display_booking_id character varying(25) ;

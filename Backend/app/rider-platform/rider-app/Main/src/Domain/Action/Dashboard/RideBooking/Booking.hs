@@ -21,6 +21,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import qualified SharedLogic.DisplayBookingId as DBI
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Booking as SQB
 import qualified Storage.Queries.Person as QPerson
@@ -45,7 +46,10 @@ getBookingBooking merchantShortId _opCity bookingCode = do
   apiRateLimitOptions <- asks (.apiRateLimitOptions)
   checkSlidingWindowLimitWithOptions bookingOtpKey apiRateLimitOptions
   m <- findMerchantByShortId merchantShortId
-  booking <- SQB.findById (Kernel.Types.Id.Id bookingCode) >>= fromMaybeM (BookingNotFound bookingCode) -- later change it to invoice number or something
+  -- Try displayBookingId Redis lookup first, then fallback to using bookingCode as bookingId
+  mbBookingIdFromDisplay <- DBI.findBookingIdByDisplayId bookingCode
+  let bookingId = fromMaybe (Kernel.Types.Id.Id bookingCode) mbBookingIdFromDisplay
+  booking <- SQB.findById bookingId >>= fromMaybeM (BookingNotFound bookingCode)
   Domain.Action.UI.Booking.bookingStatus booking.id (booking.riderId, m.id)
   where
     bookingOtpKey = "booking-code-" <> bookingCode

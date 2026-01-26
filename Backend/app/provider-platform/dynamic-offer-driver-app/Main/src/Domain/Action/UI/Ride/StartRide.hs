@@ -221,18 +221,23 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
         ( booking.isDashboardRequest
             && isRideOtpTrip booking.tripCategory
             && fromMaybe False transporterConfig.payoutRideMoneyToDriver
-            && paymentInstrument `elem` (fromMaybe [] transporterConfig.allowedPaymentInstrumentForPayout)
         )
         $ do
           -- Checking iff duplicate is there.
           whenJust transporterConfig.payoutRideScheduleTimeBuffer $ \buffer -> do
             existingPayout <- QSP.findByRideId ride.id.getId
-            let scheduledTime = addUTCTime (secondsToNominalDiffTime buffer) now
-            mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-            commission <- FCV2.calculateCommission booking.fareParams mbFarePolicy
-            let payoutAmount = maybe booking.estimatedFare (\c -> booking.estimatedFare - c) commission
             when (isNothing existingPayout) $ do
+              mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+              commission <- FCV2.calculateCommission booking.fareParams mbFarePolicy
+              let payoutAmount = maybe booking.estimatedFare (\c -> booking.estimatedFare - c) commission
               scheduledPayoutId <- Id <$> generateGUID
+              let scheduledTime = addUTCTime (secondsToNominalDiffTime buffer) now
+              let payoutStatus =
+                    if ( paymentInstrument `elem` (fromMaybe [] transporterConfig.allowedPaymentInstrumentForPayout)
+                           && isJust driverInfo.payoutVpa
+                       )
+                      then DSP.INITIATED
+                      else DSP.CASH_PENDING
               let scheduledPayout =
                     DSP.ScheduledPayout
                       { id = scheduledPayoutId,
@@ -240,11 +245,11 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                         bookingId = booking.id.getId,
                         driverId = driverId.getId,
                         amount = Just payoutAmount,
-                        status = DSP.INITIATED,
+                        status = payoutStatus,
                         retryCount = Nothing,
                         failureReason = Nothing,
                         payoutTransactionId = Nothing,
-                        expectedCreditTime = Just scheduledTime,
+                        expectedCreditTime = if payoutStatus == DSP.INITIATED then Just scheduledTime else Nothing,
                         createdAt = now,
                         updatedAt = now,
                         merchantId = Just booking.providerId,
@@ -252,8 +257,9 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                       }
               QSP.create scheduledPayout
               QSPE.createInitialHistory scheduledPayout
-              let jobData = SpecialZonePayoutJobData {scheduledPayoutId = scheduledPayoutId}
-              QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
+              when (payoutStatus == DSP.INITIATED) $ do
+                let jobData = SpecialZonePayoutJobData {scheduledPayoutId = scheduledPayoutId}
+                QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
 
       pure APISuccess.Success
   where

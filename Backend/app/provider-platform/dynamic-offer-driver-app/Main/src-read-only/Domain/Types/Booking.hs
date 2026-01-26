@@ -40,6 +40,7 @@ data Booking = Booking
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Utils.Common.Currency,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    displayBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distanceToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     dynamicPricingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

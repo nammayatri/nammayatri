@@ -28,3 +28,7 @@ data DriverPayoutStatusResp = DriverPayoutStatusResp
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverPayoutStatusRespSuccess = DriverPayoutStatusRespSuccess {payout :: Kernel.Prelude.Maybe DriverPayoutStatusResp}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

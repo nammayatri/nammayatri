@@ -22,10 +22,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("payout" :> (GetPayoutStatus :<|> PostPayoutCancel :<|> PostPayoutRetry))
+type API = ("payout" :> (GetPayoutStatus :<|> PostPayoutCancel :<|> PostPayoutRetry :<|> PostPayoutMarkCashPaid))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPayoutStatus merchantId city :<|> postPayoutCancel merchantId city :<|> postPayoutRetry merchantId city
+handler merchantId city = getPayoutStatus merchantId city :<|> postPayoutCancel merchantId city :<|> postPayoutRetry merchantId city :<|> postPayoutMarkCashPaid merchantId city
 
 type GetPayoutStatus =
   ( ApiAuth
@@ -51,6 +51,14 @@ type PostPayoutRetry =
       :> API.Types.Dashboard.RideBooking.Payout.PostPayoutRetry
   )
 
+type PostPayoutMarkCashPaid =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.PAYOUT / 'API.Types.Dashboard.RideBooking.Payout.POST_PAYOUT_MARK_CASH_PAID)
+      :> API.Types.Dashboard.RideBooking.Payout.PostPayoutMarkCashPaid
+  )
+
 getPayoutStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Payout.PayoutStatusResp)
 getPayoutStatus merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Payout.getPayoutStatus merchantShortId opCity apiTokenInfo rideId
 
@@ -59,3 +67,6 @@ postPayoutCancel merchantShortId opCity apiTokenInfo rideId req = withFlowHandle
 
 postPayoutRetry :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPayoutRetry merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Payout.postPayoutRetry merchantShortId opCity apiTokenInfo rideId
+
+postPayoutMarkCashPaid :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postPayoutMarkCashPaid merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Payout.postPayoutMarkCashPaid merchantShortId opCity apiTokenInfo rideId

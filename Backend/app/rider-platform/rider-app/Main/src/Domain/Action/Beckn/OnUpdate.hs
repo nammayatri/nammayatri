@@ -157,7 +157,8 @@ data ValidatedOnUpdateReq
 data BookingReallocationReq = BookingReallocationReq
   { bppBookingId :: Id DRB.BPPBooking,
     bppRideId :: Id DRide.BPPRide,
-    reallocationSource :: DBCR.CancellationSource
+    reallocationSource :: DBCR.CancellationSource,
+    transactionId :: Text
   }
 
 data EditDestErrorReq = EditDestErrorReq
@@ -181,12 +182,14 @@ data EditDestSoftUpdateReq = EditDestSoftUpdateReq
     fareBreakups :: [Common.DFareBreakup],
     newEstimatedDistance :: HighPrecMeters,
     currentPoint :: Maybe LatLong,
-    bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest
+    bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
+    transactionId :: Text
   }
 
 data EditDestConfirmUpdateReq = EditDestConfirmUpdateReq
   { bookingDetails :: Common.BookingDetails,
-    bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest
+    bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
+    transactionId :: Text
   }
 
 data ValidatedEditDestSoftUpdateReq = ValidatedEditDestSoftUpdateReq
@@ -258,7 +261,8 @@ data ValidatedQuoteRepetitionReq = ValidatedQuoteRepetitionReq
 data NewMessageReq = NewMessageReq
   { bppBookingId :: Id DRB.BPPBooking,
     bppRideId :: Id DRide.BPPRide,
-    message :: Text
+    message :: Text,
+    transactionId :: Text
   }
 
 data ValidatedNewMessageReq = ValidatedNewMessageReq
@@ -273,7 +277,8 @@ data SafetyAlertReq = SafetyAlertReq
   { bppBookingId :: Id DRB.BPPBooking,
     bppRideId :: Id DRide.BPPRide,
     reason :: Text,
-    code :: Text
+    code :: Text,
+    transactionId :: Text
   }
 
 data ValidatedSafetyAlertReq = ValidatedSafetyAlertReq
@@ -285,8 +290,9 @@ data ValidatedSafetyAlertReq = ValidatedSafetyAlertReq
     ride :: DRide.Ride
   }
 
-newtype StopArrivedReq = StopArrivedReq
-  { bppRideId :: Id DRide.BPPRide
+data StopArrivedReq = StopArrivedReq
+  { bppRideId :: Id DRide.BPPRide,
+    transactionId :: Text
   }
 
 data ValidatedStopArrivedReq = ValidatedStopArrivedReq
@@ -608,33 +614,28 @@ validateRequest = \case
     validatedRequest <- Common.validateBookingCancelledReq req
     return $ OUValidatedBookingCancelledReq validatedRequest
   OUBookingReallocationReq BookingReallocationReq {..} -> do
-    booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
-    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    (ride, booking) <- Common.getRideAndBooking bppBookingId transactionId
     return $ OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..}
   OUDriverArrivedReq req -> do
     validatedRequest <- Common.validateDriverArrivedReq req
     return $ OUValidatedDriverArrivedReq validatedRequest
   OUNewMessageReq NewMessageReq {..} -> do
-    booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
-    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    (ride, booking) <- Common.getRideAndBooking bppBookingId transactionId
     unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("The ride has already started." <> Text.pack (show ride.status))
     return $ OUValidatedNewMessageReq ValidatedNewMessageReq {..}
     where
       isValidRideStatus status = status `elem` [DRide.NEW, DRide.INPROGRESS]
   OUEstimateRepetitionReq EstimateRepetitionReq {..} -> do
-    booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+    (ride, booking) <- Common.getRideAndBooking bppBookingId searchRequestId.getId
     searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
-    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
     return $ OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq {..}
   OUQuoteRepetitionReq QuoteRepetitionReq {..} -> do
-    booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
-    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    (ride, booking) <- Common.getRideAndBooking bppBookingId searchRequestId.getId
     return $ OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..}
   OUSafetyAlertReq SafetyAlertReq {..} -> do
-    booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+    (ride, booking) <- Common.getRideAndBooking bppBookingId transactionId
     unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
-    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     unless (ride.status == DRide.INPROGRESS) $ throwError (BookingInvalidStatus "$ show booking.status")
     return $ OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..}
   OUStopArrivedReq StopArrivedReq {..} -> do
@@ -654,15 +655,13 @@ validateRequest = \case
         return $ OUValidatedStopArrivedReq ValidatedStopArrivedReq {..}
   OUEditDestSoftUpdateReq EditDestSoftUpdateReq {..} -> do
     let Common.BookingDetails {..} = bookingDetails
-    booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
-    ride <- runInReplica $ QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    (ride, booking) <- Common.getRideAndBooking bppBookingId transactionId
     when (ride.status == DRide.COMPLETED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed ride."
     bookingUpdateRequest <- runInReplica $ QBUR.findById bookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> bookingUpdateRequestId.getId)
     return $ OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq {..}
   OUEditDestConfirmUpdateReq EditDestConfirmUpdateReq {..} -> do
     let Common.BookingDetails {..} = bookingDetails
-    booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
-    ride <- runInReplica $ QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    (ride, booking) <- Common.getRideAndBooking bppBookingId transactionId
     when (ride.status == DRide.COMPLETED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed ride."
     bookingUpdateRequest <- runInReplica $ QBUR.findById bookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> bookingUpdateRequestId.getId)
     return $ OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq {..}

@@ -50,8 +50,9 @@ mkPayment ::
   Maybe BaseUrl ->
   Maybe BuyerFinderFee ->
   Bool ->
+  Maybe Text -> -- Payment instrument
   Spec.Payment
-mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettlementType mSettlementWindow mSettlementTermsUrl mbff isStripe = do
+mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettlementType mSettlementWindow mSettlementTermsUrl mbff isStripe mPaymentInstrument = do
   let mAmount = show . (.amount) <$> mPrice
   let mCurrency = show . (.currency) <$> mPrice
   Spec.Payment
@@ -62,7 +63,7 @@ mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettle
           then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
           else Nothing,
       paymentStatus = encodeToText' paymentStatus,
-      paymentTags = Just $ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff,
+      paymentTags = Just $ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff mPaymentInstrument,
       paymentTlMethod = mkTlMethod isStripe >>= encodeToText',
       paymentType = encodeToText' Spec.ON_FULFILLMENT
     }
@@ -109,11 +110,11 @@ mkPaymentParams mPaymentParams _mTxnId mAmount mCurrency = do
       paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
     }
 
-mkPaymentTags :: City -> Maybe SettlementType -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BuyerFinderFee -> [Spec.TagGroup]
-mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff =
+mkPaymentTags :: City -> Maybe SettlementType -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BuyerFinderFee -> Maybe Text -> [Spec.TagGroup]
+mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff mPaymentInstrument =
   catMaybes
     [ Just $ mkBuyerFinderFeeTagGroup mbff,
-      Just $ mkSettlementTagGroup txnCity mAmount mSettlementWindow mSettlementTermsUrl,
+      Just $ mkSettlementTagGroup txnCity mAmount mSettlementWindow mSettlementTermsUrl mPaymentInstrument,
       mkSettlementDetailsTagGroup mSettlementType
     ]
 
@@ -144,8 +145,8 @@ mkBuyerFinderFeeTagGroup mbff =
           tagDisplay = Just False
         }
 
-mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Spec.TagGroup
-mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl =
+mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe Text -> Spec.TagGroup
+mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl mPaymentInstrument =
   Spec.TagGroup
     { tagGroupDescriptor =
         Just $
@@ -155,7 +156,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
               descriptorShortDesc = Nothing
             },
       tagGroupDisplay = Just False,
-      tagGroupList = Just settlementTags
+      tagGroupList = Just $ catMaybes [mPaymentInstrumentTag] <> settlementTags
     }
   where
     settlementTags =
@@ -245,6 +246,19 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
                 tagDisplay = Just False
               }
         ]
+    mPaymentInstrumentTag =
+      mPaymentInstrument <&> \instrument ->
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tag.PAYMENT_INSTRUMENT,
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just instrument,
+            tagDisplay = Just False
+          }
 
 mkSettlementDetailsTagGroup :: Maybe SettlementType -> Maybe Spec.TagGroup
 mkSettlementDetailsTagGroup mSettlementType = do

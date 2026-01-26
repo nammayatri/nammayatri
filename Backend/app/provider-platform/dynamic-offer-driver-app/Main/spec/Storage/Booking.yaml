@@ -102,6 +102,7 @@ Booking:
     numberOfLuggages: Maybe Int
     paymentInstrument: Maybe PaymentInstrument
     commission: Maybe HighPrecMoney
+    displayBookingId: Maybe Text
 
   excludedFields:
     - merchantId
@@ -226,6 +227,7 @@ Booking:
     tollIds: "text[]"
     estimateId: character varying(255)
     configInExperimentVersions: "json"
+    displayBookingId: character varying(25)
 
   default:
     bookingType: "'NormalBooking'"

@@ -57,6 +57,7 @@ getVolunteerBooking merchantShortId opCity otpCode = do
     buildMessageInfoResponse Domain.Booking {..} =
       Common.BookingInfoResponse
         { bookingId = cast id,
+          displayBookingId,
           fromLocation = buildBookingLocation fromLocation,
           toLocation = buildBookingLocation <$> toLocation,
           estimatedDistance,
