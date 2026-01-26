@@ -120,8 +120,9 @@ token: {{app-token}}
 
 ###
 
+# select estimate with auto rickshaw
 # @name select
-@estimateId = {{quotes.response.body.estimates[0].id}}
+@estimateId = {{quotes.response.body.estimates[1].id}}
 
 @paymentMethodId = {{quotes.response.body.paymentMethods[0].id}}
 

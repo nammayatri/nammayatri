@@ -26,6 +26,7 @@ import qualified Domain.Types.MediaFileDocument as DMFD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Message as DMessage
 import Domain.Types.Overlay
 import qualified Domain.Types.Person as DP
@@ -79,6 +80,7 @@ data AllocatorJobType
   | MediaFileDocumentComplete
   | SendFeedbackPN
   | SpecialZonePayout
+  | CashRidesCommissionCharge
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -122,6 +124,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SMediaFileDocumentComplete jobData = AnyJobInfo <$> restoreJobInfo SMediaFileDocumentComplete jobData
   restoreAnyJobInfo SSendFeedbackPN jobData = AnyJobInfo <$> restoreJobInfo SSendFeedbackPN jobData
   restoreAnyJobInfo SSpecialZonePayout jobData = AnyJobInfo <$> restoreJobInfo SSpecialZonePayout jobData
+  restoreAnyJobInfo SCashRidesCommissionCharge jobData = AnyJobInfo <$> restoreJobInfo SCashRidesCommissionCharge jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -462,3 +465,16 @@ newtype SpecialZonePayoutJobData = SpecialZonePayoutJobData
 instance JobInfoProcessor 'SpecialZonePayout
 
 type instance JobContent 'SpecialZonePayout = SpecialZonePayoutJobData
+
+data CashRidesCommissionChargeJobData = CashRidesCommissionChargeJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    nextSettlementTime :: UTCTime,
+    paymentMode :: DMPM.PaymentMode,
+    reSchedule :: Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CashRidesCommissionCharge
+
+type instance JobContent 'CashRidesCommissionCharge = CashRidesCommissionChargeJobData

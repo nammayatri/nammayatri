@@ -377,6 +377,7 @@ library
       Lib.LocationUpdates
       Lib.Schema
       SharedLogic.Allocator
+      SharedLogic.Allocator.Jobs.CashRidesCommissionCharge
       SharedLogic.Allocator.Jobs.Cautio.InstallationStatus
       SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
       SharedLogic.Allocator.Jobs.Document.VerificationRetry
@@ -605,6 +606,7 @@ library
       Storage.Queries.BookingExtra
       Storage.Queries.BusinessEventExtra
       Storage.Queries.CallStatusExtra
+      Storage.Queries.CashRidesCommissionExtra
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
       Storage.Queries.DailyStatsExtra
@@ -951,6 +953,7 @@ library
       Domain.Types.CancellationCharges
       Domain.Types.CancellationFarePolicy
       Domain.Types.CancellationReason
+      Domain.Types.CashRidesCommission
       Domain.Types.Client
       Domain.Types.CommonDriverOnboardingDocuments
       Domain.Types.ConditionalCharges
@@ -1114,6 +1117,7 @@ library
       Storage.Beam.CancellationCharges
       Storage.Beam.CancellationFarePolicy
       Storage.Beam.CancellationReason
+      Storage.Beam.CashRidesCommission
       Storage.Beam.Client
       Storage.Beam.CommonDriverOnboardingDocuments
       Storage.Beam.ConditionalCharges
@@ -1281,6 +1285,7 @@ library
       Storage.Queries.CancellationCharges
       Storage.Queries.CancellationFarePolicy
       Storage.Queries.CancellationReason
+      Storage.Queries.CashRidesCommission
       Storage.Queries.Client
       Storage.Queries.CommonDriverOnboardingDocuments
       Storage.Queries.ConditionalCharges
@@ -1376,6 +1381,7 @@ library
       Storage.Queries.OrphanInstances.BusinessEvent
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
+      Storage.Queries.OrphanInstances.CashRidesCommission
       Storage.Queries.OrphanInstances.DailyStats
       Storage.Queries.OrphanInstances.DigilockerVerification
       Storage.Queries.OrphanInstances.DocumentVerificationConfig

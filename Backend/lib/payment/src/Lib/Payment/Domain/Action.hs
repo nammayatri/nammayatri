@@ -1434,7 +1434,7 @@ initiateStripeRefundService req createRefundsCall getRefundsCall = do
     -- TODO test this
     getErrMessage :: SomeException -> Text
     getErrMessage exc
-      | Just (BaseException baseExc) <- fromException @BaseException exc = fromMaybe "Failed to initiate refunds" $ toMessage baseExc
+      | Just (BaseException baseExc) <- fromException @BaseException exc = "Failed to initiate refunds" <> maybe "" (": " <>) (toMessage baseExc)
       | otherwise = "Failed to initiate refunds"
 
     processRefund :: DOrder.PaymentOrder -> m InitiateStripeRefundResp

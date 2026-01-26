@@ -93,7 +93,6 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mR
 
 createIndividualConnectAccount ::
   ServiceFlow m r =>
-  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Payment.IndividualConnectAccountReq ->
@@ -102,7 +101,6 @@ createIndividualConnectAccount = runWithServiceConfig Payment.createIndividualCo
 
 retryAccountLink ::
   ServiceFlow m r =>
-  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Payment.AccountId ->
@@ -111,12 +109,19 @@ retryAccountLink = runWithServiceConfig Payment.retryAccountLink (.retryBankAcco
 
 getAccount ::
   ServiceFlow m r =>
-  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Payment.AccountId ->
   m Payment.ConnectAccountResp
 getAccount = runWithServiceConfig Payment.getAccount (.getBankAccount)
+
+createTransfer ::
+  ServiceFlow m r =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
+  Payment.CreateTransferReq ->
+  m Payment.CreateTransferResp
+createTransfer = runWithServiceConfig Payment.createTransfer (.createTransfer)
 
 modifyPaymentServiceByMode :: Payment.PaymentService -> DMPM.PaymentMode -> Payment.PaymentService
 modifyPaymentServiceByMode Payment.Stripe DMPM.LIVE = Payment.Stripe
@@ -129,12 +134,11 @@ runWithServiceConfig ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->
   (DMSUC.MerchantServiceUsageConfig -> Payment.PaymentService) ->
-  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   req ->
   m resp
-runWithServiceConfig func getCfg _merchantId merchantOpCityId paymentMode req = do
+runWithServiceConfig func getCfg merchantOpCityId paymentMode req = do
   orgPaymentsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let paymentService = modifyPaymentServiceByMode (getCfg orgPaymentsConfig) (fromMaybe DMPM.LIVE paymentMode)
   orgPaymentServiceConfig <-

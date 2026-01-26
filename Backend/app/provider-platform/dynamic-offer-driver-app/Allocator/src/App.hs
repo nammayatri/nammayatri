@@ -40,6 +40,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
+import SharedLogic.Allocator.Jobs.CashRidesCommissionCharge (cashRidesCommissionCharge)
 import SharedLogic.Allocator.Jobs.Cautio.InstallationStatus (installationStatus)
 import SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
 import SharedLogic.Allocator.Jobs.Document.VerificationRetry
@@ -134,6 +135,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . mediaFileDocumentComplete)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendFeedbackPN)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSpecialZonePayout)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . cashRidesCommissionCharge)
     }
 
 runDriverOfferAllocator ::

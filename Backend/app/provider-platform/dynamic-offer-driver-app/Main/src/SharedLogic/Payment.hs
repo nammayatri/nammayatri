@@ -22,6 +22,7 @@ import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage as MessageKey
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as DP
@@ -41,8 +42,10 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Action.Transfer as Transfer
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.TransferTransaction as DTransferTransaction
 import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
@@ -321,3 +324,30 @@ data DeepLinkData = DeepLinkData
     expiryTimeInMinutes :: Maybe Int
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON, Show, Ord, Eq)
+
+makeStripeTransfer ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
+  DTransferTransaction.TransferEntityName ->
+  Id DTransferTransaction.TransferEntity ->
+  Payment.CreateTransferReq ->
+  m (Either Text Payment.CreateTransferResp)
+makeStripeTransfer merchantId merchantOperatingCityId paymentMode entityName entityId createTranferReq = do
+  let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
+      commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
+      createTransferCall = TPayment.createTransfer merchantOperatingCityId paymentMode
+  Transfer.createTransferService
+    commonMerchantId
+    commonMerchantOperatingCityId
+    entityName
+    entityId
+    createTranferReq
+    createTransferCall

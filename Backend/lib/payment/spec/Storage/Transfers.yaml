@@ -1,0 +1,50 @@
+imports:
+  TransferOrder: Lib.Payment.Domain.Types.Extra.TransferTransaction
+  Currency: Kernel.Types.Common
+  TransferEntityName: Lib.Payment.Domain.Types.Extra.TransferTransaction
+  TransferEntity: Lib.Payment.Domain.Types.Extra.TransferTransaction
+  Value: Data.Aeson
+  TransferStatus: Kernel.External.Payment.Stripe.Types.Transfer
+  Merchant: Lib.Payment.Domain.Types.Common
+  MerchantOperatingCity: Lib.Payment.Domain.Types.Common
+
+TransferTransaction:
+  tableName: transfer_transaction
+  derives: "Generic"
+  fields:
+    id: Id TransferTransaction
+    entityName: TransferEntityName
+    entityId: Id TransferEntity
+    isApiCallSuccess: Maybe Bool
+    idAssignedByServiceProvider: Maybe Text
+    status: Maybe TransferStatus
+    amount: HighPrecMoney
+    currency: Currency
+    senderAccountId: Maybe Text # Nothing means platform account
+    destinationAccountId: Maybe Text # Nothing means platform account
+    description: Maybe Text
+    errorCode: Maybe Text
+    errorMessage: Maybe Text
+    responseDump: Maybe Value
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+    entityId: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    updateTranferEntryByStripeResponse:
+      kvFunction: updateWithKV
+      params: [idAssignedByServiceProvider, errorCode, errorMessage, status, isApiCallSuccess]
+      where: id
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE

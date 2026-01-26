@@ -10,6 +10,7 @@ import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.Payment.Types
 import qualified Kernel.External.SMS.Types
 import qualified Kernel.External.Whatsapp.Types
 import Kernel.Prelude
@@ -82,6 +83,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             autoComplete = autoComplete,
             backgroundVerification = backgroundVerification,
             createBankAccount = createBankAccount,
+            createTransfer = Kernel.Prelude.fromMaybe Kernel.External.Payment.Types.Stripe createTransfer,
             createdAt = createdAt,
             dashboardGstVerificationService = dashboardGstVerificationService,
             dashboardPanVerificationService = dashboardPanVerificationService,
@@ -125,6 +127,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.autoComplete = autoComplete,
         Beam.backgroundVerification = backgroundVerification,
         Beam.createBankAccount = createBankAccount,
+        Beam.createTransfer = Kernel.Prelude.Just createTransfer,
         Beam.createdAt = createdAt,
         Beam.dashboardGstVerificationService = dashboardGstVerificationService,
         Beam.dashboardPanVerificationService = dashboardPanVerificationService,

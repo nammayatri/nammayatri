@@ -1,0 +1,21 @@
+CREATE TABLE atlas_driver_offer_bpp.transfer_transaction ();
+
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN amount double precision NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN currency text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN description text ;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN destination_account_id text ;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN entity_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN entity_name text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN error_code text ;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN error_message text ;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN id_assigned_by_service_provider text ;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN is_api_call_success boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN response_dump text ;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN sender_account_id text ;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN status text ;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.transfer_transaction ADD PRIMARY KEY ( id);
