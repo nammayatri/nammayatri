@@ -10,7 +10,7 @@ ScheduledPayout:
   derives: "Generic,Show,Eq,ToJSON,FromJSON"
   types:
     ScheduledPayoutStatus:
-      enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED"
+      enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED,CANCELLED,CASH_PAID,CASH_PENDING"
   fields:
     id: Id ScheduledPayout
     rideId: Text

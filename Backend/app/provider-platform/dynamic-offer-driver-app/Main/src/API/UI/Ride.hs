@@ -23,6 +23,7 @@ module API.UI.Ride
     otpRideCreateAndStart,
     cancelRide,
     startRide',
+    endRide,
   )
 where
 

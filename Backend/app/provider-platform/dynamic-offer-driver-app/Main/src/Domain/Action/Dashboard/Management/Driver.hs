@@ -62,6 +62,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverUpdateMerchant,
     postDriverVehicleAppendSelectedServiceTiers,
     postDriverVehicleUpsertSelectedServiceTiers,
+    postDriverUpdateRCInvalidStatusByRCNumber,
   )
 where
 
@@ -832,6 +833,12 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
 postDriverUpdateRCInvalidStatus :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateRCInvalidStatusReq -> Flow APISuccess
 postDriverUpdateRCInvalidStatus _merchantShortId _opCity _ req = do
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
+  RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing (Just True)
+  pure Success
+
+postDriverUpdateRCInvalidStatusByRCNumber :: ShortId DM.Merchant -> Context.City -> Common.UpdateRCInvalidStatusByRCNumberReq -> Flow APISuccess
+postDriverUpdateRCInvalidStatusByRCNumber _merchantShortId _opCity req = do
+  vehicleRC <- RCQuery.findLastVehicleRCWrapper req.rcNumber >>= fromMaybeM (VehicleNotFound req.rcNumber)
   RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing (Just True)
   pure Success
 

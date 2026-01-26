@@ -33,51 +33,56 @@ getPayoutStatus ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Text ->
-    Environment.Flow API.DriverPayoutStatusResp
+    Environment.Flow API.DriverPayoutStatusRespSuccess
   )
 getPayoutStatus (mbPersonId, merchantId, merchantOpCityId) rideId = do
   -- Fetch scheduled payout by rideId
-  payout <- QSP.findByRideId rideId >>= fromMaybeM (InvalidRequest "Payout not found for this ride")
+  mbPayout <- QSP.findByRideId rideId
+  payoutResp <-
+    case mbPayout of
+      Nothing -> return Nothing
+      Just payout -> do
+        -- Validate that the driver owns this payout (optional but good practice)
+        case mbPersonId of
+          Just personId ->
+            unless (payout.driverId == Kernel.Types.Id.getId personId) $
+              throwError $ InvalidRequest "Unauthorized: You can only view your own payouts"
+          Nothing -> pure ()
 
-  -- Validate that the driver owns this payout (optional but good practice)
-  case mbPersonId of
-    Just personId ->
-      unless (payout.driverId == Kernel.Types.Id.getId personId) $
-        throwError $ InvalidRequest "Unauthorized: You can only view your own payouts"
-    Nothing -> pure ()
+        payoutOrders <- QPO.findAllByEntityNameAndEntityIds (Just 1) (Just 0) (Just DPayment.SPECIAL_ZONE_PAYOUT) [Just payout.id.getId]
+        updatedStatus <- do
+          case (listToMaybe payoutOrders) of
+            Just payoutOrder -> do
+              let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = Nothing}
+                  createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchantOpCityId (DEMSC.RidePayoutService TPayout.Juspay) (Just payout.driverId)
+              resp <- DPayment.payoutStatusService (Kernel.Types.Id.cast merchantId) (Kernel.Types.Id.Id payout.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall
+              let newStatus = QSP.castPayoutOrderStatusToScheduledPayoutStatus resp.status
+              if (payout.status /= newStatus && payout.status `notElem` [DSP.CREDITED, DSP.CASH_PAID, DSP.CASH_PENDING])
+                then do
+                  let statusMsg = "Juspay Order Status Updated: " <> show resp.status
+                  QSP.updateStatusWithHistoryById newStatus (Just statusMsg) payout
+                  pure newStatus
+                else pure payout.status
+            Nothing -> do
+              logError $ "Payout Order not found for scheduled payoutId: " <> show payout.id
+              pure payout.status
 
-  payoutOrders <- QPO.findAllByEntityNameAndEntityIds (Just 1) (Just 0) (Just DPayment.SPECIAL_ZONE_PAYOUT) [Just payout.id.getId]
-  updatedStatus <- do
-    case (listToMaybe payoutOrders) of
-      Just payoutOrder -> do
-        let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = Nothing}
-            createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchantOpCityId (DEMSC.RidePayoutService TPayout.Juspay) (Just payout.driverId)
-        resp <- DPayment.payoutStatusService (Kernel.Types.Id.cast merchantId) (Kernel.Types.Id.Id payout.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall
-        let newStatus = QSP.castPayoutOrderStatusToScheduledPayoutStatus resp.status
-        if (payout.status /= newStatus && payout.status /= DSP.CREDITED)
-          then do
-            let statusMsg = "Juspay Order Status Updated: " <> show resp.status
-            QSP.updateStatusWithHistoryById newStatus (Just statusMsg) payout
-            pure newStatus
-          else pure payout.status
-      Nothing -> do
-        logError $ "Payout Order not found for scheduled payoutId: " <> show payout.id
-        pure payout.status
+        statusHistory <- QPSH.findByScheduledPayoutId Nothing Nothing payout.id
 
-  statusHistory <- QPSH.findByScheduledPayoutId Nothing Nothing payout.id
-
-  pure $
-    API.DriverPayoutStatusResp
-      { status = updatedStatus,
-        amount = payout.amount,
-        rideId = payout.rideId,
-        payoutTransactionId = payout.payoutTransactionId,
-        expectedCreditTime = payout.expectedCreditTime,
-        failureReason = payout.failureReason,
-        statusHistory = map convertHistory statusHistory,
-        createdAt = payout.createdAt,
-        updatedAt = payout.updatedAt
-      }
+        pure $
+          Just $
+            API.DriverPayoutStatusResp
+              { status = updatedStatus,
+                amount = payout.amount,
+                rideId = payout.rideId,
+                payoutTransactionId = payout.payoutTransactionId,
+                expectedCreditTime = payout.expectedCreditTime,
+                failureReason = payout.failureReason,
+                statusHistory = map convertHistory statusHistory,
+                createdAt = payout.createdAt,
+                updatedAt = payout.updatedAt
+              }
+  return $ API.DriverPayoutStatusRespSuccess payoutResp
 
 -- Helper to convert domain status history to API status event
 convertHistory :: DPSH.PayoutStatusHistory -> API.DriverPayoutStatusEvent

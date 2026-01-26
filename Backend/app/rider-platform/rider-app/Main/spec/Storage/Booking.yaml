@@ -252,6 +252,7 @@ Booking:
     commission: Maybe HighPrecMoney
     paymentMode: Maybe PaymentMode
     dashboardAgentId: Maybe Text
+    displayBookingId: Maybe Text
 
   beamFields:
     estimatedDistance:
@@ -363,6 +364,7 @@ Booking:
     estimatedDistanceValue: double precision
     vehicleIconUrl: character varying(255)
     configInExperimentVersions: "json"
+    displayBookingId: character varying(25)
 
   default:
     fareProductType: "'ONE_WAY'"

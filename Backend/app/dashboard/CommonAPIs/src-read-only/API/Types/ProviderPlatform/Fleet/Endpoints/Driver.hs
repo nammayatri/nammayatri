@@ -46,8 +46,8 @@ data ActualRoute = ActualRoute {lat :: Kernel.Prelude.Double, lon :: Kernel.Prel
 data AddRidePayoutAccountNumberReq = AddRidePayoutAccountNumberReq
   { driverMobileNumber :: Kernel.Prelude.Text,
     driverMobileNumberCountryCode :: Kernel.Prelude.Text,
-    accountNumber :: Kernel.Prelude.Text,
-    ifscCode :: Kernel.Prelude.Text,
+    accountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ifscCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleRegistrationNumber :: Kernel.Prelude.Text
   }

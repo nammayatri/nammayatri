@@ -188,3 +188,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN payment_mode text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN toll_ids text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN display_booking_id character varying(25) ;

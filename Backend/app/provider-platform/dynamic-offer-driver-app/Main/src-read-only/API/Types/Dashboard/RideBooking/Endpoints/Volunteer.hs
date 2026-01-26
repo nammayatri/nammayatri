@@ -27,6 +27,7 @@ instance Kernel.Types.HideSecrets.HideSecrets AssignCreateAndStartOtpRideAPIReq 
 
 data BookingInfoResponse = BookingInfoResponse
   { bookingId :: Kernel.Types.Id.Id Dashboard.Common.Booking,
+    displayBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromLocation :: Location,
     toLocation :: Kernel.Prelude.Maybe Location,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,

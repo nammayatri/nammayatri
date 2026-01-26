@@ -117,7 +117,8 @@ data ValidatedRideDetails
 
 data BookingReallocationReq = BookingReallocationReq
   { bookingDetails :: DCommon.BookingDetails,
-    reallocationSource :: DBCR.CancellationSource
+    reallocationSource :: DBCR.CancellationSource,
+    transactionId :: Text
   }
 
 type ValidatedBookingReallocationReq = BookingReallocationReq

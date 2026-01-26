@@ -4,7 +4,6 @@ apis:
   # Dashboard: Get payout status by rideId (admin/agent via API token)
   - GET:
       endpoint: /{rideId}/status
-      name: GetPayoutStatus
       auth: ApiAuthV2
       params:
         rideId: Text
@@ -14,7 +13,6 @@ apis:
   # Admin: Cancel payout before 2 hours
   - POST:
       endpoint: /{rideId}/cancel
-      name: PostPayoutCancel
       auth: ApiAuthV2
       params:
         rideId: Text
@@ -26,7 +24,15 @@ apis:
   # Admin: Retry failed payout
   - POST:
       endpoint: /{rideId}/retry
-      name: PostPayoutRetry
+      auth: ApiAuthV2
+      params:
+        rideId: Text
+      response:
+        type: APISuccess
+
+  # Admin: Mark cash paid
+  - POST:
+      endpoint: /{rideId}/markCashPaid
       auth: ApiAuthV2
       params:
         rideId: Text
@@ -54,4 +60,4 @@ types:
     - reason: Text
     - derive: "'HideSecrets"
   PayoutStatus:
-    enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED"
+    enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED,CANCELLED,CASH_PAID,CASH_PENDING"

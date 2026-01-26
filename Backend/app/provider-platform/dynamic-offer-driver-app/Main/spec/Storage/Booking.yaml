@@ -104,6 +104,7 @@ Booking:
     paymentInstrument: Maybe PaymentInstrument
     paymentMode: Maybe PaymentMode
     commission: Maybe HighPrecMoney
+    displayBookingId: Maybe Text
 
   excludedFields:
     - merchantId
@@ -228,6 +229,7 @@ Booking:
     tollIds: "text[]"
     estimateId: character varying(255)
     configInExperimentVersions: "json"
+    displayBookingId: character varying(25)
 
   default:
     bookingType: "'NormalBooking'"

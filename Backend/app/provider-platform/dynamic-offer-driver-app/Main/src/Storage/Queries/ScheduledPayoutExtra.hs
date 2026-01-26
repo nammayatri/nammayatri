@@ -67,6 +67,9 @@ getStatusMessage DSP.INITIATED = "Payout scheduled"
 getStatusMessage DSP.PROCESSING = "Payment in progress"
 getStatusMessage DSP.CREDITED = "Payment credited to bank"
 getStatusMessage DSP.AUTO_PAY_FAILED = "Auto-pay failed"
+getStatusMessage DSP.CANCELLED = "Payment cancelled"
+getStatusMessage DSP.CASH_PAID = "Payment marked as cash paid"
+getStatusMessage DSP.CASH_PENDING = "Payment marked as cash pending"
 getStatusMessage DSP.RETRYING = "Retrying payment..."
 getStatusMessage DSP.FAILED = "Payment failed/cancelled"
 
@@ -76,11 +79,11 @@ castPayoutOrderStatusToScheduledPayoutStatus payoutOrderStatus =
   case payoutOrderStatus of
     Payout.SUCCESS -> DSP.CREDITED
     Payout.FULFILLMENTS_SUCCESSFUL -> DSP.CREDITED
-    Payout.ERROR -> DSP.FAILED
-    Payout.FAILURE -> DSP.FAILED
-    Payout.FULFILLMENTS_FAILURE -> DSP.FAILED
-    Payout.CANCELLED -> DSP.FAILED
-    Payout.FULFILLMENTS_CANCELLED -> DSP.FAILED
+    Payout.ERROR -> DSP.AUTO_PAY_FAILED
+    Payout.FAILURE -> DSP.AUTO_PAY_FAILED
+    Payout.FULFILLMENTS_FAILURE -> DSP.AUTO_PAY_FAILED
+    Payout.CANCELLED -> DSP.CANCELLED
+    Payout.FULFILLMENTS_CANCELLED -> DSP.CANCELLED
     Payout.FULFILLMENTS_MANUAL_REVIEW -> DSP.PROCESSING -- Keep processing for manual review
     _ -> DSP.PROCESSING
 

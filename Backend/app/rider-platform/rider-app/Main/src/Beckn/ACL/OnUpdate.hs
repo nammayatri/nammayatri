@@ -72,10 +72,10 @@ parseEventV2 :: (MonadFlow m, CacheFlow m r) => Text -> Text -> Spec.Order -> m 
 parseEventV2 transactionId messageId order = do
   case order.orderStatus of
     Just "SOFT_UPDATE" -> do
-      editDestinationReq <- parseEditDestinationSoftUpdate order messageId
+      editDestinationReq <- parseEditDestinationSoftUpdate transactionId order messageId
       return editDestinationReq
     Just "CONFIRM_UPDATE" -> do
-      confirmUpdateReq <- parseEditDestinationConfirmUpdate order messageId
+      confirmUpdateReq <- parseEditDestinationConfirmUpdate transactionId order messageId
       return confirmUpdateReq
     _ -> do
       eventType <-
@@ -95,32 +95,32 @@ parseEventV2 transactionId messageId order = do
           assignedReq <- Common.parseRideAssignedEvent order messageId transactionId
           return $ DOnUpdate.OURideAssignedReq assignedReq
         "RIDE_ARRIVED_PICKUP" -> do
-          arrivedReq <- Common.parseDriverArrivedEvent order messageId
+          arrivedReq <- Common.parseDriverArrivedEvent order messageId transactionId
           return $ DOnUpdate.OUDriverArrivedReq arrivedReq
         "RIDE_STARTED" -> do
-          startedReq <- Common.parseRideStartedEvent order messageId
+          startedReq <- Common.parseRideStartedEvent order messageId transactionId
           return $ DOnUpdate.OURideStartedReq startedReq
         "RIDE_ENDED" -> do
-          completedReq <- Common.parseRideCompletedEvent order messageId
+          completedReq <- Common.parseRideCompletedEvent order messageId transactionId
           return $ DOnUpdate.OURideCompletedReq completedReq
         "RIDE_CANCELLED" -> do
-          cancelledReq <- Common.parseBookingCancelledEvent order messageId
+          cancelledReq <- Common.parseBookingCancelledEvent order messageId transactionId
           return $ DOnUpdate.OUBookingCancelledReq cancelledReq
         "ESTIMATE_REPETITION" -> parseEstimateRepetitionEvent transactionId order
         "QUOTE_REPETITION" -> parseQuoteRepetitionEvent transactionId order
-        "NEW_MESSAGE" -> parseNewMessageEvent order
-        "SAFETY_ALERT" -> parseSafetyAlertEvent order
+        "NEW_MESSAGE" -> parseNewMessageEvent transactionId order
+        "SAFETY_ALERT" -> parseSafetyAlertEvent transactionId order
         "PHONE_CALL_REQUEST" -> return $ DOnUpdate.OUPhoneCallRequestEventReq $ DOnUpdate.PhoneCallRequestEventReq transactionId
         "PHONE_CALL_COMPLETED" -> return $ DOnUpdate.OUPhoneCallCompletedEventReq $ DOnUpdate.PhoneCallCompletedEventReq transactionId
-        "STOP_ARRIVED" -> parseStopArrivedEvent order
+        "STOP_ARRIVED" -> parseStopArrivedEvent transactionId order
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
         "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
         "ESTIMATED_END_TIME_RANGE_UPDATED" -> parseEstimatedEndTimeRangeUpdatedEvent order
         "PARCEL_IMAGE_UPLOADED" -> parseParcelImageUploaded order
         _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
-parseNewMessageEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
-parseNewMessageEvent order = do
+parseNewMessageEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
+parseNewMessageEvent transactionId order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in NewMessage Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in NewMessage Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in NewMessage Event.")
@@ -130,7 +130,8 @@ parseNewMessageEvent order = do
       DOnUpdate.NewMessageReq
         { bppBookingId = Id bppBookingId,
           bppRideId = Id bppRideId,
-          message = message
+          message = message,
+          transactionId
         }
 
 parseEstimateRepetitionEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -167,8 +168,8 @@ parseQuoteRepetitionEvent transactionId order = do
           cancellationSource = Utils.castCancellationSourceV2 cancellationSource
         }
 
-parseSafetyAlertEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
-parseSafetyAlertEvent order = do
+parseSafetyAlertEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
+parseSafetyAlertEvent transactionId order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in SafetyAlert Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in SafetyAlert Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in SafetyAlert Event.")
@@ -179,20 +180,22 @@ parseSafetyAlertEvent order = do
         { bppBookingId = Id bppBookingId,
           bppRideId = Id bppRideId,
           reason = safetyReasonCode,
-          code = safetyReasonCode
+          code = safetyReasonCode,
+          transactionId
         }
 
-parseStopArrivedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
-parseStopArrivedEvent order = do
+parseStopArrivedEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
+parseStopArrivedEvent transactionId order = do
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in StopArrived Event.")
   return $
     DOnUpdate.OUStopArrivedReq $
       DOnUpdate.StopArrivedReq
-        { bppRideId = Id bppRideId
+        { bppRideId = Id bppRideId,
+          transactionId
         }
 
-parseEditDestinationSoftUpdate :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m DOnUpdate.OnUpdateReq
-parseEditDestinationSoftUpdate order messageId = do
+parseEditDestinationSoftUpdate :: (MonadFlow m, CacheFlow m r) => Text -> Spec.Order -> Text -> m DOnUpdate.OnUpdateReq
+parseEditDestinationSoftUpdate transactionId order messageId = do
   bookingDetails <- Common.parseBookingDetails order messageId
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
       personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
@@ -212,13 +215,14 @@ parseEditDestinationSoftUpdate order messageId = do
           ..
         }
 
-parseEditDestinationConfirmUpdate :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m DOnUpdate.OnUpdateReq
-parseEditDestinationConfirmUpdate order messageId = do
+parseEditDestinationConfirmUpdate :: (MonadFlow m, CacheFlow m r) => Text -> Spec.Order -> Text -> m DOnUpdate.OnUpdateReq
+parseEditDestinationConfirmUpdate transactionId order messageId = do
   bookingDetails <- Common.parseBookingDetails order messageId
   return $
     DOnUpdate.OUEditDestConfirmUpdateReq $
       DOnUpdate.EditDestConfirmUpdateReq
         { bookingUpdateRequestId = Id messageId,
+          transactionId,
           ..
         }
 

@@ -14,6 +14,7 @@
 
 module Lib.LocationUpdates
   ( module Reexport,
+    LocationUpdateFlow,
     whenWithLocationUpdatesLock,
     buildRideInterpolationHandler,
   )
@@ -21,6 +22,8 @@ where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
+import qualified Data.HashMap.Strict as HMS
+import qualified Data.Map as M
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -29,16 +32,24 @@ import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.Trip as Trip
-import Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
+import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import qualified Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport
+import Lib.Scheduler (SchedulerType)
+import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.CallInternalMLPricing as ML
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
 import qualified SharedLogic.TollsDetector as TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -51,7 +62,44 @@ import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import qualified Tools.Maps as TMaps
+import Tools.Metrics.ARDUBPPMetrics.Types
 import qualified Tools.Notifications as TN
+import TransactionLogs.Types
+
+type LocationUpdateFlow m r c =
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasLongDurationRetryCfg r c,
+    ClickhouseFlow m r,
+    EncFlow m r,
+    HedisFlow m r,
+    MonadMask m,
+    HasBPPMetrics m r,
+    HasPrettyLogger m r,
+    EventStreamFlow m r,
+    HasCallStack,
+    CoreMetrics.CoreMetrics m,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "blackListedJobs" r [Text],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["osrmMatchThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["maxStraightLineRectificationThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  )
 
 getDeviationForPoint :: LatLong -> [LatLong] -> Meters
 getDeviationForPoint pt estimatedRoute =
@@ -80,7 +128,7 @@ checkForDeviation routeDeviationThreshold estimatedRoute (pt : batchWaypoints) d
       then checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
       else checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints (deviationCount + 1)
 
-updateDeviation :: TransporterConfig -> Bool -> Maybe Ride -> [LatLong] -> Flow Bool
+updateDeviation :: LocationUpdateFlow m r c => TransporterConfig -> Bool -> Maybe Ride -> [LatLong] -> m Bool
 updateDeviation _ _ Nothing _ = do
   logInfo "No ride found to check deviation"
   return False
@@ -112,7 +160,7 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
           isRouteDeviated <- checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking
           updateRouteDeviationDetails isRouteDeviated alreadyDeviated
   where
-    updateRouteDeviationDetails :: Bool -> Bool -> Flow Bool
+    updateRouteDeviationDetails :: LocationUpdateFlow m r c => Bool -> Bool -> m Bool
     updateRouteDeviationDetails isRouteDeviated alreadyDeviated = do
       when (isRouteDeviated && not alreadyDeviated) $ do
         logInfo $ "Deviation detected for rideId: " <> getId ride.id
@@ -123,7 +171,7 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
       let alreadyDeviated = fromMaybe False rideDetails.driverDeviatedFromRoute
       return (alreadyDeviated, rideDetails.safetyAlertTriggered)
 
-checkMultipleRoutesForDeviation :: [RI.RouteAndDeviationInfo] -> [LatLong] -> Meters -> Meters -> Ride -> Booking -> Bool -> Flow Bool
+checkMultipleRoutesForDeviation :: LocationUpdateFlow m r c => [RI.RouteAndDeviationInfo] -> [LatLong] -> Meters -> Meters -> Ride -> Booking -> Bool -> m Bool
 checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking safetyCheckEnabled = do
   let rideId = ride.id
   logInfo $ "Checking for deviation in multiple routes for rideId: " <> getId rideId
@@ -171,7 +219,7 @@ checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold ni
                           }
                     }
 
-checkForDeviationInSingleRoute :: [LatLong] -> Meters -> Meters -> Ride -> Booking -> Flow Bool
+checkForDeviationInSingleRoute :: LocationUpdateFlow m r c => [LatLong] -> Meters -> Meters -> Ride -> Booking -> m Bool
 checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking = do
   let rideId = ride.id
   logInfo $ "Checking for deviation in single route for rideId: " <> getId rideId
@@ -190,7 +238,7 @@ checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafet
       logWarning $ "Ride route info not found for rideId: " <> getId rideId
       return False
 
-updateTollRouteDeviation :: Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Ride -> [LatLong] -> Flow (Bool, Bool)
+updateTollRouteDeviation :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Ride -> [LatLong] -> m (Bool, Bool)
 updateTollRouteDeviation _ _ Nothing _ = do
   logInfo "No ride found to check deviation"
   return (False, False)
@@ -201,7 +249,7 @@ updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = 
     QRide.updateDriverDeviatedToTollRoute ride.id isTollPresentOnCurrentRoute
   return (driverDeviatedToTollRoute, isTollPresentOnCurrentRoute)
 
-getTravelledDistanceAndTollInfo :: Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> Flow (Meters, Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))
+getTravelledDistanceAndTollInfo :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> m (Meters, Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))
 getTravelledDistanceAndTollInfo _ Nothing _ estimatedTollInfo = do
   logInfo "No ride found to get travelled distance"
   return (0, estimatedTollInfo)
@@ -226,7 +274,7 @@ getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDis
       logInfo $ "MultipleRoutes not found for ride" <> show rideId
       return (estimatedDistance, estimatedTollInfo)
 
-buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id Ride) -> Bool -> Maybe Integer -> Flow (RideInterpolationHandler Person Flow)
+buildRideInterpolationHandler :: LocationUpdateFlow m r c => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id Ride) -> Bool -> Maybe Integer -> m (RideInterpolationHandler Person m)
 buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBatchSize = do
   transportConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let snapToRoad' shouldRectifyDistantPointsFailure =
@@ -296,7 +344,7 @@ whenWithLocationUpdatesLock driverId f = do
   where
     lockKey = "DriverLocationUpdate:DriverId-" <> driverId.getId
 
-performSafetyCheck :: Ride -> Booking -> Flow ()
+performSafetyCheck :: LocationUpdateFlow m r c => Ride -> Booking -> m ()
 performSafetyCheck ride booking = do
   let rideId = ride.id
   logInfo $ "Performing safety check for rideId: " <> getId rideId

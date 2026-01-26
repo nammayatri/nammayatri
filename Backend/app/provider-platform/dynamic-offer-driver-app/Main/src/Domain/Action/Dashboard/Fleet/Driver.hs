@@ -743,13 +743,6 @@ postDriverAddRidePayoutAccountNumber merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   now <- getCurrentTime
-  bankAccountNumber <- encrypt req.accountNumber
-  bankIfscCode <- encrypt req.ifscCode
-  rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
-  mbAlreadyExists <- QDRPB.findByRcId rc.id
-  whenJust mbAlreadyExists $ \_ -> do
-    throwError (InvalidRequest "Ride Payout Account Number already exists")
-  id <- generateGUID
   mobileNumberHash <- getDbHash req.driverMobileNumber
   mbPerson <- QP.findByMobileNumberAndMerchantAndRole req.driverMobileNumberCountryCode mobileNumberHash merchant.id DP.DRIVER
   person <-
@@ -758,22 +751,32 @@ postDriverAddRidePayoutAccountNumber merchantShortId opCity req = do
         void $ DRBReg.auth merchantShortId opCity (Common.AuthReq req.driverMobileNumber req.driverMobileNumberCountryCode)
         QP.findByMobileNumberAndMerchantAndRole req.driverMobileNumberCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound req.driverMobileNumber)
       Just p -> return p
-  let driverRidePayoutBankAccount =
-        DRPB.DriverRidePayoutBankAccount
-          { bankAccountNumber = bankAccountNumber,
-            bankIfscCode = bankIfscCode,
-            driverId = person.id,
-            id,
-            rcId = rc.id,
-            merchantId = Just merchant.id,
-            merchantOperatingCityId = Just merchantOpCity.id,
-            createdAt = now,
-            updatedAt = now
-          }
-  let payoutVpa = req.accountNumber <> "@" <> req.ifscCode <> ".ifsc.npci"
-  QDriverInfo.updatePayoutVpaAndStatusByDriverIds (Just payoutVpa) (Just DI.MANUALLY_ADDED) [person.id]
-  QDRPB.create driverRidePayoutBankAccount
-  pure Success
+  case (req.accountNumber, req.ifscCode) of
+    (Just accountNumber, Just ifscCode) -> do
+      bankAccountNumber <- encrypt accountNumber
+      bankIfscCode <- encrypt ifscCode
+      rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
+      mbAlreadyExists <- QDRPB.findByRcId rc.id
+      whenJust mbAlreadyExists $ \_ -> do
+        throwError (InvalidRequest "Ride Payout Account Number already exists")
+      id <- generateGUID
+      let driverRidePayoutBankAccount =
+            DRPB.DriverRidePayoutBankAccount
+              { bankAccountNumber = bankAccountNumber,
+                bankIfscCode = bankIfscCode,
+                driverId = person.id,
+                id,
+                rcId = rc.id,
+                merchantId = Just merchant.id,
+                merchantOperatingCityId = Just merchantOpCity.id,
+                createdAt = now,
+                updatedAt = now
+              }
+      let payoutVpa = accountNumber <> "@" <> ifscCode <> ".ifsc.npci"
+      QDriverInfo.updatePayoutVpaAndStatusByDriverIds (Just payoutVpa) (Just DI.MANUALLY_ADDED) [person.id]
+      QDRPB.create driverRidePayoutBankAccount
+      pure Success
+    _ -> pure Success
 
 ---------------------------------------------------------------------
 postDriverFleetAddVehicles ::

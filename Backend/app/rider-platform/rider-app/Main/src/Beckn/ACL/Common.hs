@@ -180,8 +180,8 @@ parseRideAssignedEvent order msgId txnId = do
         ..
       }
 
-parseRideStartedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.RideStartedReq
-parseRideStartedEvent order msgId = do
+parseRideStartedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> m Common.RideStartedReq
+parseRideStartedEvent order msgId txnId = do
   bookingDetails <- parseBookingDetails order msgId
   stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideStarted Event.")
   start <- Utils.getStartLocation stops & fromMaybeM (InvalidRequest "pickup stop is not present in RideStarted Event.")
@@ -196,6 +196,7 @@ parseRideStartedEvent order msgId = do
   pure $
     Common.RideStartedReq
       { bookingDetails,
+        transactionId = txnId,
         endOtp_ = Just bookingDetails.otp,
         startOdometerReading,
         ..
@@ -207,19 +208,20 @@ getLocationFromTagV2 tagGroup key latKey lonKey =
       tripStartLon :: Maybe Double = readMaybe . T.unpack =<< getTagV2' key lonKey tagGroup
    in Maps.LatLong <$> tripStartLat <*> tripStartLon
 
-parseDriverArrivedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.DriverArrivedReq
-parseDriverArrivedEvent order msgId = do
+parseDriverArrivedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> m Common.DriverArrivedReq
+parseDriverArrivedEvent order msgId txnId = do
   bookingDetails <- parseBookingDetails order msgId
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
       arrivalTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
   return $
     Common.DriverArrivedReq
       { bookingDetails,
-        arrivalTime
+        arrivalTime,
+        transactionId = txnId
       }
 
-parseRideCompletedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.RideCompletedReq
-parseRideCompletedEvent order msgId = do
+parseRideCompletedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> m Common.RideCompletedReq
+parseRideCompletedEvent order msgId txnId = do
   bookingDetails <- parseBookingDetails order msgId
   currency :: Currency <- order.orderQuote >>= (.quotationPrice) >>= (.priceCurrency) >>= (readMaybe . T.unpack) & fromMaybeM (InvalidRequest "quote.price.currency is not present in RideCompleted Event.")
   fare' <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= decodeFromText & fromMaybeM (InvalidRequest "quote.price.value is not present in RideCompleted Event.")
@@ -240,6 +242,7 @@ parseRideCompletedEvent order msgId = do
   pure $
     Common.RideCompletedReq
       { bookingDetails,
+        transactionId = txnId,
         fare = Utils.decimalValueToPrice currency fare,
         totalFare = Utils.decimalValueToPrice currency totalFare,
         chargeableDistance,
@@ -261,8 +264,8 @@ mkDFareBreakup breakup = do
         description = title
       }
 
-parseBookingCancelledEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.BookingCancelledReq
-parseBookingCancelledEvent order msgId = do
+parseBookingCancelledEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> m Common.BookingCancelledReq
+parseBookingCancelledEvent order msgId txnId = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in BookingCancelled Event.")
   bookingDetails <-
     case order.orderFulfillments of
@@ -272,6 +275,7 @@ parseBookingCancelledEvent order msgId = do
   return $
     Common.BookingCancelledReq
       { bppBookingId = Id bppBookingId,
+        transactionId = txnId,
         bookingDetails,
         cancellationSource = Utils.castCancellationSourceV2 cancellationSource
       }
