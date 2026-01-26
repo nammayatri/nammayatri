@@ -343,11 +343,21 @@ types:
     schedules: [ScheduledVehicleInfo]
     alternateRouteInfo: Maybe [AlternateRouteDetails]
 
+  LegRouteWithLiveVehicle:
+    legOrder: Int
+    routeWithLiveVehicles: [RouteWithLiveVehicle]
+
   RouteServiceabilityResp:
-    enum: "LiveRouteInfo RouteWithLiveVehicle, AlternateLiveRoutesInfo [RouteWithLiveVehicle]"
+    legs: [LegRouteWithLiveVehicle]
+
+  RouteCodesWithLeg:
+    legOrder: Int
+    routeCodes: [Text]
+    derive: "Show"
 
   RouteServiceabilityReq:
-    routeCode: Maybe Text
+    routeCodes: Maybe [RouteCodesWithLeg]
+    callOtp: Maybe Bool
     onlySelectedRoute: Maybe Bool
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
