@@ -21,6 +21,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
@@ -34,7 +35,6 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.FareBreakup as QFareBreakup
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.SafetySettings as QSafety
 import Tools.Error
