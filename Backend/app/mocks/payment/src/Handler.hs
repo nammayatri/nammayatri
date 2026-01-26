@@ -37,6 +37,7 @@ import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
+import qualified Lib.Payment.Storage.Beam.TransferTransaction as BeamTT
 import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QOffer
@@ -77,6 +78,9 @@ instance HasSchemaName BeamWRP.WalletRewardPostingT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamPW.PersonWalletT where
+  schemaName _ = "atlas_app"
+
+instance HasSchemaName BeamTT.TransferTransactionT where
   schemaName _ = "atlas_app"
 
 server :: FlowServer API

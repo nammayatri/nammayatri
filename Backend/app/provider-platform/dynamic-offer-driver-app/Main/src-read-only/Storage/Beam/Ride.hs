@@ -6,6 +6,7 @@ module Storage.Beam.Ride where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Ride
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
@@ -84,6 +85,8 @@ data RideT f = RideT
     onlinePayment :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     otp :: B.C f Kernel.Prelude.Text,
     passedThroughDestination :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    paymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
+    paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
     pickupDropOutsideOfThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     previousRideTripEndLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     previousRideTripEndLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

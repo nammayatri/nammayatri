@@ -26,6 +26,8 @@ imports:
   TagNameValue: Lib.Yudhishthira.Types
   BillingCategory: SharedLogic.Type
   FarePolicy: Domain.Types.FarePolicy
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
 
 Ride:
   tableName: ride
@@ -120,6 +122,8 @@ Ride:
     vehicleServiceTierName : Maybe Text
     tripCategory: TripCategory
     onlinePayment: Bool
+    paymentInstrument: Maybe PaymentInstrument
+    paymentMode: Maybe PaymentMode
     enableOtpLessRide: Maybe Bool
     cancellationFeeIfCancelled: Maybe HighPrecMoney
     tipAmount: Maybe HighPrecMoney

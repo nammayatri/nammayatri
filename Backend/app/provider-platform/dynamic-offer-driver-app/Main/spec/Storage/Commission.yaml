@@ -1,0 +1,36 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  TransferStatus: Kernel.External.Payment.Stripe.Types.Transfer
+  Person: Domain.Types.Person
+  Role: Domain.Types.Person
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+
+CashRidesCommission:
+  tableName: cash_rides_commission
+
+  fields:
+    id: Id CashRidesCommission
+    personId: Id Person
+    personRole: Role
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    paymentMode: PaymentMode
+    lastSettlementTime: UTCTime
+    nextSettlementTime: UTCTime
+    numberOfRides: Int
+    amount: HighPrecMoney
+    currency: Currency
+    status: TransferStatus
+
+  constraints:
+    id: PrimaryKey
+    personId: "!SecondaryKey" # forcing to be a secondary key
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
