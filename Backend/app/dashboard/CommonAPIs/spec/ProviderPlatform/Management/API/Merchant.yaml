@@ -968,7 +968,7 @@ types:
     - jobData: Text
     - derive: "'HideSecrets"
   JobName:
-    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation,CongestionChargeCalculation"
+    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation,CongestionChargeCalculation, CashRidesCommissionChargeTrigger"
   UpdateOnboardingVehicleVariantMappingReq:
     - file: FilePath
     - vehicleCategory: Text

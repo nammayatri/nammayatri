@@ -27,6 +27,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     autoComplete :: Kernel.External.Maps.Types.MapsService,
     backgroundVerification :: Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
     createBankAccount :: Kernel.External.Payment.Types.PaymentService,
+    createTransfer :: Kernel.External.Payment.Types.PaymentService,
     createdAt :: Kernel.Prelude.UTCTime,
     dashboardGstVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
     dashboardPanVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,

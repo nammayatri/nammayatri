@@ -566,18 +566,22 @@ MerchantServiceUsageConfig:
     createBankAccount: PaymentService
     retryBankAccountLink: PaymentService
     getBankAccount: PaymentService
+    createTransfer: PaymentService
     backgroundVerification: BackgroundVerificationService
     sdkVerificationService: VerificationService
     llmChatCompletion: LLMChatCompletionService
 
   beamType:
     llmChatCompletion: Maybe LLMChatCompletionService
+    createTransfer: Maybe PaymentService
 
   fromTType:
     llmChatCompletion: Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI|I
+    createTransfer: Kernel.Prelude.fromMaybe Kernel.External.Payment.Types.Stripe|I
 
   toTType:
     llmChatCompletion: Kernel.Prelude.Just|I
+    createTransfer: Kernel.Prelude.Just|I
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -632,6 +636,7 @@ MerchantServiceUsageConfig:
     createBankAccount: "'Stripe'"
     retryBankAccountLink: "'Stripe'"
     getBankAccount: "'Stripe'"
+    createTransfer: "'Stripe'"
     backgroundVerification: "'Checkr'"
     sdkVerificationService: "'HyperVerge'"
     getDistancesForScheduledRides: "'OSRM'"

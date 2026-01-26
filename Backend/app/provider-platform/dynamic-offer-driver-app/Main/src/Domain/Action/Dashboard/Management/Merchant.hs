@@ -153,7 +153,7 @@ import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CashRidesCommissionChargeJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -369,11 +369,11 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
   case req.scheduledAt of
     Just utcTime -> do
       let diffTimeS = diffUTCTime utcTime now
-      triggerScheduler req.jobName req.jobData diffTimeS
+      triggerScheduler req.jobName req.jobData diffTimeS utcTime
     _ -> throwError $ InternalError "invalid scheduled at time"
   where
-    triggerScheduler :: Maybe Common.JobName -> Text -> NominalDiffTime -> Flow APISuccess
-    triggerScheduler jobName jobDataRaw diffTimeS = do
+    triggerScheduler :: Maybe Common.JobName -> Text -> NominalDiffTime -> UTCTime -> Flow APISuccess
+    triggerScheduler jobName jobDataRaw diffTimeS scheduledAt = do
       case jobName of
         Just Common.DriverFeeCalculationTrigger -> do
           let jobData' = decodeFromText jobDataRaw :: Maybe CalculateDriverFeesJobData
@@ -425,7 +425,27 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               createJobIn @_ @'CongestionCharge mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: CongestionChargeCalculationRequestJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
-        _ -> throwError $ InternalError "invalid job name"
+        Just Common.CashRidesCommissionChargeTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe CashRidesCommissionChargeJobData
+          case jobData' of
+            Just jobData -> do
+              -- validate job data
+              let timeBuffer = 300 :: NominalDiffTime -- seconds
+              unless (addUTCTime timeBuffer jobData.nextSettlementTime <= scheduledAt) $
+                throwError (InvalidRequest $ "Next settlement time should be not more than job schedule time, time buffer: " <> show timeBuffer)
+              mbMerchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+              let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
+              let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
+              unless (mbMerchantOpCityId == Just jobData.merchantOperatingCityId) $
+                throwError $ InvalidRequest "Invalid merchantOpCityId"
+              unless (mbMerchantId == Just jobData.merchantId) $
+                throwError $ InvalidRequest "Invalid merchantId"
+
+              createJobIn @_ @'CashRidesCommissionCharge mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: CashRidesCommissionChargeJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.SendManualPaymentLinkTrigger -> throwError $ InternalError "invalid job name"
+        Nothing -> throwError $ InternalError "invalid job name"
 
 ---------------------------------------------------------------------
 getMerchantConfigDriverPool :: ShortId DM.Merchant -> Context.City -> Maybe Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Flow Common.DriverPoolConfigRes

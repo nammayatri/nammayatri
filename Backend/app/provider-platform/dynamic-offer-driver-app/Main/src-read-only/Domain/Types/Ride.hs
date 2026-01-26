@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverGoHomeRequest
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Location
@@ -88,6 +89,8 @@ data Ride = Ride
     onlinePayment :: Kernel.Prelude.Bool,
     otp :: Kernel.Prelude.Text,
     passedThroughDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
+    paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     pickupDropOutsideOfThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     previousRideTripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     previousRideTripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

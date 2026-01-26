@@ -62,7 +62,7 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
   where
     refreshLink :: DDBA.DriverBankAccount -> DMPM.PaymentMode -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
     refreshLink bankAccount paymentMode = do
-      resp <- TPayment.retryAccountLink person.merchantId person.merchantOperatingCityId (Just paymentMode) bankAccount.accountId
+      resp <- TPayment.retryAccountLink person.merchantOperatingCityId (Just paymentMode) bankAccount.accountId
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
       QDBA.updateAccountLink (Just accountUrl) (Just resp.accountUrlExpiry) person.id
       return $
@@ -110,7 +110,7 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
                 idNumber,
                 mobileNumber = mobileCountryCode <> mobileNumber
               }
-      resp <- TPayment.createIndividualConnectAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) createAccountReq
+      resp <- TPayment.createIndividualConnectAccount person.merchantOperatingCityId (Just paymentMode) createAccountReq
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
       let driverBankAccount =
             DDBA.DriverBankAccount
@@ -160,7 +160,7 @@ getPersonRegisterBankAccountStatus person = do
             paymentMode
           }
     else do
-      resp <- TPayment.getAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) driverBankAccount.accountId
+      resp <- TPayment.getAccount person.merchantOperatingCityId (Just paymentMode) driverBankAccount.accountId
       QDBA.updateAccountStatus resp.chargesEnabled resp.detailsSubmitted person.id
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountResp

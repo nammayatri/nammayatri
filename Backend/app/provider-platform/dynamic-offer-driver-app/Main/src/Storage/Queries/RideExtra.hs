@@ -25,6 +25,7 @@ import Domain.Types.DriverInformation
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person
 import Domain.Types.Ride as DDR
 import Domain.Types.Ride as DR
@@ -991,3 +992,29 @@ findByIds ::
   m [Ride]
 findByIds rideIds = do
   findAllWithKV [Se.Is BeamR.id $ Se.In $ getId <$> rideIds]
+
+-- will not work for existing rides, where paymentInstrument and paymentMode are not populated yet
+findAllByCityStatusInstrumentModeAndTimeRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  DRide.RideStatus ->
+  DMPM.PaymentInstrument ->
+  DMPM.PaymentMode ->
+  UTCTime ->
+  UTCTime ->
+  m [Ride]
+findAllByCityStatusInstrumentModeAndTimeRange merchantOperatingCityId status paymentInstrument paymentMode from to = do
+  let paymentModeCond =
+        if paymentMode == DMPM.LIVE
+          then Se.Or [Se.Is BeamR.paymentMode $ Se.Eq (Just DMPM.LIVE), Se.Is BeamR.paymentMode $ Se.Eq Nothing]
+          else Se.Is BeamR.paymentMode $ Se.Eq (Just DMPM.TEST)
+  findAllWithKV
+    [ Se.And $
+        paymentModeCond :
+        [ Se.Is BeamR.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+          Se.Is BeamR.status $ Se.Eq status,
+          Se.Is BeamR.paymentInstrument $ Se.Eq (Just paymentInstrument),
+          Se.Is BeamR.tripEndTime $ Se.GreaterThanOrEq $ Just from, -- strictly include `from`
+          Se.Is BeamR.tripEndTime $ Se.LessThan $ Just to -- do not include `to`
+        ]
+    ]

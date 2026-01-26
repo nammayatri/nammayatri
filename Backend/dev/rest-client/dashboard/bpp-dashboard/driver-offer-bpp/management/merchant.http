@@ -402,3 +402,16 @@ file=null
 &defaultDriverExtra=null
 &address="Address"
 &canQueueUpOnGate=null
+
+###
+
+# @name postMerchantSchedulerTrigger
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/merchant/scheduler/trigger
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "scheduledAt": "2026-01-23T13:54:30Z",
+  "jobName": "CashRidesCommissionChargeTrigger",
+  "jobData": "{\"merchantId\":\"favorit0-0000-0000-0000-00000favorit\", \"merchantOperatingCityId\":\"favorit0-0000-0000-0000-00000000city\",\"nextSettlementTime\":\"2026-01-23T13:45:30Z\",\"paymentMode\":\"LIVE\",\"reSchedule\":false}"
+}

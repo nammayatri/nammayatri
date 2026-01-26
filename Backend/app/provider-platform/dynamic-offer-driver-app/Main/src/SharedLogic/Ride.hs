@@ -321,6 +321,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         vehicleServiceTierName = Just booking.vehicleServiceTierName,
         vehicleVariant = Just $ vehicle.variant,
         onlinePayment = onlinePayment,
+        paymentInstrument = booking.paymentInstrument,
+        paymentMode = booking.paymentMode,
         enableOtpLessRide = enableOtpLessRide,
         cancellationFeeIfCancelled = Nothing,
         tipAmount = Nothing,

@@ -260,3 +260,9 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN final_fare_policy_id characte
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cloud_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN payment_instrument text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN payment_mode text ;
