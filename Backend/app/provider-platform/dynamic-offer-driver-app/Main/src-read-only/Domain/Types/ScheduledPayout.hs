@@ -29,6 +29,16 @@ data ScheduledPayout = ScheduledPayout
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
-data ScheduledPayoutStatus = INITIATED | PROCESSING | CREDITED | AUTO_PAY_FAILED | RETRYING | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ScheduledPayoutStatus
+  = INITIATED
+  | PROCESSING
+  | CREDITED
+  | AUTO_PAY_FAILED
+  | RETRYING
+  | FAILED
+  | CANCELLED
+  | CASH_PAID
+  | CASH_PENDING
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledPayoutStatus)

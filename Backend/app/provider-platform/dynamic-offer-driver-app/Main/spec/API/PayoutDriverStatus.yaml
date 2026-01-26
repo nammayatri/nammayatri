@@ -19,6 +19,9 @@ types:
     createdAt: UTCTime
     updatedAt: UTCTime
 
+  DriverPayoutStatusRespSuccess:
+    payout: Maybe DriverPayoutStatusResp
+
   DriverPayoutStatusEvent:
     status: ScheduledPayoutStatus
     timestamp: UTCTime
@@ -32,4 +35,4 @@ apis:
       params:
         rideId: Text
       response:
-        type: API.Types.UI.PayoutDriverStatus.DriverPayoutStatusResp
+        type: API.Types.UI.PayoutDriverStatus.DriverPayoutStatusRespSuccess

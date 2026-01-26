@@ -464,7 +464,7 @@ tfPayments :: DSelect.DSelectRes -> BecknConfig -> RiderConfig -> Maybe [Spec.Pa
 tfPayments res bapConfig riderConfig = do
   let mPrice = Just res.estimate.estimatedFare
   let mkParams = SLMPM.mkBknPaymentParams res.paymentMethodInfo bapConfig riderConfig
-  Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee False res.paymentMode
+  Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee False res.paymentMode Nothing
 
 tfProvider :: DSelect.DSelectRes -> Spec.Provider
 tfProvider res =

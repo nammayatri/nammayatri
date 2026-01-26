@@ -9,7 +9,7 @@ VALUES
   , now()
   , 'yatri-00-0000-0000-0000-00000000city'
   , now(),
-  'FixedRoute',
+  'FixedRoutePickup',
   'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51'
   );
 
@@ -24,7 +24,7 @@ VALUES
   , now()
   , 'yatri-00-0000-0000-0000-00000000city'
   , now(),
-  'FixedRoute',
+  'FixedRouteDrop',
   'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51'
   );
 

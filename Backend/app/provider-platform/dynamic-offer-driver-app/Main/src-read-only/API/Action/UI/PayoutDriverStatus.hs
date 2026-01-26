@@ -23,7 +23,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "payout" :> Capture "rideId" Data.Text.Text :> "status" :> Get ('[JSON]) API.Types.UI.PayoutDriverStatus.DriverPayoutStatusResp)
+type API = (TokenAuth :> "payout" :> Capture "rideId" Data.Text.Text :> "status" :> Get '[JSON] API.Types.UI.PayoutDriverStatus.DriverPayoutStatusRespSuccess)
 
 handler :: Environment.FlowServer API
 handler = getPayoutStatus
@@ -34,6 +34,6 @@ getPayoutStatus ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Data.Text.Text ->
-    Environment.FlowHandler API.Types.UI.PayoutDriverStatus.DriverPayoutStatusResp
+    Environment.FlowHandler API.Types.UI.PayoutDriverStatus.DriverPayoutStatusRespSuccess
   )
 getPayoutStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PayoutDriverStatus.getPayoutStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

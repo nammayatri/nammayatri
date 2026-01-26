@@ -119,8 +119,8 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
             Just scheduledPayoutId -> do
               scheduledPayout <- QSPE.findById (Id scheduledPayoutId) >>= fromMaybeM (InternalError $ "Scheduled Payout Not Found: " <> show scheduledPayoutId)
               let newStatus = QSPE.castPayoutOrderStatusToScheduledPayoutStatus payoutStatus
-              when (scheduledPayout.status /= newStatus && scheduledPayout.status /= DSP.CREDITED) do
-                let statusMsg = "Juspay webhook: " <> show payoutStatus
+              when (scheduledPayout.status /= newStatus && scheduledPayout.status `notElem` [DSP.CREDITED, DSP.CASH_PAID, DSP.CASH_PENDING]) do
+                let statusMsg = "Bank Webhook: " <> show payoutStatus
                 QSPE.updateStatusWithHistoryById newStatus (Just statusMsg) scheduledPayout
         _ -> do
           unless (isSuccessStatus payoutOrder.status) do

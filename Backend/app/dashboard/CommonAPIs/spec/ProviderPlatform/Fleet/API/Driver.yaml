@@ -1420,8 +1420,8 @@ types:
   AddRidePayoutAccountNumberReq:
     - driverMobileNumber: Text
     - driverMobileNumberCountryCode: Text
-    - accountNumber: Text
-    - ifscCode: Text
+    - accountNumber: Maybe Text
+    - ifscCode: Maybe Text
     - bankName: Maybe Text
     - vehicleRegistrationNumber: Text
     - derive: "'HideSecrets"

@@ -56,6 +56,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverEarnings,
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
+    postDriverUpdateRCInvalidStatusByRCNumber,
   )
 where
 
@@ -371,3 +372,9 @@ postDriverUpdateMerchant merchantShortId opCity apiTokenInfo driverId req = do
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateMerchant) driverId req
+
+postDriverUpdateRCInvalidStatusByRCNumber :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateRCInvalidStatusByRCNumberReq -> Environment.Flow APISuccess)
+postDriverUpdateRCInvalidStatusByRCNumber merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateRCInvalidStatusByRCNumber) req)

@@ -50,7 +50,7 @@ tfOrder uiConfirm isValueAddNP bapConfig riderConfig = do
   let orderCancellationTerms_ = Nothing
   let orderId_ = Nothing
   let orderProvider_ = Just $ tfProvider uiConfirm
-  let orderPayments_ = Beckn.OnDemand.Utils.Init.mkPayment uiConfirm.paymentMethodInfo bapConfig riderConfig uiConfirm.city uiConfirm.isStripe uiConfirm.paymentMode & Just
+  let orderPayments_ = Beckn.OnDemand.Utils.Init.mkPayment uiConfirm.paymentInstrument uiConfirm.paymentMethodInfo bapConfig riderConfig uiConfirm.city uiConfirm.isStripe uiConfirm.paymentMode & Just
   let orderStatus_ = Nothing
   let orderQuote_ = Nothing
   let orderBilling_ = tfOrderBilling uiConfirm.riderPhone uiConfirm.riderName & Just
@@ -138,7 +138,35 @@ mkItemTags res =
   let itemTags = if maybe False Trip.isDeliveryTrip res.booking.tripCategory then mkDeliveryTagGroup res else []
       itemTags' = mkAdvancedBookingEnabledTagGroup res : itemTags
       itemTags'' = mkInsuranceTagGroup res : itemTags'
-   in itemTags''
+      itemTags''' = maybe itemTags'' (\displayId -> mkDisplayBookingIdTagGroup displayId : itemTags'') res.booking.displayBookingId
+   in itemTags'''
+
+mkDisplayBookingIdTagGroup :: Data.Text.Text -> Spec.TagGroup
+mkDisplayBookingIdTagGroup displayBookingId =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.BOOKING_INFO,
+              descriptorName = Just "Booking Info",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.DISPLAY_BOOKING_ID,
+                        descriptorName = Just "Display Booking ID",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = Just displayBookingId
+              }
+          ]
+    }
 
 mkAdvancedBookingEnabledTagGroup :: SharedLogic.Confirm.DConfirmRes -> Spec.TagGroup
 mkAdvancedBookingEnabledTagGroup res =

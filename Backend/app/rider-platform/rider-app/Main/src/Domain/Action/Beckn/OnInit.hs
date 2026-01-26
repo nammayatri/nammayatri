@@ -80,7 +80,8 @@ data OnInitRes = OnInitRes
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,
     tripCategory :: Maybe TripCategory,
-    paymentMode :: Maybe DMPM.PaymentMode
+    paymentMode :: Maybe DMPM.PaymentMode,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument
   }
   deriving (Generic, Show)
 
@@ -133,6 +134,7 @@ onInit req = do
             mbToLocation = mbToLocation,
             mbRiderName = decRider.firstName,
             transactionId = booking.transactionId,
+            paymentInstrument = booking.paymentInstrument,
             merchant = merchant,
             nightSafetyCheck = checkSafetySettingConstraint (Just safetySettings.enableUnexpectedEventsCheck) riderConfig now,
             enableFrequentLocationUpdates = checkSafetySettingConstraint safetySettings.aggregatedRideShareSetting riderConfig now,

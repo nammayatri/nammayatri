@@ -29,6 +29,9 @@ data PayoutStatus
   | AUTO_PAY_FAILED
   | RETRYING
   | FAILED
+  | CANCELLED
+  | CASH_PAID
+  | CASH_PENDING
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -56,7 +59,7 @@ data PayoutStatusResp = PayoutStatusResp
 instance Kernel.Types.HideSecrets.HideSecrets PayoutStatusResp where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("payout" :> (GetPayoutStatus :<|> PostPayoutCancel :<|> PostPayoutRetry))
+type API = ("payout" :> (GetPayoutStatus :<|> PostPayoutCancel :<|> PostPayoutRetry :<|> PostPayoutMarkCashPaid))
 
 type GetPayoutStatus = (Capture "rideId" Kernel.Prelude.Text :> "status" :> Get '[JSON] PayoutStatusResp)
 
@@ -64,21 +67,25 @@ type PostPayoutCancel = (Capture "rideId" Kernel.Prelude.Text :> "cancel" :> Req
 
 type PostPayoutRetry = (Capture "rideId" Kernel.Prelude.Text :> "retry" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostPayoutMarkCashPaid = (Capture "rideId" Kernel.Prelude.Text :> "markCashPaid" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
 data PayoutAPIs = PayoutAPIs
   { getPayoutStatus :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient PayoutStatusResp,
     postPayoutCancel :: Kernel.Prelude.Text -> PayoutCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPayoutRetry :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postPayoutRetry :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPayoutMarkCashPaid :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)
 mkPayoutAPIs payoutClient = (PayoutAPIs {..})
   where
-    getPayoutStatus :<|> postPayoutCancel :<|> postPayoutRetry = payoutClient
+    getPayoutStatus :<|> postPayoutCancel :<|> postPayoutRetry :<|> postPayoutMarkCashPaid = payoutClient
 
 data PayoutUserActionType
   = GET_PAYOUT_STATUS
   | POST_PAYOUT_CANCEL
   | POST_PAYOUT_RETRY
+  | POST_PAYOUT_MARK_CASH_PAID
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -51,6 +51,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.DisplayBookingId as DBI
 import SharedLogic.JobScheduler
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Payment as SPayment
@@ -102,6 +103,7 @@ data DConfirmRes = DConfirmRes
     maxEstimatedDistance :: Maybe Distance,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     isStripe :: Bool,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
     confirmResDetails :: Maybe DConfirmResDetails,
     isAdvanceBookingEnabled :: Maybe Bool,
     isInsured :: Maybe Bool,
@@ -160,7 +162,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId
+  (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
@@ -213,6 +215,7 @@ confirm DConfirmReq {..} = do
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,
         paymentMethodInfo = paymentMethodInfo,
+        paymentInstrument,
         confirmResDetails,
         isAdvanceBookingEnabled = searchRequest.isAdvanceBookingEnabled,
         isInsured = Just $ booking.isInsured,
@@ -294,6 +297,7 @@ buildBooking ::
     CacheFlow m r,
     HasFlowEnv m r '["version" ::: DeploymentVersion]
   ) =>
+  DM.Merchant ->
   Id DP.Person ->
   DSReq.SearchRequest ->
   Text ->
@@ -311,15 +315,17 @@ buildBooking ::
   Maybe DMPM.PaymentMode ->
   Maybe Text ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId = do
+buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId = do
   id <- generateGUID
+  let bookingId = Id id
+  displayBookingId <- Just <$> DBI.generateDisplayBookingId merchant.shortId bookingId now
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
   (isInsured, insuredAmount, driverInsuredAmount) <- isBookingInsured
   return $
     ( DRB.Booking
-        { id = Id id,
+        { id = bookingId,
           clientId = searchRequest.clientId,
           transactionId = searchRequest.id.getId,
           bppBookingId = Nothing,
