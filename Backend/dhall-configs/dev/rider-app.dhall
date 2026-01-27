@@ -6,9 +6,16 @@ let globalCommon = ../generic/common.dhall
 
 let ondcUrl = "https://analytics-api.aws.ondc.org/v1/api/push-txn-logs"
 
-let sosAlertsTopicARN = common.sosAlertsTopicARN
 
-let slackNotificationConfig = common.slackNotificationConfig
+let sosAlertsTopicARN = "arn:aws:chatbot::463356420488:chat-configuration/slack-channel/sos-notifications"
+
+
+
+let slackNotificationConfig =
+    { snsTopicArn = Some sosAlertsTopicARN
+    , gcpProjectId = Some "ny-sandbox"
+    , gcpTopicId = Some "slack-alerts"
+    }
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -260,6 +267,7 @@ let RiderJobType =
       | NyRegularInstance
       | CrisRecon
       | PaymentOrderStatusCheck
+      | PartnerInvoiceDataExport
       >
 
 let jobInfoMapx =
@@ -298,6 +306,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.NyRegularMaster, mapValue = True }
       , { mapKey = RiderJobType.CrisRecon, mapValue = True }
       , { mapKey = RiderJobType.PaymentOrderStatusCheck, mapValue = True }
+      , { mapKey = RiderJobType.PartnerInvoiceDataExport, mapValue = True }
       ]
 
 let cacConfig =
@@ -356,6 +365,12 @@ let disableViaPointTimetableCheck = False
 
 let noSignatureSubscribers =
       [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
+
+
+
+let emailServiceConfig =
+      { sendGridUrl = Some "https://api.sendgrid.com/v3/mail/send"
+      }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -458,6 +473,13 @@ in  { esqDBCfg
     , frfsMetricsRateLimitWindowSec = +60
     , corporatePartnerApiToken = sec.corporatePartnerApiToken
     , noSignatureSubscribers
+    , sftpConfig =
+      { host = "localhost"
+      , port = +22
+      , username = "dev"
+      , privateKeyPath = "/tmp/private_key"
+      , remotePath = "/tmp/remote_path"
+      }
     , blackListedJobs = [] : List Text
-    , emailServiceConfig = common.emailServiceConfig
+    , emailServiceConfig
     }

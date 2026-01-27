@@ -4,9 +4,15 @@ let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let globalCommon = ../generic/common.dhall
 
-let sosAlertsTopicARN = common.sosAlertsTopicARN
+let sosAlertsTopicARN = "arn:aws:chatbot::463356420488:chat-configuration/slack-channel/sos-notifications"
 
-let slackNotificationConfig = common.slackNotificationConfig
+
+let slackNotificationConfig =
+    { snsTopicArn = Some sosAlertsTopicARN
+    , gcpProjectId = Some "ny-sandbox"
+    , gcpTopicId = Some "slack-alerts"
+    }
+
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -391,6 +397,12 @@ let bapHostRedirectMap =
         }
       ]
 
+
+
+let emailServiceConfig =
+      { sendGridUrl = Some "https://api.sendgrid.com/v3/mail/send"
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -500,5 +512,5 @@ in  { esqDBCfg
     , noSignatureSubscribers
     , bapHostRedirectMap
     , blackListedJobs = [] : List Text
-    , emailServiceConfig = common.emailServiceConfig
+    , emailServiceConfig
     }
