@@ -13,7 +13,9 @@ data ConductorStatsT f = ConductorStatsT
   { bookingDate :: C f Day,
     conductorTokenNo :: C f Text,
     numberTicketsBooked :: C f Int,
-    totalRevenueInADay :: C f Double
+    totalRevenueInADay :: C f Double,
+    numberOfNewCustomers :: C f (Maybe Int),
+    depotNo :: C f (Maybe Text)
   }
   deriving (Generic)
 
@@ -23,7 +25,9 @@ conductorStatsTTable =
     { bookingDate = "booking_date",
       conductorTokenNo = "conductor_token_no",
       numberTicketsBooked = "number_tickets_booked",
-      totalRevenueInADay = "total_revenue_in_a_day"
+      totalRevenueInADay = "total_revenue_in_a_day",
+      numberOfNewCustomers = "number_of_new_customers",
+      depotNo = "depot_no"
     }
 
 type ConductorStats = ConductorStatsT Identity
@@ -41,4 +45,21 @@ findConductorStatsByToken token = do
     CH.select $
       CH.filter_
         (\row -> row.conductorTokenNo CH.==. token)
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE conductorStatsTTable)
+
+findConductorStatsBetween ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Text ->
+  Day ->
+  Day ->
+  m [ConductorStats]
+findConductorStatsBetween token fromDay toDay =
+  CH.findAll $
+    CH.select $
+      CH.filter_
+        (\row ->
+            row.conductorTokenNo CH.==. token
+              CH.&&. row.bookingDate CH.>=. fromDay
+              CH.&&. row.bookingDate CH.<=. toDay
+        )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE conductorStatsTTable)
