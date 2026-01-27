@@ -59,7 +59,7 @@ data PayoutStatusResp = PayoutStatusResp
 instance Kernel.Types.HideSecrets.HideSecrets PayoutStatusResp where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("payout" :> (GetPayoutStatus :<|> PostPayoutCancel :<|> PostPayoutRetry :<|> PostPayoutMarkCashPaid))
+type API = ("payout" :> (GetPayoutStatus :<|> PostPayoutCancel :<|> PostPayoutRetry :<|> PostPayoutMarkCashPaidHelper))
 
 type GetPayoutStatus = (Capture "rideId" Kernel.Prelude.Text :> "status" :> Get '[JSON] PayoutStatusResp)
 
@@ -69,11 +69,13 @@ type PostPayoutRetry = (Capture "rideId" Kernel.Prelude.Text :> "retry" :> Post 
 
 type PostPayoutMarkCashPaid = (Capture "rideId" Kernel.Prelude.Text :> "markCashPaid" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostPayoutMarkCashPaidHelper = (Capture "rideId" Kernel.Prelude.Text :> "markCashPaid" :> QueryParam "vendorId" Kernel.Prelude.Text :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
 data PayoutAPIs = PayoutAPIs
   { getPayoutStatus :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient PayoutStatusResp,
     postPayoutCancel :: Kernel.Prelude.Text -> PayoutCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPayoutRetry :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPayoutMarkCashPaid :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postPayoutMarkCashPaid :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)

@@ -22,6 +22,7 @@ ScheduledPayout:
     failureReason: Maybe Text
     payoutTransactionId: Maybe Text
     expectedCreditTime: Maybe UTCTime
+    markCashPaidBy: Maybe (Id Person)
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -41,6 +42,11 @@ ScheduledPayout:
     updateStatusById:
       kvFunction: updateOneWithKV
       params: [status]
+      where: id
+
+    updateMarkCashPaidByById:
+      kvFunction: updateOneWithKV
+      params: [markCashPaidBy]
       where: id
 
     updateStatusWithReasonByRideId:

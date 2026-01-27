@@ -14,6 +14,7 @@ import Data.Maybe (listToMaybe)
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.PayoutStatusHistory as DPSH
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -31,6 +32,7 @@ import qualified SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout as SpecialZ
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.PayoutStatusHistory as QPSH
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSP
 import Tools.Error
@@ -161,15 +163,20 @@ postPayoutMarkCashPaid ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postPayoutMarkCashPaid _merchantShortId _opCity rideId = do
+postPayoutMarkCashPaid _merchantShortId _opCity rideId mbAgentIdText = do
+  agentIdText <- mbAgentIdText & fromMaybeM (InvalidRequest "Agent Id is required")
   payout <- QSP.findByRideId rideId >>= fromMaybeM (InvalidRequest "Payout not found for this ride")
+  agent <- QPerson.findById (Kernel.Types.Id.Id agentIdText) >>= fromMaybeM (InvalidRequest $ "Agent not found for id: " <> agentIdText)
   when (payout.status == DSP.CREDITED) $ do
     throwError $ InvalidRequest "Payout is already credited online via bank!"
   when (payout.status == DSP.PROCESSING) $ do
     throwError $ InvalidRequest "Payout is already being processed for online credit!"
   when (payout.status == DSP.CASH_PAID) $ do
     throwError $ InvalidRequest "Payout is already marked as cash paid!"
-  QSP.updateStatusWithHistoryById DSP.CASH_PAID (Just "Cash Paid Marked!") payout
+  let agentName = agent.firstName <> " " <> (fromMaybe "" agent.lastName)
+  QSP.updateStatusWithHistoryById DSP.CASH_PAID (Just $ "Cash Paid Marked by " <> agentName) payout
+  QSP.updateMarkCashPaidByById (Just agent.id) payout.id
   logInfo $ "Cash paid marked for rideId: " <> rideId
   pure Kernel.Types.APISuccess.Success

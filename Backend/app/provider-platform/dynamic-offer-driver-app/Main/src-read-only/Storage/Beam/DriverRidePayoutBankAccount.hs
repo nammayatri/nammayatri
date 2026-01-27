@@ -12,10 +12,10 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DriverRidePayoutBankAccountT f = DriverRidePayoutBankAccountT
-  { bankAccountNumberEncrypted :: B.C f Kernel.Prelude.Text,
-    bankAccountNumberHash :: B.C f Kernel.External.Encryption.DbHash,
-    bankIfscCodeEncrypted :: B.C f Kernel.Prelude.Text,
-    bankIfscCodeHash :: B.C f Kernel.External.Encryption.DbHash,
+  { bankAccountNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bankAccountNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    bankIfscCodeEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bankIfscCodeHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     driverId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     rcId :: B.C f Kernel.Prelude.Text,

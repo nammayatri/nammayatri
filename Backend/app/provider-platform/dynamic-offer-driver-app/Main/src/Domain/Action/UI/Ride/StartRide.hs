@@ -249,6 +249,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                         retryCount = Nothing,
                         failureReason = Nothing,
                         payoutTransactionId = Nothing,
+                        markCashPaidBy = Nothing,
                         expectedCreditTime = if payoutStatus == DSP.INITIATED then Just scheduledTime else Nothing,
                         createdAt = now,
                         updatedAt = now,

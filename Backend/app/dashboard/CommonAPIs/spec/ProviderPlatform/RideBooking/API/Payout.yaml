@@ -38,6 +38,16 @@ apis:
         rideId: Text
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{rideId}/markCashPaid
+            auth: ApiAuthV2
+            params:
+              rideId: Text
+            query:
+              - vendorId: Text
+            response:
+              type: APISuccess
 
 types:
   PayoutStatusResp:

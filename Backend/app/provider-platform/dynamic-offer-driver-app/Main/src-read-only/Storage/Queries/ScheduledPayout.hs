@@ -4,6 +4,7 @@
 
 module Storage.Queries.ScheduledPayout where
 
+import qualified Domain.Types.Person
 import qualified Domain.Types.ScheduledPayout
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -33,6 +34,13 @@ findByRideId rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq rideId]
 incrementRetryCountByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> m ())
 incrementRetryCountByRideId retryCount rideId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.retryCount retryCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.rideId $ Se.Eq rideId]
 
+updateMarkCashPaidByById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout -> m ())
+updateMarkCashPaidByById markCashPaidBy id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.markCashPaidBy (Kernel.Types.Id.getId <$> markCashPaidBy), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePayoutTransactionIdById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout -> m ())
 updatePayoutTransactionIdById payoutTransactionId id = do
   _now <- getCurrentTime
@@ -60,6 +68,7 @@ updateByPrimaryKey (Domain.Types.ScheduledPayout.ScheduledPayout {..}) = do
       Se.Set Beam.driverId driverId,
       Se.Set Beam.expectedCreditTime expectedCreditTime,
       Se.Set Beam.failureReason failureReason,
+      Se.Set Beam.markCashPaidBy (Kernel.Types.Id.getId <$> markCashPaidBy),
       Se.Set Beam.payoutTransactionId payoutTransactionId,
       Se.Set Beam.retryCount retryCount,
       Se.Set Beam.rideId rideId,
@@ -82,6 +91,7 @@ instance FromTType' Beam.ScheduledPayout Domain.Types.ScheduledPayout.ScheduledP
             expectedCreditTime = expectedCreditTime,
             failureReason = failureReason,
             id = Kernel.Types.Id.Id id,
+            markCashPaidBy = Kernel.Types.Id.Id <$> markCashPaidBy,
             payoutTransactionId = payoutTransactionId,
             retryCount = retryCount,
             rideId = rideId,
@@ -101,6 +111,7 @@ instance ToTType' Beam.ScheduledPayout Domain.Types.ScheduledPayout.ScheduledPay
         Beam.expectedCreditTime = expectedCreditTime,
         Beam.failureReason = failureReason,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.markCashPaidBy = Kernel.Types.Id.getId <$> markCashPaidBy,
         Beam.payoutTransactionId = payoutTransactionId,
         Beam.retryCount = retryCount,
         Beam.rideId = rideId,

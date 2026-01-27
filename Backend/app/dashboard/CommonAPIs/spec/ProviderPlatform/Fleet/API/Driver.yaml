@@ -1632,6 +1632,8 @@ types:
     - fleetOwnerName: Text
     - driverMobileNumber: Maybe Text
     - driverMobileCountryCode: Maybe Text
+    - driverAccountNumber: Maybe Text
+    - driverIfscCode: Maybe Text
   FleetBadgeRes:
     - recordType: NewType
     - fleetBadgeInfos: [FleetBadgesAPIEntity]

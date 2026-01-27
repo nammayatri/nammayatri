@@ -23,6 +23,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import qualified SharedLogic.DisplayBookingId as DBI
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as SQB
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
@@ -65,7 +66,7 @@ getBookingList ::
   Environment.Flow Domain.Action.UI.Booking.BookingListRes
 getBookingList merchantShortId _opCity personId mbLimit mbOffset mbOnlyActive bookingStatus = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.Booking.bookingList (Just personId, m.id) Nothing False mbLimit mbOffset mbOnlyActive bookingStatus Nothing Nothing Nothing []
+  Domain.Action.UI.Booking.bookingList (Just personId, m.id) Nothing False mbLimit mbOffset mbOnlyActive bookingStatus Nothing Nothing Nothing [] Nothing
 
 getBookingAgentL1List ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -78,8 +79,9 @@ getBookingAgentL1List ::
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Environment.Flow Domain.Action.UI.Booking.BookingListRes
-getBookingAgentL1List merchantShortId _opCity mbAgentId mbLimit mbOffset mbBookingStatus mbCustomerPhoneNo mbFromDate mbToDate = do
+getBookingAgentL1List merchantShortId opCity mbAgentId mbLimit mbOffset mbBookingStatus mbCustomerPhoneNo mbFromDate mbToDate = do
   m <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let mbFromDateMS = mbFromDate <&> round . utcToMilliseconds
       mbToDateMS = mbToDate <&> round . utcToMilliseconds
   mbPersonId <-
@@ -89,7 +91,7 @@ getBookingAgentL1List merchantShortId _opCity mbAgentId mbLimit mbOffset mbBooki
         mbPerson <- QPerson.findByMobileNumberAndMerchantId "+91" mobileNumberHash m.id
         return $ mbPerson <&> (.id)
       Nothing -> return Nothing
-  Domain.Action.UI.Booking.bookingList (mbPersonId, m.id) mbAgentId True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS []
+  Domain.Action.UI.Booking.bookingList (mbPersonId, m.id) mbAgentId True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS [] (Just merchantOperatingCity.id)
 
 getBookingAgentL2List ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -101,8 +103,9 @@ getBookingAgentL2List ::
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Environment.Flow Domain.Action.UI.Booking.BookingListRes
-getBookingAgentL2List merchantShortId _opCity mbLimit mbOffset mbBookingStatus mbCustomerPhoneNo mbFromDate mbToDate = do
+getBookingAgentL2List merchantShortId opCity mbLimit mbOffset mbBookingStatus mbCustomerPhoneNo mbFromDate mbToDate = do
   m <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let mbFromDateMS = mbFromDate <&> round . utcToMilliseconds
       mbToDateMS = mbToDate <&> round . utcToMilliseconds
   mbPersonId <-
@@ -112,4 +115,4 @@ getBookingAgentL2List merchantShortId _opCity mbLimit mbOffset mbBookingStatus m
         mbPerson <- QPerson.findByMobileNumberAndMerchantId "+91" mobileNumberHash m.id
         return $ mbPerson <&> (.id)
       Nothing -> return Nothing
-  Domain.Action.UI.Booking.bookingList (mbPersonId, m.id) Nothing True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS []
+  Domain.Action.UI.Booking.bookingList (mbPersonId, m.id) Nothing True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS [] (Just merchantOperatingCity.id)
