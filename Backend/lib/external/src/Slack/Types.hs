@@ -13,20 +13,15 @@
 -}
 
 module Slack.Types
-  ( CloudManager (..),
-    SlackNotificationConfig (..),
+  ( SlackNotificationConfig (..),
   )
 where
 
 import Kernel.Prelude
 import Kernel.Utils.Dhall (FromDhall)
 
-data CloudManager = AWS | GCP
-  deriving (Show, Read, Eq, Generic, FromDhall)
-
 data SlackNotificationConfig = SlackNotificationConfig
-  { cloudManager :: CloudManager,
-    snsTopicArn :: Maybe Text,
+  { snsTopicArn :: Maybe Text,
     gcpProjectId :: Maybe Text,
     gcpTopicId :: Maybe Text
   }

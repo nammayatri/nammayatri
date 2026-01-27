@@ -1,0 +1,75 @@
+{-
+ Copyright 2022-23, Juspay India Pvt Ltd
+
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
+module Email.Flow
+  ( sendEmail,
+    sendMagicLinkEmail,
+    sendBusinessVerificationEmail,
+    sendEmailWithAttachment,
+    module Email.Types,
+  )
+where
+
+import qualified Data.Text as T
+import qualified Email.AWS.Flow as AWS
+import qualified Email.GCP.Flow as GCP
+import Email.Types
+import Kernel.Prelude
+
+
+import Kernel.Types.Version (CloudType (..))
+import Kernel.Utils.App (lookupCloudType)
+
+getSendGridUrl :: EmailServiceConfig -> String
+getSendGridUrl config = maybe "" T.unpack config.sendGridUrl
+
+sendEmail :: EmailServiceConfig -> EmailOTPConfig -> [Text] -> Text -> IO ()
+sendEmail serviceConfig emailConfig to otpCode = do
+  cloudType <- lookupCloudType
+  case cloudType of
+    AWS -> AWS.sendEmail emailConfig to otpCode
+    GCP -> GCP.sendEmail (getSendGridUrl serviceConfig) emailConfig to otpCode
+    UNAVAILABLE -> error "CloudType UNAVAILABLE: Cannot route email"
+
+sendMagicLinkEmail :: EmailServiceConfig -> EmailMagicLinkConfig -> [Text] -> Text -> IO ()
+sendMagicLinkEmail serviceConfig emailConfig to token = do
+  cloudType <- lookupCloudType
+  case cloudType of
+    AWS -> AWS.sendMagicLinkEmail emailConfig to token
+    GCP -> GCP.sendMagicLinkEmail (getSendGridUrl serviceConfig) emailConfig to token
+    UNAVAILABLE -> error "CloudType UNAVAILABLE: Cannot route magic link email"
+
+sendBusinessVerificationEmail :: EmailServiceConfig -> EmailBusinessVerificationConfig -> [Text] -> Text -> Text -> IO ()
+sendBusinessVerificationEmail serviceConfig emailConfig to otpCode token = do
+  cloudType <- lookupCloudType
+  case cloudType of
+    AWS -> AWS.sendBusinessVerificationEmail emailConfig to otpCode token
+    GCP -> GCP.sendBusinessVerificationEmail (getSendGridUrl serviceConfig) emailConfig to otpCode token
+    UNAVAILABLE -> error "CloudType UNAVAILABLE: Cannot route business verification email"
+
+sendEmailWithAttachment ::
+  EmailServiceConfig ->
+  Text ->    -- From email
+  [Text] ->  -- To emails
+  Text ->    -- Subject
+  Text ->    -- Body text
+  FilePath ->  -- Attachment file path
+  Text ->    -- Attachment filename
+  IO ()
+sendEmailWithAttachment serviceConfig from to subject bodyText filePath fileName = do
+  cloudType <- lookupCloudType
+  case cloudType of
+    AWS -> AWS.sendEmailWithAttachment from to subject bodyText filePath fileName
+    GCP -> GCP.sendEmailWithAttachment (getSendGridUrl serviceConfig) from to subject bodyText filePath fileName
+    UNAVAILABLE -> error "CloudType UNAVAILABLE: Cannot route email with attachment"

@@ -21,6 +21,7 @@ where
 
 import qualified API.Types.UI.DriverProfile as DriverProfileTypes
 import Control.Applicative ((<|>))
+import qualified Email.Types
 import Data.Aeson as DA
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
@@ -52,6 +53,7 @@ data AuthData = AuthData
 
 postDriverProfileUpdateAuthDataTriggerOTP ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "emailServiceConfig" r Email.Types.EmailServiceConfig,
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -94,6 +96,7 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
   where
     storeAndSendOTP ::
       ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+        HasField "emailServiceConfig" r Email.Types.EmailServiceConfig,
         CacheFlow m r,
         EsqDBFlow m r,
         EncFlow m r

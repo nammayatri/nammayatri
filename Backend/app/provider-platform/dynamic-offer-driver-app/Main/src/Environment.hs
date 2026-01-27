@@ -70,6 +70,7 @@ import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
+import Email.Types (EmailServiceConfig)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -155,6 +156,7 @@ data AppCfg = AppCfg
     quoteRespondCoolDown :: Int,
     sosAlertsTopicARN :: Text,
     slackNotificationConfig :: SlackNotificationConfig,
+    emailServiceConfig :: EmailServiceConfig,
     ondcRegistryUrl :: BaseUrl,
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
@@ -268,6 +270,7 @@ data AppEnv = AppEnv
     quoteRespondCoolDown :: Int,
     sosAlertsTopicARN :: Text,
     slackNotificationConfig :: SlackNotificationConfig,
+    emailServiceConfig :: EmailServiceConfig,
     psqlConn :: PG.Connection,
     serviceClickhouseCfg :: ClickhouseCfg,
     dashboardClickhouseCfg :: ClickhouseCfg,

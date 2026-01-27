@@ -12,7 +12,13 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Email.Types where
+module Email.Types
+  ( EmailOTPConfig (..),
+    EmailMagicLinkConfig (..),
+    EmailBusinessVerificationConfig (..),
+    EmailServiceConfig (..),
+  )
+where
 
 import Data.Aeson as A
 import Data.ByteString (ByteString)
@@ -22,6 +28,12 @@ import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import Kernel.Prelude
+import Kernel.Utils.Dhall (FromDhall)
+
+data EmailServiceConfig = EmailServiceConfig
+  { sendGridUrl :: Maybe Text
+  }
+  deriving (Generic, FromDhall)
 
 data EmailOTPConfig = EmailOTPConfig
   { fromEmail :: Text,

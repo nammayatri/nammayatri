@@ -68,7 +68,8 @@ import qualified Domain.Types.PersonStats as DPS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.Yudhishthira as Y
-import qualified Email.AWS.Flow as Email
+import qualified Email.Flow as Email
+import Email.Types (EmailServiceConfig)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
@@ -95,6 +96,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import Kernel.Utils.App (lookupCloudType)
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.MerchantConfig as SMC
@@ -267,7 +269,8 @@ findReusableToken personId = do
   return $ listToMaybe $ sortOn (Down . (.updatedAt)) validTokens
 
 auth ::
-  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "kafkaProducerTools" ::: KafkaProducerTools, "cloudType" ::: Maybe CloudType],
+  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "emailServiceConfig" r EmailServiceConfig,
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
     ClickhouseFlow m r,
@@ -308,7 +311,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       else
         QMerchant.findByShortId merchantTemp.fallbackShortId
           >>= fromMaybeM (MerchantNotFound $ getShortId merchantTemp.fallbackShortId)
-  cloudType <- asks (.cloudType)
+  cloudType <- Just <$> liftIO lookupCloudType
   (person, otpChannel) <-
     case identifierType of
       SP.MOBILENUMBER -> do
@@ -941,6 +944,7 @@ checkPersonExists entityId =
 
 resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "emailServiceConfig" r EmailServiceConfig,
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
@@ -1100,6 +1104,7 @@ data VerifyBusinessEmailRes = VerifyBusinessEmailRes
 
 sendBusinessEmailVerification ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "apiRateLimitOptions" ::: APIRateLimitOptions],
+    HasField "emailServiceConfig" r EmailServiceConfig,
     CacheFlow m r,
     EsqDBFlow m r,
     DB.EsqDBReplicaFlow m r,
@@ -1117,6 +1122,7 @@ sendBusinessEmailVerification personId merchantId merchantOperatingCityId = do
   decryptedBusinessEmail <- decrypt businessEmail
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   emailBusinessVerificationConfig <- riderConfig.emailBusinessVerificationConfig & fromMaybeM (RiderConfigNotFound $ "emailBusinessVerificationConfig not found for merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  emailServiceConfig <- asks (.emailServiceConfig)
 
   -- Generate BOTH OTP and magic link token
   otp <- generateOTPCode
@@ -1151,7 +1157,7 @@ sendBusinessEmailVerification personId merchantId merchantOperatingCityId = do
 
   -- Send email with BOTH OTP and magic link
   withLogTag ("personId_" <> getId personId) $ do
-    result <- withTryCatch "sendBusinessEmailVerification" $ L.runIO $ Email.sendBusinessVerificationEmail emailBusinessVerificationConfig [decryptedBusinessEmail] otp verificationToken
+    result <- withTryCatch "sendBusinessEmailVerification" $ L.runIO $ Email.sendBusinessVerificationEmail emailServiceConfig emailBusinessVerificationConfig [decryptedBusinessEmail] otp verificationToken
     case result of
       Left err -> throwError $ mapEmailError err
       Right _ -> return ()
@@ -1234,6 +1240,7 @@ verifyBusinessEmail mbPersonId req = do
 
 resendBusinessEmailVerification ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "apiRateLimitOptions" ::: APIRateLimitOptions],
+    HasField "emailServiceConfig" r EmailServiceConfig,
     CacheFlow m r,
     EsqDBFlow m r,
     DB.EsqDBReplicaFlow m r,
@@ -1254,6 +1261,7 @@ resendBusinessEmailVerification personId _merchantId merchantOperatingCityId = d
 
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   emailBusinessVerificationConfig <- riderConfig.emailBusinessVerificationConfig & fromMaybeM (RiderConfigNotFound $ "emailBusinessVerificationConfig not found for merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  emailServiceConfig <- asks (.emailServiceConfig)
 
   -- Find latest business email verification token for this person
   regTokens <- RegistrationToken.findAllByPersonId personId
@@ -1282,7 +1290,7 @@ resendBusinessEmailVerification personId _merchantId merchantOperatingCityId = d
 
   -- Send email with new OTP and magic link
   withLogTag ("personId_" <> getId personId) $ do
-    result <- withTryCatch "resendBusinessEmailVerification" $ L.runIO $ Email.sendBusinessVerificationEmail emailBusinessVerificationConfig [decryptedBusinessEmail] newOtp newVerificationToken
+    result <- withTryCatch "resendBusinessEmailVerification" $ L.runIO $ Email.sendBusinessVerificationEmail emailServiceConfig emailBusinessVerificationConfig [decryptedBusinessEmail] newOtp newVerificationToken
     case result of
       Left err -> throwError $ mapEmailError err
       Right _ -> return ()

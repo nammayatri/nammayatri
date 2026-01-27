@@ -22,8 +22,8 @@ where
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.Person as Person
-import qualified Email.AWS.Flow as Email
-import qualified Email.Types as EmailTypes
+import qualified Email.Flow as Email
+import Email.Types (EmailOTPConfig, EmailServiceConfig)
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Sms.Config
@@ -43,6 +43,7 @@ defaultOTPChannel = SMS
 
 sendOTP ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "emailServiceConfig" r EmailServiceConfig,
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r
@@ -55,7 +56,7 @@ sendOTP ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
-  Maybe EmailTypes.EmailOTPConfig ->
+  Maybe EmailOTPConfig ->
   Maybe Text ->
   m ()
 sendOTP otpChannel otpCode personId merchantId merchantOperatingCityId mbCountryCode mbMobileNumber mbEmail mbEmailOTPConfig mbSenderHash = do
@@ -87,5 +88,6 @@ sendOTP otpChannel otpCode personId merchantId merchantOperatingCityId mbCountry
     EMAIL -> do
       receiverEmail <- mbEmail & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
       emailOTPConfig <- mbEmailOTPConfig & fromMaybeM (RiderConfigNotFound $ "Email OTP config not found for merchantOperatingCityId:- " <> getId merchantOperatingCityId)
+      emailServiceConfig <- asks (.emailServiceConfig)
       withLogTag ("personId_" <> getId personId) $ do
-        L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
+        L.runIO $ Email.sendEmail emailServiceConfig emailOTPConfig [receiverEmail] otpCode

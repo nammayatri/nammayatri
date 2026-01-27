@@ -38,6 +38,8 @@ library
       ChatCompletion.Interface.Types
       ChatCompletion.Types
       Email.AWS.Flow
+      Email.Flow
+      Email.GCP.Flow
       Email.Types
       KafkaLogs.TransactionLogs
       Slack.AWS.Flow
@@ -125,7 +127,10 @@ library
     , hedis
     , hex-text
     , hspec
+    , http-client
+    , http-client-tls
     , http-media
+    , http-types
     , hw-kafka-client
     , jwt
     , kleene
