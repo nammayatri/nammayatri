@@ -500,4 +500,5 @@ in  { esqDBCfg
     , noSignatureSubscribers
     , bapHostRedirectMap
     , blackListedJobs = [] : List Text
+    , emailServiceConfig = common.emailServiceConfig
     }

@@ -49,7 +49,7 @@ let emailServiceConfig =
       { sendGridUrl = Some sendGridUrl
       }
 
-let SlackNotificationConfig =
+let slackNotificationConfig =
       { snsTopicArn = Some sosAlertsTopicARN
       , gcpProjectId = Some GCPProjectId
       , gcpTopicId = Some GCPTopicId
@@ -106,4 +106,6 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , ondcGatewayUrl
     , nyRegistryUrl
     , nyGatewayUrl
+    , emailServiceConfig
+    , slackNotificationConfig
     }

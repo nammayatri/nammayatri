@@ -459,4 +459,5 @@ in  { esqDBCfg
     , corporatePartnerApiToken = sec.corporatePartnerApiToken
     , noSignatureSubscribers
     , blackListedJobs = [] : List Text
+    , emailServiceConfig = common.emailServiceConfig
     }
