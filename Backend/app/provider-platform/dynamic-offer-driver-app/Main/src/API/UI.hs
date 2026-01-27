@@ -35,6 +35,7 @@ import qualified API.Action.UI.Merchant as Merchant
 import qualified API.Action.UI.MeterRide as MeterRide
 import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.Operator as Operator
+import qualified API.Action.UI.PayoutDriverStatus as PayoutDriverStatus
 import qualified API.Action.UI.Penalty as Penalty
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
@@ -142,6 +143,7 @@ type API =
            :<|> SubscriptionTransaction.API
            :<|> Penalty.API
            :<|> FleetOwnerList.API
+           :<|> PayoutDriverStatus.API
            :<|> StclMembership.API
        )
 
@@ -205,4 +207,5 @@ handler =
     :<|> SubscriptionTransaction.handler
     :<|> Penalty.handler
     :<|> FleetOwnerList.handler
+    :<|> PayoutDriverStatus.handler
     :<|> StclMembership.handler
