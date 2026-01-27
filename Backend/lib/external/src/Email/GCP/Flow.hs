@@ -162,13 +162,13 @@ sendBusinessVerificationEmail apiUrl config to otpCode token = do
   sendViaSendGrid apiUrl emailData
 
 sendEmailWithAttachment ::
-  String ->  -- API URL
-  Text ->    -- From email
-  [Text] ->  -- To emails
-  Text ->    -- Subject
-  Text ->    -- Body text
-  FilePath ->  -- PDF file path
-  Text ->    -- Attachment filename
+  String -> -- API URL
+  Text -> -- From email
+  [Text] -> -- To emails
+  Text -> -- Subject
+  Text -> -- Body text
+  FilePath -> -- PDF file path
+  Text -> -- Attachment filename
   IO ()
 sendEmailWithAttachment apiUrl from to subject bodyText pdfPath fileName = do
   -- Check if file exists

@@ -479,12 +479,13 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   let newMerchantShortId = maybe merchantShortId (.shortId) mbNewMerchant
   -- city
-  let mbNewOperatingCity =
-        case cityAlreadyCreated of
-          Nothing -> do
-            let newOperatingCity = buildMerchantOperatingCity newMerchantId newMerchantOperatingCityId now newMerchantShortId req.driverOfferMerchantOperatingCityId
-            Just newOperatingCity
-          _ -> Nothing
+  mbNewOperatingCity <-
+    case cityAlreadyCreated of
+      Nothing -> do
+        cityStdCode <- getCityStdCode req.city req.cityStdCode >>= fromMaybeM (InvalidRequest "City std code not found")
+        let newOperatingCity = buildMerchantOperatingCity newMerchantId newMerchantOperatingCityId now newMerchantShortId req.driverOfferMerchantOperatingCityId cityStdCode
+        return $ Just newOperatingCity
+      _ -> return Nothing
 
   -- merchant message
   mbMerchantMessages <-
@@ -690,6 +691,13 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
     )
   pure $ Common.CreateMerchantOperatingCityRes newMerchantOperatingCityId.getId
   where
+    getCityStdCode newCity mbCityStdCode = do
+      mbMerchantOperatingCity <- CQMOC.findByCity newCity
+      case (mbMerchantOperatingCity >>= (.stdCode), mbCityStdCode) of
+        (_, Just cityStdCode) -> return $ Just cityStdCode
+        (Just merchantOpCityStdCode, _) -> return $ Just merchantOpCityStdCode
+        (_, _) -> return Nothing
+
     updateGeoRestriction = \case
       Unrestricted -> Unrestricted
       Regions regions -> Regions $ regions <> [show req.city]
@@ -731,7 +739,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           ..
         }
 
-    buildMerchantOperatingCity newMerchantId cityId currentTime newMerchantShortId driverMerchantCityId = do
+    buildMerchantOperatingCity newMerchantId cityId currentTime newMerchantShortId driverMerchantCityId cityStdCode = do
       DMOC.MerchantOperatingCity
         { id = cityId,
           merchantId = newMerchantId,
@@ -741,6 +749,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           long = req.long,
           city = req.city,
           state = req.state,
+          stdCode = Just cityStdCode,
           country = req.country,
           distanceUnit = fromMaybe Meter req.distanceUnit,
           createdAt = currentTime,

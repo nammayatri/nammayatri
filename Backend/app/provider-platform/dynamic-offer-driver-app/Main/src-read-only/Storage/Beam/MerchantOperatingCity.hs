@@ -26,6 +26,7 @@ data MerchantOperatingCityT f = MerchantOperatingCityT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantShortId :: B.C f Kernel.Prelude.Text,
     state :: B.C f Kernel.Types.Beckn.Context.IndianState,
+    stdCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     supportNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)

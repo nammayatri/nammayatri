@@ -21,12 +21,12 @@ where
 
 import qualified API.Types.UI.DriverProfile as DriverProfileTypes
 import Control.Applicative ((<|>))
-import qualified Email.Types
 import Data.Aeson as DA
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
+import qualified Email.Types
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

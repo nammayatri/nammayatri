@@ -38,7 +38,6 @@ where
 import Data.OpenApi hiding (email, info, name, url)
 import Data.Text hiding (elem)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
-import qualified Email.Types
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
@@ -50,6 +49,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.TransporterConfig as TC
+import qualified Email.Types
 import Environment (Flow)
 -- import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)

@@ -20,13 +20,11 @@ where
 
 import qualified Data.Text as T
 import Kernel.Prelude
+import Kernel.Types.Version (CloudType (..))
+import Kernel.Utils.App (lookupCloudType)
 import qualified Slack.AWS.Flow as AWS
 import qualified Slack.GCP.Flow as GCP
 import Slack.Types
-
-
-import Kernel.Types.Version (CloudType (..))
-import Kernel.Utils.App (lookupCloudType)
 
 publishMessage :: SlackNotificationConfig -> T.Text -> IO ()
 publishMessage config message = do

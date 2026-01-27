@@ -679,6 +679,7 @@ library
       Storage.Queries.MediaFileDocumentExtra
       Storage.Queries.MerchantClientConfigExtra
       Storage.Queries.MerchantExtra
+      Storage.Queries.MerchantOperatingCityExtra
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MessageExtra
@@ -1419,6 +1420,7 @@ library
       Storage.Queries.OrphanInstances.MediaFileDocument
       Storage.Queries.OrphanInstances.Merchant
       Storage.Queries.OrphanInstances.MerchantClientConfig
+      Storage.Queries.OrphanInstances.MerchantOperatingCity
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.Message

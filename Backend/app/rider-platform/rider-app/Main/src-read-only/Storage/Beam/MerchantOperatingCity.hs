@@ -23,6 +23,7 @@ data MerchantOperatingCityT f = MerchantOperatingCityT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantShortId :: B.C f Kernel.Prelude.Text,
     state :: B.C f Kernel.Types.Beckn.Context.IndianState,
+    stdCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

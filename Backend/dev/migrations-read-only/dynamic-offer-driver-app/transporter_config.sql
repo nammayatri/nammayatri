@@ -600,3 +600,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_ride_mon
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allowed_payment_instrument_for_payout text ;
+
+
+------- SQL updates -------
+

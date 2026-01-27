@@ -91,12 +91,12 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Types.Version
+import Kernel.Utils.App (lookupCloudType)
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
-import Kernel.Utils.App (lookupCloudType)
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.MerchantConfig as SMC

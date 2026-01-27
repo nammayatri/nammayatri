@@ -2744,10 +2744,12 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   -- city
   baseOperatingCity <- CQMOC.findById baseOperatingCityId >>= fromMaybeM (InvalidRequest "Base Operating City not found")
   let newMerchantShortId = maybe merchantShortId (.shortId) mbNewMerchant
-  let mbNewOperatingCity =
-        case cityAlreadyCreated of
-          Nothing -> Just $ buildMerchantOperatingCity newMerchantId baseOperatingCity newMerchantOperatingCityId newMerchantShortId
-          _ -> Nothing
+  mbNewOperatingCity <-
+    case cityAlreadyCreated of
+      Nothing -> do
+        cityStdCode <- getCityStdCode req.city req.cityStdCode >>= fromMaybeM (InvalidRequest "City std code not found")
+        return $ Just $ buildMerchantOperatingCity newMerchantId baseOperatingCity newMerchantOperatingCityId newMerchantShortId cityStdCode
+      _ -> return Nothing
 
   -- intelligent pool config
   mbInteglligentPoolConfig <-
@@ -3036,6 +3038,13 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   pure $ Common.CreateMerchantOperatingCityRes newMerchantOperatingCityId.getId
   where
+    getCityStdCode newCity mbCityStdCode = do
+      mbMerchantOperatingCity <- CQMOC.findByCity newCity
+      case (mbMerchantOperatingCity >>= (.stdCode), mbCityStdCode) of
+        (_, Just cityStdCode) -> return $ Just cityStdCode
+        (Just merchantOpCityStdCode, _) -> return $ Just merchantOpCityStdCode
+        (_, _) -> return Nothing
+
     updateGeoRestriction = \case
       Unrestricted -> Unrestricted
       Regions regions -> Regions $ regions <> [show req.city]
@@ -3075,7 +3084,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           ..
         }
 
-    buildMerchantOperatingCity merchantId baseCity newCityId newMerchantShortId = do
+    buildMerchantOperatingCity merchantId baseCity newCityId newMerchantShortId cityStdCode = do
       DMOC.MerchantOperatingCity
         { id = newCityId,
           merchantId,
@@ -3085,6 +3094,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           state = req.state,
           country = req.country,
           supportNumber = req.supportNumber <|> baseCity.supportNumber,
+          stdCode = Just cityStdCode,
           language = fromMaybe baseCity.language req.primaryLanguage,
           currency = fromMaybe baseCity.currency req.currency,
           distanceUnit = fromMaybe baseCity.distanceUnit req.distanceUnit

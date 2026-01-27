@@ -38,6 +38,7 @@ import Database.PostgreSQL.Simple as PG
 import Domain.Types (GatewayAndRegistryService (..))
 import Domain.Types.FeedbackForm
 import qualified Domain.Types.Merchant as DM
+import Email.Types (EmailServiceConfig)
 import EulerHS.Prelude (newEmptyTMVarIO, (+||), (||+))
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig)
@@ -85,7 +86,6 @@ import Tools.Metrics
 import Tools.Streaming.Kafka
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
-import Email.Types (EmailServiceConfig)
 
 -- | SFTP configuration for partner invoice data export
 data SFTPConfig = SFTPConfig

@@ -19,6 +19,7 @@ MerchantOperatingCity:
     lat: Double
     long: Double
     distanceUnit: Kernel.Types.Common.DistanceUnit
+    stdCode: Maybe Text
 
   beamFields:
     distanceUnit:
@@ -52,6 +53,9 @@ MerchantOperatingCity:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, state]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 MerchantState:
   tableName: merchant_state

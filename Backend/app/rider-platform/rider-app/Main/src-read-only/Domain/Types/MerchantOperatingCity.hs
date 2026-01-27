@@ -22,6 +22,7 @@ data MerchantOperatingCity = MerchantOperatingCity
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     state :: Kernel.Types.Beckn.Context.IndianState,
+    stdCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

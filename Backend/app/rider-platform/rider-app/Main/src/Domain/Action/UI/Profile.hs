@@ -42,7 +42,6 @@ where
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
-import qualified Email.Types
 import Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
 import qualified Data.ByteString.Lazy.Char8 as BSL
@@ -65,6 +64,7 @@ import qualified Domain.Types.PersonDisability as PersonDisability
 import qualified Domain.Types.RiderConfig as DRC
 import Domain.Types.SafetySettings
 import qualified Domain.Types.VehicleCategory as VehicleCategory
+import qualified Email.Types
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (concatMapM)

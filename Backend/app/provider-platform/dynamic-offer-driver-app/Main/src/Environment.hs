@@ -23,6 +23,7 @@ import Database.PostgreSQL.Simple as PG
 import Domain.Types (GatewayAndRegistryService (..))
 import Domain.Types.External.LiveEKD
 import qualified Domain.Types.Merchant as DM
+import Email.Types (EmailServiceConfig)
 import EulerHS.Prelude
 import Kernel.External.BapHostRedirect (BapHostRedirectMap)
 import Kernel.External.Encryption (EncTools)
@@ -70,7 +71,6 @@ import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
-import Email.Types (EmailServiceConfig)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,

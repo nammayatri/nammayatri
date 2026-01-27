@@ -295,6 +295,7 @@ MerchantOperatingCity:
     language: Language
     currency: Currency
     distanceUnit: DistanceUnit
+    stdCode: Maybe Text
   sqlType:
     city: character varying(255)
     currency: character varying(255)
@@ -353,6 +354,9 @@ MerchantOperatingCity:
       kvFunction: findOneWithKV
       where:
         and: [merchantShortId, city]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 MerchantPaymentMethod:
   derives: Generic,'UsageSafety

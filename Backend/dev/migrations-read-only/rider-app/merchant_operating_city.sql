@@ -33,3 +33,8 @@ ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN distance_unit character
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN driver_offer_merchant_operating_city_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN std_code text ;

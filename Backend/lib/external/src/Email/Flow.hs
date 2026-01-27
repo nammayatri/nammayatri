@@ -26,8 +26,6 @@ import qualified Email.AWS.Flow as AWS
 import qualified Email.GCP.Flow as GCP
 import Email.Types
 import Kernel.Prelude
-
-
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.App (lookupCloudType)
 
@@ -60,12 +58,12 @@ sendBusinessVerificationEmail serviceConfig emailConfig to otpCode token = do
 
 sendEmailWithAttachment ::
   EmailServiceConfig ->
-  Text ->    -- From email
-  [Text] ->  -- To emails
-  Text ->    -- Subject
-  Text ->    -- Body text
-  FilePath ->  -- Attachment file path
-  Text ->    -- Attachment filename
+  Text -> -- From email
+  [Text] -> -- To emails
+  Text -> -- Subject
+  Text -> -- Body text
+  FilePath -> -- Attachment file path
+  Text -> -- Attachment filename
   IO ()
 sendEmailWithAttachment serviceConfig from to subject bodyText filePath fileName = do
   cloudType <- lookupCloudType
