@@ -536,4 +536,35 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN bus_ticket_allowed boolean;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN weekly_offence_suspension_time_hours integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN weekly_min_rides_for_nudging integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN weekly_min_rides_for_blocking integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN weekly_condition_cooldown_time_hours integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN monthly_offence_suspension_time_hours integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN monthly_min_rides_for_nudging integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN monthly_min_rides_for_blocking integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN monthly_condition_cooldown_time_hours integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN daily_offence_suspension_time_hours integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN daily_min_rides_for_nudging integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN daily_min_rides_for_blocking integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN daily_condition_cooldown_time_hours integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN cancellation_rate_window integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN cancellation_rate_threshold_weekly integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN cancellation_rate_threshold_monthly integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN cancellation_rate_threshold_daily integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN cancellation_rate_calculation_threshold integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_customer_cancellation_rate_blocking boolean ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.rider_config ADD COLUMN static_customer_id_threshold_day date ;

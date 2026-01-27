@@ -22,10 +22,12 @@ where
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Control.Monad.Extra (mapMaybeM)
+import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Action.UI.Cancel (makeCustomerBlockingKey)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.RidePayment as Reexport
@@ -83,6 +85,7 @@ import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Insurance as SI
@@ -107,6 +110,7 @@ import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRRN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
+import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Journey as QJourney
@@ -474,6 +478,9 @@ rideAssignedReqHandler req = do
       QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
       QRide.createRide ride
       QPFS.clearCache booking.riderId
+      fork "Increment assigned count for customer cancellation rate" $ do
+        windowSize <- CCR.getWindowSize booking.merchantOperatingCityId
+        void $ CCR.incrementAssignedCount booking.riderId windowSize
       unless isInitiatedByCronJob $ do
         if rideStatus == DRide.UPCOMING then Notify.notifyOnScheduledRideAccepted booking ride else Notify.notifyOnRideAssigned booking ride
         when req'.isDriverBirthDay $ do
@@ -989,6 +996,41 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
 
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
+  fork "Update namma tags and cancellation rate for customer cancellation" $ do
+    when (cancellationSource == DBCR.ByUser) $ do
+      case mbRide of
+        Just ride -> do
+          now <- getCurrentTime
+          mbCallStatus <- QCallStatus.findOneByRideId (Just $ ride.id.getId)
+          let callAtemptByDriver = isJust mbCallStatus
+              currentTime = floor $ utcTimeToPOSIXSeconds now
+              rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
+              driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> ride.driverArrivalTime
+              tagData =
+                Y.CancelRideTagData
+                  { ride = ride{status = DRide.CANCELLED},
+                    booking = booking{status = DRB.CANCELLED},
+                    cancellationReason = bookingCancellationReason,
+                    callAtemptByDriver,
+                    currentTime,
+                    rideCreatedTime,
+                    merchantOperatingCityId = booking.merchantOperatingCityId,
+                    driverArrivalTime
+                  }
+          nammaTags <- withTryCatch "computeNammaTags:RideCancel" (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
+          logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags)
+          let mbNammaTags = eitherToMaybe nammaTags
+          tagsWithExpiry <- forM (fromMaybe [] mbNammaTags) $ \tag -> Yudhishthira.fetchNammaTagExpiry tag
+          person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+          let existingTags = fromMaybe [] person.customerNammaTags
+          let updatedTags = existingTags <> tagsWithExpiry
+          QP.updateCustomerTags (Just updatedTags) booking.riderId
+          let tags = fromMaybe [] mbNammaTags
+          when (validCustomerCancellation `elem` tags) $ do
+            windowSize <- CCR.getWindowSize booking.merchantOperatingCityId
+            void $ CCR.incrementCancelledCount booking.riderId windowSize
+            logDebug $ "Incremented cancellation count for customer: " <> booking.riderId.getId
+        Nothing -> logError "No ride found for customer cancellation, skipping namma tags and cancellation rate update"
   fork "Checking lifetime blocking condition for customer based on cancellation rate" $ do
     val :: Maybe Bool <- Redis.safeGet $ makeCustomerBlockingKey booking.id.getId
     when (val == Just True) $ do

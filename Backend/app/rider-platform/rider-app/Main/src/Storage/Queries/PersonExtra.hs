@@ -281,6 +281,28 @@ updatingAuthEnabledAndBlockedState (Id personId) blockedByRule isAuthBlocked blo
         )
         [Se.Is BeamP.id (Se.Eq personId)]
 
+updatingBlockedStateWithUntil :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> Maybe UTCTime -> m ()
+updatingBlockedStateWithUntil (Id personId) blockedByRule isBlocked blockedUntil = do
+  person <- findByPId (Id personId)
+  case person of
+    Nothing -> pure ()
+    Just driverP -> do
+      now <- getCurrentTime
+      updateWithKV
+        ( [ Se.Set BeamP.enabled (not isBlocked),
+            Se.Set BeamP.blocked isBlocked,
+            Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
+            Se.Set BeamP.updatedAt now,
+            Se.Set BeamP.blockedUntil blockedUntil,
+            Se.Set BeamP.blockedCount $
+              if isBlocked
+                then Just $ (fromMaybe 0 driverP.blockedCount) + 1
+                else driverP.blockedCount
+          ]
+            <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
+        )
+        [Se.Is BeamP.id (Se.Eq personId)]
+
 findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> Maybe (Id Person) -> m [Person]
 findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash mbPersonId = do
   findAllWithOptionsDb

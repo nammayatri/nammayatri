@@ -59,6 +59,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.SafetyCSAlert
 import "rider-app" SharedLogic.Scheduler.Jobs.SafetyIVR
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
+import "rider-app" SharedLogic.Scheduler.Jobs.UnblockCustomer
 import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
@@ -106,6 +107,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . updateMetroBusinessHour)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runNyRegularMasterJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runNyRegularInstanceJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockCustomer)
     }
 
 runRiderAppScheduler ::

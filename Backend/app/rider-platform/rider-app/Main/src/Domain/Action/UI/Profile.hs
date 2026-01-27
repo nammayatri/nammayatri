@@ -48,6 +48,7 @@ import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
+import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Registration as DR
@@ -61,6 +62,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.PersonDisability as PersonDisability
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.RiderConfig as DRC
 import Domain.Types.SafetySettings
 import qualified Domain.Types.VehicleCategory as VehicleCategory
@@ -73,6 +75,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification as Notification
+import Kernel.External.Types (SchedulerFlow, SchedulerType)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig, useFakeSms)
@@ -92,6 +95,7 @@ import Kernel.Utils.Version
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as YUtils
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Cac
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -102,6 +106,7 @@ import qualified SharedLogic.Referral as Referral
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.Disability as QD
@@ -282,7 +287,19 @@ getIsMultimodalRider enableMultiModalForAllUsers mbTags integratedBPPConfigs =
        in any (isMultimodalRiderTag multimodalTagName) currentTags && not (null integratedBPPConfigs)
 
 getPersonDetails ::
-  (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion],
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    HasShortDurationRetryCfg r c,
+    SchedulerFlow r,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text]
+  ) =>
   (Id Person.Person, Id Merchant.Merchant) ->
   Maybe Int ->
   Maybe Text ->
@@ -349,6 +366,24 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
       )
       vehicleTypes
   let isMultimodalRider = getIsMultimodalRider riderConfig.enableMultiModalForAllUsers decPerson.customerNammaTags integratedBPPConfigs
+  -- Check if customer is temporarily blocked and should be unblocked
+  fork "Check and unblock customer if temporary block expired" $ do
+    when person.blocked $ do
+      case person.blockedUntil of
+        Just blockedUntilTime -> do
+          now <- getCurrentTime
+          when (now > blockedUntilTime) $ do
+            void $ QPerson.updatingEnabledAndBlockedState personId Nothing False
+            logInfo $ "Unblocked customer in profile API, customerId: " <> personId.getId <> " blockedUntil was: " <> show blockedUntilTime
+        Nothing -> pure ()
+  fork "Check customer cancellation rate blocking" $ do
+    personFlowStatus <- QPFS.getStatus personId
+    let isNotOnRide = case personFlowStatus of
+          Just DPFS.IDLE -> True
+          Just (DPFS.FEEDBACK_PENDING _) -> True
+          _ -> False
+    when isNotOnRide $ do
+      CCR.nudgeOrBlockCustomer riderConfig person
   makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage
   where
     makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam = do
