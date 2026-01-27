@@ -697,9 +697,9 @@ data DriverAPIs = DriverAPIs
     postDriverVehicleAppendSelectedServiceTiers :: Kernel.Types.Id.Id Dashboard.Common.Driver -> AppendSelectedServiceTiersReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverVehicleUpsertSelectedServiceTiers ::
       ( Data.ByteString.Lazy.ByteString,
-          Dashboard.Common.Driver.UpsertDriverServiceTiersCsvReq
-        ) ->
-        EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+        Dashboard.Common.Driver.UpsertDriverServiceTiersCsvReq
+      ) ->
+      EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRefundByPayout :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RefundByPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverSecurityDepositStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient [SecurityDepositDfStatusRes],
     getDriverPanAadharSelfieDetailsList :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [PanAadharSelfieDetailsListResp],
