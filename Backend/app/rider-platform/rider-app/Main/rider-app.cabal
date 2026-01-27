@@ -408,6 +408,7 @@ library
       Lib.JourneyModule.State.Utils
       Lib.JourneyModule.Types
       Lib.JourneyModule.Utils
+      SharedLogic.BehaviourManagement.CustomerCancellationRate
       SharedLogic.Booking
       SharedLogic.Cac
       SharedLogic.CallBPP
@@ -477,6 +478,7 @@ library
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
+      SharedLogic.Scheduler.Jobs.UnblockCustomer
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability

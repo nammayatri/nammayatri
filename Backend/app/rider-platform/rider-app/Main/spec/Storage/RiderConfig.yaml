@@ -67,7 +67,7 @@ RiderConfig:
     metroBookingAllowed: Maybe Bool
     suburbanBookingAllowed: Maybe Bool
     busBookingAllowed: Maybe Bool
-    metroTicketAllowed: Maybe Bool -- Controls ticket booking availability (toggled by circuit breaker)
+    metroTicketAllowed: Maybe Bool # Controls ticket booking availability (toggled by circuit breaker)
     suburbanTicketAllowed: Maybe Bool
     busTicketAllowed: Maybe Bool
     metroFareCachingAllowed: Maybe Bool
@@ -130,6 +130,24 @@ RiderConfig:
     thresholdCancellationPercentageToBlock: Maybe Int
     minRidesToBlock: Maybe Int
     minRidesToShowCancellationRate: Maybe Int
+    cancellationRateWindow: Maybe Int
+    cancellationRateCalculationThreshold: Maybe Int
+    enableCustomerCancellationRateBlocking: Maybe Bool
+    cancellationRateThresholdDaily: Maybe Int
+    cancellationRateThresholdWeekly: Maybe Int
+    cancellationRateThresholdMonthly: Maybe Int
+    dailyMinRidesForBlocking: Maybe Int
+    weeklyMinRidesForBlocking: Maybe Int
+    monthlyMinRidesForBlocking: Maybe Int
+    dailyMinRidesForNudging: Maybe Int
+    weeklyMinRidesForNudging: Maybe Int
+    monthlyMinRidesForNudging: Maybe Int
+    dailyOffenceSuspensionTimeHours: Maybe Int
+    weeklyOffenceSuspensionTimeHours: Maybe Int
+    monthlyOffenceSuspensionTimeHours: Maybe Int
+    dailyConditionCooldownTimeHours: Maybe Int
+    weeklyConditionCooldownTimeHours: Maybe Int
+    monthlyConditionCooldownTimeHours: Maybe Int
     autoSendBookingDetailsViaWhatsapp: Maybe Bool
     multimodalTesting: Bool
     isFirstReferredRideEnabled: Bool
