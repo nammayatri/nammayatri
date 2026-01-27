@@ -166,12 +166,12 @@ checkBookingsForStatus (currBooking : bookings) = do
     (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
 checkBookingsForStatus [] = pure ()
 
-getBookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Flow ([SRB.Booking], [SRB.Booking])
-getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList = do
+getBookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ([SRB.Booking], [SRB.Booking])
+getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
   let mbOnlyDashboard = if onlyDashboard then Just True else Nothing
-  (rbList, allbookings) <- runInReplica $ QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList
+  (rbList, allbookings) <- runInReplica $ QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId
   let limit = maybe 10 fromIntegral mbLimit
   if null rbList
     then do
@@ -179,7 +179,7 @@ getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset
       let allBookingsNotScheduled = length $ filter (\booking -> booking.startTime < now) allbookings
       if allBookingsNotScheduled == limit
         then do
-          getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard (Just (fromIntegral (limit + 1))) mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList
+          getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard (Just (fromIntegral (limit + 1))) mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
         else do
           return (rbList, allbookings)
     else do
@@ -191,9 +191,9 @@ getJourneyList personId mbLimit mbOffset mbFromDate' mbToDate' mbJourneyStatusLi
       mbToDate = millisecondsToUTC <$> mbToDate'
   SQJ.findAllByRiderId personId mbLimit mbOffset mbFromDate mbToDate mbJourneyStatusList mbIsPaymentSuccess
 
-bookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Flow BookingListRes
-bookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList = do
-  (rbList, allbookings) <- getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList
+bookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow BookingListRes
+bookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
+  (rbList, allbookings) <- getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
   case mbPersonId of
     Just personId -> returnResonseAndClearStuckRides allbookings rbList personId
     Nothing -> BookingListRes <$> traverse (\booking -> SRB.buildBookingAPIEntity booking booking.riderId) rbList
@@ -239,7 +239,7 @@ bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Ma
 bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbFromDate' mbToDate' billingCategoryList rideTypeList mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType = do
   (apiEntity, nextBookingOffset, nextJourneyOffset, hasMoreData) <- case mbBookingRequestType of
     Just SRB.BookingRequest -> do
-      (rbList, allbookings) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+      (rbList, allbookings) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
 
       -- Filter by ride type and billing category
       let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if not (null rideTypeList) then ((filter (SB.matchesRideType rideTypeList) rbList), (filter (SB.matchesRideType rideTypeList) allbookings)) else (rbList, allbookings)
@@ -267,7 +267,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
       pure (entitiesWithSource, Nothing, Just finalJourneyOffset, hasMoreData)
     _ -> do
-      bookingListFork <- awaitableFork "bookingListV2->getBookingList" $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+      bookingListFork <- awaitableFork "bookingListV2->getBookingList" $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
       journeyListFork <- awaitableFork "bookingListV2->getJourneyList" $ getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
 
       (rbList, allbookings) <-
@@ -318,7 +318,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
         Nothing -> do
           fork "booking list status update" $ do
             -- Fetching Bookings in Fork for stuck booking case
-            (rbList_, allbookings_) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+            (rbList_, allbookings_) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
             checkBookingsForStatus allbookings_
             logInfo $ "rbList: test " <> show rbList_
 

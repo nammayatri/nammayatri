@@ -117,11 +117,11 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
     checkForActiveBooking = do
       if isJust pollActiveBooking
         then do
-          activeBookings <- bookingList (Just personId, merchantId) Nothing False Nothing Nothing (Just True) Nothing Nothing Nothing Nothing []
+          activeBookings <- bookingList (Just personId, merchantId) Nothing False Nothing Nothing (Just True) Nothing Nothing Nothing Nothing [] Nothing
           if not (null activeBookings.list)
             then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_BOOKINGS activeBookings.list) Nothing
             else do
-              pendingFeedbackBookings <- bookingList (Just personId, merchantId) Nothing False (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing Nothing Nothing []
+              pendingFeedbackBookings <- bookingList (Just personId, merchantId) Nothing False (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing Nothing Nothing [] Nothing
               case pendingFeedbackBookings.list of
                 [booking] -> do
                   let isRated = isJust $ booking.rideList & listToMaybe >>= (.rideRating)
@@ -148,7 +148,7 @@ notifyEvent personId merchantId req = do
   _ <- case req.event of
     RATE_DRIVER_SKIPPED -> do
       QPFS.updateStatus personId DPFS.IDLE
-      pendingFeedbackBookings <- bookingList (Just personId, merchantId) Nothing False (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing Nothing Nothing []
+      pendingFeedbackBookings <- bookingList (Just personId, merchantId) Nothing False (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing Nothing Nothing [] Nothing
       case pendingFeedbackBookings.list of
         [booking] -> do
           let mbRideId = booking.rideList & listToMaybe <&> (.id)

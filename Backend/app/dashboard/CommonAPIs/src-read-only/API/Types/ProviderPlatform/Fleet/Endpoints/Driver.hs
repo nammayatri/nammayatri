@@ -883,7 +883,9 @@ data VehicleAPIEntityT = VehicleAPIEntityT
     fleetOwnerId :: Kernel.Prelude.Text,
     fleetOwnerName :: Kernel.Prelude.Text,
     driverMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    driverMobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    driverMobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverAccountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverIfscCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

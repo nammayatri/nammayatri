@@ -20,6 +20,7 @@ data ScheduledPayoutT f = ScheduledPayoutT
     expectedCreditTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     failureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    markCashPaidBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     retryCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideId :: B.C f Kernel.Prelude.Text,

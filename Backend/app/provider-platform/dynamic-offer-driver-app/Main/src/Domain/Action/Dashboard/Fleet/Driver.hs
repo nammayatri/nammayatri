@@ -528,7 +528,7 @@ getDriverFleetGetAllVehicle merchantShortId _ mbLimit mbOffset mbRegNumberString
 convertToVehicleAPIEntityTFromAssociation :: Bool -> Map.Map Text Text -> (DriverRCAssociation, DVRC.VehicleRegistrationCertificate) -> Flow (Maybe Common.VehicleAPIEntityT)
 convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap (association, rc) = do
   certificateNumber' <- decrypt rc.certificateNumber
-  (driverMobileNumber, driverMobileCountryCode) <- getDriverDetailsFromRC sendDriverMobileNumber rc.id
+  driverDetails <- getDriverDetailsFromRC sendDriverMobileNumber rc.id
   pure $
     rc.fleetOwnerId >>= \foId ->
       Just $
@@ -540,8 +540,10 @@ convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap (a
             isActive = (Just association.isRcActive),
             fleetOwnerId = foId,
             fleetOwnerName = fromMaybe "" (Map.lookup foId fleetNameMap),
-            driverMobileNumber,
-            driverMobileCountryCode
+            driverMobileNumber = driverDetails.mobileNumber,
+            driverMobileCountryCode = driverDetails.mobileCountryCode,
+            driverAccountNumber = driverDetails.accountNumber,
+            driverIfscCode = driverDetails.ifscCode
           }
 
 convertToVehicleAPIEntityT :: Bool -> Map.Map Text Text -> DVRC.VehicleRegistrationCertificate -> Flow (Maybe Common.VehicleAPIEntityT)
@@ -549,7 +551,7 @@ convertToVehicleAPIEntityT sendDriverMobileNumber fleetNameMap DVRC.VehicleRegis
   certificateNumber' <- decrypt certificateNumber
   mActiveAssociation <- QRCAssociation.findActiveAssociationByRC id True
   let isActive = isJust mActiveAssociation
-  (driverMobileNumber, driverMobileCountryCode) <- getDriverDetailsFromRC sendDriverMobileNumber id
+  driverDetails <- getDriverDetailsFromRC sendDriverMobileNumber id
   pure $
     fleetOwnerId >>= \foId ->
       Just $
@@ -561,11 +563,20 @@ convertToVehicleAPIEntityT sendDriverMobileNumber fleetNameMap DVRC.VehicleRegis
             isActive = (Just isActive),
             fleetOwnerId = foId,
             fleetOwnerName = fromMaybe "" (Map.lookup foId fleetNameMap),
-            driverMobileNumber,
-            driverMobileCountryCode
+            driverMobileNumber = driverDetails.mobileNumber,
+            driverMobileCountryCode = driverDetails.mobileCountryCode,
+            driverAccountNumber = driverDetails.accountNumber,
+            driverIfscCode = driverDetails.ifscCode
           }
 
-getDriverDetailsFromRC :: Bool -> Id DVRC.VehicleRegistrationCertificate -> Flow (Maybe Text, Maybe Text)
+data DriverAccountDetails = DriverAccountDetails
+  { mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
+    accountNumber :: Maybe Text,
+    ifscCode :: Maybe Text
+  }
+
+getDriverDetailsFromRC :: Bool -> Id DVRC.VehicleRegistrationCertificate -> Flow DriverAccountDetails
 getDriverDetailsFromRC sendDriverMobileNumber rcId = do
   if sendDriverMobileNumber
     then do
@@ -573,10 +584,32 @@ getDriverDetailsFromRC sendDriverMobileNumber rcId = do
       case mbRCAccountNumber of
         Just rcAccountNumber -> do
           person <- QPerson.findById rcAccountNumber.driverId >>= fromMaybeM (PersonDoesNotExist rcAccountNumber.driverId.getId)
+          accountNumber <- decrypt `mapM` rcAccountNumber.bankAccountNumber
+          ifscCode <- decrypt `mapM` rcAccountNumber.bankIfscCode
           driverMobileNumber <- decrypt `mapM` person.mobileNumber
-          pure (driverMobileNumber, person.mobileCountryCode)
-        Nothing -> pure (Nothing, Nothing)
-    else pure (Nothing, Nothing)
+          pure
+            DriverAccountDetails
+              { mobileNumber = driverMobileNumber,
+                mobileCountryCode = person.mobileCountryCode,
+                accountNumber = accountNumber,
+                ifscCode = ifscCode
+              }
+        Nothing ->
+          pure
+            DriverAccountDetails
+              { mobileNumber = Nothing,
+                mobileCountryCode = Nothing,
+                accountNumber = Nothing,
+                ifscCode = Nothing
+              }
+    else
+      pure
+        DriverAccountDetails
+          { mobileNumber = Nothing,
+            mobileCountryCode = Nothing,
+            accountNumber = Nothing,
+            ifscCode = Nothing
+          }
 
 ---------------------------------------------------------------------
 
@@ -720,32 +753,33 @@ postDriverAddRidePayoutAccountNumber merchantShortId opCity req = do
         void $ DRBReg.auth merchantShortId opCity (Common.AuthReq req.driverMobileNumber req.driverMobileNumberCountryCode)
         QP.findByMobileNumberAndMerchantAndRole req.driverMobileNumberCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound req.driverMobileNumber)
       Just p -> return p
+  bankAccountNumber <- encrypt `mapM` req.accountNumber
+  bankIfscCode <- encrypt `mapM` req.ifscCode
+  rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
+  mbAlreadyExists <- QDRPB.findByRcId rc.id
+  id <- generateGUID
+  let driverRidePayoutBankAccount =
+        DRPB.DriverRidePayoutBankAccount
+          { bankAccountNumber = bankAccountNumber,
+            bankIfscCode = bankIfscCode,
+            driverId = person.id,
+            id = maybe id (.id) mbAlreadyExists,
+            rcId = rc.id,
+            merchantId = Just merchant.id,
+            merchantOperatingCityId = Just merchantOpCity.id,
+            createdAt = now,
+            updatedAt = now
+          }
+  case mbAlreadyExists of
+    Just _ -> QDRPB.updateByPrimaryKey driverRidePayoutBankAccount
+    Nothing -> QDRPB.create driverRidePayoutBankAccount
+
   case (req.accountNumber, req.ifscCode) of
     (Just accountNumber, Just ifscCode) -> do
-      bankAccountNumber <- encrypt accountNumber
-      bankIfscCode <- encrypt ifscCode
-      rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
-      mbAlreadyExists <- QDRPB.findByRcId rc.id
-      whenJust mbAlreadyExists $ \_ -> do
-        throwError (InvalidRequest "Ride Payout Account Number already exists")
-      id <- generateGUID
-      let driverRidePayoutBankAccount =
-            DRPB.DriverRidePayoutBankAccount
-              { bankAccountNumber = bankAccountNumber,
-                bankIfscCode = bankIfscCode,
-                driverId = person.id,
-                id,
-                rcId = rc.id,
-                merchantId = Just merchant.id,
-                merchantOperatingCityId = Just merchantOpCity.id,
-                createdAt = now,
-                updatedAt = now
-              }
       let payoutVpa = accountNumber <> "@" <> ifscCode <> ".ifsc.npci"
       QDriverInfo.updatePayoutVpaAndStatusByDriverIds (Just payoutVpa) (Just DI.MANUALLY_ADDED) [person.id]
-      QDRPB.create driverRidePayoutBankAccount
-      pure Success
-    _ -> pure Success
+    _ -> pure ()
+  pure Success
 
 ---------------------------------------------------------------------
 postDriverFleetAddVehicles ::

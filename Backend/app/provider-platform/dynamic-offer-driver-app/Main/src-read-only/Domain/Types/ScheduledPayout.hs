@@ -6,6 +6,7 @@ module Domain.Types.ScheduledPayout where
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -19,6 +20,7 @@ data ScheduledPayout = ScheduledPayout
     expectedCreditTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout,
+    markCashPaidBy :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     payoutTransactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideId :: Kernel.Prelude.Text,

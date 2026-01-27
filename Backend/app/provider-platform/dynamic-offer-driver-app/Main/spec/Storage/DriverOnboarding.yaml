@@ -897,8 +897,8 @@ DriverRidePayoutBankAccount:
   tableName: driver_ride_payout_bank_account
   fields:
     id: Id DriverRidePayoutBankAccount
-    bankAccountNumber: EncryptedHashedField e Text
-    bankIfscCode: EncryptedHashedField e Text
+    bankAccountNumber: Maybe (EncryptedHashedField e Text)
+    bankIfscCode: Maybe (EncryptedHashedField e Text)
     driverId: Id Person
     rcId: Id VehicleRegistrationCertificate
 
@@ -906,6 +906,30 @@ DriverRidePayoutBankAccount:
     id: PrimaryKey
     driverId: "!SecondaryKey" # forcing to be a secondary key
     rcId: "!SecondaryKey" # forcing to be a secondary key
+
+  beamFields:
+    bankAccountNumber:
+      bankAccountNumberEncrypted: Maybe Text
+      bankAccountNumberHash: Maybe DbHash
+    bankIfscCode:
+      bankIfscCodeEncrypted: Maybe Text
+      bankIfscCodeHash: Maybe DbHash
+
+  fromTType:
+    bankAccountNumber: EncryptedHashed <$> (Encrypted <$> bankAccountNumberEncrypted) <*> bankAccountNumberHash|E
+    bankIfscCode: EncryptedHashed <$> (Encrypted <$> bankIfscCodeEncrypted) <*> bankIfscCodeHash|E
+
+  toTType:
+    bankAccountNumberEncrypted: (bankAccountNumber <&> unEncrypted . (.encrypted))|E
+    bankAccountNumberHash: (bankAccountNumber <&> (.hash))|E
+    bankIfscCodeEncrypted: (bankIfscCode <&> unEncrypted . (.encrypted))|E
+    bankIfscCodeHash: (bankIfscCode <&> (.hash))|E
+
+  sqlType:
+    bankAccountNumberEncrypted: character varying(255)
+    bankAccountNumberHash: bytea
+    bankIfscCodeEncrypted: character varying(255)
+    bankIfscCodeHash: bytea
 
   queries:
     findByRcId:
