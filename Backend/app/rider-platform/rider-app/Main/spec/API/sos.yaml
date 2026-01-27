@@ -36,6 +36,7 @@ types:
     isMock: Maybe Bool
     isRideEnded: Maybe Bool
     isEndLiveTracking: Maybe Bool
+    contacts: Maybe [Text]
 
   CallPoliceAPI:
     rideId: Id Ride

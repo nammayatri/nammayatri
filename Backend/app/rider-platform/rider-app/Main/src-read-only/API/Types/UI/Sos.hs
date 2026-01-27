@@ -17,7 +17,12 @@ data CallPoliceAPI = CallPoliceAPI {rideId :: Kernel.Types.Id.Id Domain.Types.Ri
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MarkAsSafeReq = MarkAsSafeReq {isEndLiveTracking :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, isMock :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
+data MarkAsSafeReq = MarkAsSafeReq
+  { contacts :: Kernel.Prelude.Maybe [Data.Text.Text],
+    isEndLiveTracking :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isMock :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
