@@ -344,7 +344,7 @@ let riderClickhouseCfg =
       , retryInterval = [ +0 ]
       }
 
-let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
+let nearByDriverAPIRateLimitOptions = { limit = +10, limitResetTimeInSec = +30 }
 
 let dashboardClickhouseCfg = riderClickhouseCfg
 
