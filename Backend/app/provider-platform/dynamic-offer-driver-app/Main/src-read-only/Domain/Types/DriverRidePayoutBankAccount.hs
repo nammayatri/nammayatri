@@ -14,8 +14,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data DriverRidePayoutBankAccountE e = DriverRidePayoutBankAccount
-  { bankAccountNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
-    bankIfscCode :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+  { bankAccountNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
+    bankIfscCode :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.DriverRidePayoutBankAccount.DriverRidePayoutBankAccount,
     rcId :: Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate,
@@ -26,15 +26,15 @@ data DriverRidePayoutBankAccountE e = DriverRidePayoutBankAccount
   }
   deriving (Generic)
 
-type DriverRidePayoutBankAccount = DriverRidePayoutBankAccountE ('AsEncrypted)
+type DriverRidePayoutBankAccount = DriverRidePayoutBankAccountE 'AsEncrypted
 
-type DecryptedDriverRidePayoutBankAccount = DriverRidePayoutBankAccountE ('AsUnencrypted)
+type DecryptedDriverRidePayoutBankAccount = DriverRidePayoutBankAccountE 'AsUnencrypted
 
 instance EncryptedItem DriverRidePayoutBankAccount where
   type Unencrypted DriverRidePayoutBankAccount = (DecryptedDriverRidePayoutBankAccount, HashSalt)
   encryptItem (entity, salt) = do
-    bankAccountNumber_ <- encryptItem (bankAccountNumber entity, salt)
-    bankIfscCode_ <- encryptItem (bankIfscCode entity, salt)
+    bankAccountNumber_ <- encryptItem $ (,salt) <$> bankAccountNumber entity
+    bankIfscCode_ <- encryptItem $ (,salt) <$> bankIfscCode entity
     pure
       DriverRidePayoutBankAccount
         { bankAccountNumber = bankAccountNumber_,
@@ -48,8 +48,8 @@ instance EncryptedItem DriverRidePayoutBankAccount where
           updatedAt = updatedAt entity
         }
   decryptItem entity = do
-    bankAccountNumber_ <- fst <$> decryptItem (bankAccountNumber entity)
-    bankIfscCode_ <- fst <$> decryptItem (bankIfscCode entity)
+    bankAccountNumber_ <- fmap fst <$> decryptItem (bankAccountNumber entity)
+    bankIfscCode_ <- fmap fst <$> decryptItem (bankIfscCode entity)
     pure
       ( DriverRidePayoutBankAccount
           { bankAccountNumber = bankAccountNumber_,

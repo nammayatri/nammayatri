@@ -88,28 +88,3 @@ INSERT INTO atlas_driver_offer_bpp.merchant_payment_method (id, merchant_id, mer
         5
     FROM atlas_driver_offer_bpp.merchant_operating_city AS T1)
     ON CONFLICT DO NOTHING;
-
-
-INSERT INTO atlas_driver_offer_bpp.merchant_payment_method (id, merchant_id, merchant_operating_city_id, payment_type, payment_instrument, collected_by, priority)
-    (SELECT
-        atlas_driver_offer_bpp.uuid_generate_v4(),
-        T1.merchant_id,
-        T1.id,
-        'PREPAID',
-        'BoothOnline',
-        'BPP',
-        5
-    FROM atlas_driver_offer_bpp.merchant_operating_city AS T1)
-    ON CONFLICT DO NOTHING;
-
-INSERT INTO atlas_driver_offer_bpp.merchant_payment_method (id, merchant_id, merchant_operating_city_id, payment_type, payment_instrument, collected_by, priority)
-    (SELECT
-        atlas_driver_offer_bpp.uuid_generate_v4(),
-        T1.merchant_id,
-        T1.id,
-        'PREPAID',
-        'BoothOnline',
-        'BAP',
-        5
-    FROM atlas_driver_offer_bpp.merchant_operating_city AS T1)
-    ON CONFLICT DO NOTHING;

@@ -386,8 +386,8 @@ findRiderIdByRideId rideId = do
   booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
   pure $ Booking.riderId <$> booking
 
-findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id Person) -> Maybe Text -> Maybe Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> Maybe UTCTime -> Maybe UTCTime -> [BookingStatus] -> m ([Booking], [Booking])
-findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList = do
+findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id Person) -> Maybe Text -> Maybe Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> Maybe UTCTime -> Maybe UTCTime -> [BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> m ([Booking], [Booking])
+findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId = do
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit
   let offset' = maybe 0 fromIntegral mbOffset
@@ -403,6 +403,7 @@ findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mb
               <> ([Se.Is BeamB.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate])
               <> ([Se.Is BeamB.status $ Se.In mbBookingStatusList | not (null mbBookingStatusList)])
               <> ([Se.Is BeamB.isDashboardRequest $ Se.Eq mbOnlyDashboard | isJust mbOnlyDashboard])
+              <> ([Se.Is BeamB.merchantOperatingCityId $ Se.Eq (mbMerchantOperatingCityId <&> (.getId)) | isJust mbMerchantOperatingCityId])
           )
       ]
       (if isOnlyActive then Se.Asc BeamB.startTime else Se.Desc BeamB.startTime)
