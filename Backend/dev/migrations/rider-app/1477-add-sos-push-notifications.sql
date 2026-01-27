@@ -84,24 +84,3 @@ INSERT INTO atlas_app.merchant_push_notification (fcm_notification_type, key, me
 
 -- LIVE_TRACKING_STOPPED (BENGALI)
 INSERT INTO atlas_app.merchant_push_notification (fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at) SELECT 'SOS_RESOLVED', 'LIVE_TRACKING_STOPPED', moc.merchant_id, moc.id, 'অবস্থান শেয়ারিং বন্ধ করা হয়েছে', '{#userName#} তাদের অবস্থান আপনার সাথে শেয়ার করা বন্ধ করেছেন।', 'BENGALI', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM atlas_app.merchant_operating_city moc ON CONFLICT DO NOTHING;
-
--- SOS_RESOLVED_TO_LIVE_TRACKING (ENGLISH)
-INSERT INTO atlas_app.merchant_push_notification (fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at) SELECT 'SOS_RESOLVED', 'SOS_RESOLVED_TO_LIVE_TRACKING', moc.merchant_id, moc.id, 'SOS Resolved', '{#userName#} has marked the SOS as safe and is back to live location sharing.', 'ENGLISH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM atlas_app.merchant_operating_city moc ON CONFLICT DO NOTHING;
-
--- SOS_RESOLVED_TO_LIVE_TRACKING (HINDI)
-INSERT INTO atlas_app.merchant_push_notification (fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at) SELECT 'SOS_RESOLVED', 'SOS_RESOLVED_TO_LIVE_TRACKING', moc.merchant_id, moc.id, 'SOS हल हो गया', '{#userName#} ने SOS को सुरक्षित के रूप में चिह्नित किया है और लाइव स्थान साझाकरण पर वापस आ गए हैं।', 'HINDI', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM atlas_app.merchant_operating_city moc ON CONFLICT DO NOTHING;
-
--- SOS_RESOLVED_TO_LIVE_TRACKING (KANNADA)
-INSERT INTO atlas_app.merchant_push_notification (fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at) SELECT 'SOS_RESOLVED', 'SOS_RESOLVED_TO_LIVE_TRACKING', moc.merchant_id, moc.id, 'SOS ಪರಿಹರಿಸಲಾಗಿದೆ', '{#userName#} SOS ಅನ್ನು ಸುರಕ್ಷಿತವಾಗಿ ಗುರುತಿಸಿದ್ದಾರೆ ಮತ್ತು ಲೈವ್ ಸ್ಥಳ ಹಂಚಿಕೆಗೆ ಹಿಂದಿರುಗಿದ್ದಾರೆ।', 'KANNADA', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM atlas_app.merchant_operating_city moc ON CONFLICT DO NOTHING;
-
--- SOS_RESOLVED_TO_LIVE_TRACKING (TAMIL)
-INSERT INTO atlas_app.merchant_push_notification (fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at) SELECT 'SOS_RESOLVED', 'SOS_RESOLVED_TO_LIVE_TRACKING', moc.merchant_id, moc.id, 'SOS தீர்வு செய்யப்பட்டது', '{#userName#} SOS ஐ பாதுகாப்பாகக் குறித்துள்ளார் மற்றும் நேரடி இடம் பகிர்வுக்குத் திரும்பியுள்ளார்।', 'TAMIL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM atlas_app.merchant_operating_city moc ON CONFLICT DO NOTHING;
-
--- SOS_RESOLVED_TO_LIVE_TRACKING (TELUGU)
-INSERT INTO atlas_app.merchant_push_notification (fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at) SELECT 'SOS_RESOLVED', 'SOS_RESOLVED_TO_LIVE_TRACKING', moc.merchant_id, moc.id, 'SOS పరిష్కరించబడింది', '{#userName#} SOS ని సురక్షితంగా గుర్తించారు మరియు లైవ్ స్థానం భాగస్వామ్యానికి తిరిగి వచ్చారు।', 'TELUGU', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM atlas_app.merchant_operating_city moc ON CONFLICT DO NOTHING;
-
--- SOS_RESOLVED_TO_LIVE_TRACKING (MALAYALAM)
-INSERT INTO atlas_app.merchant_push_notification (fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at) SELECT 'SOS_RESOLVED', 'SOS_RESOLVED_TO_LIVE_TRACKING', moc.merchant_id, moc.id, 'SOS പരിഹരിച്ചു', '{#userName#} SOS നെ സുരക്ഷിതമായി അടയാളപ്പെടുത്തി ലൈവ് സ്ഥാനം പങ്കിടലിലേക്ക് തിരിച്ചെത്തി।', 'MALAYALAM', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM atlas_app.merchant_operating_city moc ON CONFLICT DO NOTHING;
-
--- SOS_RESOLVED_TO_LIVE_TRACKING (BENGALI)
-INSERT INTO atlas_app.merchant_push_notification (fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at) SELECT 'SOS_RESOLVED', 'SOS_RESOLVED_TO_LIVE_TRACKING', moc.merchant_id, moc.id, 'SOS সমাধান হয়েছে', '{#userName#} SOS কে নিরাপদ হিসাবে চিহ্নিত করেছেন এবং লাইভ অবস্থান শেয়ারিং এ ফিরে এসেছেন।', 'BENGALI', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM atlas_app.merchant_operating_city moc ON CONFLICT DO NOTHING;
