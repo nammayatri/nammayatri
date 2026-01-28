@@ -176,6 +176,7 @@ library
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
+      Domain.Action.Dashboard.FRFSAlerts
       Domain.Action.Dashboard.FRFSTicket
       Domain.Action.Dashboard.Invoice
       Domain.Action.Dashboard.IssueManagement.Issue
@@ -240,6 +241,7 @@ library
       Domain.Action.UI.FRFSTicketService
       Domain.Action.UI.Frontend
       Domain.Action.UI.GetDailyMetrics
+      Domain.Action.UI.GetFRFSLiveAlerts
       Domain.Action.UI.HotSpot
       Domain.Action.UI.IGM
       Domain.Action.UI.Insurance
@@ -548,6 +550,7 @@ library
       Storage.Clickhouse.ConductorStats
       Storage.Clickhouse.EstimateBreakup
       Storage.Clickhouse.FareBreakup
+      Storage.Clickhouse.FRFSLiveAlerts
       Storage.Clickhouse.FRFSTicketBooking
       Storage.Clickhouse.Location
       Storage.Clickhouse.Person
@@ -695,6 +698,7 @@ library
       API.Action.Dashboard.Management
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.Customer
+      API.Action.Dashboard.Management.FRFSAlerts
       API.Action.Dashboard.Management.FRFSTicket
       API.Action.Dashboard.Management.Invoice
       API.Action.Dashboard.Management.Media

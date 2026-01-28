@@ -5,6 +5,7 @@ module API.Types.RiderPlatform.Management where
 
 import qualified API.Types.RiderPlatform.Management.Booking
 import qualified API.Types.RiderPlatform.Management.Customer
+import qualified API.Types.RiderPlatform.Management.FRFSAlerts
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.RiderPlatform.Management.Invoice
 import qualified API.Types.RiderPlatform.Management.Media
@@ -24,6 +25,7 @@ import qualified Text.Show
 data ManagementUserActionType
   = BOOKING API.Types.RiderPlatform.Management.Booking.BookingUserActionType
   | CUSTOMER API.Types.RiderPlatform.Management.Customer.CustomerUserActionType
+  | FRFS_ALERTS API.Types.RiderPlatform.Management.FRFSAlerts.FRFSAlertsUserActionType
   | FRFS_TICKET API.Types.RiderPlatform.Management.FRFSTicket.FRFSTicketUserActionType
   | INVOICE API.Types.RiderPlatform.Management.Invoice.InvoiceUserActionType
   | MEDIA API.Types.RiderPlatform.Management.Media.MediaUserActionType
@@ -40,6 +42,7 @@ instance Text.Show.Show ManagementUserActionType where
   show = \case
     BOOKING e -> "BOOKING/" <> show e
     CUSTOMER e -> "CUSTOMER/" <> show e
+    FRFS_ALERTS e -> "FRFS_ALERTS/" <> show e
     FRFS_TICKET e -> "FRFS_TICKET/" <> show e
     INVOICE e -> "INVOICE/" <> show e
     MEDIA e -> "MEDIA/" <> show e
@@ -61,6 +64,15 @@ instance Text.Read.Read ManagementUserActionType where
                  )
                  | r1 <- stripPrefix "CUSTOMER/" r,
                    (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( FRFS_ALERTS v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "FRFS_ALERTS/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( FRFS_TICKET v1,
                    r2

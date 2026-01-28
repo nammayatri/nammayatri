@@ -1,0 +1,37 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+
+module: FRFSAlerts
+
+types:
+  LiveMetricsResponse:
+    hourlyBookings: "[HourlyBooking]"
+    liveStatus: "[ModeStatus]"
+    downtimeInfo: "[VehicleDowntimeInfo]"
+
+  HourlyBooking:
+    time: UTCTime
+    mode: Text
+    count: Int
+
+  ModeStatus:
+    mode: Text
+    status: Text
+
+  VehicleDowntimeInfo:
+    vehicleType: Text
+    lastOutageStartTime: Maybe UTCTime
+    lastRecoveryTime: Maybe UTCTime
+    isCurrentlyUp: Int
+
+apis:
+  - GET: # GetFRFSLiveMetrics
+      endpoint: /frfs/liveMetrics
+      auth: ApiAuthV2
+      query:
+        - from: UTCTime
+        - to: UTCTime
+        - modes: Text
+      response:
+        type: LiveMetricsResponse
