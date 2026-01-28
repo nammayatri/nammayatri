@@ -11,6 +11,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T hiding (getCurrentTime)
 import qualified Data.UUID as UU
+import Data.Singletons
 import Environment
 import Kernel.Beam.Functions (createWithKVScheduler, updateWithKVScheduler)
 import Kernel.Prelude
@@ -194,7 +195,9 @@ getAllPendingJobs = do
   reviveThreshold <- asks (.reviveThreshold)
   currentTime <- getCurrentTime
   let newtime = T.addUTCTime ((-1) * fromIntegral reviveThreshold) currentTime
-  getPendingStuckJobs newtime
+  pendingJobs <- getPendingStuckJobs newtime
+  blacklist <- asks (.blackListedJobs)
+  return $ filter (\(AnyJob Job {..} ) -> (show $ fromSing jobInfo.jobType) `notElem` blacklist) pendingJobs
 
 updateStatusOfJobs :: JobStatus -> [Id AnyJob] -> Flow ()
 updateStatusOfJobs newStatus jobIds = do
