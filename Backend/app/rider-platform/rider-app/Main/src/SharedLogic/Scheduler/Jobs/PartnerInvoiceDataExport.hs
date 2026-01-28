@@ -14,15 +14,25 @@
 
 module SharedLogic.Scheduler.Jobs.PartnerInvoiceDataExport where
 
+import qualified API.Types.UI.PartnerBookingStatement as PBSAPI
+import API.Types.UI.PartnerBookingStatementExtra ()
+import Control.Applicative ((<|>))
 import Control.Exception (try)
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (isAlphaNum)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Char (isAlphaNum)
+-- import Data.Time.Format (defaultTimeLocale, formatTime)
+import qualified Domain.Action.UI.PartnerBookingStatement as PBS
+import qualified Domain.Types.Booking.API as DBAPI
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
+import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Person as QPerson
+import qualified Domain.Types.RideStatus as DRideStatus
 import Environment (SFTPConfig (..))
+import qualified Kernel.Beam.Functions as B
+import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude hiding (hPutStr)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -35,21 +45,6 @@ import qualified Storage.Queries.PartnerInvoiceDataLog as QPartnerInvoiceDataLog
 import System.Directory (removeFile)
 import System.IO (hClose, hPutStr, openTempFile)
 import System.Process (callProcess)
-import Control.Exception (try)
-
--- | Data structure for JSON export
-data ExportRecord = ExportRecord
-  { bookingId :: Text,
-    personId :: Text,
-    requestedAt :: UTCTime
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data ExportPayload = ExportPayload
-  { exportDate :: UTCTime,
-    records :: [ExportRecord]
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
 
 -- | The scheduled job handler for partner invoice data SFTP export
 partnerInvoiceDataExportJob ::
@@ -80,23 +75,18 @@ partnerInvoiceDataExportJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   logInfo $ "Found " <> show (length unexportedLogs) <> " unexported partner invoice data logs"
 
   -- Generate JSON content
-  let exportRecords = map toExportRecord unexportedLogs
-      exportPayload =
-        ExportPayload
-          { exportDate = now,
-            records = exportRecords
-          }
-      jsonContent = TE.decodeUtf8 $ BL.toStrict $ encode exportPayload
+  enrichedRecords <- catMaybes <$> mapM enrichLogEntry unexportedLogs
+  let jsonContent = TE.decodeUtf8 $ BL.toStrict $ encode enrichedRecords
       fileName = "partner_invoice_data_" <> T.pack (show now) <> ".json"
 
   -- Upload via SFTP if there are records
-  unless (null unexportedLogs) $ do
+  unless (null enrichedRecords) $ do
     uploadOk <- uploadToSFTP fileName jsonContent
     -- Mark records as exported only if upload was successful
     when uploadOk $ do
       forM_ unexportedLogs $ \logEntry -> do
         QPartnerInvoiceDataLog.markAsExported (Just now) logEntry.id
-      logInfo $ "Exported " <> show (length unexportedLogs) <> " records via SFTP"
+      logInfo $ "Exported " <> show (length enrichedRecords) <> " records via SFTP"
 
   -- Schedule next run (24 hours from now = 86400 seconds)
   when scheduleItself $ do
@@ -111,14 +101,36 @@ partnerInvoiceDataExportJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
 
   return Complete
 
--- | Convert a PartnerInvoiceDataLog to an ExportRecord
-toExportRecord :: DPIL.PartnerInvoiceDataLog -> ExportRecord
-toExportRecord logEntry =
-  ExportRecord
-    { bookingId = logEntry.bookingId.getId,
-      personId = logEntry.personId.getId,
-      requestedAt = logEntry.requestedAt
-    }
+-- | Enrich a log entry using the shared builder logic
+enrichLogEntry ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EncFlow m r
+  ) =>
+  DPIL.PartnerInvoiceDataLog ->
+  m (Maybe PBSAPI.InvoiceDataRes)
+enrichLogEntry logEntry = do
+  -- Fetch basic entities
+  mbBooking <- QBooking.findById logEntry.bookingId
+  mbPerson <- B.runInReplica $ QPerson.findById logEntry.personId
+
+  case (mbBooking, mbPerson) of
+    (Just booking, Just person) -> do
+      -- Build API entity
+      bookingAPI <- DBAPI.buildBookingAPIEntity booking person.id
+
+      let mbRide = find (\ride -> ride.status == DRideStatus.COMPLETED) bookingAPI.rideList
+      case mbRide of
+        Nothing -> return Nothing -- Only export completed rides
+        Just _ride -> do
+          -- Decrypt sensitive data
+          email <- mapM decrypt person.email
+          mobile <- mapM decrypt person.mobileNumber
+
+          res <- PBS.buildInvoiceData person booking bookingAPI (email <|> person.identifier) mobile
+          return $ Just res
+    _ -> return Nothing
 
 -- | Sanitize file name to prevent command injection
 -- Only allows alphanumeric, dash, underscore, and dot characters

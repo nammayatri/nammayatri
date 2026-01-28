@@ -13,7 +13,14 @@
 -}
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.UI.PartnerBookingStatement (postCorporateBookingStatement, postCorporateInvoiceData) where
+module Domain.Action.UI.PartnerBookingStatement
+  ( postCorporateBookingStatement,
+    postCorporateInvoiceData,
+    buildInvoiceData,
+    getToLocation,
+    formatAddress,
+  )
+where
 
 import qualified API.Types.UI.PartnerBookingStatement
 import qualified API.Types.UI.PartnerBookingStatement as PBSAPI
@@ -21,7 +28,7 @@ import API.Types.UI.PartnerBookingStatementExtra ()
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time.Calendar (Day, addDays)
-import Data.Time.Clock (UTCTime (..), secondsToDiffTime)
+import Data.Time.Clock (UTCTime (..), secondsToDiffTime, utctDay)
 -- import Data.Time.Format (defaultTimeLocale, formatTime)
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.Booking.API as DBAPI
@@ -30,6 +37,7 @@ import Domain.Types.LocationAddress (LocationAddress (..))
 -- import qualified Domain.Types.Ride as DRide
 -- import qualified Domain.Types.ServiceTierType as DSTT
 
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RideStatus as DRide
@@ -43,6 +51,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (MissingHeader, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PartnerInvoiceDataLog as QPartnerInvoiceDataLog
 import qualified Storage.Queries.Person as QPerson
@@ -50,7 +59,7 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
 
 -- | Corporate Invoice Data API
-postCorporateInvoiceData :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.PartnerBookingStatement.InvoiceDataReq -> Environment.Flow API.Types.UI.PartnerBookingStatement.InvoiceDataRes)
+postCorporateInvoiceData :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.PartnerBookingStatement.InvoiceDataReq -> Environment.Flow API.Types.UI.PartnerBookingStatement.InvoiceDataRes)
 postCorporateInvoiceData mbApiKey req = do
   apiKey <- mbApiKey & fromMaybeM (MissingHeader "X-Partner-API-Key")
   corporatePartnerApiToken <- asks (.corporatePartnerApiToken)
@@ -76,7 +85,43 @@ postCorporateInvoiceData mbApiKey req = do
   booking <- QBooking.findById req.bookingId >>= fromMaybeM (InvalidRequest "Booking not found")
   bookingAPIEntity <- DBAPI.buildBookingAPIEntity booking person.id
 
-  let mbRide = find (\ride -> ride.status == DRide.COMPLETED) bookingAPIEntity.rideList
+  email <- mapM decrypt person.email
+
+  -- Log this API call for SFTP export
+  logId <- Id <$> generateGUID
+  now <- getCurrentTime
+  let logEntry =
+        DPIL.PartnerInvoiceDataLog
+          { id = logId,
+            bookingId = req.bookingId,
+            personId = person.id,
+            merchantId = booking.merchantId,
+            merchantOperatingCityId = booking.merchantOperatingCityId,
+            requestedAt = now,
+            exportedAt = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
+  void $ QPartnerInvoiceDataLog.create logEntry
+
+  res <- buildInvoiceData person booking bookingAPIEntity (req.emailId <|> email) req.mobileNumber
+  pure (res :: PBSAPI.InvoiceDataRes) {PBSAPI.responseCode = "200", PBSAPI.outcomeCode = "200", PBSAPI.responseMessage = "Success"}
+
+buildInvoiceData ::
+  ( CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r
+  ) =>
+  DP.Person ->
+  DBooking.Booking ->
+  DBAPI.BookingAPIEntity ->
+  Maybe Text ->
+  Maybe Text ->
+  m PBSAPI.InvoiceDataRes
+buildInvoiceData person booking bookingAPIEntity mbEmail mbMobile = do
+  mbMerchant <- CQM.findById booking.merchantId
+  let employerName = maybe "Namma Yatri" (.name) mbMerchant
+      mbRide = find (\ride -> ride.status == DRide.COMPLETED) bookingAPIEntity.rideList
       paymentCurrency = show bookingAPIEntity.estimatedTotalFareWithCurrency.currency
   case mbRide of
     Nothing ->
@@ -86,21 +131,27 @@ postCorporateInvoiceData mbApiKey req = do
             outcomeCode = "400",
             responseMessage = "No completed ride found for the booking",
             partnerCustomerId = person.id.getId,
-            emailId = fromMaybe "" req.emailId,
-            mobileNumber = fromMaybe "" req.mobileNumber,
+            emailId = fromMaybe "" mbEmail,
+            mobileNumber = fromMaybe "" mbMobile,
             bookingId = booking.id,
             bookingDatetime = bookingAPIEntity.createdAt,
             bookingStatus = bookingAPIEntity.status,
             item = [],
             person = [],
+            employerGst = "",
+            employerName = employerName,
             unitPricing = [],
             gst = [],
             paymentMode = [],
             billing =
               PBSAPI.InvoiceBilling
-                { itemAmount = 0,
-                  addonAmount = 0,
-                  discountAmount = 0,
+                { itemAmount = 0.0,
+                  addonAmount = 0.0,
+                  discountAmount = 0.0,
+                  couponAmount = 0.0,
+                  couponCode = "",
+                  paidByPoint = 0.0,
+                  taxableAmount = 0.0,
                   paymentAmount = 0.0,
                   paymentAmountCurrencyName = Just paymentCurrency
                 },
@@ -108,7 +159,8 @@ postCorporateInvoiceData mbApiKey req = do
               PBSAPI.InvoiceInvoice
                 { invoiceDatetime = Just bookingAPIEntity.createdAt,
                   invoiceAmount = 0,
-                  invoiceAmountCurrencyName = Just paymentCurrency
+                  invoiceAmountCurrencyName = Just paymentCurrency,
+                  invoiceLink = ""
                 }
           }
     Just ride -> do
@@ -134,7 +186,10 @@ postCorporateInvoiceData mbApiKey req = do
                 serviceStartDatetime = serviceStartDatetime,
                 serviceEndAddress = fromMaybe "" (formatAddress <$> toLocation),
                 serviceEndPincode = toLocation >>= (.areaCode),
-                serviceEndDatetime = serviceEndDatetime
+                serviceEndDatetime = serviceEndDatetime,
+                itemQuantity = "1",
+                personCount = "1",
+                bookingQuota = ""
               }
 
           personEntry =
@@ -143,7 +198,12 @@ postCorporateInvoiceData mbApiKey req = do
                 gender = show person.gender,
                 firstName = fromMaybe "" person.firstName,
                 middleName = fromMaybe "" person.middleName,
-                lastName = fromMaybe "" person.lastName
+                lastName = fromMaybe "" person.lastName,
+                dob = maybe "" (T.pack . show . utctDay) person.dateOfBirth,
+                prefix = case person.gender of
+                  DP.MALE -> "Mister"
+                  DP.FEMALE -> "Miss"
+                  _ -> ""
               }
 
           unitPricingEntry =
@@ -151,22 +211,34 @@ postCorporateInvoiceData mbApiKey req = do
               { itemId = "ride",
                 personId = person.id.getId,
                 itemAmount = paymentAmount,
-                platformFee = 0,
-                discountAmount = 0,
-                priceMultipler = 1
+                platformFee = 0.0,
+                discountAmount = 0.0,
+                loyaltyNumber = "",
+                loyaltyProvider = "",
+                shippingFee = 0.0,
+                taxAmount = 0.0,
+                taxableAmount = 0.0,
+                priceMultipler = 1.0
               }
 
           paymentModeEntry =
             PBSAPI.InvoicePaymentMode
               { paymentMode = "CASH/UPI",
-                amount = paymentAmount
+                amount = paymentAmount,
+                cardEnd = "",
+                cardStart = "",
+                issuerName = ""
               }
 
           billingEntry =
             PBSAPI.InvoiceBilling
               { itemAmount = paymentAmount,
-                addonAmount = 0,
-                discountAmount = 0,
+                addonAmount = 0.0,
+                discountAmount = 0.0,
+                couponAmount = 0.0,
+                couponCode = "",
+                paidByPoint = 0.0,
+                taxableAmount = 0.0,
                 paymentAmount = paymentAmount,
                 paymentAmountCurrencyName = Just paymentCurrency
               }
@@ -175,37 +247,21 @@ postCorporateInvoiceData mbApiKey req = do
             PBSAPI.InvoiceInvoice
               { invoiceDatetime = serviceEndDatetime,
                 invoiceAmount = paymentAmount,
+                invoiceLink = "",
                 invoiceAmountCurrencyName = Just paymentCurrency
               }
 
-      email <- mapM decrypt person.email
-
-      -- Log this API call for SFTP export
-      logId <- Id <$> generateGUID
-      now <- getCurrentTime
-      let logEntry =
-            DPIL.PartnerInvoiceDataLog
-              { id = logId,
-                bookingId = req.bookingId,
-                personId = person.id,
-                merchantId = booking.merchantId,
-                merchantOperatingCityId = booking.merchantOperatingCityId,
-                requestedAt = now,
-                exportedAt = Nothing,
-                createdAt = now,
-                updatedAt = now
-              }
-      void $ QPartnerInvoiceDataLog.create logEntry
-
       pure
         PBSAPI.InvoiceDataRes
-          { responseCode = "200",
-            outcomeCode = "200",
-            responseMessage = "Success",
+          { responseCode = "",
+            outcomeCode = "",
+            responseMessage = "",
             partnerCustomerId = person.id.getId,
-            emailId = fromMaybe "" (req.emailId <|> email),
-            mobileNumber = fromMaybe "" req.mobileNumber,
+            emailId = fromMaybe "" mbEmail,
+            mobileNumber = fromMaybe "" mbMobile,
             bookingId = booking.id,
+            employerGst = "",
+            employerName = employerName,
             bookingDatetime = bookingDatetime,
             bookingStatus = bookingAPIEntity.status,
             item = [itemEntry],
@@ -217,7 +273,7 @@ postCorporateInvoiceData mbApiKey req = do
             invoice = invoiceEntry
           }
 
-postCorporateBookingStatement :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.PartnerBookingStatement.BookingStatementReq -> Environment.Flow API.Types.UI.PartnerBookingStatement.BookingStatementRes)
+postCorporateBookingStatement :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.PartnerBookingStatement.BookingStatementReq -> Environment.Flow API.Types.UI.PartnerBookingStatement.BookingStatementRes)
 postCorporateBookingStatement mbApiKey req = do
   -- Validate partner API token
   apiKey <- mbApiKey & fromMaybeM (MissingHeader "X-Partner-API-Key")
@@ -335,11 +391,11 @@ buildBookingItem _person bookingAPIEntity = do
               providerCode = providerCode,
               paymentAmount = paymentAmount,
               paymentAmountCurrencyCode = show bookingAPIEntity.estimatedTotalFareWithCurrency.currency,
-              serviceStartAddress = (formatAddress fromLocation),
+              serviceStartAddress = formatAddress fromLocation,
               serviceStartPincode = fromLocation.areaCode,
               serviceStartDatetime = serviceStartDatetime,
               serviceEndAddress = fromMaybe "" (formatAddress <$> toLocation),
-              serviceEndPincode = (toLocation >>= (.areaCode)),
+              serviceEndPincode = toLocation >>= (.areaCode),
               serviceEndDatetime = serviceEndDatetime
             }
 

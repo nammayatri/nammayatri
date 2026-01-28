@@ -59,10 +59,14 @@ data BookingStatementRes = BookingStatementRes
 
 data InvoiceBilling = InvoiceBilling
   { addonAmount :: Kernel.Types.Common.HighPrecMoney,
+    couponAmount :: Kernel.Types.Common.HighPrecMoney,
+    couponCode :: Kernel.Prelude.Text,
     discountAmount :: Kernel.Types.Common.HighPrecMoney,
     itemAmount :: Kernel.Types.Common.HighPrecMoney,
+    paidByPoint :: Kernel.Types.Common.HighPrecMoney,
     paymentAmount :: Kernel.Types.Common.HighPrecMoney,
-    paymentAmountCurrencyName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    paymentAmountCurrencyName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    taxableAmount :: Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToSchema)
@@ -82,6 +86,8 @@ data InvoiceDataRes = InvoiceDataRes
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     bookingStatus :: Domain.Types.BookingStatus.BookingStatus,
     emailId :: Kernel.Prelude.Text,
+    employerGst :: Kernel.Prelude.Text,
+    employerName :: Kernel.Prelude.Text,
     gst :: [InvoiceGST],
     invoice :: InvoiceInvoice,
     item :: [InvoiceItem],
@@ -110,16 +116,20 @@ data InvoiceGST = InvoiceGST
 data InvoiceInvoice = InvoiceInvoice
   { invoiceAmount :: Kernel.Types.Common.HighPrecMoney,
     invoiceAmountCurrencyName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    invoiceDatetime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    invoiceDatetime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    invoiceLink :: Kernel.Prelude.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToSchema)
 
 data InvoiceItem = InvoiceItem
   { bookingClass :: Domain.Types.ServiceTierType.ServiceTierType,
+    bookingQuota :: Kernel.Prelude.Text,
     bookingType :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory,
     itemId :: Kernel.Prelude.Text,
     itemName :: Kernel.Prelude.Text,
+    itemQuantity :: Kernel.Prelude.Text,
+    personCount :: Kernel.Prelude.Text,
     provider :: Kernel.Prelude.Text,
     providerCode :: Kernel.Prelude.Text,
     providerPriceCategory :: Kernel.Prelude.Text,
@@ -133,11 +143,25 @@ data InvoiceItem = InvoiceItem
   deriving stock (Generic, Show)
   deriving anyclass (ToSchema)
 
-data InvoicePaymentMode = InvoicePaymentMode {amount :: Kernel.Types.Common.HighPrecMoney, paymentMode :: Kernel.Prelude.Text}
+data InvoicePaymentMode = InvoicePaymentMode
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    cardEnd :: Kernel.Prelude.Text,
+    cardStart :: Kernel.Prelude.Text,
+    issuerName :: Kernel.Prelude.Text,
+    paymentMode :: Kernel.Prelude.Text
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToSchema)
 
-data InvoicePerson = InvoicePerson {firstName :: Kernel.Prelude.Text, gender :: Kernel.Prelude.Text, lastName :: Kernel.Prelude.Text, middleName :: Kernel.Prelude.Text, personId :: Kernel.Prelude.Text}
+data InvoicePerson = InvoicePerson
+  { dob :: Kernel.Prelude.Text,
+    firstName :: Kernel.Prelude.Text,
+    gender :: Kernel.Prelude.Text,
+    lastName :: Kernel.Prelude.Text,
+    middleName :: Kernel.Prelude.Text,
+    personId :: Kernel.Prelude.Text,
+    prefix :: Kernel.Prelude.Text
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToSchema)
 
@@ -145,9 +169,14 @@ data InvoiceUnitPricing = InvoiceUnitPricing
   { discountAmount :: Kernel.Types.Common.HighPrecMoney,
     itemAmount :: Kernel.Types.Common.HighPrecMoney,
     itemId :: Kernel.Prelude.Text,
+    loyaltyNumber :: Kernel.Prelude.Text,
+    loyaltyProvider :: Kernel.Prelude.Text,
     personId :: Kernel.Prelude.Text,
     platformFee :: Kernel.Types.Common.HighPrecMoney,
-    priceMultipler :: Kernel.Prelude.Double
+    priceMultipler :: Kernel.Prelude.Double,
+    shippingFee :: Kernel.Types.Common.HighPrecMoney,
+    taxAmount :: Kernel.Types.Common.HighPrecMoney,
+    taxableAmount :: Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToSchema)

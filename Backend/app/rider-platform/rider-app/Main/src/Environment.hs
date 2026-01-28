@@ -97,16 +97,6 @@ data SFTPConfig = SFTPConfig
   }
   deriving (Generic, FromDhall, Show)
 
--- | SFTP configuration for partner invoice data export
-data SFTPConfig = SFTPConfig
-  { host :: Text,
-    port :: Int,
-    username :: Text,
-    privateKeyPath :: Text,
-    remotePath :: Text
-  }
-  deriving (Generic, FromDhall, Show)
-
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
