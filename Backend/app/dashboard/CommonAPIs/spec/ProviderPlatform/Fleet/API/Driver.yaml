@@ -1609,6 +1609,7 @@ types:
     - vehicleModelYear: Maybe Int
     - vehicleTags: Maybe [Text]
     - fuelType: Maybe Text
+    - skipFleetChecks: Maybe Bool
     - derive: "'HideSecrets"
   ListVehicleResT:
     - recordType: NewType

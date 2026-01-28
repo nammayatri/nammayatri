@@ -1750,8 +1750,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
   logDebug $ "postMultimodalRouteServiceability: req=" <> show req <> ", personId=" <> show personId.getId <> ", merchantOperatingCityId=" <> show person.merchantOperatingCityId.getId <> ", integratedBPPConfigId=" <> show integratedBPPConfig.id.getId
 
   if not callOtp
-    -- If callOtp is False then we expect routeCodes from frontend
-    then do
+    then -- If callOtp is False then we expect routeCodes from frontend
+    do
       let routeCodesWithLegs = fromMaybe [] req.routeCodes
       legRoutesWithVehicles <- forM routeCodesWithLegs $ \legInfo -> do
         busesForRoutes <- CQMMB.getBusesForRoutes legInfo.routeCodes integratedBPPConfig
@@ -1814,11 +1814,9 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
           case validatedRoute.legs of
             [] ->
               return $ ApiTypes.RouteServiceabilityResp []
-
             legs -> do
               legRoutesWithVehicles <-
                 forM (zip [0 ..] legs) $ \(index, leg) -> do
-
                   finalRouteCodes <-
                     getLegRouteCodes leg integratedBPPConfig
 
@@ -1843,7 +1841,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
             mapM
               (\r -> buildRouteWithLiveVehicle r integratedBPPConfig person True)
               busesForRoutes
-          let resp = ApiTypes.LegRouteWithLiveVehicle { legOrder = 0, routeWithLiveVehicles = alternateLiveVehicleData}
+          let resp = ApiTypes.LegRouteWithLiveVehicle {legOrder = 0, routeWithLiveVehicles = alternateLiveVehicleData}
           return $ ApiTypes.RouteServiceabilityResp [resp]
   where
     getStopGtfsCode :: Maybe MultiModalStopDetails -> Maybe Text
@@ -1865,11 +1863,12 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
 
       -- Only first routeDetail to be considered since this is bus
       let routeCodeFromLeg =
-            maybeToList $ listToMaybe routeDetails
-              >>= \rd ->
-                    Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode <$> rd.gtfsId
+            maybeToList $
+              listToMaybe routeDetails
+                >>= \rd ->
+                  Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode <$> rd.gtfsId
 
-      let mSrcCode  = getStopGtfsCode leg.fromStopDetails
+      let mSrcCode = getStopGtfsCode leg.fromStopDetails
           mDestCode = getStopGtfsCode leg.toStopDetails
 
       stopToStopRouteCodes <-

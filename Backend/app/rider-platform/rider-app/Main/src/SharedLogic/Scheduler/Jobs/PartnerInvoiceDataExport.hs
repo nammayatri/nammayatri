@@ -14,11 +14,12 @@
 
 module SharedLogic.Scheduler.Jobs.PartnerInvoiceDataExport where
 
+import Control.Exception (try)
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BL
+import Data.Char (isAlphaNum)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Char (isAlphaNum)
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
 import Environment (SFTPConfig (..))
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -28,12 +29,11 @@ import Kernel.Utils.Common hiding (HasField)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
-import qualified Storage.Queries.PartnerInvoiceDataLog as QPartnerInvoiceDataLog
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.Queries.PartnerInvoiceDataLog as QPartnerInvoiceDataLog
 import System.Directory (removeFile)
 import System.IO (hClose, hPutStr, openTempFile)
 import System.Process (callProcess)
-import Control.Exception (try)
 
 -- | Data structure for JSON export
 data ExportRecord = ExportRecord
@@ -48,8 +48,6 @@ data ExportPayload = ExportPayload
     records :: [ExportRecord]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
-
-
 
 -- | The scheduled job handler for partner invoice data SFTP export
 partnerInvoiceDataExportJob ::
@@ -169,11 +167,15 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
 
   -- Build SFTP argument list (no shell interpolation)
   let sftpArgs =
-        [ "-i", privateKeyPath
-        , "-P", port
-        , "-o", "StrictHostKeyChecking=yes"
-        , "-b", tmpBatchPath
-        , username <> "@" <> host
+        [ "-i",
+          privateKeyPath,
+          "-P",
+          port,
+          "-o",
+          "StrictHostKeyChecking=yes",
+          "-b",
+          tmpBatchPath,
+          username <> "@" <> host
         ]
 
   logInfo $ "Uploading file " <> fileName <> " to SFTP server " <> sftpCfg.host <> ":" <> sftpCfg.remotePath
@@ -194,6 +196,3 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
     Left err -> do
       logError $ "SFTP upload failed: " <> T.pack (show err)
       pure False
-
-
-

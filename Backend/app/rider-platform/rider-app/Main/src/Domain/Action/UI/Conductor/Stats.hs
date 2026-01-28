@@ -37,7 +37,7 @@ statsHandler conductorToken = withFlowHandlerAPI $ do
 
   let mtdStats =
         filter
-          (\stat ->
+          ( \stat ->
               stat.bookingDate >= monthStartDay
                 && stat.bookingDate <= yesterday
           )
