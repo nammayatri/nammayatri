@@ -57,7 +57,7 @@ findConductorStatsBetween token fromDay toDay =
   CH.findAll $
     CH.select $
       CH.filter_
-        (\row ->
+        ( \row ->
             row.conductorTokenNo CH.==. token
               CH.&&. row.bookingDate CH.>=. fromDay
               CH.&&. row.bookingDate CH.<=. toDay
