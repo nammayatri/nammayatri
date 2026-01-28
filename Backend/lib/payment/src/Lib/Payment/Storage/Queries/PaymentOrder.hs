@@ -18,7 +18,6 @@ module Lib.Payment.Storage.Queries.PaymentOrder where
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
-import Data.Coerce (coerce)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -88,26 +87,6 @@ updateAmountAndPaymentIntentId orderId amount paymentServiceOrderId = do
   updateWithKV
     [ Se.Set BeamPO.amount amount,
       Se.Set BeamPO.paymentServiceOrderId paymentServiceOrderId,
-      Se.Set BeamPO.updatedAt now
-    ]
-    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
-
--- | Update amount, currency, status, and paymentIntentId for retry handling
--- | Update amount, currency, status, and paymentIntentId for retry handling
-updateAmountAndStatus :: (EncFlow m r, BeamFlow m r) => Id DOrder.PaymentOrder -> HighPrecMoney -> Currency -> Payment.TransactionStatus -> Text -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Maybe UTCTime -> m ()
-updateAmountAndStatus orderId amount currency status paymentServiceOrderId mbClientAuthToken clientAuthTokenExpiry = do
-  now <- getCurrentTime
-  let (encToken, tokenHash) = case mbClientAuthToken of
-        Nothing -> (Nothing, Nothing)
-        Just token -> (Just (coerce $ encrypted token), Just (hash token))
-  updateWithKV
-    [ Se.Set BeamPO.amount amount,
-      Se.Set BeamPO.currency currency,
-      Se.Set BeamPO.status status,
-      Se.Set BeamPO.paymentServiceOrderId paymentServiceOrderId,
-      Se.Set BeamPO.clientAuthTokenEncrypted encToken,
-      Se.Set BeamPO.clientAuthTokenHash tokenHash,
-      Se.Set BeamPO.clientAuthTokenExpiry clientAuthTokenExpiry,
       Se.Set BeamPO.updatedAt now
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
