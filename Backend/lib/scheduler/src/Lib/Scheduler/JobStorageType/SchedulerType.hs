@@ -32,14 +32,21 @@ import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST
 import qualified Lib.Scheduler.JobStorageType.Redis.Queries as RQ
 import Lib.Scheduler.Types
 
-whenCreateNotBlocked :: (JobCreator r m) => Text -> m () -> m ()
-whenCreateNotBlocked jobType createJobCb = do
-  jobIsBlackListed >>= bool createJobCb (fork "Incementing Blocked Job Counter: " $ incrementSchedulerJobDisabledCounter ("Scheduler_" <> jobType))
-  where
-    jobIsBlackListed :: (JobCreator r m) => m Bool
-    jobIsBlackListed = do
-      blackListedJobs <- asks (.blackListedJobs)
-      return $ jobType `elem` blackListedJobs
+whenCreateJobOnlyInSecondaryRedis :: (JobCreator r m) => Text -> m () -> m ()
+whenCreateJobOnlyInSecondaryRedis jobType createJobCb = do
+  isBlocked <- isBlockedJob jobType
+  if isBlocked
+    then do
+      logDebug $ "job type " <> jobType <> " is blacklisted, skipping creating job in secondary redis"
+      local (\env -> env{hedisClusterEnv = fromMaybe env.hedisClusterEnv env.secondaryHedisClusterEnv}) createJobCb
+      fork "Incementing Blocked Job Counter: " $ incrementSchedulerJobDisabledCounter ("Scheduler_" <> jobType)
+    else do
+      createJobCb
+
+isBlockedJob :: (JobCreator r m) => Text -> m Bool
+isBlockedJob jobType = do
+  blackListedJobs <- asks (.blackListedJobs)
+  return $ jobType `elem` blackListedJobs
 
 createJob ::
   forall t (e :: t) m r.
@@ -53,7 +60,7 @@ createJob merchantId merchantOperatingCityId jobData = do
   schedulerType <- asks (.schedulerType)
   uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
-  whenCreateNotBlocked jobType $
+  whenCreateJobOnlyInSecondaryRedis jobType $
     case schedulerType of
       RedisBased -> do
         longRunning <- isLongRunning jobType
@@ -81,7 +88,7 @@ createJobIn merchantId merchantOperatingCityId inTime jobData = do
   schedulerType <- asks (.schedulerType)
   uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
-  whenCreateNotBlocked jobType $ case schedulerType of
+  whenCreateJobOnlyInSecondaryRedis jobType $ case schedulerType of
     RedisBased -> do
       longRunning <- isLongRunning jobType
       logDebug $ "LONG RUNNING " <> show longRunning <> " " <> show (jobType)
@@ -109,7 +116,7 @@ createJobInWithCheck ::
   Maybe Int ->
   JobContent e ->
   m ()
-createJobInWithCheck merchantId merchantOperatingCityId inTime minScheduleTime maxScheduleTime jobType upperLimit jobData = whenCreateNotBlocked jobType $ do
+createJobInWithCheck merchantId merchantOperatingCityId inTime minScheduleTime maxScheduleTime jobType upperLimit jobData = whenCreateJobOnlyInSecondaryRedis jobType $ do
   jobs <- DBQ.getJobByTypeTimeAndData @t @e jobType minScheduleTime maxScheduleTime jobData
   case upperLimit of
     Just uL -> do
@@ -139,7 +146,7 @@ createJobByTime merchantId merchantOperatingCityId byTime jobData = do
   schedulerType <- asks (.schedulerType)
   uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
-  whenCreateNotBlocked jobType $ case schedulerType of
+  whenCreateJobOnlyInSecondaryRedis jobType $ case schedulerType of
     RedisBased -> do
       longRunning <- isLongRunning jobType
       logDebug $ "LONG RUNNING " <> show longRunning
