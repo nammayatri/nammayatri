@@ -264,6 +264,7 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "CAB", Just "PREMIUM_SEDAN") -> Just Variant.PREMIUM_SEDAN
   (Just "CAB", Just "BLACK") -> Just Variant.BLACK
   (Just "CAB", Just "SUV_PLUS") -> Just Variant.SUV_PLUS
+  (Just "CAB", Just "BLACK_XL") -> Just Variant.BLACK_XL
   (Just "CAB", Just "HERITAGE_CAB") -> Just Variant.HERITAGE_CAB
   (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just Variant.AUTO_RICKSHAW
   (Just "AUTO_RICKSHAW", Just "EV_AUTO_RICKSHAW") -> Just Variant.EV_AUTO_RICKSHAW
