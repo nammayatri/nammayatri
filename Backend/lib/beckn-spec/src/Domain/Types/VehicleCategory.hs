@@ -15,6 +15,7 @@ data VehicleCategory
   | AMBULANCE
   | TRUCK
   | BOAT
+  | TOTO
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''VehicleCategory)

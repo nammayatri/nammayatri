@@ -30,7 +30,7 @@ IdfyVerification:
   tableName: idfy_verification
   fields:
     id: Id IdfyVerification
-    documentImageId1: Id Image
+    documentImageId1: Maybe (Id Image)
     documentImageId2: Maybe (Id Image)
     driverId: Id Person
     requestId: Text
@@ -224,7 +224,7 @@ DriverLicense:
   fields:
     id: Id DriverLicense
     driverId: Id Person
-    documentImageId1: Id Image
+    documentImageId1: Maybe (Id Image)
     documentImageId2: Maybe (Id Image)
     driverDob: Maybe UTCTime
     driverName: Maybe Text
@@ -271,7 +271,7 @@ VehicleRegistrationCertificate:
   tableName: vehicle_registration_certificate
   fields:
     id: Id VehicleRegistrationCertificate
-    documentImageId: Id Image
+    documentImageId: Maybe (Id Image)
     certificateNumber: EncryptedHashedField e Text
     unencryptedCertificateNumber: Maybe Text
     fitnessExpiry: UTCTime
@@ -1230,7 +1230,7 @@ HyperVergeVerification:
   tableName: hyperverge_verification
   fields:
     id: Id HyperVergeVerification
-    documentImageId1: Id Image
+    documentImageId1: Maybe (Id Image)
     documentImageId2: Maybe (Id Image)
     driverId: Id Person
     requestId: Text

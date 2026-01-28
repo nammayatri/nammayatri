@@ -19,7 +19,7 @@ data DriverLicenseE e = DriverLicense
     consent :: Kernel.Prelude.Bool,
     consentTimestamp :: Kernel.Prelude.UTCTime,
     dateOfIssue :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    documentImageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
+    documentImageId1 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -37,9 +37,9 @@ data DriverLicenseE e = DriverLicense
   }
   deriving (Generic)
 
-type DriverLicense = DriverLicenseE ('AsEncrypted)
+type DriverLicense = DriverLicenseE 'AsEncrypted
 
-type DecryptedDriverLicense = DriverLicenseE ('AsUnencrypted)
+type DecryptedDriverLicense = DriverLicenseE 'AsUnencrypted
 
 instance EncryptedItem DriverLicense where
   type Unencrypted DriverLicense = (DecryptedDriverLicense, HashSalt)

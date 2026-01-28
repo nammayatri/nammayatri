@@ -751,7 +751,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
     dlFlow.name
     dobText
     documentVerificationConfig
-    imageId
+    (Just imageId)
     Nothing
     dlFlow.name
     dateOfIssueUTC

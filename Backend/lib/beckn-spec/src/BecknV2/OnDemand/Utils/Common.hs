@@ -99,7 +99,7 @@ mapVariantToVehicle = \case
   DTV.VIP_OFFICER -> Enums.CAB
   DTV.AC_PRIORITY -> Enums.CAB
   DTV.BIKE_PLUS -> Enums.MOTORCYCLE
-  DTV.E_RICKSHAW -> Enums.AUTO_RICKSHAW
+  DTV.E_RICKSHAW -> Enums.TOTO
   DTV.AUTO_LITE -> Enums.AUTO_RICKSHAW
 
 castVehicleCategoryToDomain :: Enums.VehicleCategory -> DVC.VehicleCategory
@@ -111,6 +111,7 @@ castVehicleCategoryToDomain = \case
   Enums.METRO -> DVC.TRAIN
   Enums.SUBWAY -> DVC.TRAIN
   Enums.BOAT -> DVC.BOAT
+  Enums.TOTO -> DVC.TOTO
   _ -> DVC.CAR -- not used
 
 mapServiceTierToCategory :: ServiceTierType -> Enums.VehicleCategory
@@ -151,7 +152,7 @@ mapServiceTierToCategory = \case
   VIP_OFFICER -> Enums.CAB
   AC_PRIORITY -> Enums.CAB
   BIKE_PLUS -> Enums.MOTORCYCLE
-  E_RICKSHAW -> Enums.AUTO_RICKSHAW
+  E_RICKSHAW -> Enums.TOTO
   AUTO_LITE -> Enums.AUTO_RICKSHAW
 
 getListOfServiceTireTypes :: Enums.VehicleCategory -> [DVST.ServiceTierType]
@@ -165,6 +166,7 @@ getListOfServiceTireTypes Enums.SUBWAY = []
 getListOfServiceTireTypes Enums.BUS = [DVST.BUS_NON_AC, DVST.BUS_AC]
 getListOfServiceTireTypes Enums.TRUCK = [DVST.DELIVERY_LIGHT_GOODS_VEHICLE, DVST.DELIVERY_TRUCK_MINI, DVST.DELIVERY_TRUCK_SMALL, DVST.DELIVERY_TRUCK_MEDIUM, DVST.DELIVERY_TRUCK_LARGE, DVST.DELIVERY_TRUCK_ULTRA_LARGE]
 getListOfServiceTireTypes Enums.BOAT = [DVST.BOAT]
+getListOfServiceTireTypes Enums.TOTO = [DVST.E_RICKSHAW]
 
 tripCategoryToFulfillmentType :: TripCategory -> Text
 tripCategoryToFulfillmentType = \case

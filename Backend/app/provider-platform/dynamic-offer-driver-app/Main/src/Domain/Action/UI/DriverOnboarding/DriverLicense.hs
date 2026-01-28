@@ -79,7 +79,7 @@ data DriverDLReq = DriverDLReq
     operatingCity :: Text,
     driverDateOfBirth :: UTCTime,
     vehicleCategory :: Maybe VehicleCategory,
-    imageId1 :: Id Image.Image,
+    imageId1 :: Maybe (Id Image.Image),
     imageId2 :: Maybe (Id Image.Image),
     dateOfIssue :: Maybe UTCTime,
     nameOnCard :: Maybe Text,
@@ -123,6 +123,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
+  imageId1' <- maybe (throwError (InvalidRequest "Image ID is required to verify driver license")) return imageId1
   (nameOnTheCard, dateOfBirth) <-
     if isJust nameOnCardFromSdk
       then return (nameOnCardFromSdk, Nothing)
@@ -135,7 +136,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                 let dateOfBirth = Just $ convertUTCTimetoDate req.driverDateOfBirth
                 return (nameOnTheCard, dateOfBirth)
               else do
-                image1 <- getImage imageId1
+                image1 <- getImage imageId1'
                 image2 <- getImage `mapM` imageId2
                 resp <-
                   Verification.extractDLImage person.merchantId merchantOpCityId $
@@ -148,11 +149,11 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                     -- disable this check for debugging with mock-idfy
                     cacheExtractedDl person.id extractDLNumber operatingCity
                     unless (extractDLNumber == dlNumber) $
-                      throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
+                      throwImageError imageId1' $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
                     let extractedDob = VC.parseDateTime =<< extractedDL.dateOfBirth
                     void $ VC.compareDateOfBirth extractedDob (Just driverDateOfBirth)
                     return (_nameOnCard, extractedDL.dateOfBirth)
-                  Nothing -> throwImageError imageId1 ImageExtractionFailed
+                  Nothing -> throwImageError imageId1' ImageExtractionFailed
           else return (Nothing, Nothing)
   decryptedPanNumber <- mapM decrypt driverInfo.panNumber
   decryptedAadhaarNumber <- mapM decrypt driverInfo.aadhaarNumber
@@ -181,10 +182,10 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
               if fromMaybe False documentVerificationConfig.allowLicenseTransfer
                 then pure ()
                 else -- unlinkDLFromDriver driverLicense.driverId
-                  throwImageError imageId1 DLAlreadyLinked
+                  throwImageError imageId1' DLAlreadyLinked
             if fromMaybe False documentVerificationConfig.allowLicenseTransfer
               then pure ()
-              else unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
+              else unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1' DLAlreadyUpdated
             when (driverLicense.verificationStatus == Documents.VALID && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer)) $ throwError DLAlreadyUpdated
             if documentVerificationConfig.doStrictVerifcation
               then do
@@ -193,7 +194,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
           Nothing -> do
             mDriverDL <- Query.findByDriverId personId
-            when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
+            when (isJust mDriverDL) $ throwImageError imageId1' DriverAlreadyLinked
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
@@ -236,7 +237,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
     makeVerifyDLHitsCountKey :: Text -> Text
     makeVerifyDLHitsCountKey dlNumber = "VerifyDL:dlNumberHits:" <> dlNumber <> ":hitsCount"
 
-verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe VehicleCategory -> Maybe Text -> Maybe Text -> Flow ()
+verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Maybe (Id Image.Image) -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe VehicleCategory -> Maybe Text -> Maybe Text -> Flow ()
 verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard mbVehicleCategory mbReqId mbTxnId = do
   now <- getCurrentTime
   encryptedDL <- encrypt dlNumber
@@ -256,7 +257,7 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
         VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard verifyRes.requestId now imageExtractionValidation encryptedDL verifyRes.transactionId
         _ -> throwError $ InternalError ("Service provider not configured to return DL verification async responses. Provider Name : " <> (show verifyRes.requestor))
 
-mkIdfyVerificationEntity :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Flow Domain.IdfyVerification
+mkIdfyVerificationEntity :: Person.Person -> Maybe (Id Image.Image) -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Flow Domain.IdfyVerification
 mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard requestId now imageExtractionValidation encryptedDL = do
   id <- generateGUID
   return $
@@ -285,7 +286,7 @@ mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOf
         updatedAt = now
       }
 
-mkHyperVergeVerificationEntity :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe Text -> Flow Domain.HyperVergeVerification
+mkHyperVergeVerificationEntity :: Person.Person -> Maybe (Id Image.Image) -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe Text -> Flow Domain.HyperVergeVerification
 mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard requestId now imageExtractionValidation encryptedDL transactionId = do
   id <- generateGUID
   return $
@@ -343,7 +344,7 @@ onVerifyDL verificationReq output serviceName = do
           onVerifyDLHandler person output.licenseNumber (output.t_validity_to <|> output.nt_validity_to) output.covs output.driverName output.dob documentVerificationConfig verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard Nothing verificationReq.vehicleCategory
           pure Ack
 
-onVerifyDLHandler :: Person.Person -> Maybe Text -> Maybe Text -> Maybe [Idfy.CovDetail] -> Maybe Text -> Maybe Text -> DocumentVerificationConfig -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe Text -> Maybe UTCTime -> Maybe VehicleCategory -> Flow ()
+onVerifyDLHandler :: Person.Person -> Maybe Text -> Maybe Text -> Maybe [Idfy.CovDetail] -> Maybe Text -> Maybe Text -> DocumentVerificationConfig -> Maybe (Id Image.Image) -> Maybe (Id Image.Image) -> Maybe Text -> Maybe UTCTime -> Maybe VehicleCategory -> Flow ()
 onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory = do
   now <- getCurrentTime
   id <- generateGUID
@@ -358,9 +359,9 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
         Person.DRIVER -> do
           DriverInfo.updateDlNumber mEncryptedDL person.id
         _ -> pure ()
-      (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
+      (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (imageId1, imageId2)
       when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
-        mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
+        mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [imageId1, imageId2]
       case driverLicense.driverName of
         Just name_ -> void $ Person.updateName name_ person.id
         Nothing -> pure ()
@@ -379,7 +380,7 @@ createDL ::
   Maybe Text ->
   Maybe Text ->
   Id Domain.DriverLicense ->
-  Id Image.Image ->
+  Maybe (Id Image.Image) ->
   Maybe (Id Image.Image) ->
   Maybe Text ->
   Maybe UTCTime ->

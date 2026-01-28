@@ -131,7 +131,7 @@ data DriverInfoRes = DriverInfoRes
 
 data DriverLicenseAPIEntity = DriverLicenseAPIEntity
   { driverLicenseId :: Kernel.Types.Id.Id Dashboard.Common.Driver.DriverLicense,
-    documentImageId1 :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    documentImageId1 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     documentImageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -215,7 +215,7 @@ data PlatformFee = PlatformFee
 
 data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPIEntity
   { registrationCertificateId :: Kernel.Types.Id.Id Dashboard.Common.Driver.VehicleRegistrationCertificate,
-    documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    documentImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     certificateNumber :: Kernel.Prelude.Text,
     fitnessExpiry :: Kernel.Prelude.UTCTime,
     permitExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

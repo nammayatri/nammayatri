@@ -43,6 +43,7 @@ types:
     trucks: Maybe [DocumentVerificationConfigAPIEntity]
     bus: Maybe [DocumentVerificationConfigAPIEntity]
     boat: Maybe [DocumentVerificationConfigAPIEntity]
+    toto: Maybe [DocumentVerificationConfigAPIEntity]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     documentCategory: Maybe DocumentCategory

@@ -72,7 +72,8 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
         bus = fmap (castDocumentVerificationConfigAPIEntity <$>) bus,
         cabs = fmap (castDocumentVerificationConfigAPIEntity <$>) cabs,
         trucks = fmap (castDocumentVerificationConfigAPIEntity <$>) trucks,
-        boat = fmap (castDocumentVerificationConfigAPIEntity <$>) boat
+        boat = fmap (castDocumentVerificationConfigAPIEntity <$>) boat,
+        toto = fmap (castDocumentVerificationConfigAPIEntity <$>) toto
       }
 
 castDocumentVerificationConfigAPIEntity :: Onboarding.DocumentVerificationConfigAPIEntity -> CommonOnboarding.DocumentVerificationConfigAPIEntity

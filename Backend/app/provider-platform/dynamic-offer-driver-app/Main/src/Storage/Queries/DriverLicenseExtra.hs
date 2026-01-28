@@ -37,14 +37,14 @@ findByDLNumber dlNumber = do
   findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]
 
 findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
-findByImageId (Id imageId1) = findOneWithKV [Se.Or [Se.Is BeamDL.documentImageId1 $ Se.Eq imageId1, Se.Is BeamDL.documentImageId2 $ Se.Eq (Just imageId1)]]
+findByImageId (Id imageId1) = findOneWithKV [Se.Or [Se.Is BeamDL.documentImageId1 $ Se.Eq (Just imageId1), Se.Is BeamDL.documentImageId2 $ Se.Eq (Just imageId1)]]
 
 findAllByImageId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Image] -> m [DriverLicense]
-findAllByImageId imageIds = findAllWithKV [Se.Or [Se.Is BeamDL.documentImageId1 $ Se.In $ map (.getId) imageIds, Se.Is BeamDL.documentImageId2 $ Se.In $ map (Just . (.getId)) imageIds]]
+findAllByImageId imageIds = findAllWithKV [Se.Or [Se.Is BeamDL.documentImageId1 $ Se.In $ map (Just . (.getId)) imageIds, Se.Is BeamDL.documentImageId2 $ Se.In $ map (Just . (.getId)) imageIds]]
 
 updateVerificationStatusAndRejectReason ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Documents.VerificationStatus -> Text -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateVerificationStatusAndRejectReason verificationStatus rejectReason (Kernel.Types.Id.Id imageId) = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set BeamDL.verificationStatus verificationStatus, Se.Set BeamDL.rejectReason (Just rejectReason), Se.Set BeamDL.updatedAt _now] [Se.Or [Se.Is BeamDL.documentImageId1 $ Se.Eq imageId, Se.Is BeamDL.documentImageId2 $ Se.Eq (Just imageId)]]
+  updateOneWithKV [Se.Set BeamDL.verificationStatus verificationStatus, Se.Set BeamDL.rejectReason (Just rejectReason), Se.Set BeamDL.updatedAt _now] [Se.Or [Se.Is BeamDL.documentImageId1 $ Se.Eq (Just imageId), Se.Is BeamDL.documentImageId2 $ Se.Eq (Just imageId)]]

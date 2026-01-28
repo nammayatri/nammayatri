@@ -13,6 +13,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
 import qualified Kernel.External.Notification.FCM.Types
@@ -262,6 +263,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     useWithSnapToRoadFallback :: Kernel.Prelude.Bool,
     validNameComparePercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     variantsToEnableForSubscription :: [Domain.Types.VehicleVariant.VehicleVariant],
+    vehicleCategoryExcludedFromVerification :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
     volunteerSmsSendingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit,
     weeklyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyMinRidesForBlocking :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

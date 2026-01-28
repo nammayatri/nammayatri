@@ -141,7 +141,7 @@ data DLDetails = DLDetails
     operatingCity :: Text,
     driverDateOfBirth :: Maybe UTCTime,
     classOfVehicles :: [Text],
-    imageId1 :: Text,
+    imageId1 :: Maybe (Text),
     imageId2 :: Maybe (Text),
     dateOfIssue :: Maybe UTCTime,
     createdAt :: UTCTime
@@ -247,17 +247,17 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
   whenJust vehicleCategoryWithoutMandatoryConfigs $ \vehicleCategory -> do
     let allDriverDocsVerified = all (\doc -> checkIfDocumentValid allDocumentVerificationConfigs doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
     when (allDriverDocsVerified && transporterConfig.requiresOnboardingInspection /= Just True && person.role == DP.DRIVER) $ do
-      enableDriver merchantOpCityId personId mDL
+      enableDriver merchantOpCityId personId (mDL >>= (.driverName))
       whenJust onboardingVehicleCategory $ \category -> do
         DIIQuery.updateOnboardingVehicleCategory (Just category) personId
 
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
-  vehicleDocuments <- getVehicleDocuments allDocumentVerificationConfigs driverDocuments person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection
+  vehicleDocuments <- getVehicleDocuments allDocumentVerificationConfigs driverDocuments person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification
 
   (dlDetails, rcDetails) <-
     case prefillData of
       Just True -> do
-        let vehRegImgIds = map (.id) $ IQuery.filterImagesByPersonAndType driverImagesInfo merchantId DVC.VehicleRegistrationCertificate
+        let vehRegImgIds = map (Just . (.id)) $ IQuery.filterImagesByPersonAndType driverImagesInfo merchantId DVC.VehicleRegistrationCertificate
         dl <- runInReplica $ DLQuery.findByDriverId personId <&> maybeToList
         allRCImgs <- runInReplica $ RCQuery.findAllByImageId vehRegImgIds
         allDLDetails <- mapM convertDLToDLDetails dl
@@ -292,7 +292,7 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
         digilockerAuthorizationUrl = digilockerAuthorizationUrl
       }
   where
-    getVehicleDocuments allDocumentVerificationConfigs driverDocuments role vehicleDocumentsUnverified requiresOnboardingInspection = do
+    getVehicleDocuments allDocumentVerificationConfigs driverDocuments role vehicleDocumentsUnverified requiresOnboardingInspection vehicleCategoryExcludedFromVerification = do
       let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
           personId = driverImagesInfo.driverId
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
@@ -300,10 +300,17 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
             allDriverDocsVerified = checkAllDriverDocsVerified allDocumentVerificationConfigs driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
 
             inspectionNotRequired = requiresOnboardingInspection /= Just True || vehicleDoc.isApproved
-        when (allVehicleDocsVerified && allDriverDocsVerified && inspectionNotRequired && role == DP.DRIVER) $ enableDriver merchantOpCityId personId mDL
+            isVehicleCategoryExcludedFromVerification = (fromMaybe userSelectedVehicleCategory verifiedVehicleCategory) `elem` (fromMaybe [] vehicleCategoryExcludedFromVerification)
+            canActivateRC = (allVehicleDocsVerified && allDriverDocsVerified && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification
+
+        when canActivateRC $ do
+          case (isVehicleCategoryExcludedFromVerification, mDL) of
+            (True, _) -> enableDriver merchantOpCityId personId Nothing
+            (False, Just dl) -> enableDriver merchantOpCityId personId dl.driverName
+            (_,_) -> return ()
 
         mbVehicle <- QVehicle.findById personId -- check everytime
-        when (shouldActivateRc && isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && inspectionNotRequired && role == DP.DRIVER) $
+        when (shouldActivateRc && isNothing mbVehicle && canActivateRC && inspectionNotRequired && role == DP.DRIVER) $
           void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId driverImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
@@ -316,7 +323,7 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
             operatingCity = show driverImagesInfo.merchantOperatingCity.city,
             driverDateOfBirth = dl.driverDob,
             classOfVehicles = dl.classOfVehicles,
-            imageId1 = dl.documentImageId1.getId,
+            imageId1 = getId <$> dl.documentImageId1,
             imageId2 = getId <$> dl.documentImageId2,
             createdAt = dl.createdAt,
             dateOfIssue = dl.dateOfIssue
@@ -326,7 +333,7 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
       pure $
         RCDetails
           { vehicleRegistrationCertNumber = certificateNumberDec,
-            imageId = rc.documentImageId.getId,
+            imageId = maybe "" getId rc.documentImageId,
             operatingCity = show driverImagesInfo.merchantOperatingCity.city,
             vehicleCategory = show <$> rc.userPassedVehicleCategory,
             airConditioned = rc.airConditioned,
@@ -653,13 +660,12 @@ checkAllDriverDocsVerified ::
 checkAllDriverDocsVerified allDocumentVerificationConfigs driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory = do
   all (\doc -> checkIfDocumentValid allDocumentVerificationConfigs doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
 
-enableDriver :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Maybe DL.DriverLicense -> Flow ()
-enableDriver _ _ Nothing = return ()
-enableDriver merchantOpCityId personId (Just dl) = do
+enableDriver :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Maybe Text -> Flow ()
+enableDriver merchantOpCityId personId driverName = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   unless driverInfo.enabled $ do
     SDO.enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId True
-    whenJust dl.driverName $ \name -> QPerson.updateName name personId
+    whenJust driverName $ \name -> QPerson.updateName name personId
 
 activateRCAutomatically :: Id DP.Person -> DMOC.MerchantOperatingCity -> Text -> Flow ()
 activateRCAutomatically personId merchantOpCity rcNumber = do

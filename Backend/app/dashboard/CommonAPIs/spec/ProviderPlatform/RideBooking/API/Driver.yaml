@@ -408,7 +408,7 @@ types:
     - sgstWithCurrency: PriceAPIEntity
   VehicleRegistrationCertificateAPIEntity:
     - registrationCertificateId: Id VehicleRegistrationCertificate
-    - documentImageId: Id Image
+    - documentImageId: Maybe (Id Image)
     - certificateNumber: Text
     - fitnessExpiry: UTCTime
     - permitExpiry: Maybe UTCTime

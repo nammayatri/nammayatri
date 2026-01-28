@@ -146,6 +146,7 @@ getServiceNameConfigJSON = \case
     Tokenize.GullakTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Gullak, toJSON cfg)
     Tokenize.HyperVergeTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.HyperVerge, toJSON cfg)
     Tokenize.DigilockerTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Digilocker, toJSON cfg)
+    Tokenize.TtenTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Tten, toJSON cfg)
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> (Domain.PayoutService Payout.Juspay, toJSON cfg)
   Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
