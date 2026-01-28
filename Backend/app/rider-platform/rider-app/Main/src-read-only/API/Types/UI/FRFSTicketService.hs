@@ -247,6 +247,7 @@ data FRFSStationAPI = FRFSStationAPI
 data FRFSTicketAPI = FRFSTicketAPI
   { createdAt :: Kernel.Prelude.UTCTime,
     description :: Data.Maybe.Maybe Data.Text.Text,
+    isReturnTicket :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     qrData :: Data.Text.Text,
     scannedByVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
     status :: Domain.Types.FRFSTicketStatus.FRFSTicketStatus,

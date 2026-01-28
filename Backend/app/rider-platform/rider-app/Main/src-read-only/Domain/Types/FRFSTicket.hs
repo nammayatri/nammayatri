@@ -19,6 +19,7 @@ data FRFSTicket = FRFSTicket
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     frfsTicketBookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket,
+    isReturnTicket :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isTicketFree :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

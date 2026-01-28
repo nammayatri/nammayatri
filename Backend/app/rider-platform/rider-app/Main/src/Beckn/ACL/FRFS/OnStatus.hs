@@ -49,7 +49,7 @@ buildOnStatusReq onStatusReq = do
 
   fulfillments <- order.orderFulfillments & fromMaybeM (InvalidRequest "Fulfillments not found")
   when (null fulfillments) $ throwError $ InvalidRequest "Empty fulfillments"
-  tickets <- Utils.parseTickets item fulfillments
+  tickets <- Utils.parseTickets item fulfillments Nothing Nothing
 
   pure $
     Domain.DOrder

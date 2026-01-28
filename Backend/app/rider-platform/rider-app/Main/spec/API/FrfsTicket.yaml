@@ -192,6 +192,7 @@ types:
     ticketNumber: Text
     description: Maybe Text
     createdAt: UTCTime
+    isReturnTicket: Maybe Bool
     derive: "Show"
 
   FRFSBookingPaymentAPI:
