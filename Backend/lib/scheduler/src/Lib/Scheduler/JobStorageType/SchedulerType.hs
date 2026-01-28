@@ -84,15 +84,17 @@ createJobIn merchantId merchantOperatingCityId inTime jobData = do
   whenCreateNotBlocked jobType $ case schedulerType of
     RedisBased -> do
       longRunning <- isLongRunning jobType
-      logDebug $ "LONG RUNNING " <> show longRunning
+      logDebug $ "LONG RUNNING " <> show longRunning <> " " <> show (jobType)
       if longRunning
         then do
+          logDebug $ "CREATE JOB IN DB" <> show (jobType)
           DBQ.createJobIn @t @e merchantId merchantOperatingCityId uuid inTime maxShards jobData
           RQ.createJobIn @t @e merchantId merchantOperatingCityId uuid inTime maxShards jobData
         else do
+          logDebug $ "CREATE JOB IN REDIS" <> show (jobType)
           RQ.createJobIn @t @e merchantId merchantOperatingCityId uuid inTime maxShards jobData
     DbBased -> do
-      logDebug "DB BASED JOB "
+      logDebug $ "CREATE JOB IN DB_BASED_SCHEDULER" <> show (jobType)
       DBQ.createJobIn @t @e merchantId merchantOperatingCityId uuid inTime maxShards jobData
 
 createJobInWithCheck ::
