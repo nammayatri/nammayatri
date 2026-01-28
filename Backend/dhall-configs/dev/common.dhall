@@ -39,7 +39,6 @@ let internalEndPointMap =
       , { mapKey = "http://localhost:3000", mapValue = "http://localhost:3000" }
       ]
 
-
 let SchedulerType = < RedisBased | DbBased >
 
 let urlShortnerConfig =
