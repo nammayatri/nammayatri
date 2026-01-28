@@ -709,10 +709,12 @@ updateIssueCategory merchantShortId city issueCategoryId req issueHandle identif
             logoUrl = fromMaybe logoUrl req.logoUrl,
             priority = fromMaybe priority req.priority,
             isActive = fromMaybe isActive req.isActive,
+            isRideRequired = fromMaybe isRideRequired req.isRideRequired,
             isTicketRequired = fromMaybe isTicketRequired req.isTicketRequired,
             maxAllowedRideAge = req.maxAllowedRideAge <|> maxAllowedRideAge,
             allowedRideStatuses = req.allowedRideStatuses <|> allowedRideStatuses,
             label = req.label <|> label,
+            igmCategory = req.igmCategory <|> igmCategory,
             updatedAt = now,
             ..
           }
