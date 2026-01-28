@@ -107,7 +107,7 @@ jobs:
       - name: Build all flake outputs
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
-          om ci run --systems "${{ matrix.system }}" --no-link -- -v --impure
+          om ci run --impure --systems "${{ matrix.system }}" --no-link -- -v
 
       - name: Build And Push Docker image
         id: docker
