@@ -255,12 +255,20 @@ kaalChakraEventUser h filteredTags mbAllTags eventId defaultUserDataMap now user
     Right (userDataValue, accQueries) -> do
       unless (null accQueries) $ do
         logDebug $ "Used default objects for userId: " <> show userId <> "; query names: " <> show accQueries
+
+      logDebug $ "Processing tags for userId: " <> show userId <> "; userData: " <> show userDataValue <> "; oldTags: " <> show mbOldTagsText
+
       let eTagValuesTuple = applyRule userId userDataValue <$> filteredTags
       -- Skip current tag for current user instead of throwing error
       tagValuesTuple <- (catMaybes <$>) $
         forM eTagValuesTuple $ \case
-          Right tagValueTuple -> pure $ Just tagValueTuple
-          Left err -> logError err >> pure Nothing
+          Right tagValueTuple@(t, v) -> do
+            logDebug $ "User " <> show userId <> ": Tag " <> show t.name <> " calculated as " <> show v
+            pure $ Just tagValueTuple
+          Left err -> do
+            logDebug $ "User " <> show userId <> ": Tag Rule Failed -> " <> err
+            logError err
+            pure Nothing
 
       case tagValuesTuple of
         [] -> do
@@ -271,6 +279,7 @@ kaalChakraEventUser h filteredTags mbAllTags eventId defaultUserDataMap now user
           -- Skip current user instead of throwing error
           case updateUserTagValues userId tagValuesTuple mbOldTagsText now of
             Right (updTagsText, actionDataList) -> do
+              logDebug $ "User " <> show userId <> ": Final New Tags List -> " <> show updTagsText
               finalTagsText <- updateUserTagsWithExtraAction h userId now mbAllTags mbOldTagsText (Just updTagsText) $ do
                 forM_ actionDataList $ \actionData -> do
                   runTagAction h userId actionData
