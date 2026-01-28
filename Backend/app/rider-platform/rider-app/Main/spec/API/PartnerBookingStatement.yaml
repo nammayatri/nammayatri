@@ -64,6 +64,8 @@ types:
     bookingId: Id Booking
     bookingDatetime: UTCTime
     bookingStatus: BookingStatus
+    employerName: Text
+    employerGst: Text
     item: "[InvoiceItem]"
     person: "[InvoicePerson]"
     unitPricing: "[InvoiceUnitPricing]"
@@ -81,6 +83,9 @@ types:
     provider: Text # NammaYatri
     providerCode: Text # Vehicle number
     providerPriceCategory:  Text # Vehicle Varaint if available
+    itemQuantity: Text
+    personCount: Text
+    bookingQuota: Text
     serviceStartAddress:  Text
     serviceStartPincode: Maybe Text
     serviceStartDatetime: Maybe UTCTime
@@ -92,17 +97,24 @@ types:
   InvoicePerson:
     personId: Text
     gender: Text
+    prefix: Text
     firstName:  Text
     middleName:  Text
     lastName: Text
+    dob: Text
     derive': Generic,Show,ToSchema
 
   InvoiceUnitPricing:
     itemId: Text # Ride short ID
     personId: Text
     itemAmount: HighPrecMoney
+    shippingFee: HighPrecMoney
     platformFee: HighPrecMoney
     discountAmount: HighPrecMoney
+    taxableAmount: HighPrecMoney
+    taxAmount: HighPrecMoney
+    loyaltyProvider: Text
+    loyaltyNumber: Text
     priceMultipler: Double
     derive': Generic,Show,ToSchema
 
@@ -116,21 +128,29 @@ types:
 
   InvoicePaymentMode:
     paymentMode: Text
+    cardStart: Text
+    cardEnd: Text
+    issuerName: Text
     amount:  HighPrecMoney
     derive': Generic,Show,ToSchema
 
   InvoiceBilling:
     itemAmount:  HighPrecMoney
     addonAmount:  HighPrecMoney
+    couponCode: Text
+    couponAmount: HighPrecMoney
     discountAmount:  HighPrecMoney
+    taxableAmount: HighPrecMoney
     paymentAmount: HighPrecMoney
     paymentAmountCurrencyName: Maybe Text
+    paidByPoint: HighPrecMoney
     derive': Generic,Show,ToSchema
 
   InvoiceInvoice:
     invoiceDatetime: Maybe UTCTime
     invoiceAmount: HighPrecMoney
     invoiceAmountCurrencyName: Maybe Text
+    invoiceLink: Text
     derive': Generic,Show,ToSchema
 
 apis:

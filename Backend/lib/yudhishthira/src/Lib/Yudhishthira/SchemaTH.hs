@@ -81,5 +81,5 @@ genToSchemaForType seen t = case t of
   AppT (ConT proxy) t' | proxy == ''Proxy -> genToSchemaForType seen t'
   AppT (ConT idt) _ | idt == ''Kernel.Types.Id.Id -> pure []
   AppT (ConT sidt) _ | sidt == ''Kernel.Types.Id.ShortId -> pure []
-  AppT t1 t2 -> (++) <$> (genToSchemaForType seen t1) <*> (genToSchemaForType seen t2)
+  AppT t1 t2 -> (++) <$> genToSchemaForType seen t1 <*> genToSchemaForType seen t2
   _ -> pure []
