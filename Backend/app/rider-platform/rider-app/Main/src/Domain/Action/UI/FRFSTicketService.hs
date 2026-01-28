@@ -471,14 +471,6 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
 
 postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId vehicleType_ req = do
-  let frfsRouteDetails =
-        [ FRFSRouteDetails
-            { routeCode = req.routeCode,
-              startStationCode = req.fromStationCode,
-              endStationCode = req.toStationCode,
-              serviceTier = req.serviceTier
-            }
-        ]
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   let platformType = fromMaybe DIBC.APPLICATION req.platformType
   merchantOperatingCityId <-
@@ -494,6 +486,32 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId vehicleTy
 
   merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType
+
+  -- If vehicle number is provided, try to get the service tier from OTP REST
+  mbServiceTierFromVehicle <- case req.vehicleNumber of
+    Just vehicleNumber -> do
+      mbVehicleServiceType <- OTPRest.getVehicleServiceType integratedBPPConfig vehicleNumber Nothing
+      return $ (.service_type) <$> mbVehicleServiceType
+    Nothing -> return Nothing
+
+  -- Use service tier from vehicle if available, otherwise use from request
+  let finalServiceTier = mbServiceTierFromVehicle <|> req.serviceTier
+      frfsRouteDetails =
+        [ FRFSRouteDetails
+            { routeCode = req.routeCode,
+              startStationCode = req.fromStationCode,
+              endStationCode = req.toStationCode,
+              serviceTier = finalServiceTier
+            }
+        ]
+  logInfo $
+    "FRFS Search params → "
+      <> "vehicleNumber="
+      <> show req.vehicleNumber
+      <> ", serviceTier="
+      <> show finalServiceTier
+      <> ", routeCode="
+      <> show req.routeCode
   postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) [] [] -- the journey leg upsert function is not required here
 
 postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
