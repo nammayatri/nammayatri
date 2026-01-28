@@ -268,6 +268,7 @@ let RiderJobType =
       | CrisRecon
       | PaymentOrderStatusCheck
       | PartnerInvoiceDataExport
+      | UnblockCustomer
       >
 
 let jobInfoMapx =
@@ -307,6 +308,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.CrisRecon, mapValue = True }
       , { mapKey = RiderJobType.PaymentOrderStatusCheck, mapValue = True }
       , { mapKey = RiderJobType.PartnerInvoiceDataExport, mapValue = True }
+      , { mapKey = RiderJobType.UnblockCustomer, mapValue = True }
       ]
 
 let cacConfig =
