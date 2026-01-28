@@ -771,6 +771,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
       let isEnableForVariant = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) currentVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
       let toUpdateOrCreateDriverfee = (totalDriverFee > 0 || (totalDriverFee <= 0 && isPlanMandatoryForVariant && isJust mbDriverPlan)) && isEnableForVariant
       when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge) $ do
+        logDebug $ "createDriverFee': updating or creating driverfee: " <> show driverFee
         numRides <- case lastDriverFee of
           Just ldFee ->
             if now >= ldFee.startTime && now < ldFee.endTime
@@ -854,6 +855,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> UTCTime -> m ()
 scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
+  logDebug $ "scheduleJobs: for driverFee" <> show driverFee
   void $
     case transporterConfig.driverFeeCalculationTime of
       Nothing -> pure ()
@@ -864,6 +866,7 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
           case isDfCaclculationJobScheduled of
             ----- marker ---
             Nothing -> do
+              logDebug $ "scheduleJobs: creating job for driverFee" <> show driverFee
               createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
                 CalculateDriverFeesJobData
                   { merchantId = merchantId,
@@ -880,7 +883,9 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
                   }
               setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId driverFee.serviceName dfCalculationJobTs
               setDriverFeeBillNumberKey merchantOpCityId 1 36000 (driverFee.serviceName)
-            _ -> pure ()
+            _ -> do
+              logDebug $ "scheduleJobs: job already scheduled for driverFee" <> show driverFee
+              pure ()
 
 mkDriverFee ::
   ( MonadFlow m,
