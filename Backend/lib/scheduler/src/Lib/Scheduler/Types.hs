@@ -154,6 +154,6 @@ derivePersistField "JobStatus"
 
 $(mkBeamInstancesForEnum ''JobStatus)
 
-data ExecutionResult = Complete | Terminate Text | Retry | ReSchedule UTCTime | DuplicateExecution
+data ExecutionResult = Complete | Terminate Text | Retry | ReSchedule UTCTime | DuplicateExecution | SkipBlacklistedJob
   deriving (Show, Generic, Exception)
   deriving (PrettyShow) via Showable ExecutionResult
