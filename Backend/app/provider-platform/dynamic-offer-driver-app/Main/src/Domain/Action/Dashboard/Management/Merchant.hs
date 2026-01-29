@@ -1225,7 +1225,10 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     driverCancellationPenaltyAmount :: Text,
     perLuggageCharge :: Text,
     returnFee :: Text,
-    boothCharges :: Text
+    boothCharges :: Text,
+    vatChargeConfig :: Text,
+    commissionChargeConfig :: Text,
+    tollTaxCharge :: Text
   }
   deriving (Show)
 
@@ -1324,7 +1327,10 @@ instance ToNamedRecord FarePolicyCSVRow where
         "driver_cancellation_penalty_amount" .= driverCancellationPenaltyAmount,
         "per_luggage_charge" .= perLuggageCharge,
         "return_fee" .= returnFee,
-        "booth_charges" .= boothCharges
+        "booth_charges" .= boothCharges,
+        "vat_charge_config" .= vatChargeConfig,
+        "commission_charge_config" .= commissionChargeConfig,
+        "toll_tax_charge_config" .= tollTaxCharge
       ]
 
 farePolicyCSVHeader :: Header
@@ -1525,6 +1531,9 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "per_luggage_charge"
       <*> r .: "return_fee"
       <*> r .: "booth_charges"
+      <*> r .: "vat_charge_config"
+      <*> r .: "commission_charge_config"
+      <*> r .: "toll_tax_charge_config"
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
@@ -1710,9 +1719,9 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
 
           -- JSON encode complex fields
           conditionalChargesJson = if null farePolicy.conditionalCharges then "" else TEnc.decodeUtf8 $ LBS.toStrict $ A.encode farePolicy.conditionalCharges
-          -- vatChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.vatChargeConfig
-          -- commissionChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.commissionChargeConfig
-          -- tollTaxChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.tollTaxChargeConfig
+          vatChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.vatChargeConfig
+          commissionChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.commissionChargeConfig
+          tollTaxChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.tollTaxChargeConfig
           returnFeeVal = maybe "" showT farePolicy.returnFee
           boothChargesVal = maybe "" showT farePolicy.boothCharges
        in FarePolicyCSVRow
@@ -1809,10 +1818,10 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
               perLuggageCharge = maybe "" showT farePolicy.perLuggageCharge,
               returnFee = returnFeeVal,
               boothCharges = boothChargesVal,
-              rideExtraTimeChargeGracePeriod = maybe "" showT farePolicy.rideExtraTimeChargeGracePeriod
-              -- vatCharge Config = vatChargeJson,
-              -- commissionChargeConfig = commissionChargeJson,
-              -- tollTaxCharge = tollTaxChargeJson
+              rideExtraTimeChargeGracePeriod = maybe "" showT farePolicy.rideExtraTimeChargeGracePeriod,
+              vatChargeConfig = vatChargeJson,
+              commissionChargeConfig = commissionChargeJson,
+              tollTaxCharge = tollTaxChargeJson
             }
 
     -- Helper functions
