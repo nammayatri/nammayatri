@@ -295,6 +295,7 @@ types:
     - ventilator: Maybe Bool
     - vehicleCategory: Maybe VehicleCategory
     - vehicleDetails: Maybe DriverVehicleDetails
+    - udinNumber: Maybe Text
     - derive: "'HideSecrets"
   GenerateAadhaarOtpReq:
     - aadhaarNumber: Text

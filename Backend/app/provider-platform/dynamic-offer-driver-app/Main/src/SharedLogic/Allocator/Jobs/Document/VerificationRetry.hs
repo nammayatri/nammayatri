@@ -52,7 +52,8 @@ retryDocumentVerificationJob ::
     EsqDBFlow m r,
     EncFlow m r,
     MonadReader r m,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "ttenTokenCacheExpiry" r Seconds
   ) =>
   Job 'RetryDocumentVerification ->
   m ExecutionResult
@@ -74,12 +75,10 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
       IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
-    callVerifyRC :: VerificationFlow m r => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
+    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyRC documentNum person verificationReq = do
       verifyRes <-
-        Verification.verifyRC person.merchantId person.merchantOperatingCityId
-          Nothing
-          Verification.VerifyRCReq {rcNumber = documentNum, driverId = person.id.getId}
+        Verification.verifyRC person.merchantId person.merchantOperatingCityId Nothing (Verification.VerifyRCReq {rcNumber = documentNum, driverId = person.id.getId, token = Nothing, udinNo = Nothing})
       case verifyRes.verifyRCResp of
         Verification.AsyncResp res -> do
           case res.requestor of

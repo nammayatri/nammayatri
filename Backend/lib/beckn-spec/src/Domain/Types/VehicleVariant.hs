@@ -186,7 +186,7 @@ castVehicleVariantToVehicleCategory = \case
   VIP_OFFICER -> DVC.CAR
   AC_PRIORITY -> DVC.CAR
   BIKE_PLUS -> DVC.MOTORCYCLE
-  E_RICKSHAW -> DVC.AUTO_CATEGORY
+  E_RICKSHAW -> DVC.TOTO
   AUTO_LITE -> DVC.AUTO_CATEGORY
 
 castServiceTierToVehicleCategory :: DVST.ServiceTierType -> DVC.VehicleCategory
@@ -227,7 +227,7 @@ castServiceTierToVehicleCategory = \case
   DVST.VIP_OFFICER -> DVC.CAR
   DVST.AC_PRIORITY -> DVC.CAR
   DVST.BIKE_PLUS -> DVC.MOTORCYCLE
-  DVST.E_RICKSHAW -> DVC.AUTO_CATEGORY
+  DVST.E_RICKSHAW -> DVC.TOTO
   DVST.AUTO_LITE -> DVC.AUTO_CATEGORY
 
 getVehicleCategory :: Maybe DVC.VehicleCategory -> VehicleVariant -> Maybe DVC.VehicleCategory

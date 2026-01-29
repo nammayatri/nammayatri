@@ -41,6 +41,9 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.MerchantServiceUsageConfig
+import qualified Kernel.External.Tokenize.Interface as TI
+import qualified Kernel.External.Tokenize.Interface.Types as TIFT
+import qualified Kernel.External.Tokenize.Types as TT
 import Kernel.External.Types (ServiceFlow)
 import Kernel.External.Verification as Reexport hiding
   ( extractAadhaarImage,
@@ -64,7 +67,9 @@ import Kernel.External.Verification as Reexport hiding
 import qualified Kernel.External.Verification as Verification
 import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
 import Kernel.External.Verification.Interface.InternalScripts
+import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.GovtDataRC ()
@@ -87,16 +92,87 @@ verifyDLAsync _ merchantOpCityId req = do
 
 verifyRC ::
   ( ServiceFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasField "ttenTokenCacheExpiry" r Seconds
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe [VerificationService] ->
   VerifyRCReq ->
   m RCRespWithRemPriorityList
-verifyRC _ merchantOptCityId mbRemPriorityList req = getConfig >>= flip (Verification.verifyRC (getServiceConfig merchantOptCityId)) req . flip fromMaybe mbRemPriorityList
+verifyRC _ merchantOptCityId mbRemPriorityList req = do
+  merchantServiceUsageConfig <-
+    CQMSUC.findByMerchantOpCityId merchantOptCityId Nothing
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
+
+  let configuredTotoList = fromMaybe [VT.Idfy] merchantServiceUsageConfig.totoVerificationPriorityList
+  let isTtenVerification =
+        if isJust req.udinNo
+          then do
+            case listToMaybe configuredTotoList of
+              Just VT.Tten -> True
+              _ -> False
+          else False
+
+  mbToken' <-
+    if isTtenVerification
+      then do
+        when (isNothing req.udinNo) $
+          throwError $ InvalidRequest "UDIN number is required for TTEN verification"
+
+        token <- getOrCreateTtenToken merchantOptCityId
+        return (Just token)
+      else return Nothing
+  let reqWithToken = req {token = mbToken'}
+  let finalPriorityList =
+        fromMaybe
+          ( if isTtenVerification
+              then fromMaybe [VT.Tten] merchantServiceUsageConfig.totoVerificationPriorityList
+              else merchantServiceUsageConfig.verificationProvidersPriorityList
+          )
+          mbRemPriorityList
+  Verification.verifyRC (getServiceConfig merchantOptCityId) finalPriorityList reqWithToken
   where
-    getConfig = CQMSUC.findByMerchantOpCityId merchantOptCityId Nothing >>= ((.verificationProvidersPriorityList) <$>) . fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
+    getOrCreateTtenToken :: (ServiceFlow m r, CoreMetrics m, HasField "ttenTokenCacheExpiry" r Seconds) => Id DMOC.MerchantOperatingCity -> m Text
+    getOrCreateTtenToken merchantOpCityId = do
+      let tokenCacheKey = makeTtenTokenCacheKey merchantOpCityId
+      mbToken <- Redis.withCrossAppRedis $ Redis.safeGet tokenCacheKey
+      case mbToken of
+        Just cachedToken -> do
+          return cachedToken
+        Nothing -> do
+          tokenServiceConfigJSON <- getTtenTokenizationServiceConfig merchantOpCityId
+          tokenResp <-
+            withTryCatch "tokenizeTtenCertificate" $
+              TI.tokenize
+                tokenServiceConfigJSON
+                (TIFT.TokenizationReq {expiry = Nothing, code = Nothing, codeVerifier = Nothing})
+          case tokenResp of
+            Left err -> throwError $ InvalidRequest $ show err
+            Right tokenResp' -> do
+              now <- getCurrentTime
+              ttenTokenCacheExpiry <- asks (.ttenTokenCacheExpiry)
+              let expiryTime = fromMaybe (addUTCTime (secondsToNominalDiffTime ttenTokenCacheExpiry) now) tokenResp'.expiresAt
+                  expirySeconds = round $ diffUTCTime expiryTime now
+              Redis.withCrossAppRedis $ Redis.setExp tokenCacheKey tokenResp'.token expirySeconds
+              return tokenResp'.token
+
+    getTtenTokenizationServiceConfig :: (ServiceFlow m r, CoreMetrics m) => Id DMOC.MerchantOperatingCity -> m TIFT.TokenizationServiceConfig
+    getTtenTokenizationServiceConfig mocid = do
+      merchantServiceConfig <-
+        CQMSC.findByServiceAndCity
+          (DMSC.TokenizationService TT.Tten)
+          mocid
+          >>= fromMaybeM
+            ( MerchantServiceConfigNotFound mocid.getId "tokenization" $
+                show (DMSC.TokenizationService TT.Tten)
+            )
+      case merchantServiceConfig.serviceConfig of
+        DMSC.TokenizationServiceConfig vsc -> return vsc
+        _ -> throwError $ InternalError "Unknown Service Config"
+
+    makeTtenTokenCacheKey :: Id DMOC.MerchantOperatingCity -> Text
+    makeTtenTokenCacheKey opCityId = "TtenToken:MerchantOpCityId-" <> opCityId.getId
 
 getServiceConfig :: ServiceFlow m r => Id DMOC.MerchantOperatingCity -> VerificationService -> m VerificationServiceConfig
 getServiceConfig merchantOptCityId cfg = case cfg of

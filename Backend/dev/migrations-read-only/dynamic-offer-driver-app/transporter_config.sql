@@ -604,17 +604,16 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allowed_payment
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN vehicle_category_excluded_from_verification text[]  default '{TOTO}';
+
+
+------- SQL updates -------
+
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_multi_fleet_operator_link boolean ;
 
 
 ------- SQL updates -------
 
-
-
-
-
-
-------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN missing_mapping_fallback_variant text ;

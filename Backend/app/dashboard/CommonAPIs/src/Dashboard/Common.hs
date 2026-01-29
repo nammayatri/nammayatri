@@ -19,7 +19,7 @@
 module Dashboard.Common
   ( module Dashboard.Common,
     module Domain.Types.VehicleVariant,
-    VehicleCategory (CAR, MOTORCYCLE, TRAIN, BUS, FLIGHT, AUTO_CATEGORY, AMBULANCE, TRUCK),
+    VehicleCategory (CAR, MOTORCYCLE, TRAIN, BUS, FLIGHT, AUTO_CATEGORY, AMBULANCE, TRUCK, TOTO),
     ServiceTierType,
     TripCategory,
     OneWayMode,

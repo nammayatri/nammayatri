@@ -104,6 +104,7 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
     boat :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     bus :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     cabs :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    toto :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]
   }
   deriving stock (Generic)

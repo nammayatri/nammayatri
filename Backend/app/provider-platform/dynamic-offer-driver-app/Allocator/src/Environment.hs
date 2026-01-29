@@ -138,7 +138,8 @@ data HandlerEnv = HandlerEnv
     blackListedJobs :: [Text],
     dashboardClickhouseCfg :: ClickhouseCfg,
     dashboardClickhouseEnv :: ClickhouseEnv,
-    kafkaClickhouseEnv :: ClickhouseEnv
+    kafkaClickhouseEnv :: ClickhouseEnv,
+    ttenTokenCacheExpiry :: Seconds
   }
   deriving (Generic)
 
@@ -189,7 +190,7 @@ buildHandlerEnv HandlerCfg {..} = do
       searchRequestExpirationSecondsForMultimodal' = fromIntegral appCfg.searchRequestExpirationSecondsForMultimodal
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
-  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ..}
+  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ttenTokenCacheExpiry = appCfg.ttenTokenCacheExpiry, ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
 releaseHandlerEnv HandlerEnv {..} = do

@@ -469,6 +469,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
     (cast driverId_, cast merchant.id, merchantOpCityId)
     ( DriverRCReq
         { imageId = cast imageId,
+          udinNumber = udinNumber,
           vehicleCategory = vehicleCategoryToPass,
           vehicleDetails = vehicleDetailsToPass,
           isRCImageValidated = Nothing,
