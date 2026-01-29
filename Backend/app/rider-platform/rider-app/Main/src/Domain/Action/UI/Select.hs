@@ -99,6 +99,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
+import qualified Tools.Auth as TAuth
 import Tools.Error
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
@@ -221,6 +222,7 @@ select2 :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSe
 select2 personId estimateId req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  whenM (TAuth.checkMobileVerification person) $ throwError (GuestUserAccessDenied personId.getId "Guest users cannot book rides") -- Blocks guest user from booking rides
   when ((not (fromMaybe False person.businessProfileVerified)) && billingCategory == Just BUSINESS) $ throwError (InvalidRequest "Business profile not verified for business billing category")
   merchant <- QM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId

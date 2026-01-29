@@ -1372,7 +1372,7 @@ findOrCreatePersonForDirectBooking merchantId req = do
       -- Create new person using Registration.createPersonWithPhoneNumber pattern
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       let authReq = buildAuthReqForDirectBooking req countryCode merchant
-      person <- Registration.createPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant Nothing
+      person <- Registration.createPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant Nothing Nothing
       return person.id
 
 -- Build AuthReq for direct booking person creation
@@ -1389,6 +1389,7 @@ buildAuthReqForDirectBooking req countryCode merchant =
       merchantId = merchant.shortId,
       deviceToken = Nothing,
       notificationToken = Nothing,
+      imeiNumber = Nothing,
       whatsappNotificationEnroll = Nothing,
       firstName = req.customerName <|> Just "User",
       middleName = Nothing,
@@ -2158,6 +2159,7 @@ postTicketDashboardRegister merchant req = do
                 merchantId = merchant.shortId,
                 deviceToken = Nothing,
                 notificationToken = Nothing,
+                imeiNumber = Nothing,
                 whatsappNotificationEnroll = Nothing,
                 firstName = Just req.firstName,
                 middleName = Nothing,
@@ -2182,7 +2184,7 @@ postTicketDashboardRegister merchant req = do
                   "merchantId: " <> merchant.id.getId <> " ,city: " <> show merchant.defaultCity
               )
       cloudType <- asks (.cloudType)
-      person <- Registration.buildPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant merchant.defaultCity merchantOperatingCityId Nothing
+      person <- Registration.buildPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant merchant.defaultCity merchantOperatingCityId Nothing Nothing
       QP.create (person {Domain.Types.Person.role = Domain.Types.Person.TICKET_DASHBOARD_USER})
       return $
         API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp
