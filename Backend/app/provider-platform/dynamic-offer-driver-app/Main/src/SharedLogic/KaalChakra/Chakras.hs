@@ -16,9 +16,13 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
-import Kernel.Storage.Beam.SystemConfigs (SystemConfigsT)
+import Kernel.Storage.Esqueleto.Config (HasEsqEnv)
+import qualified Kernel.Storage.Beam.SystemConfigs as BeamSC
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Tools.Logging (withDynamicLogLevel)
+import Kernel.Utils.IOLogging (HasLog)
+import Kernel.Tools.Metrics.CoreMetrics (HasCoreMetrics)
+import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -31,16 +35,26 @@ import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.Person as QPerson
 
-type ChakraJobs m r =
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    JobCreator r m,
-    HasJobInfoMap r,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+type ChakraJobs m f r =
+  ( EsqDBFlow m f,
+    CacheFlow m f,
+    JobCreator f m,
+    HasJobInfoMap f,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
+    HasLog f,
+    HasCoreMetrics f,
+    HasEsqEnv m f,
+    HedisFlow m f,
+    HasInMemEnv f,
+    HasCacheConfig f,
+    HasSchemaName BeamSC.SystemConfigsT,
+    MonadReader f m,
+    MonadFlow m,
+    HasCacConfig f
   )
 
 mkKaalChakraHandle ::
-  ChakraJobs m r =>
+  ChakraJobs m f r =>
   Maybe (Id DM.Merchant) ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   Event.Handle m Actions.Action
@@ -56,7 +70,7 @@ mkKaalChakraHandle merchantId merchantOperatingCityId =
     }
 
 createFetchUserDataJob ::
-  ChakraJobs m r =>
+  ChakraJobs m f r =>
   Maybe (Id DM.Merchant) ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   LYT.Chakra ->
@@ -76,7 +90,7 @@ createFetchUserDataJob merchantId merchantOperatingCityId chakra jobData schedul
     updJobData = jobData{startTime = Just scheduledTime}
 
 createUpdateUserTagDataJob ::
-  ChakraJobs m r =>
+  ChakraJobs m f r =>
   Maybe (Id DM.Merchant) ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   LYT.Chakra ->
@@ -100,7 +114,7 @@ createUpdateUserTagDataJob merchantId merchantOperatingCityId chakra jobData sch
       LYT.Quarterly -> QuarterlyUpdateTag
 
 runDailyJob ::
-  ChakraJobs m r =>
+  ChakraJobs m f r =>
   Job 'Daily ->
   m ExecutionResult
 runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -109,7 +123,7 @@ runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag 
     Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Daily jobInfo.jobData
 
 runWeeklyJob ::
-  ChakraJobs m r =>
+  ChakraJobs m f r =>
   Job 'Weekly ->
   m ExecutionResult
 runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -118,7 +132,7 @@ runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag
     Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Weekly jobInfo.jobData
 
 runQuarterlyJob ::
-  ChakraJobs m r =>
+  ChakraJobs m f r =>
   Job 'Quarterly ->
   m ExecutionResult
 runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -127,7 +141,7 @@ runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLog
     Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
 
 runMonthlyJob ::
-  ChakraJobs m r =>
+  ChakraJobs m f r =>
   Job 'Monthly ->
   m ExecutionResult
 runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -136,7 +150,7 @@ runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTa
     Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Monthly jobInfo.jobData
 
 runDailyUpdateTagJob ::
-  ChakraJobs m r =>
+  ChakraJobs m f r =>
   Job 'DailyUpdateTag ->
   m ExecutionResult
 runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -145,7 +159,7 @@ runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = wi
     Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Daily jobInfo.jobData
 
 runWeeklyUpdateTagJob ::
-  ChakraJobs m r =>
+  ChakraJobs m f r =>
   Job 'WeeklyUpdateTag ->
   m ExecutionResult
 runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -154,7 +168,7 @@ runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = w
     Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Weekly jobInfo.jobData
 
 runQuarterlyUpdateTagJob ::
-  ChakraJobs m r =>
+  ChakraJobs m f r =>
   Job 'QuarterlyUpdateTag ->
   m ExecutionResult
 runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -163,7 +177,7 @@ runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} 
     Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
 
 runMonthlyUpdateTagJob ::
-  ChakraJobs m r =>
+  ChakraJobs m f r =>
   Job 'MonthlyUpdateTag ->
   m ExecutionResult
 runMonthlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
