@@ -51,6 +51,8 @@ data StclMembershipT f = StclMembershipT
     numberOfShares :: (B.C f Kernel.Prelude.Int),
     panNumberEncrypted :: (B.C f Kernel.Prelude.Text),
     panNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
+    paymentStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    shortId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     status :: (B.C f Domain.Types.StclMembership.ApplicationStatus),
     termsAccepted :: (B.C f Kernel.Prelude.Bool),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),

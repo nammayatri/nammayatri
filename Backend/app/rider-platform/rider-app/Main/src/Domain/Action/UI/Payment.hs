@@ -202,6 +202,7 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
       Just Payment.FRFSMultiModalBooking -> DMSC.MultiModalPaymentService service
       Just Payment.FRFSPassPurchase -> DMSC.PassPaymentService service
       Just Payment.ParkingBooking -> DMSC.ParkingPaymentService service
+      Just Payment.STCL -> DMSC.PaymentService service
       Nothing -> DMSC.PaymentService service
 
 juspayWebhookHandler ::

@@ -37,8 +37,18 @@ findByDriverIdAndStatus driverId status = do findAllWithKV [Se.And [Se.Is Beam.d
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.StclMembership.StclMembership -> m (Maybe Domain.Types.StclMembership.StclMembership))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+findByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.StclMembership.StclMembership))
+findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq shortId]
+
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.StclMembership.ApplicationStatus -> Kernel.Types.Id.Id Domain.Types.StclMembership.StclMembership -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateStatusAndPaymentStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.StclMembership.ApplicationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.StclMembership.StclMembership -> m ())
+updateStatusAndPaymentStatus status paymentStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.paymentStatus paymentStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.StclMembership.StclMembership -> m (Maybe Domain.Types.StclMembership.StclMembership))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -82,6 +92,8 @@ updateByPrimaryKey (Domain.Types.StclMembership.StclMembership {..}) = do
       Se.Set Beam.numberOfShares numberOfShares,
       Se.Set Beam.panNumberEncrypted (((unEncrypted . (.encrypted) $ panNumber))),
       Se.Set Beam.panNumberHash (((.hash) panNumber)),
+      Se.Set Beam.paymentStatus paymentStatus,
+      Se.Set Beam.shortId shortId,
       Se.Set Beam.status status,
       Se.Set Beam.termsAccepted termsAccepted,
       Se.Set Beam.updatedAt _now,

@@ -76,6 +76,9 @@ getConfigJSON = \case
   Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
+  Domain.MembershipPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> toJSON cfg
+    Payment.StripeConfig cfg -> toJSON cfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> toJSON cfg
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
@@ -149,6 +152,11 @@ getServiceName = \case
       Just Juspay.AA -> Domain.RentalPaymentService Payment.AAJuspay
       _ -> Domain.RentalPaymentService Payment.Juspay
     Payment.StripeConfig _ -> Domain.CautioPaymentService Payment.Stripe
+  Domain.MembershipPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> case cfg.serviceMode of
+      Just Juspay.AA -> Domain.MembershipPaymentService Payment.AAJuspay
+      _ -> Domain.MembershipPaymentService Payment.Juspay
+    Payment.StripeConfig _ -> Domain.MembershipPaymentService Payment.Stripe
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> Domain.IssueTicketService Ticket.Kapture
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
@@ -212,6 +220,9 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.CautioPaymentService Payment.AAJuspay -> Domain.CautioPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
   Domain.CautioPaymentService Payment.Stripe -> Domain.CautioPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
+  Domain.MembershipPaymentService Payment.Juspay -> Domain.MembershipPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
+  Domain.MembershipPaymentService Payment.AAJuspay -> Domain.MembershipPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
+  Domain.MembershipPaymentService Payment.Stripe -> Domain.MembershipPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> eitherValue configJSON

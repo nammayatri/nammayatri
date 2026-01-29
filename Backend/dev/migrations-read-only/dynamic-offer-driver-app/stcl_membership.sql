@@ -42,3 +42,14 @@ ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN terms_accepted boo
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN vehicle_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN short_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN payment_status text ;
