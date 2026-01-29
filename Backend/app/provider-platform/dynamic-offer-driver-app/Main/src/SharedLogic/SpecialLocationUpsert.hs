@@ -70,6 +70,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoHasGeom :: Text,
     gateInfoCanQueueUpOnGate :: Text,
     gateInfoType :: Text,
+    priority :: Text,
     pickupPriority :: Text,
     dropPriority :: Text,
     specialLocationId :: Text
@@ -94,6 +95,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "gate_info_has_geom"
       <*> r .: "gate_info_can_queue_up_on_gate"
       <*> r .: "gate_info_type"
+      <*> r .: "priority"
       <*> r .: "pickup_priority"
       <*> r .: "drop_priority"
       <*> r .: "special_location_id"
@@ -185,6 +187,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   let locationType :: Maybe SL.SpecialLocationType = readMaybeCSVField idx row.locationType "Location Type"
       mbSpecialLocationId :: Maybe Text = cleanField row.specialLocationId
   enabled :: Bool <- readCSVField idx row.enabled "Enabled"
+  let priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
   gateInfoId <- generateGUID
@@ -214,7 +217,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             merchantOperatingCityId = Just (cast merchantOpCity.id),
             linkedLocationsIds = [],
             gates = [],
-            priority = 0,
+            priority = fromMaybe 0 priority,
             locationType = fromMaybe SL.Open locationType,
             geom = Just $ T.pack locationGeom,
             createdAt = now,
