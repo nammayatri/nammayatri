@@ -15,6 +15,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
+import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -23,13 +24,13 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "submitApplication" :> ReqBody ('[JSON]) API.Types.UI.StclMembership.MembershipApplicationReq
+  ( TokenAuth :> "submitApplication" :> ReqBody '[JSON] API.Types.UI.StclMembership.MembershipApplicationReq
       :> Post
-           ('[JSON])
-           API.Types.UI.StclMembership.MembershipApplicationResp
+           '[JSON]
+           Kernel.External.Payment.Interface.Types.CreateOrderResp
       :<|> TokenAuth
       :> "membership"
-      :> Get ('[JSON]) API.Types.UI.StclMembership.MembershipDetailsResp
+      :> Get '[JSON] API.Types.UI.StclMembership.MembershipDetailsResp
   )
 
 handler :: Environment.FlowServer API
@@ -41,7 +42,7 @@ postSubmitApplication ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     API.Types.UI.StclMembership.MembershipApplicationReq ->
-    Environment.FlowHandler API.Types.UI.StclMembership.MembershipApplicationResp
+    Environment.FlowHandler Kernel.External.Payment.Interface.Types.CreateOrderResp
   )
 postSubmitApplication a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.StclMembership.postSubmitApplication (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 

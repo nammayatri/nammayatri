@@ -45,6 +45,8 @@ data StclMembershipE e = StclMembership
     nomineeName :: Kernel.Prelude.Text,
     numberOfShares :: Kernel.Prelude.Int,
     panNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+    paymentStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    shortId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.StclMembership.ApplicationStatus,
     termsAccepted :: Kernel.Prelude.Bool,
     updatedAt :: Kernel.Prelude.UTCTime,
@@ -52,9 +54,9 @@ data StclMembershipE e = StclMembership
   }
   deriving (Generic)
 
-type StclMembership = StclMembershipE ('AsEncrypted)
+type StclMembership = StclMembershipE 'AsEncrypted
 
-type DecryptedStclMembership = StclMembershipE ('AsUnencrypted)
+type DecryptedStclMembership = StclMembershipE 'AsUnencrypted
 
 instance EncryptedItem StclMembership where
   type Unencrypted StclMembership = (DecryptedStclMembership, HashSalt)
@@ -98,6 +100,8 @@ instance EncryptedItem StclMembership where
           nomineeName = nomineeName entity,
           numberOfShares = numberOfShares entity,
           panNumber = panNumber_,
+          paymentStatus = paymentStatus entity,
+          shortId = shortId entity,
           status = status entity,
           termsAccepted = termsAccepted entity,
           updatedAt = updatedAt entity,
@@ -143,6 +147,8 @@ instance EncryptedItem StclMembership where
             nomineeName = nomineeName entity,
             numberOfShares = numberOfShares entity,
             panNumber = panNumber_,
+            paymentStatus = paymentStatus entity,
+            shortId = shortId entity,
             status = status entity,
             termsAccepted = termsAccepted entity,
             updatedAt = updatedAt entity,
@@ -158,4 +164,4 @@ instance EncryptedItem' StclMembership where
 
 data ApplicationStatus = SUBMITTED | PENDING | APPROVED | REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ApplicationStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ApplicationStatus)

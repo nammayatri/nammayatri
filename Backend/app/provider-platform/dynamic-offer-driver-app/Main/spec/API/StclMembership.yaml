@@ -4,6 +4,8 @@ imports:
   UTCTime: Kernel.Prelude
   Day: Data.Time
   ApplicationStatus: Domain.Types.StclMembership
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
+  Money: Kernel.Types.Common
 
 module: StclMembership
 types:
@@ -50,6 +52,7 @@ types:
     vehicleInfo: VehicleInfo
     nomineeInfo: NomineeInfo
     declaration: Declaration
+    amount: Money
   MembershipApplicationResp:
     applicationId: Text
     status: ApplicationStatus
@@ -85,7 +88,7 @@ apis:
       request:
         type: MembershipApplicationReq
       response:
-        type: MembershipApplicationResp
+        type: CreateOrderResp
   - GET:
       endpoint: /membership
       auth: TokenAuth PROVIDER_TYPE

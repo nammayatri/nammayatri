@@ -31,7 +31,7 @@ import qualified Kernel.External.Wallet as Wallet
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Payment.API as Payment
+import qualified Lib.Payment.API as PaymentAPI
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 import Storage.Beam.SystemConfigs ()
@@ -39,16 +39,30 @@ import Tools.Auth
 
 type API =
   TokenAuth
-    :> Payment.API "invoiceId" "notificationId" Invoice Notification Payment.NotificationStatusResp ()
+    :> ( "payment"
+           :> "createOrder"
+           :> "v2"
+           :> ReqBody '[JSON] Payment.CreateOrderReq
+           :> Post '[JSON] Payment.CreateOrderResp
+           :<|> "payment"
+             :> "status"
+             :> "v2"
+             :> Capture "orderId" Text
+             :> Get '[JSON] DPayment.PaymentStatusResp
+           :<|> PaymentAPI.API "invoiceId" "notificationId" Invoice Notification Payment.NotificationStatusResp ()
+       )
 
 handler :: FlowServer API
 handler authInfo =
-  createOrder authInfo
-    :<|> getStatus authInfo
-    :<|> getOrder authInfo
-    :<|> getNotificationStatus authInfo
-    :<|> postWalletRecharge authInfo
-    :<|> getWalletBalance authInfo
+  createOrderV2 authInfo
+    :<|> getStatusV2 authInfo
+    :<|> ( createOrder authInfo
+             :<|> getStatus authInfo
+             :<|> getOrder authInfo
+             :<|> getNotificationStatus authInfo
+             :<|> postWalletRecharge authInfo
+             :<|> getWalletBalance authInfo
+         )
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Invoice -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails invoiceId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails invoiceId
@@ -68,3 +82,9 @@ postWalletRecharge tokenDetails _ = withFlowHandlerAPI $ DPayment.postWalletRech
 
 getWalletBalance :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Wallet.WalletBalanceData
 getWalletBalance tokenDetails = withFlowHandlerAPI $ DPayment.getWalletBalance tokenDetails
+
+createOrderV2 :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Payment.CreateOrderReq -> FlowHandler Payment.CreateOrderResp
+createOrderV2 tokenDetails createOrderReq = withFlowHandlerAPI $ DPayment.createOrderV2 tokenDetails createOrderReq
+
+getStatusV2 :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler DPayment.PaymentStatusResp
+getStatusV2 tokenDetails orderIdText = withFlowHandlerAPI $ DPayment.getStatusV2 tokenDetails orderIdText

@@ -26,19 +26,29 @@ createMany = traverse_ create
 findByApplicationId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.StclMembership.StclMembership))
 findByApplicationId applicationId = do findOneWithKV [Se.Is Beam.applicationId $ Se.Eq applicationId]
 
-findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.StclMembership.StclMembership]))
+findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.StclMembership.StclMembership])
 findByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByDriverIdAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.StclMembership.ApplicationStatus -> m ([Domain.Types.StclMembership.StclMembership]))
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.StclMembership.ApplicationStatus -> m [Domain.Types.StclMembership.StclMembership])
 findByDriverIdAndStatus driverId status = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.status $ Se.Eq status]]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.StclMembership.StclMembership -> m (Maybe Domain.Types.StclMembership.StclMembership))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+findByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.StclMembership.StclMembership))
+findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq shortId]
+
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.StclMembership.ApplicationStatus -> Kernel.Types.Id.Id Domain.Types.StclMembership.StclMembership -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateStatusAndPaymentStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.StclMembership.ApplicationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.StclMembership.StclMembership -> m ())
+updateStatusAndPaymentStatus status paymentStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.paymentStatus paymentStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.StclMembership.StclMembership -> m (Maybe Domain.Types.StclMembership.StclMembership))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -47,10 +57,10 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.StclMembership.StclMembership {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.aadharNumberEncrypted (((unEncrypted . (.encrypted) $ aadharNumber))),
-      Se.Set Beam.aadharNumberHash (((.hash) aadharNumber)),
-      Se.Set Beam.accountNumberEncrypted (((unEncrypted . (.encrypted) $ accountNumber))),
-      Se.Set Beam.accountNumberHash (((.hash) accountNumber)),
+    [ Se.Set Beam.aadharNumberEncrypted (unEncrypted . (.encrypted) $ aadharNumber),
+      Se.Set Beam.aadharNumberHash ((.hash) aadharNumber),
+      Se.Set Beam.accountNumberEncrypted (unEncrypted . (.encrypted) $ accountNumber),
+      Se.Set Beam.accountNumberHash ((.hash) accountNumber),
       Se.Set Beam.addressCity addressCity,
       Se.Set Beam.addressPostalCode addressPostalCode,
       Se.Set Beam.addressState addressState,
@@ -68,20 +78,22 @@ updateByPrimaryKey (Domain.Types.StclMembership.StclMembership {..}) = do
       Se.Set Beam.fatherMotherName fatherMotherName,
       Se.Set Beam.firstName firstName,
       Se.Set Beam.fuelTypes fuelTypes,
-      Se.Set Beam.ifscCodeEncrypted (((unEncrypted . (.encrypted) $ ifscCode))),
-      Se.Set Beam.ifscCodeHash (((.hash) ifscCode)),
+      Se.Set Beam.ifscCodeEncrypted (unEncrypted . (.encrypted) $ ifscCode),
+      Se.Set Beam.ifscCodeHash ((.hash) ifscCode),
       Se.Set Beam.lastName lastName,
       Se.Set Beam.memberCategory memberCategory,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.mobileNumberEncrypted (((unEncrypted . (.encrypted) $ mobileNumber))),
-      Se.Set Beam.mobileNumberHash (((.hash) mobileNumber)),
-      Se.Set Beam.nomineeAadharEncrypted (((nomineeAadhar & unEncrypted . encrypted))),
-      Se.Set Beam.nomineeAadharHash ((nomineeAadhar & hash)),
+      Se.Set Beam.mobileNumberEncrypted (unEncrypted . (.encrypted) $ mobileNumber),
+      Se.Set Beam.mobileNumberHash ((.hash) mobileNumber),
+      Se.Set Beam.nomineeAadharEncrypted (nomineeAadhar & unEncrypted . encrypted),
+      Se.Set Beam.nomineeAadharHash (nomineeAadhar & hash),
       Se.Set Beam.nomineeName nomineeName,
       Se.Set Beam.numberOfShares numberOfShares,
-      Se.Set Beam.panNumberEncrypted (((unEncrypted . (.encrypted) $ panNumber))),
-      Se.Set Beam.panNumberHash (((.hash) panNumber)),
+      Se.Set Beam.panNumberEncrypted (unEncrypted . (.encrypted) $ panNumber),
+      Se.Set Beam.panNumberHash ((.hash) panNumber),
+      Se.Set Beam.paymentStatus paymentStatus,
+      Se.Set Beam.shortId shortId,
       Se.Set Beam.status status,
       Se.Set Beam.termsAccepted termsAccepted,
       Se.Set Beam.updatedAt _now,

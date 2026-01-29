@@ -43,6 +43,7 @@ data ServiceName
   | PaymentService Payment.PaymentService
   | RentalPaymentService Payment.PaymentService
   | CautioPaymentService Payment.PaymentService
+  | MembershipPaymentService Payment.PaymentService
   | PayoutService Payout.PayoutService
   | RentalPayoutService Payout.PayoutService
   | RidePayoutService Payout.PayoutService
@@ -70,6 +71,7 @@ instance Show ServiceName where
   show (PaymentService s) = "Payment_" <> show s
   show (RentalPaymentService s) = "RentalPayment_" <> show s
   show (CautioPaymentService s) = "CautioPayment_" <> show s
+  show (MembershipPaymentService s) = "MembershipPayment_" <> show s
   show (PayoutService s) = "Payout_" <> show s
   show (RentalPayoutService s) = "RentalPayout_" <> show s
   show (RidePayoutService s) = "RidePayout_" <> show s
@@ -125,6 +127,10 @@ instance Read ServiceName where
                ]
             ++ [ (CautioPaymentService v1, r2)
                  | r1 <- stripPrefix "CautioPayment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (MembershipPaymentService v1, r2)
+                 | r1 <- stripPrefix "MembershipPayment_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (PayoutService v1, r2)
@@ -187,6 +193,7 @@ data ServiceConfigD (s :: UsageSafety)
   | PaymentServiceConfig !PaymentServiceConfig
   | RentalPaymentServiceConfig !PaymentServiceConfig
   | CautioPaymentServiceConfig !PaymentServiceConfig
+  | MembershipPaymentServiceConfig !PaymentServiceConfig
   | PayoutServiceConfig !PayoutServiceConfig
   | RentalPayoutServiceConfig !PayoutServiceConfig
   | RidePayoutServiceConfig !PayoutServiceConfig
