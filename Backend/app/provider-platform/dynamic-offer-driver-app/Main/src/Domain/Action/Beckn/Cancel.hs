@@ -60,7 +60,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
-import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
 import SharedLogic.Cancel
@@ -131,9 +130,6 @@ cancel req merchant booking mbActiveSearchTry = do
     let currentLocation = getCoordinates <$> mbLocation
     bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
-    -- Update analytics and driver stats for cancellation
-    whenJust mbRide $ \ride ->
-      Analytics.updateCancellationAnalyticsAndDriverStats transporterConfig ride bookingCR
     QRB.updateStatus booking.id SRB.CANCELLED
     when booking.isScheduled $ removeBookingFromRedis booking
     fork "DriverRideCancelledCoin" $ do
