@@ -487,12 +487,12 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId vehicleTy
   merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType
 
-  -- If vehicle number is provided, try to get the service tier from OTP REST
-  mbServiceTierFromVehicle <- case req.vehicleNumber of
-    Just vehicleNumber -> do
+  -- If vehicle number is provided and serviceTier is not provided in request, try to get the service tier from OTP REST
+  mbServiceTierFromVehicle <- case (req.vehicleNumber, req.serviceTier) of
+    (Just vehicleNumber, Nothing) -> do
       mbVehicleServiceType <- OTPRest.getVehicleServiceType integratedBPPConfig vehicleNumber Nothing
       return $ (.service_type) <$> mbVehicleServiceType
-    Nothing -> return Nothing
+    _ -> return Nothing
 
   -- Use service tier from vehicle if available, otherwise use from request
   let finalServiceTier = mbServiceTierFromVehicle <|> req.serviceTier
