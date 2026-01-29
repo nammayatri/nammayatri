@@ -57,6 +57,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     smsProvidersPriorityList :: B.C f [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: B.C f Kernel.External.Maps.Types.MapsService,
     snapToRoadProvidersList :: B.C f [Kernel.External.Maps.Types.MapsService],
+    totoVerificationPriorityList :: B.C f (Kernel.Prelude.Maybe [Kernel.External.Verification.Types.VerificationService]),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     verificationProvidersPriorityList :: B.C f [Kernel.External.Verification.Types.VerificationService],
     verificationService :: B.C f Kernel.External.Verification.Types.VerificationService,

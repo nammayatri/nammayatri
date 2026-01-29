@@ -153,6 +153,7 @@ getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandat
   truckConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.TRUCK Nothing
   boatConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BOAT Nothing
   busConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BUS Nothing
+  totoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.TOTO Nothing
   cabConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments cabConfigsRaw mbOnlyVehicle)
   autoConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments autoConfigsRaw mbOnlyVehicle)
   bikeConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments bikeConfigsRaw mbOnlyVehicle)
@@ -160,6 +161,7 @@ getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandat
   truckConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments truckConfigsRaw mbOnlyVehicle)
   busConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments busConfigsRaw mbOnlyVehicle)
   boatConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments boatConfigsRaw mbOnlyVehicle)
+  totoConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments totoConfigsRaw mbOnlyVehicle)
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       { cabs = SDO.toMaybe cabConfigs,
@@ -168,7 +170,8 @@ getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandat
         ambulances = SDO.toMaybe ambulanceConfigs,
         trucks = SDO.toMaybe truckConfigs,
         bus = SDO.toMaybe busConfigs,
-        boat = SDO.toMaybe boatConfigs
+        boat = SDO.toMaybe boatConfigs,
+        toto = SDO.toMaybe totoConfigs
       }
 
 getDriverVehiclePhotos ::

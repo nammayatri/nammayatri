@@ -173,7 +173,8 @@ data AppCfg = AppCfg
     noSignatureSubscribers :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
-    cityDBSchema :: Text
+    cityDBSchema :: Text,
+    ttenTokenCacheExpiry :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -293,7 +294,8 @@ data AppEnv = AppEnv
     noSignatureSubscribers :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
-    cloudType :: Maybe CloudType
+    cloudType :: Maybe CloudType,
+    ttenTokenCacheExpiry :: Seconds
   }
   deriving (Generic)
 

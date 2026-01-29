@@ -513,4 +513,5 @@ in  { esqDBCfg
     , blackListedJobs = [] : List Text
     , cityDBSchema = "atlas_driver_offer_bpp"
     , emailServiceConfig
+    , ttenTokenCacheExpiry = +86390
     }

@@ -322,7 +322,8 @@ data RegisterRCReq = RegisterRCReq
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory,
-    vehicleDetails :: Kernel.Prelude.Maybe Dashboard.Common.DriverVehicleDetails
+    vehicleDetails :: Kernel.Prelude.Maybe Dashboard.Common.DriverVehicleDetails,
+    udinNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

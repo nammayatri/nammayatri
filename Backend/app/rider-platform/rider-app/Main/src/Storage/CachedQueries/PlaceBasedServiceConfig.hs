@@ -110,6 +110,7 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     Tokenize.GullakTokenizationServiceConfig _ -> TokenizationService Tokenize.Gullak
     Tokenize.HyperVergeTokenizationServiceConfig _ -> TokenizationService Tokenize.HyperVerge
     Tokenize.DigilockerTokenizationServiceConfig _ -> TokenizationService Tokenize.Digilocker
+    Tokenize.TtenTokenizationServiceConfig _ -> TokenizationService Tokenize.Tten
   PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> PayoutService Payout.Juspay
   MultiModalServiceConfig multiModalCfg -> case multiModalCfg of

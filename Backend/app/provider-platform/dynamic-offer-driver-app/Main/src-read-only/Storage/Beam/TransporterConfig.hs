@@ -261,6 +261,7 @@ data TransporterConfigT f = TransporterConfigT
     useWithSnapToRoadFallback :: B.C f Kernel.Prelude.Bool,
     validNameComparePercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     variantsToEnableForSubscription :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
+    vehicleCategoryExcludedFromVerification :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     volunteerSmsSendingLimit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     weeklyConditionCooldownTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     weeklyMinRidesForBlocking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

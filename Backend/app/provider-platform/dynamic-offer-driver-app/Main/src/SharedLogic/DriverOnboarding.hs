@@ -412,13 +412,14 @@ createRC ::
   m VehicleRegistrationCertificate
 createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
   (verificationStatus, reviewRequired, variant, mbVehicleModel) <- validateRCStatus input rcconfigs now expiry
+  logInfo $ "createRC: verificationStatus=" <> show verificationStatus <> ", reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel
   let airConditioned = input.airConditioned
       updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
         Just DVC.BUS -> if airConditioned == Just True then Just DV.BUS_AC else Just DV.BUS_NON_AC
         Just DVC.TRUCK -> Just $ DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight (fromMaybe DV.DELIVERY_LIGHT_GOODS_VEHICLE variant)
         _ -> variant
       finalVerificationStatus = if null failedRules then verificationStatus else Documents.INVALID
-  pure $
+  pure
     VehicleRegistrationCertificate
       { id,
         documentImageId = input.documentImageId,
@@ -470,6 +471,7 @@ validateRCStatus input rcconfigs now expiry = do
       let mbVehicleClassOrCategory = input.vehicleClass <|> input.vehicleClassCategory
       logInfo $ "validateRCStatus: vehicleClass=" <> show input.vehicleClass <> ", vehicleClassCategory=" <> show input.vehicleClassCategory <> ", mbVehicleClassOrCategory=" <> show mbVehicleClassOrCategory <> ", vehicleClassCheckType=" <> show validCOVsCheck <> ", vehicleClassVariantMap size=" <> show (length vehicleClassVariantMap)
       let (isCOVValid, reviewRequired, variant, mbVehicleModel) = maybe (False, Nothing, Nothing, Nothing) (isValidCOVRC input.airConditioned input.oxygen input.ventilator input.vehicleClassCategory input.seatingCapacity input.manufacturer input.bodyType input.manufacturerModel vehicleClassVariantMap validCOVsCheck) mbVehicleClassOrCategory
+      logDebug $ "validateRCStatus: reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel
       logInfo $ "validateRCStatus: isCOVValid=" <> show isCOVValid <> ", checkExpiry=" <> show rcconfigs.checkExpiry <> ", expiry=" <> show expiry <> ", now < expiry=" <> show (now < expiry)
       let validInsurance = True -- (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
       let expiryCheck = (not rcconfigs.checkExpiry) || now < expiry

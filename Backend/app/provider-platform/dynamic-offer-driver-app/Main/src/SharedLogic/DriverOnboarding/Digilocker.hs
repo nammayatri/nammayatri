@@ -94,6 +94,7 @@ getAllowedVehicleCategories merchantOpCityId = do
       | txt == "TRUCK" = Just DVC.TRUCK
       | txt == "BOAT" = Just DVC.BOAT
       | txt == "BUS" = Just DVC.BUS
+      | txt == "TOTO" = Just DVC.TOTO
       | otherwise = Nothing
 
 -- | Base64URL encode without padding (for PKCE)

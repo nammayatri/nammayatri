@@ -506,6 +506,7 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
         DomainRC.DriverRCReq
           { vehicleRegistrationCertNumber = req.vehicleRegistrationCertNumber,
             imageId = cast req.imageId,
+            udinNumber = req.udinNumber,
             operatingCity = req.operatingCity,
             dateOfRegistration = req.dateOfRegistration,
             airConditioned = req.airConditioned,
@@ -974,6 +975,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
               imageId = Id "bulkVehicleUpload",
               vehicleDetails = Nothing,
               vehicleCategory = Just $ fromMaybe DVC.CAR vehicleCategory,
+              udinNumber = Nothing,
               ..
             },
           vehicleNumberHash,
@@ -3187,7 +3189,8 @@ convertToAddVehicleReq rcReq =
       vehicleModelYear = Nothing,
       skipFleetChecks = Nothing,
       vehicleTags = Nothing,
-      fuelType = Nothing
+      fuelType = Nothing,
+      udinNumber = rcReq.udinNumber
     }
 
 getDriverDashboardInternalHelperGetFleetOwnerId :: (ShortId DM.Merchant -> Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow Text)
