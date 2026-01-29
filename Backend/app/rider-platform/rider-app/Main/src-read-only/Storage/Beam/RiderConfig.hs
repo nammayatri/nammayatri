@@ -86,6 +86,7 @@ data RiderConfigT f = RiderConfigT
     incidentReportSupport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     initiateFirstMultimodalJourney :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     intercitySearchLocations :: B.C f (Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation]),
+    invoiceLogoUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isDeviceIdCheckDisabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFirstReferredRideEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
