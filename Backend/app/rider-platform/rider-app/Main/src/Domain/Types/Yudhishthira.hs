@@ -167,7 +167,6 @@ instance ToJSON DRide.Ride where
         "pickupEtaLogicVersion" A..= ride.pickupEtaLogicVersion,
         "pickupRouteCallCount" A..= ride.pickupRouteCallCount,
         "pickupSpeedInMPS" A..= ride.pickupSpeedInMPS,
-        "refundRequestStatus" A..= ride.refundRequestStatus,
         "rideEndTime" A..= ride.rideEndTime,
         "rideRating" A..= ride.rideRating,
         "rideStartTime" A..= ride.rideStartTime,
