@@ -151,10 +151,10 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               CQM.findById merchantId
                 >>= fromMaybeM (MerchantNotFound merchantId.getId)
             transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+            rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
             noShowCharges <- withTryCatch "noShowCharges:cancelRideImpl" $ do
               if transporterConfig.canAddCancellationFee
                 then do
-                  rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
                   let tagsForCancellationCharges = [validCustomerCancellation, validUserNoShowCancellation]
                   let cancellationType =
                         if bookingCReason.source == SBCR.ByDriver && validUserNoShowCancellation `elem` rideTags
@@ -186,7 +186,6 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 DC.driverCoinsEvent ride.driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver (fromMaybe (DTCR.CancellationReasonCode "OTHER") bookingCReason.reasonCode)) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
 
             fork "cancelRide - Notify driver" $ do
-              rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
               triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
               triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
               when (bookingCReason.source == SBCR.ByDriver) $ do
