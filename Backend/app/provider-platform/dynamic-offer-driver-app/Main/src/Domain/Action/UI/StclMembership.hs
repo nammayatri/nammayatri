@@ -3,30 +3,37 @@
 module Domain.Action.UI.StclMembership (postSubmitApplication, getMembership) where
 
 import qualified API.Types.UI.StclMembership as APITypes
-import Data.Text (takeEnd)
 import qualified Data.Text as T
-import qualified Data.Time
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Person
+import qualified Domain.Action.UI.Payment as DPayment
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
+import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Person as Person
 import qualified Domain.Types.StclMembership as Domain
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.Prelude
+import Kernel.Types.Common (Money (..), toHighPrecMoney)
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
 import Tools.Auth
 
 postSubmitApplication ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Person.Person),
+      Kernel.Types.Id.Id Merchant.Merchant,
+      Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity
     ) ->
     APITypes.MembershipApplicationReq ->
-    Environment.Flow APITypes.MembershipApplicationResp
+    Environment.Flow Payment.CreateOrderResp
   )
 postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
   -- Extract and validate driver ID
@@ -38,11 +45,54 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
     throwError $ InvalidRequest "Driver ID in request does not match authenticated driver"
 
   -- Check for existing applications to prevent duplicates
+  -- If any existing application has status SUBMITTED, throw error
   existingApplications <- QStclMembership.findByDriverId driverId
-  unless (null existingApplications) $
+  let hasSubmittedApplication = any (\app -> app.status == Domain.SUBMITTED) existingApplications
+  when hasSubmittedApplication $
     throwError $ InvalidRequest "An application already exists for this driver"
 
-  -- Encrypt sensitive fields
+  -- Get person details
+  person <- QP.findById driverId >>= fromMaybeM (InvalidRequest "Person not found")
+
+  -- Decrypt mobile number for payment
+  mbMobileNumber <- person.mobileNumber & fromMaybeM (InvalidRequest "Mobile number not found")
+  decryptedMobile <- decrypt mbMobileNumber
+
+  -- Generate order ID and short ID in backend
+  orderId <- generateGUIDText
+  orderShortId <- generateShortId
+  let shortIdText = orderShortId.getShortId
+
+  -- Get amount from request
+  let amount = toHighPrecMoney req.amount
+
+  -- Create Payment.CreateOrderReq
+  let createOrderReq =
+        Payment.CreateOrderReq
+          { orderId = orderId,
+            orderShortId = shortIdText,
+            amount = amount,
+            customerId = driverId.getId,
+            customerEmail = req.emailId,
+            customerPhone = decryptedMobile,
+            customerFirstName = Just req.firstName,
+            customerLastName = Just req.lastName,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateFrequency = Nothing,
+            mandateStartDate = Nothing,
+            mandateEndDate = Nothing,
+            metadataGatewayReferenceId = Nothing,
+            optionsGetUpiDeepLinks = Nothing,
+            metadataExpiryInMins = Nothing,
+            splitSettlementDetails = Nothing,
+            basket = Nothing
+          }
+
+  -- Call createOrderV2
+  createOrderResp <- DPayment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq
+
+  -- Encrypt sensitive fields for storage
   encryptedAadhar <- encrypt req.aadharNumber
   encryptedPAN <- encrypt req.panNumber
   encryptedMobile <- encrypt req.mobileNumber
@@ -50,9 +100,8 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
   encryptedIFSC <- encrypt req.bankDetails.ifscCode
   encryptedNomineeAadhar <- encrypt req.nomineeInfo.nomineeAadhar
 
-  -- Generate application ID and record ID
+  -- Generate application ID and record ID for membership record
   applicationId <- generateGUIDText
-  recordId :: Kernel.Types.Id.Id Domain.StclMembership <- generateGUID
   now <- getCurrentTime
 
   -- Convert VehicleType enum to Text format for storage
@@ -69,9 +118,10 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
   -- Create domain type
   let membership =
         Domain.StclMembership
-          { Domain.id = recordId,
+          { Domain.id = Kernel.Types.Id.Id orderId,
             Domain.driverId = driverId,
             Domain.applicationId = applicationId,
+            Domain.shortId = Just shortIdText,
             Domain.firstName = req.firstName,
             Domain.lastName = req.lastName,
             Domain.memberCategory = req.memberCategory,
@@ -99,7 +149,8 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             Domain.declarationDate = req.declaration.date,
             Domain.declarationSignature = req.declaration.signature,
             Domain.termsAccepted = req.declaration.termsAccepted,
-            Domain.status = Domain.SUBMITTED,
+            Domain.status = Domain.PENDING,
+            Domain.paymentStatus = Nothing,
             Domain.merchantId = merchantId,
             Domain.merchantOperatingCityId = merchantOperatingCityId,
             Domain.createdAt = now,
@@ -109,19 +160,13 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
   -- Save to database
   QStclMembership.create membership
 
-  -- Return response
-  return $
-    APITypes.MembershipApplicationResp
-      { APITypes.applicationId = applicationId,
-        APITypes.status = Domain.SUBMITTED,
-        APITypes.message = "Your application has been submitted successfully",
-        APITypes.submittedAt = now
-      }
+  -- Return Payment.CreateOrderResp from createOrderV2
+  return createOrderResp
 
 getMembership ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Person.Person),
+      Kernel.Types.Id.Id Merchant.Merchant,
+      Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Environment.Flow APITypes.MembershipDetailsResp
   )
@@ -139,7 +184,7 @@ getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
   let maskSensitiveData :: Kernel.Prelude.Text -> Kernel.Prelude.Text
       maskSensitiveData value =
         let len = T.length value
-            last4 = if len >= 4 then takeEnd 4 value else value
+            last4 = if len >= 4 then T.takeEnd 4 value else value
             xCount = max 0 (len - 4)
          in T.replicate xCount "X" <> last4
 
