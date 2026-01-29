@@ -200,7 +200,6 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
   operator <- checkOperator requestorId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mobileNumberHash <- getDbHash req.mobileNumber
   let enabled = Just True
   fleetOwner <- do
@@ -222,13 +221,17 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
         personData <- DRegistrationV2.createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled
         pure personData
 
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwner.id True
   when (any (\foa -> Id foa.fleetOwnerId == fleetOwner.id && Id foa.operatorId == operator.id) existingFOAssociations)
     . throwError
     $ InvalidRequest "Fleet already associated with operator"
-  when (merchant.overwriteAssociation /= Just True && notNull existingFOAssociations)
-    . throwError
-    $ InvalidRequest "Fleet already associated with another operator"
+  -- Check city config: if allowMultiFleetOperatorLink is False/None, enforce 1-to-1 mapping
+  -- But allow if overwriteAssociation is enabled (will end existing associations)
+  when (transporterConfig.allowMultiFleetOperatorLink /= Just True
+        && notNull existingFOAssociations
+        && merchant.overwriteAssociation /= Just True) $
+    throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
 
   if skipOtpVerification
     then do
@@ -281,7 +284,16 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
   storedOtp <- Redis.get key >>= fromMaybeM OtpNotFound
   unless (storedOtp == req.otp) $ throwError InvalidOtp
 
-  SA.endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetOwner
+  existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwner.id True
+  -- Check city config: if allowMultiFleetOperatorLink is False/None, enforce 1-to-1 mapping
+  when (transporterConfig.allowMultiFleetOperatorLink /= Just True
+        && notNull existingFOAssociations
+        && merchant.overwriteAssociation /= Just True) $
+    throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
+
+  -- Only end associations if overwriteAssociation is enabled and multi-link is not allowed
+  when (merchant.overwriteAssociation == Just True && transporterConfig.allowMultiFleetOperatorLink /= Just True) $
+    SA.endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetOwner
   fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
   QFOA.create fleetOperatorAssociation
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus

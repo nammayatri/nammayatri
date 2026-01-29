@@ -38,6 +38,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     allowDuplicateAadhaar :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateGst :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicatePan :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allowMultiFleetOperatorLink :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowedPaymentInstrumentForPayout :: Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument],
     allowedReferralEntities :: [Domain.Types.Person.Role],
     analyticsConfig :: Domain.Types.TransporterConfig.AnalyticsConfig,

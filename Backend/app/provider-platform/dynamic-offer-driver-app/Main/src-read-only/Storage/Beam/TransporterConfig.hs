@@ -33,6 +33,7 @@ data TransporterConfigT f = TransporterConfigT
     allowDuplicateAadhaar :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowDuplicateGst :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowDuplicatePan :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    allowMultiFleetOperatorLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowedPaymentInstrumentForPayout :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument]),
     allowedReferralEntities :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     analyticsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

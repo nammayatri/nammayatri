@@ -85,9 +85,9 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
       Nothing
       ( \driverInfo -> do
           Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) res.person.id
-          mOperator <- QFOA.findByFleetOwnerId fleetOwnerId True
-          when (isNothing mOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
-          whenJust mOperator $ \operator -> do
+          operators <- QFOA.findAllByFleetOwnerId (Id fleetOwnerId) True
+          when (null operators) $ logTagError "AnalyticsAddDriver" "No operators found for fleet owner"
+          forM_ operators $ \operator -> do
             when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
             Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
       )

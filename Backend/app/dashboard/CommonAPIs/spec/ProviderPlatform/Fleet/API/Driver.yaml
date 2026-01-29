@@ -1629,6 +1629,7 @@ types:
     - fleetConfig: Maybe FleetConfig
     - operatorName: Maybe Text
     - operatorContact: Maybe Text
+    - operators: "[(Text, Maybe Text)]"
     - referralCode: Maybe Text
     - registeredAt: Maybe UTCTime
     - businessLicenseNumber: Maybe Text

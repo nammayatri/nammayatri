@@ -7,6 +7,7 @@ module SharedLogic.DriverFleetOperatorAssociation
   )
 where
 
+import Data.List.Extra (notNull)
 import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Types.DriverOperatorAssociation as DDOA
@@ -66,9 +67,9 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
           Nothing
           ( \driverInfo -> do
               Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just existingAssociation.fleetOwnerId) existingAssociation.driverId
-              mbOperator <- QFOA.findByFleetOwnerId existingAssociation.fleetOwnerId True
-              when (isNothing mbOperator) $ logTagError "AnalyticsRemoveDriver" "Operator not found for fleet owner"
-              whenJust mbOperator $ \operator -> do
+              operators <- QFOA.findAllByFleetOwnerId (Id existingAssociation.fleetOwnerId) True
+              when (null operators) $ logTagError "AnalyticsRemoveDriver" "No operators found for fleet owner"
+              forM_ operators $ \operator -> do
                 when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
                 Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
           )
@@ -124,25 +125,25 @@ endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetO
   let fleetOwnerFullName = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.lastName
   fleetOwnerMobile <- maybe (pure "unknown") decrypt fleetOwner.mobileNumber
   existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwner.id True
-  unless (null existingFOAssociations) $ do
-    if merchant.overwriteAssociation == Just True
-      then forM_ existingFOAssociations $ \existingAssociation -> do
-        logInfo $ "End existing fleet operator association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "operatorId: " <> existingAssociation.operatorId
-        QFOA.endFleetOperatorAssociation (Id existingAssociation.fleetOwnerId) (Id existingAssociation.operatorId)
-        let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-        when allowCacheDriverFlowStatus $ do
-          DDriverMode.decrementOperatorStatusKeyForFleetOwner existingAssociation.operatorId existingAssociation.fleetOwnerId
+  -- If overwriteAssociation is enabled, end all existing associations
+  -- Otherwise, allow multiple operators (no action needed)
+  when (merchant.overwriteAssociation == Just True && notNull existingFOAssociations) $ do
+    forM_ existingFOAssociations $ \existingAssociation -> do
+      logInfo $ "End existing fleet operator association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "operatorId: " <> existingAssociation.operatorId
+      QFOA.endFleetOperatorAssociation (Id existingAssociation.fleetOwnerId) (Id existingAssociation.operatorId)
+      let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+      when allowCacheDriverFlowStatus $ do
+        DDriverMode.decrementOperatorStatusKeyForFleetOwner existingAssociation.operatorId existingAssociation.fleetOwnerId
 
-        -- send notification to existing operator about fleet unlink
-        mbExistingOperator <- B.runInReplica $ QP.findById (Id existingAssociation.operatorId :: Id DP.Person)
-        whenJust mbExistingOperator $ \existingOperator -> do
-          mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId (show Notification.FLEET_UNLINK_FROM_OPERATOR) Nothing Nothing existingOperator.language Nothing
-          whenJust mbMerchantPN $ \merchantPN -> do
-            let title = T.replace "{#fleetName#}" fleetOwnerFullName . T.replace "{#fleetNo#}" fleetOwnerMobile $ merchantPN.title
-            let body = T.replace "{#fleetName#}" fleetOwnerFullName . T.replace "{#fleetNo#}" fleetOwnerMobile $ merchantPN.body
+      -- send notification to existing operator about fleet unlink
+      mbExistingOperator <- B.runInReplica $ QP.findById (Id existingAssociation.operatorId :: Id DP.Person)
+      whenJust mbExistingOperator $ \existingOperator -> do
+        mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId (show Notification.FLEET_UNLINK_FROM_OPERATOR) Nothing Nothing existingOperator.language Nothing
+        whenJust mbMerchantPN $ \merchantPN -> do
+          let title = T.replace "{#fleetName#}" fleetOwnerFullName . T.replace "{#fleetNo#}" fleetOwnerMobile $ merchantPN.title
+          let body = T.replace "{#fleetName#}" fleetOwnerFullName . T.replace "{#fleetNo#}" fleetOwnerMobile $ merchantPN.body
 
-            TN.notifyWithGRPCProvider merchantOpCityId Notification.FLEET_UNLINK_FROM_OPERATOR title body (Id existingAssociation.operatorId) ()
-      else throwError (InvalidRequest "Fleet already associated with another operator")
+          TN.notifyWithGRPCProvider merchantOpCityId Notification.FLEET_UNLINK_FROM_OPERATOR title body (Id existingAssociation.operatorId) ()
 
 makeFleetOperatorAssociation ::
   (MonadFlow m) =>

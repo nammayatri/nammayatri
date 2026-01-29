@@ -162,30 +162,26 @@ makeOperatorAnalyticsKey operatorId metric = makeOperatorKeyPrefix operatorId <>
 makeOperatorPeriodicKey :: Text -> PeriodMetric -> Period -> Text
 makeOperatorPeriodicKey operatorId metric period = makeOperatorKeyPrefix operatorId <> show metric <> ":" <> show period
 
--- | Find the operator ID for a driver by checking direct association or fleet association
 findOperatorIdForDriver ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
   Id DP.Person ->
-  m (Maybe Text)
+  m [Text]
 findOperatorIdForDriver driverId = do
   -- First try to find direct driver-operator association
   mbDriverOperatorAssoc <- QDOA.findByDriverId driverId True
   case mbDriverOperatorAssoc of
-    Just assoc -> pure (Just assoc.operatorId)
+    Just assoc -> pure [assoc.operatorId]
     Nothing -> do
       -- If no direct association, try to find through fleet
       mbFleetDriverAssoc <- QFDA.findByDriverId driverId True
       case mbFleetDriverAssoc of
         Just fleetAssoc -> do
-          -- Found fleet association, now find the operator for this fleet
-          mbFleetOperatorAssoc <- QFOA.findByFleetOwnerIdAndIsActive (Id fleetAssoc.fleetOwnerId) True
-          case mbFleetOperatorAssoc of
-            Just fleetOpAssoc -> pure (Just fleetOpAssoc.operatorId)
-            Nothing -> pure Nothing
-        Nothing -> pure Nothing
+          fleetOperatorAssocs <- QFOA.findAllByFleetOwnerId (Id fleetAssoc.fleetOwnerId) True
+          pure $ map (.operatorId) fleetOperatorAssocs
+        Nothing -> pure []
 
 -- | Common function to ensure Redis keys exist by falling back to ClickHouse if needed
 -- Uses Person role to determine which fallback function to call
@@ -278,10 +274,10 @@ updateOperatorAnalyticsCancelCount ::
   Id DP.Person ->
   m ()
 updateOperatorAnalyticsCancelCount transporterConfig driverId = do
-  -- Find the operator ID for this driver
-  mbOperatorId <- findOperatorIdForDriver driverId
-  when (isNothing mbOperatorId) $ logTagInfo "AnalyticsUpdateCancelCount" $ "No operator found for driver: " <> show driverId
-  whenJust mbOperatorId $ \operatorId -> do
+  -- Find all operator IDs for this driver
+  operatorIds <- findOperatorIdForDriver driverId
+  when (null operatorIds) $ logTagInfo "AnalyticsUpdateCancelCount" $ "No operator found for driver: " <> show driverId
+  forM_ operatorIds $ \operatorId -> do
     let cancelCountKey = makeOperatorAnalyticsKey operatorId CANCEL_COUNT
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $
       SFleetOperatorStats.incrementDriverCancellationCount operatorId transporterConfig
@@ -330,9 +326,9 @@ updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount ::
   Bool ->
   m ()
 updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig incrementTotalRequestCount incrementAcceptationCount incrementRejectedRequestCount incrementPulledRequestCount = do
-  mbOperatorId <- findOperatorIdForDriver driverId
-  when (isNothing mbOperatorId) $ logTagInfo "AnalyticsUpdateAcceptationAndTotalRequestCount" $ "No operator found for driver: " <> show driverId
-  whenJust mbOperatorId $ \operatorId -> do
+  operatorIds <- findOperatorIdForDriver driverId
+  when (null operatorIds) $ logTagInfo "AnalyticsUpdateAcceptationAndTotalRequestCount" $ "No operator found for driver: " <> show driverId
+  forM_ operatorIds $ \operatorId -> do
     when (incrementTotalRequestCount || incrementAcceptationCount) $ do
       Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $
         SFleetOperatorStats.incrementRequestCounts
@@ -386,11 +382,11 @@ updateOperatorAnalyticsRatingScoreKey ::
   Bool ->
   m ()
 updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue shouldIncrementCount = do
-  mbOperatorId <- findOperatorIdForDriver driverId
-  when (isNothing mbOperatorId) $ logTagInfo "AnalyticsUpdateRatingScoreKey" $ "No operator found for driver: " <> show driverId
+  operatorIds <- findOperatorIdForDriver driverId
+  when (null operatorIds) $ logTagInfo "AnalyticsUpdateRatingScoreKey" $ "No operator found for driver: " <> show driverId
 
   -- Operator analytics
-  whenJust mbOperatorId $ \operatorId -> do
+  forM_ operatorIds $ \operatorId -> do
     let ratingSumKey = makeOperatorAnalyticsKey operatorId RATING_SUM
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $
       SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore operatorId transporterConfig ratingValue shouldIncrementCount
@@ -418,9 +414,9 @@ updateOperatorAnalyticsTotalRideCount ::
   DR.Ride ->
   m ()
 updateOperatorAnalyticsTotalRideCount transporterConfig driverId ride = do
-  mbOperatorId <- findOperatorIdForDriver driverId
-  when (isNothing mbOperatorId) $ logTagInfo "AnalyticsUpdateTotalRideCount" $ "No operator found for driver: " <> show driverId
-  whenJust mbOperatorId $ \operatorId -> do
+  operatorIds <- findOperatorIdForDriver driverId
+  when (null operatorIds) $ logTagInfo "AnalyticsUpdateTotalRideCount" $ "No operator found for driver: " <> show driverId
+  forM_ operatorIds $ \operatorId -> do
     let totalRideCountKey = makeOperatorAnalyticsKey operatorId TOTAL_RIDE_COUNT
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $
       SFleetOperatorStats.incrementTotalRidesTotalDistAndTotalEarning operatorId ride transporterConfig
@@ -500,9 +496,9 @@ updateEnabledVerifiedStateWithAnalytics mbDriverInfoData transporterConfig drive
   where
     updateDriverEnabledState driverInfo = do
       when (driverInfo.enabled /= isEnabled) $ do
-        mbOperatorId <- findOperatorIdForDriver driverId
-        when (isNothing mbOperatorId) $ logTagError "AnalyticsUpdateDriverEnabled" $ "No operator found for driver: " <> show driverId
-        whenJust mbOperatorId $ \operatorId ->
+        operatorIds <- findOperatorIdForDriver driverId
+        when (null operatorIds) $ logTagError "AnalyticsUpdateDriverEnabled" $ "No operator found for driver: " <> show driverId
+        forM_ operatorIds $ \operatorId ->
           if isEnabled
             then incrementOperatorAnalyticsDriverEnabled transporterConfig operatorId
             else decrementOperatorAnalyticsDriverEnabled transporterConfig operatorId

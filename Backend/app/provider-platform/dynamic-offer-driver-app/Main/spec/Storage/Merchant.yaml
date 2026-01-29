@@ -1092,6 +1092,7 @@ TransporterConfig:
     cancellationFeeVendor: Maybe Text
     upgradeTierDropRetentionTime: Maybe Seconds
     allowDriverToUseFleetRcs: Maybe Bool
+    allowMultiFleetOperatorLink: Maybe Bool
     allowDisableDriverToTakeSpecialZoneRide: Maybe Bool
     payoutRideMoneyToDriver: Maybe Bool
     payoutRideScheduleTimeBuffer: Maybe Seconds

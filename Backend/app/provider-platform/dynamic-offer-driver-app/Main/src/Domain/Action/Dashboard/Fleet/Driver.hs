@@ -1016,9 +1016,9 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         Nothing
         ( \driverInfo -> do
             Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just entityId) personId
-            mbOperator <- FOV.findByFleetOwnerId entityId True
-            when (isNothing mbOperator) $ logTagError "AnalyticsRemoveDriver" "Operator not found for fleet owner"
-            whenJust mbOperator $ \operator -> do
+            operators <- FOV.findAllByFleetOwnerId (Id entityId) True
+            when (null operators) $ logTagError "AnalyticsRemoveDriver" "No operators found for fleet owner"
+            forM_ operators $ \operator -> do
               when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
               Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
         )
@@ -1683,6 +1683,7 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             fleetConfig = Nothing,
             operatorName = Nothing,
             operatorContact = Nothing,
+            operators = [],
             registeredAt = Nothing,
             businessLicenseNumber = Nothing,
             approvedBy = Nothing,
@@ -1693,17 +1694,29 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
           }
     Just fleetOwnerInfo -> do
       fleetConfig <- QFC.findByPrimaryKey personId
-      mbFleetOperatorAssoc <- FOV.findByFleetOwnerId personId.getId True
-      (operatorName, operatorContact) <- case mbFleetOperatorAssoc of
-        Nothing -> pure (Nothing, Nothing)
-        Just fleetOperatorAssoc -> do
-          operator <- QPerson.findById (Id fleetOperatorAssoc.operatorId) >>= fromMaybeM (PersonDoesNotExist fleetOperatorAssoc.operatorId)
-          contact <- mapM decrypt operator.mobileNumber
-          pure $ (Just (operator.firstName <> fromMaybe "" operator.middleName <> fromMaybe "" operator.lastName), contact)
-      makeFleetOwnerInfoRes fleetConfig fleetOwnerInfo person operatorName operatorContact
+      fleetOperatorAssocs <- FOV.findByFleetOwnerId personId.getId True
+      operatorsList <-
+        if null fleetOperatorAssocs
+          then pure []
+          else do
+            let operatorIds = map (.operatorId) fleetOperatorAssocs
+            operators <- QPerson.findAllByPersonIds operatorIds
+            forM fleetOperatorAssocs $ \fleetOperatorAssoc -> do
+              operator <- case find (\op -> op.id.getId == fleetOperatorAssoc.operatorId) operators of
+                Just op -> pure op
+                Nothing -> throwError (PersonDoesNotExist fleetOperatorAssoc.operatorId)
+              contact <- mapM decrypt operator.mobileNumber
+              let nameParts = catMaybes [Just operator.firstName, operator.middleName, operator.lastName]
+                  operatorName = T.intercalate " " nameParts
+              pure (operatorName, contact)
+      -- For backward compatibility using latest one in this field, have created new field to support multiple operators
+      let (operatorName, operatorContact) = case operatorsList of
+            [] -> (Nothing, Nothing)
+            ((name, contact) : _) -> (Just name, contact)
+      makeFleetOwnerInfoRes fleetConfig fleetOwnerInfo person operatorName operatorContact operatorsList
   where
-    makeFleetOwnerInfoRes :: Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> DP.Person -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
-    makeFleetOwnerInfoRes mbFleetConfig DFOI.FleetOwnerInformation {..} fleetOwner operatorName operatorContact = do
+    makeFleetOwnerInfoRes :: Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> DP.Person -> Maybe Text -> Maybe Text -> [(Text, Maybe Text)] -> Flow Common.FleetOwnerInfoRes
+    makeFleetOwnerInfoRes mbFleetConfig DFOI.FleetOwnerInformation {..} fleetOwner operatorName operatorContact operatorsList = do
       referral <- QDR.findById fleetOwnerPersonId
       let fleetConfig =
             mbFleetConfig <&> \fleetConfig' ->
@@ -1734,6 +1747,9 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             mobileNo = mobileNo',
             roleName = Just (show fleetOwner.role),
             isEligibleForSubscription = Just isEligibleForSubscription,
+            operatorName = operatorName,
+            operatorContact = operatorContact,
+            operators = operatorsList,
             ..
           }
 
@@ -1877,9 +1893,10 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         Nothing
         ( \driverInfo -> do
             Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) person.id
-            mOperator <- FOV.findByFleetOwnerId fleetOwnerId True
-            when (isNothing mOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
-            whenJust mOperator $ \operator -> do
+            operators <- FOV.findAllByFleetOwnerId (Id fleetOwnerId) True
+            when (null operators) $ logTagError "AnalyticsAddDriver" "No operators found for fleet owner"
+            forM_ operators $ \operator -> do
+              -- Optimize later if needed (MSIL will have single operator per fleet)
               when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
               Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
         )
