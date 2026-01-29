@@ -15,7 +15,9 @@
 module Domain.Action.UI.Payment
   ( DPayment.PaymentStatusResp (..),
     createOrder,
+    createOrderV2,
     getStatus,
+    getStatusV2,
     getOrder,
     juspayWebhookHandler,
     pdnNotificationStatus,
@@ -42,6 +44,7 @@ import Domain.Types.Notification (Notification)
 import qualified Domain.Types.Notification as DNTF
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
+import qualified Domain.Types.StclMembership as Domain
 import qualified Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.SubscriptionTransaction as SubscriptionTransaction
 import qualified Domain.Types.WebhookExtra as WT
@@ -97,6 +100,7 @@ import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.StclMembership as QStclMembership
 import qualified Storage.Queries.SubscriptionTransaction as QSubscriptionTransaction
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VendorFeeExtra as QVF
@@ -124,6 +128,41 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
   return createOrderResp
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)
+
+-- create order v2 -----------------------------------------------------
+createOrderV2 :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Payment.CreateOrderReq -> Flow Payment.CreateOrderResp
+createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq = do
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- PaymentServiceType for createOrderService (STCL, Normal, etc.)
+  let paymentServiceType = DOrder.STCL
+
+  -- ServiceName for decidePaymentService (which payment provider: Juspay, Stripe, etc.)
+  -- Using MembershipPaymentService to fetch MembershipPaymentServiceConfig from merchant_service_config
+  let defaultPaymentServiceName = DMSC.MembershipPaymentService Payment.Juspay
+
+  -- Decide payment service provider based on person's clientSdkVersion
+  paymentServiceName <- Payment.decidePaymentService defaultPaymentServiceName person.clientSdkVersion merchantOperatingCityId
+
+  -- Get payment service call function
+  (createOrderCall, _) <- Payment.createOrder merchantId merchantOperatingCityId paymentServiceName (Just person.id.getId)
+
+  -- Cast types for Lib.Payment
+  let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
+      commonPersonId = cast @DP.Person @DPayment.Person personId
+
+  -- Call createOrderService (only 8 args - no isTestTransaction, mbCreateWalletCall, isMockPayment in this version)
+  mbCreateOrderResp <-
+    DPayment.createOrderService
+      commonMerchantId
+      (Just $ cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId)
+      commonPersonId
+      Nothing -- mbPaymentOrderValidity
+      (Just DPayment.DRIVER_STCL) -- mbEntityName
+      paymentServiceType -- DOrder.STCL
+      createOrderReq
+      createOrderCall
+  mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")
 
 getOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> Flow DOrder.PaymentOrderAPIEntity
 getOrder (personId, _, _) orderId = do
@@ -156,7 +195,6 @@ getStatus ::
   m DPayment.PaymentStatusResp
 getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId -- api call
   order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
   now <- getCurrentTime
   invoices <- QIN.findById (cast paymentOrderId)
@@ -190,12 +228,17 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
             domainEntityId = Nothing
           }
     else do
+      -- Check if this is a STCL membership payment order
+      let isStclOrder = order.paymentServiceType == Just DOrder.STCL || order.entityName == Just DPayment.DRIVER_STCL
       let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
       serviceConfig <-
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
-      paymentServiceName <- Payment.decidePaymentService serviceConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
+      -- Use MembershipPaymentService for STCL orders, otherwise use the service config's payment service name
+      let defaultPaymentServiceName = if isStclOrder then DMSC.MembershipPaymentService Payment.Juspay else serviceConfig.paymentServiceName
+      paymentServiceName <- Payment.decidePaymentService defaultPaymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
+      let orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId -- api call
       paymentStatus <- DPayment.orderStatusService commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId))
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
@@ -224,6 +267,57 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
           processNotification driver.merchantOperatingCityId notification notificationStatus responseCode responseMessage driverFee driver False
       return paymentStatus
 
+getStatusV2 ::
+  ( ServiceFlow m r,
+    Transactionable m,
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EventStreamFlow m r,
+    MonadFlow m,
+    JobCreatorEnv r,
+    HasField "schedulerType" r SchedulerType,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+  ) =>
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Text ->
+  m DPayment.PaymentStatusResp
+getStatusV2 tokenDetails orderIdText = do
+  -- Lookup by shortId only
+  paymentOrder <- QOrder.findByShortId (ShortId orderIdText) >>= fromMaybeM (PaymentOrderNotFound orderIdText)
+
+  -- Get payment status using existing getStatus function with the found order ID
+  paymentStatusResp <- getStatus tokenDetails paymentOrder.id
+  logDebug $ "Payment Status Response: " <> show paymentStatusResp
+  -- Extract payment status string
+  let paymentStatusText = case paymentStatusResp of
+        DPayment.PaymentStatus {status} -> Just $ show status
+        DPayment.MandatePaymentStatus {status} -> Just $ show status
+        _ -> Nothing
+  logDebug $ "Payment Status Text: " <> show paymentStatusText
+  -- Find StclMembership by orderId (orderId is the same as membership.id)
+  -- Convert Id PaymentOrder to Id StclMembership using the underlying Text
+  let membershipId = Id (paymentOrder.id.getId)
+  mbMembership <- QStclMembership.findById membershipId
+
+  -- Update membership if found
+  whenJust mbMembership $ \_ -> do
+    let newStatus = case paymentStatusResp of
+          DPayment.PaymentStatus {status}
+            | status == Payment.CHARGED -> Domain.SUBMITTED
+            | otherwise -> Domain.PENDING
+          DPayment.MandatePaymentStatus {status}
+            | status == Payment.CHARGED -> Domain.SUBMITTED
+            | otherwise -> Domain.PENDING
+          _ -> Domain.PENDING
+    logDebug $ "New Status: " <> show newStatus
+    -- Update membership with new status and payment status
+    -- updateStatusAndPaymentStatus generates updatedAt internally
+    QStclMembership.updateStatusAndPaymentStatus newStatus paymentStatusText membershipId
+
+  return paymentStatusResp
+
 -- webhook ----------------------------------------------------------
 
 juspayWebhookHandler ::
@@ -249,6 +343,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     DMSC.PaymentServiceConfig psc' -> pure psc'
     DMSC.RentalPaymentServiceConfig psc' -> pure psc'
     DMSC.CautioPaymentServiceConfig psc' -> pure psc'
+    DMSC.MembershipPaymentServiceConfig psc' -> pure psc'
     _ -> throwError $ InternalError "Unknown Service Config"
   orderStatusResp <- Juspay.orderStatusWebhook psc DPayment.juspayWebhookService authData value
   osr <- case orderStatusResp of

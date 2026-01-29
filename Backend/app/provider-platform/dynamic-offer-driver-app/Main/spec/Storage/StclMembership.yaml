@@ -13,6 +13,7 @@ StclMembership:
     id: Id StclMembership
     driverId: Id Person
     applicationId: Text
+    shortId: Maybe Text
     firstName: Text
     lastName: Text
     memberCategory: Text
@@ -41,6 +42,7 @@ StclMembership:
     declarationSignature: Text
     termsAccepted: Bool
     status: ApplicationStatus
+    paymentStatus: Maybe Text
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime
@@ -113,6 +115,9 @@ StclMembership:
     findByApplicationId:
       kvFunction: findOneWithKV
       where: applicationId
+    findByShortId:
+      kvFunction: findOneWithKV
+      where: shortId
     findByDriverIdAndStatus:
       kvFunction: findAllWithKV
       where:
@@ -120,6 +125,10 @@ StclMembership:
     updateStatus:
       kvFunction: updateOneWithKV
       params: [status, updatedAt]
+      where: id
+    updateStatusAndPaymentStatus:
+      kvFunction: updateOneWithKV
+      params: [status, paymentStatus, updatedAt]
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE

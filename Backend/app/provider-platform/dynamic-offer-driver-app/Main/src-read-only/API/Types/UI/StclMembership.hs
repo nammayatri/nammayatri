@@ -7,6 +7,7 @@ import qualified Data.Time
 import qualified Domain.Types.StclMembership
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Servant
 import Tools.Auth
 
@@ -40,6 +41,7 @@ data FuelType
 data MembershipApplicationReq = MembershipApplicationReq
   { aadharNumber :: Kernel.Prelude.Text,
     address :: Address,
+    amount :: Kernel.Types.Common.Money,
     bankDetails :: BankDetails,
     dateOfBirth :: Data.Time.Day,
     declaration :: Declaration,
