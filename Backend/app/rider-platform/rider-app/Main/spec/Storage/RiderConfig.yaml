@@ -213,6 +213,7 @@ RiderConfig:
     singleModeWalkSpeed: Maybe Double
     kafkaTopicName: Text
     staticCustomerIdThresholdDay: Maybe Day
+    invoiceLogoUrl: Maybe Text
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

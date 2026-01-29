@@ -575,3 +575,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_customer_cancellation_rate_
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN static_customer_id_threshold_day date ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_logo_url text ;

@@ -62,7 +62,8 @@ data InvoiceData = InvoiceData
     merchantAddress :: Maybe Text,
     bookings :: [DBAPI.BookingAPIEntity], -- Now using BookingAPIEntity which includes ride data
     totalAmount :: Maybe HighPrecMoney,
-    totalRides :: Int
+    totalRides :: Int,
+    logoUrl :: Maybe Text
   }
   deriving (Generic)
 
@@ -77,8 +78,9 @@ generateInvoicePDF ::
   DM.Merchant ->
   UTCTime ->
   UTCTime ->
+  Maybe Text -> -- Logo URL from RiderConfig
   m FilePath
-generateInvoicePDF invoiceId person bookings merchant startDate endDate = do
+generateInvoicePDF invoiceId person bookings merchant startDate endDate mbLogoUrl = do
   decryptedEmail <- mapM decrypt person.email
   decryptedMobile <- mapM decrypt person.mobileNumber
 
@@ -94,7 +96,8 @@ generateInvoicePDF invoiceId person bookings merchant startDate endDate = do
             merchantAddress = Just $ show merchant.defaultCity <> ", " <> show merchant.defaultState,
             bookings = bookings, -- Already has ride data in rideList
             totalAmount = calculateTotalAmount bookings,
-            totalRides = length bookings
+            totalRides = length bookings,
+            logoUrl = mbLogoUrl
           }
 
   -- Generate HTML
@@ -201,6 +204,17 @@ generateInvoiceHTML InvoiceData {..} =
       formattedAmount = maybe "N/A" (\amt -> T.pack $ printf "%.2f" (fromRational (getHighPrecMoney amt) :: Double)) totalAmount
       -- Escape all user-controlled data to prevent XSS
       safeCustomerName = escapeHtml customerName
+      -- Logo section - only show if logoUrl is configured
+      logoSection = case logoUrl of
+        Just url ->
+          T.concat
+            [ "<div class='logo-section'>",
+              "<img src='",
+              escapeHtml url,
+              "' alt='Logo' class='logo' />",
+              "</div>"
+            ]
+        Nothing -> ""
    in T.concat
         [ "<!DOCTYPE html>",
           "<html>",
@@ -213,6 +227,8 @@ generateInvoiceHTML InvoiceData {..} =
           "</head>",
           "<body>",
           "<div class='invoice-container'>",
+          -- Logo (only if configured)
+          logoSection,
           -- Header
           "<div class='header'>",
           "<div class='header-left'>",
@@ -381,6 +397,9 @@ invoiceCSS =
     [ "* { margin: 0; padding: 0; box-sizing: border-box; }",
       "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #2d2d2d; background: #f7f7f7; padding: 20px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }",
       ".invoice-container { max-width: 800px; margin: 0 auto; background: white; padding: 0; }",
+      -- Logo styles
+      ".logo-section { padding: 32px 32px 0 32px; }",
+      ".logo { height: 40px; width: auto; }",
       -- Header styles
       ".header { display: flex; justify-content: space-between; align-items: flex-start; padding: 32px 32px 24px 32px; background: white; page-break-inside: avoid; }",
       ".header-left h1 { font-size: 22px; font-weight: 500; color: #2d2d2d; margin-bottom: 8px; }",
@@ -403,9 +422,9 @@ invoiceCSS =
       ".location-row:last-of-type { margin-bottom: 24px; }",
       -- Vertical line connecting pickup and drop
       ".location-row:first-of-type::after { content: ''; position: absolute; left: 7px; top: 18px; height: 36px; width: 2px; background: #d1d5db; z-index: 0; }",
-      -- Dot styles with explicit colors for PDF
-      ".dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-right: 16px; margin-top: 3px; z-index: 1; position: relative; border: 2px solid white; }",
-      ".green-dot { background-color: #10b981 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }",
+      -- Dot styles with solid filled colors for PDF
+      ".dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; margin-right: 16px; margin-top: 3px; z-index: 1; position: relative; }",
+      ".green-dot { background-color: #22c55e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }",
       ".red-dot { background-color: #ef4444 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }",
       ".location-details { flex: 1; }",
       ".time { font-size: 15px; font-weight: 600; color: #2d2d2d; margin-bottom: 4px; }",

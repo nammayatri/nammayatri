@@ -17,6 +17,7 @@ import qualified Domain.Types.Person as DPerson
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Tools.Logging (withDynamicLogLevel)
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -28,7 +29,6 @@ import qualified SharedLogic.KaalChakra.Actions as Actions
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.Person as QPerson
-import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Metrics
 
 type ChakraJobs m r =
   ( EsqDBFlow m r,

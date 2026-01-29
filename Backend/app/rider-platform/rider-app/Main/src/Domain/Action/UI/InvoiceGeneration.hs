@@ -238,8 +238,8 @@ generateAndEmailInvoice invoiceId person bookingAPIEntities merchantId email = d
   let actualStartDate = minimum $ map (.createdAt) bookingAPIEntities
       actualEndDate = maximum $ map (.createdAt) bookingAPIEntities
 
-  -- Generate PDF
-  pdfPath <- PDF.generateInvoicePDF invoiceId.getId person bookingAPIEntities merchant actualStartDate actualEndDate
+  -- Generate PDF with logo URL from RiderConfig
+  pdfPath <- PDF.generateInvoicePDF invoiceId.getId person bookingAPIEntities merchant actualStartDate actualEndDate riderConfig.invoiceLogoUrl
 
   -- Verify file exists before attempting to send
   fileExists <- liftIO $ doesFileExist pdfPath

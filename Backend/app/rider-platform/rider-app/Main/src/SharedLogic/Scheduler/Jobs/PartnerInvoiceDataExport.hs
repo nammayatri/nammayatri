@@ -27,8 +27,6 @@ import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.UI.PartnerBookingStatement as PBS
 import qualified Domain.Types.Booking.API as DBAPI
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
-import qualified Storage.Queries.Booking as QBooking
-import qualified Storage.Queries.Person as QPerson
 import qualified Domain.Types.RideStatus as DRideStatus
 import Environment (SFTPConfig (..))
 import qualified Kernel.Beam.Functions as B
@@ -41,7 +39,9 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PartnerInvoiceDataLog as QPartnerInvoiceDataLog
+import qualified Storage.Queries.Person as QPerson
 import System.Directory (removeFile)
 import System.IO (hClose, hPutStr, openTempFile)
 import System.Process (callProcess)
