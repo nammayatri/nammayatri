@@ -727,71 +727,35 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
       --         lies outside the city, we check each segment that crosses cities and apply charges
       -- Case 2: Cross City Ride - apply charges for segments that cross cities
       -- Case 3: Intercity Ride - don't apply segment-based charges
+      -- Calculate state entry permit charges for rides with stops
+      -- Comment 3: Only run for rides with stops (> 1 segment)
+      -- Comment 2: Wrap in error handling
       let (isOverallIntercity, isOverallCrossCity) = SEPD.determineOverallRideType [booking.tripCategory]
-      logDebug $
-        "[STATE_ENTRY_PERMIT][EndRide] overallRideType isIntercity=" <> show isOverallIntercity <> ", isCrossCity=" <> show isOverallCrossCity
+      merchant <- getMerchant merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       mbSegmentStateEntryPermitCharges <-
-        if null journeySegments || length journeySegments <= 1
+        if length journeySegments <= 1
           then do
-            -- No stops or single segment, use existing
-            logDebug "[STATE_ENTRY_PERMIT][EndRide] journeySegments <= 1, reusing farePolicy.stateEntryPermitCharges"
-            return farePolicy.stateEntryPermitCharges
+            -- Simple A-to-B (no stops): return Nothing to use fare policy's stateEntryPermitCharges
+            logDebug "[STATE_ENTRY_PERMIT][EndRide] Single segment (no stops), using fare policy's stateEntryPermitCharges"
+            return Nothing
           else
             if isOverallIntercity && not isOverallCrossCity
               then do
-                -- Case 3: Intercity - don't apply segment-based charges
-                logDebug "[STATE_ENTRY_PERMIT][EndRide] overall intercity (non-cross-city), reusing farePolicy.stateEntryPermitCharges"
-                return farePolicy.stateEntryPermitCharges
+                logDebug "[STATE_ENTRY_PERMIT][EndRide] Overall intercity (non-cross-city), skipping segment-based stateEntryPermitCharges"
+                return Nothing
               else do
-                -- Case 1 & 2: Intracity or Cross City - check each segment individually
-                -- For Intracity: even if overall ride is intracity, segments that cross cities are detected
-                -- For Cross City: segments that cross cities are detected
-                -- Get merchant for segment calculations
-                merchant <- getMerchant merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-                -- Calculate charges for each segment
-                segmentChargeResults <- forM journeySegments $ \segment -> do
-                  logDebug $ "[STATE_ENTRY_PERMIT][EndRide] evaluating segment from=" <> show segment.segmentFrom <> " to=" <> show segment.segmentTo
-                  -- Get source city and nearest operating city for segment start point
-                  segmentSourceCityResult <- DSearch.getNearestOperatingAndSourceCity merchant segment.segmentFrom
-                  -- Get merchant operating city for the segment
-                  segmentMerchantOpCityForSegment <- CQMOC.getMerchantOpCity merchant (Just segmentSourceCityResult.nearestOperatingCity.city)
-                  -- Check if THIS segment crosses city boundaries (independent of overall ride type)
-                  -- This handles the case where an Intracity ride has stops outside the city
-                  (segmentIsIntercity, segmentIsCrossCity, mbSegmentDestinationTravelCityName) <- DSearch.checkForIntercityOrCrossCity thresholdConfig (Just segment.segmentTo) segmentSourceCityResult.sourceCity merchant
-                  logDebug $ "[STATE_ENTRY_PERMIT][EndRide] segment classification isIntercity=" <> show segmentIsIntercity <> ", isCrossCity=" <> show segmentIsCrossCity <> ", destTravelCityName=" <> show mbSegmentDestinationTravelCityName
-                  -- Get fare policy for this segment (using segment start and end points)
-                  -- Only apply charges if THIS segment crosses cities
-                  mbSegmentFarePolicy <-
-                    if segmentIsIntercity || segmentIsCrossCity
-                      then do
-                        -- Calculate geohashes for segment
-                        let segmentFromGeohash = Text.pack <$> Geohash.encode (fromMaybe 5 thresholdConfig.dpGeoHashPercision) (segment.segmentFrom.lat, segment.segmentFrom.lon)
-                            segmentToGeohash = Text.pack <$> Geohash.encode (fromMaybe 5 thresholdConfig.dpGeoHashPercision) (segment.segmentTo.lat, segment.segmentTo.lon)
-                        -- Construct trip category for this segment (similar to getPossibleTripOption logic)
-                        -- For EndRide, we use isScheduled = False as we're recalculating after the ride
-                        let segmentTripCategories = SEPD.constructSegmentTripCategories segmentIsIntercity segmentIsCrossCity mbSegmentDestinationTravelCityName False
-                        -- Get fare policies for this segment using the constructed trip category and default area
-                        case listToMaybe segmentTripCategories of
-                          Just segmentTripCategory -> do
-                            segmentFarePoliciesProduct <- SFP.getAllFarePoliciesProduct merchantId segmentMerchantOpCityForSegment.id booking.isDashboardRequest segment.segmentFrom (Just segment.segmentTo) (Just (TransactionId (Id booking.transactionId))) segmentFromGeohash segmentToGeohash Nothing Nothing booking.dynamicPricingLogicVersion segmentTripCategory booking.configInExperimentVersions
-                            -- Select a fare policy for the segment (filter by vehicle service tier to match booking)
-                            let segmentFarePolicies = filter (\fp -> fp.vehicleServiceTier == booking.vehicleServiceTier) segmentFarePoliciesProduct.farePolicies
-                            let hasSegmentFarePolicy = isJust (listToMaybe segmentFarePolicies)
-                            logDebug $ "[STATE_ENTRY_PERMIT][EndRide] mbSegmentFarePolicy present=" <> show hasSegmentFarePolicy
-                            return $ listToMaybe segmentFarePolicies
-                          Nothing -> do
-                            logDebug "[STATE_ENTRY_PERMIT][EndRide] no segmentTripCategory constructed, skipping segment fare policy"
-                            return Nothing
-                      else do
-                        -- No city crossing, no charge needed
-                        logDebug "[STATE_ENTRY_PERMIT][EndRide] segment does not cross cities, skipping segment fare policy"
-                        return Nothing
-                  SEPD.calculateSegmentStateEntryPermitCharge segmentIsIntercity segmentIsCrossCity mbSegmentFarePolicy segment
-                -- Calculate total stateEntryPermitCharges from segments
-                let totalSegmentCharges = SEPD.calculateTotalStateEntryPermitCharges segmentChargeResults
-                logDebug $ "[STATE_ENTRY_PERMIT][EndRide] totalSegmentCharges=" <> show totalSegmentCharges
-                return totalSegmentCharges
-      logDebug $ "[STATE_ENTRY_PERMIT][EndRide] mbSegmentStateEntryPermitCharges=" <> show mbSegmentStateEntryPermitCharges
+                -- Comment 1: Extract to helper function for better maintainability
+                -- Comment 2: Wrap in error handling
+                result <- withTryCatch "calculateSegmentCharges:EndRide" $ do
+                  segmentChargeResults <- calculateSegmentChargesForEndRide merchant merchantId thresholdConfig booking journeySegments
+                  let totalCharges = SEPD.calculateTotalStateEntryPermitCharges segmentChargeResults
+                  logInfo $ "[STATE_ENTRY_PERMIT][EndRide] Calculated segment charges: segments=" <> show (length journeySegments) <> ", totalCharges=" <> show totalCharges
+                  return totalCharges
+                case result of
+                  Right charges -> return charges
+                  Left err -> do
+                    logError $ "[STATE_ENTRY_PERMIT][EndRide] Segment calculation failed: " <> show err <> ". Defaulting stateEntryPermitCharges to Nothing (zero charges)."
+                    return Nothing
       fareParams <-
         calculateFareParameters
           Fare.CalculateFareParametersParams
@@ -973,3 +937,34 @@ isUnloadingTimeRequired str =
              DVST.DELIVERY_TRUCK_LARGE,
              DVST.DELIVERY_TRUCK_ULTRA_LARGE
            ]
+
+-- Helper function to calculate segment charges (Comment 1: move logic to helper)
+calculateSegmentChargesForEndRide ::
+  (MonadFlow m, MonadThrow m, Log m, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, ServiceFlow m r, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) =>
+  DM.Merchant ->
+  Id DM.Merchant ->
+  DTConf.TransporterConfig ->
+  SRB.Booking ->
+  [SEPD.JourneySegment] ->
+  m [SEPD.SegmentChargeResult]
+calculateSegmentChargesForEndRide merchant merchantId thresholdConfig booking journeySegments = do
+  forM journeySegments $ \segment -> do
+    logDebug $ "[STATE_ENTRY_PERMIT][EndRide] evaluating segment from=" <> show segment.segmentFrom <> " to=" <> show segment.segmentTo
+    segmentSourceCityResult <- DSearch.getNearestOperatingAndSourceCity merchant segment.segmentFrom
+    segmentMerchantOpCityForSegment <- CQMOC.getMerchantOpCity merchant (Just segmentSourceCityResult.nearestOperatingCity.city)
+    (segmentIsIntercity, segmentIsCrossCity, mbSegmentDestinationTravelCityName) <- DSearch.checkForIntercityOrCrossCity thresholdConfig (Just segment.segmentTo) segmentSourceCityResult.sourceCity merchant
+    logDebug $ "[STATE_ENTRY_PERMIT][EndRide] segment classification isIntercity=" <> show segmentIsIntercity <> ", isCrossCity=" <> show segmentIsCrossCity <> ", destTravelCityName=" <> show mbSegmentDestinationTravelCityName
+    mbSegmentFarePolicy <-
+      if segmentIsIntercity || segmentIsCrossCity
+        then do
+          let segmentFromGeohash = Text.pack <$> Geohash.encode (fromMaybe 5 thresholdConfig.dpGeoHashPercision) (segment.segmentFrom.lat, segment.segmentFrom.lon)
+              segmentToGeohash = Text.pack <$> Geohash.encode (fromMaybe 5 thresholdConfig.dpGeoHashPercision) (segment.segmentTo.lat, segment.segmentTo.lon)
+          let segmentTripCategories = SEPD.constructSegmentTripCategories segmentIsIntercity segmentIsCrossCity mbSegmentDestinationTravelCityName False
+          case listToMaybe segmentTripCategories of
+            Just segmentTripCategory -> do
+              segmentFarePoliciesProduct <- SFP.getAllFarePoliciesProduct merchantId segmentMerchantOpCityForSegment.id booking.isDashboardRequest segment.segmentFrom (Just segment.segmentTo) (Just (TransactionId (Id booking.transactionId))) segmentFromGeohash segmentToGeohash Nothing Nothing booking.dynamicPricingLogicVersion segmentTripCategory booking.configInExperimentVersions
+              let segmentFarePolicies = filter (\fp -> fp.vehicleServiceTier == booking.vehicleServiceTier) segmentFarePoliciesProduct.farePolicies
+              return $ listToMaybe segmentFarePolicies
+            Nothing -> return Nothing
+        else return Nothing
+    SEPD.calculateSegmentStateEntryPermitCharge segmentIsIntercity segmentIsCrossCity mbSegmentFarePolicy segment

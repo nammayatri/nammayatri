@@ -298,64 +298,34 @@ handler ValidatedDSearchReq {..} sReq = do
   --         lies outside the city, we check each segment that crosses cities and apply charges
   -- Case 2: Cross City Ride - apply charges for segments that cross cities
   -- Case 3: Intercity Ride - don't apply segment-based charges
+  -- Calculate state entry permit charges for rides with stops
+  -- Comment 3: Only run for rides with stops (> 1 segment)
+  -- Comment 2: Wrap in error handling
   let (isOverallIntercity, isOverallCrossCity) = SEPD.determineOverallRideType possibleTripOption.tripCategories
-  logDebug $
-    "[STATE_ENTRY_PERMIT][Search] overallRideType isIntercity=" <> show isOverallIntercity <> ", isCrossCity=" <> show isOverallCrossCity
-  segmentChargeResults <-
-    if isOverallIntercity && not isOverallCrossCity
+  mbSegmentStateEntryPermitCharges <-
+    if length journeySegments <= 1
       then do
-        -- Case 3: Intercity - don't apply segment-based charges
-        logDebug "[STATE_ENTRY_PERMIT][Search] overall intercity (non-cross-city), skipping segment-based stateEntryPermitCharges"
-        return []
-      else do
-        -- Case 1 & 2: Intracity or Cross City - check each segment individually
-        -- For Intracity: even if overall ride is intracity, segments that cross cities are detected
-        -- For Cross City: segments that cross cities are detected
-        forM journeySegments $ \segment -> do
-          logDebug $
-            "[STATE_ENTRY_PERMIT][Search] evaluating segment from=" <> show segment.segmentFrom <> " to=" <> show segment.segmentTo
-          -- Get source city and nearest operating city for segment start point
-          segmentSourceCityResult <- getNearestOperatingAndSourceCity merchant segment.segmentFrom
-          -- Get merchant operating city for the segment
-          segmentMerchantOpCity <- CQMOC.getMerchantOpCity merchant (Just segmentSourceCityResult.nearestOperatingCity.city)
-          -- Check if THIS segment crosses city boundaries (independent of overall ride type)
-          -- This handles the case where an Intracity ride has stops outside the city
-          (segmentIsIntercity, segmentIsCrossCity, mbSegmentDestinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig (Just segment.segmentTo) segmentSourceCityResult.sourceCity merchant
-          logDebug $
-            "[STATE_ENTRY_PERMIT][Search] segment classification isIntercity=" <> show segmentIsIntercity <> ", isCrossCity=" <> show segmentIsCrossCity <> ", destTravelCityName=" <> show mbSegmentDestinationTravelCityName
-          -- Get fare policy for this segment (using segment start and end points)
-          -- Only apply charges if THIS segment crosses cities
-          mbSegmentFarePolicy <-
-            if segmentIsIntercity || segmentIsCrossCity
-              then do
-                -- Calculate geohashes for segment
-                let segmentFromGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (segment.segmentFrom.lat, segment.segmentFrom.lon)
-                    segmentToGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (segment.segmentTo.lat, segment.segmentTo.lon)
-                -- Construct trip category for this segment (similar to getPossibleTripOption logic)
-                let segmentTripCategories = SEPD.constructSegmentTripCategories segmentIsIntercity segmentIsCrossCity mbSegmentDestinationTravelCityName possibleTripOption.isScheduled
-                -- Get fare policies for this segment using the constructed trip category and default area
-                case listToMaybe segmentTripCategories of
-                  Just segmentTripCategory -> do
-                    segmentFarePoliciesProduct <- getAllFarePoliciesProduct merchant.id segmentMerchantOpCity.id sReq.isDashboardRequest segment.segmentFrom (Just segment.segmentTo) (Just (TransactionId (Id sReq.transactionId))) segmentFromGeohash segmentToGeohash Nothing Nothing mbVersion segmentTripCategory configVersionMap
-                    -- Select a fare policy for the segment using parent journey parameters (distance, duration, vehicle restrictions)
-                    -- The fare policy product is calculated for the segment, but we use parent journey parameters for filtering
-                    let segmentFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier segmentFarePoliciesProduct.farePolicies
-                    let hasSegmentFarePolicy = isJust (listToMaybe segmentFarePolicies)
-                    logDebug $
-                      "[STATE_ENTRY_PERMIT][Search] mbSegmentFarePolicy present=" <> show hasSegmentFarePolicy
-                    return $ listToMaybe segmentFarePolicies
-                  Nothing -> do
-                    logDebug "[STATE_ENTRY_PERMIT][Search] no segmentTripCategory constructed, skipping segment fare policy"
-                    return Nothing
-              else do
-                -- No city crossing, no charge needed
-                logDebug "[STATE_ENTRY_PERMIT][Search] segment does not cross cities, skipping segment fare policy"
+        -- Simple A-to-B (no stops): return Nothing to use fare policy's stateEntryPermitCharges
+        logDebug "[STATE_ENTRY_PERMIT][Search] Single segment (no stops), using fare policy's stateEntryPermitCharges"
+        return Nothing
+      else
+        if isOverallIntercity && not isOverallCrossCity
+          then do
+            logDebug "[STATE_ENTRY_PERMIT][Search] Overall intercity (non-cross-city), skipping segment-based stateEntryPermitCharges"
+            return Nothing
+          else do
+            -- Comment 1: Extract to helper function for better maintainability
+            -- Comment 2: Wrap in error handling
+            result <- withTryCatch "calculateSegmentCharges:Search" $ do
+              segmentChargeResults <- calculateSegmentChargesForSearch merchant transporterConfig sReq possibleTripOption mbDistance mbDuration mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier mbVersion configVersionMap journeySegments
+              let totalCharges = SEPD.calculateTotalStateEntryPermitCharges segmentChargeResults
+              logInfo $ "[STATE_ENTRY_PERMIT][Search] Calculated segment charges: segments=" <> show (length journeySegments) <> ", totalCharges=" <> show totalCharges
+              return totalCharges
+            case result of
+              Right charges -> return charges
+              Left err -> do
+                logError $ "[STATE_ENTRY_PERMIT][Search] Segment calculation failed: " <> show err <> ". Defaulting stateEntryPermitCharges to Nothing (zero charges)."
                 return Nothing
-          SEPD.calculateSegmentStateEntryPermitCharge segmentIsIntercity segmentIsCrossCity mbSegmentFarePolicy segment
-  -- Calculate total stateEntryPermitCharges from segments
-  let mbSegmentStateEntryPermitCharges = SEPD.calculateTotalStateEntryPermitCharges segmentChargeResults
-  logDebug $
-    "[STATE_ENTRY_PERMIT][Search] mbSegmentStateEntryPermitCharges=" <> show mbSegmentStateEntryPermitCharges
   now <- getCurrentTime
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneGateId, mbDefaultDriverExtra)
@@ -521,6 +491,29 @@ handler ValidatedDSearchReq {..} sReq = do
           pure $ mbVst <&> (.serviceTierType)
         Nothing -> pure Nothing
     getVehicleServiceTierForMeterRideSearch _ _ _ = pure Nothing
+
+    -- Helper function to calculate segment charges (Comment 1: move logic to helper)
+    calculateSegmentChargesForSearch merchant_ transporterConfig_ sReq_ possibleTripOption_ mbDistance_ mbDuration_ mbIsAutoRickshawAllowed_ mbIsTwoWheelerAllowed_ mbVehicleServiceTier_ mbVersion_ configVersionMap_ journeySegments_ = do
+      forM journeySegments_ $ \segment -> do
+        logDebug $ "[STATE_ENTRY_PERMIT][Search] evaluating segment from=" <> show segment.segmentFrom <> " to=" <> show segment.segmentTo
+        segmentSourceCityResult <- getNearestOperatingAndSourceCity merchant_ segment.segmentFrom
+        segmentMerchantOpCity <- CQMOC.getMerchantOpCity merchant_ (Just segmentSourceCityResult.nearestOperatingCity.city)
+        (segmentIsIntercity, segmentIsCrossCity, mbSegmentDestinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig_ (Just segment.segmentTo) segmentSourceCityResult.sourceCity merchant_
+        logDebug $ "[STATE_ENTRY_PERMIT][Search] segment classification isIntercity=" <> show segmentIsIntercity <> ", isCrossCity=" <> show segmentIsCrossCity <> ", destTravelCityName=" <> show mbSegmentDestinationTravelCityName
+        mbSegmentFarePolicy <-
+          if segmentIsIntercity || segmentIsCrossCity
+            then do
+              let segmentFromGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig_.dpGeoHashPercision) (segment.segmentFrom.lat, segment.segmentFrom.lon)
+                  segmentToGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig_.dpGeoHashPercision) (segment.segmentTo.lat, segment.segmentTo.lon)
+              let segmentTripCategories = SEPD.constructSegmentTripCategories segmentIsIntercity segmentIsCrossCity mbSegmentDestinationTravelCityName possibleTripOption_.isScheduled
+              case listToMaybe segmentTripCategories of
+                Just segmentTripCategory -> do
+                  segmentFarePoliciesProduct <- getAllFarePoliciesProduct merchant_.id segmentMerchantOpCity.id sReq_.isDashboardRequest segment.segmentFrom (Just segment.segmentTo) (Just (TransactionId (Id sReq_.transactionId))) segmentFromGeohash segmentToGeohash Nothing Nothing mbVersion_ segmentTripCategory configVersionMap_
+                  let segmentFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance_) (fromMaybe 0 mbDuration_) mbIsAutoRickshawAllowed_ mbIsTwoWheelerAllowed_ mbVehicleServiceTier_ segmentFarePoliciesProduct.farePolicies
+                  return $ listToMaybe segmentFarePolicies
+                Nothing -> return Nothing
+            else return Nothing
+        SEPD.calculateSegmentStateEntryPermitCharge segmentIsIntercity segmentIsCrossCity mbSegmentFarePolicy segment
 
 addNearestDriverInfo ::
   (HasField "vehicleServiceTier" a ServiceTierType) =>

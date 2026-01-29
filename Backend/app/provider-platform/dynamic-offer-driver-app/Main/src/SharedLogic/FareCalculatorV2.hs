@@ -230,7 +230,8 @@ buildComponentMap FareParameters {..} =
             (CustomerCancellationChargeComponent, maybeZero customerCancellationDues),
             (PlatformFeeComponent, maybeZero platformFee),
             (RideVatComponent, maybeZero rideVat),
-            (TollVatComponent, maybeZero tollVat)
+            (TollVatComponent, maybeZero tollVat),
+            (StateEntryPermitChargesComponent, maybeZero stateEntryPermitCharges)
           ]
       -- Detail map: Additional components based on fare policy type
       detailMap = case fareParametersDetails of
