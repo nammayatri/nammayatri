@@ -31,6 +31,8 @@ import qualified SharedLogic.JobScheduler as RJS
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.PersonExtra as QPExtra
+import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.BookingExtra as QBExtra
 import Tools.Error
 
 data CustomerCancellationRateData = CustomerCancellationRateData
@@ -171,22 +173,26 @@ nudgeOrBlockCustomer ::
   DP.Person ->
   m ()
 nudgeOrBlockCustomer riderConfig customer = do
-  -- Check if cancellation rate blocking is enabled for this city
   unless (riderConfig.enableCustomerCancellationRateBlocking == Just True) $ do
     logDebug $ "Customer cancellation rate blocking is disabled for city: " <> customer.merchantOperatingCityId.getId
     return ()
 
-  let config = buildConfig riderConfig
+  activeJourneys <- QJourney.findAllActiveByRiderId customer.id
+  unless (null activeJourneys) $ do
+    logDebug $ "Customer " <> customer.id.getId <> " has active journeys, skipping cancellation rate blocking check"
+    return ()
   personFlowStatus <- QPFS.getStatus customer.id
+  mbLatestBooking <- QBExtra.findLatestSelfAndPartyBookingByRiderId customer.id
+  let hasActiveBooking = isJust mbLatestBooking
   let isNotOnRide = case personFlowStatus of
-        Just DPFS.IDLE -> True
-        Just (DPFS.FEEDBACK_PENDING _) -> True
+        Just DPFS.IDLE -> not hasActiveBooking
+        Just (DPFS.FEEDBACK_PENDING _) -> not hasActiveBooking
         _ -> False
 
   unless isNotOnRide $ do
-    logDebug $ "Customer " <> customer.id.getId <> " is on ride, skipping cancellation rate blocking check"
+    logDebug $ "Customer " <> customer.id.getId <> " is on ride or has active booking, skipping cancellation rate blocking check"
     return ()
-
+  let config = buildConfig riderConfig
   case (riderConfig.cancellationRateWindow, config) of
     (Just windowSize, Just CancellationRateBasedNudgingAndBlockingConfig {..}) -> do
       (dailyCancellationRate, dailyAssignedCount) <- getCancellationRateOfDays 1 windowSize
