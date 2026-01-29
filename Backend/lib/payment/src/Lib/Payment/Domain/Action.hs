@@ -16,6 +16,8 @@
 
 module Lib.Payment.Domain.Action
   ( PaymentStatusResp (..),
+    CreatePaymentIntentServiceResp (..),
+    CreatePaymentIntentServiceReq (..),
     createOrderService,
     orderStatusService,
     juspayWebhookService,
@@ -162,7 +164,27 @@ data PayoutPaymentStatus = PayoutPaymentStatus
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+data CreatePaymentIntentServiceResp = CreatePaymentIntentServiceResp
+  { paymentIntentId :: Text,
+    orderId :: Id DOrder.PaymentOrder
+  }
+  deriving (Show, Eq, Generic)
+
+-- Request type for createPaymentIntentService that doesn't require orderShortId
+-- The orderShortId is generated internally by the service
+data CreatePaymentIntentServiceReq = CreatePaymentIntentServiceReq
+  { amount :: HighPrecMoney,
+    applicationFeeAmount :: HighPrecMoney,
+    currency :: Currency,
+    customer :: Payment.CustomerId,
+    paymentMethod :: Payment.PaymentMethodId,
+    receiptEmail :: Maybe Text,
+    driverAccountId :: Payment.AccountId
+  }
+  deriving (Show, Eq, Generic)
+
 -- create payment intent --------------------------------------------
+-- Note: All orders now get new IDs. Link to ride is via PaymentInvoice table, not order.id
 
 createPaymentIntentService ::
   forall m r c.
@@ -173,24 +195,29 @@ createPaymentIntentService ::
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
-  Id Ride ->
-  Text ->
-  Payment.CreatePaymentIntentReq ->
+  Maybe (Id DOrder.PaymentOrder) -> -- existing order ID (for retry handling)
+  CreatePaymentIntentServiceReq ->
   (Payment.CreatePaymentIntentReq -> m Payment.CreatePaymentIntentResp) ->
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
-  m Payment.CreatePaymentIntentResp
-createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall cancelPaymentIntentCall = do
-  let rideShortId = ShortId rideShortIdText
-  mbExistingOrder <- QOrder.findById (cast rideId)
+  m CreatePaymentIntentServiceResp
+createPaymentIntentService merchantId mbMerchantOpCityId personId mbExistingOrderId createPaymentIntentServiceReq createPaymentIntentCall cancelPaymentIntentCall = do
+
+  mbExistingOrder <- case mbExistingOrderId of
+    Just orderId -> QOrder.findById orderId
+    Nothing -> pure Nothing
+
   case mbExistingOrder of
     Nothing -> do
+      newOrderId <- Id <$> generateGUID
+      newOrderShortId <- generateShortId
+      let createPaymentIntentReq = mkPaymentIntentReq newOrderShortId createPaymentIntentServiceReq
       createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq -- api call
-      paymentOrder <- buildPaymentOrder_ createPaymentIntentResp rideShortId
+      paymentOrder <- buildPaymentOrder_ createPaymentIntentResp newOrderId newOrderShortId
       transaction <- buildTransaction paymentOrder createPaymentIntentResp
       logInfo $ "Created new order and payment intent: " <> createPaymentIntentResp.paymentIntentId <> "; amount: " <> show createPaymentIntentReq.amount <> "; applicationFeeAmount: " <> show createPaymentIntentReq.applicationFeeAmount
       QOrder.create paymentOrder
       QTransaction.create transaction
-      return createPaymentIntentResp
+      return CreatePaymentIntentServiceResp {paymentIntentId = createPaymentIntentResp.paymentIntentId, orderId = newOrderId}
     Just existingOrder -> do
       transactions <- QTransaction.findAllByOrderId existingOrder.id
       let mbInProgressTransaction = find (isInProgress . (.status)) transactions
@@ -198,8 +225,8 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
         Nothing -> createNewTransaction existingOrder -- if previous all payment intents are already charged or cancelled, then create a new payment intent
         Just existingTransaction -> do
           paymentIntentId <- existingTransaction.txnId & fromMaybeM (InternalError "Transaction doesn't have txnId") -- should never happen
-          let newTransactionAmount = createPaymentIntentReq.amount -- changing whole amount
-          let newApplicationFeeAmount = createPaymentIntentReq.applicationFeeAmount -- changing application fee amount
+          let newTransactionAmount = createPaymentIntentServiceReq.amount -- changing whole amount
+          let newApplicationFeeAmount = createPaymentIntentServiceReq.applicationFeeAmount -- changing application fee amount
           if newTransactionAmount > existingTransaction.amount
             then do
               -- currently we don't support incremental authorization, so just cancel and create new intent
@@ -208,6 +235,9 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
               createNewTransaction existingOrder -- create new payment intent
             else updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder existingTransaction
   where
+    mkPaymentIntentReq :: ShortId DOrder.PaymentOrder -> CreatePaymentIntentServiceReq -> Payment.CreatePaymentIntentReq
+    mkPaymentIntentReq orderShortId CreatePaymentIntentServiceReq {..} = Payment.CreatePaymentIntentReq {orderShortId = orderShortId.getShortId, ..}
+
     isInProgress = (`elem` [Payment.NEW, Payment.PENDING_VBV, Payment.STARTED, Payment.AUTHORIZING])
 
     cancelOldTransaction :: DTransaction.PaymentTransaction -> Payment.PaymentIntentId -> m ()
@@ -228,8 +258,9 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
       -- no need to update order status, because we will create new payment intent linked to this order
       QTransaction.updateStatusAndError transaction.id Payment.CANCELLED errorCode' errorMessage'
 
-    createNewTransaction :: (EncFlow m r, BeamFlow m r) => DOrder.PaymentOrder -> m Payment.CreatePaymentIntentResp
+    createNewTransaction :: (EncFlow m r, BeamFlow m r) => DOrder.PaymentOrder -> m CreatePaymentIntentServiceResp
     createNewTransaction existingOrder = do
+      let createPaymentIntentReq = mkPaymentIntentReq existingOrder.shortId createPaymentIntentServiceReq
       createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq -- api call
       let newOrderAmount = createPaymentIntentReq.amount
       transaction <- buildTransaction existingOrder createPaymentIntentResp
@@ -237,36 +268,34 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
       logInfo $ "Created new payment intent: " <> createPaymentIntentResp.paymentIntentId
       QOrder.updateAmountAndPaymentIntentId existingOrder.id newOrderAmount createPaymentIntentResp.paymentIntentId
       QTransaction.create transaction
-      return createPaymentIntentResp
+      return CreatePaymentIntentServiceResp {paymentIntentId = createPaymentIntentResp.paymentIntentId, orderId = existingOrder.id}
 
     updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder existingTransaction = do
-      mbClientSecret <- mapM decrypt existingOrder.clientAuthToken
-      clientSecret <- mbClientSecret & fromMaybeM (InternalError "Client secret not found") -- should never happen
-      let newOrderAmount = createPaymentIntentReq.amount
+      let newOrderAmount = createPaymentIntentServiceReq.amount
       when (newOrderAmount /= existingOrder.amount || paymentIntentId /= existingOrder.paymentServiceOrderId) $ do
         logInfo $ "Updated order amount: " <> paymentIntentId <> "; amount: " <> show newOrderAmount
         QOrder.updateAmountAndPaymentIntentId existingOrder.id newOrderAmount paymentIntentId
       when (newTransactionAmount /= existingTransaction.amount || newApplicationFeeAmount /= existingTransaction.applicationFeeAmount) $ do
         logInfo $ "Updated transaction amount: " <> paymentIntentId <> "; amount: " <> show newTransactionAmount <> "; applicationFeeAmount: " <> show newApplicationFeeAmount
         QTransaction.updateAmount existingTransaction.id newTransactionAmount newApplicationFeeAmount
-      let paymentIntentStatus = Payment.caseToPaymentIntentStatus existingTransaction.status
-      return $ Payment.CreatePaymentIntentResp paymentIntentId clientSecret paymentIntentStatus
+      return CreatePaymentIntentServiceResp {paymentIntentId = existingOrder.paymentServiceOrderId, orderId = existingOrder.id}
 
     buildPaymentOrder_ ::
       ( EncFlow m r,
         BeamFlow m r
       ) =>
       Payment.CreatePaymentIntentResp ->
+      Id DOrder.PaymentOrder ->
       ShortId DOrder.PaymentOrder ->
       m DOrder.PaymentOrder
-    buildPaymentOrder_ createPaymentIntentResp rideShortId = do
+    buildPaymentOrder_ createPaymentIntentResp orderId orderShortId = do
       now <- getCurrentTime
       clientAuthToken <- encrypt createPaymentIntentResp.clientSecret
       let clientAuthTokenExpiry = Time.UTCTime (Time.fromGregorian 2099 1 1) 0 -- setting infinite expiry for now
       pure
         DOrder.PaymentOrder
-          { id = cast rideId,
-            shortId = rideShortId,
+          { id = orderId,
+            shortId = orderShortId,
             paymentServiceOrderId = createPaymentIntentResp.paymentIntentId,
             requestId = Nothing,
             service = Nothing,
@@ -279,8 +308,8 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             entityName = Nothing,
             paymentServiceType = Nothing,
             paymentMerchantId = Nothing,
-            amount = createPaymentIntentReq.amount,
-            currency = createPaymentIntentReq.currency,
+            amount = createPaymentIntentServiceReq.amount,
+            currency = createPaymentIntentServiceReq.currency,
             status = Payment.castToTransactionStatus createPaymentIntentResp.status,
             paymentLinks = Payment.PaymentLinks Nothing Nothing Nothing Nothing,
             clientAuthToken = Just clientAuthToken,
@@ -331,10 +360,10 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             gatewayReferenceId = Nothing,
             orderId = order.id,
             merchantId = order.merchantId,
-            amount = createPaymentIntentReq.amount,
-            applicationFeeAmount = createPaymentIntentReq.applicationFeeAmount,
+            amount = createPaymentIntentServiceReq.amount,
+            applicationFeeAmount = createPaymentIntentServiceReq.applicationFeeAmount,
             retryCount = 0,
-            currency = createPaymentIntentReq.currency,
+            currency = createPaymentIntentServiceReq.currency,
             dateCreated = Nothing,
             statusId = 0, -- not used for stripe
             status = Payment.castToTransactionStatus resp.status,

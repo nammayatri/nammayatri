@@ -1,0 +1,73 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Utils.Common
+  PaymentInvoice: Domain.Types.PaymentInvoice
+
+PaymentInvoice:
+  tableName: payment_invoice
+
+  types:
+    InvoicePaymentStatus:
+      enum: "PENDING,CAPTURED,FAILED,CANCELLED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    PaymentPurpose:
+      enum: "RIDE,TIP,RIDE_TIP,CANCELLATION_FEE"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    InvoiceType:
+      enum: "PAYMENT,REFUNDS"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <InvoicePaymentStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentPurpose>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <InvoiceType>
+
+  fields:
+    id: Id PaymentInvoice
+    rideId: Id Ride
+    paymentOrderId: Maybe (Id PaymentOrder)
+    paymentStatus: InvoicePaymentStatus
+    paymentInstrument: PaymentInstrument
+    paymentPurpose: PaymentPurpose
+    invoiceType: InvoiceType
+    invoiceNumber: Text
+    amount: HighPrecMoney
+    currency: Currency
+
+  constraints:
+    id: PrimaryKey
+    rideId: SecondaryKey
+    paymentOrderId: SecondaryKey
+    invoiceNumber: SecondaryKey
+
+  # merchantId and merchantOperatingCityId kept for future filtering/analytics
+  excludedFields: []
+
+  sqlType:
+    paymentInstrument: text
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByRideId:
+      kvFunction: findAllWithKV
+      where: rideId
+    findByInvoiceNumber:
+      kvFunction: findOneWithKV
+      where: invoiceNumber
+    findByPaymentOrderIdAndInvoiceType:
+      kvFunction: findOneWithKV
+      where:
+        and: [paymentOrderId, invoiceType]
+    updatePaymentStatus:
+      kvFunction: updateWithKV
+      params: [paymentStatus]
+      where: id
+

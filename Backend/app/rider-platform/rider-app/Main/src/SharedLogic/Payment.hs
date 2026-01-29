@@ -555,16 +555,15 @@ makePaymentIntent ::
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Id Person.Person ->
-  Ride.Ride ->
-  Payment.CreatePaymentIntentReq ->
-  m Payment.CreatePaymentIntentResp
-makePaymentIntent merchantId merchantOpCityId paymentMode personId ride createPaymentIntentReq = do
+  Maybe (Id DOrder.PaymentOrder) -> -- existing order ID (for retry handling)
+  DPayment.CreatePaymentIntentServiceReq ->
+  m DPayment.CreatePaymentIntentServiceResp
+makePaymentIntent merchantId merchantOpCityId paymentMode personId mbExistingOrderId createPaymentIntentServiceReq = do
   let commonMerchantId = cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @Person.Person @DPayment.Person personId
-      commonRideId = cast @Ride.Ride @DPayment.Ride ride.id
       createPaymentIntentCall = TPayment.createPaymentIntent merchantId merchantOpCityId paymentMode
       cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId paymentMode
-  DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall cancelPaymentIntentCall
+  DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId mbExistingOrderId createPaymentIntentServiceReq createPaymentIntentCall cancelPaymentIntentCall
 
 cancelPaymentIntent ::
   ( MonadFlow m,
