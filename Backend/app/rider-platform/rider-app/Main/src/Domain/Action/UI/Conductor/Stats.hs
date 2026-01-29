@@ -12,10 +12,10 @@ data StatsResp = StatsResp
     yesterdayRevenue :: Money,
     mtdTickets :: Int,
     mtdRevenue :: Money,
-    activeCount :: Int, -- Will default to 1 if has today's data
-    busNo :: Maybe Text, -- Will need to map from conductor token
-    newUsersToday :: Int, -- Placeholder for now
-    newUsersMtd :: Int -- Placeholder for now
+    activeCount :: Int,
+    busNo :: Maybe Text,
+    newUsersToday :: Int,
+    newUsersMtd :: Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -28,7 +28,10 @@ statsHandler conductorToken = withFlowHandlerAPI $ do
   let (year, month, _) = Time.toGregorian yesterday
   let monthStartDay = Time.fromGregorian year month 1
 
-  allStats <- CHConductor.findConductorStatsByToken conductorToken
+
+  -- For future proofing when yesterdayStats might be extended to todayStats
+  let lowerBound = min monthStartDay yesterday
+  allStats <- CHConductor.findConductorStatsBetween conductorToken lowerBound yesterday
   logDebug $ "allStats: " <> show allStats
 
   let yesterdayStats = filter (\stat -> stat.bookingDate == yesterday) allStats
@@ -44,21 +47,22 @@ statsHandler conductorToken = withFlowHandlerAPI $ do
           allStats
   logDebug $ "mtdStats: " <> show mtdStats
 
-  let yesterdayTickets = sum $ map (.numberTicketsBooked) yesterdayStats
-      mtdTickets = sum $ map (.numberTicketsBooked) mtdStats
+  let yesterdayTickets = sum $ map (fromMaybe 0 . (.numberTicketsBooked)) yesterdayStats
+
+      mtdTickets = sum $ map (fromMaybe 0 . (.numberTicketsBooked)) mtdStats
 
       -- Calculate revenue from ClickHouse data
       --
       yesterdayRevenue =
         Money . round $
-          sum (map (.totalRevenueInADay) yesterdayStats)
+          sum (map (fromMaybe 0 . (.totalRevenueInADay)) yesterdayStats)
 
       mtdRevenue =
         Money . round $
-          sum (map (.totalRevenueInADay) mtdStats)
+          sum (map (fromMaybe 0 . (.totalRevenueInADay)) mtdStats)
 
       -- TODO
-      activeCount = -1
+      activeCount = 0
       busNo = Nothing -- TODO: implement bus number mapping
       newUsersToday = sum (map (fromMaybe 0 . (.numberOfNewCustomers)) yesterdayStats)
       newUsersMtd = sum (map (fromMaybe 0 . (.numberOfNewCustomers)) mtdStats)
