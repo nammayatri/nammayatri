@@ -28,9 +28,11 @@ library
   exposed-modules:
       Lib.Payment.API
       Lib.Payment.Domain.Action
+      Lib.Payment.Domain.PaytmEDC
       Lib.Payment.Domain.Types.Common
       Lib.Payment.Domain.Types.PaymentOrder
       Lib.Payment.Domain.Types.PaymentTransaction
+      Lib.Payment.Domain.Types.PaytmEDC
       Lib.Payment.Storage.Beam.BeamFlow
       Lib.Payment.Storage.Beam.PaymentOrder
       Lib.Payment.Storage.Beam.PaymentTransaction
