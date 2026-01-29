@@ -9,13 +9,16 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantOperatingCity as MerchantOperatingCity
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.StclMembership as Domain
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
-import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payment.Interface as PaymentInterface
+import qualified Kernel.External.Payment.Interface.Types as PaymentTypes
+import qualified Kernel.External.Payment.Types as Payment
 import qualified Kernel.Prelude
 import Kernel.Types.Common (Money (..), toHighPrecMoney)
 import Kernel.Types.Error
@@ -23,6 +26,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
 import Tools.Auth
@@ -33,7 +37,7 @@ postSubmitApplication ::
       Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity
     ) ->
     APITypes.MembershipApplicationReq ->
-    Environment.Flow Payment.CreateOrderResp
+    Environment.Flow PaymentTypes.CreateOrderResp
   )
 postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
   -- Extract and validate driver ID
@@ -66,9 +70,19 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
   -- Get amount from request
   let amount = toHighPrecMoney req.amount
 
-  -- Create Payment.CreateOrderReq
+  -- Fetch gatewayReferenceId from merchant service config
+  mbGatewayReferenceId <- do
+    mbServiceConfig <- CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService Payment.Juspay) merchantOperatingCityId
+    case mbServiceConfig of
+      Just serviceConfig -> case serviceConfig.serviceConfig of
+        DMSC.MembershipPaymentServiceConfig paymentServiceConfig ->
+          pure $ PaymentInterface.getGatewayReferenceId paymentServiceConfig
+        _ -> pure Nothing
+      Nothing -> pure Nothing
+
+  -- Create PaymentTypes.CreateOrderReq
   let createOrderReq =
-        Payment.CreateOrderReq
+        PaymentTypes.CreateOrderReq
           { orderId = orderId,
             orderShortId = shortIdText,
             amount = amount,
@@ -82,7 +96,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             mandateFrequency = Nothing,
             mandateStartDate = Nothing,
             mandateEndDate = Nothing,
-            metadataGatewayReferenceId = Nothing,
+            metadataGatewayReferenceId = mbGatewayReferenceId,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = Nothing,
@@ -160,7 +174,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
   -- Save to database
   QStclMembership.create membership
 
-  -- Return Payment.CreateOrderResp from createOrderV2
+  -- Return PaymentTypes.CreateOrderResp from createOrderV2
   return createOrderResp
 
 getMembership ::
