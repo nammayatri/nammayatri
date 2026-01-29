@@ -1,0 +1,72 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+
+College:
+  tableName: college
+
+  fields:
+    id: Id College
+    collegeName: Text
+    collegeAddress: Maybe Text
+    contactName: Text
+    contactPhoneNumber: Maybe (EncryptedHashedField e Text)
+    contactRole: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamFields:
+    contactPhoneNumber:
+      contactPhoneNumberEncrypted: Maybe Text
+      contactPhoneNumberHash: Maybe DbHash
+
+  fromTType:
+    contactPhoneNumber: EncryptedHashed <$> (Encrypted <$> contactPhoneNumberEncrypted) <*> contactPhoneNumberHash|E
+
+  toTType:
+    contactPhoneNumber: (contactPhoneNumber <&> unEncrypted . (.encrypted))|E
+    contactPhoneNumberHash: (contactPhoneNumber <&> (.hash))|E
+
+  constraints:
+    id: PrimaryKey
+    collegeName: SecondaryKey
+
+  sqlType:
+    collegeName: character varying(255)
+    collegeAddress: text
+    contactName: character varying(255)
+    contactPhoneNumberEncrypted: character varying(255)
+    contactPhoneNumberHash: bytea
+    contactRole: character varying(255)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByCollegeName:
+      kvFunction: findOneWithKV
+      where: collegeName
+
+    updateContactDetails:
+      kvFunction: updateWithKV
+      params: [contactName, contactPhoneNumber, contactRole, updatedAt]
+      where: id
+
+    updateCollegeAddress:
+      kvFunction: updateWithKV
+      params: [collegeAddress, updatedAt]
+      where: id
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

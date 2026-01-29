@@ -1,0 +1,101 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  College: Domain.Types.College
+
+Student:
+  tableName: student
+
+  types:
+    VerificationStatus:
+      enum: "EXPIRED, PENDING, VERIFIED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VerificationStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <VerificationStatus>
+
+  fields:
+    id: Id Student
+    personId: Id Person
+    studentName: Text
+    collegeId: Id College
+    collegeName: Maybe Text
+    studentPicture: Maybe Text
+    verificationStatus: VerificationStatus
+    verificationDate: Maybe UTCTime
+    studentAddress: Maybe Text
+    studentAge: Maybe Int
+    guardianName: Maybe Text
+    studentClass: Maybe Text
+    sourceStop: Maybe Text
+    destinationStop: Maybe Text
+    intermediateStops: "[Text]"
+    graduationDate: Maybe UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    intermediateStops: "Maybe [Text]"
+
+  fromTType:
+    intermediateStops: fromMaybe [] intermediateStops|E
+
+  toTType:
+    intermediateStops: Just intermediateStops|E
+
+  constraints:
+    id: PrimaryKey
+    personId: !SecondaryKey
+
+  sqlType:
+    studentName: character varying(255)
+    collegeId: character varying(255)
+    collegeName: character varying(255)
+    studentPicture: text
+    verificationStatus: character varying(255)
+    studentAddress: text
+    guardianName: character varying(255)
+    studentClass: character varying(255)
+    sourceStop: text
+    destinationStop: text
+    intermediateStops: text[]
+
+  default:
+    verificationStatus: "'PENDING'"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, verificationDate, updatedAt]
+      where: id
+
+    updateStudentDetails:
+      kvFunction: updateWithKV
+      params: [studentName, collegeId, collegeName, studentPicture, studentAddress, studentAge, guardianName, studentClass, graduationDate, updatedAt]
+      where: id
+
+    updateStops:
+      kvFunction: updateWithKV
+      params: [sourceStop, destinationStop, intermediateStops, updatedAt]
+      where: id
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

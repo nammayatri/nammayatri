@@ -1,0 +1,23 @@
+CREATE TABLE atlas_app.student ();
+
+ALTER TABLE atlas_app.student ADD COLUMN college_id character varying(255) NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN college_name character varying(255) ;
+ALTER TABLE atlas_app.student ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.student ADD COLUMN destination_stop text ;
+ALTER TABLE atlas_app.student ADD COLUMN graduation_date timestamp with time zone ;
+ALTER TABLE atlas_app.student ADD COLUMN guardian_name character varying(255) ;
+ALTER TABLE atlas_app.student ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN intermediate_stops text[] ;
+ALTER TABLE atlas_app.student ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN person_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN source_stop text ;
+ALTER TABLE atlas_app.student ADD COLUMN student_address text ;
+ALTER TABLE atlas_app.student ADD COLUMN student_age integer ;
+ALTER TABLE atlas_app.student ADD COLUMN student_class character varying(255) ;
+ALTER TABLE atlas_app.student ADD COLUMN student_name character varying(255) NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN student_picture text ;
+ALTER TABLE atlas_app.student ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.student ADD COLUMN verification_date timestamp with time zone ;
+ALTER TABLE atlas_app.student ADD COLUMN verification_status character varying(255) NOT NULL default 'PENDING';
+ALTER TABLE atlas_app.student ADD PRIMARY KEY ( id);

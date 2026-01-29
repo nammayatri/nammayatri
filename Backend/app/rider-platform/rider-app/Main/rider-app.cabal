@@ -566,6 +566,7 @@ library
       Storage.Queries.BusinessHourExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReasonExtra
+      Storage.Queries.CollegeExtra
       Storage.Queries.DisabilityExtra
       Storage.Queries.EstimateBreakup
       Storage.Queries.EstimateExtra
@@ -618,6 +619,7 @@ library
       Storage.Queries.ServiceCategoryExtra
       Storage.Queries.ServicePeopleCategoryExtra
       Storage.Queries.StationsExtraInformationExtra
+      Storage.Queries.StudentExtra
       Storage.Queries.TicketBookingExtra
       Storage.Queries.TicketBookingPeopleCategoryExtra
       Storage.Queries.TicketBookingServiceCategoryExtra
@@ -847,6 +849,7 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.ClientPersonInfo
+      Domain.Types.College
       Domain.Types.CrisRecon
       Domain.Types.DeletedPerson
       Domain.Types.Depot
@@ -964,6 +967,7 @@ library
       Domain.Types.StationsExtraInformation
       Domain.Types.StopFare
       Domain.Types.StopInformation
+      Domain.Types.Student
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
       Domain.Types.TicketBookingService
@@ -1001,6 +1005,7 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.ClientPersonInfo
+      Storage.Beam.College
       Storage.Beam.CrisRecon
       Storage.Beam.DeletedPerson
       Storage.Beam.Depot
@@ -1117,6 +1122,7 @@ library
       Storage.Beam.StationsExtraInformation
       Storage.Beam.StopFare
       Storage.Beam.StopInformation
+      Storage.Beam.Student
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
       Storage.Beam.TicketBookingService
@@ -1158,6 +1164,7 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.ClientPersonInfo
+      Storage.Queries.College
       Storage.Queries.CrisRecon
       Storage.Queries.DeletedPerson
       Storage.Queries.Depot
@@ -1231,6 +1238,7 @@ library
       Storage.Queries.OrphanInstances.BusinessHour
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
+      Storage.Queries.OrphanInstances.College
       Storage.Queries.OrphanInstances.Disability
       Storage.Queries.OrphanInstances.Estimate
       Storage.Queries.OrphanInstances.Exophone
@@ -1278,6 +1286,7 @@ library
       Storage.Queries.OrphanInstances.ServiceCategory
       Storage.Queries.OrphanInstances.ServicePeopleCategory
       Storage.Queries.OrphanInstances.StationsExtraInformation
+      Storage.Queries.OrphanInstances.Student
       Storage.Queries.OrphanInstances.TicketBooking
       Storage.Queries.OrphanInstances.TicketBookingPeopleCategory
       Storage.Queries.OrphanInstances.TicketBookingService
@@ -1339,6 +1348,7 @@ library
       Storage.Queries.StationsExtraInformation
       Storage.Queries.StopFare
       Storage.Queries.StopInformation
+      Storage.Queries.Student
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory
       Storage.Queries.TicketBookingService
