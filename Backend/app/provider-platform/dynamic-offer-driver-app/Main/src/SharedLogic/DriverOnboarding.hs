@@ -383,8 +383,8 @@ data CreateRCInput = CreateRCInput
     unladdenWeight :: Maybe Float
   }
 
-buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> [Text] -> m (Maybe VehicleRegistrationCertificate)
-buildRC merchantId merchantOperatingCityId input failedRules = do
+buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> [Text] -> Bool -> m (Maybe VehicleRegistrationCertificate)
+buildRC merchantId merchantOperatingCityId input failedRules isExcludedVehicleCategoryFromVerification = do
   now <- getCurrentTime
   id <- generateGUID
   rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe DVC.CAR input.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
@@ -392,7 +392,7 @@ buildRC merchantId merchantOperatingCityId input failedRules = do
   let mbFitnessExpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
   mbRC <- case (mEncryptedRC, mbFitnessExpiry) of
     (Just certificateNumber, Just expiry) -> do
-      rc <- createRC merchantId merchantOperatingCityId input rCConfigs id now failedRules certificateNumber expiry
+      rc <- createRC merchantId merchantOperatingCityId input rCConfigs id now isExcludedVehicleCategoryFromVerification failedRules certificateNumber expiry
       logInfo $ "buildRC: Created RC with verificationStatus=" <> show rc.verificationStatus <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
       return $ Just rc
     _ -> return Nothing
@@ -406,11 +406,12 @@ createRC ::
   DVC.DocumentVerificationConfig ->
   Id VehicleRegistrationCertificate ->
   UTCTime ->
+  Bool ->
   [Text] ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   m VehicleRegistrationCertificate
-createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
+createRC merchantId merchantOperatingCityId input rcconfigs id now isExcludedVehicleCategoryFromVerification failedRules certificateNumber expiry = do
   (verificationStatus, reviewRequired, variant, mbVehicleModel) <- validateRCStatus input rcconfigs now expiry
   let airConditioned = input.airConditioned
       updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
@@ -418,7 +419,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         Just DVC.TRUCK -> Just $ DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight (fromMaybe DV.DELIVERY_LIGHT_GOODS_VEHICLE variant)
         _ -> variant
       finalVerificationStatus = if null failedRules then verificationStatus else Documents.INVALID
-  pure $
+  pure
     VehicleRegistrationCertificate
       { id,
         documentImageId = input.documentImageId,
@@ -427,7 +428,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         permitExpiry = input.permitValidityUpto,
         pucExpiry = input.pucValidityUpto,
         vehicleClass = input.vehicleClass,
-        vehicleVariant = updVariant,
+        vehicleVariant = if isExcludedVehicleCategoryFromVerification then getVehicleVariantForExcludedCategory input.vehicleCategory else updVariant,
         vehicleManufacturer = input.manufacturer <|> input.manufacturerModel,
         vehicleCapacity = input.seatingCapacity,
         vehicleModel = mbVehicleModel,
@@ -440,7 +441,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         reviewRequired,
         insuranceValidity = input.insuranceValidity,
         mYManufacturing = input.mYManufacturing,
-        verificationStatus = finalVerificationStatus,
+        verificationStatus = if isExcludedVehicleCategoryFromVerification then Documents.VALID else finalVerificationStatus,
         fleetOwnerId = input.fleetOwnerId,
         merchantId = Just merchantId,
         merchantOperatingCityId = Just merchantOperatingCityId,
@@ -729,3 +730,8 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.FinnishIDResidencePermit -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.FinnishIDResidencePermit
   Domain.Types.DocumentVerificationConfig.BusinessRegistrationExtract -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessRegistrationExtract
   Domain.Types.DocumentVerificationConfig.PersonalId -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PersonalId
+
+getVehicleVariantForExcludedCategory :: Maybe DVC.VehicleCategory -> Maybe DV.VehicleVariant
+getVehicleVariantForExcludedCategory = \case
+  Just DVC.TOTO -> Just DV.E_RICKSHAW
+  _ -> Just DV.E_RICKSHAW --TODO: For now kept the default vehicle variant for excluded categories as E_RICKSHAW

@@ -506,6 +506,7 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
         DomainRC.DriverRCReq
           { vehicleRegistrationCertNumber = req.vehicleRegistrationCertNumber,
             imageId = cast req.imageId,
+            udinNumber = Nothing,
             operatingCity = req.operatingCity,
             dateOfRegistration = req.dateOfRegistration,
             airConditioned = req.airConditioned,

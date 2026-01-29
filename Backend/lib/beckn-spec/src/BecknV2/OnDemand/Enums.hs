@@ -39,6 +39,7 @@ data VehicleCategory
   | TWO_WHEELER
   | TRUCK
   | BOAT
+  | TOTO
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, Read, ToSchema)
 
 $(mkHttpInstancesForEnum ''VehicleCategory)

@@ -57,6 +57,7 @@ getConfigJSON = \case
     Verification.HyperVergeVerificationConfig cfg -> toJSON cfg
     Verification.HyperVergeVerificationConfigRCDL cfg -> toJSON cfg
     Verification.DigiLockerConfig cfg -> toJSON cfg
+    Verification.TtenVerificationConfig cfg -> toJSON cfg
   Domain.DriverBackgroundVerificationServiceConfig driverBackgroundVerificationCfg -> case driverBackgroundVerificationCfg of
     Verification.SafetyPortalConfig cfg -> toJSON cfg
   Domain.CallServiceConfig callCfg -> case callCfg of
@@ -95,6 +96,7 @@ getConfigJSON = \case
     Tokenize.JourneyMonitoringTokenizationServiceConfig cfg -> toJSON cfg
     Tokenize.GullakTokenizationServiceConfig cfg -> toJSON cfg
     Tokenize.DigilockerTokenizationServiceConfig cfg -> toJSON cfg
+    Tokenize.TtenTokenizationServiceConfig cfg -> toJSON cfg
   Domain.BackgroundVerificationServiceConfig backgroundVerificationCfg -> case backgroundVerificationCfg of
     BackgroundVerification.CheckrConfig cfg -> toJSON cfg
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
@@ -135,6 +137,7 @@ getServiceName = \case
     Verification.HyperVergeVerificationConfig _ -> Domain.VerificationService Verification.HyperVerge
     Verification.HyperVergeVerificationConfigRCDL _ -> Domain.VerificationService Verification.HyperVergeRCDL
     Verification.DigiLockerConfig _ -> Domain.VerificationService Verification.DigiLocker
+    Verification.TtenVerificationConfig _ -> Domain.VerificationService Verification.Tten
   Domain.DriverBackgroundVerificationServiceConfig driverBackgroundVerificationCfg -> case driverBackgroundVerificationCfg of
     Verification.SafetyPortalConfig _ -> Domain.DriverBackgroundVerificationService Verification.SafetyPortal
   Domain.CallServiceConfig callCfg -> case callCfg of
@@ -165,6 +168,7 @@ getServiceName = \case
     Tokenize.GullakTokenizationServiceConfig _ -> Domain.TokenizationService Tokenize.Gullak
     Tokenize.JourneyMonitoringTokenizationServiceConfig _ -> Domain.TokenizationService Tokenize.JourneyMonitoring
     Tokenize.DigilockerTokenizationServiceConfig _ -> Domain.TokenizationService Tokenize.Digilocker
+    Tokenize.TtenTokenizationServiceConfig _ -> Domain.TokenizationService Tokenize.Tten
   Domain.BackgroundVerificationServiceConfig backgroundVerificationCfg -> case backgroundVerificationCfg of
     BackgroundVerification.CheckrConfig _ -> Domain.BackgroundVerificationService BackgroundVerification.Checkr
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
@@ -212,6 +216,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.VerificationService Verification.HyperVerge -> Domain.VerificationServiceConfig . Verification.HyperVergeVerificationConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.HyperVergeRCDL -> Domain.VerificationServiceConfig . Verification.HyperVergeVerificationConfigRCDL <$> eitherValue configJSON
   Domain.VerificationService Verification.DigiLocker -> Domain.VerificationServiceConfig . Verification.DigiLockerConfig <$> eitherValue configJSON
+  Domain.VerificationService Verification.Tten -> Domain.VerificationServiceConfig . Verification.TtenVerificationConfig <$> eitherValue configJSON
   Domain.DriverBackgroundVerificationService Verification.SafetyPortal -> Domain.DriverBackgroundVerificationServiceConfig . Verification.SafetyPortalConfig <$> eitherValue configJSON
   Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> eitherValue configJSON
   Domain.CallService Call.TwillioCall -> Domain.CallServiceConfig . Call.TwillioCallConfig <$> eitherValue configJSON
@@ -237,6 +242,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.TokenizationService Tokenize.JourneyMonitoring -> Domain.TokenizationServiceConfig . Tokenize.JourneyMonitoringTokenizationServiceConfig <$> eitherValue configJSON
   Domain.TokenizationService Tokenize.Gullak -> Domain.TokenizationServiceConfig . Tokenize.GullakTokenizationServiceConfig <$> eitherValue configJSON
   Domain.TokenizationService Tokenize.Digilocker -> Domain.TokenizationServiceConfig . Tokenize.DigilockerTokenizationServiceConfig <$> eitherValue configJSON
+  Domain.TokenizationService Tokenize.Tten -> Domain.TokenizationServiceConfig . Tokenize.TtenTokenizationServiceConfig <$> eitherValue configJSON
   Domain.BackgroundVerificationService BackgroundVerification.Checkr -> Domain.BackgroundVerificationServiceConfig . BackgroundVerification.CheckrConfig <$> eitherValue configJSON
   Domain.IncidentReportService IncidentReport.ERSS -> Domain.IncidentReportServiceConfig . IncidentReport.ERSSConfig <$> eitherValue configJSON
   Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI -> Domain.LLMChatCompletionServiceConfig . CIT.AzureOpenAI <$> eitherValue configJSON

@@ -77,9 +77,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
     callVerifyRC :: VerificationFlow m r => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyRC documentNum person verificationReq = do
       verifyRes <-
-        Verification.verifyRC person.merchantId person.merchantOperatingCityId
-          Nothing
-          Verification.VerifyRCReq {rcNumber = documentNum, driverId = person.id.getId}
+        Verification.verifyRC person.merchantId person.merchantOperatingCityId Nothing (Verification.VerifyRCReq {rcNumber = documentNum, driverId = person.id.getId, token = Nothing, udinNo = Nothing})
       case verifyRes.verifyRCResp of
         Verification.AsyncResp res -> do
           case res.requestor of
