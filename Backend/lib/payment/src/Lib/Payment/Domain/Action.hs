@@ -201,7 +201,6 @@ createPaymentIntentService ::
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   m CreatePaymentIntentServiceResp
 createPaymentIntentService merchantId mbMerchantOpCityId personId mbExistingOrderId createPaymentIntentServiceReq createPaymentIntentCall cancelPaymentIntentCall = do
-
   mbExistingOrder <- case mbExistingOrderId of
     Just orderId -> QOrder.findById orderId
     Nothing -> pure Nothing

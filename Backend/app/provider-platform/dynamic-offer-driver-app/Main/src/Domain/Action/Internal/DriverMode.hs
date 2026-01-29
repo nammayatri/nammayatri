@@ -106,8 +106,8 @@ updateFleetOperatorStatusKeyForDriver driverId newStatus driverInfo = do
     decrementFleetOperatorStatusKeyForDriver entityType entityId (Just oldStatus)
     incrementFleetOperatorStatusKeyForDriver entityType entityId (Just newStatus)
     when (entityType == DP.FLEET_OWNER) $ do
-      mbFleetOperatorAssociation <- QFleetOperatorAssociation.findByFleetOwnerId entityId True
-      whenJust mbFleetOperatorAssociation $ \foa -> do
+      fleetOperatorAssociations <- QFleetOperatorAssociation.findAllByFleetOwnerId (Id entityId) True
+      forM_ fleetOperatorAssociations $ \foa -> do
         decrementFleetOperatorStatusKeyForDriver DP.OPERATOR foa.operatorId (Just oldStatus)
         incrementFleetOperatorStatusKeyForDriver DP.OPERATOR foa.operatorId (Just newStatus)
 

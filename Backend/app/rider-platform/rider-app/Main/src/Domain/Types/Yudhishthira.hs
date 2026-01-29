@@ -194,7 +194,6 @@ instance ToJSON DRide.Ride where
         "wasRideSafe" A..= ride.wasRideSafe
       ]
 
-
 $(YTH.generateGenericDefault ''LoginTagData)
 $(YTH.generateGenericDefault ''RideData)
 $(YTH.generateGenericDefault ''CustomerData)

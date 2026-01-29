@@ -32,10 +32,6 @@ FleetOperatorAssociation:
     findAllFleetAssociations:
       kvFunction: findAllWithKV
       where: fleetOwnerId
-    findByFleetOwnerId:
-      kvFunction: findOneWithKV
-      where:
-        and: [fleetOwnerId, isActive]
     deleteByFleetOwnerId:
       kvFunction: deleteWithKV
       where: fleetOwnerId

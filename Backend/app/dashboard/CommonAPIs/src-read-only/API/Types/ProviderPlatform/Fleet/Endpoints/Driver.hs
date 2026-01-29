@@ -672,6 +672,7 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
     fleetConfig :: Kernel.Prelude.Maybe FleetConfig,
     operatorName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     operatorContact :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    operators :: [(Text, Kernel.Prelude.Maybe Kernel.Prelude.Text)],
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registeredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

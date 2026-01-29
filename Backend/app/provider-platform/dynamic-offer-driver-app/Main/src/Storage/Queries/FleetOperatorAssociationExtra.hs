@@ -220,3 +220,21 @@ findActiveAssociationByOperatorId (Id operatorId) = do
 
 deleteByOperatorId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m ()
 deleteByOperatorId (Id operatorId) = deleteWithKV [Se.Is BeamFOA.operatorId (Se.Eq operatorId)]
+
+findByFleetOwnerId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Bool ->
+  m [FleetOperatorAssociation]
+findByFleetOwnerId fleetOwnerId isActive = do
+  now <- getCurrentTime
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamFOA.fleetOwnerId $ Se.Eq fleetOwnerId,
+          Se.Is BeamFOA.isActive $ Se.Eq isActive,
+          Se.Is BeamFOA.associatedTill (Se.GreaterThan $ Just now)
+        ]
+    ]
+    (Se.Desc BeamFOA.createdAt)
+    Nothing
+    Nothing

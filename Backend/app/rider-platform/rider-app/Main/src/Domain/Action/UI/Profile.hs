@@ -75,6 +75,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification as Notification
+import Kernel.External.Types (SchedulerFlow, SchedulerType)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig, useFakeSms)
@@ -88,7 +89,6 @@ import Kernel.Types.Predicate
 import Kernel.Types.Validation
 import Kernel.Types.Version
 import Kernel.Utils.Common
-import Kernel.External.Types (SchedulerFlow, SchedulerType)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Kernel.Utils.Version

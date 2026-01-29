@@ -1112,6 +1112,7 @@ TransporterConfig:
     cancellationFeeVendor: Maybe Text
     upgradeTierDropRetentionTime: Maybe Seconds
     allowDriverToUseFleetRcs: Maybe Bool
+    allowMultiFleetOperatorLink: Maybe Bool
     enableFareCalculatorV2: Maybe Bool
     enableVendorCheckForCollectingDues: Maybe Bool
     enableMobileNumberValidation: Maybe Bool
