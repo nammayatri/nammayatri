@@ -14,6 +14,7 @@
 
 module Domain.Action.Internal.KnowYourDriver where
 
+import qualified Data.Aeson as A
 import qualified AWS.S3 as S3
 import Data.List (nub)
 import qualified Data.Text as T
@@ -31,6 +32,8 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Error
+import Lib.Yudhishthira.Tools.Utils (accessTagKey, convertTags)
+import Lib.Yudhishthira.Types (TagName (..))
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
@@ -45,6 +48,7 @@ import qualified Storage.Queries.QueriesExtra.RideLite as QRLite
 import qualified Storage.Queries.RatingExtra as QRating
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import Control.Applicative ((<|>))
 
 data DriverReview = DriverReview
   { riderName :: Maybe Text,
@@ -79,7 +83,9 @@ data DriverProfileRes = DriverProfileRes
     vehicleTags :: [Text],
     profileImage :: Maybe Text,
     images :: [Text],
-    topReviews :: [DriverReview]
+    topReviews :: [DriverReview],
+    driverSafetyScore :: Maybe A.Value,
+    driverTags :: Maybe A.Value
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -121,6 +127,10 @@ getDriverProfile withImages person = do
     Nothing -> do
       fetchLegacyProfileImage person.id
   topFeedbacks <- getTopFeedBackForDriver person.id
+  let driverTagsJson = convertTags $ fromMaybe [] person.driverTag
+  let mbSafetyScoreFromTag = accessTagKey (TagName "SafetyScore") driverTagsJson
+  let mbSafetyCohort = accessTagKey (TagName "SafetyCohort") driverTagsJson
+  let driverSafetyScore = mbSafetyScoreFromTag <|> getSafetyScoreFromSafetyCohort mbSafetyCohort
   pure $
     DriverProfileRes
       { certificates = map show $ mapMaybe (fmap (.category)) modules,
@@ -138,7 +148,9 @@ getDriverProfile withImages person = do
         vehicleTags = fromMaybe [] ((.vehicleTags) =<< driverProfile),
         images = images,
         profileImage = profileImage,
-        topReviews = topFeedbacks
+        topReviews = topFeedbacks,
+        driverSafetyScore = driverSafetyScore,
+        driverTags = Just driverTagsJson
       }
   where
     fetchLegacyProfileImage personId =
@@ -226,3 +238,10 @@ getDriverProfile withImages person = do
     mkRatingWithRiderName bookings ratingWithBooking (rating, bookingId) =
       ratingWithBooking
         <> [(rating, fromMaybe Nothing $ find (\booking -> booking.id == bookingId) bookings <&> (.riderName))]
+
+    getSafetyScoreFromSafetyCohort mbSafetyCohort = do
+      case mbSafetyCohort of
+        Just "Safe" -> Just (A.Number 0.0)
+        Just "Problematic" -> Just (A.Number 0.5)
+        Just "Unsafe" -> Just (A.Number 1.0)
+        _ -> Just (A.Number 0.25)
