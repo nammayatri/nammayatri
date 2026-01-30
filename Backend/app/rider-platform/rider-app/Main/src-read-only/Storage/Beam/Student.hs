@@ -12,9 +12,7 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data StudentT f = StudentT
-  { collegeId :: (B.C f Kernel.Prelude.Text),
-    collegeName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
     destinationStop :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     graduationDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     guardianName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -22,6 +20,8 @@ data StudentT f = StudentT
     intermediateStops :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    organizationId :: (B.C f Kernel.Prelude.Text),
+    organizationName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     personId :: (B.C f Kernel.Prelude.Text),
     sourceStop :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     studentAddress :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),

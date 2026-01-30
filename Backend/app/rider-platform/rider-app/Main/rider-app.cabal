@@ -566,7 +566,6 @@ library
       Storage.Queries.BusinessHourExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReasonExtra
-      Storage.Queries.CollegeExtra
       Storage.Queries.DisabilityExtra
       Storage.Queries.EstimateBreakup
       Storage.Queries.EstimateExtra
@@ -591,6 +590,7 @@ library
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MerchantServiceUsageConfigExtra
       Storage.Queries.NyRegularSubscriptionExtra
+      Storage.Queries.OrganizationExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
       Storage.Queries.PassCategoryExtra
@@ -849,7 +849,6 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.ClientPersonInfo
-      Domain.Types.College
       Domain.Types.CrisRecon
       Domain.Types.DeletedPerson
       Domain.Types.Depot
@@ -914,6 +913,7 @@ library
       Domain.Types.NyRegularInstanceLog
       Domain.Types.NyRegularSubscription
       Domain.Types.OnSearchEvent
+      Domain.Types.Organization
       Domain.Types.ParcelDetails
       Domain.Types.ParkingTransaction
       Domain.Types.PartnerInvoiceDataLog
@@ -1005,7 +1005,6 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.ClientPersonInfo
-      Storage.Beam.College
       Storage.Beam.CrisRecon
       Storage.Beam.DeletedPerson
       Storage.Beam.Depot
@@ -1070,6 +1069,7 @@ library
       Storage.Beam.NyRegularInstanceLog
       Storage.Beam.NyRegularSubscription
       Storage.Beam.OnSearchEvent
+      Storage.Beam.Organization
       Storage.Beam.ParcelDetails
       Storage.Beam.ParkingTransaction
       Storage.Beam.PartnerInvoiceDataLog
@@ -1164,7 +1164,6 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.ClientPersonInfo
-      Storage.Queries.College
       Storage.Queries.CrisRecon
       Storage.Queries.DeletedPerson
       Storage.Queries.Depot
@@ -1229,6 +1228,7 @@ library
       Storage.Queries.NyRegularInstanceLog
       Storage.Queries.NyRegularSubscription
       Storage.Queries.OnSearchEvent
+      Storage.Queries.Organization
       Storage.Queries.OrphanInstances.AppInstalls
       Storage.Queries.OrphanInstances.BBPS
       Storage.Queries.OrphanInstances.BecknConfig
@@ -1238,7 +1238,6 @@ library
       Storage.Queries.OrphanInstances.BusinessHour
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
-      Storage.Queries.OrphanInstances.College
       Storage.Queries.OrphanInstances.Disability
       Storage.Queries.OrphanInstances.Estimate
       Storage.Queries.OrphanInstances.Exophone
@@ -1259,6 +1258,7 @@ library
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
       Storage.Queries.OrphanInstances.NyRegularSubscription
+      Storage.Queries.OrphanInstances.Organization
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
       Storage.Queries.OrphanInstances.Pass

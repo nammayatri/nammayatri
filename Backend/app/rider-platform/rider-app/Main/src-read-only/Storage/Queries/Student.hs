@@ -4,7 +4,7 @@
 
 module Storage.Queries.Student (module Storage.Queries.Student, module ReExport) where
 
-import qualified Domain.Types.College
+import qualified Domain.Types.Organization
 import qualified Domain.Types.Person
 import qualified Domain.Types.Student
 import Kernel.Beam.Functions
@@ -48,13 +48,13 @@ updateStops sourceStop destinationStop intermediateStops id = do
 
 updateStudentDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.College.College -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Student.Student -> m ())
-updateStudentDetails studentName collegeId collegeName studentPicture studentAddress studentAge guardianName studentClass graduationDate id = do
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Organization.Organization -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Student.Student -> m ())
+updateStudentDetails studentName organizationId organizationName studentPicture studentAddress studentAge guardianName studentClass graduationDate id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.studentName studentName,
-      Se.Set Beam.collegeId (Kernel.Types.Id.getId collegeId),
-      Se.Set Beam.collegeName collegeName,
+      Se.Set Beam.organizationId (Kernel.Types.Id.getId organizationId),
+      Se.Set Beam.organizationName organizationName,
       Se.Set Beam.studentPicture studentPicture,
       Se.Set Beam.studentAddress studentAddress,
       Se.Set Beam.studentAge studentAge,
@@ -79,14 +79,14 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Student.Student {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.collegeId (Kernel.Types.Id.getId collegeId),
-      Se.Set Beam.collegeName collegeName,
-      Se.Set Beam.destinationStop destinationStop,
+    [ Se.Set Beam.destinationStop destinationStop,
       Se.Set Beam.graduationDate graduationDate,
       Se.Set Beam.guardianName guardianName,
       Se.Set Beam.intermediateStops (Just intermediateStops),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.organizationId (Kernel.Types.Id.getId organizationId),
+      Se.Set Beam.organizationName organizationName,
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.sourceStop sourceStop,
       Se.Set Beam.studentAddress studentAddress,

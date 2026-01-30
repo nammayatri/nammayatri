@@ -1,13 +1,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.CollegeExtra where
+module Storage.Queries.OrganizationExtra where
 
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import Storage.Queries.OrphanInstances.College
+import Storage.Queries.OrphanInstances.Organization
 
 -- Extra code goes here --

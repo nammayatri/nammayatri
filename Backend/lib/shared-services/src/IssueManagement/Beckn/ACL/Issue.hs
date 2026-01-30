@@ -109,7 +109,7 @@ tfUpdatedBy issueRes =
   Just $
     Spec.Organization
       { organizationContact = tfOrganizationContact issueRes,
-        organizationOrg = tfOrganzationOrg issueRes,
+        organizationOrg = tfOrganizationOrg issueRes,
         organizationPerson = tfOrganizationPerson issueRes
       }
 
@@ -121,8 +121,8 @@ tfOrganizationContact issueRes =
         gROContactPhone = Just issueRes.groPhone
       }
 
-tfOrganzationOrg :: DIssue.IssueRes -> Maybe Spec.OrganizationOrg
-tfOrganzationOrg issueRes =
+tfOrganizationOrg :: DIssue.IssueRes -> Maybe Spec.OrganizationOrg
+tfOrganizationOrg issueRes =
   Just $
     Spec.OrganizationOrg
       { organizationOrgName = mkOrgName issueRes.bppId Spec.PUBLIC_TRANSPORT

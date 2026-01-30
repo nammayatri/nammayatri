@@ -17,9 +17,7 @@ instance FromTType' Beam.Student Domain.Types.Student.Student where
     pure $
       Just
         Domain.Types.Student.Student
-          { collegeId = Kernel.Types.Id.Id collegeId,
-            collegeName = collegeName,
-            createdAt = createdAt,
+          { createdAt = createdAt,
             destinationStop = destinationStop,
             graduationDate = graduationDate,
             guardianName = guardianName,
@@ -27,6 +25,8 @@ instance FromTType' Beam.Student Domain.Types.Student.Student where
             intermediateStops = fromMaybe [] intermediateStops,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            organizationId = Kernel.Types.Id.Id organizationId,
+            organizationName = organizationName,
             personId = Kernel.Types.Id.Id personId,
             sourceStop = sourceStop,
             studentAddress = studentAddress,
@@ -42,9 +42,7 @@ instance FromTType' Beam.Student Domain.Types.Student.Student where
 instance ToTType' Beam.Student Domain.Types.Student.Student where
   toTType' (Domain.Types.Student.Student {..}) = do
     Beam.StudentT
-      { Beam.collegeId = Kernel.Types.Id.getId collegeId,
-        Beam.collegeName = collegeName,
-        Beam.createdAt = createdAt,
+      { Beam.createdAt = createdAt,
         Beam.destinationStop = destinationStop,
         Beam.graduationDate = graduationDate,
         Beam.guardianName = guardianName,
@@ -52,6 +50,8 @@ instance ToTType' Beam.Student Domain.Types.Student.Student where
         Beam.intermediateStops = Just intermediateStops,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.organizationId = Kernel.Types.Id.getId organizationId,
+        Beam.organizationName = organizationName,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.sourceStop = sourceStop,
         Beam.studentAddress = studentAddress,

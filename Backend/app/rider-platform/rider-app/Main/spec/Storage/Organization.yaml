@@ -4,13 +4,13 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
 
-College:
-  tableName: college
+Organization:
+  tableName: organization
 
   fields:
-    id: Id College
-    collegeName: Text
-    collegeAddress: Maybe Text
+    id: Id Organization
+    organizationName: Text
+    organizationAddress: Maybe Text
     contactName: Text
     contactPhoneNumber: Maybe (EncryptedHashedField e Text)
     contactRole: Maybe Text
@@ -33,11 +33,11 @@ College:
 
   constraints:
     id: PrimaryKey
-    collegeName: SecondaryKey
+    organizationName: SecondaryKey
 
   sqlType:
-    collegeName: character varying(255)
-    collegeAddress: text
+    organizationName: character varying(255)
+    organizationAddress: text
     contactName: character varying(255)
     contactPhoneNumberEncrypted: character varying(255)
     contactPhoneNumberHash: bytea
@@ -48,18 +48,18 @@ College:
       kvFunction: findOneWithKV
       where: id
 
-    findByCollegeName:
+    findByOrganizationName:
       kvFunction: findOneWithKV
-      where: collegeName
+      where: organizationName
 
     updateContactDetails:
       kvFunction: updateWithKV
       params: [contactName, contactPhoneNumber, contactRole, updatedAt]
       where: id
 
-    updateCollegeAddress:
+    updateOrganizationAddress:
       kvFunction: updateWithKV
-      params: [collegeAddress, updatedAt]
+      params: [organizationAddress, updatedAt]
       where: id
 
     deleteById:
@@ -68,5 +68,6 @@ College:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

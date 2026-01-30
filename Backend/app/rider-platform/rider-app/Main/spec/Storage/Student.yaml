@@ -2,7 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
-  College: Domain.Types.College
+  Organization: Domain.Types.Organization
 
 Student:
   tableName: student
@@ -20,8 +20,8 @@ Student:
     id: Id Student
     personId: Id Person
     studentName: Text
-    collegeId: Id College
-    collegeName: Maybe Text
+    organizationId: Id Organization
+    organizationName: Maybe Text
     studentPicture: Maybe Text
     verificationStatus: VerificationStatus
     verificationDate: Maybe UTCTime
@@ -53,8 +53,8 @@ Student:
 
   sqlType:
     studentName: character varying(255)
-    collegeId: character varying(255)
-    collegeName: character varying(255)
+    organizationId: character varying(255)
+    organizationName: character varying(255)
     studentPicture: text
     verificationStatus: character varying(255)
     studentAddress: text
@@ -83,7 +83,7 @@ Student:
 
     updateStudentDetails:
       kvFunction: updateWithKV
-      params: [studentName, collegeId, collegeName, studentPicture, studentAddress, studentAge, guardianName, studentClass, graduationDate, updatedAt]
+      params: [studentName, organizationId, organizationName, studentPicture, studentAddress, studentAge, guardianName, studentClass, graduationDate, updatedAt]
       where: id
 
     updateStops:

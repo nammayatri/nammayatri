@@ -1,7 +1,7 @@
 CREATE TABLE atlas_app.student ();
 
-ALTER TABLE atlas_app.student ADD COLUMN college_id character varying(255) NOT NULL;
-ALTER TABLE atlas_app.student ADD COLUMN college_name character varying(255) ;
+ALTER TABLE atlas_app.student ADD COLUMN organization_id character varying(255) NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN organization_name character varying(255) ;
 ALTER TABLE atlas_app.student ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.student ADD COLUMN destination_stop text ;
 ALTER TABLE atlas_app.student ADD COLUMN graduation_date timestamp with time zone ;
