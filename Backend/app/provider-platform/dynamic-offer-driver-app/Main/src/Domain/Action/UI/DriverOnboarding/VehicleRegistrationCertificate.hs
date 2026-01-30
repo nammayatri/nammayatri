@@ -264,7 +264,9 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
         vehicleDetails <-
           CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel vehicleModelYear
             |<|>| CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel Nothing
-        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel) req.vehicleCategory mbAirConditioned req.imageId ((vehicleDetails <&> (.vehicleVariant)) <|> Just DV.HATCHBACK) vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.imageId Nothing Nothing
+        let mbVehicleVariant =
+              (vehicleDetails <&> (.vehicleVariant)) <|> transporterConfig.missingMappingFallbackVariant
+        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel) req.vehicleCategory mbAirConditioned req.imageId mbVehicleVariant vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.imageId Nothing Nothing
       Nothing -> verifyRCFlow person merchantOpCityId req.vehicleRegistrationCertNumber req.imageId req.dateOfRegistration req.vehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation
   return Success
   where
@@ -576,6 +578,19 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           }
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of
+        Just vehicleRC
+          | vehicleRC.verificationStatus == Documents.INVALID ->
+            throwError $
+              InvalidRequest $
+                "No valid mapping found for (vehicleClass: "
+                  <> fromMaybe "null" rcVerificationResponse.vehicleClass
+                  <> ", vehicleClassCategory: "
+                  <> maybe "null" (T.pack . show) rcVerificationResponse.vehicleCategory
+                  <> ", manufacturer: "
+                  <> fromMaybe "null" rcVerificationResponse.manufacturer
+                  <> ", model: "
+                  <> fromMaybe "null" rcVerificationResponse.manufacturerModel
+                  <> ")"
         Just vehicleRC -> do
           logInfo $ "initiateRCCreation: Upserting RC with verificationStatus=" <> show vehicleRC.verificationStatus <> ", failedRules=" <> show vehicleRC.failedRules <> ", registrationNumber=" <> show vehicleRC.unencryptedCertificateNumber <> ", vehicleVariant=" <> show vehicleRC.vehicleVariant <> ", vehicleClass=" <> show vehicleRC.vehicleClass
           -- upsert vehicleRC
