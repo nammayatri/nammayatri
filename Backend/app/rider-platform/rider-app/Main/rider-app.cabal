@@ -594,6 +594,7 @@ library
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MerchantServiceUsageConfigExtra
       Storage.Queries.NyRegularSubscriptionExtra
+      Storage.Queries.OrganizationExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
       Storage.Queries.PassCategoryExtra
@@ -623,6 +624,7 @@ library
       Storage.Queries.ServiceCategoryExtra
       Storage.Queries.ServicePeopleCategoryExtra
       Storage.Queries.StationsExtraInformationExtra
+      Storage.Queries.StudentExtra
       Storage.Queries.TicketBookingExtra
       Storage.Queries.TicketBookingPeopleCategoryExtra
       Storage.Queries.TicketBookingServiceCategoryExtra
@@ -917,6 +919,7 @@ library
       Domain.Types.NyRegularInstanceLog
       Domain.Types.NyRegularSubscription
       Domain.Types.OnSearchEvent
+      Domain.Types.Organization
       Domain.Types.ParcelDetails
       Domain.Types.ParkingTransaction
       Domain.Types.PartnerInvoiceDataLog
@@ -971,6 +974,7 @@ library
       Domain.Types.StationsExtraInformation
       Domain.Types.StopFare
       Domain.Types.StopInformation
+      Domain.Types.Student
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
       Domain.Types.TicketBookingService
@@ -1072,6 +1076,7 @@ library
       Storage.Beam.NyRegularInstanceLog
       Storage.Beam.NyRegularSubscription
       Storage.Beam.OnSearchEvent
+      Storage.Beam.Organization
       Storage.Beam.ParcelDetails
       Storage.Beam.ParkingTransaction
       Storage.Beam.PartnerInvoiceDataLog
@@ -1125,6 +1130,7 @@ library
       Storage.Beam.StationsExtraInformation
       Storage.Beam.StopFare
       Storage.Beam.StopInformation
+      Storage.Beam.Student
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
       Storage.Beam.TicketBookingService
@@ -1230,6 +1236,7 @@ library
       Storage.Queries.NyRegularInstanceLog
       Storage.Queries.NyRegularSubscription
       Storage.Queries.OnSearchEvent
+      Storage.Queries.Organization
       Storage.Queries.OrphanInstances.AppInstalls
       Storage.Queries.OrphanInstances.BBPS
       Storage.Queries.OrphanInstances.BecknConfig
@@ -1259,6 +1266,7 @@ library
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
       Storage.Queries.OrphanInstances.NyRegularSubscription
+      Storage.Queries.OrphanInstances.Organization
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
       Storage.Queries.OrphanInstances.Pass
@@ -1286,6 +1294,7 @@ library
       Storage.Queries.OrphanInstances.ServiceCategory
       Storage.Queries.OrphanInstances.ServicePeopleCategory
       Storage.Queries.OrphanInstances.StationsExtraInformation
+      Storage.Queries.OrphanInstances.Student
       Storage.Queries.OrphanInstances.TicketBooking
       Storage.Queries.OrphanInstances.TicketBookingPeopleCategory
       Storage.Queries.OrphanInstances.TicketBookingService
@@ -1348,6 +1357,7 @@ library
       Storage.Queries.StationsExtraInformation
       Storage.Queries.StopFare
       Storage.Queries.StopInformation
+      Storage.Queries.Student
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory
       Storage.Queries.TicketBookingService
