@@ -210,6 +210,8 @@ in  { _output = outputPath
     , _apiKind = ApiKind.UI
     , _serverName = None Text
     , _folderName = None Text
+    , _apiDashboardPrefix = None Text
+    , _serverNameTypePrefix = None Text
     , _migrationParams =
         [] : List { _migrationName : Text, _migrationParam : Optional Text }
     , _endpointPrefix = None Text
