@@ -7,6 +7,7 @@ where
 import qualified API.Action.UI.AlertWebhook as AlertWebhook
 import qualified API.Action.UI.InsuranceInternal as InsuranceInternal
 import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
+import qualified API.Internal.Auth as Auth
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
 import qualified API.Internal.FRFS as FRFS
@@ -22,7 +23,8 @@ import Tools.Auth ()
 
 type API =
   "internal"
-    :> ( Rating.API
+    :> ( Auth.API
+           :<|> Rating.API
            :<|> FRFS.API
            :<|> Cac.API
            :<|> StopEvents.API
@@ -38,7 +40,8 @@ type API =
 
 handler :: FlowServer API
 handler =
-  Rating.handler
+  Auth.handler
+    :<|> Rating.handler
     :<|> FRFS.handler
     :<|> Cac.handler
     :<|> StopEvents.handler
