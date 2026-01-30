@@ -162,6 +162,7 @@ _:
               applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/rider-dashboard/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/CommonAPIs/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/app/safety-dashboard/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/app/unified-dashboard/src-read-only" "$allArg"
             else
               applyHint "''${FLAKE_ROOT}/''${pathArg}" true
             fi

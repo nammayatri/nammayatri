@@ -46,6 +46,7 @@ processSpecFolders' isGenAll insideOfSpecDir specFolderPath = do
               putStrLn' "33" ("Skipping as Config file not found at " ++ configPath)
               processSpecFolders isGenAll isSpecDir entryPath
             else do
+              putStrLn' "32" ("Running as Config file is found at " ++ configPath)
               shouldRunApiGenerators <- forM apiContents $
                 \inputFile -> do
                   if ".yaml" `isSuffixOf` inputFile

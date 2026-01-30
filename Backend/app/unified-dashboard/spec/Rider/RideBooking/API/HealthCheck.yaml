@@ -1,0 +1,15 @@
+# TODO remove: folder structure testing
+
+imports:
+  APISuccess: Kernel.Types.APISuccess
+
+module: HealthCheck
+
+types: {}
+
+apis:
+  - GET:
+      endpoint: /test
+      auth: ApiAuthV3
+      response:
+        type: APISuccess

@@ -317,7 +317,11 @@ library
       Domain.Action.UI.VehicleInfo
       Domain.Action.UI.Whatsapp
       Domain.Action.UI.WMB
-      Domain.Action.UnifiedDashboard.Provider.Person
+      Domain.Action.UnifiedDashboard.Fleet.HealthCheck
+      Domain.Action.UnifiedDashboard.Management.HealthCheck
+      Domain.Action.UnifiedDashboard.Management.Person
+      Domain.Action.UnifiedDashboard.Operator.HealthCheck
+      Domain.Action.UnifiedDashboard.RideBooking.HealthCheck
       Domain.Types.Beckn.Status
       Domain.Types.Cac
       Domain.Types.CacType
@@ -873,8 +877,15 @@ library
       API.Action.UI.VehicleDetails
       API.Action.UI.VehicleInfo
       API.Action.UI.WMB
-      API.Action.UnifiedDashboard.Provider
-      API.Action.UnifiedDashboard.Provider.Person
+      API.Action.UnifiedDashboard.Fleet
+      API.Action.UnifiedDashboard.Fleet.HealthCheck
+      API.Action.UnifiedDashboard.Management
+      API.Action.UnifiedDashboard.Management.HealthCheck
+      API.Action.UnifiedDashboard.Management.Person
+      API.Action.UnifiedDashboard.Operator
+      API.Action.UnifiedDashboard.Operator.HealthCheck
+      API.Action.UnifiedDashboard.RideBooking
+      API.Action.UnifiedDashboard.RideBooking.HealthCheck
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Driver
       API.Types.Dashboard.AppManagement.DriverSubscription
@@ -905,9 +916,6 @@ library
       API.Types.Dashboard.RideBooking.Ride
       API.Types.Dashboard.RideBooking.SearchRequest
       API.Types.Dashboard.RideBooking.Volunteer
-      API.Types.Provider
-      API.Types.Provider.Endpoints.Person
-      API.Types.Provider.Person
       API.Types.UI.CallFeedback
       API.Types.UI.DemandHotspots
       API.Types.UI.DriverOnboardingV2
@@ -937,6 +945,20 @@ library
       API.Types.UI.VehicleDetails
       API.Types.UI.VehicleInfo
       API.Types.UI.WMB
+      API.Types.UnifiedDashboard.Fleet
+      API.Types.UnifiedDashboard.Fleet.Endpoints.HealthCheck
+      API.Types.UnifiedDashboard.Fleet.HealthCheck
+      API.Types.UnifiedDashboard.Management
+      API.Types.UnifiedDashboard.Management.Endpoints.HealthCheck
+      API.Types.UnifiedDashboard.Management.Endpoints.Person
+      API.Types.UnifiedDashboard.Management.HealthCheck
+      API.Types.UnifiedDashboard.Management.Person
+      API.Types.UnifiedDashboard.Operator
+      API.Types.UnifiedDashboard.Operator.Endpoints.HealthCheck
+      API.Types.UnifiedDashboard.Operator.HealthCheck
+      API.Types.UnifiedDashboard.RideBooking
+      API.Types.UnifiedDashboard.RideBooking.Endpoints.HealthCheck
+      API.Types.UnifiedDashboard.RideBooking.HealthCheck
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify

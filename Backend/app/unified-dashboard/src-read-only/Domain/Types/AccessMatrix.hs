@@ -38,7 +38,7 @@ data UserActionType
   | POST_USER_LOGIN_OTP
   | POST_USER_LOGIN_VERIFY
   | POST_USER_ENABLE_2FA
-  | POST_PROVIDER_PERSON_CREATE
+  | POST_MANAGEMENT_PERSON_CREATE
   | GET_MANAGEMENT_ACCESS_MATRIX
   | GET_MANAGEMENT_MERCHANT_WITH_CITY_LIST
   | CREATE_MANAGEMENT_MERCHANT_WITH_ADMIN
@@ -64,10 +64,14 @@ data UserActionType
   | POST_MANAGEMENT_ROLE_ASSIGN_ACCESS_LEVEL
   | GET_MANAGEMENT_ROLE_LIST
   | GET_MANAGEMENT_TRANSACTION_LIST
+  | GET_FLEET_HEALTH_CHECK_TEST
+  | GET_OPERATOR_HEALTH_CHECK_TEST
+  | GET_RIDE_BOOKING_HEALTH_CHECK_TEST
+  | GET_MANAGEMENT_HEALTH_CHECK_TEST
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ServerName))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServerName)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UserActionType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UserActionType)
 
-$(mkHttpInstancesForEnum (''UserActionType))
+$(mkHttpInstancesForEnum ''UserActionType)

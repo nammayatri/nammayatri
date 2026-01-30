@@ -18,6 +18,12 @@ let outputPrefixDriverApp =
           rootDir
       ++  "/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/"
 
+let outputPrefixRiderAppReadOnly =
+      rootDir ++ "/Backend/app/rider-platform/rider-app/Main/src-read-only/"
+
+let outputPrefixRiderApp =
+      rootDir ++ "/Backend/app/rider-platform/rider-app/Main/src/"
+
 let migrationPath =
       rootDir ++ "/Backend/dev/migrations-read-only/unified-dashboard/"
 
@@ -31,12 +37,8 @@ let outputPath =
           outputPrefixDashboardReadOnly ++ "Storage/CachedQueries"
       , _extraCachedQueries = outputPrefixDashboard ++ "Storage/CachedQueries"
       , _beamTable = outputPrefixDashboardReadOnly ++ "Storage/Beam"
-      , _domainHandler =
-          outputPrefixDriverApp ++ "Domain/Action/UnifiedDashboard"
       , _domainHandlerDashboard = outputPrefixDashboard ++ "Domain/Action"
       , _domainType = outputPrefixDashboardReadOnly ++ "Domain/Types"
-      , _servantApi =
-          outputPrefixDriverAppReadOnly ++ "API/Action/UnifiedDashboard"
       , _servantApiDashboard = outputPrefixDashboardReadOnly ++ "API/Action"
       , _servantApiClient = outputPrefixDashboardReadOnly ++ "API/Client"
       , _sql = [ { _1 = migrationPath, _2 = "atlas_dashboard" } ]
@@ -141,176 +143,181 @@ let sqlMapper =
       , { _1 = "DistanceUnit", _2 = "character varying(255)" }
       ]
 
-let defaultImports =
-      [ { _simpleImports =
-          [ "EulerHS.Prelude", "Servant", "Tools.Auth", "Kernel.Utils.Common" ]
-        , _qualifiedImports =
-          [ "Domain.Types.Person"
-          , "Kernel.Prelude"
-          , "Control.Lens"
-          , "Domain.Types.Merchant"
-          , "Environment"
-          , "Kernel.Types.Id"
-          , "Kernel.Types.Beckn.Context"
-          ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.SERVANT_API
-        }
-      , { _simpleImports =
-          [ "EulerHS.Prelude hiding (sortOn)"
-          , "Servant"
-          , "Tools.Auth.Api"
-          , "Kernel.Utils.Common hiding (INFO)"
-          , "Storage.Beam.CommonInstances ()"
-          ]
-        , _qualifiedImports =
-          [ "Domain.Types.Person"
-          , "Kernel.Prelude"
-          , "Control.Lens"
-          , "Domain.Types.Merchant"
-          , "Environment"
-          , "Kernel.Types.Id"
-          , "Kernel.Types.Beckn.Context"
-          ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.SERVANT_API_DASHBOARD
-        }
-      , { _simpleImports =
-          [ "EulerHS.Prelude"
-          , "Tools.Auth.Api"
-          , "Tools.Auth.Merchant"
-          , "Kernel.Utils.Common"
-          , "Storage.Beam.CommonInstances ()"
-          ]
-        , _qualifiedImports =
-          [ "Kernel.Prelude"
-          , "Domain.Types.Person"
-          , "Domain.Types.Merchant"
-          , "Environment"
-          , "Kernel.Types.Id"
-          , "Kernel.Types.Beckn.Context"
-          ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.DOMAIN_HANDLER_DASHBOARD
-        }
-      , { _simpleImports =
-          [ "EulerHS.Prelude hiding (id, state)"
-          , "Servant"
-          , "Data.OpenApi (ToSchema)"
-          , "Servant.Client"
-          , "Kernel.Types.Common"
-          ]
-        , _qualifiedImports =
-          [ "Kernel.Prelude"
-          , "Domain.Types.Person"
-          , "Domain.Types.Merchant"
-          , "Environment"
-          , "Kernel.Types.Id"
-          , "EulerHS.Types"
-          , "Kernel.Types.APISuccess"
-          , "Kernel.Types.HideSecrets"
-          , "Kernel.Storage.Esqueleto"
-          , "Data.Singletons.TH"
-          ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.API_TYPES
-        }
-      , { _simpleImports = [ "Servant" ]
-        , _qualifiedImports =
-          [ "Domain.Types.Merchant"
-          , "Environment"
-          , "Kernel.Types.Beckn.Context"
-          , "Kernel.Types.Id"
-          ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.API_TREE
-        }
-      , { _simpleImports = [ "Servant" ]
-        , _qualifiedImports =
-          [ "Domain.Types.Merchant"
-          , "Environment"
-          , "Kernel.Types.Beckn.Context"
-          , "Kernel.Types.Id"
-          ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.API_TREE_DASHBOARD
-        }
-      , { _simpleImports = [ "EulerHS.Prelude", "Data.OpenApi (ToSchema)" ]
-        , _qualifiedImports =
-          [ "Kernel.Storage.Esqueleto"
-          , "Text.Show"
-          , "Text.Read"
-          , "Dashboard.Common"
-          , "Data.List"
-          , "Data.Singletons.TH"
-          ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.API_TREE_COMMON
-        }
-      , { _simpleImports = [ "Kernel.Prelude", "Servant" ]
-        , _qualifiedImports =
-          [ "Kernel.Types.Beckn.City"
-          , "Domain.Types.Merchant"
-          , "Domain.Types.AccessMatrix"
-          , "Tools.Auth.Merchant"
-          , "Tools.Client"
-          ]
-        , _packageImports =
-          [ { _importType = ImportType.QUALIFIED
-            , _importPackageName = "dynamic-offer-driver-app"
-            , _importModuleName = "API.UnifiedDashboard"
-            }
-          ]
-        , _generationType = GeneratorType.API_TREE_CLIENT
-        }
-      , { _simpleImports =
-          [ "EulerHS.Prelude hiding (id)"
-          , "Servant"
-          , "Tools.Auth"
-          , "Data.OpenApi (ToSchema)"
-          ]
-        , _qualifiedImports =
-          [ "Kernel.Prelude"
-          , "Domain.Types.Person"
-          , "Domain.Types.Merchant"
-          , "Environment"
-          , "Kernel.Types.Id"
-          , "Kernel.Types.Beckn.Context"
-          ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.DOMAIN_HANDLER
-        }
-      , { _simpleImports = [ "Data.Aeson", "Kernel.Utils.Dhall" ] : List Text
-        , _qualifiedImports = [ "!Tools.Beam.UtilsTH" ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.DOMAIN_TYPE
-        }
-      , { _simpleImports =
-          [ "Kernel.Prelude"
-          , "Tools.Beam.UtilsTH"
-          , "Kernel.External.Encryption"
-          ]
-        , _qualifiedImports = [ "Database.Beam as B" ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.BEAM_TABLE
-        }
-      , { _simpleImports =
-          [ "Kernel.Beam.Functions"
-          , "Kernel.Prelude"
-          , "Kernel.External.Encryption"
-          , "Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime, fromMaybeM)"
-          , "Kernel.Types.Error"
-          ]
-        , _qualifiedImports = [ "Sequelize as Se" ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.BEAM_QUERIES
-        }
-      , { _simpleImports = [ "Kernel.Prelude", "Kernel.Utils.Common" ]
-        , _qualifiedImports = [ "Kernel.Storage.Hedis as Hedis" ]
-        , _packageImports = [] : List PackageImport
-        , _generationType = GeneratorType.CACHED_QUERIES
-        }
-      ]
+let mkDefaultImports =
+      \(serverPackageName : Text) ->
+        [ { _simpleImports =
+            [ "EulerHS.Prelude"
+            , "Servant"
+            , "Tools.Auth"
+            , "Kernel.Utils.Common"
+            ]
+          , _qualifiedImports =
+            [ "Domain.Types.Person"
+            , "Kernel.Prelude"
+            , "Control.Lens"
+            , "Domain.Types.Merchant"
+            , "Environment"
+            , "Kernel.Types.Id"
+            , "Kernel.Types.Beckn.Context"
+            ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.SERVANT_API
+          }
+        , { _simpleImports =
+            [ "EulerHS.Prelude hiding (sortOn)"
+            , "Servant"
+            , "Tools.Auth.Api"
+            , "Kernel.Utils.Common hiding (INFO)"
+            , "Storage.Beam.CommonInstances ()"
+            ]
+          , _qualifiedImports =
+            [ "Domain.Types.Person"
+            , "Kernel.Prelude"
+            , "Control.Lens"
+            , "Domain.Types.Merchant"
+            , "Environment"
+            , "Kernel.Types.Id"
+            , "Kernel.Types.Beckn.Context"
+            ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.SERVANT_API_DASHBOARD
+          }
+        , { _simpleImports =
+            [ "EulerHS.Prelude"
+            , "Tools.Auth.Api"
+            , "Tools.Auth.Merchant"
+            , "Kernel.Utils.Common"
+            , "Storage.Beam.CommonInstances ()"
+            ]
+          , _qualifiedImports =
+            [ "Kernel.Prelude"
+            , "Domain.Types.Person"
+            , "Domain.Types.Merchant"
+            , "Environment"
+            , "Kernel.Types.Id"
+            , "Kernel.Types.Beckn.Context"
+            ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.DOMAIN_HANDLER_DASHBOARD
+          }
+        , { _simpleImports =
+            [ "EulerHS.Prelude hiding (id, state)"
+            , "Servant"
+            , "Data.OpenApi (ToSchema)"
+            , "Servant.Client"
+            , "Kernel.Types.Common"
+            ]
+          , _qualifiedImports =
+            [ "Kernel.Prelude"
+            , "Domain.Types.Person"
+            , "Domain.Types.Merchant"
+            , "Environment"
+            , "Kernel.Types.Id"
+            , "EulerHS.Types"
+            , "Kernel.Types.APISuccess"
+            , "Kernel.Types.HideSecrets"
+            , "Kernel.Storage.Esqueleto"
+            , "Data.Singletons.TH"
+            ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.API_TYPES
+          }
+        , { _simpleImports = [ "Servant" ]
+          , _qualifiedImports =
+            [ "Domain.Types.Merchant"
+            , "Environment"
+            , "Kernel.Types.Beckn.Context"
+            , "Kernel.Types.Id"
+            ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.API_TREE
+          }
+        , { _simpleImports = [ "Servant" ]
+          , _qualifiedImports =
+            [ "Domain.Types.Merchant"
+            , "Environment"
+            , "Kernel.Types.Beckn.Context"
+            , "Kernel.Types.Id"
+            ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.API_TREE_DASHBOARD
+          }
+        , { _simpleImports = [ "EulerHS.Prelude", "Data.OpenApi (ToSchema)" ]
+          , _qualifiedImports =
+            [ "Kernel.Storage.Esqueleto"
+            , "Text.Show"
+            , "Text.Read"
+            , "Dashboard.Common"
+            , "Data.List"
+            , "Data.Singletons.TH"
+            ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.API_TREE_COMMON
+          }
+        , { _simpleImports = [ "Kernel.Prelude", "Servant" ]
+          , _qualifiedImports =
+            [ "Kernel.Types.Beckn.City"
+            , "Domain.Types.Merchant"
+            , "Domain.Types.AccessMatrix"
+            , "Tools.Auth.Merchant"
+            , "Tools.Client"
+            ]
+          , _packageImports =
+            [ { _importType = ImportType.QUALIFIED
+              , _importPackageName = serverPackageName
+              , _importModuleName = "API.UnifiedDashboard"
+              }
+            ]
+          , _generationType = GeneratorType.API_TREE_CLIENT
+          }
+        , { _simpleImports =
+            [ "EulerHS.Prelude hiding (id)"
+            , "Servant"
+            , "Tools.Auth"
+            , "Data.OpenApi (ToSchema)"
+            ]
+          , _qualifiedImports =
+            [ "Kernel.Prelude"
+            , "Domain.Types.Person"
+            , "Domain.Types.Merchant"
+            , "Environment"
+            , "Kernel.Types.Id"
+            , "Kernel.Types.Beckn.Context"
+            ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.DOMAIN_HANDLER
+          }
+        , { _simpleImports = [ "Data.Aeson", "Kernel.Utils.Dhall" ] : List Text
+          , _qualifiedImports = [ "!Tools.Beam.UtilsTH" ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.DOMAIN_TYPE
+          }
+        , { _simpleImports =
+            [ "Kernel.Prelude"
+            , "Tools.Beam.UtilsTH"
+            , "Kernel.External.Encryption"
+            ]
+          , _qualifiedImports = [ "Database.Beam as B" ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.BEAM_TABLE
+          }
+        , { _simpleImports =
+            [ "Kernel.Beam.Functions"
+            , "Kernel.Prelude"
+            , "Kernel.External.Encryption"
+            , "Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime, fromMaybeM)"
+            , "Kernel.Types.Error"
+            ]
+          , _qualifiedImports = [ "Sequelize as Se" ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.BEAM_QUERIES
+          }
+        , { _simpleImports = [ "Kernel.Prelude", "Kernel.Utils.Common" ]
+          , _qualifiedImports = [ "Kernel.Storage.Hedis as Hedis" ]
+          , _packageImports = [] : List PackageImport
+          , _generationType = GeneratorType.CACHED_QUERIES
+          }
+        ]
 
 let ApiKind = < UI | DASHBOARD >
 
@@ -323,7 +330,6 @@ let defaultConfigs =
         , _extraDefaultFields = extraDefaultFields
         , _defaultCachedQueryKeyPrefix = "unifiedDashboard"
         }
-      , _defaultImports = defaultImports
       , _defaultTypeImportMapper = defaultTypeImportMapper
       , _generate =
         [ GeneratorType.DOMAIN_TYPE
@@ -356,6 +362,8 @@ in  { defaultConfigs
     , ClientName
     , outputPrefixDriverApp
     , outputPrefixDriverAppReadOnly
+    , outputPrefixRiderApp
+    , outputPrefixRiderAppReadOnly
     , GeneratorType
     , outputPath
     , outputPrefixDashboardReadOnly
@@ -363,4 +371,5 @@ in  { defaultConfigs
     , outputPrefixCommonApisReadOnly
     , outputPrefixCommonApis
     , migrationPath
+    , mkDefaultImports
     }
