@@ -75,7 +75,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification as Notification
-import Kernel.External.Types (SchedulerFlow, SchedulerType)
+import Kernel.External.Types (SchedulerFlow, SchedulerType, ServiceFlow)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig, useFakeSms)
@@ -173,7 +173,8 @@ data ProfileRes = ProfileRes
     isMultimodalRider :: Bool,
     customerTags :: DA.Value,
     profilePicture :: Maybe Text,
-    paymentMode :: Maybe DMPM.PaymentMode
+    paymentMode :: Maybe DMPM.PaymentMode,
+    blockedUntil :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -293,6 +294,7 @@ getPersonDetails ::
     EncFlow m r,
     HasShortDurationRetryCfg r c,
     SchedulerFlow r,
+    ServiceFlow m r,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
