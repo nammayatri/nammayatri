@@ -19,6 +19,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.RiderConfig as RC
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -34,6 +35,7 @@ import qualified Storage.Queries.BookingExtra as QBExtra
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.PersonExtra as QPExtra
 import Tools.Error
+import qualified Tools.Notifications as Notify
 
 data CustomerCancellationRateData = CustomerCancellationRateData
   { assignedCount :: Int,
@@ -168,7 +170,7 @@ data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgin
   deriving (Show, Eq, Generic)
 
 nudgeOrBlockCustomer ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, JobCreator r m, HasShortDurationRetryCfg r c) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, JobCreator r m, HasShortDurationRetryCfg r c, ServiceFlow m r) =>
   RC.RiderConfig ->
   DP.Person ->
   m ()
@@ -222,11 +224,11 @@ nudgeOrBlockCustomer riderConfig customer = do
             blockCustomerTemporarily customer.merchantId customer.merchantOperatingCityId customer.id suspensionTimeHours
         _ -> do
           when (canNudgeCustomer cancellationRateThresholdWeekly weeklyMinRidesforNudging weeklyMinRidesforBlocking weeklyCancellationRate weeklyAssignedCount) $ do
-            logDebug $ "Would nudge customer for weekly cancellation rate: " <> show weeklyCancellationRate
+            Notify.sendCustomerCancellationRateNudge customer "CUSTOMER_CANCELLATION_RATE_NUDGE_WEEKLY" weeklyCancellationRate
           when (canNudgeCustomer cancellationRateThresholdDaily dailyMinRidesforNudging dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount) $ do
-            logDebug $ "Would nudge customer for daily cancellation rate: " <> show dailyCancellationRate
+            Notify.sendCustomerCancellationRateNudge customer "CUSTOMER_CANCELLATION_RATE_NUDGE_WEEKLY" dailyCancellationRate
           when (maybe False (\threshold -> maybe False (\minRidesNudge -> maybe False (\minRidesBlock -> canNudgeCustomer threshold minRidesNudge minRidesBlock monthlyCancellationRate monthlyAssignedCount) monthlyMinRidesforBlocking) monthlyMinRidesforNudging) cancellationRateThresholdMonthly) $ do
-            logDebug $ "Would nudge customer for monthly cancellation rate: " <> show monthlyCancellationRate
+            Notify.sendCustomerCancellationRateNudge customer "CUSTOMER_CANCELLATION_RATE_NUDGE_MONTHLY" monthlyCancellationRate
     _ -> logInfo "cancellationRateWindow or cancellationRateBasedNudgingAndBlockingConfig not found in rider config"
   where
     canNudgeCustomer cancellationRateThreshold minAssignedRides maxAssignedRides cancellationRate rideAssignedCount =
