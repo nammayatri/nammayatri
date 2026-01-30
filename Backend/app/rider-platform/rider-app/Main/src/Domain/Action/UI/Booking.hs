@@ -286,9 +286,10 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
     Just SRB.JourneyRequest -> do
       -- Journeys (NammaTransit) should only be included for PERSONAL billing category and NORMAL ride type
       let shouldIncludeJourneys = shouldIncludeJourneysForFilters billingCategoryList rideTypeList
-      allJourneys <- if shouldIncludeJourneys
-        then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
-        else pure []
+      allJourneys <-
+        if shouldIncludeJourneys
+          then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+          else pure []
       clearStuckRides Nothing []
 
       logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialJourneyOffset <> " JourneyRequest allJourneys (id, createdAt): " <> show (map (\j -> (j.id, j.createdAt)) allJourneys)
@@ -303,9 +304,11 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
       -- Journeys (NammaTransit) should only be included for PERSONAL billing category and NORMAL ride type
       let shouldIncludeJourneys = shouldIncludeJourneysForFilters billingCategoryList rideTypeList
-      journeyListFork <- awaitableFork "bookingListV2->getJourneyList" $ if shouldIncludeJourneys
-        then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
-        else pure []
+      journeyListFork <-
+        awaitableFork "bookingListV2->getJourneyList" $
+          if shouldIncludeJourneys
+            then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+            else pure []
 
       (rbList, allbookings) <-
         L.await Nothing bookingListFork >>= \case
