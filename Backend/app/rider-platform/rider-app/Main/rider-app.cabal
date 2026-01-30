@@ -52,6 +52,7 @@ library
       API.FRFSMetrics
       API.IGM
       API.Internal
+      API.Internal.Auth
       API.Internal.Cac
       API.Internal.DriverArrivalNotf
       API.Internal.FrequentLocUser
@@ -201,6 +202,7 @@ library
       Domain.Action.Dashboard.Sos
       Domain.Action.Dashboard.SosMedia
       Domain.Action.Dashboard.System
+      Domain.Action.Internal.Auth
       Domain.Action.Internal.Cac
       Domain.Action.Internal.DriverArrivalNotf
       Domain.Action.Internal.FrequentLocUser
