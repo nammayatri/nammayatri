@@ -16,6 +16,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
+import Kernel.Tools.Logging (withDynamicLogLevel)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -27,13 +28,17 @@ import qualified SharedLogic.KaalChakra.Actions as Actions
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.Person as QPerson
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Metrics
 
 type ChakraJobs m r =
   ( EsqDBFlow m r,
     CacheFlow m r,
     JobCreator r m,
     HasJobInfoMap r,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
+    HasField "url" r (Maybe Text),
+    HasField "version" r Metrics.DeploymentVersion,
+    HasField "coreMetrics" r Metrics.CoreMetricsContainer
   )
 
 mkKaalChakraHandle ::
@@ -100,62 +105,70 @@ runDailyJob ::
   ChakraJobs m r =>
   Job 'Daily ->
   m ExecutionResult
-runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Daily jobInfo.jobData
+runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
+  withDynamicLogLevel "Chakra" $ do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Daily jobInfo.jobData
 
 runWeeklyJob ::
   ChakraJobs m r =>
   Job 'Weekly ->
   m ExecutionResult
-runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Weekly jobInfo.jobData
+runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
+  withDynamicLogLevel "Chakra" $ do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Weekly jobInfo.jobData
 
 runQuarterlyJob ::
   ChakraJobs m r =>
   Job 'Quarterly ->
   m ExecutionResult
-runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
+runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
+  withDynamicLogLevel "Chakra" $ do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
 
 runMonthlyJob ::
   ChakraJobs m r =>
   Job 'Monthly ->
   m ExecutionResult
-runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Monthly jobInfo.jobData
+runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
+  withDynamicLogLevel "Chakra" $ do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Monthly jobInfo.jobData
 
 runDailyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'DailyUpdateTag ->
   m ExecutionResult
-runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Daily jobInfo.jobData
+runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
+  withDynamicLogLevel "Chakra" $ do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Daily jobInfo.jobData
 
 runWeeklyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'WeeklyUpdateTag ->
   m ExecutionResult
-runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Weekly jobInfo.jobData
+runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
+  withDynamicLogLevel "Chakra" $ do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Weekly jobInfo.jobData
 
 runQuarterlyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'QuarterlyUpdateTag ->
   m ExecutionResult
-runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
+runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
+  withDynamicLogLevel "Chakra" $ do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
 
 runMonthlyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'MonthlyUpdateTag ->
   m ExecutionResult
-runMonthlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Monthly jobInfo.jobData
+runMonthlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
+  withDynamicLogLevel "Chakra" $ do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Monthly jobInfo.jobData
