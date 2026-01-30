@@ -1732,6 +1732,12 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
                 )
             _ -> (leg.mode, leg.distance, leg.duration)
 
+data RouteServiceabilityContext = RouteServiceabilityContext {
+  integratedBPPConfig :: DIBC.IntegratedBPPConfig,
+  merchantOperatingCityId:: Id DMOC.MerchantOperatingCity,
+  merchantId :: Id Domain.Types.Merchant.Merchant
+}
+
 postMultimodalRouteServiceability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -1740,109 +1746,171 @@ postMultimodalRouteServiceability ::
     Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
   )
 postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
-  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-
-  let callOtp = fromMaybe False req.callOtp
-
+  person <- authenticate mbPersonId
   integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-
-  logDebug $ "postMultimodalRouteServiceability: req=" <> show req <> ", personId=" <> show personId.getId <> ", merchantOperatingCityId=" <> show person.merchantOperatingCityId.getId <> ", integratedBPPConfigId=" <> show integratedBPPConfig.id.getId
-
+  let routeServiceabilityContext = RouteServiceabilityContext {
+    integratedBPPConfig,
+    merchantOperatingCityId = person.merchantOperatingCityId,
+    merchantId = person.merchantId
+  }
+  let callOtp = fromMaybe False req.callOtp
   if not callOtp
-    then -- If callOtp is False then we expect routeCodes from frontend
-    do
-      let routeCodesWithLegs = fromMaybe [] req.routeCodes
+    then getRouteServiceabilityForRouteCodes req.routeCodes routeServiceabilityContext
+    else do
+      (srcCode, destCode) <- resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode
+      directRouteCodes <- JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
+      if null directRouteCodes
+        then getRouteServiceabilityForMultiModalRoute srcCode destCode routeServiceabilityContext
+        else getRouteServiceabilityForDirectRoute directRouteCodes routeServiceabilityContext
+  where
+    authenticate :: Maybe (Id Domain.Types.Person.Person) -> Environment.Flow Domain.Types.Person.Person
+    authenticate mbPersonId' = do
+      personId <- mbPersonId' & fromMaybeM (InvalidRequest "Person not found")
+      QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+
+    getRouteServiceabilityForRouteCodes :: Maybe [ApiTypes.RouteCodesWithLeg] -> RouteServiceabilityContext -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    getRouteServiceabilityForRouteCodes routeCodes' routeServiceabilityContext = do
+      let routeCodesWithLegs = fromMaybe [] routeCodes'
       legRoutesWithVehicles <- mapConcurrently (\legInfo -> do
-        busesForRoutes <- CQMMB.getBusesForRoutes legInfo.routeCodes integratedBPPConfig
+        busesForRoutes <- CQMMB.getBusesForRoutes legInfo.routeCodes routeServiceabilityContext.integratedBPPConfig
         routesWithLiveVehicles <-
-          mapM
-            (\r -> buildRouteWithLiveVehicle r integratedBPPConfig person False)
-            busesForRoutes
+          catMaybes
+            <$> mapM
+              (\r -> buildRouteWithLiveVehicle r routeServiceabilityContext False)
+              busesForRoutes
         return $
           ApiTypes.LegRouteWithLiveVehicle
             { legOrder = legInfo.legOrder,
               routeWithLiveVehicles = routesWithLiveVehicles
-            })
-        routeCodesWithLegs
+            }
+        ) routeCodesWithLegs
       pure $ ApiTypes.RouteServiceabilityResp legRoutesWithVehicles
-    else do
-      -- If callOtp is True then srcCode and destCode are to be sent from frontend
-      (srcCode, destCode) <- fromMaybeM (InvalidRequest $ "Source or destination stop code not found for req: " <> show req) $ do
-        let resolved = case (req.sourceStopCode, req.destinationStopCode) of
-              (Just sourceStopCode, Just destinationStopCode) -> do
-                Just (sourceStopCode, destinationStopCode)
-              _ -> Nothing
-        resolved
-      directRouteCodes <- JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
-      -- Call OTP if only directRouteCodes not found
-      if null directRouteCodes
-        then do
-          sourceStationData <-
-            OTPRest.getStationByGtfsIdAndStopCode srcCode integratedBPPConfig
-              >>= fromMaybeM (StationError.StationNotFound srcCode)
-          destStationData <-
-            OTPRest.getStationByGtfsIdAndStopCode destCode integratedBPPConfig
-              >>= fromMaybeM (StationError.StationNotFound destCode)
-          sourceLat <- sourceStationData.lat & fromMaybeM (StationError.InvalidStationData "Source station latitude not found")
-          sourceLon <- sourceStationData.lon & fromMaybeM (StationError.InvalidStationData "Source station longitude not found")
-          destLat <- destStationData.lat & fromMaybeM (StationError.InvalidStationData "Destination station latitude not found")
-          destLon <- destStationData.lon & fromMaybeM (StationError.InvalidStationData "Destination station longitude not found")
-          let sourceLatLong = LatLngV2 sourceLat sourceLon
-              destLatLong = LatLngV2 destLat destLon
 
-          riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
+    resolveSrcAndDestCode :: Maybe Text -> Maybe Text -> Environment.Flow (Text, Text)
+    resolveSrcAndDestCode srcCode destCode =
+      fromMaybeM
+        (InvalidRequest $
+          "Source or destination stop code not found. src="
+            <> show srcCode
+            <> " dest="
+            <> show destCode
+        )
+        ((,) <$> srcCode <*> destCode)
 
-          let transitRoutesReq =
-                MultiModalTypes.GetTransitRoutesReq
-                  { origin = WayPointV2 {location = LocationV2 {latLng = sourceLatLong}},
-                    destination = WayPointV2 {location = LocationV2 {latLng = destLatLong}},
-                    arrivalTime = Nothing,
-                    departureTime = Nothing,
-                    mode = Nothing,
-                    transitPreferences = Nothing,
-                    transportModes = Nothing,
-                    minimumWalkDistance = riderConfig.minimumWalkDistance,
-                    permissibleModes = fromMaybe [] riderConfig.permissibleModes,
-                    maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
-                    sortingType = MultiModal.Fastest,
-                    walkSpeed = Nothing
+    getRouteServiceabilityForMultiModalRoute :: Text -> Text -> RouteServiceabilityContext -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    getRouteServiceabilityForMultiModalRoute srcCode' destCode' routeServiceabilityContext = do
+      validatedRoute <- getValidSingleModeRoute routeServiceabilityContext srcCode' destCode'
+      case validatedRoute.legs of
+        [] ->
+          return $ ApiTypes.RouteServiceabilityResp []
+        legs -> do
+          legRoutesWithVehicles <-
+            mapConcurrently (\(index, leg) -> do
+              finalRouteCodes <-
+                getLegRouteCodes leg routeServiceabilityContext.integratedBPPConfig
+              busesForRoutes <-
+                CQMMB.getBusesForRoutes finalRouteCodes routeServiceabilityContext.integratedBPPConfig
+              routesWithLiveVehicles <-
+                catMaybes
+                  <$> mapM
+                    (\r -> buildRouteWithLiveVehicle r routeServiceabilityContext False)
+                    busesForRoutes
+              pure $
+                ApiTypes.LegRouteWithLiveVehicle
+                  { legOrder = index,
+                    routeWithLiveVehicles = routesWithLiveVehicles
                   }
+              ) (zip [0 ..] legs)
+          pure $ ApiTypes.RouteServiceabilityResp legRoutesWithVehicles
 
-          transitServiceReq <- TMultiModal.getTransitServiceReq person.merchantId person.merchantOperatingCityId
-          otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) "getTransitRoutes"
-          validatedRoute <- JMU.getBestOneWayRoute MultiModalTypes.Bus otpResponse.routes (Just srcCode) (Just destCode) & fromMaybeM (getRouteNotFoundError MultiModalTypes.Bus srcCode destCode)
-          case validatedRoute.legs of
-            [] ->
-              return $ ApiTypes.RouteServiceabilityResp []
-            legs -> do
-              legRoutesWithVehicles <-
-                mapConcurrently (\(index, leg) -> do
-                  finalRouteCodes <-
-                    getLegRouteCodes leg integratedBPPConfig
-                  busesForRoutes <-
-                    CQMMB.getBusesForRoutes finalRouteCodes integratedBPPConfig
-                  routesWithLiveVehicles <-
-                    mapM
-                      (\r -> buildRouteWithLiveVehicle r integratedBPPConfig person True)
-                      busesForRoutes
-                  pure $
-                    ApiTypes.LegRouteWithLiveVehicle
-                      { legOrder = index,
-                        routeWithLiveVehicles = routesWithLiveVehicles
-                      }
-                ) (zip [0 ..] legs)
-              pure $ ApiTypes.RouteServiceabilityResp legRoutesWithVehicles
-        else do
-          -- Direct routes found so just return liveVehicles
-          busesForRoutes <- CQMMB.getBusesForRoutes directRouteCodes integratedBPPConfig
-          alternateLiveVehicleData <-
-            mapConcurrently
-              (\r -> buildRouteWithLiveVehicle r integratedBPPConfig person True)
-              busesForRoutes
-          let resp = ApiTypes.LegRouteWithLiveVehicle {legOrder = 0, routeWithLiveVehicles = alternateLiveVehicleData}
-          return $ ApiTypes.RouteServiceabilityResp [resp]
-  where
+    getRouteServiceabilityForDirectRoute :: [Text] -> RouteServiceabilityContext -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    getRouteServiceabilityForDirectRoute directRouteCodes' routeServiceabilityContext = do
+      busesForRoutes <- CQMMB.getBusesForRoutes directRouteCodes' routeServiceabilityContext.integratedBPPConfig
+      alternateLiveVehicleData <-
+        catMaybes
+          <$> mapConcurrently
+            (\r -> buildRouteWithLiveVehicle r routeServiceabilityContext False)
+            busesForRoutes
+      let resp = ApiTypes.LegRouteWithLiveVehicle {legOrder = 0, routeWithLiveVehicles = alternateLiveVehicleData}
+      return $ ApiTypes.RouteServiceabilityResp [resp]
+
+    extractSourceDestLatLng :: Text -> Text -> RouteServiceabilityContext -> Environment.Flow (LatLngV2, LatLngV2)
+    extractSourceDestLatLng srcCode destCode routeServiceabilityContext = do
+      sourceStationData <-
+        OTPRest.getStationByGtfsIdAndStopCode srcCode routeServiceabilityContext.integratedBPPConfig
+          >>= fromMaybeM (StationError.StationNotFound srcCode)
+      destStationData <-
+        OTPRest.getStationByGtfsIdAndStopCode destCode routeServiceabilityContext.integratedBPPConfig
+          >>= fromMaybeM (StationError.StationNotFound destCode)
+      sourceLat <- sourceStationData.lat & fromMaybeM (StationError.InvalidStationData "Source station latitude not found")
+      sourceLon <- sourceStationData.lon & fromMaybeM (StationError.InvalidStationData "Source station longitude not found")
+      destLat <- destStationData.lat & fromMaybeM (StationError.InvalidStationData "Destination station latitude not found")
+      destLon <- destStationData.lon & fromMaybeM (StationError.InvalidStationData "Destination station longitude not found")
+      pure (LatLngV2 sourceLat sourceLon, LatLngV2 destLat destLon)
+
+    buildRouteWithLiveVehicle ::
+      CQMMB.RouteWithBuses ->
+      RouteServiceabilityContext ->
+      Bool ->
+      Environment.Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
+    buildRouteWithLiveVehicle routeInfo routeServiceabilityContext enableDebug = do
+      route <-
+        OTPRest.getRouteByRouteId routeServiceabilityContext.integratedBPPConfig routeInfo.routeId
+          >>= fromMaybeM
+            (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
+      busScheduleDetails <-
+        OTPRest.getRouteBusSchedule routeInfo.routeId routeServiceabilityContext.integratedBPPConfig
+      schedules <-
+        getBusScheduleInfo busScheduleDetails routeServiceabilityContext
+      when enableDebug $
+        logDebug $
+          "AlternateRoute getRouteBusSchedule routeId="
+            <> routeInfo.routeId
+            <> ", scheduleCount="
+            <> show (length schedules)
+      liveVehicles <- getLiveVehicles routeInfo.buses routeServiceabilityContext
+      when enableDebug $
+        logDebug $
+          "AlternateRoute routeId="
+            <> routeInfo.routeId
+            <> ", shortName="
+            <> route.shortName
+      if null liveVehicles && null schedules then pure Nothing
+      else
+        pure $
+          Just
+            API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+              { liveVehicles,
+                schedules,
+                routeCode = routeInfo.routeId,
+                routeShortName = route.shortName,
+                alternateRouteInfo = Nothing
+              }
+
+    getValidSingleModeRoute :: RouteServiceabilityContext -> Text -> Text -> Environment.Flow MultiModalTypes.MultiModalRoute
+    getValidSingleModeRoute routeServiceabilityContext srcCode' destCode' = do
+      riderConfig <- QRiderConfig.findByMerchantOperatingCityId routeServiceabilityContext.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound routeServiceabilityContext.merchantOperatingCityId.getId)
+      (sourceLatLong', destLatLong') <- extractSourceDestLatLng srcCode' destCode' routeServiceabilityContext
+      let transitRoutesReq =
+            MultiModalTypes.GetTransitRoutesReq
+              { origin = WayPointV2 {location = LocationV2 {latLng = sourceLatLong'}},
+                destination = WayPointV2 {location = LocationV2 {latLng = destLatLong'}},
+                arrivalTime = Nothing,
+                departureTime = Nothing,
+                mode = Nothing,
+                transitPreferences = Nothing,
+                transportModes = Nothing,
+                minimumWalkDistance = riderConfig.minimumWalkDistance,
+                permissibleModes = fromMaybe [] riderConfig.permissibleModes,
+                maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+                sortingType = MultiModal.Fastest,
+                walkSpeed = Nothing
+              }
+      transitServiceReq <- TMultiModal.getTransitServiceReq routeServiceabilityContext.merchantId routeServiceabilityContext.merchantOperatingCityId
+      otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) "getTransitRoutes"
+      JMU.getBestOneWayRoute MultiModalTypes.Bus otpResponse.routes (Just srcCode') (Just destCode') & fromMaybeM (getRouteNotFoundError MultiModalTypes.Bus srcCode' destCode')
+
+
     getStopGtfsCode :: Maybe MultiModalStopDetails -> Maybe Text
     getStopGtfsCode =
       fmap Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode . (>>= (.gtfsId))
@@ -1879,31 +1947,17 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
 
       pure $ nub (routeCodeFromLeg <> stopToStopRouteCodes)
 
-    enrichBusStopETA :: DIBC.IntegratedBPPConfig -> CQMMB.BusStopETA -> Environment.Flow CQMMB.BusStopETA
-    enrichBusStopETA integratedBPPConfig' eta =
-      case eta.stopName of
-        Just _ ->
-          pure eta
-        Nothing -> do
-          mbStation <-
-            OTPRest.getStationByGtfsIdAndStopCode
-              eta.stopCode
-              integratedBPPConfig'
-          let fetchedName = fmap (.name) mbStation
-          pure $
-            eta{CQMMB.stopName = fetchedName <|> eta.stopName}
-
-    getBusScheduleInfo :: NandiTypes.BusScheduleDetails -> DIBC.IntegratedBPPConfig -> Domain.Types.Person.Person -> Environment.Flow [API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo]
-    getBusScheduleInfo busScheduleDetails integratedBPPConfig person =
+    getBusScheduleInfo :: NandiTypes.BusScheduleDetails -> RouteServiceabilityContext -> Environment.Flow [API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo]
+    getBusScheduleInfo busScheduleDetails routeServiceabilityContext =
       catMaybes
         <$> mapM
           ( \detail -> do
-              busLiveInfo <- JLCF.getBusLiveInfo detail.vehicle_no integratedBPPConfig
+              busLiveInfo <- JLCF.getBusLiveInfo detail.vehicle_no routeServiceabilityContext.integratedBPPConfig
               logDebug $ "getBusScheduleInfo: getBusLiveInfo vehicle=" <> detail.vehicle_no <> ", found=" <> show (isJust busLiveInfo) <> ", details=" <> show (fmap (\v -> (v.vehicle_number, v.latitude, v.longitude, v.timestamp, v.routes_info, v.bearing)) busLiveInfo)
-              mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] detail.vehicle_no
+              mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [routeServiceabilityContext.integratedBPPConfig] detail.vehicle_no
               case mbServiceTier of
                 Just serviceTier -> do
-                  frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier person.merchantOperatingCityId integratedBPPConfig.id
+                  frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier routeServiceabilityContext.merchantOperatingCityId routeServiceabilityContext.integratedBPPConfig.id
                   logDebug $ "getBusScheduleInfo: vehicle=" <> detail.vehicle_no <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", hasLiveInfo=" <> show (isJust busLiveInfo) <> ", eta=" <> show detail.eta <> ", position=" <> show ((\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo) <> ", timestamp=" <> show ((.timestamp) <$> busLiveInfo)
                   return . Just $
                     API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo
@@ -1920,19 +1974,19 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
           )
           busScheduleDetails
 
-    getLiveVehicles :: [CQMMB.FullBusData] -> DIBC.IntegratedBPPConfig -> Domain.Types.Person.Person -> Environment.Flow [API.Types.UI.MultimodalConfirm.LiveVehicleInfo]
-    getLiveVehicles busesData integratedBPPConfig person =
+    getLiveVehicles :: [CQMMB.FullBusData] -> RouteServiceabilityContext -> Environment.Flow [API.Types.UI.MultimodalConfirm.LiveVehicleInfo]
+    getLiveVehicles busesData routeServiceabilityContext =
       catMaybes
         <$> mapM
           ( \bus -> do
-              mbServiceTier <- JLU.getVehicleServiceTypeFromInMem [integratedBPPConfig] bus.vehicleNumber
+              mbServiceTier <- JLU.getVehicleServiceTypeFromInMem [routeServiceabilityContext.integratedBPPConfig] bus.vehicleNumber
               case mbServiceTier of
                 Just serviceTier -> do
-                  frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier person.merchantOperatingCityId integratedBPPConfig.id
+                  frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier routeServiceabilityContext.merchantOperatingCityId routeServiceabilityContext.integratedBPPConfig.id
                   logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
                   enrichedEta <-
-                    mapM
-                      (enrichBusStopETA integratedBPPConfig)
+                    mapConcurrently
+                      (enrichBusStopETA routeServiceabilityContext.integratedBPPConfig)
                       (fromMaybe [] bus.busData.eta_data)
                   return . Just $
                     API.Types.UI.MultimodalConfirm.LiveVehicleInfo
@@ -1949,49 +2003,19 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
           )
           busesData
 
-    buildRouteWithLiveVehicle ::
-      CQMMB.RouteWithBuses ->
-      DIBC.IntegratedBPPConfig ->
-      Domain.Types.Person.Person ->
-      -- | enableDebug
-      Bool ->
-      Environment.Flow API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
-    buildRouteWithLiveVehicle routeInfo integratedBPPConfig person enableDebug = do
-      route <-
-        OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId
-          >>= fromMaybeM
-            (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
-
-      busScheduleDetails <-
-        OTPRest.getRouteBusSchedule routeInfo.routeId integratedBPPConfig
-
-      schedules <-
-        getBusScheduleInfo busScheduleDetails integratedBPPConfig person
-
-      when enableDebug $
-        logDebug $
-          "AlternateRoute getRouteBusSchedule routeId="
-            <> routeInfo.routeId
-            <> ", scheduleCount="
-            <> show (length schedules)
-
-      liveVehicles <- getLiveVehicles routeInfo.buses integratedBPPConfig person
-
-      when enableDebug $
-        logDebug $
-          "AlternateRoute routeId="
-            <> routeInfo.routeId
-            <> ", shortName="
-            <> route.shortName
-
-      pure $
-        API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
-          { liveVehicles,
-            schedules,
-            routeCode = routeInfo.routeId,
-            routeShortName = route.shortName,
-            alternateRouteInfo = Nothing
-          }
+    enrichBusStopETA :: DIBC.IntegratedBPPConfig -> CQMMB.BusStopETA -> Environment.Flow CQMMB.BusStopETA
+    enrichBusStopETA integratedBPPConfig' eta =
+      case eta.stopName of
+        Just _ ->
+          pure eta
+        Nothing -> do
+          mbStation <-
+            OTPRest.getStationByGtfsIdAndStopCode
+              eta.stopCode
+              integratedBPPConfig'
+          let fetchedName = fmap (.name) mbStation
+          pure $
+            eta{CQMMB.stopName = fetchedName <|> eta.stopName}
 
     getRouteNotFoundError :: GeneralVehicleType -> Text -> Text -> MultimodalError
     getRouteNotFoundError MultiModalTypes.MetroRail source dest = NoValidMetroRoute source dest
