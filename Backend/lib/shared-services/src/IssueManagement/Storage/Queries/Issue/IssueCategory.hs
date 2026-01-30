@@ -25,6 +25,8 @@ updateByPrimaryKey IssueCategory {..} =
       Set BeamIC.logoUrl logoUrl,
       Set BeamIC.priority priority,
       Set BeamIC.isActive isActive,
+      Set BeamIC.isRideRequired isRideRequired,
+      Set BeamIC.isTicketRequired isTicketRequired,
       Set BeamIC.maxAllowedRideAge maxAllowedRideAge,
       Set BeamIC.allowedRideStatuses allowedRideStatuses,
       Set BeamIC.label label,
