@@ -296,3 +296,10 @@ data EarningType = DAILY | WEEKLY | MONTHLY
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''EarningType)
+
+-- VehicleServiceTierOrderConfig for RiderConfig API
+data VehicleServiceTierOrderConfig = VehicleServiceTierOrderConfig
+  { orderArray :: [ServiceTierType],
+    vehicle :: ServiceTierType
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Read, Ord)

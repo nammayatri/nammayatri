@@ -35,6 +35,8 @@ imports:
   WhiteListOperatingCityReq: Dashboard.Common.Merchant
   WhiteListOperatingCityRes: Dashboard.Common.Merchant
   SpecialLocationType: Lib.Types.SpecialLocation
+  VehicleServiceTierOrderConfig: Dashboard.Common
+  ServiceTierType: Dashboard.Common
 
 module: Merchant
 
@@ -283,6 +285,18 @@ apis:
             response:
               type: CreateMerchantOperatingCityRes
       userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+  - GET: # GetRiderConfigEstimatesOrderAPI
+      endpoint: /riderConfig/estimatesOrder
+      auth: ApiAuthV2
+      response:
+        type: RiderConfigEstimatesOrderRes
+  - POST: # PostRiderConfigEstimatesOrderUpdateAPI
+      endpoint: /riderConfig/estimatesOrder/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateRiderConfigEstimatesOrderReq
+      response:
+        type: APISuccess
 
 types:
   MerchantUpdateReq:
@@ -322,6 +336,15 @@ types:
     - platform: Platform
   JobName:
     - enum: "NyRegularMasterTrigger"
+  RiderConfigEstimatesOrderRes:
+    - userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
+    - defaultServiceTierOrderConfig: "[ServiceTierType]"
+    - noOfRideRequestsConfig: Int
+  UpdateRiderConfigEstimatesOrderReq:
+    - userServiceTierOrderConfig: "Maybe [VehicleServiceTierOrderConfig]"
+    - defaultServiceTierOrderConfig: "Maybe [ServiceTierType]"
+    - noOfRideRequestsConfig: Maybe Int
+    - derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
