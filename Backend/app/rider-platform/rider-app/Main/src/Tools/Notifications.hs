@@ -1645,3 +1645,28 @@ notifyOnRideEndOffer person = do
     []
     Nothing
     Nothing
+
+data CustomerCancellationRateNudgeData = CustomerCancellationRateNudgeData
+  { customerId :: Text,
+    customerCancellationRate :: Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+sendCustomerCancellationRateNudge ::
+  (ServiceFlow m r, EsqDBFlow m r) =>
+  Person ->
+  Text ->
+  Int ->
+  m ()
+sendCustomerCancellationRateNudge person notificationKey cancellationRate = do
+  let entityData = CustomerCancellationRateNudgeData {customerId = person.id.getId, customerCancellationRate = cancellationRate}
+      entity = Notification.Entity Notification.Person person.id.getId entityData
+  dynamicNotifyPerson
+    person
+    (createNotificationReq notificationKey identity)
+    EmptyDynamicParam
+    entity
+    Nothing
+    []
+    Nothing
+    Nothing
