@@ -1648,6 +1648,42 @@ notifyOnRideEndOffer person = do
     Nothing
     Nothing
 
+data CustomerCancellationRateNudgeData = CustomerCancellationRateNudgeData
+  { customerId :: Text,
+    customerCancellationRate :: Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+customerCancellationRateNudgeSentKey :: Text -> Text -> Text
+customerCancellationRateNudgeSentKey personId notificationKey = "CustomerCancellationRateNudge:" <> personId <> ":" <> notificationKey
+
+-- 24 hours in seconds
+customerCancellationRateNudgeTtlSeconds :: Int
+customerCancellationRateNudgeTtlSeconds = 24 * 3600
+
+sendCustomerCancellationRateNudge ::
+  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Person ->
+  Text ->
+  Int ->
+  m ()
+sendCustomerCancellationRateNudge person notificationKey cancellationRate = do
+  let key = customerCancellationRateNudgeSentKey person.id.getId notificationKey
+  alreadyNudged :: (Maybe Bool) <- Redis.get key
+  unless (maybe False (const True) alreadyNudged) $ do
+    let entityData = CustomerCancellationRateNudgeData {customerId = person.id.getId, customerCancellationRate = cancellationRate}
+        entity = Notification.Entity Notification.Person person.id.getId entityData
+    dynamicNotifyPerson
+      person
+      (createNotificationReq notificationKey identity)
+      EmptyDynamicParam
+      entity
+      Nothing
+      []
+      Nothing
+      Nothing
+    Redis.setExp key True customerCancellationRateNudgeTtlSeconds
+
 notifyRefunds ::
   ServiceFlow m r =>
   DRefundRequest.RefundRequest ->
