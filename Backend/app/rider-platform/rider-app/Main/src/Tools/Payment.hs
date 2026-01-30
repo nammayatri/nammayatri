@@ -213,7 +213,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
       FRFSMultiModalBooking -> pure $ DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> pure $ DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> pure $ DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> pure $ DMSC.PaymentService Payment.Juspay
+      STCL -> pure $ DMSC.MembershipPaymentService Payment.Juspay
 
 decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> m DMSC.ServiceName
 decidePaymentService paymentServiceName clientSdkVersion = do
@@ -542,6 +542,7 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
+    Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     _ -> False
   where
     getPaymentServiceByType = \case
@@ -553,7 +554,7 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> DMSC.PaymentService Payment.Juspay
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
 getIsPercentageSplit ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -577,6 +578,7 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
+    Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     _ -> False
   where
     getPaymentServiceByType = \case
@@ -588,7 +590,7 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> DMSC.PaymentService Payment.Juspay
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
 getIsRefundSplitEnabled ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -612,6 +614,7 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
+    Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     _ -> False
   where
     getPaymentServiceByType = \case
@@ -623,7 +626,7 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> DMSC.PaymentService Payment.Juspay
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
 getPaymentOrderValidity ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -647,6 +650,7 @@ getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.MembershipPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
     _ -> Nothing
   where
     extractPaymentOrderValidity = \case
@@ -662,7 +666,7 @@ getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> DMSC.PaymentService Payment.Juspay
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
 extractSplitSettlementDetailsAmount :: Maybe SplitSettlementDetails -> Maybe SplitSettlementDetailsAmount
 extractSplitSettlementDetailsAmount Nothing = Nothing
@@ -691,6 +695,7 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
+    Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     _ -> Nothing
   where
     getPaymentServiceByType = \case
@@ -702,7 +707,7 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> DMSC.PaymentService Payment.Juspay
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
 fetchOfferSKUConfig ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -726,6 +731,7 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
+    Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
     _ -> Nothing
   where
     getPaymentServiceByType = \case
@@ -737,4 +743,4 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
-      STCL -> DMSC.PaymentService Payment.Juspay
+      STCL -> DMSC.MembershipPaymentService Payment.Juspay
