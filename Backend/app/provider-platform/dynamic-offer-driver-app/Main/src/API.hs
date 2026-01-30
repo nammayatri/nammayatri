@@ -90,7 +90,7 @@ type MainAPI =
          )
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
-    :<|> UnifiedDashboard.APIV2
+    :<|> UnifiedDashboard.API
     :<|> Internal.API
 
 driverOfferAPI :: Proxy DriverOfferAPI
@@ -113,7 +113,7 @@ mainServer =
     :<|> juspayPayoutWebhookHandlerV2
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
-    :<|> UnifiedDashboard.handlerV2
+    :<|> UnifiedDashboard.handler
     :<|> Internal.handler
 
 driverOfferServer :: FlowServer DriverOfferAPI

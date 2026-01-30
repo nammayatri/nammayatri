@@ -47,6 +47,7 @@ in      common.defaultConfigs
           , common.GeneratorType.API_TREE_COMMON
           , common.GeneratorType.SQL
           ]
+        , _defaultImports = common.mkDefaultImports "dynamic-offer-driver-app"
         , _packageMapping =
           [ { _1 = common.GeneratorType.API_TYPES, _2 = "unified-dashboard" }
           , { _1 = common.GeneratorType.SERVANT_API, _2 = "unified-dashboard" }

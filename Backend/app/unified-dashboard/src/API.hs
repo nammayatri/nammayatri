@@ -19,7 +19,8 @@ module API
 where
 
 import qualified API.Action.Management as Management
-import qualified API.Action.Provider as Provider
+import qualified API.Provider as Provider
+import qualified API.Rider as Rider
 import qualified Data.ByteString as BS
 import Data.OpenApi
 import qualified Domain.Types.Merchant
@@ -42,7 +43,10 @@ type MainAPI =
   "dashboard"
     :> Capture "merchantId" (ShortId Domain.Types.Merchant.Merchant)
     :> Capture "city" Kernel.Types.Beckn.Context.City
-    :> (Management.API :<|> Provider.API)
+    :> ( Management.API
+           :<|> "provider" :> Provider.API
+           :<|> "rider" :> Rider.API
+       )
 
 handler :: FlowServer API
 handler =
@@ -51,8 +55,11 @@ handler =
     :<|> writeOpenAPIFlow
     :<|> serveDirectoryWebApp "swagger"
 
-mainServer :: ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> FlowServer (Management.API :<|> Provider.API)
-mainServer merchantId city = Management.handler merchantId city :<|> Provider.handler merchantId city
+mainServer :: FlowServer MainAPI
+mainServer merchantId city =
+  Management.handler merchantId city
+    :<|> Provider.handler merchantId city
+    :<|> Rider.handler merchantId city
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 

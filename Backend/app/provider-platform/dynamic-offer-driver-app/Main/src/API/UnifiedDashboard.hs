@@ -14,7 +14,10 @@
 
 module API.UnifiedDashboard where
 
-import qualified API.Action.UnifiedDashboard.Provider as ProviderDSL
+import qualified API.Action.UnifiedDashboard.Fleet as FleetDSL
+import qualified API.Action.UnifiedDashboard.Management as ManagementDSL
+import qualified API.Action.UnifiedDashboard.Operator as OperatorDSL
+import qualified API.Action.UnifiedDashboard.RideBooking as RideBookingDSL
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Beckn.Context as Context
@@ -22,17 +25,42 @@ import Kernel.Types.Id
 import Servant hiding (throwError)
 import Tools.Auth (DashboardTokenAuth)
 
-type APIV2 =
-  "dashboard"
+type API =
+  "unified-dashboard"
     :> Capture "merchantId" (ShortId DM.Merchant)
     :> Capture "city" Context.City
-    :> ProviderDSLAPI
+    :> ( "fleet" :> FleetDSLAPI
+           :<|> "management" :> ManagementDSLAPI
+           :<|> "operator" :> OperatorDSLAPI
+           :<|> "rideBooking" :> RideBookingDSLAPI
+       )
 
-type ProviderDSLAPI = DashboardTokenAuth :> ProviderDSL.API
+type FleetDSLAPI = DashboardTokenAuth :> FleetDSL.API
 
-handlerV2 :: FlowServer APIV2
-handlerV2 =
-  \merchantId city -> unifiedDashboardProviderDSLHandler merchantId city
+type ManagementDSLAPI = DashboardTokenAuth :> ManagementDSL.API
 
-unifiedDashboardProviderDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer ProviderDSLAPI
-unifiedDashboardProviderDSLHandler merchantId city _auth = ProviderDSL.handler merchantId city
+type OperatorDSLAPI = DashboardTokenAuth :> OperatorDSL.API
+
+type RideBookingDSLAPI = DashboardTokenAuth :> RideBookingDSL.API
+
+-- TODO IssueManagement
+
+handler :: FlowServer API
+handler =
+  \merchantId city -> do
+    unifiedDashboardFleetDSLHandler merchantId city
+      :<|> unifiedDashboardManagementDSLHandler merchantId city
+      :<|> unifiedDashboardOperatorDSLHandler merchantId city
+      :<|> unifiedDashboardRideBookingDSLHandler merchantId city
+
+unifiedDashboardFleetDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer FleetDSLAPI
+unifiedDashboardFleetDSLHandler merchantId city _auth = FleetDSL.handler merchantId city
+
+unifiedDashboardManagementDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer ManagementDSLAPI
+unifiedDashboardManagementDSLHandler merchantId city _auth = ManagementDSL.handler merchantId city
+
+unifiedDashboardOperatorDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer OperatorDSLAPI
+unifiedDashboardOperatorDSLHandler merchantId city _auth = OperatorDSL.handler merchantId city
+
+unifiedDashboardRideBookingDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingDSLAPI
+unifiedDashboardRideBookingDSLHandler merchantId city _auth = RideBookingDSL.handler merchantId city

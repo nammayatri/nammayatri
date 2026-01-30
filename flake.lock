@@ -1839,14 +1839,17 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1768295822,
-        "narHash": "sha256-YdoNgN2RovPzyLFITpToAYw4iP6XZUk+HvnPQf9NqWs=",
-        "path": "/Users/utkarsh/Desktop/namma-dsl",
-        "type": "path"
+        "lastModified": 1769090797,
+        "narHash": "sha256-L3j/XUMdscjA4kwtOyNoLgsx45UAnMXCtj2xS3bBFGM=",
+        "owner": "nammayatri",
+        "repo": "namma-dsl",
+        "rev": "0c4367e07f17921a5e7fffb4d7e63165901471fe",
+        "type": "github"
       },
       "original": {
-        "path": "/Users/utkarsh/Desktop/namma-dsl",
-        "type": "path"
+        "owner": "nammayatri",
+        "repo": "namma-dsl",
+        "type": "github"
       }
     },
     "nix": {
@@ -3619,8 +3622,9 @@
         "type": "github"
       },
       "original": {
-        "path": "/Users/utkarsh/Desktop/shared-kernel",
-        "type": "path"
+        "owner": "nammayatri",
+        "repo": "shared-kernel",
+        "type": "github"
       }
     },
     "systems": {

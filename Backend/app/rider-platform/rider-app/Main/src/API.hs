@@ -26,6 +26,7 @@ import qualified API.FRFSMetrics as FRFSMetrics
 import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.UI as UI
+import qualified API.UnifiedDashboard as UnifiedDashboard
 import qualified Data.ByteString as BS
 import Data.OpenApi hiding (Header)
 import qualified Domain.Action.Internal.Payout as Payout
@@ -80,6 +81,7 @@ type MainAPI =
              :> Stripe.StripeWebhookAPI
          )
     :<|> Dashboard.APIV2
+    :<|> UnifiedDashboard.API
     :<|> Internal.API
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> QueryParam "city" Context.City
@@ -109,6 +111,7 @@ mainServer =
     :<|> stripeWebhookHandler
     :<|> stripeTestWebhookHandler
     :<|> Dashboard.handlerV2
+    :<|> UnifiedDashboard.handler
     :<|> Internal.handler
     :<|> juspayPayoutWebhookHandlerV2
     :<|> Conductor.handler

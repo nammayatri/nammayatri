@@ -47,7 +47,8 @@ runService configModifier = do
       ( ConnectionConfigDashboard
           { esqDBCfg = appCfg.esqDBCfg,
             esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-            hedisClusterCfg = appCfg.hedisClusterCfg
+            hedisClusterCfg = appCfg.hedisClusterCfg,
+            hedisSecondaryClusterCfg = appCfg.hedisSecondaryClusterCfg
           }
       )
       appCfg.kvConfigUpdateFrequency

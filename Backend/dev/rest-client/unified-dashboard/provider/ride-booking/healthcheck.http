@@ -1,0 +1,18 @@
+
+@unified-dashboard-admin = unified-dashboard-admin
+@driver-offer-bpp-host = http://localhost:8016
+@unified-dashboard-helper-token = unified-dashboard-admin
+@unified-dashboard-helper-token = some-secret-dashboard-token-for-driver-offer-bpp
+
+###
+
+# @name healthCheck
+GET {{unified-dashboard-host}}/dashboard/NAMMA_YATRI/KOCHI/provider/rideBooking/healthCheck/test
+token: {{unified-dashboard-admin}}}
+
+###
+
+# @name healthCheckHelper
+
+GET {{driver-offer-bpp-host}}/unified-dashboard/NAMMA_YATRI/KOCHI/rideBooking/healthCheck/test
+token: {{unified-dashboard-helper-token}}

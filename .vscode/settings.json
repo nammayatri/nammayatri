@@ -48,7 +48,8 @@
             "bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver": "65913d60-41a8-41f5-a35f-92f9b8af030d",
             "bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops": "b0ff7e6b-c101-4234-94fa-32985c4dc0e1",
             "bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin": "1460d294-8c69-44b9-811a-c370949d056e",
-            "bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service": "5425f717-3838-476a-a6ed-58a7a71c6c57"
+            "bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service": "5425f717-3838-476a-a6ed-58a7a71c6c57",
+            "unified-dashboard-host": "http://localhost:8021"
         }
     }
 }
