@@ -355,6 +355,8 @@ let riderClickhouseCfg =
 
 let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
 
+let sosTrackingRateLimitOptions = { limit = +60, limitResetTimeInSec = +60 }
+
 let dashboardClickhouseCfg = riderClickhouseCfg
 
 let tsServiceConfig = { url = "http://0.0.0.0:3001/" }
@@ -463,6 +465,7 @@ in  { esqDBCfg
     , googleSAPrivateKey = sec.googleSAPrivateKey
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , nearByDriverAPIRateLimitOptions
+    , sosTrackingRateLimitOptions
     , inMemConfig
     , disableViaPointTimetableCheck
     , parkingApiKey = sec.parkingApiKey
