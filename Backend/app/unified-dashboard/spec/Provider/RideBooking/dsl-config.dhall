@@ -19,6 +19,11 @@ let outputPath =
               ++  "API/Types/UnifiedDashboard/"
               ++  folderName
               ++  "/OrphanInstances"
+          , _extraApiRelatedCommonTypes =
+                  common.outputPrefixDriverApp
+              ++  "API/Types/UnifiedDashboard/"
+              ++  folderName
+              ++  "/Common"
           , _domainHandlerDashboard =
               defaultOutput._domainHandlerDashboard ++ "/" ++ fullFolderName
           , _servantApi =

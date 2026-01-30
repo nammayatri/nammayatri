@@ -1753,18 +1753,21 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
     then -- If callOtp is False then we expect routeCodes from frontend
     do
       let routeCodesWithLegs = fromMaybe [] req.routeCodes
-      legRoutesWithVehicles <- mapConcurrently (\legInfo -> do
-        busesForRoutes <- CQMMB.getBusesForRoutes legInfo.routeCodes integratedBPPConfig
-        routesWithLiveVehicles <-
-          mapM
-            (\r -> buildRouteWithLiveVehicle r integratedBPPConfig person False)
-            busesForRoutes
-        return $
-          ApiTypes.LegRouteWithLiveVehicle
-            { legOrder = legInfo.legOrder,
-              routeWithLiveVehicles = routesWithLiveVehicles
-            })
-        routeCodesWithLegs
+      legRoutesWithVehicles <-
+        mapConcurrently
+          ( \legInfo -> do
+              busesForRoutes <- CQMMB.getBusesForRoutes legInfo.routeCodes integratedBPPConfig
+              routesWithLiveVehicles <-
+                mapM
+                  (\r -> buildRouteWithLiveVehicle r integratedBPPConfig person False)
+                  busesForRoutes
+              return $
+                ApiTypes.LegRouteWithLiveVehicle
+                  { legOrder = legInfo.legOrder,
+                    routeWithLiveVehicles = routesWithLiveVehicles
+                  }
+          )
+          routeCodesWithLegs
       pure $ ApiTypes.RouteServiceabilityResp legRoutesWithVehicles
     else do
       -- If callOtp is True then srcCode and destCode are to be sent from frontend
@@ -1817,21 +1820,23 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
               return $ ApiTypes.RouteServiceabilityResp []
             legs -> do
               legRoutesWithVehicles <-
-                mapConcurrently (\(index, leg) -> do
-                  finalRouteCodes <-
-                    getLegRouteCodes leg integratedBPPConfig
-                  busesForRoutes <-
-                    CQMMB.getBusesForRoutes finalRouteCodes integratedBPPConfig
-                  routesWithLiveVehicles <-
-                    mapM
-                      (\r -> buildRouteWithLiveVehicle r integratedBPPConfig person True)
-                      busesForRoutes
-                  pure $
-                    ApiTypes.LegRouteWithLiveVehicle
-                      { legOrder = index,
-                        routeWithLiveVehicles = routesWithLiveVehicles
-                      }
-                ) (zip [0 ..] legs)
+                mapConcurrently
+                  ( \(index, leg) -> do
+                      finalRouteCodes <-
+                        getLegRouteCodes leg integratedBPPConfig
+                      busesForRoutes <-
+                        CQMMB.getBusesForRoutes finalRouteCodes integratedBPPConfig
+                      routesWithLiveVehicles <-
+                        mapM
+                          (\r -> buildRouteWithLiveVehicle r integratedBPPConfig person True)
+                          busesForRoutes
+                      pure $
+                        ApiTypes.LegRouteWithLiveVehicle
+                          { legOrder = index,
+                            routeWithLiveVehicles = routesWithLiveVehicles
+                          }
+                  )
+                  (zip [0 ..] legs)
               pure $ ApiTypes.RouteServiceabilityResp legRoutesWithVehicles
         else do
           -- Direct routes found so just return liveVehicles

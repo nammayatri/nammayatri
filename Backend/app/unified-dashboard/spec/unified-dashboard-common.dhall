@@ -29,8 +29,10 @@ let migrationPath =
 
 let outputPath =
       { _apiRelatedTypes = outputPrefixCommonApisReadOnly
-      , _extraApiRelatedTypes = outputPrefixCommonApis ++ "/Extra"
-      , _extraApiRelatedCommonTypes = outputPrefixCommonApis ++ "/Common"
+      , _extraApiRelatedTypes =
+          outputPrefixCommonApis ++ "API/Types/Management/OrphanInstances"
+      , _extraApiRelatedCommonTypes =
+          outputPrefixCommonApis ++ "API/Types/Management/Common"
       , _beamQueries = outputPrefixDashboardReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefixDashboard ++ "Storage/Queries/"
       , _cachedQueries =

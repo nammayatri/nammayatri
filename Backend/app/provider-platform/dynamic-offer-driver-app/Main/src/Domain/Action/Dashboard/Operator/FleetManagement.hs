@@ -228,10 +228,12 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
     $ InvalidRequest "Fleet already associated with operator"
   -- Check city config: if allowMultiFleetOperatorLink is False/None, enforce 1-to-1 mapping
   -- But allow if overwriteAssociation is enabled (will end existing associations)
-  when (transporterConfig.allowMultiFleetOperatorLink /= Just True
+  when
+    ( transporterConfig.allowMultiFleetOperatorLink /= Just True
         && notNull existingFOAssociations
-        && merchant.overwriteAssociation /= Just True) $
-    throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
+        && merchant.overwriteAssociation /= Just True
+    )
+    $ throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
 
   if skipOtpVerification
     then do
@@ -286,10 +288,12 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
 
   existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwner.id True
   -- Check city config: if allowMultiFleetOperatorLink is False/None, enforce 1-to-1 mapping
-  when (transporterConfig.allowMultiFleetOperatorLink /= Just True
+  when
+    ( transporterConfig.allowMultiFleetOperatorLink /= Just True
         && notNull existingFOAssociations
-        && merchant.overwriteAssociation /= Just True) $
-    throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
+        && merchant.overwriteAssociation /= Just True
+    )
+    $ throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
 
   -- Only end associations if overwriteAssociation is enabled and multi-link is not allowed
   when (merchant.overwriteAssociation == Just True && transporterConfig.allowMultiFleetOperatorLink /= Just True) $
