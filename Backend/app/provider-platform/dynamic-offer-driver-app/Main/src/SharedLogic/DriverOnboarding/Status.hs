@@ -18,8 +18,6 @@ module SharedLogic.DriverOnboarding.Status
 where
 
 import Control.Applicative ((<|>))
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Strict as HM
 import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
@@ -364,32 +362,25 @@ fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVeh
       transporterConfig = driverImagesInfo.transporterConfig
       isDigiLockerEnabled = fromMaybe False transporterConfig.digilockerEnabled
 
-  digilockerDocStatusMap <- if isDigiLockerEnabled then getDigilockerDocStatusMap driverId else pure HM.empty
+  digilockerDocStatusMap <- if isDigiLockerEnabled then getDigilockerDocStatusMap driverId else pure DocStatus.emptyDocStatusMap
 
   driverDocumentTypes <- getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs
   driverDocumentTypes `forM` \docType -> do
-    (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL
-    let responseCode = if isDigiLockerEnabled then getResponseCode docType digilockerDocStatusMap else Nothing
-    case mbStatus of
-      Just status -> do
-        message <- documentStatusMessage status Nothing docType mbProcessedUrl language
-        -- For DigiLocker-enabled cities: mbProcessedReason -> responseCode -> message
-        -- For non-DigiLocker cities: mbProcessedReason -> message
-        let finalMessage =
-              if isDigiLockerEnabled
-                then mbProcessedReason <|> responseCode <|> Just message
-                else mbProcessedReason <|> Just message
-        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbProcessedUrl}
-      Nothing -> do
-        (status, mbReason, mbUrl) <- getInProgressDriverDocuments driverImagesInfo docType
-        message <- documentStatusMessage status mbReason docType mbUrl language
-        -- For DigiLocker-enabled cities: mbReason -> responseCode -> message
-        -- For non-DigiLocker cities: mbReason -> message
-        let finalMessage =
-              if isDigiLockerEnabled
-                then mbReason <|> responseCode <|> Just message
-                else mbReason <|> Just message
-        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl}
+    let mbDocStatus = if isDigiLockerEnabled then DocStatus.getDocStatus docType digilockerDocStatusMap else Nothing
+        responseCode = mbDocStatus >>= (.responseCode)
+        mbDocVerificationStatus = mbDocStatus >>= (mapDigilockerToResponseStatus . (.status))
+
+    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL
+    (status, mbReason, mbUrl) <- case mbProcessedStatus of
+      Just VALID -> pure (VALID, mbProcessedReason, mbProcessedUrl)
+      Just s -> pure (s, mbProcessedReason, mbProcessedUrl)
+      Nothing -> case mbDocVerificationStatus of
+        Just docStatus -> pure (docStatus, Nothing, Nothing)
+        Nothing -> getInProgressDriverDocuments driverImagesInfo docType
+
+    message <- documentStatusMessage status mbReason docType mbUrl language
+    let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> Just message
+    return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl}
 
 fetchVehicleDocuments ::
   IQuery.DriverImagesInfo ->
@@ -1155,29 +1146,14 @@ getDigilockerResponseCode driverId = do
   mbSession <- listToMaybe <$> QDV.findLatestByDriverId (Just 1) (Just 0) driverId
   pure $ mbSession >>= (.responseCode)
 
-getDigilockerDocStatusMap :: Id DP.Person -> Flow (HM.HashMap Text (HM.HashMap Text A.Value))
+getDigilockerDocStatusMap :: Id DP.Person -> Flow DocStatus.DocStatusMap
 getDigilockerDocStatusMap driverId = do
   mbSession <- listToMaybe <$> QDV.findLatestByDriverId (Just 1) (Just 0) driverId
-  pure $ maybe HM.empty (parseDocStatus . (.docStatus)) mbSession
+  pure $ maybe DocStatus.emptyDocStatusMap (.docStatus) mbSession
 
-getResponseCode :: DDVC.DocumentType -> HM.HashMap Text (HM.HashMap Text A.Value) -> Maybe Text
-getResponseCode docType docStatusMap = do
-  docMap <- HM.lookup (show docType) docStatusMap
-  case HM.lookup "responseCode" docMap of
-    Just (A.String code) -> Just code
-    _ -> Nothing
-
--- Convert DocStatusMap to the expected format
-parseDocStatus :: DocStatus.DocStatusMap -> HM.HashMap Text (HM.HashMap Text A.Value)
-parseDocStatus docStatusMap =
-  let mapList = DocStatus.toList docStatusMap
-      convertDocStatus (docType, documentStatus) =
-        let docTypeText = T.pack $ show docType
-            docStatusObj =
-              HM.fromList
-                [ ("status", A.String $ DocStatus.docStatusEnumToText documentStatus.status),
-                  ("responseCode", maybe A.Null A.String documentStatus.responseCode),
-                  ("responseDescription", maybe A.Null A.String documentStatus.responseDescription)
-                ]
-         in (docTypeText, docStatusObj)
-   in HM.fromList $ map convertDocStatus mapList
+mapDigilockerToResponseStatus :: DocStatus.DocStatusEnum -> Maybe ResponseStatus
+mapDigilockerToResponseStatus DocStatus.DOC_PENDING = Just PENDING
+mapDigilockerToResponseStatus DocStatus.DOC_FAILED = Just FAILED
+mapDigilockerToResponseStatus DocStatus.DOC_CONSENT_DENIED = Just CONSENT_DENIED
+mapDigilockerToResponseStatus DocStatus.DOC_PULL_REQUIRED = Just PULL_REQUIRED
+mapDigilockerToResponseStatus DocStatus.DOC_SUCCESS = Just VALID
