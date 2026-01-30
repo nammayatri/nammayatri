@@ -1032,6 +1032,7 @@ TransporterConfig:
     considerDriversForSearch: Bool
     dlNumberVerification: Maybe Bool
     allowDashboardToPassVehicleDetails: Maybe Bool
+    missingMappingFallbackVariant: Maybe Domain.Types.VehicleVariant.VehicleVariant
     pastDaysRideCounter: Int
     placeNameCacheExpiryDays: Maybe Int
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
@@ -1405,6 +1406,7 @@ TransporterConfig:
     allowedReferralEntities: "text[]"
     cancellationRateSlabConfig: json
     driverCallingOption: text
+    missingMappingFallbackVariant: text
     analyticsConfig: json
     driverWalletConfig: json
     subscriptionConfig: json
