@@ -193,6 +193,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     minRidesToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minThresholdForPassThroughDestination :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     minmRentalAndScheduledBookingLeadTimeHours :: Kernel.Types.Common.Hours,
+    missingMappingFallbackVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant,
     nightSafetyEndTime :: Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: Kernel.Types.Common.Meters,
     nightSafetyStartTime :: Kernel.Types.Common.Seconds,
