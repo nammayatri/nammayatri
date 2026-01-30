@@ -1056,6 +1056,8 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           Nothing
           ( \driverInfo -> do
               Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just entityId) personId
+              when (driverInfo.mode == Just DrInfo.ONLINE) $
+                Analytics.decrementFleetOwnerAnalyticsCurrentOnlineDriverCount (Just entityId) personId
               operators <- FOV.findAllByFleetOwnerId (Id entityId) True
               when (null operators) $ logTagError "AnalyticsRemoveDriver" "No operators found for fleet owner"
               forM_ operators $ \operator -> do
@@ -2195,6 +2197,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         Nothing
         ( \driverInfo -> do
             Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) person.id
+            when (driverInfo.mode == Just DrInfo.ONLINE) $
+              Analytics.incrementFleetOwnerAnalyticsCurrentOnlineDriverCount (Just fleetOwnerId) person.id
             operators <- FOV.findAllByFleetOwnerId (Id fleetOwnerId) True
             when (null operators) $ logTagError "AnalyticsAddDriver" "No operators found for fleet owner"
             forM_ operators $ \operator -> do
@@ -3503,13 +3507,11 @@ getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId = do
   mbAllTimeKeysRes <- mapM (Redis.get @Int) allTimeKeysData
   logTagInfo "fleetMbAllTimeKeysRes" (show mbAllTimeKeysRes)
 
-  onlineDriverCount <- DDF.getOnlineKeyValue fleetOwnerId
-  logTagInfo "onlineDriverCount" (show onlineDriverCount)
   -- fallback to ClickHouse and populate cache when missing
   (activeDriverCount, activeVehicleCount, currentOnlineDriverCount) <- do
-    if all isJust mbAllTimeKeysRes && isJust onlineDriverCount
+    if all isJust mbAllTimeKeysRes
       then do
-        let res = Analytics.convertToFleetAllTimeFallbackRes (Analytics.zipJusts Analytics.fleetAllTimeMetrics mbAllTimeKeysRes) onlineDriverCount
+        let res = Analytics.convertToFleetAllTimeFallbackRes (Analytics.zipJusts Analytics.fleetAllTimeMetrics mbAllTimeKeysRes)
         logTagInfo "FleetAllTimeFallbackRes" (show res)
         Analytics.extractFleetAnalyticsData res
       else do
@@ -3742,6 +3744,8 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
         Nothing
         ( \driverInfo -> do
             Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) driverId
+            when (driverInfo.mode == Just DrInfo.ONLINE) $
+              Analytics.incrementFleetOwnerAnalyticsCurrentOnlineDriverCount (Just fleetOwnerId) driverId
             operators <- FOV.findAllByFleetOwnerId (Id fleetOwnerId) True
             when (null operators) $
               logTagError "AnalyticsApproveDriver" "No operators found for fleet owner"

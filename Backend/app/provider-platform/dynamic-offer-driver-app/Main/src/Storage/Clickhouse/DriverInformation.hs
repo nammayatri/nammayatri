@@ -1,5 +1,6 @@
 module Storage.Clickhouse.DriverInformation where
 
+import qualified Domain.Types.Common as DM
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
@@ -10,6 +11,7 @@ import Kernel.Types.Id
 data DriverInformationT f = DriverInformationT
   { driverId :: C f (Id DP.Person),
     driverFlowStatus :: C f (Maybe DDF.DriverFlowStatus),
+    mode :: C f (Maybe DM.DriverMode),
     enabled :: C f Bool,
     enabledAt :: C f (Maybe UTCTime)
   }
@@ -22,6 +24,7 @@ driverInformationTTable =
   DriverInformationT
     { driverId = "driver_id",
       driverFlowStatus = "driver_flow_status",
+      mode = "mode",
       enabled = "enabled",
       enabledAt = "enabled_at"
     }
@@ -69,5 +72,5 @@ getOnlineDriverCountByDriverIds driverIds = do
   res <-
     CH.findAll $
       CH.select_ (\info -> CH.aggregate $ CH.count_ info.driverId) $
-        CH.filter_ (\info -> info.driverId `CH.in_` driverIds CH.&&. info.driverFlowStatus CH.==. Just DDF.ONLINE) (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
+        CH.filter_ (\info -> info.driverId `CH.in_` driverIds CH.&&. info.mode CH.==. Just DM.ONLINE) (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
   pure $ fromMaybe 0 (listToMaybe res)
