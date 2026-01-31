@@ -70,6 +70,17 @@ data ChangeStopsResp = ChangeStopsResp {stationsChanged :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data EffectiveStops = EffectiveStops
+  { destinationChanged :: Kernel.Prelude.Bool,
+    effectiveDestinationStop :: Kernel.Prelude.Text,
+    effectiveSourceStop :: Kernel.Prelude.Text,
+    requestedDestinationStop :: Kernel.Prelude.Text,
+    requestedSourceStop :: Kernel.Prelude.Text,
+    sourceChanged :: Kernel.Prelude.Bool
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ExtendLegGetFareReq = ExtendLegGetFareReq {endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.LocationAPIEntity, startLocation :: Lib.JourneyModule.Types.ExtendLegStartPoint}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -321,7 +332,7 @@ data RouteServiceabilityReq = RouteServiceabilityReq
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteServiceabilityResp = RouteServiceabilityResp {legs :: [LegRouteWithLiveVehicle]}
+data RouteServiceabilityResp = RouteServiceabilityResp {effectiveStops :: Kernel.Prelude.Maybe EffectiveStops, legs :: [LegRouteWithLiveVehicle]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
