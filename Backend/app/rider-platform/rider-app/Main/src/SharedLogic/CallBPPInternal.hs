@@ -15,6 +15,7 @@
 module SharedLogic.CallBPPInternal where
 
 import API.Types.UI.FavouriteDriver
+import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
 import Data.Text as T hiding (filter, map)
@@ -455,7 +456,9 @@ data DriverProfileRes = DriverProfileRes
     vehicleTags :: [Text],
     images :: [Text],
     profileImage :: Maybe Text,
-    topReviews :: [DriverReview]
+    topReviews :: [DriverReview],
+    driverSafetyScore :: Maybe A.Value,
+    driverTags :: Maybe A.Value
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
