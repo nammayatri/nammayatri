@@ -10,6 +10,7 @@ where
 import Data.List.Extra (notNull)
 import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
+import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DriverOperatorAssociation as DDOA
 import qualified Domain.Types.FleetOperatorAssociation as DFOA
 import qualified Domain.Types.Merchant as DM
@@ -67,6 +68,8 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
           Nothing
           ( \driverInfo -> do
               Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just existingAssociation.fleetOwnerId) existingAssociation.driverId
+              when (driverInfo.mode == Just DrInfo.ONLINE) $
+                Analytics.decrementFleetOwnerAnalyticsCurrentOnlineDriverCount (Just existingAssociation.fleetOwnerId) existingAssociation.driverId
               operators <- QFOA.findAllByFleetOwnerId (Id existingAssociation.fleetOwnerId) True
               when (null operators) $ logTagError "AnalyticsRemoveDriver" "No operators found for fleet owner"
               forM_ operators $ \operator -> do

@@ -9,6 +9,7 @@ where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.FleetDriverAssociation as FDV
+import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
@@ -93,6 +94,8 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
       Nothing
       ( \driverInfo -> do
           Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) res.person.id
+          when (driverInfo.mode == Just DrInfo.ONLINE) $
+            Analytics.incrementFleetOwnerAnalyticsCurrentOnlineDriverCount (Just fleetOwnerId) res.person.id
           operators <- QFOA.findAllByFleetOwnerId (Id fleetOwnerId) True
           when (null operators) $ logTagError "AnalyticsAddDriver" "No operators found for fleet owner"
           forM_ operators $ \operator -> do
