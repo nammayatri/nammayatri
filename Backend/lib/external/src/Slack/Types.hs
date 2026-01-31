@@ -23,6 +23,7 @@ import Kernel.Utils.Dhall (FromDhall)
 data SlackNotificationConfig = SlackNotificationConfig
   { snsTopicArn :: Maybe Text,
     gcpProjectId :: Maybe Text,
-    gcpTopicId :: Maybe Text
+    gcpTopicId :: Maybe Text,
+    isForcedAWS :: Bool
   }
-  deriving (Generic, FromDhall)
+  deriving (Generic, FromDhall, Show)

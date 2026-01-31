@@ -31,7 +31,8 @@ import Kernel.Prelude
 import Kernel.Utils.Dhall (FromDhall)
 
 data EmailServiceConfig = EmailServiceConfig
-  { sendGridUrl :: Maybe Text
+  { sendGridUrl :: Maybe Text,
+    isForcedAWS :: Bool
   }
   deriving (Generic, FromDhall)
 
