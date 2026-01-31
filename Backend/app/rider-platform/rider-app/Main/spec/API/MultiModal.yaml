@@ -347,8 +347,17 @@ types:
     legOrder: Int
     routeWithLiveVehicles: [RouteWithLiveVehicle]
 
+  EffectiveStops:
+    requestedSourceStop: Text
+    requestedDestinationStop: Text
+    effectiveSourceStop: Text
+    effectiveDestinationStop: Text
+    sourceChanged: Bool
+    destinationChanged: Bool
+
   RouteServiceabilityResp:
     legs: [LegRouteWithLiveVehicle]
+    effectiveStops: Maybe EffectiveStops
 
   RouteCodesWithLeg:
     legOrder: Int

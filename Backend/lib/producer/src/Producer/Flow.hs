@@ -8,10 +8,10 @@ module Producer.Flow where
 import qualified Data.Aeson as Ae
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BSL
+import Data.Singletons
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T hiding (getCurrentTime)
 import qualified Data.UUID as UU
-import Data.Singletons
 import Environment
 import Kernel.Beam.Functions (createWithKVScheduler, updateWithKVScheduler)
 import Kernel.Prelude
@@ -197,7 +197,7 @@ getAllPendingJobs = do
   let newtime = T.addUTCTime ((-1) * fromIntegral reviveThreshold) currentTime
   pendingJobs <- getPendingStuckJobs newtime
   blacklist <- asks (.blackListedJobs)
-  return $ filter (\(AnyJob Job {..} ) -> (show $ fromSing jobInfo.jobType) `notElem` blacklist) pendingJobs
+  return $ filter (\(AnyJob Job {..}) -> (show $ fromSing jobInfo.jobType) `notElem` blacklist) pendingJobs
 
 updateStatusOfJobs :: JobStatus -> [Id AnyJob] -> Flow ()
 updateStatusOfJobs newStatus jobIds = do

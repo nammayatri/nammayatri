@@ -28,7 +28,6 @@ statsHandler conductorToken = withFlowHandlerAPI $ do
   let (year, month, _) = Time.toGregorian yesterday
   let monthStartDay = Time.fromGregorian year month 1
 
-
   -- For future proofing when yesterdayStats might be extended to todayStats
   let lowerBound = min monthStartDay yesterday
   allStats <- CHConductor.findConductorStatsBetween conductorToken lowerBound yesterday
