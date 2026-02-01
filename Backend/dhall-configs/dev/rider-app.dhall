@@ -10,10 +10,11 @@ let sosAlertsTopicARN =
       "arn:aws:chatbot::463356420488:chat-configuration/slack-channel/sos-notifications"
 
 let slackNotificationConfig =
-      { snsTopicArn = Some sosAlertsTopicARN
-      , gcpProjectId = Some "ny-sandbox"
-      , gcpTopicId = Some "slack-alerts"
-      }
+    { snsTopicArn = Some sosAlertsTopicARN
+    , gcpProjectId = Some "ny-sandbox"
+    , gcpTopicId = Some "slack-alerts"
+    , isForcedAWS = True
+    }
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -367,7 +368,9 @@ let noSignatureSubscribers =
       [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
 
 let emailServiceConfig =
-      { sendGridUrl = Some "https://api.sendgrid.com/v3/mail/send" }
+      { sendGridUrl = Some "https://api.sendgrid.com/v3/mail/send"
+      , isForcedAWS = True
+      }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
