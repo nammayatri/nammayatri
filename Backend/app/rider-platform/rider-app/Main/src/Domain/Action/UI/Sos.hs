@@ -561,8 +561,8 @@ postSosUpdateLocation (mbPersonId, _) sosId req = do
 
 getSosTracking :: Id DSos.Sos -> Flow SosTrackingRes
 getSosTracking sosId = do
-  apiRateLimitOptions <- asks (.apiRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (sosTrackingHitsCountKey sosId) apiRateLimitOptions
+  sosTrackingRateLimitOptions <- asks (.sosTrackingRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (sosTrackingHitsCountKey sosId) sosTrackingRateLimitOptions
 
   sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
   unless (sosDetails.flow == DSos.SafetyFlow && sosDetails.entityType == Just DSos.NonRide) $
