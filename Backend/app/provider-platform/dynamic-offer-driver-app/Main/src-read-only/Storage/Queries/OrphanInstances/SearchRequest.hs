@@ -3,6 +3,8 @@
 
 module Storage.Queries.OrphanInstances.SearchRequest where
 
+import qualified Data.Text
+import qualified Domain.Types.RiderPreferredOption
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -15,6 +17,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON
+import qualified Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils
 import qualified Storage.Beam.SearchRequest as Beam
 import qualified Storage.CachedQueries.Merchant
@@ -35,7 +38,9 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     fromLocation' <- Storage.Queries.Location.findById ((.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ((.getId) $ (.locationId) fromLocationMapping))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
     stops' <- Storage.Queries.Transformers.SearchRequest.getStops id hasStops
-    toLocation' <- maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping
+    toLocation' <- (maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping)
+    userBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userBundleVersion)
+    userSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userSdkVersion)
     pure $
       Just
         Domain.Types.SearchRequest.SearchRequest
@@ -84,6 +89,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             providerId = Kernel.Types.Id.Id providerId,
             returnTime = returnTime,
             riderId = Kernel.Types.Id.Id <$> riderId,
+            riderPreferredOption = fromMaybe Domain.Types.RiderPreferredOption.OneWay riderPreferredOption,
             roundTrip = roundTrip,
             searchTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType searchTags,
             specialLocationName = specialLocationName,
@@ -97,6 +103,10 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             tollNames = tollNames,
             transactionId = transactionId,
             tripCategory = tripCategory,
+            userBackendAppVersion = userBackendAppVersion,
+            userBundleVersion = userBundleVersion',
+            userClientDevice = Kernel.Utils.Version.mkClientDevice userOsType userOsVersion userModelName userManufacturer,
+            userSdkVersion = userSdkVersion',
             validTill = fromMaybe (Kernel.Utils.Common.addUTCTime 600 startTime_) validTill
           }
 
@@ -149,17 +159,25 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.providerId = Kernel.Types.Id.getId providerId,
         Beam.returnTime = returnTime,
         Beam.riderId = Kernel.Types.Id.getId <$> riderId,
+        Beam.riderPreferredOption = Just riderPreferredOption,
         Beam.roundTrip = roundTrip,
         Beam.searchTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType searchTags,
         Beam.specialLocationName = specialLocationName,
         Beam.specialLocationTag = specialLocationTag,
         Beam.startTime = Just startTime,
         Beam.toLocGeohash = toLocGeohash,
-        Beam.toLocationId = Kernel.Types.Id.getId . (.id) <$> toLocation,
+        Beam.toLocationId = ((Kernel.Types.Id.getId . (.id)) <$> toLocation),
         Beam.tollCharges = tollCharges,
         Beam.tollIds = tollIds,
         Beam.tollNames = tollNames,
         Beam.transactionId = transactionId,
         Beam.tripCategory = tripCategory,
+        Beam.userBackendAppVersion = userBackendAppVersion,
+        Beam.userBundleVersion = Kernel.Utils.Version.versionToText <$> userBundleVersion,
+        Beam.userManufacturer = userClientDevice >>= (.deviceManufacturer),
+        Beam.userModelName = userClientDevice <&> (.deviceModel),
+        Beam.userOsType = userClientDevice <&> (.deviceType),
+        Beam.userOsVersion = userClientDevice <&> (.deviceVersion),
+        Beam.userSdkVersion = Kernel.Utils.Version.versionToText <$> userSdkVersion,
         Beam.validTill = Just validTill
       }
