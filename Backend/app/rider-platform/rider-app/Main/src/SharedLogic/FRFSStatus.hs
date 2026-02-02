@@ -287,7 +287,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         whenJust paymentBooking.frfsQuoteId $ \paymentBookingQuoteId -> do
           when (booking.quoteId /= paymentBookingQuoteId) $ do
             switchFRFSQuoteTier journeyLeg paymentBookingQuoteId
-        void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) (Just True) journeyId
+        isTestTransaction <- asks (.isMetroTestTransaction)
+        let updatedOrderShortId =
+              if isTestTransaction
+                then "test-" <> paymentOrder.shortId.getShortId
+                else paymentOrder.shortId.getShortId
+        void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) (Just True) journeyId
         void $ QJourney.updateStatus (if booking.status == DFRFSTicketBooking.FAILED then DJ.FAILED else DJ.INPROGRESS) journeyId
       pure mbJourneyLeg
 
