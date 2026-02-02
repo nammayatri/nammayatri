@@ -48,6 +48,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
+import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.RouteDetails
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
@@ -206,7 +207,7 @@ getQuotes searchRequestId mbAllowMultiple = do
           journey = journeyData
         }
 
-processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> Maybe SSR.RiderPreferredOption -> CancellationStage -> m ()
+processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> Maybe DRPO.RiderPreferredOption -> CancellationStage -> m ()
 processActiveBooking booking mbNewRiderPreferredOption cancellationStage = do
   -- Check if both bookings are FixedRoute and allow multiple bookings
   -- Fetch the active booking's SearchRequest through its Quote
@@ -257,10 +258,10 @@ isHighPriorityBooking bookingDetails = case bookingDetails of
 
 -- | Check if two bookings can coexist based on FixedRoute riderPreferredOption
 -- Allows multiple bookings only if both bookings have riderPreferredOption = FixedRoute
-canCoexistForFixedRoute :: Maybe SSR.RiderPreferredOption -> Maybe SSR.RiderPreferredOption -> Bool
+canCoexistForFixedRoute :: Maybe DRPO.RiderPreferredOption -> Maybe DRPO.RiderPreferredOption -> Bool
 canCoexistForFixedRoute mbNewRiderPreferredOption mbActiveRiderPreferredOption =
   case (mbNewRiderPreferredOption, mbActiveRiderPreferredOption) of
-    (Just SSR.FixedRoute, Just SSR.FixedRoute) -> True
+    (Just DRPO.FixedRoute, Just DRPO.FixedRoute) -> True
     _ -> False
 
 getOffers :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
@@ -273,7 +274,7 @@ getOffers searchRequest = do
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
       let quotes = case searchRequest.riderPreferredOption of
-            SSR.Rental -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+            DRPO.Rental -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
             _ -> OnDemandCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
       return . sortBy (compare `on` creationTime) $ quotes
     Nothing -> do

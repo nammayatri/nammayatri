@@ -62,6 +62,7 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
 import qualified Domain.Types.RiderConfig as DRiderConfig
+import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.ServiceTierType as DVST
@@ -390,10 +391,10 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterQuotesByPrefference' :: [QuoteInfo] -> [Enums.VehicleCategory] -> [QuoteInfo]
     filterQuotesByPrefference' _quotesInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
-        Rental -> filter (\qInfo -> not (qInfo.vehicleVariant `elem` ambulanceVariants) && (not $ isNotRental qInfo)) _quotesInfo
-        OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory && not (quote.vehicleVariant `elem` ambulanceVariants)) _quotesInfo
-        Ambulance -> filter (\qInfo -> qInfo.vehicleVariant `elem` ambulanceVariants) _quotesInfo
-        Delivery -> []
+        DRPO.Rental -> filter (\qInfo -> not (qInfo.vehicleVariant `elem` ambulanceVariants) && (not $ isNotRental qInfo)) _quotesInfo
+        DRPO.OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory && not (quote.vehicleVariant `elem` ambulanceVariants)) _quotesInfo
+        DRPO.Ambulance -> filter (\qInfo -> qInfo.vehicleVariant `elem` ambulanceVariants) _quotesInfo
+        DRPO.Delivery -> []
         _ -> filter isNotRental _quotesInfo
 
     filterEstimtesByPrefference :: [EstimateInfo] -> [Enums.VehicleCategory] -> Maybe NyRegularSubscription.NyRegularSubscription -> [EstimateInfo]
@@ -404,10 +405,10 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterEstimtesByPrefference' :: [EstimateInfo] -> [Enums.VehicleCategory] -> [EstimateInfo]
     filterEstimtesByPrefference' _estimateInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
-        OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
-        InterCity -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
-        Ambulance -> filter (\eInfo -> eInfo.vehicleVariant `elem` ambulanceVariants) _estimateInfo
-        Delivery -> filter isDeliveryEstimate _estimateInfo
+        DRPO.OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
+        DRPO.InterCity -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
+        DRPO.Ambulance -> filter (\eInfo -> eInfo.vehicleVariant `elem` ambulanceVariants) _estimateInfo
+        DRPO.Delivery -> filter isDeliveryEstimate _estimateInfo
         _ -> []
 
     parseMetaDataFromSubs mbMetaData =
@@ -446,9 +447,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     updateRiderPreferredOption quotes = case listToMaybe quotes of
       Just quote -> do
         let actualRiderPreferredOption = case quote.quoteDetails of
-              DQuote.InterCityDetails _ -> InterCity
-              _ -> OneWay
-        when (actualRiderPreferredOption == InterCity && searchRequest.riderPreferredOption /= actualRiderPreferredOption) $ QSearchReq.updateRiderPreferredOption InterCity quote.requestId
+              DQuote.InterCityDetails _ -> DRPO.InterCity
+              _ -> DRPO.OneWay
+        when (actualRiderPreferredOption == DRPO.InterCity && searchRequest.riderPreferredOption /= actualRiderPreferredOption) $ QSearchReq.updateRiderPreferredOption DRPO.InterCity quote.requestId
       _ -> pure ()
 
     updateNyRegularInstanceLogStatus :: Text -> Flow ()

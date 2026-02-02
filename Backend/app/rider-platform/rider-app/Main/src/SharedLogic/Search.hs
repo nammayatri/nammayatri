@@ -16,6 +16,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.NyRegularSubscription as DNyRegularSubscription
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
+import qualified Domain.Types.RiderPreferredOption as DRPO
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
@@ -33,7 +34,7 @@ data SearchRes = SearchRes
     stops :: [SearchReqLocation],
     startTime :: UTCTime,
     returnTime :: Maybe UTCTime,
-    riderPreferredOption :: SearchRequest.RiderPreferredOption,
+    riderPreferredOption :: DRPO.RiderPreferredOption,
     roundTrip :: Bool,
     searchRequest :: DSearchReq.SearchRequest,
     now :: UTCTime,
@@ -198,7 +199,7 @@ data RouteDetails = RouteDetails
   }
 
 data SearchDetails = SearchDetails
-  { riderPreferredOption :: SearchRequest.RiderPreferredOption,
+  { riderPreferredOption :: DRPO.RiderPreferredOption,
     origin :: SearchReqLocation,
     roundTrip :: Bool,
     stops :: [SearchReqLocation],
