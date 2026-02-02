@@ -16,6 +16,7 @@ imports:
   Day: Data.Time
   Language: Kernel.External.Types
   CumulativeOfferResp: SharedLogic.Offer
+  PurchasedPassPayment: Domain.Types.PurchasedPassPayment
 
 module: Pass
 types:
@@ -110,6 +111,7 @@ types:
     derive: "Show"
 
   PurchasedPassTransactionAPIEntity:
+    id: Id PurchasedPassPayment
     passName: Maybe Text
     passCode: Text
     createdAt: UTCTime

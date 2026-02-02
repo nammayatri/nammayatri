@@ -75,3 +75,19 @@ updatePurchasedPassIdByOldPurchasedPassId newPurchasedPassId oldPurchasedPassId 
   updateWithKV
     [Se.Set Beam.purchasedPassId (getId newPurchasedPassId), Se.Set Beam.updatedAt _now]
     [Se.Is Beam.purchasedPassId $ Se.Eq (getId oldPurchasedPassId)]
+
+updateStatusByPurchasedPassIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPurchasedPass.StatusType ->
+  Id DPurchasedPass.PurchasedPass ->
+  DPurchasedPass.StatusType ->
+  m ()
+updateStatusByPurchasedPassIdAndStatus newStatus purchasedPassId oldStatus = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.status newStatus, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.purchasedPassId $ Se.Eq purchasedPassId.getId,
+          Se.Is Beam.status $ Se.Eq oldStatus
+        ]
+    ]
