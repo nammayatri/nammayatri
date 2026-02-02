@@ -16,8 +16,10 @@ module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.RidePayment as DRidePayment
-import Domain.Types.PaymentInvoice (PaymentPurpose (TIP))
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import Domain.Types.PaymentInvoice (PaymentPurpose (..))
 import qualified Domain.Types.PaymentInvoice as DPI
+import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -160,7 +162,42 @@ cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   when (isNothing ride.cancellationFeeIfCancelled) $ do
     QRide.updateCancellationFeeIfCancelledField (Just cancellationAmount.amount) rideId
   paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId booking.paymentMode order.paymentServiceOrderId cancellationAmount.amount
-  when paymentCharged $ QRide.markPaymentStatus DRide.Completed rideId
+  if paymentCharged
+    then do
+      QRide.markPaymentStatus DRide.Completed rideId
+      -- Create cancellation fee invoice with CAPTURED status
+      now <- getCurrentTime
+      SPInvoice.createInvoiceIfNotExists
+        merchant.shortId
+        rideId
+        (Just order.id)
+        DPI.PAYMENT
+        DPI.CANCELLATION_FEE
+        DPI.CAPTURED
+        cancellationAmount.amount
+        order.currency
+        (fromMaybe (DMPM.Card DMPM.DefaultCardType) booking.paymentInstrument)
+        merchant.id
+        merchantOpCity.id
+        now
+    else do
+      -- Create cancellation fee invoice with FAILED status when payment fails
+      QRide.markPaymentStatus DRide.Failed rideId
+      logError $ "Failed to charge cancellation payment for ride: " <> rideId.getId
+      now <- getCurrentTime
+      SPInvoice.createInvoiceIfNotExists
+        merchant.shortId
+        rideId
+        (Just order.id)
+        DPI.PAYMENT
+        DPI.CANCELLATION_FEE
+        DPI.FAILED
+        cancellationAmount.amount
+        order.currency
+        (fromMaybe (DMPM.Card DMPM.DefaultCardType) booking.paymentInstrument)
+        merchant.id
+        merchantOpCity.id
+        now
   void $
     CallBPPInternal.customerCancellationDuesSync
       (merchant.driverOfferApiKey)
