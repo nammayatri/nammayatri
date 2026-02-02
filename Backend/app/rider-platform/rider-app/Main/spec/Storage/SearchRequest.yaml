@@ -34,6 +34,7 @@ imports:
   RecentLocation: Domain.Types.RecentLocation
   VehicleCategory: BecknV2.OnDemand.Enums
   BusLocation: API.Types.UI.RiderLocation
+  RiderPreferredOption: Domain.Types.RiderPreferredOption
 
 SearchRequest:
   tableName: search_request
@@ -69,7 +70,7 @@ SearchRequest:
     autoAssignEnabledV2: Maybe Bool
     selectedPaymentMethodId: Maybe PaymentMethodId
     selectedPaymentInstrument: Maybe PaymentInstrument
-    riderPreferredOption: RiderPreferredOption
+    riderPreferredOption: RiderPreferredOption|NoRelation
     createdAt: UTCTime
     clientBundleVersion: Maybe Version
     clientSdkVersion: Maybe Version
@@ -109,9 +110,6 @@ SearchRequest:
   types:
     SearchRequestStatus:
       enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
-      derive: "HttpInstance"
-    RiderPreferredOption:
-      enum: "Rental, OneWay, InterCity, Ambulance, Delivery, PublicTransport, FixedRoute"
       derive: "HttpInstance"
     SearchMode:
       enum: "NORMAL, RESERVE"
@@ -202,7 +200,7 @@ SearchRequest:
     merchantOperatingCityId: Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId|EM
     distance: (Kernel.Utils.Common.mkDistanceWithDefault distanceUnit distanceValue . Kernel.Types.Common.HighPrecMeters <$> distance)|E
     maxDistance: (Kernel.Utils.Common.mkDistanceWithDefault distanceUnit maxDistanceValue . Kernel.Types.Common.HighPrecMeters <$> maxDistance)|E
-    riderPreferredOption: fromMaybe Domain.Types.SearchRequest.OneWay riderPreferredOption|E
+    riderPreferredOption: fromMaybe Domain.Types.RiderPreferredOption.OneWay riderPreferredOption|E
     customerExtraFee: Kernel.Utils.Common.mkPriceWithDefault customerExtraFeeAmount currency <$> customerExtraFee|E
     fromLocation: Storage.Queries.Transformers.SearchRequest.getFromLocation id|EM
     stops: Storage.Queries.Transformers.SearchRequest.getStops id hasStops|EM

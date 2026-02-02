@@ -203,3 +203,13 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN special_location_name text
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN toll_charges double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN search_try_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN dq_duration_to_pickup bigint ;
+
+
+------- SQL updates -------
+
