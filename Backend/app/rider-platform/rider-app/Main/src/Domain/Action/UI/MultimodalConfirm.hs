@@ -962,6 +962,11 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           withTryCatch "getGtfsVersion:mkResponse" (OTPRest.getGtfsVersion bppConfig) >>= \case
             Left _ -> return bppConfig.feedKey
             Right gtfsVersion -> return gtfsVersion
+        -- Get service subtypes from external API for specific vehicle
+        let mbServiceSubTypes = do
+              vehicleRouteInfo <- mbVehicleLiveRouteInfo
+              let vehicleLiveInfo = snd vehicleRouteInfo
+              vehicleLiveInfo.serviceSubTypes
         pure
           ApiTypes.PublicTransportData
             { ss =
@@ -997,6 +1002,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                           stC = r.stopCount,
                           st = mbServiceType,
                           stn = frfsServiceTier <&> (.shortName),
+                          sst = mbServiceSubTypes,
                           vt = show r.vehicleType,
                           clr = r.color,
                           ibc = bppConfig.id
@@ -1990,6 +1996,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
               case mbServiceTier of
                 Just serviceTier -> do
                   frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier routeServiceabilityContext.merchantOperatingCityId routeServiceabilityContext.integratedBPPConfig.id
+                  -- Get service subtypes from in-memory cache
+                  mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [routeServiceabilityContext.integratedBPPConfig] detail.vehicle_no
                   logDebug $ "getBusScheduleInfo: vehicle=" <> detail.vehicle_no <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", hasLiveInfo=" <> show (isJust busLiveInfo) <> ", eta=" <> show detail.eta <> ", position=" <> show ((\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo) <> ", timestamp=" <> show ((.timestamp) <$> busLiveInfo)
                   return . Just $
                     API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo
@@ -1998,7 +2006,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                         locationUTCTimestamp = posixSecondsToUTCTime . fromIntegral . (.timestamp) <$> busLiveInfo,
                         serviceTierType = serviceTier,
                         serviceTierName = (.shortName) <$> frfsServiceTier,
-                        vehicleNumber = detail.vehicle_no
+                        vehicleNumber = detail.vehicle_no,
+                        serviceSubTypes = mbServiceSubTypes
                       }
                 Nothing -> do
                   logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
@@ -2015,6 +2024,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
               case mbServiceTier of
                 Just serviceTier -> do
                   frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier routeServiceabilityContext.merchantOperatingCityId routeServiceabilityContext.integratedBPPConfig.id
+                  -- Get service subtypes from in-memory cache
+                  mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [routeServiceabilityContext.integratedBPPConfig] bus.vehicleNumber
                   logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
                   enrichedEta <-
                     mapConcurrently
@@ -2027,7 +2038,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                         position = LatLong bus.busData.latitude bus.busData.longitude,
                         locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,
                         serviceTierType = serviceTier,
-                        serviceTierName = (.shortName) <$> frfsServiceTier
+                        serviceTierName = (.shortName) <$> frfsServiceTier,
+                        serviceSubTypes = mbServiceSubTypes
                       }
                 Nothing -> do
                   logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber

@@ -99,13 +99,13 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
 
   let successfulMappings = catMaybes busRouteMapping
 
-  serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text) <-
+  serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text, Maybe [Spe.ServiceSubType]) <-
     HashMap.fromList
       <$> mapM
         ( \m -> do
             frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config -> do
               CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId m.service_type riderConfig.merchantOperatingCityId config.id
-            return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName)))
+            return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName), m.service_sub_types))
         )
         successfulMappings
 
@@ -118,8 +118,9 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
                   distance = Nothing,
                   routeCode = route_id,
                   routeState = Just routeInfo.route_state,
-                  serviceType = fst <$> maybeServiceType,
-                  serviceTierName = snd =<< maybeServiceType,
+                  serviceType = (\(sType, _, _) -> sType) <$> maybeServiceType,
+                  serviceTierName = (\(_, sName, _) -> sName) =<< maybeServiceType,
+                  serviceSubTypes = (\(_, _, sSubTypes) -> sSubTypes) =<< maybeServiceType,
                   shortName = routeInfo.route_number,
                   vehicleNumber = bus.vehicle_number,
                   bearing = round <$> bus.bearing

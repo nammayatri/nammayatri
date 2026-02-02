@@ -77,6 +77,7 @@ data RouteStopMappingInMemoryServerWithPublicData = RouteStopMappingInMemoryServ
 
 data VehicleServiceTypeResponse = VehicleServiceTypeResponse
   { service_type :: BecknV2.FRFS.Enums.ServiceTierType,
+    service_sub_types :: Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     vehicle_no :: Text,
     last_updated :: Maybe UTCTime,
     schedule_no :: Maybe Text,

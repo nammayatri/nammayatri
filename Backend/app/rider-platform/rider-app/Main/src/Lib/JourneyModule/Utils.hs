@@ -142,7 +142,8 @@ data UpcomingVehicleInfo = UpcomingVehicleInfo
     serviceName :: Maybe Text,
     arrivalTimeInSeconds :: Seconds,
     nextAvailableTimings :: (TimeOfDay, TimeOfDay),
-    source :: SourceType
+    source :: SourceType,
+    serviceSubTypes :: Maybe [ServiceSubType]
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -689,7 +690,8 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
               serviceName = rst.serviceTierName,
               arrivalTimeInSeconds = estimatedArrivalTimeInSeconds,
               nextAvailableTimings = (rst.timeOfArrival, rst.timeOfDeparture),
-              source = rst.source
+              source = rst.source,
+              serviceSubTypes = Nothing  -- Will be populated below for LIVE vehicles
             }
           | rst <- filteredByService,
             let arrivalTimeInSeconds' = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime rst.timeOfArrival currentTime) currentTimeIST,
@@ -699,8 +701,21 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
                   | abs secondsValue > 86400 = Seconds $ round $ (7 * 86400) + secondsValue
                   | otherwise = Seconds $ round $ 86400 + secondsValue
         ]
-  logDebug $ "tripTimingsWithCalendars after filtering on current time : " <> show tripTimingsWithCalendars
-  let upcomingBuses = sortBy (\a b -> compare (arrivalTimeInSeconds a) (arrivalTimeInSeconds b)) tripTimingsWithCalendars
+
+  -- Fetch serviceSubTypes for LIVE vehicles using tripId (which is vehicleNumber)
+  tripTimingsWithSubTypes <- forM tripTimingsWithCalendars $ \info -> do
+    if info.source == LIVE
+      then do
+        -- For LIVE vehicles, tripId in RouteStopTimeTable is the vehicleNumber
+        let mbVehicleId = find (\rst -> rst.routeCode == info.routeCode && rst.serviceTierType == info.serviceType) filteredByService <&> (.tripId.getId)
+        mbServiceSubTypes <- case mbVehicleId of
+          Just vehicleId -> getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleId
+          Nothing -> pure Nothing
+        pure $ (info { serviceSubTypes = mbServiceSubTypes } :: UpcomingVehicleInfo)
+      else pure info
+
+  logDebug $ "tripTimingsWithCalendars after filtering on current time : " <> show tripTimingsWithSubTypes
+  let upcomingBuses = sortBy (\a b -> compare (arrivalTimeInSeconds a) (arrivalTimeInSeconds b)) tripTimingsWithSubTypes
 
   let busFrequency =
         if length upcomingBuses >= 3
@@ -1414,7 +1429,8 @@ data VehicleLiveRouteInfo = VehicleLiveRouteInfo
     isActuallyValid :: Maybe Bool,
     busConductorId :: Maybe Text,
     busDriverId :: Maybe Text,
-    eligiblePassIds :: Maybe [Text]
+    eligiblePassIds :: Maybe [Text],
+    serviceSubTypes :: Maybe [Spec.ServiceSubType]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -1443,6 +1459,17 @@ getVehicleServiceTypeFromInMem integratedBPPConfigs vehicleNumber = IM.withInMem
     Just (_, VehicleLiveRouteInfo {serviceType}) -> return $ Just serviceType
     Nothing -> return Nothing
 
+-- | Get service subtypes for a vehicle, cached in-memory for 1 day (86400 seconds)
+getVehicleServiceSubTypesFromInMem ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  [DIntegratedBPPConfig.IntegratedBPPConfig] ->
+  Text ->
+  m (Maybe [Spec.ServiceSubType])
+getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleNumber =
+  IM.withInMemCache ["CACHED_VEHICLE_SERVICE_SUBTYPES", vehicleNumber] 86400 $ do
+    mbVehicleLiveRouteInfo <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
+    pure $ mbVehicleLiveRouteInfo >>= (\(_, v) -> v.serviceSubTypes)
+
 getVehicleLiveRouteInfoUnsafe ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
@@ -1459,7 +1486,7 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
         mbResult
           <&> ( \result ->
                   ( integratedBPPConfig,
-                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id, eligiblePassIds = result.eligible_pass_ids}
+                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id, eligiblePassIds = result.eligible_pass_ids, serviceSubTypes = result.service_sub_types}
                   )
               )
 

@@ -223,6 +223,7 @@ data LiveVehicleInfo = LiveVehicleInfo
     locationUTCTimestamp :: Kernel.Prelude.UTCTime,
     number :: Kernel.Prelude.Text,
     position :: Kernel.External.Maps.Types.LatLong,
+    serviceSubTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType
   }
@@ -354,6 +355,7 @@ data ScheduledVehicleInfo = ScheduledVehicleInfo
   { eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
     locationUTCTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     position :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    serviceSubTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
     vehicleNumber :: Kernel.Prelude.Text
@@ -431,6 +433,7 @@ data TransportRoute = TransportRoute
     ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     lN :: Kernel.Prelude.Text,
     sN :: Kernel.Prelude.Text,
+    sst :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     st :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stC :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
