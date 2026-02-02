@@ -750,7 +750,14 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     fork "computing offers namma tag" $
       addOffersNammaTags updRide person
 
-  -- we should create job for collecting money from customer
+  -- Update invoice amount for ALL payment types (cash and online)
+  -- This ensures invoice reflects actual fare, not estimated fare
+  mbExistingInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE
+  whenJust mbExistingInvoice $ \existingInvoice -> do
+    when (existingInvoice.amount /= totalFare.amount) $
+      QPaymentInvoiceExtra.updateAmount existingInvoice.id totalFare.amount
+
+  -- Create job for collecting money from customer (online payments only)
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   when onlinePayment $ do
     let applicationFeeAmount = fromMaybe 0 booking.commission
@@ -770,15 +777,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               receiptEmail = email,
               driverAccountId
             }
-    -- Lookup existing invoice to get order ID for retry handling
-    mbExistingInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE
+    -- Use existing invoice to get order ID for retry handling
     let mbExistingOrderId = mbExistingInvoice >>= (.paymentOrderId)
     handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id mbExistingOrderId createPaymentIntentServiceReq)
-    -- Update invoice amount if fare changed (e.g., fare recalculation after toll, etc.)
-    whenJust mbExistingInvoice $ \existingInvoice -> do
-      when (existingInvoice.amount /= totalFare.amount) $ do
-        logInfo $ "Updating invoice amount from " <> show existingInvoice.amount <> " to " <> show totalFare.amount <> " for invoice: " <> existingInvoice.id.getId
-        QPaymentInvoiceExtra.updateAmount existingInvoice.id totalFare.amount
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
     createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
