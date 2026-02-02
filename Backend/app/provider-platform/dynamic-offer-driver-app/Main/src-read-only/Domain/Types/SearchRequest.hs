@@ -80,6 +80,10 @@ data SearchRequest = SearchRequest
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     transactionId :: Kernel.Prelude.Text,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory,
+    userBackendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    userBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    userClientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
+    userSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     validTill :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON)

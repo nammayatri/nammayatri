@@ -14,6 +14,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils
 import qualified Lib.Yudhishthira.Types
 import qualified Sequelize as Se
@@ -65,7 +66,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.disabilityTag disabilityTag,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverDefaultExtraFee (roundToIntegral <$> driverDefaultExtraFee),
-      Se.Set Beam.driverDefaultExtraFeeAmount driverDefaultExtraFee,
+      Se.Set Beam.driverDefaultExtraFeeAmount (driverDefaultExtraFee),
       Se.Set Beam.driverIdForSearch (Kernel.Types.Id.getId <$> driverIdForSearch),
       Se.Set Beam.dynamicPricingLogicVersion dynamicPricingLogicVersion,
       Se.Set Beam.estimatedDistance estimatedDistance,
@@ -98,12 +99,19 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.startTime (Just startTime),
       Se.Set Beam.toLocGeohash toLocGeohash,
-      Se.Set Beam.toLocationId (Kernel.Types.Id.getId . (.id) <$> toLocation),
+      Se.Set Beam.toLocationId (((Kernel.Types.Id.getId . (.id)) <$> toLocation)),
       Se.Set Beam.tollCharges tollCharges,
       Se.Set Beam.tollIds tollIds,
       Se.Set Beam.tollNames tollNames,
       Se.Set Beam.transactionId transactionId,
       Se.Set Beam.tripCategory tripCategory,
+      Se.Set Beam.userBackendAppVersion userBackendAppVersion,
+      Se.Set Beam.userBundleVersion (Kernel.Utils.Version.versionToText <$> userBundleVersion),
+      Se.Set Beam.userManufacturer (userClientDevice >>= (.deviceManufacturer)),
+      Se.Set Beam.userModelName (userClientDevice <&> (.deviceModel)),
+      Se.Set Beam.userOsType (userClientDevice <&> (.deviceType)),
+      Se.Set Beam.userOsVersion (userClientDevice <&> (.deviceVersion)),
+      Se.Set Beam.userSdkVersion (Kernel.Utils.Version.versionToText <$> userSdkVersion),
       Se.Set Beam.validTill (Just validTill)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

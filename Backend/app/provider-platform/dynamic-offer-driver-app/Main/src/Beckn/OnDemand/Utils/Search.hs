@@ -27,7 +27,9 @@ import qualified Domain.Types.RefereeLink as DRL
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
 import Kernel.Types.Common
+import qualified Kernel.Types.Version as KTV
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Version as KUV
 import qualified Lib.Yudhishthira.Types as LYT
 import Tools.Error (GenericError (InvalidRequest))
 
@@ -171,6 +173,31 @@ buildCustomerPhoneNumber :: Spec.SearchReqMessage -> Maybe Text
 buildCustomerPhoneNumber req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
   Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_PHONE_NUMBER tagGroups
+
+buildUserClientDevice :: Spec.SearchReqMessage -> Maybe KTV.Device
+buildUserClientDevice req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
+      osTypeText = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.USER_OS_TYPE tagGroups
+      osType = osTypeText >>= (readMaybe . T.unpack)
+      osVersion = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.USER_OS_VERSION tagGroups
+      modelName = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.USER_MODEL_NAME tagGroups
+      manufacturer = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.USER_MANUFACTURER tagGroups
+  KUV.mkClientDevice osType osVersion modelName manufacturer
+
+buildUserBundleVersion :: Spec.SearchReqMessage -> Maybe Text
+buildUserBundleVersion req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
+  T.strip <$> Utils.getTagV2 Tag.CUSTOMER_INFO Tag.USER_BUNDLE_VERSION tagGroups
+
+buildUserSdkVersion :: Spec.SearchReqMessage -> Maybe Text
+buildUserSdkVersion req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
+  T.strip <$> Utils.getTagV2 Tag.CUSTOMER_INFO Tag.USER_SDK_VERSION tagGroups
+
+buildUserBackendAppVersion :: Spec.SearchReqMessage -> Maybe Text
+buildUserBackendAppVersion req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
+  Utils.getTagV2 Tag.CUSTOMER_INFO Tag.USER_BACKEND_APP_VERSION tagGroups
 
 -- customerPerson <- req ^? (ix "searchReqMessageIntent" . key "intentFulfillment" . key "fulfillmentCustomer" . key "customerPerson" . key "tags") & fromMaybeM (InvalidRequest "Missing Fields")
 

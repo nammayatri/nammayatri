@@ -22,6 +22,7 @@ imports:
   BillingCategory: SharedLogic.Type
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+  SearchTry: Domain.Types.SearchTry
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -105,6 +106,9 @@ Booking:
     paymentMode: Maybe PaymentMode
     commission: Maybe HighPrecMoney
     displayBookingId: Maybe Text
+    searchTryId: Maybe (Id SearchTry)
+    dqDistanceToPickup: Maybe Meters
+    dqDurationToPickup: Maybe Seconds
 
   excludedFields:
     - merchantId
@@ -127,6 +131,8 @@ Booking:
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
     billingCategory: Maybe BillingCategory
+    searchTryId: Maybe Text
+    dqDistanceToPickup: Maybe HighPrecMeters
 
   beamFields:
     tripCategory:
@@ -176,6 +182,8 @@ Booking:
     isInsured: Just isInsured|E
     isPetRide: Just isPetRide|E
     billingCategory: Just billingCategory|E
+    searchTryId: (Kernel.Types.Id.getId <$> searchTryId)|E
+    dqDistanceToPickup: (Kernel.Prelude.realToFrac <$> dqDistanceToPickup)|E
 
   intermediateTransformers:
     fromTType:
@@ -205,6 +213,8 @@ Booking:
     isInsured: fromMaybe False isInsured|E
     isPetRide: fromMaybe False isPetRide|E
     billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+    searchTryId: Kernel.Types.Id.Id <$> searchTryId|E
+    dqDistanceToPickup: Kernel.Prelude.roundToIntegral <$> dqDistanceToPickup|E
 
   sqlType:
     status: character varying(255)
@@ -230,6 +240,9 @@ Booking:
     estimateId: character varying(255)
     configInExperimentVersions: "json"
     displayBookingId: character varying(25)
+    searchTryId: character varying(36)
+    dqDistanceToPickup: double precision
+    dqDurationToPickup: bigint
 
   default:
     bookingType: "'NormalBooking'"

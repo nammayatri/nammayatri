@@ -503,7 +503,14 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 (Beckn.CUSTOMER_VEHICLE_CATEGORY, maybe Nothing (Just . show) (personVehicleCategory person)),
                 (Beckn.DASHBOARD_USER, (Just . show) isDashboardRequest),
                 (Beckn.CUSTOMER_DISABILITY, (decode . encode) tag),
-                (Beckn.CUSTOMER_NAMMA_TAGS, show @Text @[Text] . fmap ((.getTagNameValue) . Yudhishthira.removeTagExpiry) <$> person.customerNammaTags)
+                (Beckn.CUSTOMER_NAMMA_TAGS, show @Text @[Text] . fmap ((.getTagNameValue) . Yudhishthira.removeTagExpiry) <$> person.customerNammaTags),
+                (Beckn.USER_OS_TYPE, show . (.deviceType) <$> searchRequest.clientDevice),
+                (Beckn.USER_OS_VERSION, (.deviceVersion) <$> searchRequest.clientDevice),
+                (Beckn.USER_MODEL_NAME, (.deviceModel) <$> searchRequest.clientDevice),
+                (Beckn.USER_MANUFACTURER, searchRequest.clientDevice >>= (.deviceManufacturer)),
+                (Beckn.USER_BUNDLE_VERSION, versionToText <$> searchRequest.clientBundleVersion),
+                (Beckn.USER_SDK_VERSION, versionToText <$> searchRequest.clientSdkVersion),
+                (Beckn.USER_BACKEND_APP_VERSION, searchRequest.backendAppVersion)
               ]
                 ++ maybe [] (\pn -> [(Beckn.CUSTOMER_PHONE_NUMBER, Just pn)]) phoneNumber
            }

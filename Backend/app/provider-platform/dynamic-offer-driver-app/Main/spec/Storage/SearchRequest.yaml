@@ -23,6 +23,9 @@ imports:
   ParcelType: Domain.Types.ParcelType
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
   CloudType: Kernel.Types.Version
+  Version: Kernel.Types.Version
+  Device: Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
@@ -86,6 +89,10 @@ SearchRequest:
     numberOfLuggages: Maybe Int
     paymentMode: Maybe PaymentMode
     cloudType: Maybe CloudType
+    userClientDevice: Maybe Device
+    userBundleVersion: Maybe Version
+    userSdkVersion: Maybe Version
+    userBackendAppVersion: Maybe Text
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime
@@ -100,6 +107,8 @@ SearchRequest:
     customerNammaTags: "Maybe [Text]"
     searchTags: "Maybe [Text]"
     preferSafetyPlus: Maybe Bool
+    userBundleVersion: Maybe Text
+    userSdkVersion: Maybe Text
   beamFields:
     driverDefaultExtraFee:
       driverDefaultExtraFee: Maybe Money
@@ -109,6 +118,11 @@ SearchRequest:
     toLocation:
       toLocationId: Maybe Text
     stops: {}
+    userClientDevice:
+      userOsType: Maybe DeviceType
+      userOsVersion: Maybe Text
+      userModelName: Maybe Text
+      userManufacturer: Maybe Text
 
   toTType:
     fromLocationId: Just $ Kernel.Types.Id.getId ((.id) fromLocation)|E
@@ -128,6 +142,12 @@ SearchRequest:
     customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
     searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
     preferSafetyPlus: Kernel.Prelude.Just|I
+    userOsType: userClientDevice <&> (.deviceType)|E
+    userOsVersion: userClientDevice <&> (.deviceVersion)|E
+    userModelName: userClientDevice <&> (.deviceModel)|E
+    userManufacturer: userClientDevice >>= (.deviceManufacturer)|E
+    userBundleVersion: Kernel.Utils.Version.versionToText <$> userBundleVersion|E
+    userSdkVersion: Kernel.Utils.Version.versionToText <$> userSdkVersion|E
 
   intermediateTransformers:
     fromTType:
@@ -154,6 +174,9 @@ SearchRequest:
     customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
     searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
     preferSafetyPlus: fromMaybe False preferSafetyPlus|E
+    userClientDevice: Kernel.Utils.Version.mkClientDevice userOsType userOsVersion userModelName userManufacturer|E
+    userBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userBundleVersion)|EM
+    userSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userSdkVersion)|EM
 
   constraints:
     id: PrimaryKey
@@ -186,6 +209,13 @@ SearchRequest:
     pickupZoneGateId: character varying(36)
     transactionId: character varying(36)
     configInExperimentVersions: "json"
+    userOsType: character varying(255)
+    userOsVersion: character varying(255)
+    userModelName: character varying(255)
+    userManufacturer: character varying(255)
+    userBundleVersion: character varying(255)
+    userSdkVersion: character varying(255)
+    userBackendAppVersion: character varying(255)
 
   default:
     autoAssignEnabled: "false"

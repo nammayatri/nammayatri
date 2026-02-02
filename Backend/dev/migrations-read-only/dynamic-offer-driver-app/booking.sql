@@ -193,3 +193,10 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN toll_ids text[] ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN display_booking_id character varying(25) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN search_try_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN dq_duration_to_pickup bigint ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN dq_distance_to_pickup double precision ;

@@ -144,3 +144,14 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN toll_ids text[] ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN cloud_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_sdk_version character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_os_version character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_os_type character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_model_name character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_manufacturer character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_bundle_version character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_backend_app_version character varying(255) ;

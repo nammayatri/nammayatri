@@ -35,6 +35,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber
 import Kernel.Utils.Common (decodeFromText, fromMaybeM, type (:::))
 import Kernel.Utils.Logging (logDebug)
+import qualified Kernel.Utils.Version
 import Tools.Error
 
 buildSearchReq :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text], EncFlow m r) => Data.Text.Text -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> m Domain.Action.Beckn.Search.DSearchReq
@@ -66,6 +67,10 @@ buildSearchReq messageId subscriber req context = do
       paymentMode = Beckn.OnDemand.Utils.Search.getPaymentMode req
       fromSpecialLocationId_ = getFromSpecialLocationId req
       toSpecialLocationId_ = getToSpecialLocationId req
+      userClientDevice = Beckn.OnDemand.Utils.Search.buildUserClientDevice req
+      userBackendAppVersion = Beckn.OnDemand.Utils.Search.buildUserBackendAppVersion req
+  userBundleVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserBundleVersion req)
+  userSdkVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserSdkVersion req)
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   customerPhoneNum_ <- getPhoneNumberFromTag $ Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress

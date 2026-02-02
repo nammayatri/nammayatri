@@ -73,7 +73,7 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
-import Kernel.Types.Version (CloudType)
+import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithoutGeoJson)
@@ -156,7 +156,11 @@ data DSearchReq = DSearchReq
     numberOfLuggages :: Maybe Int,
     paymentMode :: Maybe DMPM.PaymentMode,
     fromSpecialLocationId :: Maybe (Id SL.SpecialLocation), -- Fixed route: from area ID
-    toSpecialLocationId :: Maybe (Id SL.SpecialLocation) -- Fixed route: to area ID
+    toSpecialLocationId :: Maybe (Id SL.SpecialLocation), -- Fixed route: to area ID
+    userClientDevice :: Maybe Device,
+    userBundleVersion :: Maybe Version,
+    userSdkVersion :: Maybe Version,
+    userBackendAppVersion :: Maybe Text
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo
