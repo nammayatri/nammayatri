@@ -43,6 +43,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
 import Domain.Types.RiderConfig
+import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
@@ -146,7 +147,7 @@ extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
 extractSearchDetails now = \case
   OneWaySearch reqDetails@OneWaySearchReq {..} ->
     SearchDetails
-      { riderPreferredOption = SearchRequest.OneWay,
+      { riderPreferredOption = DRPO.OneWay,
         roundTrip = False,
         stops = fromMaybe [] stops <> fromMaybe [] (fmap (: []) destination),
         startTime = fromMaybe now startTime,
@@ -166,7 +167,7 @@ extractSearchDetails now = \case
       }
   RentalSearch RentalSearchReq {..} ->
     SearchDetails
-      { riderPreferredOption = SearchRequest.Rental,
+      { riderPreferredOption = DRPO.Rental,
         roundTrip = False,
         stops = fromMaybe [] stops,
         hasStops = Nothing,
@@ -186,7 +187,7 @@ extractSearchDetails now = \case
       }
   InterCitySearch InterCitySearchReq {..} ->
     SearchDetails
-      { riderPreferredOption = SearchRequest.InterCity,
+      { riderPreferredOption = DRPO.InterCity,
         stops = fromMaybe [] stops,
         hasStops = Nothing,
         driverIdentifier_ = Nothing,
@@ -203,7 +204,7 @@ extractSearchDetails now = \case
       }
   AmbulanceSearch OneWaySearchReq {..} ->
     SearchDetails
-      { riderPreferredOption = SearchRequest.Ambulance,
+      { riderPreferredOption = DRPO.Ambulance,
         roundTrip = False,
         stops = maybe [] pure destination,
         startTime = fromMaybe now startTime,
@@ -224,7 +225,7 @@ extractSearchDetails now = \case
       }
   DeliverySearch OneWaySearchReq {..} ->
     SearchDetails
-      { riderPreferredOption = SearchRequest.Delivery,
+      { riderPreferredOption = DRPO.Delivery,
         roundTrip = False,
         stops = maybe [] pure destination,
         startTime = fromMaybe now startTime,
@@ -245,7 +246,7 @@ extractSearchDetails now = \case
       }
   PTSearch PublicTransportSearchReq {..} ->
     SearchDetails
-      { riderPreferredOption = SearchRequest.PublicTransport,
+      { riderPreferredOption = DRPO.PublicTransport,
         stops = maybe [] pure destination,
         hasStops = Nothing,
         driverIdentifier_ = Nothing,
@@ -268,7 +269,7 @@ extractSearchDetails now = \case
       }
   FixedRouteSearch FixedRouteSearchReq {..} ->
     SearchDetails
-      { riderPreferredOption = SearchRequest.FixedRoute,
+      { riderPreferredOption = DRPO.FixedRoute,
         origin = origin,
         stops = [destination],
         hasStops = Nothing,
@@ -503,7 +504,15 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 (Beckn.CUSTOMER_VEHICLE_CATEGORY, maybe Nothing (Just . show) (personVehicleCategory person)),
                 (Beckn.DASHBOARD_USER, (Just . show) isDashboardRequest),
                 (Beckn.CUSTOMER_DISABILITY, (decode . encode) tag),
-                (Beckn.CUSTOMER_NAMMA_TAGS, show @Text @[Text] . fmap ((.getTagNameValue) . Yudhishthira.removeTagExpiry) <$> person.customerNammaTags)
+                (Beckn.CUSTOMER_NAMMA_TAGS, show @Text @[Text] . fmap ((.getTagNameValue) . Yudhishthira.removeTagExpiry) <$> person.customerNammaTags),
+                (Beckn.USER_OS_TYPE, show . (.deviceType) <$> searchRequest.clientDevice),
+                (Beckn.USER_OS_VERSION, (.deviceVersion) <$> searchRequest.clientDevice),
+                (Beckn.USER_MODEL_NAME, (.deviceModel) <$> searchRequest.clientDevice),
+                (Beckn.USER_MANUFACTURER, searchRequest.clientDevice >>= (.deviceManufacturer)),
+                (Beckn.USER_BUNDLE_VERSION, versionToText <$> searchRequest.clientBundleVersion),
+                (Beckn.USER_SDK_VERSION, versionToText <$> searchRequest.clientSdkVersion),
+                (Beckn.USER_BACKEND_APP_VERSION, searchRequest.backendAppVersion),
+                (Beckn.RIDER_PREFERRED_OPTION, Just . show $ searchRequest.riderPreferredOption)
               ]
                 ++ maybe [] (\pn -> [(Beckn.CUSTOMER_PHONE_NUMBER, Just pn)]) phoneNumber
            }
@@ -637,7 +646,7 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Seconds ->
   Maybe Seconds ->
-  SearchRequest.RiderPreferredOption ->
+  DRPO.RiderPreferredOption ->
   DistanceUnit ->
   Maybe Int ->
   Bool ->

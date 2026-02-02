@@ -163,4 +163,32 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN special_location_na
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_sdk_version character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_os_version character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_os_type character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_model_name character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_manufacturer character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_bundle_version character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_backend_app_version character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN rider_preferred_option character varying(255) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pickup_gate_id character varying(36);

@@ -15,6 +15,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.ParcelType
 import qualified Domain.Types.RiderDetails
+import qualified Domain.Types.SearchTry
 import qualified Domain.Types.Trip
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
@@ -43,6 +44,7 @@ data Booking = Booking
     displayBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distanceToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    dqDurationToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     dynamicPricingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimateId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate),
     estimatedCongestionCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -82,6 +84,7 @@ data Booking = Booking
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    searchTryId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry),
     senderDetails :: Kernel.Prelude.Maybe Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

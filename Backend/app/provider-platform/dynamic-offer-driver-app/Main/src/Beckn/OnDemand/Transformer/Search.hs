@@ -27,6 +27,7 @@ import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search
 import qualified Domain.Action.Internal.Estimate as DBppEstimate
+import qualified Domain.Types.RiderPreferredOption as DRPO
 import EulerHS.Prelude hiding (id)
 import Kernel.External.BapHostRedirect (BapHostRedirectMap)
 import Kernel.External.Encryption
@@ -38,6 +39,7 @@ import qualified Kernel.Types.Registry.Subscriber
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common (decodeFromText, fromMaybeM, type (:::))
 import Kernel.Utils.Logging (logDebug)
+import qualified Kernel.Utils.Version
 import Servant.Client.Core (BaseUrl)
 import Tools.Error
 
@@ -76,6 +78,17 @@ buildSearchReq messageId subscriber req context actualBapUri = do
       paymentMode = Beckn.OnDemand.Utils.Search.getPaymentMode req
       fromSpecialLocationId_ = getFromSpecialLocationId req
       toSpecialLocationId_ = getToSpecialLocationId req
+      userClientDevice = Beckn.OnDemand.Utils.Search.buildUserClientDevice req
+      userBackendAppVersion = Beckn.OnDemand.Utils.Search.buildUserBackendAppVersion req
+  userBundleVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserBundleVersion req)
+  userSdkVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserSdkVersion req)
+  riderPreferredOption <- case Beckn.OnDemand.Utils.Search.buildRiderPreferredOption req of
+    Nothing -> pure DRPO.OneWay
+    Just txt -> case readMaybe (T.unpack txt) of
+      Just val -> pure val
+      Nothing -> do
+        logDebug $ "Invalid riderPreferredOption value: " <> txt <> ", defaulting to OneWay"
+        pure DRPO.OneWay
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   customerPhoneNum_ <- getPhoneNumberFromTag $ Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
