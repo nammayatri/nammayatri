@@ -11,6 +11,7 @@
 module Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab where
 
 import qualified Domain.Types.FarePolicy as Domain
+import qualified Domain.Types.FarePolicy.FarePolicyAmbulanceDetails as FPASlab
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Id as KTI
@@ -21,8 +22,17 @@ import Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab as BeamFPAD
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m [BeamFPAD.FullFarePolicyAmbulanceDetailsSlab]
 findById' (KTI.Id farePolicyId') = findAllWithOptionsKV [Se.Is BeamFPAD.farePolicyId $ Se.Eq farePolicyId'] (Se.Asc BeamFPAD.vehicleAge) Nothing Nothing
 
+getNextSlabId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m Int
+getNextSlabId = do
+  rows <- findAllWithOptionsKV [Se.Is BeamFPAD.id $ Se.GreaterThanOrEq 0] (Se.Desc BeamFPAD.id) (Just 1) Nothing
+  pure $ case listToMaybe rows of
+    Just (_, slab) -> FPASlab.id slab + 1
+    Nothing -> 1
+
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BeamFPAD.FullFarePolicyAmbulanceDetailsSlab -> m ()
-create = createWithKV
+create (farePolicyId, slab) = do
+  nextId <- getNextSlabId
+  createWithKV ((farePolicyId, slab { FPASlab.id = nextId }) :: BeamFPAD.FullFarePolicyAmbulanceDetailsSlab)
 
 delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
 delete farePolicyId = deleteWithKV [Se.Is BeamFPAD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]

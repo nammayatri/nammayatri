@@ -188,6 +188,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.CancellationFarePolicy as QCFP
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
+import qualified Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab as QueriesFPAD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
 import qualified Storage.Queries.FareProduct as SQF
@@ -2251,6 +2252,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
           newId <- generateGUID
           finalFarePolicy <- mergeFarePolicy newId firstFarePolicy
           CQFP.create finalFarePolicy
+          case finalFarePolicy.farePolicyDetails of
+            FarePolicy.AmbulanceDetails details ->
+              forM_ (NE.toList details.slabs) $ \slab ->
+                QueriesFPAD.create (finalFarePolicy.id, slab)
+            _ -> pure ()
           let merchanOperatingCityId = merchantOpCity.id
           (oldFareProducts, newBoundedAlreadyDeletedMap) <-
             case timeBounds of
@@ -2554,7 +2560,35 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
             let pricingSlabs = NE.fromList [FPIDPS.FPInterCityDetailsPricingSlabs {..}]
             return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {nightShiftCharge = mbNightCharges, perDayMaxAllowanceInMins = mbPerDayMaxAllowanceInMins, ..}
-          _ -> throwError $ InvalidRequest "Fare Policy Type not supported"
+          FarePolicy.Ambulance -> do
+            baseDistance :: Meters <- readCSVField idx row.baseDistance "Base Distance"
+            baseFare :: HighPrecMoney <- readCSVField idx row.baseFare "Base Fare"
+            perKmRate :: HighPrecMoney <- readCSVField idx row.perKmRateOneWay "Per Km Rate One Way"
+            let waitingChargeInfo =
+                  Just
+                    FarePolicy.WaitingChargeInfo
+                      { waitingCharge = waitingCharges,
+                        freeWaitingTime = freeWatingTime
+                      }
+
+                platformFeeInfo = mbPlatformFeeInfo
+                nightShiftCharge = mbNightCharges
+
+                slab :: FarePolicy.FPAmbulanceDetailsSlab
+                slab =
+                  FarePolicy.FPAmbulanceDetailsSlab
+                    { id = 0  -- Placeholder: database will auto-generate
+                    , baseFare = baseFare
+                    , baseDistance = baseDistance
+                    , vehicleAge = 0 -- Hardcoded to 0 for now
+                    , perKmRate = perKmRate
+                    , currency = currency
+                    , waitingChargeInfo = waitingChargeInfo
+                    , platformFeeInfo = platformFeeInfo
+                    , nightShiftCharge = nightShiftCharge
+                    }
+                details = FarePolicy.FPAmbulanceDetails (NE.fromList [slab])
+            return $ FarePolicy.AmbulanceDetails details
 
       driverExtraFeeBounds <- do
         let mbStartDistance :: Maybe Meters = readMaybeCSVField idx row.startDistanceDriverAddition "Start Distance Driver Addition"
@@ -2572,6 +2606,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"
       Rental _ -> unless (farePolicyType == FarePolicy.Rental) $ throwError $ InvalidRequest "Fare Policy Type not supported for rental"
+      Ambulance _ -> unless (farePolicyType == FarePolicy.Ambulance) $ throwError $ InvalidRequest "Fare Policy Type not supported for ambulance"
       _ -> pure ()
 
     makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DFareProduct.SearchSource -> Text
