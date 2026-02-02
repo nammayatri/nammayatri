@@ -1,0 +1,40 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+
+module: AlertIncident
+
+types:
+  # Response with list of incidents
+  AlertIncidentsResponse:
+    incidents: "[AlertIncidentInfo]"
+    totalCount: Int
+
+  # Alert incident information
+  AlertIncidentInfo:
+    id: Text
+    alertName: Text
+    serviceName: Text
+    alertGroup: Maybe Text
+    description: Maybe Text
+    severity: Maybe Text
+    firingTime: UTCTime
+    resolvedTime: Maybe UTCTime
+    downtimeSeconds: Maybe Int
+    status: IncidentStatus
+    receiver: Maybe Text
+    externalURL: Maybe Text
+    createdAt: UTCTime
+
+  IncidentStatus:
+    enum: "FIRING,RESOLVED"
+
+apis:
+  - GET: # GetAlertIncidents
+      endpoint: /alerts/incidents
+      auth: ApiAuthV2
+      query:
+        - fromTime: UTCTime
+        - toTime: UTCTime
+      response:
+        type: AlertIncidentsResponse

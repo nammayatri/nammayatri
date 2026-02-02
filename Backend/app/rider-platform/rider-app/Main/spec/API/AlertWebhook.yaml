@@ -1,0 +1,38 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+
+module: AlertWebhook
+
+types:
+  # VictoriaMetrics vmalert webhook request
+  VmAlertWebhookReq:
+    receiver: Maybe Text
+    status: Text
+    alerts: "[AlertDetail]"
+    externalURL: Maybe Text
+
+  AlertDetail:
+    status: Text
+    labels: AlertLabels
+    annotations: AlertAnnotations
+    startsAt: UTCTime
+    endsAt: UTCTime
+
+  AlertLabels:
+    alertname: Text
+    alert: Maybe Text
+    alertgroup: Maybe Text
+    severity: Maybe Text
+
+  AlertAnnotations:
+    description: Maybe Text
+    summary: Maybe Text
+
+apis:
+  - POST:
+      endpoint: /api/v1/alerts/update
+      auth: NoAuth
+      request:
+        type: VmAlertWebhookReq
+      response:
+        type: APISuccess
