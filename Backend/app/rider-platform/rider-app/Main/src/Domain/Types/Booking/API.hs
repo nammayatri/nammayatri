@@ -16,6 +16,7 @@ module Domain.Types.Booking.API where
 
 -- TODO:Move api entity of booking to UI
 
+
 import qualified BecknV2.OnDemand.Enums as VehicleCategory
 import Data.Aeson (eitherDecode, encode)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
@@ -38,6 +39,7 @@ import Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
+import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Sos as DSos
 import qualified Domain.Types.StopInformation as DSI
@@ -63,6 +65,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.JourneyLeg as QJL
+import qualified Storage.Queries.PaymentInvoice as QPI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
@@ -71,6 +74,7 @@ import Tools.Error
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
+import Domain.Types.Extra.PaymentInvoice (InvoiceAPIEntity(..))
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,
@@ -139,6 +143,8 @@ data BookingAPIEntity = BookingAPIEntity
     displayBookingId :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+
 
 data BookingCancellationReasonAPIEntity = BookingCancellationReasonAPIEntity
   { additionalInfo :: Maybe Text,
@@ -493,6 +499,7 @@ buildBookingAPIEntity booking personId = do
       else return Nothing
   makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason)
   where
+
     makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
     makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
 
@@ -520,6 +527,7 @@ favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 -- TODO move to Domain.Types.Ride.Extra
 buildRideAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DRide.Ride -> m RideAPIEntity
 buildRideAPIEntity DRide.Ride {..} = do
+  invoices <- QPI.findAllByRideId id
   stopsInfo <- if (fromMaybe False hasStops) then QSI.findAllByRideId id else return []
   let oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
@@ -543,7 +551,20 @@ buildRideAPIEntity DRide.Ride {..} = do
         talkedWithDriver = fromMaybe False talkedWithDriver,
         isInsured = Just isInsured,
         tipAmount = mkPriceAPIEntity <$> tipAmount,
+        invoices = mkInvoiceAPIEntity <$> invoices,
         ..
+      }
+  where
+    mkInvoiceAPIEntity :: DPI.PaymentInvoice -> InvoiceAPIEntity
+    mkInvoiceAPIEntity inv = InvoiceAPIEntity
+      { invoiceId = inv.id,
+        invoiceNumber = inv.invoiceNumber,
+        amount = round inv.amount,
+        currency = inv.currency,
+        invoiceType = inv.invoiceType,
+        paymentPurpose = inv.paymentPurpose,
+        paymentStatus = inv.paymentStatus,
+        createdAt = inv.createdAt
       }
 
 -- BOOKING REQUEST TYPE in ListV2 API

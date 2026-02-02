@@ -320,7 +320,9 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         mbInvoice <- QPaymentInvoice.findByPaymentOrderIdAndInvoiceType (Just mainPaymentIntentResp.orderId) DPI.PAYMENT
         whenJust mbInvoice $ \invoice -> do
           -- Update purpose prefix in invoice number: 190126-NY-RF-PMT-000001 → 190126-NY-TRF-PMT-000001
-          let newInvoiceNumber = Text.replace "-RF-" "-TRF-" invoice.invoiceNumber
+          let rf = "-" <> SPInvoice.showPurpose DPI.RIDE <> "-"
+          let trf = "-" <> SPInvoice.showPurpose DPI.RIDE_TIP <> "-"
+          let newInvoiceNumber = Text.replace rf trf invoice.invoiceNumber
           let updatedInvoice = invoice{paymentPurpose = RIDE_TIP, amount = fareWithTip.amount, invoiceNumber = newInvoiceNumber}
           QPaymentInvoice.updateByPrimaryKey updatedInvoice
     createFareBreakup
