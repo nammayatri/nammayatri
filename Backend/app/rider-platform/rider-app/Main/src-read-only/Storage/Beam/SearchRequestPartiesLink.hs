@@ -12,13 +12,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SearchRequestPartiesLinkT f = SearchRequestPartiesLinkT
-  { id :: B.C f Kernel.Prelude.Text,
-    partyId :: B.C f Kernel.Prelude.Text,
-    partyName :: B.C f Kernel.Prelude.Text,
-    partyType :: B.C f Domain.Types.Trip.TripParty,
-    searchRequestId :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { id :: (B.C f Kernel.Prelude.Text),
+    partyId :: (B.C f Kernel.Prelude.Text),
+    partyName :: (B.C f Kernel.Prelude.Text),
+    partyType :: (B.C f Domain.Types.Trip.TripParty),
+    searchRequestId :: (B.C f Kernel.Prelude.Text),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +28,6 @@ instance B.Table SearchRequestPartiesLinkT where
 
 type SearchRequestPartiesLink = SearchRequestPartiesLinkT Identity
 
-$(enableKVPG ''SearchRequestPartiesLinkT ['id] [['searchRequestId]])
+$(enableKVPG (''SearchRequestPartiesLinkT) [('id)] [[('searchRequestId)]])
 
-$(mkTableInstances ''SearchRequestPartiesLinkT "search_request_parties_link")
+$(mkTableInstances (''SearchRequestPartiesLinkT) "search_request_parties_link")
