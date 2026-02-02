@@ -1,0 +1,192 @@
+imports:
+  Text: Data.Text
+  SosType : Domain.Types.Sos
+  SosStatus : Domain.Types.Sos
+  SosState : Domain.Types.Sos
+  Sos : Domain.Types.Sos
+  LatLong : Kernel.External.Maps.Types
+
+module: Sos
+types:
+  SosRes:
+    sosId: Id Sos
+
+  SosDetailsRes:
+    sos: Maybe Sos
+
+  SosReq:
+    flow: SosType
+    rideId: Maybe Text
+    isRideEnded: Maybe Bool
+    sendPNOnPostRideSOS: Maybe Bool
+    notifyAllContacts: Maybe Bool
+    customerLocation: Maybe LatLong
+
+  SosUpdateReq:
+    status: SosStatus
+    comment: Maybe Text
+
+  MockSosReq:
+    onRide: Maybe Bool
+    startDrill: Maybe Bool
+
+  MarkAsSafeReq:
+    isMock: Maybe Bool
+    isRideEnded: Maybe Bool
+    isEndLiveTracking: Maybe Bool
+    contacts: Maybe [Text]
+
+  CallPoliceAPI:
+    rideId: Id Ride
+
+  SosLocationUpdateReq:
+    lat: Double
+    lon: Double
+    accuracy: Maybe Double
+
+  SosLocationRes:
+    lat: Double
+    lon: Double
+    accuracy: Maybe Double
+
+  SosTrackingRes:
+    currentLocation: Maybe SosLocationRes
+    sosState: Maybe SosState
+    status: SosStatus
+
+  StartTrackingReq:
+    contacts: "[Text]"
+    durationInMinutes: Int
+    customerLocation: Maybe LatLong
+    sosId: Maybe (Id Sos)
+
+  StartTrackingRes:
+    sosId: Id Sos
+    trackingUrl: Text
+
+  UpdateStateReq:
+    sosState: SosState
+
+  SosTrackingDetailsRes:
+    personName: Text
+    mobileNumber: Text
+
+apis:
+  # GET /sos/getDetails
+  - GET:
+      endpoint: /sos/getDetails/{rideId}
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+      response:
+        type: API.Types.UI.Sos.SosDetailsRes
+
+  # GET /sos/IvrOutcome
+  - GET:
+      endpoint: /sos/IvrOutcome
+      auth: NoAuth
+      query:
+        CallSid: Text
+        CallFrom: Text
+        digits: Text
+        CallStatus: Text
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # POST /sos/create
+  - POST:
+      endpoint: /sos/create
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.Sos.SosReq
+      response:
+        type: API.Types.UI.Sos.SosRes
+
+  # POST /sos/{sosId}/status
+  - POST:
+      endpoint: /sos/{sosId}/status
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.UI.Sos.SosUpdateReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # POST /sos/markRideAsSafe/{sosId}
+  - POST:
+      endpoint: /sos/markRideAsSafe/{sosId}
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.UI.Sos.MarkAsSafeReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # POST /sos/createMockSos
+  - POST:
+      endpoint: /sos/createMockSos
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.Sos.MockSosReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # # POST /sos/callPolice
+  - POST:
+      endpoint: /sos/callPolice
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.Sos.CallPoliceAPI
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # POST /sos/{sosId}/updateLocation
+  - POST:
+      endpoint: /sos/{sosId}/updateLocation
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.UI.Sos.SosLocationUpdateReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # GET /sos/{sosId}/tracking
+  - GET:
+      endpoint: /sos/{sosId}/tracking
+      auth: NoAuth
+      params:
+        sosId: Id Sos
+      response:
+        type: API.Types.UI.Sos.SosTrackingRes
+
+  # POST /sos/startTracking
+  - POST:
+      endpoint: /sos/startTracking
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.Sos.StartTrackingReq
+      response:
+        type: API.Types.UI.Sos.StartTrackingRes
+
+  # POST /sos/updateState/{sosId}
+  - POST:
+      endpoint: /sos/updateState/{sosId}
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.UI.Sos.UpdateStateReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # GET /sos/trackingDetails/{sosId}
+  - GET:
+      endpoint: /sos/trackingDetails/{sosId}
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      response:
+        type: API.Types.UI.Sos.SosTrackingDetailsRes

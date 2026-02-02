@@ -1,0 +1,71 @@
+imports:
+  UTCTime: Kernel.Prelude
+  RideShareOptions: Safety.Domain.Types.Common
+
+SafetySettings:
+  tableName: safety_settings
+  derives: "Generic"
+
+  fields:
+    personId : Text
+    nightSafetyChecks : Bool
+    hasCompletedMockSafetyDrill : Maybe Bool
+    hasCompletedSafetySetup : Bool
+    falseSafetyAlarmCount : Int
+    safetyCenterDisabledOnDate : Maybe UTCTime
+    informPoliceSos : Bool
+    autoCallDefaultContact : Bool
+    notifySosWithEmergencyContacts : Bool
+    enableUnexpectedEventsCheck : RideShareOptions
+    enablePostRideSafetyCheck : RideShareOptions
+    notifySafetyTeamForSafetyCheckFailure : Bool
+    shakeToActivate : Bool
+    enableOtpLessRide : Maybe Bool
+    aggregatedRideShareSetting : Maybe RideShareOptions
+
+  beamType:
+    falseSafetyAlarmCount: Maybe Int
+
+  fromTType:
+    falseSafetyAlarmCount: Kernel.Prelude.fromMaybe 0 falseSafetyAlarmCount|E
+
+  toTType:
+    falseSafetyAlarmCount: (Kernel.Prelude.Just falseSafetyAlarmCount)|E
+
+  constraints:
+    personId: PrimaryKey
+
+  default:
+    nightSafetyChecks : "false"
+    hasCompletedMockSafetyDrill : "false"
+    hasCompletedSafetySetup : "false"
+    informPoliceSos : "false"
+    autoCallDefaultContact : "false"
+    notifySosWithEmergencyContacts : "false"
+    enableUnexpectedEventsCheck : "'NEVER_SHARE'"
+    enablePostRideSafetyCheck : "false"
+    notifySafetyTeamForSafetyCheckFailure : "false"
+    shakeToActivate : "false"
+
+  queries:
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+
+    updateEmergencyContactStatus:
+      kvFunction: updateWithKV
+      params: [autoCallDefaultContact,notifySosWithEmergencyContacts]
+      where: personId
+
+    updateMockSafetyDrillStatus:
+      kvFunction: updateWithKV
+      params: [hasCompletedMockSafetyDrill]
+      where: personId
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+  defaultQueryTypeConstraint: "(Safety.Storage.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
