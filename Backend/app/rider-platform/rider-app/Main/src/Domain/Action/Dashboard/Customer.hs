@@ -58,7 +58,7 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Clickhouse.Sos as CHSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.SafetySettings as QSafety
+import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import qualified Storage.Queries.SavedReqLocation as QSRL
 
 ---------------------------------------------------------------------
@@ -134,7 +134,7 @@ getCustomerInfo merchantShortId opCity customerId = do
     runInReplica $
       QP.findById personId
         >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  safetySettings <- QSafety.findSafetySettingsWithFallback personId Nothing
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId Nothing
   -- merchant access checking
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
@@ -221,15 +221,15 @@ postCustomerUpdateSafetyCenterBlocking ::
   Flow APISuccess
 postCustomerUpdateSafetyCenterBlocking _ _ personId req = do
   let personId' = cast @Common.Customer @DP.Person personId
-  safetySettings <- QSafety.findSafetySettingsWithFallback personId' Nothing
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId' Nothing
   case req.resetCount of
     Just True -> do
-      QSafety.updateSafetyCenterBlockingCounter personId' (Just 0) Nothing
+      QSafetyExtra.updateSafetyCenterBlockingCounter personId' (Just 0) Nothing
     _ -> pure ()
   case req.incrementCount of
     Just True -> do
       now <- getCurrentTime
-      QSafety.updateSafetyCenterBlockingCounter personId' (Just $ safetySettings.falseSafetyAlarmCount + 1) $ blockingDate now safetySettings.falseSafetyAlarmCount
+      QSafetyExtra.updateSafetyCenterBlockingCounter personId' (Just $ safetySettings.falseSafetyAlarmCount + 1) $ blockingDate now safetySettings.falseSafetyAlarmCount
     _ -> pure ()
   return Success
   where

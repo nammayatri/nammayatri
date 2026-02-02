@@ -519,6 +519,7 @@ library
       Storage.Beam.IssueManagement
       Storage.Beam.Payment
       Storage.Beam.SchedulerJob
+      Storage.Beam.Sos
       Storage.Beam.SystemConfigs
       Storage.Beam.Yudhishthira
       Storage.CachedQueries.BecknConfig
@@ -1006,7 +1007,6 @@ library
       Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
       Domain.Types.RouteTripMapping
-      Domain.Types.SafetySettings
       Domain.Types.SavedReqLocation
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
@@ -1016,7 +1016,6 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
-      Domain.Types.Sos
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
       Domain.Types.StationsExtraInformation
@@ -1167,7 +1166,6 @@ library
       Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
       Storage.Beam.RouteTripMapping
-      Storage.Beam.SafetySettings
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
@@ -1177,7 +1175,6 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
-      Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.StationsExtraInformation
@@ -1346,7 +1343,6 @@ library
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.RouteDetails
       Storage.Queries.OrphanInstances.RoutePolylines
-      Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.ServiceCategory
@@ -1400,7 +1396,6 @@ library
       Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender
       Storage.Queries.RouteTripMapping
-      Storage.Queries.SafetySettings
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
@@ -1410,7 +1405,6 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
-      Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.StationsExtraInformation
