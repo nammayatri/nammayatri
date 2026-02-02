@@ -39,9 +39,7 @@ sendEmail serviceConfig emailConfig to otpCode = do
     case cloudType of
       AWS -> AWS.sendEmail emailConfig to otpCode
       GCP -> GCP.sendEmail (getSendGridUrl serviceConfig) emailConfig to otpCode
-      UNAVAILABLE -> do
-           putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
-           error "CloudType UNAVAILABLE: Cannot route email"
+      UNAVAILABLE -> error "CloudType UNAVAILABLE: Cannot route email"
 
 sendMagicLinkEmail :: EmailServiceConfig -> EmailMagicLinkConfig -> [Text] -> Text -> IO ()
 sendMagicLinkEmail serviceConfig emailConfig to token = do
@@ -50,20 +48,15 @@ sendMagicLinkEmail serviceConfig emailConfig to token = do
     case cloudType of
       AWS -> AWS.sendMagicLinkEmail emailConfig to token
       GCP -> GCP.sendMagicLinkEmail (getSendGridUrl serviceConfig) emailConfig to token
-      UNAVAILABLE -> do
-           putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
-           error "CloudType UNAVAILABLE: Cannot route magic link email"
+      UNAVAILABLE -> error "CloudType UNAVAILABLE: Cannot route magic link email"
 
 sendBusinessVerificationEmail :: EmailServiceConfig -> EmailBusinessVerificationConfig -> [Text] -> Text -> Text -> IO ()
 sendBusinessVerificationEmail serviceConfig emailConfig to otpCode token = do
-  putStrLn $ ("DEBUG: Email.Flow: sendBusinessVerificationEmail called. To: " :: Text) <> show to
   handleEmailRouting serviceConfig "sendBusinessVerificationEmail" $ \cloudType ->
     case cloudType of
       AWS -> AWS.sendBusinessVerificationEmail emailConfig to otpCode token
       GCP -> GCP.sendBusinessVerificationEmail (getSendGridUrl serviceConfig) emailConfig to otpCode token
-      UNAVAILABLE -> do
-           putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
-           error "CloudType UNAVAILABLE: Cannot route business verification email"
+      UNAVAILABLE -> error "CloudType UNAVAILABLE: Cannot route business verification email"
 
 sendEmailWithAttachment ::
   EmailServiceConfig ->
@@ -75,23 +68,17 @@ sendEmailWithAttachment ::
   Text -> -- Attachment filename
   IO ()
 sendEmailWithAttachment serviceConfig from to subject bodyText filePath fileName = do
-  putStrLn $ ("DEBUG: Email.Flow: sendEmailWithAttachment called. To: " :: Text) <> show to
   handleEmailRouting serviceConfig "sendEmailWithAttachment" $ \cloudType ->
     case cloudType of
       AWS -> AWS.sendEmailWithAttachment from to subject bodyText filePath fileName
       GCP -> GCP.sendEmailWithAttachment (getSendGridUrl serviceConfig) from to subject bodyText filePath fileName
-      UNAVAILABLE -> do
-           putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
-           error "CloudType UNAVAILABLE: Cannot route email with attachment"
+      UNAVAILABLE -> error "CloudType UNAVAILABLE: Cannot route email with attachment"
 
 handleEmailRouting :: EmailServiceConfig -> Text -> (CloudType -> IO ()) -> IO ()
-handleEmailRouting config caller action = do
+handleEmailRouting config _ action = do
   if config.isForcedAWS
     then do
-      putStrLn $ ("DEBUG: Email.Flow: " <> caller <> ": isForcedAWS is TRUE. Forcing routing to AWS SES." :: Text)
       action AWS
     else do
-      putStrLn $ ("DEBUG: Email.Flow: " <> caller <> ": isForcedAWS is FALSE. Looking up CloudType..." :: Text)
       cloudType <- lookupCloudType
-      putStrLn $ ("DEBUG: Email.Flow: " <> caller <> ": Detected CloudType: " :: Text) <> show cloudType
       action cloudType

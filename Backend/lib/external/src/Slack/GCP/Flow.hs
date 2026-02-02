@@ -23,13 +23,8 @@ import Kernel.Prelude
 
 publishMessage :: T.Text -> T.Text -> T.Text -> IO ()
 publishMessage projectId topicId message = do
-  putStrLn $ ("DEBUG: Slack.GCP.Flow: publishMessage called. Project: " :: Text) <> projectId <> ", Topic: " <> topicId
-  putStrLn $ ("DEBUG: Slack.GCP.Flow: Message content: " :: Text) <> message
   let msg = PubSub.Message (T.unpack message) Nothing Nothing
-  putStrLn ("DEBUG: Slack.GCP.Flow: PubSub.publishMessage invoking..." :: Text)
   result <- PubSub.publishMessage (T.unpack projectId) (T.unpack topicId) [msg]
   case result of
-    Left err -> do
-        putStrLn $ ("ERROR: Slack.GCP.Flow: Failed to publish message: " :: Text) <> T.pack err
-        error $ "Failed to publish message: " <> T.pack err
-    Right _ -> putStrLn ("DEBUG: Slack.GCP.Flow: Successfully published message to GCP Pub/Sub." :: Text)
+    Left err -> error $ "Failed to publish message: " <> T.pack err
+    Right _ -> return ()
