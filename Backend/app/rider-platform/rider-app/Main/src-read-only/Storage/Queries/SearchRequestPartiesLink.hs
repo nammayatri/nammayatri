@@ -23,7 +23,7 @@ createMany = traverse_ create
 
 findAllBySearchRequestId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.SearchRequestPartiesLink.SearchRequestPartiesLink])
+  (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ([Domain.Types.SearchRequestPartiesLink.SearchRequestPartiesLink]))
 findAllBySearchRequestId searchRequestId = do findAllWithKV [Se.Is Beam.searchRequestId $ Se.Eq (Kernel.Types.Id.getId searchRequestId)]
 
 instance FromTType' Beam.SearchRequestPartiesLink Domain.Types.SearchRequestPartiesLink.SearchRequestPartiesLink where

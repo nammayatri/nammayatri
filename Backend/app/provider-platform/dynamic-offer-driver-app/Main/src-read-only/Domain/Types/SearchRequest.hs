@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ParcelType
 import qualified Domain.Types.Person
 import qualified Domain.Types.RiderDetails
+import qualified Domain.Types.RiderPreferredOption
 import qualified Domain.Types.Trip
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
@@ -68,6 +69,7 @@ data SearchRequest = SearchRequest
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
+    riderPreferredOption :: Domain.Types.RiderPreferredOption.RiderPreferredOption,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     searchTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -81,6 +83,10 @@ data SearchRequest = SearchRequest
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     transactionId :: Kernel.Prelude.Text,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory,
+    userBackendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    userBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    userClientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
+    userSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     validTill :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON)
