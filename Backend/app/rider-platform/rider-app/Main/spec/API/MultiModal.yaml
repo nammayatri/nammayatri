@@ -270,6 +270,9 @@ types:
     rsm: [TransportRouteStopMapping]
     ptcv: Text
     eligiblePassIds: Maybe [Text]
+    errorCode: Maybe Text
+    errorMessage: Maybe Text
+    serviceTier: Maybe Text
     derive': "Generic, ToSchema"
 
   UpdatePaymentOrderReq:
@@ -610,6 +613,8 @@ apis:
       params:
         vehicleType: VehicleCategory
         vehicleNumber: Text
+      query:
+        returnServiceTier: Bool
       response:
         type: PublicTransportData
 
