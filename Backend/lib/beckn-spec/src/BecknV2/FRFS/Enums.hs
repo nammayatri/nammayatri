@@ -112,21 +112,17 @@ instance ToSchema ServiceTierType where
 
 $(mkHttpInstancesForEnum ''ServiceTierType)
 
-data ServiceSubType = LF_BUS | AC_BUS | EV_BUS | ORDI_BUS
+data ServiceSubType = LF_BUS | EV_BUS
   deriving (Eq, Ord, Show, Read, Generic, ToParamSchema, ToSchema)
 
 instance FromJSON ServiceSubType where
   parseJSON (String "LF") = pure LF_BUS
-  parseJSON (String "AC") = pure AC_BUS
   parseJSON (String "EV") = pure EV_BUS
-  parseJSON (String "ORDI") = pure ORDI_BUS
   parseJSON _ = mzero  -- Silently ignore unknown values
 
 instance ToJSON ServiceSubType where
   toJSON LF_BUS = String "LF"
-  toJSON AC_BUS = String "AC"
   toJSON EV_BUS = String "EV"
-  toJSON ORDI_BUS = String "ORDI"
 
 $(mkHttpInstancesForEnum ''ServiceSubType)
 
