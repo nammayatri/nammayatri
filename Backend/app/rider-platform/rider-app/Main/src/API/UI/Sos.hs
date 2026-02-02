@@ -21,12 +21,12 @@ where
 import qualified Domain.Action.UI.Sos as DSos
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Sos as Sos
 import Environment
 import EulerHS.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Domain.Types.Sos as Sos
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth

@@ -12,17 +12,21 @@ import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Sos as DSos
+import qualified Domain.Types.Ride as DRide
 import qualified Environment
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Domain.Action.UI.Sos as SafetySos
+import qualified Safety.Domain.Types.Common as SafetyCommon
+import qualified Safety.Domain.Types.Sos as SafetyDSos
 import Storage.Beam.IssueManagement ()
+import Storage.Beam.Sos ()
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Sos as QSos
 
 getSosMediaSosMedia ::
   ShortId DM.Merchant ->
@@ -32,11 +36,12 @@ getSosMediaSosMedia ::
 getSosMediaSosMedia _merchantShortId _opCity customerId = do
   let personId = cast @Dashboard.Common.Customer @DP.Person customerId
   void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  sosList <- QSos.findByPersonId personId
+  let safetyPersonId = cast @DP.Person @SafetyCommon.Person personId
+  sosList <- SafetySos.findSosByPersonId safetyPersonId
   let sosWithMediaPairs =
         [ (mediaFileId, sos)
           | sos <- sosList,
-            sos.entityType == Just DSos.Ride,
+            sos.entityType == Just SafetyDSos.Ride,
             mediaFileId <- sos.mediaFiles
         ]
 
@@ -57,7 +62,9 @@ getSosMediaSosMedia _merchantShortId _opCity customerId = do
           Nothing -> throwError $ InvalidRequest "No S3 file path found"
           Just s3Path -> S3.get $ T.unpack s3Path
 
-        let rideId = cast sos.rideId
+        rideId <- case sos.rideId of
+          Nothing -> throwError $ InvalidRequest "Ride ID not found for SOS"
+          Just rid -> return $ cast @SafetyCommon.Ride @Dashboard.Common.Ride rid
         return $
           Common.GetSosMediaResponse
             { content = content,

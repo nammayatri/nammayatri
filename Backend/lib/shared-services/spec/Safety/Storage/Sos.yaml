@@ -1,17 +1,20 @@
 imports:
-  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  Merchant: Domain.Types.Merchant
-  Person: Domain.Types.Person
-  Ride: Domain.Types.Ride
+  UTCTime: Kernel.Prelude
+  ShortId: Kernel.Types.Id
+  Person: Safety.Domain.Types.Common
+  Merchant: Safety.Domain.Types.Common
+  Ride: Safety.Domain.Types.Common
   MediaFile: IssueManagement.Domain.Types.MediaFile
+  MerchantOperatingCity: Safety.Domain.Types.Common
 
 Sos:
   tableName: sos
+  derives: "Generic, Show, ToJSON, FromJSON, ToSchema"
 
   fields:
     id : Id Sos
     personId : Id Person
-    rideId : Id Ride
+    rideId : Maybe (Id Ride)
     flow : SosType
     status : SosStatus
     ticketId : Maybe Text
@@ -19,6 +22,10 @@ Sos:
     trackingExpiresAt : Maybe UTCTime
     sosState : Maybe SosState
     entityType : Maybe SosEntityType
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    createdAt : UTCTime
+    updatedAt : UTCTime
 
   types:
     EmergencyContactId:
@@ -88,4 +95,6 @@ Sos:
 
   constraints:
     id: PrimaryKey
-    rideId: SecondaryKey
+
+  defaultQueryTypeConstraint: "(Safety.Storage.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

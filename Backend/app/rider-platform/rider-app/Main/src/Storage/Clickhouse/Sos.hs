@@ -19,18 +19,18 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
-import qualified Domain.Types.Sos as DSos
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Id
+import qualified Safety.Domain.Types.Sos as SafetyDSos
 
 data SosT f = SosT
-  { flow :: C f DSos.SosType,
-    id :: C f (Id DSos.Sos),
+  { flow :: C f SafetyDSos.SosType,
+    id :: C f (Id SafetyDSos.Sos),
     personId :: C f (Id DP.Person),
     rideId :: C f (Id DR.Ride),
-    status :: C f DSos.SosStatus,
+    status :: C f SafetyDSos.SosStatus,
     ticketId :: C f (Maybe Text),
     merchantId :: C f (Maybe (Id DM.Merchant)),
     merchantOperatingCityId :: C f (Maybe (Id DMOC.MerchantOperatingCity))
@@ -39,9 +39,9 @@ data SosT f = SosT
 
 deriving instance Show Sos
 
-instance ClickhouseValue DSos.SosType
+instance ClickhouseValue SafetyDSos.SosType
 
-instance ClickhouseValue DSos.SosStatus
+instance ClickhouseValue SafetyDSos.SosStatus
 
 sosTTable :: SosT (FieldModification SosT)
 sosTTable =

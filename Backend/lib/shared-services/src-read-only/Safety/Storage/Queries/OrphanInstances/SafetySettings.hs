@@ -1,28 +1,29 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.OrphanInstances.SafetySettings where
+module Safety.Storage.Queries.OrphanInstances.SafetySettings where
 
-import qualified Domain.Types.SafetySettings
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Storage.Beam.SafetySettings as Beam
+import qualified Safety.Domain.Types.SafetySettings
+import qualified Safety.Storage.Beam.SafetySettings as Beam
 
-instance FromTType' Beam.SafetySettings Domain.Types.SafetySettings.SafetySettings where
+instance FromTType' Beam.SafetySettings Safety.Domain.Types.SafetySettings.SafetySettings where
   fromTType' (Beam.SafetySettingsT {..}) = do
     pure $
       Just
-        Domain.Types.SafetySettings.SafetySettings
+        Safety.Domain.Types.SafetySettings.SafetySettings
           { aggregatedRideShareSetting = aggregatedRideShareSetting,
             autoCallDefaultContact = autoCallDefaultContact,
             enableOtpLessRide = enableOtpLessRide,
             enablePostRideSafetyCheck = enablePostRideSafetyCheck,
             enableUnexpectedEventsCheck = enableUnexpectedEventsCheck,
-            falseSafetyAlarmCount = fromMaybe 0 falseSafetyAlarmCount,
+            falseSafetyAlarmCount = Kernel.Prelude.fromMaybe 0 falseSafetyAlarmCount,
             hasCompletedMockSafetyDrill = hasCompletedMockSafetyDrill,
             hasCompletedSafetySetup = hasCompletedSafetySetup,
             informPoliceSos = informPoliceSos,
@@ -31,19 +32,18 @@ instance FromTType' Beam.SafetySettings Domain.Types.SafetySettings.SafetySettin
             notifySosWithEmergencyContacts = notifySosWithEmergencyContacts,
             personId = Kernel.Types.Id.Id personId,
             safetyCenterDisabledOnDate = safetyCenterDisabledOnDate,
-            shakeToActivate = shakeToActivate,
-            updatedAt = updatedAt
+            shakeToActivate = shakeToActivate
           }
 
-instance ToTType' Beam.SafetySettings Domain.Types.SafetySettings.SafetySettings where
-  toTType' (Domain.Types.SafetySettings.SafetySettings {..}) = do
+instance ToTType' Beam.SafetySettings Safety.Domain.Types.SafetySettings.SafetySettings where
+  toTType' (Safety.Domain.Types.SafetySettings.SafetySettings {..}) = do
     Beam.SafetySettingsT
       { Beam.aggregatedRideShareSetting = aggregatedRideShareSetting,
         Beam.autoCallDefaultContact = autoCallDefaultContact,
         Beam.enableOtpLessRide = enableOtpLessRide,
         Beam.enablePostRideSafetyCheck = enablePostRideSafetyCheck,
         Beam.enableUnexpectedEventsCheck = enableUnexpectedEventsCheck,
-        Beam.falseSafetyAlarmCount = Just falseSafetyAlarmCount,
+        Beam.falseSafetyAlarmCount = (Kernel.Prelude.Just falseSafetyAlarmCount),
         Beam.hasCompletedMockSafetyDrill = hasCompletedMockSafetyDrill,
         Beam.hasCompletedSafetySetup = hasCompletedSafetySetup,
         Beam.informPoliceSos = informPoliceSos,
@@ -52,6 +52,5 @@ instance ToTType' Beam.SafetySettings Domain.Types.SafetySettings.SafetySettings
         Beam.notifySosWithEmergencyContacts = notifySosWithEmergencyContacts,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.safetyCenterDisabledOnDate = safetyCenterDisabledOnDate,
-        Beam.shakeToActivate = shakeToActivate,
-        Beam.updatedAt = updatedAt
+        Beam.shakeToActivate = shakeToActivate
       }
