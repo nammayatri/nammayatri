@@ -4,6 +4,7 @@ module API.Internal
   )
 where
 
+import qualified API.Action.UI.AlertWebhook as AlertWebhook
 import qualified API.Action.UI.InsuranceInternal as InsuranceInternal
 import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
 import qualified API.Internal.Cac as Cac
@@ -32,6 +33,7 @@ type API =
            :<|> ViolationDetection.API
            :<|> RideSearchExpired.API
            :<|> GetPickupInstructions.API
+           :<|> AlertWebhook.API
        )
 
 handler :: FlowServer API
@@ -47,3 +49,4 @@ handler =
     :<|> ViolationDetection.handler
     :<|> RideSearchExpired.handler
     :<|> GetPickupInstructions.handler
+    :<|> AlertWebhook.handler

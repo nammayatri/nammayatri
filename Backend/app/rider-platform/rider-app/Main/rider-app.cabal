@@ -164,6 +164,7 @@ library
       Domain.Action.Beckn.OnStatus
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
+      Domain.Action.Dashboard.AlertIncident
       Domain.Action.Dashboard.AppManagement.Customer
       Domain.Action.Dashboard.AppManagement.EventManagement
       Domain.Action.Dashboard.AppManagement.EventManagement.Utils
@@ -214,6 +215,7 @@ library
       Domain.Action.Internal.StopEvents
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.AadhaarVerification
+      Domain.Action.UI.AlertWebhook
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.AttractionRecommend
       Domain.Action.UI.BBPS
@@ -549,6 +551,7 @@ library
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleConfig
       Storage.CachedQueries.WhiteListOrg
+      Storage.Clickhouse.AlertIncident
       Storage.Clickhouse.Booking
       Storage.Clickhouse.BookingCancellationReason
       Storage.Clickhouse.ConductorStats
@@ -701,6 +704,7 @@ library
       API.Action.Dashboard.IssueManagement.Issue
       API.Action.Dashboard.IssueManagement.IssueList
       API.Action.Dashboard.Management
+      API.Action.Dashboard.Management.AlertIncident
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.Customer
       API.Action.Dashboard.Management.FRFSAlerts
@@ -726,6 +730,7 @@ library
       API.Action.Dashboard.RideBooking.Registration
       API.Action.Dashboard.RideBooking.Search
       API.Action.Dashboard.RideBooking.Select
+      API.Action.UI.AlertWebhook
       API.Action.UI.AttractionRecommend
       API.Action.UI.BBPS
       API.Action.UI.Cac
@@ -806,6 +811,7 @@ library
       API.Types.Dashboard.RideBooking.Registration
       API.Types.Dashboard.RideBooking.Search
       API.Types.Dashboard.RideBooking.Select
+      API.Types.UI.AlertWebhook
       API.Types.UI.AttractionRecommend
       API.Types.UI.BBPS
       API.Types.UI.CRIS
@@ -849,6 +855,7 @@ library
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AadhaarVerification
+      Domain.Types.AlertIncident
       Domain.Types.AppInstalls
       Domain.Types.BBPS
       Domain.Types.BBPSConfig
@@ -1003,6 +1010,7 @@ library
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
       Storage.Beam.AadhaarVerification
+      Storage.Beam.AlertIncident
       Storage.Beam.AmbulanceDetails
       Storage.Beam.AppInstalls
       Storage.Beam.BBPS
@@ -1162,6 +1170,7 @@ library
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
       Storage.Queries.AadhaarVerification
+      Storage.Queries.AlertIncident
       Storage.Queries.AppInstalls
       Storage.Queries.BBPS
       Storage.Queries.BBPSConfig
