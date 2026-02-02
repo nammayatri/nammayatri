@@ -18,7 +18,6 @@ import Data.Aeson
 import qualified Data.Aeson as DA
 import Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
-import qualified Domain.Types.SafetySettings as DSafety
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
@@ -27,6 +26,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (maskText)
 import qualified Lib.Yudhishthira.Tools.Utils as YUtils
+import qualified Safety.Domain.Types.SafetySettings as DSafety
 
 data PersonAPIEntity = PersonAPIEntity
   { id :: Id Person,

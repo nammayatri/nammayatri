@@ -2,22 +2,24 @@ module Storage.Queries.SafetySettingsExtra where
 
 import Control.Applicative ((<|>))
 import Domain.Types.Person
-import qualified Domain.Types.SafetySettings as DSafety
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
+import qualified Safety.Domain.Types.Common as SafetyCommon
+import qualified Safety.Domain.Types.SafetySettings as DSafety
+import qualified Safety.Storage.Beam.SafetySettings as BeamP
+import Safety.Storage.Queries.OrphanInstances.SafetySettings ()
 import qualified Sequelize as Se
-import qualified Storage.Beam.SafetySettings as BeamP
-import Storage.Queries.OrphanInstances.SafetySettings ()
+import Storage.Beam.Sos ()
 import qualified Storage.Queries.Person as QPerson
 
 data UpdateEmergencyInfo = UpdateEmergencyInfo
   { autoCallDefaultContact :: Maybe Bool,
-    enablePostRideSafetyCheck :: Maybe RideShareOptions,
-    enableUnexpectedEventsCheck :: Maybe RideShareOptions,
+    enablePostRideSafetyCheck :: Maybe SafetyCommon.RideShareOptions,
+    enableUnexpectedEventsCheck :: Maybe SafetyCommon.RideShareOptions,
     hasCompletedMockSafetyDrill :: Maybe Bool,
     hasCompletedSafetySetup :: Maybe Bool,
     informPoliceSos :: Maybe Bool,
@@ -26,7 +28,7 @@ data UpdateEmergencyInfo = UpdateEmergencyInfo
     notifySosWithEmergencyContacts :: Maybe Bool,
     shakeToActivate :: Maybe Bool,
     enableOtpLessRide :: Maybe Bool,
-    aggregatedRideShare :: Maybe RideShareOptions
+    aggregatedRideShare :: Maybe SafetyCommon.RideShareOptions
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -40,13 +42,11 @@ upsert ::
   UpdateEmergencyInfo ->
   m ()
 upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = Hedis.withLockRedis (mkSafetySettingsByPersonIdKey personId) 1 $ do
-  now <- getCurrentTime
   res <- findOneWithKV [Se.And [Se.Is BeamP.personId $ Se.Eq personId]]
   if isJust res
     then
       updateWithKV
-        ( [Se.Set BeamP.updatedAt now]
-            <> [Se.Set BeamP.autoCallDefaultContact (fromJust autoCallDefaultContact) | isJust autoCallDefaultContact]
+        ( [Se.Set BeamP.autoCallDefaultContact (fromJust autoCallDefaultContact) | isJust autoCallDefaultContact]
             <> [Se.Set BeamP.enablePostRideSafetyCheck (fromJust enablePostRideSafetyCheck) | isJust enablePostRideSafetyCheck]
             <> [Se.Set BeamP.enableUnexpectedEventsCheck (fromJust enableUnexpectedEventsCheck) | isJust enableUnexpectedEventsCheck]
             <> [Se.Set BeamP.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill | isJust hasCompletedMockSafetyDrill]
@@ -62,11 +62,16 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = Hedis.withLockRe
         [Se.Is BeamP.personId (Se.Eq personId)]
     else do
       person <- runInReplica $ QPerson.findById (Kernel.Types.Id.Id personId) >>= fromMaybeM (PersonNotFound personId)
-      let enableUnexpectedEventsCheckValue = maybe (bool NEVER_SHARE SHARE_WITH_TIME_CONSTRAINTS person.nightSafetyChecks) identity enableUnexpectedEventsCheck
+      let enableUnexpectedEventsCheckValue = maybe (bool SafetyCommon.NEVER_SHARE SafetyCommon.SHARE_WITH_TIME_CONSTRAINTS person.nightSafetyChecks) identity enableUnexpectedEventsCheck
+          convertRideShareOptions :: RideShareOptions -> SafetyCommon.RideShareOptions
+          convertRideShareOptions = \case
+            ALWAYS_SHARE -> SafetyCommon.ALWAYS_SHARE
+            SHARE_WITH_TIME_CONSTRAINTS -> SafetyCommon.SHARE_WITH_TIME_CONSTRAINTS
+            NEVER_SHARE -> SafetyCommon.NEVER_SHARE
           safetySettings =
             DSafety.SafetySettings
               { autoCallDefaultContact = fromMaybe person.shareEmergencyContacts autoCallDefaultContact,
-                enablePostRideSafetyCheck = fromMaybe NEVER_SHARE enablePostRideSafetyCheck,
+                enablePostRideSafetyCheck = fromMaybe SafetyCommon.NEVER_SHARE enablePostRideSafetyCheck,
                 enableUnexpectedEventsCheck = enableUnexpectedEventsCheckValue,
                 falseSafetyAlarmCount = person.falseSafetyAlarmCount,
                 hasCompletedMockSafetyDrill = bool person.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill (isJust hasCompletedMockSafetyDrill),
@@ -78,18 +83,15 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = Hedis.withLockRe
                 personId = Kernel.Types.Id.Id personId,
                 safetyCenterDisabledOnDate = person.safetyCenterDisabledOnDate,
                 shakeToActivate = fromMaybe False shakeToActivate,
-                updatedAt = now,
                 enableOtpLessRide = enableOtpLessRide <|> person.enableOtpLessRide,
-                aggregatedRideShareSetting = person.shareTripWithEmergencyContactOption
+                aggregatedRideShareSetting = convertRideShareOptions <$> person.shareTripWithEmergencyContactOption
               }
       createWithKV safetySettings
 
 updateSafetyCenterBlockingCounter :: (MonadFlow m, EsqDBFlow m r) => Kernel.Types.Id.Id Person -> Maybe Int -> Maybe UTCTime -> m ()
 updateSafetyCenterBlockingCounter personId counter mbDate = do
-  now <- getCurrentTime
   updateWithKV
-    ( [ Se.Set BeamP.updatedAt now,
-        Se.Set BeamP.safetyCenterDisabledOnDate mbDate
+    ( [ Se.Set BeamP.safetyCenterDisabledOnDate mbDate
       ]
         <> [Se.Set BeamP.falseSafetyAlarmCount counter | isJust counter]
     )
@@ -97,17 +99,21 @@ updateSafetyCenterBlockingCounter personId counter mbDate = do
 
 findSafetySettingsWithFallback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Kernel.Types.Id.Id Person -> Maybe Person -> m DSafety.SafetySettings
 findSafetySettingsWithFallback personId mbPerson = Hedis.withLockRedisAndReturnValue (mkSafetySettingsByPersonIdKey personId.getId) 1 $ do
-  now <- getCurrentTime
   res <- findOneWithKV [Se.And [Se.Is BeamP.personId $ Se.Eq personId.getId]]
   case res of
     Just safetySettings -> return safetySettings
     Nothing -> do
       person <- maybe (runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)) return mbPerson
-      let safetySettings =
+      let convertRideShareOptions :: RideShareOptions -> SafetyCommon.RideShareOptions
+          convertRideShareOptions = \case
+            ALWAYS_SHARE -> SafetyCommon.ALWAYS_SHARE
+            SHARE_WITH_TIME_CONSTRAINTS -> SafetyCommon.SHARE_WITH_TIME_CONSTRAINTS
+            NEVER_SHARE -> SafetyCommon.NEVER_SHARE
+          safetySettings =
             DSafety.SafetySettings
               { autoCallDefaultContact = person.shareEmergencyContacts,
-                enablePostRideSafetyCheck = NEVER_SHARE,
-                enableUnexpectedEventsCheck = NEVER_SHARE,
+                enablePostRideSafetyCheck = SafetyCommon.NEVER_SHARE,
+                enableUnexpectedEventsCheck = SafetyCommon.NEVER_SHARE,
                 falseSafetyAlarmCount = person.falseSafetyAlarmCount,
                 hasCompletedMockSafetyDrill = person.hasCompletedMockSafetyDrill,
                 hasCompletedSafetySetup = person.hasCompletedSafetySetup,
@@ -117,10 +123,9 @@ findSafetySettingsWithFallback personId mbPerson = Hedis.withLockRedisAndReturnV
                 notifySosWithEmergencyContacts = person.shareEmergencyContacts,
                 safetyCenterDisabledOnDate = person.safetyCenterDisabledOnDate,
                 shakeToActivate = False,
-                updatedAt = now,
                 enableOtpLessRide = person.enableOtpLessRide,
-                aggregatedRideShareSetting = person.shareTripWithEmergencyContactOption,
-                ..
+                aggregatedRideShareSetting = convertRideShareOptions <$> person.shareTripWithEmergencyContactOption,
+                personId = Kernel.Types.Id.Id personId.getId
               }
       _ <- createWithKV safetySettings
       return safetySettings

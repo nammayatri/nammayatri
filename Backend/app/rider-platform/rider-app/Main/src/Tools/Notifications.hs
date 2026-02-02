@@ -60,6 +60,7 @@ import Kernel.Utils.Common hiding (getCurrentTime)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Safety.Domain.Types.Common as SafetyCommon
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Quote
@@ -78,7 +79,7 @@ import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonDisability as PD
-import Storage.Queries.SafetySettings as QSafety
+import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -568,10 +569,15 @@ notifyOnRideCompleted booking ride otherParties = do
       )
 
   fork "Create Post ride safety job" $ do
-    safetySettings <- QSafety.findSafetySettingsWithFallback person.id (Just person)
+    safetySettings <- QSafetyExtra.findSafetySettingsWithFallback person.id (Just person)
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
-    when (checkSafetySettingConstraint (Just safetySettings.enablePostRideSafetyCheck) riderConfig now) $ do
+    let convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> RideShareOptions
+        convertToPersonRideShareOptions = \case
+          SafetyCommon.ALWAYS_SHARE -> ALWAYS_SHARE
+          SafetyCommon.SHARE_WITH_TIME_CONSTRAINTS -> SHARE_WITH_TIME_CONSTRAINTS
+          SafetyCommon.NEVER_SHARE -> NEVER_SHARE
+    when (checkSafetySettingConstraint (Just $ convertToPersonRideShareOptions safetySettings.enablePostRideSafetyCheck) riderConfig now) $ do
       let scheduleAfter = riderConfig.postRideSafetyNotificationDelay
           postRideSafetyNotificationJobData = PostRideSafetyNotificationJobData {rideId = ride.id, personId = booking.riderId}
       createJobIn @_ @'PostRideSafetyNotification ride.merchantId ride.merchantOperatingCityId scheduleAfter (postRideSafetyNotificationJobData :: PostRideSafetyNotificationJobData)

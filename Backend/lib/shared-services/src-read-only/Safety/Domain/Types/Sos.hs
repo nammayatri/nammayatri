@@ -1,35 +1,30 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.Sos where
+module Safety.Domain.Types.Sos where
 
 import Data.Aeson
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Person
-import qualified Domain.Types.Ride
 import qualified IssueManagement.Domain.Types.MediaFile
+import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Safety.Domain.Types.Common
 import qualified Tools.Beam.UtilsTH
 
 data Sos = Sos
-  { entityType :: Kernel.Prelude.Maybe Domain.Types.Sos.SosEntityType,
-    externalReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    externalReferenceStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    externalStatusHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    flow :: Domain.Types.Sos.SosType,
-    id :: Kernel.Types.Id.Id Domain.Types.Sos.Sos,
+  { createdAt :: Kernel.Prelude.UTCTime,
+    entityType :: Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosEntityType,
+    flow :: Safety.Domain.Types.Sos.SosType,
+    id :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos,
     mediaFiles :: [Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile],
-    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
-    sosState :: Kernel.Prelude.Maybe Domain.Types.Sos.SosState,
-    status :: Domain.Types.Sos.SosStatus,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Common.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Common.MerchantOperatingCity),
+    personId :: Kernel.Types.Id.Id Safety.Domain.Types.Common.Person,
+    rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Common.Ride),
+    sosState :: Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosState,
+    status :: Safety.Domain.Types.Sos.SosStatus,
     ticketId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     trackingExpiresAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
-    createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -38,7 +33,7 @@ data EmergencyContactId = EmergencyContactId Kernel.Prelude.Text deriving (Eq, O
 
 data SosEntityType = Ride | NonRide deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SosMockDrill = SosMockDrill {personId :: Kernel.Types.Id.Id Domain.Types.Person.Person, status :: Domain.Types.Sos.SosStatus} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+data SosMockDrill = SosMockDrill {personId :: Kernel.Types.Id.Id Safety.Domain.Types.Common.Person, status :: Safety.Domain.Types.Sos.SosStatus} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data SosState = LiveTracking | SosActive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -47,7 +42,7 @@ data SosStatus = Resolved | NotResolved | Pending | MockPending | MockResolved d
 data SosType
   = Police
   | CustomerCare
-  | EmergencyContact Domain.Types.Sos.EmergencyContactId
+  | EmergencyContact Safety.Domain.Types.Sos.EmergencyContactId
   | SafetyFlow
   | CSAlertSosTicket
   | AudioRecording
