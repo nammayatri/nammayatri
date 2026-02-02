@@ -484,5 +484,6 @@ in  { esqDBCfg
       , remotePath = "/tmp/remote_path"
       }
     , blackListedJobs = [] : List Text
+    , cityDBSchema = "atlas_app"
     , emailServiceConfig
     }

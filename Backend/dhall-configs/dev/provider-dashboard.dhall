@@ -163,5 +163,6 @@ in  { esqDBCfg
     , internalAuthAPIKey = "ae288466-2add-11ee-be56-0242ac120002"
     , passwordExpiryDays = None Integer
     , enforceStrongPasswordPolicy = False
+    , cityDBSchema = "atlas_driver_offer_bpp" -- Note: For Production, change this to `atlas_app` as Driver Dashboard uses Customer DB instance in Prod.
     , inMemConfig
     }

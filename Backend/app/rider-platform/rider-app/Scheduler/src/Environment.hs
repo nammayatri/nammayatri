@@ -22,6 +22,7 @@ module Environment
   )
 where
 
+import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
@@ -53,7 +54,7 @@ import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event hiding (id)
 import Passetto.Client
 import SharedLogic.GoogleTranslate
-import System.Environment (lookupEnv)
+import System.Environment (lookupEnv, setEnv)
 import Tools.Metrics
 import Tools.Metrics.BAPMetrics.Types
 import TransactionLogs.Types
@@ -143,6 +144,7 @@ data HandlerEnv = HandlerEnv
 buildHandlerEnv :: HandlerCfg -> IO HandlerEnv
 buildHandlerEnv HandlerCfg {..} = do
   let AppCfg {..} = appCfg
+  setEnv "GET_MY_SCHEMA" (T.unpack cityDBSchema)
   hostname <- fmap cs <$> lookupEnv "POD_NAME" :: IO (Maybe Text)
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname

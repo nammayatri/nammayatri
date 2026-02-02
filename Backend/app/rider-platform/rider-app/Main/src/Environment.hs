@@ -195,6 +195,7 @@ data AppCfg = AppCfg
     corporatePartnerApiToken :: Text,
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
+    cityDBSchema :: Text,
     sftpConfig :: SFTPConfig
   }
   deriving (Generic, FromDhall)
@@ -330,6 +331,7 @@ buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv cfg@AppCfg {..} = do
   hostname <- getPodName
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
+  SE.setEnv "GET_MY_SCHEMA" (T.unpack cityDBSchema)
   version <- lookupDeploymentVersion
   cloudType <- Just <$> lookupCloudType
   isShuttingDown <- newEmptyTMVarIO

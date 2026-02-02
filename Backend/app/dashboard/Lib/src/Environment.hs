@@ -14,6 +14,7 @@
 
 module Environment where
 
+import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import Domain.Types.ServerName
@@ -79,6 +80,7 @@ data AppCfg = AppCfg
     kvConfigUpdateFrequency :: Int,
     passwordExpiryDays :: Maybe Int,
     enforceStrongPasswordPolicy :: Bool,
+    cityDBSchema :: Text,
     inMemConfig :: InMemConfig
   }
   deriving (Generic, FromDhall)
@@ -138,6 +140,7 @@ data AppEnv = AppEnv
 
 buildAppEnv :: Text -> AppCfg -> IO AppEnv
 buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
+  setEnv "GET_MY_SCHEMA" (T.unpack cityDBSchema)
   podName <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName

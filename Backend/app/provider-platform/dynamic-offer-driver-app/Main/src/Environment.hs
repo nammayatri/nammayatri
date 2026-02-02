@@ -67,7 +67,7 @@ import SharedLogic.GoogleTranslate
 import Slack.Types (SlackNotificationConfig)
 import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
-import System.Environment (lookupEnv)
+import System.Environment (lookupEnv, setEnv)
 import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
@@ -172,7 +172,8 @@ data AppCfg = AppCfg
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
     noSignatureSubscribers :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
-    blackListedJobs :: [Text]
+    blackListedJobs :: [Text],
+    cityDBSchema :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -314,6 +315,7 @@ buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpirationSeconds, driverQuoteExpirationSeconds = _driverQuoteExpirationSeconds, searchRequestExpirationSecondsForMultimodal = _searchRequestExpirationSecondsForMultimodal, ..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
+  setEnv "GET_MY_SCHEMA" (T.unpack cityDBSchema)
   version <- lookupDeploymentVersion
   cloudType <- Just <$> lookupCloudType
   passettoContext <- uncurry mkDefPassettoContext encTools.service
