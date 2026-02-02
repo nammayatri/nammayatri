@@ -37,6 +37,7 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.RiderConfig as DRC
+import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.SearchRequest as SearchRequest
 import Domain.Types.Trip (TripCategory)
 import qualified Domain.Types.Trip as Trip
@@ -607,7 +608,7 @@ notifyOnExpiration searchReq = do
   let personId = searchReq.riderId
   person <- Person.findById personId
   let tripCategory = case searchReq.riderPreferredOption of
-        SearchRequest.Delivery -> Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)
+        DRPO.Delivery -> Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)
         _ -> Nothing
   case person of
     Just p -> do
@@ -966,7 +967,7 @@ notifyOnQuoteReceived quote = do
   let entity = Notification.Entity Notification.Product quote.requestId.getId ()
       dynamicParams = EmptyDynamicParam
       tripCategory = case searchRequest.riderPreferredOption of
-        SearchRequest.Delivery -> Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)
+        DRPO.Delivery -> Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)
         _ -> Nothing
   dynamicNotifyPerson
     person
