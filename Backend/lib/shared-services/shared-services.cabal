@@ -94,6 +94,8 @@ library
       Registry.Beckn.Interface.Types
       Registry.Beckn.Nammayatri.Flow
       Registry.Beckn.Nammayatri.Types
+      Safety.Domain.Types.Common
+      Safety.Storage.BeamFlow
       UrlShortner.Common
       UrlShortner.Types
       API.Types.ProviderPlatform.IssueManagement

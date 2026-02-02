@@ -1,0 +1,96 @@
+imports:
+  UTCTime: Kernel.Prelude
+  ShortId: Kernel.Types.Id
+
+Sos:
+  tableName: sos
+  derives: "Generic"
+
+  fields:
+    id : Id Sos
+    personId : Text
+    rideId : Text
+    flow : SosType
+    status : SosStatus
+    ticketId : Maybe Text
+    mediaFiles : "[Text]"
+    trackingExpiresAt : Maybe UTCTime
+    sosState : Maybe SosState
+    entityType : Maybe SosEntityType
+    merchantId : Maybe Text
+    merchantOperatingCityId : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  types:
+    EmergencyContactId:
+      enum: "EmergencyContactId Text"
+
+    SosType:
+      enum: "Police,CustomerCare,EmergencyContact EmergencyContactId,SafetyFlow,CSAlertSosTicket,AudioRecording,KaptureDashboard"
+
+    SosStatus:
+      enum: "Resolved,NotResolved,Pending,MockPending,MockResolved"
+
+    SosState:
+      enum: "LiveTracking,SosActive"
+
+    SosEntityType:
+      enum: "Ride,NonRide"
+
+    SosMockDrill:
+      personId: Text
+      status : SosStatus
+
+  queries:
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateMediaFiles:
+      kvFunction: updateOneWithKV
+      params: [mediaFiles]
+      where: id
+    updateTrackingExpiresAt:
+      kvFunction: updateOneWithKV
+      params: [trackingExpiresAt]
+      where: id
+    updateState:
+      kvFunction: updateOneWithKV
+      params: [sosState]
+      where: id
+    updateEntityType:
+      kvFunction: updateOneWithKV
+      params: [entityType]
+      where: id
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByRideId:
+      kvFunction: findOneWithKV
+      where: rideId
+    findByTicketId:
+      kvFunction: findOneWithKV
+      where: ticketId
+    findByPersonId:
+      kvFunction: findAllWithKV
+      where: personId
+
+  beamType:
+    mediaFiles: Maybe [Text]
+
+  fromTType:
+    mediaFiles: Kernel.Prelude.fromMaybe [] mediaFiles|E
+
+  toTType:
+    mediaFiles: Kernel.Prelude.Just mediaFiles|E
+
+  sqlType:
+    mediaFiles: "text[]"
+
+  constraints:
+    id: PrimaryKey
+    rideId: SecondaryKey
+
+  defaultQueryTypeConstraint: "(Safety.Storage.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
