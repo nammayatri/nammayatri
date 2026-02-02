@@ -22,6 +22,7 @@ imports:
   BillingCategory: SharedLogic.Type
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+  SearchTry: Domain.Types.SearchTry
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -108,6 +109,8 @@ Booking:
     commission: Maybe HighPrecMoney
     displayBookingId: Maybe Text
     emailDomain: Maybe Text
+    searchTryId: Maybe (Id SearchTry)
+    dqDurationToPickup: Maybe Seconds
 
   excludedFields:
     - merchantId
@@ -130,6 +133,7 @@ Booking:
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
     billingCategory: Maybe BillingCategory
+    searchTryId: Maybe Text
 
   beamFields:
     tripCategory:
@@ -179,6 +183,7 @@ Booking:
     isInsured: Just isInsured|E
     isPetRide: Just isPetRide|E
     billingCategory: Just billingCategory|E
+    searchTryId: (Kernel.Types.Id.getId <$> searchTryId)|E
 
   intermediateTransformers:
     fromTType:
@@ -208,6 +213,7 @@ Booking:
     isInsured: fromMaybe False isInsured|E
     isPetRide: fromMaybe False isPetRide|E
     billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+    searchTryId: Kernel.Types.Id.Id <$> searchTryId|E
 
   sqlType:
     status: character varying(255)
@@ -233,6 +239,8 @@ Booking:
     estimateId: character varying(255)
     configInExperimentVersions: "json"
     displayBookingId: character varying(25)
+    searchTryId: character varying(36)
+    dqDurationToPickup: bigint
 
   default:
     bookingType: "'NormalBooking'"

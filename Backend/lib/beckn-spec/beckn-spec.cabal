@@ -232,6 +232,7 @@ library
       Domain.Types.ParcelType
       Domain.Types.PaymentMode
       Domain.Types.RefereeLink
+      Domain.Types.RiderPreferredOption
       Domain.Types.RideStatus
       Domain.Types.ServiceTierType
       Domain.Types.StationType
