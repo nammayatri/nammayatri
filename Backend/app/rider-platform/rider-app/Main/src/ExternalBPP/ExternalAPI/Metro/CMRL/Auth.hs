@@ -4,6 +4,7 @@ module ExternalBPP.ExternalAPI.Metro.CMRL.Auth where
 
 import Data.Aeson
 import Domain.Types.Extra.IntegratedBPPConfig
+import EulerHS.Prelude hiding (threadDelay)
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.Error
 import Kernel.External.Encryption
@@ -46,6 +47,9 @@ authAPI = Proxy
 authTokenKey :: Text
 authTokenKey = "CMRLAuth:Token"
 
+refreshLockKey :: Text
+refreshLockKey = "CMRLAuth:RefreshLock"
+
 cmrlAppType :: Text
 cmrlAppType = "CMRL_CUM_IQR"
 
@@ -58,12 +62,39 @@ getAuthToken config = do
 
 resetAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m Text
 resetAuthToken config = do
-  password <- decrypt config.password
-  auth <-
-    callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.username password cmrlAppType) "authCMRL" authAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CMRL_AUTH_API") config.networkHostUrl)
-  Hedis.setExp authTokenKey auth.result.access_token (2 * 3600)
-  return auth.result.access_token
+  lockAcquired <- Hedis.tryLockRedis refreshLockKey 30
+  if lockAcquired
+    then do
+      logInfo "[CMRL:Auth] Acquired Redis lock for token refresh"
+      let unlockLock = do
+            logInfo "[CMRL:Auth] Releasing Redis lock"
+            Hedis.unlockRedis refreshLockKey
+
+      auth <-
+        ( do
+            -- Double check cache
+            mbToken <- Hedis.get authTokenKey
+            case mbToken of
+              Just token -> do
+                logInfo "[CMRL:Auth] Token found in cache after acquiring lock"
+                return token
+              Nothing -> do
+                logInfo $ "[CMRL:Auth] Requesting new auth token from: " <> showBaseUrl config.networkHostUrl
+                password <- decrypt config.password
+                authRes <-
+                  callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.username password cmrlAppType) "authCMRL" authAPI
+                    >>= fromEitherM (ExternalAPICallError (Just "CMRL_AUTH_API") config.networkHostUrl)
+                logInfo "[CMRL:Auth] Successfully obtained auth token"
+                let tokenExpiry = 2 * 3600
+                Hedis.setExp authTokenKey authRes.result.access_token tokenExpiry
+                return authRes.result.access_token
+          )
+          `finally` unlockLock
+      return auth
+    else do
+      logInfo "[CMRL:Auth] Redis lock already held by another pod, waiting 2 seconds"
+      threadDelay 2000000
+      getAuthToken config
 
 callCMRLAPI ::
   ( HasCallStack,
