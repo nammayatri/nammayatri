@@ -315,7 +315,7 @@ buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpirationSeconds, driverQuoteExpirationSeconds = _driverQuoteExpirationSeconds, searchRequestExpirationSecondsForMultimodal = _searchRequestExpirationSecondsForMultimodal, ..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
-  setEnv "GET_MY_SCHEMA" (T.unpack cityDBSchema)
+  setEnv "CITY_SCHEMA" (T.unpack cityDBSchema)
   version <- lookupDeploymentVersion
   cloudType <- Just <$> lookupCloudType
   passettoContext <- uncurry mkDefPassettoContext encTools.service

@@ -144,7 +144,7 @@ data HandlerEnv = HandlerEnv
 buildHandlerEnv :: HandlerCfg -> IO HandlerEnv
 buildHandlerEnv HandlerCfg {..} = do
   let AppCfg {..} = appCfg
-  setEnv "GET_MY_SCHEMA" (T.unpack cityDBSchema)
+  setEnv "CITY_SCHEMA" (T.unpack cityDBSchema)
   hostname <- fmap cs <$> lookupEnv "POD_NAME" :: IO (Maybe Text)
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname

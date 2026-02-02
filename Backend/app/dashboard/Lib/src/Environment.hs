@@ -140,7 +140,7 @@ data AppEnv = AppEnv
 
 buildAppEnv :: Text -> AppCfg -> IO AppEnv
 buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
-  setEnv "GET_MY_SCHEMA" (T.unpack cityDBSchema)
+  setEnv "CITY_SCHEMA" (T.unpack cityDBSchema)
   podName <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName

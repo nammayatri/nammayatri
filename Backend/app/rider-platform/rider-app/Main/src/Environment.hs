@@ -331,7 +331,7 @@ buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv cfg@AppCfg {..} = do
   hostname <- getPodName
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
-  SE.setEnv "GET_MY_SCHEMA" (T.unpack cityDBSchema)
+  SE.setEnv "CITY_SCHEMA" (T.unpack cityDBSchema)
   version <- lookupDeploymentVersion
   cloudType <- Just <$> lookupCloudType
   isShuttingDown <- newEmptyTMVarIO
