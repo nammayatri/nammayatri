@@ -107,8 +107,10 @@ library
       API.Types.ProviderPlatform.Operator.FleetManagement
       API.Types.ProviderPlatform.Operator.Registration
       API.Types.RiderPlatform.Management
+      API.Types.RiderPlatform.Management.AlertIncident
       API.Types.RiderPlatform.Management.Booking
       API.Types.RiderPlatform.Management.Customer
+      API.Types.RiderPlatform.Management.Endpoints.AlertIncident
       API.Types.RiderPlatform.Management.Endpoints.Booking
       API.Types.RiderPlatform.Management.Endpoints.Customer
       API.Types.RiderPlatform.Management.Endpoints.FRFSAlerts
