@@ -1,0 +1,84 @@
+AlertIncident:
+  tableName: alert_incident
+
+  fields:
+    id: Id AlertIncident
+    alertName: Text
+    serviceName: Text
+    alertGroup: Maybe Text
+    description: Maybe Text
+    severity: Maybe Text
+    firingTime: UTCTime
+    resolvedTime: Maybe UTCTime
+    downtimeSeconds: Maybe Int
+    status: IncidentStatus
+    receiver: Maybe Text
+    externalURL: Maybe Text
+    rawPayload: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    IncidentStatus:
+      enum: "FIRING,RESOLVED"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findFiringIncident:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - description
+          - status
+      orderBy:
+        field: firingTime
+        order: desc
+      limit: 1
+
+    findIncidentToResolve:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - description
+          - resolvedTime
+      orderBy:
+        field: firingTime
+        order: desc
+      limit: 1
+
+    updateToResolved:
+      kvFunction: updateWithKV
+      params:
+        - status
+        - resolvedTime
+        - downtimeSeconds
+        - updatedAt
+      where: id
+
+  sqlType:
+    id: character(36)
+    alertName: character varying(255)
+    serviceName: character varying(255)
+    alertGroup: character varying(255)
+    description: text
+    severity: character varying(50)
+    firingTime: timestamp with time zone
+    resolvedTime: timestamp with time zone
+    downtimeSeconds: integer
+    status: character varying(50)
+    receiver: character varying(255)
+    externalURL: character varying(500)
+    rawPayload: text
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+
+  constraints:
+    id: PrimaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
