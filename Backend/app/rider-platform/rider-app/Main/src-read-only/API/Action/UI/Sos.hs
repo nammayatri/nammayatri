@@ -14,13 +14,13 @@ import qualified Domain.Action.UI.Sos
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
-import qualified Domain.Types.Sos
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Domain.Types.Sos
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
@@ -56,7 +56,7 @@ type API =
       :> "sos"
       :> Capture
            "sosId"
-           (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
+           (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos)
       :> "status"
       :> ReqBody
            '[JSON]
@@ -69,7 +69,7 @@ type API =
       :> "markRideAsSafe"
       :> Capture
            "sosId"
-           (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
+           (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos)
       :> ReqBody
            '[JSON]
            API.Types.UI.Sos.MarkAsSafeReq
@@ -98,7 +98,7 @@ type API =
       :> "sos"
       :> Capture
            "sosId"
-           (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
+           (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos)
       :> "updateLocation"
       :> ReqBody
            '[JSON]
@@ -109,7 +109,7 @@ type API =
       :<|> "sos"
       :> Capture
            "sosId"
-           (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
+           (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos)
       :> "tracking"
       :> Get
            '[JSON]
@@ -128,7 +128,7 @@ type API =
       :> "updateState"
       :> Capture
            "sosId"
-           (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
+           (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos)
       :> ReqBody
            '[JSON]
            API.Types.UI.Sos.UpdateStateReq
@@ -140,10 +140,22 @@ type API =
       :> "trackingDetails"
       :> Capture
            "sosId"
-           (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
+           (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos)
       :> Get
            '[JSON]
            API.Types.UI.Sos.SosTrackingDetailsRes
+      :<|> TokenAuth
+      :> "sos"
+      :> Capture
+           "sosId"
+           (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos)
+      :> "updateToRide"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.Sos.UpdateToRideReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
       :<|> "sos"
       :> "erss"
       :> "statusUpdate"
@@ -156,7 +168,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getSosGetDetails :<|> getSosIvrOutcome :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos :<|> postSosCallPolice :<|> postSosUpdateLocation :<|> getSosTracking :<|> postSosStartTracking :<|> postSosUpdateState :<|> getSosTrackingDetails :<|> postSosErssStatusUpdate
+handler = getSosGetDetails :<|> getSosIvrOutcome :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos :<|> postSosCallPolice :<|> postSosUpdateLocation :<|> getSosTracking :<|> postSosStartTracking :<|> postSosUpdateState :<|> getSosTrackingDetails :<|> postSosErssStatusUpdate :<|> postSosUpdateToRide
 
 getSosGetDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -177,7 +189,7 @@ postSosStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Types.Id.Id Domain.Types.Sos.Sos ->
+    Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos ->
     API.Types.UI.Sos.SosUpdateReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
@@ -187,7 +199,7 @@ postSosMarkRideAsSafe ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Types.Id.Id Domain.Types.Sos.Sos ->
+    Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos ->
     API.Types.UI.Sos.MarkAsSafeReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
@@ -215,13 +227,13 @@ postSosUpdateLocation ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Types.Id.Id Domain.Types.Sos.Sos ->
+    Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos ->
     API.Types.UI.Sos.SosLocationUpdateReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postSosUpdateLocation a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosUpdateLocation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
-getSosTracking :: (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> Environment.FlowHandler API.Types.UI.Sos.SosTrackingRes)
+getSosTracking :: (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos -> Environment.FlowHandler API.Types.UI.Sos.SosTrackingRes)
 getSosTracking a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosTracking a1
 
 postSosStartTracking ::
@@ -237,7 +249,7 @@ postSosUpdateState ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Types.Id.Id Domain.Types.Sos.Sos ->
+    Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos ->
     API.Types.UI.Sos.UpdateStateReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
@@ -247,10 +259,20 @@ getSosTrackingDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Types.Id.Id Domain.Types.Sos.Sos ->
+    Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos ->
     Environment.FlowHandler API.Types.UI.Sos.SosTrackingDetailsRes
   )
 getSosTrackingDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosTrackingDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosErssStatusUpdate :: (API.Types.UI.Sos.ErssStatusUpdateReq -> Environment.FlowHandler API.Types.UI.Sos.ErssStatusUpdateRes)
 postSosErssStatusUpdate a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosErssStatusUpdate a1
+
+postSosUpdateToRide ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos ->
+    API.Types.UI.Sos.UpdateToRideReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postSosUpdateToRide a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosUpdateToRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

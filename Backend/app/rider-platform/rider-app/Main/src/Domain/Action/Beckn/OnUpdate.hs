@@ -95,7 +95,7 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as SQQ
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SafetySettings as QSafety
+import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Transformers.Booking as STB
 import Tools.Error
@@ -504,7 +504,7 @@ onUpdate = \case
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     void $ QRide.updateSafetyJourneyStatus ride.id (DRide.UnexpectedCondition DRide.DriverDeviated)
-    safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId Nothing
+    safetySettings <- QSafetyExtra.findSafetySettingsWithFallback booking.riderId Nothing
     let triggerIVRFlow
           | riderConfig.useUserSettingsForSafetyIVR = safetySettings.informPoliceSos || safetySettings.notifySafetyTeamForSafetyCheckFailure
           | otherwise = True

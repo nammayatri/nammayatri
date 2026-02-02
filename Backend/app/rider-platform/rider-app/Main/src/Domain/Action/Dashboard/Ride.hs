@@ -53,7 +53,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
-import qualified Domain.Types.Sos as DSos
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -70,6 +69,7 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate (UniqueField (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
+import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -192,13 +192,13 @@ getStopFromBookingDetails bookingDetails = case bookingDetails of
   DB.RentalDetails rentalDetails -> mkCommonBookingLocation <$> rentalDetails.stopLocation
   _ -> Nothing
 
-castSosStatus :: DSos.SosStatus -> Common.SosStatus
+castSosStatus :: SafetyDSos.SosStatus -> Common.SosStatus
 castSosStatus = \case
-  DSos.Pending -> Common.Pending
-  DSos.Resolved -> Common.Resolved
-  DSos.NotResolved -> Common.NotResolved
-  DSos.MockPending -> Common.MockPending
-  DSos.MockResolved -> Common.MockResolved
+  SafetyDSos.Pending -> Common.Pending
+  SafetyDSos.Resolved -> Common.Resolved
+  SafetyDSos.NotResolved -> Common.NotResolved
+  SafetyDSos.MockPending -> Common.MockPending
+  SafetyDSos.MockResolved -> Common.MockResolved
 
 castSosState :: DSos.SosState -> Common.SosState
 castSosState = \case

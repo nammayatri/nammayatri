@@ -27,6 +27,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import qualified Safety.Domain.Types.Sos as SafetyDSos
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.Ride as SRide
@@ -42,7 +43,7 @@ import Tools.Error
 
 getSosTracking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow API.Types.RiderPlatform.Management.Sos.SosTrackingRes)
 getSosTracking _merchantShortId _opCity sosId = do
-  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @Domain.Types.Sos.Sos sosId
+  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
   res <- Sos.getSosTracking sosId'
   pure $ convertToApiRes res
 
@@ -104,82 +105,13 @@ convertLocation loc =
       accuracy = loc.accuracy
     }
 
-convertSosState :: Domain.Types.Sos.SosState -> API.Types.RiderPlatform.Management.Sos.SosState
-convertSosState Domain.Types.Sos.LiveTracking = API.Types.RiderPlatform.Management.Sos.LiveTracking
-convertSosState Domain.Types.Sos.SosActive = API.Types.RiderPlatform.Management.Sos.SosActive
+convertSosState :: SafetyDSos.SosState -> API.Types.RiderPlatform.Management.Sos.SosState
+convertSosState SafetyDSos.LiveTracking = API.Types.RiderPlatform.Management.Sos.LiveTracking
+convertSosState SafetyDSos.SosActive = API.Types.RiderPlatform.Management.Sos.SosActive
 
-convertSosStatus :: Domain.Types.Sos.SosStatus -> API.Types.RiderPlatform.Management.Sos.SosStatus
-convertSosStatus Domain.Types.Sos.Resolved = API.Types.RiderPlatform.Management.Sos.Resolved
-convertSosStatus Domain.Types.Sos.NotResolved = API.Types.RiderPlatform.Management.Sos.NotResolved
-convertSosStatus Domain.Types.Sos.Pending = API.Types.RiderPlatform.Management.Sos.Pending
-convertSosStatus Domain.Types.Sos.MockPending = API.Types.RiderPlatform.Management.Sos.MockPending
-convertSosStatus Domain.Types.Sos.MockResolved = API.Types.RiderPlatform.Management.Sos.MockResolved
-
--- | Called from the dashboard when triggerSource is DASHBOARD.
---   Fetches the SOS record and dispatches the external SOS API call.
-callExternalSOS :: Kernel.Types.Id.Id DSos.Sos -> Environment.Flow ()
-callExternalSOS sosId = do
-  sos <- QSos.findById sosId >>= fromMaybeM (InvalidRequest "SOS record not found")
-  merchantOpCityId <- sos.merchantOperatingCityId & fromMaybeM (InvalidRequest "SOS record missing merchantOperatingCityId")
-  merchantId <- sos.merchantId & fromMaybeM (InvalidRequest "SOS record missing merchantId")
-  person <- QP.findById sos.personId >>= fromMaybeM (PersonDoesNotExist sos.personId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
-  case riderConfig.externalSOSConfig of
-    Nothing -> throwError $ InvalidRequest "External SOS config not configured for this city"
-    Just sosConfig -> do
-      when (sosConfig.triggerSource /= DRC.DASHBOARD) $
-        throwError $ InvalidRequest "External SOS trigger source is not DASHBOARD for this city"
-      let sosServiceType = flowToSOSService sosConfig.flow
-      merchantSvcCfg <-
-        QMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (DMSC.SOSService sosServiceType)
-          >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "SOS" (show sosServiceType))
-      case merchantSvcCfg.serviceConfig of
-        DMSC.SOSServiceConfig specificConfig -> do
-          mbRide <- QRide.findById sos.rideId
-          customerLocation <- getCustomerLocation sos.rideId mbRide
-          emergencyContacts <- DP.getDefaultEmergencyNumbers (sos.personId, merchantId)
-          merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
-          initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
-          unless initialRes.success $
-            throwError $ InternalError (fromMaybe "External SOS call failed" initialRes.errorMessage)
-          whenJust initialRes.trackingId $ \trackingId -> do
-            QSos.updateExternalReferenceId (Just trackingId) sosId
-            Redis.del (Sos.mkExternalSOSTraceKey sosId)
-        _ -> throwError $ InternalError "Invalid SOS Service Config for provider"
-  where
-    getCustomerLocation rideId mbRide = do
-      mbSosLoc <- SOSLocation.getSosRiderLocation sosId
-      case mbSosLoc of
-        Just sosLoc -> do
-          logInfo $ "Using SOS rider location from Redis for sosId: " <> sosId.getId
-          pure $ Just $ LatLong sosLoc.lat sosLoc.lon
-        Nothing -> do
-          logInfo $ "SOS rider location not found, trying driver location for sosId: " <> sosId.getId
-          driverLocResp <- withTryCatch "getDriverLoc:callExternalSOS" $ SRide.getDriverLoc rideId
-          case driverLocResp of
-            Right driverLoc -> pure $ Just $ LatLong driverLoc.lat driverLoc.lon
-            Left err -> do
-              logError $ "Driver location fetch failed, falling back to ride fromLocation: " <> show err
-              pure $ (\ride -> LatLong ride.fromLocation.lat ride.fromLocation.lon) <$> mbRide
-
-    mkSosReq :: DSos.Sos -> Maybe LatLong -> UISos.SosReq
-    mkSosReq sos customerLoc =
-      UISos.SosReq
-        { flow = sos.flow,
-          rideId = Just sos.rideId,
-          isRideEnded = Nothing,
-          sendPNOnPostRideSOS = Nothing,
-          notifyAllContacts = Nothing,
-          customerLocation = customerLoc
-        }
-
-flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
-flowToSOSService DRC.ERSS = SOS.ERSS
-flowToSOSService DRC.GJ112 = SOS.GJ112
-
-postSosCallExternalSOS :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow Kernel.Types.APISuccess.APISuccess
-postSosCallExternalSOS _merchantShortId _opCity sosId = do
-  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @Domain.Types.Sos.Sos sosId
-  callExternalSOS sosId'
-  pure Kernel.Types.APISuccess.Success
+convertSosStatus :: SafetyDSos.SosStatus -> API.Types.RiderPlatform.Management.Sos.SosStatus
+convertSosStatus SafetyDSos.Resolved = API.Types.RiderPlatform.Management.Sos.Resolved
+convertSosStatus SafetyDSos.NotResolved = API.Types.RiderPlatform.Management.Sos.NotResolved
+convertSosStatus SafetyDSos.Pending = API.Types.RiderPlatform.Management.Sos.Pending
+convertSosStatus SafetyDSos.MockPending = API.Types.RiderPlatform.Management.Sos.MockPending
+convertSosStatus SafetyDSos.MockResolved = API.Types.RiderPlatform.Management.Sos.MockResolved
