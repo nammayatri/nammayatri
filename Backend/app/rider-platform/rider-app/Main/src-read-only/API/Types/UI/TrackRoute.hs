@@ -23,6 +23,7 @@ data VehicleInfoForRoute = VehicleInfoForRoute
     longitude :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     routeState :: Kernel.Prelude.Maybe Storage.CachedQueries.Merchant.MultiModalBus.RouteState,
     scheduleRelationship :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceSubTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     speed :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     startDate :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
