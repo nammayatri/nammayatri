@@ -113,6 +113,7 @@ import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
+import Domain.Action.UI.RidePayment as DRidePayment
 
 mkTicketAPI :: DT.FRFSTicket -> APITypes.FRFSTicketAPI
 mkTicketAPI DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
@@ -850,7 +851,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             splitSettlementDetails = splitSettlementDetails,
-            basket = basket
+            basket = basket,
+            paymentRules = Nothing
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
@@ -859,8 +861,9 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
       createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion (Just isMockPayment)
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment
+  let createWalletCall = Payment.createWallet merchantId merchantOperatingCityId Nothing paymentType Nothing Nothing Nothing
+  getCustomerResp <- DRidePayment.getcustomer person
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (Just False) (Just getCustomerResp.customerId.getId) isMockPayment
   mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment) orderResp
   where
     getPaymentIds = do

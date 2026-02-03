@@ -308,7 +308,8 @@ buildJuspayWebhookPayload
                         fmap
                           (realToFrac . getHighPrecMoney)
                           effectAmount,
-                      offers = offers
+                      offers = offers,
+                      txn_list = Nothing                -- change later
                     },
               mandate = Nothing,
               notification = Nothing,
@@ -403,7 +404,8 @@ buildOrderStatusResp order mTxn refunds offers = do
         splitSettlementResponse = mTxn >>= DTxn.splitSettlementResponse,
         effectiveAmount =
           orderEffectAmount,
-        offers = Just $ map toPaymentOffer offers
+        offers = Just $ map toPaymentOffer offers,
+        txnList = Nothing             -- change later
       }
   where
     totalRefundedAmount =

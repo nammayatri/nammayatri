@@ -38,7 +38,9 @@ createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCit
 createOrder = runWithServiceConfigAndName Payment.createOrder
 
 orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
-orderStatus = runWithUnWrap Payment.orderStatus
+orderStatus =
+  runWithUnWrap
+    (Payment.orderStatus :: Payment.PaymentServiceConfig -> Maybe Text -> Payment.OrderStatusReq -> m Payment.OrderStatusResp)
 
 offerList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.OfferListReq -> m Payment.OfferListResp
 offerList = runWithUnWrap Payment.offerList

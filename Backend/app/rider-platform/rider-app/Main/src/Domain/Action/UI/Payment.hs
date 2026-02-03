@@ -87,6 +87,7 @@ import Tools.Metrics
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
+import Domain.Action.UI.RidePayment as DRidePayment
 
 -- create order -----------------------------------------------------
 
@@ -130,15 +131,17 @@ createOrder (personId, merchantId) rideId = do
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal (Just person.id.getId) person.clientSdkVersion (Just False)
-      createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False >>= fromMaybeM (InternalError "Order expired please try again")
+      createWalletCall = Payment.createWallet merchantId person.merchantOperatingCityId Nothing Payment.Normal Nothing Nothing Nothing
+  getCustomerResp <- DRidePayment.getcustomer person
+  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (Just False) (Just getCustomerResp.customerId.getId) False >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
 
@@ -355,7 +358,7 @@ postWalletRecharge (personId, merchantId) req = do
         Payment.CreateOrderReq
           { orderId = walletRewardPostingId,
             orderShortId = operationId.getShortId,
-            amount = fromIntegral req.pointsAmount,
+            amount = fromIntegral req.amount,
             customerId = person.id.getId,
             customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
             customerPhone = personPhone,
@@ -370,7 +373,8 @@ postWalletRecharge (personId, merchantId) req = do
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
             splitSettlementDetails = Nothing,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -379,8 +383,9 @@ postWalletRecharge (personId, merchantId) req = do
       createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing DOrder.Wallet (Just person.id.getId) person.clientSdkVersion Nothing
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing DOrder.Wallet
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False
+  let createWalletCall = Payment.createWallet merchantId person.merchantOperatingCityId Nothing DOrder.Wallet (Just person.id.getId) person.clientSdkVersion Nothing
+  getCustomerResp <- DRidePayment.getcustomer person
+  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (Just True) (Just getCustomerResp.customerId.getId) False
   _ <- mbOrderResp & fromMaybeM (InternalError "Failed to create payment order")
   return Success
 
@@ -391,15 +396,13 @@ getWalletBalance (personId, merchantId) = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   personWallet <- QPersonWallet.findByPersonId personId.getId >>= fromMaybeM (InternalError $ "Person wallet not found for personId: " <> show personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
-  let walletBalanceReq = Wallet.WalletBalanceReq {customerId = personWallet.personId, requireHistory = Just True}
-      walletBalanceCall = TWallet.walletBalance merchantId merchantOperatingCityId
-  walletBalanceResp <- DPayment.walletBalanceService walletBalanceReq walletBalanceCall
-  case walletBalanceResp.success of
-    True -> do
-      now <- getCurrentTime
-      QPersonWallet.updateByPrimaryKey personWallet {DPersonWallet.pointsAmount = walletBalanceResp.walletData.pointsAmount, DPersonWallet.cashAmount = walletBalanceResp.walletData.cashAmount, DPersonWallet.expiredBalance = walletBalanceResp.walletData.expiredBalance, DPersonWallet.cashFromPointsRedemption = walletBalanceResp.walletData.cashFromPointsRedemption, DPersonWallet.usablePointsAmount = walletBalanceResp.walletData.usablePointsAmount, DPersonWallet.usableCashAmount = walletBalanceResp.walletData.usableCashAmount, DPersonWallet.updatedAt = now}
-      return walletBalanceResp.walletData
-    False -> throwError (InternalError $ "Failed to get wallet balance for personId: " <> show personId.getId)
+  let refreshWalletReq = Payment.RefreshWalletReq {walletId = personWallet.id, command = "refresh"}
+      refreshWalletCall = Payment.refreshWallet merchantId merchantOperatingCityId Nothing DOrder.Wallet Nothing Nothing Nothing
+  refreshWalletResp <- DPayment.refreshWalletService refreshWalletReq refreshWalletCall
+
+  now <- getCurrentTime
+  QPersonWallet.updateByPrimaryKey personWallet {DPersonWallet.cashAmount = refreshWalletResp.currentBalance}
+  return refreshWalletResp.walletData
 
 -- redeemWallet :: (PaymentBeamFlow.BeamFlow m r, MonadThrow m) => Id.Id DP.Person -> HighPrecMoney -> m (Maybe DWalletRewardPosting.WalletPostingStatus)
 -- redeemWallet personId pointsAmount = do

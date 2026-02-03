@@ -13,7 +13,7 @@
 -}
 
 module Tools.Wallet
-  ( createWallet,
+  ( createBreezeWallet,
     walletPosting,
     walletReversal,
     walletBalance,
@@ -33,7 +33,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 
-createWallet ::
+createBreezeWallet ::
   ( EncFlow m r,
     CoreMetrics m,
     CacheFlow m r,
@@ -43,7 +43,7 @@ createWallet ::
   Id DMOC.MerchantOperatingCity ->
   Wallet.CreateWalletReq ->
   m Wallet.CreateWalletResp
-createWallet merchantId merchantOperatingCityId req = runWithServiceConfig Wallet.createWallet merchantId merchantOperatingCityId req
+createBreezeWallet merchantId merchantOperatingCityId req = runWithServiceConfig Wallet.createWallet merchantId merchantOperatingCityId req
 
 walletPosting ::
   ( EncFlow m r,

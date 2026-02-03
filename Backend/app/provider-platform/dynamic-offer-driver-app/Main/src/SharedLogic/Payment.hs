@@ -127,7 +127,8 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
@@ -136,7 +137,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
   mCreateOrderRes <-
     if (isJust existingInvoice && amount < 1) -- In case driver fee was cleared with coins and remaining amount is less than 1 (Juspay create order fails)
       then pure Nothing
-      else DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId Nothing mbEntityName DOrder.Normal False createOrderReq createOrderCall Nothing False
+      else DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId Nothing mbEntityName DOrder.Normal False createOrderReq createOrderCall Nothing Nothing Nothing False
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes{sdk_payload = createOrderRes.sdk_payload{payload = createOrderRes.sdk_payload.payload{clientId = pseudoClientId <|> createOrderRes.sdk_payload.payload.clientId}}}, cast invoiceId)
     Nothing -> do
@@ -374,5 +375,7 @@ createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbP
       createOrderReq
       createOrderCall
       Nothing -- mbCreateWalletCall
+      Nothing -- mbIsWalletTopup
+      Nothing -- mbCustomerId
       False -- isMockPayment
   mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")

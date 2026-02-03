@@ -7,7 +7,7 @@ import Kernel.Prelude
 import Servant
 
 data WalletRechargeReq = WalletRechargeReq
-  { pointsAmount :: Int
+  { amount :: Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
