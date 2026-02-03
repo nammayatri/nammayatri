@@ -74,10 +74,14 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   let oneFromEachRemaining :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = filter (\(st, _) -> not $ st `elem` alreadySelectedServiceTiers) . M.toList $ M.fromList serviceTiersOfRemainingBuses
   let allBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = serviceTiersOfSelectedBuses <> oneFromEachRemaining
 
+  vehicleTrackingInfoWithSubTypes <- forM allBuses $ \(mbServiceTier, (actualRouteCode, vt@VehicleTracking {..})) -> do
+    mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [integratedBPPConfig] vehicleId
+    let resp = mkVehicleTrackingResponse mbServiceTier mbServiceSubTypes (actualRouteCode, vt)
+    pure resp
+
   pure $
     TrackRoute.TrackingResp
-      { vehicleTrackingInfo =
-          map (uncurry mkVehicleTrackingResponse) allBuses
+      { vehicleTrackingInfo = vehicleTrackingInfoWithSubTypes
       }
   where
     filterVehiclesYetToReachSelectedStop vehicleTracking =
@@ -85,7 +89,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
         Just selectedStopId -> filter (\(_, vt) -> any (\u -> u.stopCode == selectedStopId) vt.upcomingStops) vehicleTracking
         Nothing -> vehicleTracking
 
-    mkVehicleTrackingResponse serviceTierType (actualRouteCode, VehicleTracking {..}) =
+    mkVehicleTrackingResponse serviceTierType mbServiceSubTypes (actualRouteCode, VehicleTracking {..}) =
       TrackRoute.VehicleTrackingInfo
         { vehicleId = vehicleId,
           nextStop = nextStop,
@@ -95,15 +99,15 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
           delay = delay,
           vehicleInfo =
             maybe
-              (TrackRoute.VehicleInfoForRoute Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
-              mkVehicleInfo
+              (TrackRoute.VehicleInfoForRoute Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
+              (mkVehicleInfo mbServiceSubTypes)
               vehicleInfo,
           routeCode = actualRouteCode,
           routeShortName = routeShortName,
           serviceTierType = serviceTierType
         }
 
-    mkVehicleInfo VehicleInfo {..} = TrackRoute.VehicleInfoForRoute {..}
+    mkVehicleInfo mbServiceSubTypes VehicleInfo {..} = TrackRoute.VehicleInfoForRoute {serviceSubTypes = mbServiceSubTypes, ..}
 
     distanceToStop :: Maybe LatLong -> VehicleTracking -> Maybe HighPrecMeters
     distanceToStop mbSourceStopLocation vt = do

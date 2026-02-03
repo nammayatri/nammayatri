@@ -22,6 +22,7 @@ data NearbyBus = NearbyBus
     distance :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     routeCode :: Data.Text.Text,
     routeState :: Kernel.Prelude.Maybe Storage.CachedQueries.Merchant.MultiModalBus.RouteState,
+    serviceSubTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     serviceTierName :: Kernel.Prelude.Maybe Data.Text.Text,
     serviceType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     shortName :: Kernel.Prelude.Maybe Data.Text.Text,

@@ -4,6 +4,7 @@ module ExternalBPP.ExternalAPI.Metro.CMRL.V2.Auth where
 
 import Data.Aeson
 import Domain.Types.Extra.IntegratedBPPConfig
+import EulerHS.Prelude hiding (threadDelay)
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.V2.Error
 import Kernel.External.Encryption
@@ -53,6 +54,9 @@ refreshTokenKey merchantId = "CMRLV2Auth:RefreshToken:" <> merchantId
 encryptionKeyKey :: Text -> Text
 encryptionKeyKey merchantId = "CMRLV2Auth:EncryptionKey:" <> merchantId
 
+refreshLockKey :: Text -> Text
+refreshLockKey merchantId = "CMRLV2Auth:RefreshLock:" <> merchantId
+
 getAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLV2Config -> m Text
 getAuthToken config = do
   logDebug $ "[CMRLV2:Auth] Checking for cached auth token for merchantId: " <> config.merchantId
@@ -67,19 +71,43 @@ getAuthToken config = do
 
 resetAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLV2Config -> m Text
 resetAuthToken config = do
-  logInfo $ "[CMRLV2:Auth] Requesting new auth token from: " <> showBaseUrl config.networkHostUrl
-  logDebug $ "[CMRLV2:Auth] Auth request - operatorNameId: " <> show config.operatorNameId <> ", merchantId: " <> config.merchantId <> ", username: " <> config.username <> ", password: " <> show config.password
-  password <- decrypt config.password
-  let authReq = AuthReq config.operatorNameId config.username password "password" config.merchantId
-  logDebug $ "[CMRLV2:Auth] Auth request payload: " <> show authReq
-  auth <-
-    callAPI config.networkHostUrl (ET.client authAPI authReq) "authCMRLV2" authAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CMRL_V2_AUTH_API") config.networkHostUrl)
-  logInfo $ "[CMRLV2:Auth] Successfully obtained auth token, expires_in: " <> show auth.expires_in <> "s, key_index: " <> show auth.key_index
-  Hedis.setExp (authTokenKey config.merchantId) auth.access_token (auth.expires_in)
-  Hedis.setExp (refreshTokenKey config.merchantId) auth.refresh_token (7 * 24 * 3600)
-  Hedis.setExp (encryptionKeyKey config.merchantId) auth.key (7 * 24 * 3600)
-  return auth.access_token
+  let lockKey = refreshLockKey config.merchantId
+  lockAcquired <- Hedis.tryLockRedis lockKey 30
+  if lockAcquired
+    then do
+      logInfo $ "[CMRLV2:Auth] Acquired Redis lock for token refresh for merchantId: " <> config.merchantId
+      let unlockLock = do
+            logInfo $ "[CMRLV2:Auth] Releasing Redis lock for merchantId: " <> config.merchantId
+            Hedis.unlockRedis lockKey
+
+      auth <-
+        ( do
+            -- Double check cache after acquiring lock
+            mbToken <- Hedis.get (authTokenKey config.merchantId)
+            case mbToken of
+              Just token -> do
+                logInfo $ "[CMRLV2:Auth] Token found in cache after acquiring lock for merchantId: " <> config.merchantId
+                return token
+              Nothing -> do
+                logInfo $ "[CMRLV2:Auth] Requesting new auth token from: " <> showBaseUrl config.networkHostUrl
+                password <- decrypt config.password
+                let authReq = AuthReq config.operatorNameId config.username password "password" config.merchantId
+                authRes <-
+                  callAPI config.networkHostUrl (ET.client authAPI authReq) "authCMRLV2" authAPI
+                    >>= fromEitherM (ExternalAPICallError (Just "CMRL_V2_AUTH_API") config.networkHostUrl)
+                logInfo $ "[CMRLV2:Auth] Successfully obtained auth token, expires_in: " <> show authRes.expires_in <> "s, key_index: " <> show authRes.key_index
+                let tokenExpiry = authRes.expires_in * 90 `div` 100
+                Hedis.setExp (authTokenKey config.merchantId) authRes.access_token tokenExpiry
+                Hedis.setExp (refreshTokenKey config.merchantId) authRes.refresh_token (7 * 24 * 3600)
+                Hedis.setExp (encryptionKeyKey config.merchantId) authRes.key (7 * 24 * 3600)
+                return authRes.access_token
+          )
+          `finally` unlockLock
+      return auth
+    else do
+      logInfo $ "[CMRLV2:Auth] Redis lock already held by another pod for, waiting 2 seconds"
+      threadDelay 2000000
+      getAuthToken config
 
 callCMRLV2API ::
   ( HasCallStack,

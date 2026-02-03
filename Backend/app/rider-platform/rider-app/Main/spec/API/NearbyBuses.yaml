@@ -8,6 +8,7 @@ imports:
   PlatformType: Domain.Types.IntegratedBPPConfig
   Price: Kernel.Types.Price
   ServiceTierType: BecknV2.FRFS.Enums
+  ServiceSubType: BecknV2.FRFS.Enums
   VehicleCategory: BecknV2.FRFS.Enums
   UpcomingTripInfo: Lib.JourneyModule.Utils
   RouteState: Storage.CachedQueries.Merchant.MultiModalBus
@@ -25,6 +26,7 @@ types:
       distance: Maybe Double
       serviceType: Maybe ServiceTierType
       serviceTierName: Maybe Text
+      serviceSubTypes: Maybe [ServiceSubType]
       routeState: Maybe RouteState
       shortName: Maybe Text
       bearing: Maybe Int

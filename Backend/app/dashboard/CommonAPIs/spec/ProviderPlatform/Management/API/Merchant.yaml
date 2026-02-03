@@ -1035,6 +1035,7 @@ types:
     - stopFcmThreshold: Maybe Int
     - stopFcmSuppressCount: Maybe Int
     - scheduleBookingListEligibilityTags: Maybe [Text]
+    - isEnabled: Maybe Bool
   VehicleServiceTierConfigUpdateReq:
     - name: Maybe Text
     - shortDescription: Maybe Text
@@ -1060,17 +1061,18 @@ types:
     - stopFcmThreshold: Maybe Int
     - stopFcmSuppressCount: Maybe Int
     - scheduleBookingListEligibilityTags: Maybe [Text]
+    - isEnabled: Maybe Bool
     - derive: "'HideSecrets"
   VehicleServiceTierConfigCreateReq:
     - serviceTierType: ServiceTierType
     - name: Text
     - shortDescription: Text
-    - longDescription: Text
+    - longDescription: Maybe Text
     - seatingCapacity: Int
     - airConditionedThreshold: Maybe Double
-    - isAirConditioned: Bool
-    - isIntercityEnabled: Bool
-    - isRentalsEnabled: Bool
+    - isAirConditioned: Maybe Bool
+    - isIntercityEnabled: Maybe Bool
+    - isRentalsEnabled: Maybe Bool
     - allowedVehicleVariant: [VehicleVariant]
     - autoSelectedVehicleVariant: [VehicleVariant]
     - defaultForVehicleVariant: [VehicleVariant]
@@ -1078,7 +1080,7 @@ types:
     - driverRating: Maybe Centesimal
     - vehicleRating: Maybe Double
     - priority: Int
-    - baseVehicleServiceTier: Maybe Bool
+    - baseVehicleServiceTier: Bool
     - fareAdditionPerKmOverBaseServiceTier: Maybe Int
     - oxygen: Maybe Double
     - ventilator: Maybe Int
@@ -1086,7 +1088,8 @@ types:
     - stopFcmThreshold: Maybe Int
     - stopFcmSuppressCount: Maybe Int
     - scheduleBookingListEligibilityTags: Maybe [Text]
-    - vehicleCategory: Maybe VehicleCategory
+    - vehicleCategory: VehicleCategory
+    - isEnabled: Bool
     - derive: "'HideSecrets"
   VehicleServiceTierListRes:
     - recordType: Type
@@ -1102,8 +1105,6 @@ types:
     - state: IndianState
     - city: City
     - geom: Maybe Text
-
-
 extraOperations:
   - EXTRA_API_TYPES_FILE
   - EXTRA_API_COMMON_TYPES_FILE

@@ -33,6 +33,8 @@ module Domain.Action.RiderPlatform.Management.Merchant
     getMerchantConfigSpecialLocationList,
     getMerchantConfigGeometryList,
     putMerchantConfigGeometryUpdate,
+    getMerchantRiderConfigEstimatesOrder,
+    postMerchantRiderConfigEstimatesOrderUpdate,
   )
 where
 
@@ -276,3 +278,14 @@ putMerchantConfigGeometryUpdate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.putMerchantConfigGeometryUpdate)) req
+
+getMerchantRiderConfigEstimatesOrder :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Common.RiderConfigEstimatesOrderRes)
+getMerchantRiderConfigEstimatesOrder merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantRiderConfigEstimatesOrder)
+
+postMerchantRiderConfigEstimatesOrderUpdate :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.UpdateRiderConfigEstimatesOrderReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postMerchantRiderConfigEstimatesOrderUpdate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantRiderConfigEstimatesOrderUpdate) req

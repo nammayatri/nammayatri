@@ -657,12 +657,12 @@ data VehicleServiceTierConfigCreateReq = VehicleServiceTierConfigCreateReq
   { serviceTierType :: Dashboard.Common.ServiceTierType,
     name :: Kernel.Prelude.Text,
     shortDescription :: Kernel.Prelude.Text,
-    longDescription :: Kernel.Prelude.Text,
+    longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     seatingCapacity :: Kernel.Prelude.Int,
     airConditionedThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    isAirConditioned :: Kernel.Prelude.Bool,
-    isIntercityEnabled :: Kernel.Prelude.Bool,
-    isRentalsEnabled :: Kernel.Prelude.Bool,
+    isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isIntercityEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isRentalsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowedVehicleVariant :: [Dashboard.Common.VehicleVariant],
     autoSelectedVehicleVariant :: [Dashboard.Common.VehicleVariant],
     defaultForVehicleVariant :: [Dashboard.Common.VehicleVariant],
@@ -670,7 +670,7 @@ data VehicleServiceTierConfigCreateReq = VehicleServiceTierConfigCreateReq
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     priority :: Kernel.Prelude.Int,
-    baseVehicleServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    baseVehicleServiceTier :: Kernel.Prelude.Bool,
     fareAdditionPerKmOverBaseServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -678,7 +678,8 @@ data VehicleServiceTierConfigCreateReq = VehicleServiceTierConfigCreateReq
     stopFcmThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory
+    vehicleCategory :: Dashboard.Common.VehicleCategory,
+    isEnabled :: Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -710,7 +711,8 @@ data VehicleServiceTierConfigUpdateReq = VehicleServiceTierConfigUpdateReq
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stopFcmThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
+    scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -743,7 +745,8 @@ data VehicleServiceTierItem = VehicleServiceTierItem
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stopFcmThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
+    scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

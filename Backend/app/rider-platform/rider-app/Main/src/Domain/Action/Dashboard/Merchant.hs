@@ -34,6 +34,9 @@ module Domain.Action.Dashboard.Merchant
     getMerchantConfigSpecialLocationList,
     getMerchantConfigGeometryList,
     putMerchantConfigGeometryUpdate,
+    getMerchantRiderConfigEstimatesOrder,
+    postMerchantRiderConfigEstimatesOrderUpdate,
+    postMerchantConfigMerchantCreate,
   )
 where
 
@@ -860,6 +863,10 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             ..
           }
 
+-- Alias for postMerchantConfigOperatingCityCreate to match generated code expectations
+postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
+postMerchantConfigMerchantCreate = postMerchantConfigOperatingCityCreate
+
 postMerchantConfigFailover :: ShortId DM.Merchant -> Context.City -> Common.ConfigNames -> Common.ConfigFailoverReq -> Flow APISuccess
 postMerchantConfigFailover merchantShortId city configNames req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -1671,3 +1678,68 @@ putMerchantConfigGeometryUpdate merchantShortId opCity req = do
     void $ CallBPPInternal.updateGeometry merchant opCity req.region (T.pack newGeom)
 
   return Success
+
+---------------------------------------------------------------------
+getMerchantRiderConfigEstimatesOrder ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow Common.RiderConfigEstimatesOrderRes
+getMerchantRiderConfigEstimatesOrder merchantShortId city = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+
+  let versionMap = LYT.ConfigVersionMap {version = 1, config = LYT.RIDER_CONFIG LYT.RiderConfig}
+  riderConfig <-
+    QRC.findByMerchantOperatingCityId merchantOperatingCity.id (Just [versionMap])
+      >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
+
+  pure $
+    Common.RiderConfigEstimatesOrderRes
+      { userServiceTierOrderConfig = map toCommonVehicleServiceTierOrderConfig riderConfig.userServiceTierOrderConfig,
+        defaultServiceTierOrderConfig = riderConfig.defaultServiceTierOrderConfig,
+        noOfRideRequestsConfig = riderConfig.noOfRideRequestsConfig
+      }
+
+postMerchantRiderConfigEstimatesOrderUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpdateRiderConfigEstimatesOrderReq ->
+  Flow APISuccess
+postMerchantRiderConfigEstimatesOrderUpdate merchantShortId city req = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+
+  let versionMap = LYT.ConfigVersionMap {version = 1, config = LYT.RIDER_CONFIG LYT.RiderConfig}
+  riderConfig <-
+    QRC.findByMerchantOperatingCityId merchantOperatingCity.id (Just [versionMap])
+      >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
+
+  let updatedConfig =
+        riderConfig
+          { DRC.userServiceTierOrderConfig = maybe riderConfig.userServiceTierOrderConfig (map toDomainVehicleServiceTierOrderConfig) req.userServiceTierOrderConfig,
+            DRC.defaultServiceTierOrderConfig = fromMaybe riderConfig.defaultServiceTierOrderConfig req.defaultServiceTierOrderConfig,
+            DRC.noOfRideRequestsConfig = fromMaybe riderConfig.noOfRideRequestsConfig req.noOfRideRequestsConfig
+          }
+
+  QRC.updateByPrimaryKey updatedConfig
+  QRC.clearCache merchantOperatingCity.id
+
+  logTagInfo "dashboard -> postMerchantRiderConfigEstimatesOrderUpdate : " (show merchantOperatingCity.id)
+  pure Success
+
+-- Type conversion helpers for VehicleServiceTierOrderConfig
+toCommonVehicleServiceTierOrderConfig :: DRC.VehicleServiceTierOrderConfig -> Common.VehicleServiceTierOrderConfig
+toCommonVehicleServiceTierOrderConfig domainConfig =
+  Common.VehicleServiceTierOrderConfig
+    { orderArray = domainConfig.orderArray,
+      vehicle = domainConfig.vehicle
+    }
+
+toDomainVehicleServiceTierOrderConfig :: Common.VehicleServiceTierOrderConfig -> DRC.VehicleServiceTierOrderConfig
+toDomainVehicleServiceTierOrderConfig commonConfig =
+  DRC.VehicleServiceTierOrderConfig
+    { orderArray = commonConfig.orderArray,
+      vehicle = commonConfig.vehicle
+    }

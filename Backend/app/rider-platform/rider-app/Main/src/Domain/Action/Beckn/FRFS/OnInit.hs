@@ -168,5 +168,10 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
     markBookingApproved paymentOrder booking = do
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
       whenJust mbJourneyId $ \journeyId -> do
-        void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) Nothing journeyId
+        isTestTransaction <- asks (.isMetroTestTransaction)
+        let updatedOrderShortId =
+              if isTestTransaction
+                then "test-" <> paymentOrder.shortId.getShortId
+                else paymentOrder.shortId.getShortId
+        void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) Nothing journeyId
     markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id

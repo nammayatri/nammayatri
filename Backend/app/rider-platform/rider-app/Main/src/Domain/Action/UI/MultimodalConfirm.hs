@@ -962,6 +962,11 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           withTryCatch "getGtfsVersion:mkResponse" (OTPRest.getGtfsVersion bppConfig) >>= \case
             Left _ -> return bppConfig.feedKey
             Right gtfsVersion -> return gtfsVersion
+        -- Get service subtypes from external API for specific vehicle
+        let mbServiceSubTypes = do
+              vehicleRouteInfo <- mbVehicleLiveRouteInfo
+              let vehicleLiveInfo = snd vehicleRouteInfo
+              vehicleLiveInfo.serviceSubTypes
         pure
           ApiTypes.PublicTransportData
             { ss =
@@ -997,6 +1002,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                           stC = r.stopCount,
                           st = mbServiceType,
                           stn = frfsServiceTier <&> (.shortName),
+                          sst = mbServiceSubTypes,
                           vt = show r.vehicleType,
                           clr = r.color,
                           ibc = bppConfig.id
@@ -1738,6 +1744,11 @@ data RouteServiceabilityContext = RouteServiceabilityContext
     merchantId :: Id Domain.Types.Merchant.Merchant
   }
 
+data ResolvedLeg = ResolvedLeg
+  { rlOrder      :: Int,
+    rlRouteCodes :: [Text]
+  }
+
 postMultimodalRouteServiceability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -1756,39 +1767,18 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
           }
   let callOtp = fromMaybe False req.callOtp
   if not callOtp
-    then getRouteServiceabilityForRouteCodes req.routeCodes routeServiceabilityContext
+    then handleProvidedRouteCodes routeServiceabilityContext req.routeCodes
     else do
       (srcCode, destCode) <- resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode
       directRouteCodes <- JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
       if null directRouteCodes
-        then getRouteServiceabilityForMultiModalRoute srcCode destCode routeServiceabilityContext
-        else getRouteServiceabilityForDirectRoute srcCode destCode directRouteCodes routeServiceabilityContext
+        then handleOtpRoute routeServiceabilityContext srcCode destCode
+        else handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes
   where
     authenticate :: Maybe (Id Domain.Types.Person.Person) -> Environment.Flow Domain.Types.Person.Person
     authenticate mbPersonId' = do
       personId <- mbPersonId' & fromMaybeM (InvalidRequest "Person not found")
       QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-
-    getRouteServiceabilityForRouteCodes :: Maybe [ApiTypes.RouteCodesWithLeg] -> RouteServiceabilityContext -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
-    getRouteServiceabilityForRouteCodes routeCodes' routeServiceabilityContext = do
-      let routeCodesWithLegs = fromMaybe [] routeCodes'
-      legRoutesWithVehicles <-
-        mapConcurrently
-          ( \legInfo -> do
-              busesForRoutes <- CQMMB.getBusesForRoutes legInfo.routeCodes routeServiceabilityContext.integratedBPPConfig
-              routesWithLiveVehicles <-
-                catMaybes
-                  <$> mapM
-                    (\r -> buildRouteWithLiveVehicle r routeServiceabilityContext False)
-                    busesForRoutes
-              return $
-                ApiTypes.LegRouteWithLiveVehicle
-                  { legOrder = legInfo.legOrder,
-                    routeWithLiveVehicles = routesWithLiveVehicles
-                  }
-          )
-          routeCodesWithLegs
-      pure $ ApiTypes.RouteServiceabilityResp Nothing legRoutesWithVehicles
 
     resolveSrcAndDestCode :: Maybe Text -> Maybe Text -> Environment.Flow (Text, Text)
     resolveSrcAndDestCode srcCode destCode =
@@ -1800,71 +1790,6 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
               <> show destCode
         )
         ((,) <$> srcCode <*> destCode)
-
-    getRouteServiceabilityForMultiModalRoute :: Text -> Text -> RouteServiceabilityContext -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
-    getRouteServiceabilityForMultiModalRoute srcCode' destCode' routeServiceabilityContext = do
-      validatedRoute <- getValidSingleModeRoute routeServiceabilityContext srcCode' destCode'
-      case validatedRoute.legs of
-        [] ->
-          return $ ApiTypes.RouteServiceabilityResp Nothing []
-        legs -> do
-          let firstLeg = head legs
-              lastLeg = last legs
-              mEffSrc = getStopGtfsCode firstLeg.fromStopDetails
-              mEffDest = getStopGtfsCode lastLeg.toStopDetails
-          (effSrc, effDest) <-
-            fromMaybeM
-              (InvalidRequest "OTP returned legs without stop codes")
-              ((,) <$> mEffSrc <*> mEffDest)
-          let effectiveStops =
-                ApiTypes.EffectiveStops
-                  { requestedSourceStop = srcCode',
-                    requestedDestinationStop = destCode',
-                    effectiveSourceStop = effSrc,
-                    effectiveDestinationStop = effDest,
-                    sourceChanged = effSrc /= srcCode',
-                    destinationChanged = effDest /= destCode'
-                  }
-          legRoutesWithVehicles <-
-            mapConcurrently
-              ( \(index, leg) -> do
-                  finalRouteCodes <-
-                    getLegRouteCodes leg routeServiceabilityContext.integratedBPPConfig
-                  busesForRoutes <-
-                    CQMMB.getBusesForRoutes finalRouteCodes routeServiceabilityContext.integratedBPPConfig
-                  routesWithLiveVehicles <-
-                    catMaybes
-                      <$> mapM
-                        (\r -> buildRouteWithLiveVehicle r routeServiceabilityContext False)
-                        busesForRoutes
-                  pure $
-                    ApiTypes.LegRouteWithLiveVehicle
-                      { legOrder = index,
-                        routeWithLiveVehicles = routesWithLiveVehicles
-                      }
-              )
-              (zip [0 ..] legs)
-          pure $ ApiTypes.RouteServiceabilityResp (Just effectiveStops) legRoutesWithVehicles
-
-    getRouteServiceabilityForDirectRoute :: Text -> Text -> [Text] -> RouteServiceabilityContext -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
-    getRouteServiceabilityForDirectRoute srcCode' destCode' directRouteCodes' routeServiceabilityContext = do
-      busesForRoutes <- CQMMB.getBusesForRoutes directRouteCodes' routeServiceabilityContext.integratedBPPConfig
-      alternateLiveVehicleData <-
-        catMaybes
-          <$> mapConcurrently
-            (\r -> buildRouteWithLiveVehicle r routeServiceabilityContext False)
-            busesForRoutes
-      let resp = ApiTypes.LegRouteWithLiveVehicle {legOrder = 0, routeWithLiveVehicles = alternateLiveVehicleData}
-      let effectiveStops =
-            ApiTypes.EffectiveStops
-              { requestedSourceStop = srcCode',
-                requestedDestinationStop = destCode',
-                effectiveSourceStop = srcCode',
-                effectiveDestinationStop = destCode',
-                sourceChanged = False,
-                destinationChanged = False
-              }
-      return $ ApiTypes.RouteServiceabilityResp (Just effectiveStops) [resp]
 
     extractSourceDestLatLng :: Text -> Text -> RouteServiceabilityContext -> Environment.Flow (LatLngV2, LatLngV2)
     extractSourceDestLatLng srcCode destCode routeServiceabilityContext = do
@@ -1941,7 +1866,12 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq routeServiceabilityContext.merchantId routeServiceabilityContext.merchantOperatingCityId
       otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) "getTransitRoutes"
-      JMU.getBestOneWayRoute MultiModalTypes.Bus otpResponse.routes (Just srcCode') (Just destCode') & fromMaybeM (getRouteNotFoundError MultiModalTypes.Bus srcCode' destCode')
+      oneWayRouteWithWalkLegs <- JMU.getBestOneWayRoute MultiModalTypes.Bus otpResponse.routes (Just srcCode') (Just destCode') & fromMaybeM (getRouteNotFoundError MultiModalTypes.Bus srcCode' destCode')
+      pure $ onlyBusLegs oneWayRouteWithWalkLegs
+
+    onlyBusLegs :: MultiModalTypes.MultiModalRoute -> MultiModalTypes.MultiModalRoute
+    onlyBusLegs route =
+      route { legs = filter (\l -> l.mode == MultiModal.Bus) route.legs }
 
     getStopGtfsCode :: Maybe MultiModalStopDetails -> Maybe Text
     getStopGtfsCode =
@@ -1990,6 +1920,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
               case mbServiceTier of
                 Just serviceTier -> do
                   frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier routeServiceabilityContext.merchantOperatingCityId routeServiceabilityContext.integratedBPPConfig.id
+                  -- Get service subtypes from in-memory cache
+                  mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [routeServiceabilityContext.integratedBPPConfig] detail.vehicle_no
                   logDebug $ "getBusScheduleInfo: vehicle=" <> detail.vehicle_no <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", hasLiveInfo=" <> show (isJust busLiveInfo) <> ", eta=" <> show detail.eta <> ", position=" <> show ((\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo) <> ", timestamp=" <> show ((.timestamp) <$> busLiveInfo)
                   return . Just $
                     API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo
@@ -1998,7 +1930,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                         locationUTCTimestamp = posixSecondsToUTCTime . fromIntegral . (.timestamp) <$> busLiveInfo,
                         serviceTierType = serviceTier,
                         serviceTierName = (.shortName) <$> frfsServiceTier,
-                        vehicleNumber = detail.vehicle_no
+                        vehicleNumber = detail.vehicle_no,
+                        serviceSubTypes = mbServiceSubTypes
                       }
                 Nothing -> do
                   logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
@@ -2015,6 +1948,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
               case mbServiceTier of
                 Just serviceTier -> do
                   frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier routeServiceabilityContext.merchantOperatingCityId routeServiceabilityContext.integratedBPPConfig.id
+                  -- Get service subtypes from in-memory cache
+                  mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [routeServiceabilityContext.integratedBPPConfig] bus.vehicleNumber
                   logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
                   enrichedEta <-
                     mapConcurrently
@@ -2027,7 +1962,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                         position = LatLong bus.busData.latitude bus.busData.longitude,
                         locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,
                         serviceTierType = serviceTier,
-                        serviceTierName = (.shortName) <$> frfsServiceTier
+                        serviceTierName = (.shortName) <$> frfsServiceTier,
+                        serviceSubTypes = mbServiceSubTypes
                       }
                 Nothing -> do
                   logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber
@@ -2054,6 +1990,149 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
     getRouteNotFoundError MultiModalTypes.Subway source dest = NoValidSubwayRoute source dest
     getRouteNotFoundError MultiModalTypes.Bus source dest = NoValidBusRoute source dest
     getRouteNotFoundError _ source dest = NoValidMetroRoute source dest -- fallback
+
+    getRouteServiceability
+      :: Maybe ApiTypes.EffectiveStops
+      -> RouteServiceabilityContext
+      -> [ResolvedLeg]
+      -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    getRouteServiceability mEffStops ctx legs = do
+      legRoutes <- enrichResolvedLegs ctx legs
+      pure $ ApiTypes.RouteServiceabilityResp mEffStops legRoutes
+
+
+    handleProvidedRouteCodes
+      :: RouteServiceabilityContext
+      -> Maybe [ApiTypes.RouteCodesWithLeg]
+      -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    handleProvidedRouteCodes ctx routeCodes' = do
+      let routeCodesWithLegs = fromMaybe [] routeCodes'
+      when (null routeCodesWithLegs) $
+        throwError $ InvalidRequest "routeCodes is required when callOtp=false"
+      let resolvedLegs =
+            resolveLegsFromProvidedRouteCodes routeCodes'
+      getRouteServiceability Nothing ctx resolvedLegs
+
+    handleDirectRoute
+      :: RouteServiceabilityContext
+      -> Text
+      -> Text
+      -> [Text]
+      -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    handleDirectRoute ctx srcCode destCode directRouteCodes = do
+      let resolvedLegs =
+            resolveLegsForDirectRoute srcCode destCode directRouteCodes
+          effectiveStops =
+            ApiTypes.EffectiveStops
+              { requestedSourceStop      = srcCode,
+                requestedDestinationStop = destCode,
+                effectiveSourceStop      = srcCode,
+                effectiveDestinationStop = destCode,
+                sourceChanged            = False,
+                destinationChanged       = False
+              }
+      getRouteServiceability (Just effectiveStops) ctx resolvedLegs
+
+    handleOtpRoute
+      :: RouteServiceabilityContext
+      -> Text
+      -> Text
+      -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    handleOtpRoute ctx srcCode destCode = do
+      (effectiveStops, resolvedLegs) <-
+        resolveLegsViaOtp srcCode destCode ctx
+
+      getRouteServiceability effectiveStops ctx resolvedLegs
+
+    enrichResolvedLegs
+      :: RouteServiceabilityContext
+      -> [ResolvedLeg]
+      -> Environment.Flow [ApiTypes.LegRouteWithLiveVehicle]
+    enrichResolvedLegs ctx =
+      mapConcurrently enrichLeg
+      where
+        enrichLeg ResolvedLeg{..} = do
+          busesForRoutes <-
+            CQMMB.getBusesForRoutes rlRouteCodes ctx.integratedBPPConfig
+
+          routesWithLiveVehicles <-
+            catMaybes
+              <$> mapM
+                (\r -> buildRouteWithLiveVehicle r ctx False)
+                busesForRoutes
+
+          pure $
+            ApiTypes.LegRouteWithLiveVehicle
+              { legOrder = rlOrder
+              , routeWithLiveVehicles = routesWithLiveVehicles
+              }
+
+    resolveLegsFromProvidedRouteCodes
+      :: Maybe [ApiTypes.RouteCodesWithLeg]
+      -> [ResolvedLeg]
+    resolveLegsFromProvidedRouteCodes routeCodes' =
+      let routeCodesWithLegs = fromMaybe [] routeCodes'
+      in map
+           (\leg ->
+              ResolvedLeg
+                { rlOrder = leg.legOrder
+                , rlRouteCodes = leg.routeCodes
+                })
+           routeCodesWithLegs
+
+    resolveLegsViaOtp
+      :: Text
+      -> Text
+      -> RouteServiceabilityContext
+      -> Environment.Flow (Maybe ApiTypes.EffectiveStops, [ResolvedLeg])
+    resolveLegsViaOtp srcCode destCode ctx = do
+      validatedRoute <- getValidSingleModeRoute ctx srcCode destCode
+      case validatedRoute.legs of
+        [] -> pure (Nothing, [])
+        legs -> do
+          let firstLeg = head legs
+              lastLeg  = last legs
+          (effSrc, effDest) <-
+            fromMaybeM
+              (InvalidRequest "OTP returned legs without stop codes")
+              ( (,) <$> getStopGtfsCode firstLeg.fromStopDetails
+                    <*> getStopGtfsCode lastLeg.toStopDetails
+              )
+          resolvedLegs <-
+            mapM
+              (\(idx, leg) -> do
+                  codes <- getLegRouteCodes leg ctx.integratedBPPConfig
+                  pure $
+                    ResolvedLeg
+                      { rlOrder = idx
+                      , rlRouteCodes = codes
+                      }
+              )
+              (zip [0 ..] legs)
+
+          pure
+            ( Just ApiTypes.EffectiveStops
+                { requestedSourceStop = srcCode,
+                  requestedDestinationStop = destCode,
+                  effectiveSourceStop = effSrc,
+                  effectiveDestinationStop = effDest,
+                  sourceChanged = effSrc /= srcCode,
+                  destinationChanged = effDest /= destCode
+                }
+            , resolvedLegs
+            )
+
+    resolveLegsForDirectRoute
+      :: Text
+      -> Text
+      -> [Text]
+      -> [ResolvedLeg]
+    resolveLegsForDirectRoute _src _dest directRouteCodes =
+      [ ResolvedLeg
+          { rlOrder = 0
+          , rlRouteCodes = directRouteCodes
+          }
+      ]
 
 postMultimodalRouteAvailability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

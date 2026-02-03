@@ -33,6 +33,7 @@ imports:
   VehiclePosition: Lib.JourneyModule.Types
   SDKPayloadDetails: Kernel.External.Payment.Juspay.Types
   ServiceTierType: BecknV2.FRFS.Enums
+  ServiceSubType: BecknV2.FRFS.Enums
   City: Kernel.Types.Beckn.Context
   SuggestedStations: Domain.Types.StationType
   PlatformType: Domain.Types.IntegratedBPPConfig
@@ -238,6 +239,7 @@ types:
     vt: Text
     st: Maybe ServiceTierType
     stn: Maybe Text
+    sst: Maybe [ServiceSubType]
     clr: Maybe Text
     ibc: Id IntegratedBPPConfig
     derive': "Generic, ToSchema"
@@ -322,6 +324,7 @@ types:
     locationUTCTimestamp: Maybe UTCTime
     eta: Maybe [BusStopETA]
     position: Maybe LatLong
+    serviceSubTypes: "Maybe [ServiceSubType]"
 
   LiveVehicleInfo:
     number: Text
@@ -330,6 +333,7 @@ types:
     locationUTCTimestamp: UTCTime
     eta: "Maybe [BusStopETA]"
     position: LatLong
+    serviceSubTypes: "Maybe [ServiceSubType]"
 
   AlternateRouteDetails:
     routeCode: Text
@@ -382,6 +386,7 @@ types:
     routeShortName: Text
     routeLongName: Text
     routeTimings: "[Seconds]"
+    serviceSubTypes: "Maybe [ServiceSubType]"
 
   SwitchRouteReq:
     journeyId: Id Journey

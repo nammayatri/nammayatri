@@ -9,6 +9,7 @@ imports:
   PlatformType: Domain.Types.IntegratedBPPConfig
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RouteState: Storage.CachedQueries.Merchant.MultiModalBus
+  ServiceSubType: BecknV2.FRFS.Enums
 
 module: TrackRoute
 
@@ -27,6 +28,7 @@ types:
     speed: Maybe Double
     timestamp: Maybe Text
     upcomingStops: Maybe [SharedLogic.External.LocationTrackingService.Types.UpcomingStop]
+    serviceSubTypes: "Maybe [ServiceSubType]"
     derive: "Show"
 
   VehicleTrackingInfo:
