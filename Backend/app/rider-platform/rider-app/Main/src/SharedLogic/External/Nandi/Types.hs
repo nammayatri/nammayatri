@@ -4,6 +4,7 @@ module SharedLogic.External.Nandi.Types where
 
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
+import Data.Aeson.Types (Parser)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Types.Station
@@ -11,6 +12,26 @@ import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Time
 import Storage.CachedQueries.Merchant.MultiModalBus (BusStopETA)
+
+newtype FilteredServiceSubTypes = FilteredServiceSubTypes [BecknV2.FRFS.Enums.ServiceSubType]
+  deriving (Show)
+
+instance FromJSON FilteredServiceSubTypes where
+  parseJSON (Array values) = do
+    -- Parse each element, collecting successes and ignoring failures
+    let parseElement v = case fromJSON v of
+          Success val -> Just val
+          Error _ -> Nothing
+    let parsed = catMaybes $ map parseElement $ toList values
+    return $ FilteredServiceSubTypes parsed
+  parseJSON _ = fail "Expected an array for service_sub_types"
+
+-- Helper function to normalize FilteredServiceSubTypes to Maybe [ServiceSubType]
+-- Converts empty lists to Nothing for cleaner API responses
+normalizeServiceSubTypes :: Maybe FilteredServiceSubTypes -> Maybe [BecknV2.FRFS.Enums.ServiceSubType]
+normalizeServiceSubTypes Nothing = Nothing
+normalizeServiceSubTypes (Just (FilteredServiceSubTypes [])) = Nothing
+normalizeServiceSubTypes (Just (FilteredServiceSubTypes subtypes)) = Just subtypes
 
 newtype NandiPatternsRes = NandiPatternsRes
   { patterns :: [NandiPattern]
@@ -92,7 +113,29 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     conductor_id :: Maybe Text,
     eligible_pass_ids :: Maybe [Text]
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+  deriving (Generic, ToJSON, ToSchema, Show)
+
+-- Custom FromJSON instance that filters unknown ServiceSubType values and normalizes empty lists to Nothing
+instance FromJSON VehicleServiceTypeResponse where
+  parseJSON = withObject "VehicleServiceTypeResponse" $ \v -> do
+    service_type <- v .: "service_type"
+    -- Parse with filtering, then normalize to public type
+    raw_service_sub_types <- v .:? "service_sub_types" :: Parser (Maybe FilteredServiceSubTypes)
+    let service_sub_types = normalizeServiceSubTypes raw_service_sub_types
+    vehicle_no <- v .: "vehicle_no"
+    last_updated <- v .:? "last_updated"
+    schedule_no <- v .:? "schedule_no"
+    trip_number <- v .:? "trip_number"
+    route_id <- v .:? "route_id"
+    waybill_id <- v .:? "waybill_id"
+    route_number <- v .:? "route_number"
+    depot <- v .:? "depot"
+    remaining_trip_details <- v .:? "remaining_trip_details"
+    is_actually_valid <- v .:? "is_actually_valid"
+    driver_id <- v .:? "driver_id"
+    conductor_id <- v .:? "conductor_id"
+    eligible_pass_ids <- v .:? "eligible_pass_ids"
+    return VehicleServiceTypeResponse {..}
 
 data BusScheduleTrip = BusScheduleTrip
   { schedule_number :: Maybe Text,

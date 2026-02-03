@@ -23,6 +23,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as A
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Domain.Action.UI.NearbyBuses (getSimpleNearbyBuses)
 import Domain.Action.UI.Serviceability (getNearestOperatingAndCurrentCity)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -274,25 +275,27 @@ getNearbyBusesAsBuckets merchantOperatingCityId riderConfig location = do
 
   let radiusBuckets = generateRadiusBuckets nearbyBusRadiusBucketStep nearbyBusSearchRadiusMeters
 
-  let groupedBuckets = groupByRadiusAndServiceType radiusBuckets busesWithDistance
+  let groupedBucketsWithBuses = groupByRadiusAndServiceType radiusBuckets busesWithDistance
 
   let vehicleDataBuckets =
         map
-          ( \((bucketRadius, mbServiceType, mbServiceTierName, mbServiceSubTypes), buses) ->
-              ND.VehicleDataBucket
-                { radius = bucketRadius,
-                  travelMode = DTrip.Bus,
-                  vehicleInfo =
-                    ND.PublicTransport $
-                      ND.PublicTransportBucket
-                        { serviceType = mbServiceType,
-                          serviceTierName = mbServiceTierName,
-                          serviceSubTypes = mbServiceSubTypes,
-                          vehicles = sortOn (.distance) buses
-                        }
-                }
+          ( \((bucketRadius, mbServiceType, mbServiceTierName), (buses, serviceSubTypesSet)) ->
+              let allServiceSubTypes = Set.toList serviceSubTypesSet
+                  mbServiceSubTypes = if null allServiceSubTypes then Nothing else Just allServiceSubTypes
+               in ND.VehicleDataBucket
+                    { radius = bucketRadius,
+                      travelMode = DTrip.Bus,
+                      vehicleInfo =
+                        ND.PublicTransport $
+                          ND.PublicTransportBucket
+                            { serviceType = mbServiceType,
+                              serviceTierName = mbServiceTierName,
+                              serviceSubTypes = mbServiceSubTypes,
+                              vehicles = sortOn (.distance) buses
+                            }
+                    }
           )
-          groupedBuckets
+          groupedBucketsWithBuses
 
   return vehicleDataBuckets
   where
@@ -308,7 +311,7 @@ getNearbyBusesAsBuckets merchantOperatingCityId riderConfig location = do
     groupByRadiusAndServiceType ::
       [Meters] ->
       [(NB.NearbyBus, ND.PublicTransportInfo, Double)] ->
-      [((Meters, Maybe Spe.ServiceTierType, Maybe Text, Maybe [Spe.ServiceSubType]), [ND.PublicTransportInfo])]
+      [((Meters, Maybe Spe.ServiceTierType, Maybe Text), ([ND.PublicTransportInfo], Set.Set Spe.ServiceSubType))]
     groupByRadiusAndServiceType buckets buses =
       let grouped =
             foldr
@@ -316,8 +319,9 @@ getNearbyBusesAsBuckets merchantOperatingCityId riderConfig location = do
                   case findBucket buckets dist of
                     Nothing -> acc
                     Just bucket ->
-                      let key = (bucket, bus.serviceType, bus.serviceTierName, bus.serviceSubTypes)
-                       in Map.insertWith (++) key [info] acc
+                      let key = (bucket, bus.serviceType, bus.serviceTierName)
+                          subTypesSet = Set.fromList $ fromMaybe [] bus.serviceSubTypes
+                       in Map.insertWith (\(infos1, set1) (infos2, set2) -> (infos1 ++ infos2, Set.union set1 set2)) key ([info], subTypesSet) acc
               )
               Map.empty
               buses
