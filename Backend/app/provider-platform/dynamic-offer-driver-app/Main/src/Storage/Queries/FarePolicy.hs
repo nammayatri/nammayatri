@@ -119,6 +119,7 @@ delete farePolicyId = do
   QueriesFPRD.delete farePolicyId
   QueriesFPICD.delete farePolicyId
   QueriesFPSDS.deleteAll' farePolicyId
+  QueriesFPAD.delete farePolicyId
   deleteWithKV [Se.Is BeamFP.id $ Se.Eq (getId farePolicyId)]
 
 instance ToTType' BeamFP.FarePolicy FarePolicy where
