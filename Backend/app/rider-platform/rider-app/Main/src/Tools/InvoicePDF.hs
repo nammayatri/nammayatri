@@ -100,6 +100,9 @@ generateInvoicePDF invoiceId person bookings merchant startDate endDate mbLogoUr
             logoUrl = mbLogoUrl
           }
 
+  -- Debug log for logo URL
+  logInfo $ "Generating invoice PDF with logoUrl: " <> maybe "Nothing" (\url -> "Just " <> url) mbLogoUrl
+
   -- Generate HTML
   let html = generateInvoiceHTML invoiceData
 
@@ -149,6 +152,11 @@ generatePDFFromHTML htmlPath pdfPath = do
             ( readProcessWithExitCode
                 "wkhtmltopdf"
                 [ "--enable-local-file-access",
+                  "--enable-external-links", -- Allow loading external images
+                  "--load-error-handling",
+                  "ignore", -- Ignore loading errors gracefully
+                  "--encoding",
+                  "utf-8",
                   "--print-media-type", -- Use print CSS for better rendering
                   htmlPath,
                   pdfPath
