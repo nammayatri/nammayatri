@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.PassType
 import qualified Domain.Types.Person
 import qualified Domain.Types.PurchasedPass
 import Kernel.Prelude
@@ -27,6 +28,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
     passCode :: Kernel.Prelude.Text,
+    passEnum :: Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum,
     passName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
