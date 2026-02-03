@@ -76,6 +76,12 @@ VehicleServiceTier:
           - or:
               - isEnabled: "(Just True)|CIM"
               - isEnabled: "Nothing|CIM"
+    findByServiceTierTypeAndCityIdForUpdate:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - serviceTierType
+          - merchantOperatingCityId
     findBaseServiceTierTypeByCategoryAndCityId:
       kvFunction: findOneWithKV
       where:

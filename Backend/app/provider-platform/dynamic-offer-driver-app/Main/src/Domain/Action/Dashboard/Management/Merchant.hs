@@ -3667,7 +3667,7 @@ postMerchantConfigVehicleServiceTierUpdate merchantShortId opCity serviceTierTyp
 
   -- 1. Find existing config
   existingConfig <-
-    CQVST.findByServiceTierTypeAndCityId serviceTierType merchantOpCityId Nothing
+    QVST.findByServiceTierTypeAndCityIdForUpdate serviceTierType merchantOpCityId
       >>= fromMaybeM (VehicleServiceTierNotFound $ show serviceTierType)
 
   -- 2. Validate update request
@@ -3772,7 +3772,8 @@ applyVehicleServiceTierUpdate existing req =
       DVST.stopFcmThreshold = req.stopFcmThreshold <|> existing.stopFcmThreshold,
       DVST.stopFcmSuppressCount = req.stopFcmSuppressCount <|> existing.stopFcmSuppressCount,
       DVST.scheduleBookingListEligibilityTags = req.scheduleBookingListEligibilityTags <|> existing.scheduleBookingListEligibilityTags,
-      DVST.vehicleCategory = req.vehicleCategory <|> existing.vehicleCategory
+      DVST.vehicleCategory = req.vehicleCategory <|> existing.vehicleCategory,
+      DVST.isEnabled = req.isEnabled <|> existing.isEnabled
     }
 
 getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.GeometryResp
