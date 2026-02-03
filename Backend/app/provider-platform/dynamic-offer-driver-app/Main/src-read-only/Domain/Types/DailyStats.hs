@@ -19,6 +19,7 @@ data DailyStats = DailyStats
   { activatedValidRides :: Kernel.Prelude.Int,
     bonusEarnings :: Kernel.Types.Common.HighPrecMoney,
     cancellationCharges :: Kernel.Types.Common.HighPrecMoney,
+    commissionCharges :: Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Types.Common.Currency,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,

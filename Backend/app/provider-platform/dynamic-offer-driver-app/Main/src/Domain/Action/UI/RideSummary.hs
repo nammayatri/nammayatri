@@ -34,7 +34,8 @@ data DriverRideSummaryResp = DriverRideSummaryResp
     noOfRides :: Int,
     tipAmount :: PriceAPIEntity,
     cancellationCharges :: PriceAPIEntity,
-    rideDuration :: Seconds
+    rideDuration :: Seconds,
+    commissionCharges :: PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -62,6 +63,7 @@ mkRideSummaryList =
             noOfRides = x.numRides,
             tipAmount = PriceAPIEntity x.tipAmount x.currency,
             cancellationCharges = PriceAPIEntity x.cancellationCharges x.currency,
-            rideDuration = x.totalRideTime
+            rideDuration = x.totalRideTime,
+            commissionCharges = PriceAPIEntity x.commissionCharges x.currency
           }
     )
