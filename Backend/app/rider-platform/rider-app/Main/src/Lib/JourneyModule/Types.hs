@@ -4,6 +4,7 @@ import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified API.Types.UI.RiderLocation as RL
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Monad.Extra (mapMaybeM)
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import Control.Applicative ((<|>))
 import Data.Aeson (object, withObject, (.:), (.=))
@@ -307,9 +308,12 @@ data LegExtraInfo = Walk WalkLegExtraInfo | Taxi TaxiLegExtraInfo | Metro MetroL
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LegSplitInfo = LegSplitInfo
+data LegRefundInfo = LegRefundInfo
   { amount :: HighPrecMoney,
-    status :: Payment.RefundStatus
+    status :: Payment.RefundStatus,
+    arn :: Maybe Text,
+    updatedAt :: UTCTime,
+    createdAt :: UTCTime
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -366,7 +370,8 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     ticketNo :: Maybe [Text],
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
-    refund :: Maybe LegSplitInfo,
+    refund :: Maybe LegRefundInfo,
+    refunds :: [LegRefundInfo],
     categories :: [FRFSTicketServiceAPI.CategoryInfoResponse],
     categoryBookingDetails :: Maybe [CategoryBookingDetails] -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
   }
@@ -388,7 +393,8 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
     ticketNo :: Maybe [Text],
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
-    refund :: Maybe LegSplitInfo,
+    refund :: Maybe LegRefundInfo,
+    refunds :: [LegRefundInfo],
     categories :: [FRFSTicketServiceAPI.CategoryInfoResponse],
     categoryBookingDetails :: Maybe [CategoryBookingDetails] -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
   }
@@ -431,7 +437,8 @@ data BusLegExtraInfo = BusLegExtraInfo
     ticketNo :: Maybe [Text],
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
-    refund :: Maybe LegSplitInfo,
+    refund :: Maybe LegRefundInfo,
+    refunds :: [LegRefundInfo],
     trackingStatus :: JMState.TrackingStatus,
     trackingStatusLastUpdatedAt :: UTCTime,
     fleetNo :: Maybe Text,
@@ -886,17 +893,13 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
       }
   where
     mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters totalBookingAmount = do
-      mbBookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
-      refundBloc <- case mbBookingPayment of
-        Just bookingPayment -> do
-          mbPaymentOrder <- QPaymentOrder.findById bookingPayment.paymentOrderId
-          case mbPaymentOrder of
-            Just paymentOrder -> do
-              refundEntries <- QRefunds.findAllByOrderId paymentOrder.shortId
-              let firstRefundEntry = listToMaybe refundEntries
-              return $ firstRefundEntry <&> \refundEntry -> LegSplitInfo {amount = totalBookingAmount.amount, status = refundEntry.status}
-            Nothing -> return Nothing
-        Nothing -> return Nothing
+      bookingPayments <- QFRFSTicketBookingPayment.findAllTBPByBookingId booking.id
+      let paymentOrderIds = nub $ map (.paymentOrderId) bookingPayments
+      paymentOrders <- mapMaybeM QPaymentOrder.findById paymentOrderIds
+      let orderShortIds = map (.shortId) paymentOrders
+      refunds <- concat <$> mapM QRefunds.findAllByOrderId orderShortIds
+      let refunds' = map (\refundEntry -> LegRefundInfo {amount = totalBookingAmount.amount, status = refundEntry.status, arn = refundEntry.arn, updatedAt = refundEntry.updatedAt, createdAt = refundEntry.createdAt}) refunds
+      let refundBloc = listToMaybe refunds'
       let adultTicketQuantity = find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
           childTicketQuantity = find (\priceItem -> priceItem.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
       case booking.vehicleType of
@@ -914,6 +917,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   adultTicketQuantity = adultTicketQuantity,
                   childTicketQuantity = childTicketQuantity,
                   refund = refundBloc,
+                  refunds = refunds',
                   categories = categories,
                   categoryBookingDetails = Just categoryBookingDetails
                 }
@@ -947,6 +951,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   adultTicketQuantity = adultTicketQuantity,
                   childTicketQuantity = childTicketQuantity,
                   refund = refundBloc,
+                  refunds = refunds',
                   trackingStatus = journeyLegDetail.trackingStatus,
                   trackingStatusLastUpdatedAt = journeyLegDetail.trackingStatusLastUpdatedAt,
                   fleetNo = journeyLeg.finalBoardedBusNumber,
@@ -992,6 +997,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   adultTicketQuantity = adultTicketQuantity,
                   childTicketQuantity = childTicketQuantity,
                   refund = refundBloc,
+                  refunds = refunds',
                   categories = categories,
                   categoryBookingDetails = Just categoryBookingDetails
                 }
@@ -1174,6 +1180,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                   adultTicketQuantity = adultTicketQuantity,
                   childTicketQuantity = childTicketQuantity,
                   refund = Nothing,
+                  refunds = [],
                   categories = categories,
                   categoryBookingDetails = Nothing
                 }
@@ -1204,6 +1211,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                   adultTicketQuantity = adultTicketQuantity,
                   childTicketQuantity = childTicketQuantity,
                   refund = Nothing,
+                  refunds = [],
                   trackingStatus = journeyLegDetail.trackingStatus,
                   trackingStatusLastUpdatedAt = journeyLegDetail.trackingStatusLastUpdatedAt,
                   fleetNo = journeyLeg.finalBoardedBusNumber,
@@ -1245,6 +1253,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                   adultTicketQuantity = adultTicketQuantity,
                   childTicketQuantity = childTicketQuantity,
                   refund = Nothing,
+                  refunds = [],
                   categories = categories,
                   categoryBookingDetails = Nothing
                 }
