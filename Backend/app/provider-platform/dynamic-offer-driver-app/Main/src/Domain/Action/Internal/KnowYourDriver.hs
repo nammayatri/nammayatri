@@ -14,8 +14,9 @@
 
 module Domain.Action.Internal.KnowYourDriver where
 
-import qualified Data.Aeson as A
 import qualified AWS.S3 as S3
+import Control.Applicative ((<|>))
+import qualified Data.Aeson as A
 import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Types.DocumentVerificationConfig as DTO
@@ -48,7 +49,6 @@ import qualified Storage.Queries.QueriesExtra.RideLite as QRLite
 import qualified Storage.Queries.RatingExtra as QRating
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
-import Control.Applicative ((<|>))
 
 data DriverReview = DriverReview
   { riderName :: Maybe Text,

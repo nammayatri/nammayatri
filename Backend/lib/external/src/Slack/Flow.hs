@@ -43,8 +43,8 @@ publishMessage config message = do
         AWS -> routeToAWS config message
         GCP -> routeToGCP config message
         UNAVAILABLE -> do
-             putStrLn ("ERROR: Slack.Flow: CloudType UNAVAILABLE" :: Text)
-             error "CloudType UNAVAILABLE: Cannot route slack message"
+          putStrLn ("ERROR: Slack.Flow: CloudType UNAVAILABLE" :: Text)
+          error "CloudType UNAVAILABLE: Cannot route slack message"
 
 routeToAWS :: SlackNotificationConfig -> T.Text -> IO ()
 routeToAWS config message = do
@@ -52,16 +52,16 @@ routeToAWS config message = do
   case config.snsTopicArn of
     Just topicArn -> AWS.publishMessage topicArn message
     Nothing -> do
-         putStrLn ("ERROR: Slack.Flow: AWS SNS Topic ARN not configured!" :: Text)
-         error "AWS SNS Topic ARN not configured in slackNotificationConfig"
+      putStrLn ("ERROR: Slack.Flow: AWS SNS Topic ARN not configured!" :: Text)
+      error "AWS SNS Topic ARN not configured in slackNotificationConfig"
 
 routeToGCP :: SlackNotificationConfig -> T.Text -> IO ()
 routeToGCP config message = do
   putStrLn ("DEBUG: Slack.Flow: Routing to GCP Pub/Sub..." :: Text)
   case (config.gcpProjectId, config.gcpTopicId) of
     (Just projectId, Just topicId) -> do
-         putStrLn $ ("DEBUG: Slack.Flow: Calling GCP.publishMessage with ProjectId=" :: Text) <> projectId <> ", TopicId=" <> topicId
-         GCP.publishMessage projectId topicId message
+      putStrLn $ ("DEBUG: Slack.Flow: Calling GCP.publishMessage with ProjectId=" :: Text) <> projectId <> ", TopicId=" <> topicId
+      GCP.publishMessage projectId topicId message
     _ -> do
-         putStrLn ("ERROR: Slack.Flow: GCP Pub/Sub project/topic not configured!" :: Text)
-         error "GCP Pub/Sub project/topic not configured in slackNotificationConfig"
+      putStrLn ("ERROR: Slack.Flow: GCP Pub/Sub project/topic not configured!" :: Text)
+      error "GCP Pub/Sub project/topic not configured in slackNotificationConfig"

@@ -86,6 +86,7 @@ data Booking = Booking
     providerUrl :: Kernel.Types.Common.BaseUrl,
     quoteId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote),
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
+    requiresPaymentBeforeConfirm :: Kernel.Prelude.Bool,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

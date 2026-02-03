@@ -51,6 +51,7 @@ type API =
     :> QueryParam "paymentMethodId" Payment.PaymentMethodId
     :> QueryParam "paymentInstrument" DMPM.PaymentInstrument
     :> QueryParam "isAdvancedBookingEnabled" Bool
+    :> QueryParam "requiresPaymentBeforeConfirm" Bool
     :> Post '[JSON] ConfirmRes
 
 data ConfirmRes = ConfirmRes
@@ -72,8 +73,9 @@ confirm ::
   Maybe Payment.PaymentMethodId ->
   Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
+  Maybe Bool ->
   FlowHandler ConfirmRes
-confirm (personId, merchantId) quoteId mbPaymentMethodId mbPaymentInstrument = withFlowHandlerAPI . confirm' (personId, merchantId) quoteId Nothing mbPaymentMethodId mbPaymentInstrument
+confirm (personId, merchantId) quoteId mbPaymentMethodId mbPaymentInstrument mbRequiresPaymentBeforeConfirm = withFlowHandlerAPI . confirm' (personId, merchantId) quoteId Nothing mbPaymentMethodId mbPaymentInstrument mbRequiresPaymentBeforeConfirm
 
 confirm' ::
   (Id SP.Person, Id Merchant.Merchant) ->
@@ -82,10 +84,11 @@ confirm' ::
   Maybe Payment.PaymentMethodId ->
   Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
+  Maybe Bool ->
   Flow ConfirmRes
-confirm' (personId, _) quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled =
+confirm' (personId, _) quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled mbRequiresPaymentBeforeConfirm =
   withPersonIdLogTag personId $ do
-    dConfirmRes <- DConfirm.confirm personId quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled
+    dConfirmRes <- DConfirm.confirm personId quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled (fromMaybe False mbRequiresPaymentBeforeConfirm)
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
     moc <- CQMOC.findByMerchantIdAndCity dConfirmRes.merchant.id dConfirmRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dConfirmRes.merchant.id.getId <> "-city-" <> show dConfirmRes.city)
     bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId dConfirmRes.merchant.id "MOBILITY" moc.id

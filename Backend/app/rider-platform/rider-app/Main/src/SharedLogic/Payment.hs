@@ -535,6 +535,7 @@ syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
       DOrder.Normal -> do
         ticketBooking <- QTB.findById (cast paymentOrder.id)
         return $ ticketBooking <&> (.ticketPlaceId)
+      DOrder.RideBooking -> return Nothing
       _ -> return Nothing
   let orderStatusCall = TPayment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
   orderStatusHandler fulfillmentHandler paymentServiceType paymentOrder orderStatusCall

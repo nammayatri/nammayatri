@@ -23,6 +23,7 @@ where
 
 import qualified Domain.Action.UI.Booking as DBooking
 import qualified Domain.Action.UI.InvoiceGeneration as DInvoice
+import qualified Domain.Action.UI.Payment as DPayment
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.Booking.API (BookingAPIEntity, BookingRequestType, BookingStatusAPIEntity)
 import qualified Domain.Types.BookingStatus as SRB
@@ -104,6 +105,10 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] DInvoice.GenerateInvoiceReq
              :> Post '[JSON] DInvoice.GenerateInvoiceRes
+           :<|> Capture "rideBookingId" (Id SRB.Booking)
+             :> "paymentStatus"
+             :> TokenAuth
+             :> Get '[JSON] DPayment.PaymentStatusResp
        )
 
 handler :: FlowServer API
@@ -116,6 +121,7 @@ handler =
     :<|> addStop
     :<|> editStop
     :<|> generateInvoice
+    :<|> getRideBookingPaymentStatus
 
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler BookingAPIEntity
 bookingStatus bookingId = withFlowHandlerAPI . DBooking.bookingStatus bookingId
@@ -140,3 +146,7 @@ favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClie
 
 generateInvoice :: (Id Person.Person, Id Merchant.Merchant) -> DInvoice.GenerateInvoiceReq -> FlowHandler DInvoice.GenerateInvoiceRes
 generateInvoice (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLogTag personId $ DInvoice.generateInvoice (personId, merchantId) req
+
+-- | Optional: get payment status for payment-before-confirm booking. With Paytm EDC webhook, confirm is triggered server-side on success so polling is not required; use only for UI refresh or fallback if webhook is delayed.
+getRideBookingPaymentStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DPayment.PaymentStatusResp
+getRideBookingPaymentStatus bookingId authInfo = withFlowHandlerAPI $ DPayment.getRideBookingPaymentStatusByBookingId authInfo bookingId
