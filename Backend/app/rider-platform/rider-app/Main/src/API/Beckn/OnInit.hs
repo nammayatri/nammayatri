@@ -22,8 +22,10 @@ import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Utils.Common as Common
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Cancel as DCancel
+import qualified Domain.Action.UI.Payment as DPayment
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..), CancellationStage (..))
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -58,10 +60,12 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
             (onInitRes, booking) <- DOnInit.onInit onInitReq
             fork "on init received pushing ondc logs" do
               void $ pushLogs "on_init" (toJSON reqV2) onInitRes.merchant.id.getId "MOBILITY"
-            handle (errHandler booking) . void . withShortRetry $ do
-              confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
-              Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId
-              CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
+            if booking.requiresPaymentBeforeConfirm && (booking.paymentInstrument == Just DMPM.BoothOnline)
+              then void $ DPayment.createRideBookingPaymentOrder booking
+              else handle (errHandler booking) . void . withShortRetry $ do
+                confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
+                Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId
+                CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
       else do
         let cancellationReason = "on_init API failure"
             cancelReq = buildCancelReq cancellationReason OnInit

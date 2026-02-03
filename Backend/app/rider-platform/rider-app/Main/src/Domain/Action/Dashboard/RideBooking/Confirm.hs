@@ -21,7 +21,8 @@ postConfirmRideSearchQuotes ::
   Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId ->
   Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow API.UI.Confirm.ConfirmRes
-postConfirmRideSearchQuotes merchantShortId _opCity personId quoteId dashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled = do
+postConfirmRideSearchQuotes merchantShortId _opCity personId quoteId dashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled mbRequiresPaymentBeforeConfirm = do
   m <- findMerchantByShortId merchantShortId
-  API.UI.Confirm.confirm' (personId, m.id) quoteId dashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled
+  API.UI.Confirm.confirm' (personId, m.id) quoteId dashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled mbRequiresPaymentBeforeConfirm
