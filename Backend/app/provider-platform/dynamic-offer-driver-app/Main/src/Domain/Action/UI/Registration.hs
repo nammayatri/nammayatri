@@ -729,8 +729,7 @@ signatureAuth ::
   Maybe Text ->
   Maybe Text ->
   Flow AuthRes
-signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbClientId = do
-  let req = if req'.merchantId == "JATRI_SAATHI_PARTNER" then (req' {merchantId = "NAMMA_YATRI_PARTNER"} :: AuthReq) else req'
+signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbClientId = do
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- asks (.smsCfg)
   countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for signature auth")
@@ -738,7 +737,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
   deploymentVersion <- asks (.version)
   cloudType <- asks (.cloudType)
   merchant <-
-    QMerchant.findByShortId (ShortId req.merchantId)
+    QMerchant.findById (Id req.merchantId)
       >>= fromMaybeM (MerchantNotFound (req.merchantId))
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req.merchantOperatingCity
   mobileNumberDecrypted <- decryptAES128 merchant.cipherText mobileNumber
