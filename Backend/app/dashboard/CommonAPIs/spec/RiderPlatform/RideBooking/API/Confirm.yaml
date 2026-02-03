@@ -38,6 +38,7 @@ apis:
               - paymentMethodId: PaymentMethodId
               - paymentInstrument: PaymentInstrument
               - isAdvancedBookingEnabled: Bool
+              - requiresPaymentBeforeConfirm: Bool
             auth: ApiAuthV2
             response:
               type: ConfirmRes

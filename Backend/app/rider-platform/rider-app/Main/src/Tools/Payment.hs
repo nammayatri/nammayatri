@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingVia #-}
 
 module Tools.Payment
@@ -103,6 +104,13 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import System.Environment as SE
+
+-- Paytm POS (RideBooking): createOrder/config will use PaymentEDC from shared-kernel.
+-- Until shared-kernel PR is merged, use Juspay so the app compiles.
+-- After merge: build with cabal flag usePaymentEDC (e.g. cabal build -f usePaymentEDC) to test Paytm EDC flow.
+rideBookingPaymentService :: Payment.PaymentService
+rideBookingPaymentService = Payment.Juspay
+
 
 createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfigAndServiceName Payment.createOrder
@@ -214,6 +222,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
       FRFSPassPurchase -> pure $ DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> pure $ DMSC.ParkingPaymentService Payment.Juspay
       STCL -> pure $ DMSC.PaymentService Payment.Juspay
+      RideBooking -> decidePaymentService (DMSC.PaymentService rideBookingPaymentService) clientSdkVersion
 
 decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> m DMSC.ServiceName
 decidePaymentService paymentServiceName clientSdkVersion = do
@@ -554,6 +563,7 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
       STCL -> DMSC.PaymentService Payment.Juspay
+      RideBooking -> DMSC.PaymentService rideBookingPaymentService
 
 getIsPercentageSplit ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -589,6 +599,7 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
       STCL -> DMSC.PaymentService Payment.Juspay
+      RideBooking -> DMSC.PaymentService rideBookingPaymentService
 
 getIsRefundSplitEnabled ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -624,6 +635,7 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
       STCL -> DMSC.PaymentService Payment.Juspay
+      RideBooking -> DMSC.PaymentService rideBookingPaymentService
 
 getPaymentOrderValidity ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -663,6 +675,7 @@ getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
       STCL -> DMSC.PaymentService Payment.Juspay
+      RideBooking -> DMSC.PaymentService rideBookingPaymentService
 
 extractSplitSettlementDetailsAmount :: Maybe SplitSettlementDetails -> Maybe SplitSettlementDetailsAmount
 extractSplitSettlementDetailsAmount Nothing = Nothing
@@ -703,6 +716,7 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
       STCL -> DMSC.PaymentService Payment.Juspay
+      RideBooking -> DMSC.PaymentService rideBookingPaymentService
 
 fetchOfferSKUConfig ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -737,4 +751,5 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
       ParkingBooking -> DMSC.ParkingPaymentService Payment.Juspay
+      RideBooking -> DMSC.PaymentService rideBookingPaymentService
       STCL -> DMSC.PaymentService Payment.Juspay

@@ -82,7 +82,8 @@ data DConfirmReq = DConfirmReq
     dashboardAgentId :: Maybe Text,
     paymentMethodId :: Maybe Payment.PaymentMethodId,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    requiresPaymentBeforeConfirm :: Bool
   }
 
 data DConfirmRes = DConfirmRes
@@ -163,7 +164,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId
+  (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
@@ -315,8 +316,9 @@ buildBooking ::
   [LYT.ConfigVersionMap] ->
   Maybe DMPM.PaymentMode ->
   Maybe Text ->
+  Bool ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId = do
+buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId requiresPaymentBeforeConfirm = do
   id <- generateGUID
   let bookingId = Id id
   displayBookingId <- Just <$> DBI.generateDisplayBookingId merchant.shortId bookingId now
@@ -389,6 +391,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           multimodalSearchRequestId = searchRequest.multimodalSearchRequestId,
           vehicleCategory = searchRequest.vehicleCategory,
           dashboardAgentId,
+          requiresPaymentBeforeConfirm,
           -- Commission is calculated on BPP side (requires fare policy config).
           -- BAP doesn't have access to fare policy, so commission remains Nothing here.
           -- If commission is needed on BAP, it should flow from BPP via Beckn protocol extension.

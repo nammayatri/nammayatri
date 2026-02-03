@@ -46,7 +46,20 @@ type API =
     :> Payment.API "rideId" "rideId" DRide.Ride DRide.Ride Payment.CreateOrderResp PaymentAPI.WalletRechargeReq
 
 type S2SAPI =
-  "s2s" :> "payment" :> Capture "orderId" (Id DOrder.PaymentOrder) :> Capture "customerId" (Id DP.Person) :> "status" :> Header "api-key" Data.Text.Text :> Get '[JSON] DPayment.PaymentStatusResp
+  "s2s"
+    :> "payment"
+    :> ( Capture "orderId" (Id DOrder.PaymentOrder)
+           :> Capture "customerId" (Id DP.Person)
+           :> "status"
+           :> Header "api-key" Data.Text.Text
+           :> Get '[JSON] DPayment.PaymentStatusResp
+       )
+      :<|> ( "paytm"
+               :> "edc"
+               :> "callback"
+               :> ReqBody '[JSON] DPayment.PaytmEdcCallbackReq
+               :> Post '[JSON] AckResponse
+           )
 
 handler :: FlowServer API
 handler authInfo =
@@ -58,7 +71,7 @@ handler authInfo =
     :<|> getWalletBalance authInfo
 
 handlerS2S :: FlowServer S2SAPI
-handlerS2S = getStatusS2S
+handlerS2S = getStatusS2S :<|> paytmEdcCallback
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DRide.Ride -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails rideId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails rideId
@@ -73,6 +86,9 @@ getStatusS2S :: Id DOrder.PaymentOrder -> Id DP.Person -> Maybe Data.Text.Text -
 getStatusS2S orderId personId mbApiKey = withFlowHandlerAPI $ do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound "Person not found")
   DPayment.getStatusS2S orderId personId person.merchantId mbApiKey
+
+paytmEdcCallback :: DPayment.PaytmEdcCallbackReq -> FlowHandler AckResponse
+paytmEdcCallback = withFlowHandlerAPI . DPayment.paytmEdcCallbackHandler
 
 postWalletRecharge :: (Id DP.Person, Id Merchant.Merchant) -> PaymentAPI.WalletRechargeReq -> FlowHandler APISuccess
 postWalletRecharge tokenDetails req = withFlowHandlerAPI $ DPayment.postWalletRecharge tokenDetails req

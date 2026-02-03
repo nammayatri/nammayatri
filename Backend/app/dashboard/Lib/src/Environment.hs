@@ -14,9 +14,9 @@
 
 module Environment where
 
-import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
+import qualified Data.Text as T
 import Domain.Types.ServerName
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
