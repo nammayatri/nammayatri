@@ -60,6 +60,17 @@ findByServiceTierTypeAndCityId serviceTierType merchantOperatingCityId = do
         ]
     ]
 
+findByServiceTierTypeAndCityIdForUpdate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.Common.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
+findByServiceTierTypeAndCityIdForUpdate serviceTierType merchantOperatingCityId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+        ]
+    ]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.VehicleServiceTier.VehicleServiceTier -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
