@@ -77,6 +77,8 @@ library
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
       API.Internal.ViolationDetection
+      API.Types.UnifiedDashboard.Common
+      API.Types.UnifiedDashboard.Management.OrphanInstances.MediaFileDocument
       API.UI
       API.UI.Call
       API.UI.CallEvent
@@ -319,6 +321,7 @@ library
       Domain.Action.UI.WMB
       Domain.Action.UnifiedDashboard.Fleet.HealthCheck
       Domain.Action.UnifiedDashboard.Management.HealthCheck
+      Domain.Action.UnifiedDashboard.Management.MediaFileDocument
       Domain.Action.UnifiedDashboard.Management.Person
       Domain.Action.UnifiedDashboard.Operator.HealthCheck
       Domain.Action.UnifiedDashboard.RideBooking.HealthCheck
@@ -881,6 +884,7 @@ library
       API.Action.UnifiedDashboard.Fleet.HealthCheck
       API.Action.UnifiedDashboard.Management
       API.Action.UnifiedDashboard.Management.HealthCheck
+      API.Action.UnifiedDashboard.Management.MediaFileDocument
       API.Action.UnifiedDashboard.Management.Person
       API.Action.UnifiedDashboard.Operator
       API.Action.UnifiedDashboard.Operator.HealthCheck
@@ -950,8 +954,10 @@ library
       API.Types.UnifiedDashboard.Fleet.HealthCheck
       API.Types.UnifiedDashboard.Management
       API.Types.UnifiedDashboard.Management.Endpoints.HealthCheck
+      API.Types.UnifiedDashboard.Management.Endpoints.MediaFileDocument
       API.Types.UnifiedDashboard.Management.Endpoints.Person
       API.Types.UnifiedDashboard.Management.HealthCheck
+      API.Types.UnifiedDashboard.Management.MediaFileDocument
       API.Types.UnifiedDashboard.Management.Person
       API.Types.UnifiedDashboard.Operator
       API.Types.UnifiedDashboard.Operator.Endpoints.HealthCheck

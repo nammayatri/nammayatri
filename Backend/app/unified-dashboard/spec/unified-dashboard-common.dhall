@@ -8,7 +8,8 @@ let outputPrefixDashboard = rootDir ++ "/Backend/app/unified-dashboard/src/"
 let outputPrefixCommonApisReadOnly =
       rootDir ++ "/Backend/app/unified-dashboard/src-read-only/API/Types/"
 
-let outputPrefixCommonApis = rootDir ++ "/Backend/app/unified-dashboard/src/"
+let outputPrefixCommonApis =
+      rootDir ++ "/Backend/app/unified-dashboard/src/API/Types/"
 
 let outputPrefixDriverAppReadOnly =
           rootDir
@@ -28,12 +29,7 @@ let migrationPath =
       rootDir ++ "/Backend/dev/migrations-read-only/unified-dashboard/"
 
 let outputPath =
-      { _apiRelatedTypes = outputPrefixCommonApisReadOnly
-      , _extraApiRelatedTypes =
-          outputPrefixCommonApis ++ "API/Types/Management/OrphanInstances"
-      , _extraApiRelatedCommonTypes =
-          outputPrefixCommonApis ++ "API/Types/Management/Common"
-      , _beamQueries = outputPrefixDashboardReadOnly ++ "Storage/Queries"
+      { _beamQueries = outputPrefixDashboardReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefixDashboard ++ "Storage/Queries/"
       , _cachedQueries =
           outputPrefixDashboardReadOnly ++ "Storage/CachedQueries"
@@ -198,6 +194,7 @@ let mkDefaultImports =
             , "Environment"
             , "Kernel.Types.Id"
             , "Kernel.Types.Beckn.Context"
+            , "Domain.Action.Management.Transaction"
             ]
           , _packageImports = [] : List PackageImport
           , _generationType = GeneratorType.DOMAIN_HANDLER_DASHBOARD
@@ -356,6 +353,15 @@ let defaultConfigs =
       , _folderName = None Text
       , _apiDashboardPrefix = Some "API.UnifiedDashboard"
       , _serverNameTypePrefix = Some "Domain.Types.AccessMatrix"
+      , _importsMapping =
+        [ { _1 = "Dashboard.Common"
+          , _2 = Some "API.Types.UnifiedDashboard.Common"
+          }
+        , { _1 = "SharedLogic.Transaction"
+          , _2 = Some "Domain.Action.Management.Transaction"
+          }
+        , { _1 = "Domain.Types.Transaction", _2 = None Text }
+        ]
       , _migrationParams =
           [] : List { _migrationName : Text, _migrationParam : Optional Text }
       }

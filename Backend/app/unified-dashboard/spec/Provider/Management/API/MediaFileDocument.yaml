@@ -1,0 +1,79 @@
+imports:
+  FileType: AWS.S3
+  MediaFileDocument: Domain.Types.MediaFileDocument
+  MediaFileDocumentType: Domain.Types.Common
+  MediaFileDocumentStatus: Domain.Types.MediaFileDocument
+
+importPackageOverrides:
+  Domain.Types.MediaFileDocument: "dynamic-offer-driver-app"
+  Domain.Types.Common: "dynamic-offer-driver-app"
+
+module: MediaFileDocument
+
+apis:
+  - POST:
+      endpoint: /uploadLink
+      auth: ApiAuthV3
+      request:
+        type: UploadMediaFileDocumentReq
+      response:
+        type: MediaFileDocumentResp
+      helperApiExtra:
+          mandatoryQuery:
+            - requestorId: Text
+  - POST:
+      endpoint: /confirm
+      auth: ApiAuthV3
+      request:
+        type: MediaFileDocumentReq
+      response:
+        type: APISuccess
+      helperApiExtra:
+          mandatoryQuery:
+            - requestorId: Text
+  - POST:
+      endpoint: /delete
+      auth: ApiAuthV3
+      request:
+        type: MediaFileDocumentReq
+      response:
+        type: APISuccess
+      helperApiExtra:
+          mandatoryQuery:
+            - requestorId: Text
+  - GET:
+      endpoint: /downloadLink
+      auth: ApiAuthV3
+      mandatoryQuery:
+        - mediaFileDocumentType: MediaFileDocumentType
+        - rcNumber: Text
+      response:
+        type: MediaFileDocumentResp
+      helperApiExtra:
+          mandatoryQuery:
+            - requestorId: Text
+
+types:
+  UploadMediaFileDocumentReq:
+    - mediaFileDocumentType: MediaFileDocumentType
+    - fileType: FileType
+    - reqContentType: Text
+    - rcNumber: Text
+  UploadMediaFileDocumentTReq:
+    - mediaFileDocumentType: MediaFileDocumentType
+    - fileType: FileType
+    - reqContentType: Text
+  MediaFileDocumentResp:
+    - mediaFileLink: Maybe Text
+    - mediaFileDocumentId: Id MediaFileDocument
+    - mediaFileDocumentStatus: MediaFileDocumentStatus
+  MediaFileDocumentTResp:
+    - mediaFileDocumentId: Id MediaFileDocument
+    - mediaFileDocumentStatus: MediaFileDocumentStatus
+  MediaFileDocumentReq:
+    - mediaFileDocumentId: Id MediaFileDocument
+    - recordType: NewType
+    - derive: "'HideSecrets"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

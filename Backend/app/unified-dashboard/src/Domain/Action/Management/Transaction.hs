@@ -4,6 +4,7 @@ module Domain.Action.Management.Transaction
   ( getTransactionList,
     buildTransaction,
     withTransactionStoring,
+    withResponseTransactionStoring,
   )
 where
 
@@ -25,6 +26,7 @@ import qualified Kernel.External.Encryption
 import qualified Kernel.External.Verification.SafetyPortal.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as City
+import Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, encodeToText, generateGUID, getCurrentTime, throwError)
 import Storage.Beam.BeamFlow (BeamFlow)
@@ -87,7 +89,7 @@ mkRequestorAPIEntity person =
 
 -- Build a transaction record for storing API call information
 buildTransaction ::
-  (MonadFlow m, ToJSON request) =>
+  (MonadFlow m, ToJSON request, HideSecrets request) =>
   DMatrix.UserActionType ->
   Maybe DMatrix.ServerName ->
   Maybe ApiTokenInfo ->
@@ -107,7 +109,7 @@ buildTransaction endpoint serverName apiTokenInfo commonDriverId commonRideId re
         endpoint = endpoint,
         commonDriverId = commonDriverId,
         commonRideId = commonRideId,
-        request = encodeToText <$> request,
+        request = encodeToText . hideSecrets <$> request,
         response = Nothing,
         responseError = Nothing,
         createdAt = now,
@@ -127,6 +129,21 @@ withTransactionStoring ::
   m response
 withTransactionStoring =
   withResponseTransactionStoring' (const emptyResponse)
+
+-- | Run client call and store transaction to DB.
+--
+-- If client call successed, then write response to transaction, with secrets hiding
+-- Else write error code to transaction.
+withResponseTransactionStoring ::
+  ( BeamFlow m r,
+    MonadCatch m,
+    HideSecrets response
+  ) =>
+  DTransaction.Transaction ->
+  m response ->
+  m response
+withResponseTransactionStoring =
+  withResponseTransactionStoring' (Just . hideSecrets)
 
 withResponseTransactionStoring' ::
   (BeamFlow m r, MonadCatch m, ToJSON transactionResponse) =>

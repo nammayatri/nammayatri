@@ -131,8 +131,6 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)
 
-
-
 getOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> Flow DOrder.PaymentOrderAPIEntity
 getOrder (personId, _, _) orderId = do
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)

@@ -219,6 +219,7 @@ in  { _output = outputPath
     , _folderName = None Text
     , _apiDashboardPrefix = None Text
     , _serverNameTypePrefix = None Text
+    , _importsMapping = [] : List { _1 : Text, _2 : Optional Text }
     , _migrationParams =
         [] : List { _migrationName : Text, _migrationParam : Optional Text }
     , _endpointPrefix = None Text

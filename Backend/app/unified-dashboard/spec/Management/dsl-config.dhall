@@ -13,6 +13,8 @@ let outputPath =
               ++  "API/Types/"
               ++  folderName
               ++  "/OrphanInstances"
+          , _extraApiRelatedCommonTypes =
+              common.outputPrefixCommonApis ++ folderName ++ "/Common"
           , _domainHandlerDashboard =
               defaultOutput._domainHandlerDashboard ++ "/" ++ folderName
           , _servantApi =
@@ -23,7 +25,6 @@ let outputPath =
               defaultOutput._servantApiDashboard ++ "/" ++ folderName
           , _servantApiClient =
               defaultOutput._servantApiClient ++ "/" ++ folderName
-          , _extraBeamQueries = defaultOutput._extraBeamQueries
           }
 
 let serverName = Some "DRIVER_OFFER_BPP_MANAGEMENT"
@@ -37,17 +38,21 @@ in      common.defaultConfigs
           , common.GeneratorType.BEAM_TABLE
           , common.GeneratorType.BEAM_QUERIES
           , common.GeneratorType.CACHED_QUERIES
-          , common.GeneratorType.DOMAIN_HANDLER
           , common.GeneratorType.DOMAIN_HANDLER_DASHBOARD
           , common.GeneratorType.API_TYPES
-          , common.GeneratorType.SERVANT_API
           , common.GeneratorType.SERVANT_API_DASHBOARD
-          , common.GeneratorType.API_TREE
           , common.GeneratorType.API_TREE_DASHBOARD
           , common.GeneratorType.API_TREE_COMMON
           , common.GeneratorType.SQL
           ]
         , _defaultImports = common.mkDefaultImports "dynamic-offer-driver-app"
+        , _importsMapping =
+          [ { _1 = "Dashboard.Common", _2 = None Text }
+          , { _1 = "SharedLogic.Transaction"
+            , _2 = Some "Domain.Action.Management.Transaction"
+            }
+          , { _1 = "Domain.Types.Transaction", _2 = None Text }
+          ]
         , _packageMapping =
           [ { _1 = common.GeneratorType.API_TYPES, _2 = "unified-dashboard" }
           , { _1 = common.GeneratorType.SERVANT_API, _2 = "unified-dashboard" }
