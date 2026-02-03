@@ -40,11 +40,6 @@ import Tools.Auth
 type API =
   TokenAuth
     :> ( "payment"
-           :> "createOrder"
-           :> "v2"
-           :> ReqBody '[JSON] Payment.CreateOrderReq
-           :> Post '[JSON] Payment.CreateOrderResp
-           :<|> "payment"
              :> "status"
              :> "v2"
              :> Capture "orderId" Text
@@ -54,8 +49,7 @@ type API =
 
 handler :: FlowServer API
 handler authInfo =
-  createOrderV2 authInfo
-    :<|> getStatusV2 authInfo
+ getStatusV2 authInfo
     :<|> ( createOrder authInfo
              :<|> getStatus authInfo
              :<|> getOrder authInfo
@@ -83,8 +77,6 @@ postWalletRecharge tokenDetails _ = withFlowHandlerAPI $ DPayment.postWalletRech
 getWalletBalance :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Wallet.WalletBalanceData
 getWalletBalance tokenDetails = withFlowHandlerAPI $ DPayment.getWalletBalance tokenDetails
 
-createOrderV2 :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Payment.CreateOrderReq -> FlowHandler Payment.CreateOrderResp
-createOrderV2 tokenDetails createOrderReq = withFlowHandlerAPI $ DPayment.createOrderV2 tokenDetails createOrderReq
 
 getStatusV2 :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler DPayment.PaymentStatusResp
 getStatusV2 tokenDetails orderIdText = withFlowHandlerAPI $ DPayment.getStatusV2 tokenDetails orderIdText

@@ -8,6 +8,7 @@ import qualified Domain.Types.StclMembership
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Servant
 import Tools.Auth
 
@@ -55,6 +56,7 @@ data MembershipApplicationReq = MembershipApplicationReq
     nomineeInfo :: NomineeInfo,
     numberOfShares :: Kernel.Prelude.Int,
     panNumber :: Kernel.Prelude.Text,
+    paymentServiceType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PaymentOrder.PaymentServiceType,
     vehicleInfo :: VehicleInfo
   }
   deriving stock (Generic)

@@ -41,6 +41,7 @@ data ServiceName
   | MultiModalPaymentService Payment.PaymentService
   | PassPaymentService Payment.PaymentService
   | ParkingPaymentService Payment.PaymentService
+  | MembershipPaymentService Payment.PaymentService
   | IssueTicketService Ticket.IssueTicketService
   | TokenizationService Tokenize.TokenizationService
   | IncidentReportService IncidentReport.IncidentReportService
@@ -69,6 +70,7 @@ instance Show ServiceName where
   show (MultiModalPaymentService s) = "MultiModalPayment_" <> show s
   show (PassPaymentService s) = "PassPayment_" <> show s
   show (ParkingPaymentService s) = "ParkingPayment_" <> show s
+  show (MembershipPaymentService s) = "MembershipPayment_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
   show (TokenizationService s) = "Tokenization_" <> show s
   show (IncidentReportService s) = "IncidentReport_" <> show s
@@ -136,6 +138,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "ParkingPayment_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (MembershipPaymentService v1, r2)
+                 | r1 <- stripPrefix "MembershipPayment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (IssueTicketService v1, r2)
                  | r1 <- stripPrefix "Ticket_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -191,6 +197,7 @@ data ServiceConfigD (s :: UsageSafety)
   | MultiModalPaymentServiceConfig !PaymentServiceConfig
   | PassPaymentServiceConfig !PaymentServiceConfig
   | ParkingPaymentServiceConfig !PaymentServiceConfig
+  | MembershipPaymentServiceConfig !PaymentServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   | TokenizationServiceConfig !Tokenize.TokenizationServiceConfig
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
@@ -226,6 +233,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (MultiModalPaymentServiceConfig cfg) = "MultiModalPaymentServiceConfig " <> show cfg
   show (PassPaymentServiceConfig cfg) = "PassPaymentServiceConfig " <> show cfg
   show (ParkingPaymentServiceConfig cfg) = "ParkingPaymentServiceConfig " <> show cfg
+  show (MembershipPaymentServiceConfig cfg) = "MembershipPaymentServiceConfig " <> show cfg
   show (IssueTicketServiceConfig cfg) = "IssueTicketServiceConfig " <> show cfg
   show (TokenizationServiceConfig cfg) = "TokenizationServiceConfig " <> show cfg
   show (IncidentReportServiceConfig cfg) = "IncidentReportServiceConfig " <> show cfg
@@ -250,6 +258,7 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (MultiModalPaymentServiceConfig cfg) = "MultiModalPaymentServiceConfig " <> show cfg
   show (PassPaymentServiceConfig cfg) = "PassPaymentServiceConfig " <> show cfg
   show (ParkingPaymentServiceConfig cfg) = "ParkingPaymentServiceConfig " <> show cfg
+  show (MembershipPaymentServiceConfig cfg) = "MembershipPaymentServiceConfig " <> show cfg
   show (IssueTicketServiceConfig cfg) = "IssueTicketServiceConfig " <> show cfg
   show (TokenizationServiceConfig cfg) = "TokenizationServiceConfig " <> show cfg
   show (IncidentReportServiceConfig cfg) = "IncidentReportServiceConfig " <> show cfg

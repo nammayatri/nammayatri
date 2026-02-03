@@ -62,6 +62,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.MultiModalPaymentService paymentServiceName -> Domain.MultiModalPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
     Domain.PassPaymentService paymentServiceName -> Domain.PassPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
     Domain.ParkingPaymentService paymentServiceName -> Domain.ParkingPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+    Domain.MembershipPaymentService paymentServiceName -> Domain.MembershipPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.JourneyMonitoring -> Domain.TokenizationServiceConfig . Tokenize.JourneyMonitoringTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
@@ -129,6 +130,7 @@ getServiceNameConfigJson = \case
       Just Stripe.Live -> (Domain.ParkingPaymentService Payment.Stripe, toJSON cfg)
       Just Stripe.Test -> (Domain.ParkingPaymentService Payment.StripeTest, toJSON cfg)
       Nothing -> (Domain.ParkingPaymentService Payment.Stripe, toJSON cfg)
+  Domain.MembershipPaymentServiceConfig paymentCfg -> first Domain.MembershipPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of

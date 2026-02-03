@@ -6,6 +6,7 @@ imports:
   ApplicationStatus: Domain.Types.StclMembership
   CreateOrderResp: Kernel.External.Payment.Interface.Types
   Money: Kernel.Types.Common
+  PaymentServiceType: Lib.Payment.Domain.Types.PaymentOrder
 
 module: StclMembership
 types:
@@ -53,6 +54,7 @@ types:
     nomineeInfo: NomineeInfo
     declaration: Declaration
     amount: Money
+    paymentServiceType: Maybe PaymentServiceType
   MembershipApplicationResp:
     applicationId: Text
     status: ApplicationStatus
