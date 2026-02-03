@@ -17,10 +17,16 @@ import qualified Storage.Clickhouse.Person as CHPerson
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 
 -- Response Types
-data DailyMetricsResponse = DailyMetricsResponse
-  { toDate :: Text,
-    bookingSummaryList :: [BookingSummary],
-    registrationSummaryList :: [RegistrationSummary]
+type DailyMetricsResponse = [DailyMetricRow]
+
+data DailyMetricRow = DailyMetricRow
+  { date :: Text,
+    bookingCount :: Int,
+    totalPassengerCount :: Int,
+    totalRevenue :: Double,
+    vehicleType :: Text,
+    newRegistrations :: Maybe Int,
+    osType :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -74,12 +80,27 @@ getDailyMetricsWithAuth mbApiKey mbIpAddress dateStr = withFlowHandlerAPI $ do
       pure freshData
 
   -- Return the response
-  pure $
-    DailyMetricsResponse
-      { toDate = dateStr,
-        bookingSummaryList = metricsData.bookings,
-        registrationSummaryList = metricsData.registrations
-      }
+  let bookings = metricsData.bookings
+  let registrations = metricsData.registrations
+  pure $ transformToFlat dateStr bookings registrations
+
+transformToFlat :: Text -> [BookingSummary] -> [RegistrationSummary] -> [DailyMetricRow]
+transformToFlat dateStr bookings registrations =
+  let paddedRegistrations = map Just registrations ++ repeat Nothing
+      pairs = zip bookings paddedRegistrations
+   in map (\(b, r) -> mkRow dateStr b r) pairs
+
+mkRow :: Text -> BookingSummary -> Maybe RegistrationSummary -> DailyMetricRow
+mkRow dateStr b r =
+  DailyMetricRow
+    { date = dateStr,
+      bookingCount = b.bookingCount,
+      totalPassengerCount = b.totalPassengerCount,
+      totalRevenue = b.totalRevenue,
+      vehicleType = b.vehicleType,
+      newRegistrations = fmap (.newRegistrations) r,
+      osType = fmap (.osType) r
+    }
 
 queryMetricsFromClickHouse :: (MonadFlow m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Id DMOC.MerchantOperatingCity -> Text -> m RedisMetricsData
 queryMetricsFromClickHouse merchantOpCityId dateStr = do
