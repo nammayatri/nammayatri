@@ -79,6 +79,7 @@ import Tools.Error
 import qualified Tools.Payment as TPayment
 import Tools.SMS as Sms hiding (Success)
 import qualified Tools.Wallet as TWallet
+import qualified Storage.CachedQueries.PassType as CQPassType
 
 defaultDashboardDeviceId :: Text
 defaultDashboardDeviceId = "dashboard-default-device-id"
@@ -247,6 +248,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
 
         QPurchasedPass.create purchasedPass
         return newPurchasedPassId
+  passType <- CQPassType.findById pass.passTypeId
 
   let purchasedPassPayment =
         DPurchasedPassPayment.PurchasedPassPayment
@@ -265,6 +267,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             passCode = pass.code,
             passName = pass.name,
             merchantId = pass.merchantId,
+            passEnum = passType >>= (.passEnum),
             merchantOperatingCityId = pass.merchantOperatingCityId,
             profilePicture = mbProfilePicture <|> person.profilePicture,
             createdAt = now,
@@ -984,6 +987,7 @@ buildPurchasedPassPaymentAPIEntity purchasedPassPayment =
       amount = purchasedPassPayment.amount,
       passName = purchasedPassPayment.passName,
       passCode = purchasedPassPayment.passCode,
+      passType = purchasedPassPayment.passEnum,
       createdAt = purchasedPassPayment.createdAt
     }
 

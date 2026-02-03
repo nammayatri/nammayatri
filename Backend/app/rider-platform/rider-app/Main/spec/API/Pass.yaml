@@ -117,6 +117,7 @@ types:
     endDate: Day
     amount: HighPrecMoney
     status: StatusType
+    passType: Maybe PassEnum
     derive: "Show"
 
 

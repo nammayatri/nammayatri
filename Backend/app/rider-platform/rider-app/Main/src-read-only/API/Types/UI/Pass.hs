@@ -119,6 +119,7 @@ data PurchasedPassTransactionAPIEntity = PurchasedPassTransactionAPIEntity
     endDate :: Data.Time.Day,
     passCode :: Data.Text.Text,
     passName :: Data.Maybe.Maybe Data.Text.Text,
+    passType :: Data.Maybe.Maybe Domain.Types.PassType.PassEnum,
     startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType
   }
