@@ -555,6 +555,7 @@ library
       Storage.Clickhouse.EstimateBreakup
       Storage.Clickhouse.FareBreakup
       Storage.Clickhouse.FRFSLiveAlerts
+      Storage.Clickhouse.FRFSQuoteCategory
       Storage.Clickhouse.FRFSTicketBooking
       Storage.Clickhouse.Location
       Storage.Clickhouse.Person
