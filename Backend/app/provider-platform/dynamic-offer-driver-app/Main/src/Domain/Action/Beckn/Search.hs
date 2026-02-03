@@ -160,7 +160,8 @@ data DSearchReq = DSearchReq
     userClientDevice :: Maybe Device,
     userBundleVersion :: Maybe Version,
     userSdkVersion :: Maybe Version,
-    userBackendAppVersion :: Maybe Text
+    userBackendAppVersion :: Maybe Text,
+    riderPreferredOption :: DSR.RiderPreferredOption
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo

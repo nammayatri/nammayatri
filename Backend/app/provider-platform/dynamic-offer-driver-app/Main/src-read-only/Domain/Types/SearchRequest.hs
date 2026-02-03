@@ -17,6 +17,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
+import Kernel.Utils.TH
 import qualified Lib.Types.SpecialLocation
 import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
@@ -68,6 +69,7 @@ data SearchRequest = SearchRequest
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
+    riderPreferredOption :: Domain.Types.SearchRequest.RiderPreferredOption,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     searchTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -87,3 +89,9 @@ data SearchRequest = SearchRequest
     validTill :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+data RiderPreferredOption = Rental | OneWay | InterCity | Ambulance | Delivery | PublicTransport | FixedRoute deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RiderPreferredOption))
+
+$(mkHttpInstancesForEnum (''RiderPreferredOption))

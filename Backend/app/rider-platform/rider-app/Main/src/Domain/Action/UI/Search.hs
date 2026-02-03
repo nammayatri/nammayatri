@@ -510,7 +510,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 (Beckn.USER_MANUFACTURER, searchRequest.clientDevice >>= (.deviceManufacturer)),
                 (Beckn.USER_BUNDLE_VERSION, versionToText <$> searchRequest.clientBundleVersion),
                 (Beckn.USER_SDK_VERSION, versionToText <$> searchRequest.clientSdkVersion),
-                (Beckn.USER_BACKEND_APP_VERSION, searchRequest.backendAppVersion)
+                (Beckn.USER_BACKEND_APP_VERSION, searchRequest.backendAppVersion),
+                (Beckn.RIDER_PREFERRED_OPTION, Just . show $ searchRequest.riderPreferredOption)
               ]
                 ++ maybe [] (\pn -> [(Beckn.CUSTOMER_PHONE_NUMBER, Just pn)]) phoneNumber
            }

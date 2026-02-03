@@ -94,6 +94,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.providerId (Kernel.Types.Id.getId providerId),
       Se.Set Beam.returnTime returnTime,
       Se.Set Beam.riderId (Kernel.Types.Id.getId <$> riderId),
+      Se.Set Beam.riderPreferredOption (Just riderPreferredOption),
       Se.Set Beam.roundTrip roundTrip,
       Se.Set Beam.searchTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType searchTags),
       Se.Set Beam.specialLocationTag specialLocationTag,

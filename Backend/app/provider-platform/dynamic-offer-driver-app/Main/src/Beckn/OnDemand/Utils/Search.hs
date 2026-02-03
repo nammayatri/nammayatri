@@ -199,6 +199,11 @@ buildUserBackendAppVersion req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
   Utils.getTagV2 Tag.CUSTOMER_INFO Tag.USER_BACKEND_APP_VERSION tagGroups
 
+buildRiderPreferredOption :: Spec.SearchReqMessage -> Maybe Text
+buildRiderPreferredOption req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
+  T.strip <$> Utils.getTagV2 Tag.CUSTOMER_INFO Tag.RIDER_PREFERRED_OPTION tagGroups
+
 -- customerPerson <- req ^? (ix "searchReqMessageIntent" . key "intentFulfillment" . key "fulfillmentCustomer" . key "customerPerson" . key "tags") & fromMaybeM (InvalidRequest "Missing Fields")
 
 getIsReallocationEnabled :: Spec.SearchReqMessage -> Maybe Bool

@@ -30,6 +30,11 @@ imports:
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
 
+  types:
+    RiderPreferredOption:
+      enum: "Rental, OneWay, InterCity, Ambulance, Delivery, PublicTransport, FixedRoute"
+      derive: "HttpInstance"
+
   fields:
     id: Id SearchRequest
     transactionId: Text
@@ -93,6 +98,7 @@ SearchRequest:
     userBundleVersion: Maybe Version
     userSdkVersion: Maybe Version
     userBackendAppVersion: Maybe Text
+    riderPreferredOption: RiderPreferredOption
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime
@@ -109,6 +115,7 @@ SearchRequest:
     preferSafetyPlus: Maybe Bool
     userBundleVersion: Maybe Text
     userSdkVersion: Maybe Text
+    riderPreferredOption: Maybe RiderPreferredOption
   beamFields:
     driverDefaultExtraFee:
       driverDefaultExtraFee: Maybe Money
@@ -148,6 +155,7 @@ SearchRequest:
     userManufacturer: userClientDevice >>= (.deviceManufacturer)|E
     userBundleVersion: Kernel.Utils.Version.versionToText <$> userBundleVersion|E
     userSdkVersion: Kernel.Utils.Version.versionToText <$> userSdkVersion|E
+    riderPreferredOption: Just riderPreferredOption|E
 
   intermediateTransformers:
     fromTType:
@@ -177,6 +185,7 @@ SearchRequest:
     userClientDevice: Kernel.Utils.Version.mkClientDevice userOsType userOsVersion userModelName userManufacturer|E
     userBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userBundleVersion)|EM
     userSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userSdkVersion)|EM
+    riderPreferredOption: fromMaybe Domain.Types.SearchRequest.OneWay riderPreferredOption|E
 
   constraints:
     id: PrimaryKey
@@ -216,6 +225,7 @@ SearchRequest:
     userBundleVersion: character varying(255)
     userSdkVersion: character varying(255)
     userBackendAppVersion: character varying(255)
+    riderPreferredOption: character varying(255)
 
   default:
     autoAssignEnabled: "false"
