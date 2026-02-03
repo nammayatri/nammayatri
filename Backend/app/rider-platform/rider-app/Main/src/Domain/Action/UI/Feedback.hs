@@ -162,12 +162,9 @@ feedback request personId = do
         Left err -> logTagError "Create Ticket API failed - " $ show err
         Right resp -> logTagInfo "Created Ticket for Customer L0 Feedback : TicketId - " resp.ticketId
       slackConfig <- asks (.slackNotificationConfig)
-      logTagInfo "Feedback: Entered isLOFeedback logic. Slack Config: " (show slackConfig)
       desc <- generateSlackMessage person ride unencryptedMobileNumber (T.pack $ show city) request.rating feedbackDetails
       let message = createJsonMessage desc
-      logTagInfo "Feedback: Slack Message Content prepared. Calling Slack.publishMessage..." message
       void $ L.runIO $ Slack.publishMessage slackConfig message
-      logTagInfo "Feedback: Slack.publishMessage call completed." "Done"
   pure
     FeedbackRes
       { wasOfferedAssistance = request.wasOfferedAssistance,

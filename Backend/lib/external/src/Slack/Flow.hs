@@ -28,40 +28,24 @@ import Slack.Types
 
 publishMessage :: SlackNotificationConfig -> T.Text -> IO ()
 publishMessage config message = do
-  putStrLn $ ("DEBUG: Slack.Flow: publishMessage called. Config: " :: Text) <> show config
-  putStrLn $ ("DEBUG: Slack.Flow: Message content length: " :: Text) <> show (T.length message)
-
   if config.isForcedAWS
     then do
-      putStrLn ("DEBUG: Slack.Flow: isForcedAWS is TRUE. Forcing routing to AWS SNS..." :: Text)
       routeToAWS config message
     else do
-      putStrLn ("DEBUG: Slack.Flow: isForcedAWS is FALSE. Looking up CloudType..." :: Text)
       cloudType <- lookupCloudType
-      putStrLn $ ("DEBUG: Slack.Flow: Detected CloudType: " :: Text) <> show cloudType
       case cloudType of
         AWS -> routeToAWS config message
         GCP -> routeToGCP config message
-        UNAVAILABLE -> do
-             putStrLn ("ERROR: Slack.Flow: CloudType UNAVAILABLE" :: Text)
-             error "CloudType UNAVAILABLE: Cannot route slack message"
+        UNAVAILABLE -> error "CloudType UNAVAILABLE: Cannot route slack message"
 
 routeToAWS :: SlackNotificationConfig -> T.Text -> IO ()
 routeToAWS config message = do
-  putStrLn ("DEBUG: Slack.Flow: Routing to AWS SNS..." :: Text)
   case config.snsTopicArn of
     Just topicArn -> AWS.publishMessage topicArn message
-    Nothing -> do
-         putStrLn ("ERROR: Slack.Flow: AWS SNS Topic ARN not configured!" :: Text)
-         error "AWS SNS Topic ARN not configured in slackNotificationConfig"
+    Nothing -> error "AWS SNS Topic ARN not configured in slackNotificationConfig"
 
 routeToGCP :: SlackNotificationConfig -> T.Text -> IO ()
 routeToGCP config message = do
-  putStrLn ("DEBUG: Slack.Flow: Routing to GCP Pub/Sub..." :: Text)
   case (config.gcpProjectId, config.gcpTopicId) of
-    (Just projectId, Just topicId) -> do
-         putStrLn $ ("DEBUG: Slack.Flow: Calling GCP.publishMessage with ProjectId=" :: Text) <> projectId <> ", TopicId=" <> topicId
-         GCP.publishMessage projectId topicId message
-    _ -> do
-         putStrLn ("ERROR: Slack.Flow: GCP Pub/Sub project/topic not configured!" :: Text)
-         error "GCP Pub/Sub project/topic not configured in slackNotificationConfig"
+    (Just projectId, Just topicId) -> GCP.publishMessage projectId topicId message
+    _ -> error "GCP Pub/Sub project/topic not configured in slackNotificationConfig"

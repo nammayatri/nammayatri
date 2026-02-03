@@ -21,8 +21,6 @@ import Kernel.Prelude
 
 publishMessage :: T.Text -> T.Text -> IO ()
 publishMessage topicArn message = do
-  putStrLn $ ("DEBUG: Slack.AWS.Flow: publishMessage called. TopicArn: " :: Text) <> topicArn
-  putStrLn $ ("DEBUG: Slack.AWS.Flow: Message content: " :: Text) <> message
   env <- AWS.newEnv AWS.discover
   let pubReq =
         Publish'
@@ -36,6 +34,4 @@ publishMessage topicArn message = do
             topicArn = Just topicArn,
             ..
           }
-  putStrLn ("DEBUG: Slack.AWS.Flow: Sending to AWS SNS..." :: Text)
   void $ AWS.runResourceT $ AWS.send env pubReq
-  putStrLn ("DEBUG: Slack.AWS.Flow: Successfully sent to AWS SNS." :: Text)
