@@ -26,5 +26,7 @@ publishMessage projectId topicId message = do
   let msg = PubSub.Message (T.unpack message) Nothing Nothing
   result <- PubSub.publishMessage (T.unpack projectId) (T.unpack topicId) [msg]
   case result of
-    Left err -> error $ "Failed to publish message: " <> T.pack err
-    Right _ -> return ()
+    Left err -> do
+      putStrLn $ ("ERROR: Slack.GCP.Flow: Failed to publish message: " :: Text) <> T.pack err
+      error $ "Failed to publish message: " <> T.pack err
+    Right _ -> putStrLn ("DEBUG: Slack.GCP.Flow: Successfully published message to GCP Pub/Sub." :: Text)

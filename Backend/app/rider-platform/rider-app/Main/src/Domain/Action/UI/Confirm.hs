@@ -73,8 +73,9 @@ confirm ::
   Maybe Payment.PaymentMethodId ->
   Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
+  Bool ->
   m SConfirm.DConfirmRes
-confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAdvanceBookingEnabled = do
+confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   merchant <- CQM.findById quote.merchantId >>= fromMaybeM (MerchantNotFound quote.merchantId.getId)
   SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId

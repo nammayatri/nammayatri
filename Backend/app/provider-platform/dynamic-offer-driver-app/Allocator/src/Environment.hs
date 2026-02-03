@@ -28,6 +28,7 @@ import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Data.Map.Strict as MS
 import Data.String.Conversions (cs)
+import qualified Data.Text as T
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude

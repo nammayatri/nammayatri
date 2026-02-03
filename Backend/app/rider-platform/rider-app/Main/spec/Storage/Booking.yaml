@@ -253,6 +253,7 @@ Booking:
     paymentMode: Maybe PaymentMode
     dashboardAgentId: Maybe Text
     displayBookingId: Maybe Text
+    requiresPaymentBeforeConfirm: Bool
 
   beamFields:
     estimatedDistance:
@@ -313,6 +314,7 @@ Booking:
     preferSafetyPlus: Maybe Bool
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
+    requiresPaymentBeforeConfirm: Maybe Bool
 
 
   sqlType:
@@ -365,12 +367,14 @@ Booking:
     vehicleIconUrl: character varying(255)
     configInExperimentVersions: "json"
     displayBookingId: character varying(25)
+    requiresPaymentBeforeConfirm: boolean
 
   default:
     fareProductType: "'ONE_WAY'"
     itemId: "''"
     merchantId: "'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51'"
     isBookingUpdated: "false"
+    requiresPaymentBeforeConfirm: "false"
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -410,6 +414,7 @@ Booking:
     preferSafetyPlus : Kernel.Prelude.Just|I
     isInsured: Kernel.Prelude.Just isInsured|E
     isPetRide: Kernel.Prelude.Just|I
+    requiresPaymentBeforeConfirm: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just billingCategory|E
 
   intermediateTransformers:
@@ -443,6 +448,7 @@ Booking:
     isInsured: fromMaybe False isInsured|E
     preferSafetyPlus : fromMaybe False preferSafetyPlus | E
     isPetRide: fromMaybe False isPetRide | E
+    requiresPaymentBeforeConfirm: fromMaybe False requiresPaymentBeforeConfirm | E
     billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
 
   extraOperations:

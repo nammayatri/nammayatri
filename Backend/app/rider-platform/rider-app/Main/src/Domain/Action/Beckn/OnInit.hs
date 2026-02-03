@@ -163,3 +163,79 @@ onInit req = do
       DRB.AmbulanceDetails details -> Just details.toLocation
       DRB.DeliveryDetails details -> Just details.toLocation
       DRB.MeterRideDetails details -> details.toLocation
+
+-- | Rebuild OnInitRes from a booking id (e.g. after payment success for RideBooking payment-before-confirm flow).
+buildOnInitResFromBooking ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    Metrics.HasBAPMetrics m r
+  ) =>
+  Id DRB.Booking ->
+  m OnInitRes
+buildOnInitResFromBooking bookingId = do
+  booking <- QRideB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  decRider <- decrypt person
+  safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId (Just person)
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  riderPhoneNumber <-
+    if isValueAddNP
+      then decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      else pure $ prependZero booking.primaryExophone
+  city <-
+    CQMOC.findById booking.merchantOperatingCityId
+      >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow decRider.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
+  let fromLocation = booking.fromLocation
+      mbToLocation = getToLocationFromBookingDetails booking.bookingDetails
+  pure
+    OnInitRes
+      { bookingId = booking.id,
+        bppBookingId = booking.bppBookingId,
+        paymentUrl = booking.paymentUrl,
+        itemId = booking.bppEstimateId,
+        vehicleVariant = DV.castServiceTierToVariant booking.vehicleServiceTierType,
+        fulfillmentId = booking.fulfillmentId,
+        bookingDetails = booking.bookingDetails,
+        bppId = booking.providerId,
+        bppUrl = booking.providerUrl,
+        fromLocation,
+        mbToLocation,
+        estimatedTotalFare = booking.estimatedTotalFare,
+        estimatedFare = booking.estimatedFare,
+        riderPhoneCountryCode,
+        riderPhoneNumber,
+        mbRiderName = decRider.firstName,
+        transactionId = booking.transactionId,
+        merchant,
+        city,
+        nightSafetyCheck = checkSafetySettingConstraint (Just safetySettings.enableUnexpectedEventsCheck) riderConfig now,
+        isValueAddNP,
+        enableFrequentLocationUpdates = checkSafetySettingConstraint safetySettings.aggregatedRideShareSetting riderConfig now,
+        paymentId = Nothing,
+        enableOtpLessRide = isBookingMeterRide booking.bookingDetails || fromMaybe False safetySettings.enableOtpLessRide,
+        tripCategory = booking.tripCategory,
+        paymentMode = booking.paymentMode,
+        paymentInstrument = booking.paymentInstrument
+      }
+  where
+    prependZero :: Text -> Text
+    prependZero str = "0" <> str
+
+    isBookingMeterRide = \case
+      DRB.MeterRideDetails _ -> True
+      _ -> False
+
+    getToLocationFromBookingDetails = \case
+      DRB.RentalDetails _ -> Nothing
+      DRB.OneWayDetails details -> Just details.toLocation
+      DRB.DriverOfferDetails details -> Just details.toLocation
+      DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+      DRB.InterCityDetails details -> Just details.toLocation
+      DRB.AmbulanceDetails details -> Just details.toLocation
+      DRB.DeliveryDetails details -> Just details.toLocation
+      DRB.MeterRideDetails details -> details.toLocation

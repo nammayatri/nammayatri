@@ -26,6 +26,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import Data.String.Conversions (cs)
+import qualified Data.Text as T
 import "rider-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
