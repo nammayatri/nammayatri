@@ -7,9 +7,8 @@ module SharedLogic.MediaFileDocument
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.MediaFileDocument as Common
+import qualified "this" API.Types.UnifiedDashboard.Management.MediaFileDocument as UCommon
 import AWS.S3 as S3
-import qualified "dashboard-helper-api" Dashboard.Common.MediaFileDocument as CommonMFD
 import Data.Either (isRight)
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601Show)
@@ -51,14 +50,14 @@ mediaFileDocumentUploadLink ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
-  Common.UploadMediaFileDocumentReq ->
-  Flow Common.MediaFileDocumentResp
+  UCommon.UploadMediaFileDocumentReq ->
+  Flow UCommon.MediaFileDocumentResp
 mediaFileDocumentUploadLink merchantShortId opCity requestorId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
   fileExtension <- validateContentType
   rc <- QRC.findLastVehicleRCWrapper req.rcNumber >>= fromMaybeM (RCNotFound req.rcNumber)
-  let mediaFileDocumentType = castMediaFileDocumentType req.mediaFileDocumentType
+  let mediaFileDocumentType = req.mediaFileDocumentType
       mediaFileDocLockKey = mkMediaFileDocLockKey merchantOpCity.id rc.id mediaFileDocumentType
   eRes <- Hedis.whenWithLockRedisAndReturnValue mediaFileDocLockKey 10 $ do
     -- if file was deleted by operator, then allow to create new one
@@ -93,10 +92,10 @@ mediaFileDocumentUploadLink merchantShortId opCity requestorId req = do
               else pure existingMediaFile{uploadLink = Nothing}
           else pure existingMediaFile{uploadLink = Nothing} -- we can show upload link only to creator to avoid uploading by two users in the same time
     pure $
-      Common.MediaFileDocumentResp
+      UCommon.MediaFileDocumentResp
         { mediaFileLink = mediaFileDocument.uploadLink,
-          mediaFileDocumentId = cast @DMFD.MediaFileDocument @CommonMFD.MediaFileDocument mediaFileDocument.id,
-          mediaFileDocumentStatus = castMediaFileDocumentStatus mediaFileDocument.status
+          mediaFileDocumentId = mediaFileDocument.id,
+          mediaFileDocumentStatus = mediaFileDocument.status
         }
   case eRes of
     Right res -> pure res
@@ -110,18 +109,6 @@ mediaFileDocumentUploadLink merchantShortId opCity requestorId req = do
           "video/mpeg" -> pure "mpeg"
           _ -> throwError $ FileFormatNotSupported req.reqContentType
         _ -> throwError $ FileFormatNotSupported req.reqContentType
-
-castMediaFileDocumentType :: Common.MediaFileDocumentType -> DCommon.MediaFileDocumentType
-castMediaFileDocumentType = \case
-  Common.VehicleVideo -> DCommon.VehicleVideo
-
-castMediaFileDocumentStatus :: DMFD.MediaFileDocumentStatus -> Common.MediaFileDocumentStatus
-castMediaFileDocumentStatus = \case
-  DMFD.PENDING -> Common.PENDING
-  DMFD.DELETED -> Common.DELETED
-  DMFD.FAILED -> Common.FAILED
-  DMFD.CONFIRMED -> Common.CONFIRMED
-  DMFD.COMPLETED -> Common.COMPLETED
 
 createMediaPathByRcId ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
@@ -153,16 +140,16 @@ buildMediaFileDocument ::
   Text ->
   Id DRC.VehicleRegistrationCertificate ->
   Text ->
-  Common.UploadMediaFileDocumentReq ->
+  UCommon.UploadMediaFileDocumentReq ->
   m DMFD.MediaFileDocument
-buildMediaFileDocument merchantOpCity creatorId s3Path rcId mediaFileLink Common.UploadMediaFileDocumentReq {..} = do
+buildMediaFileDocument merchantOpCity creatorId s3Path rcId mediaFileLink UCommon.UploadMediaFileDocumentReq {..} = do
   uuid <- generateGUID
   now <- getCurrentTime
   pure
     DMFD.MediaFileDocument
       { id = Id uuid,
         creatorId,
-        mediaFileDocumentType = castMediaFileDocumentType mediaFileDocumentType,
+        mediaFileDocumentType,
         merchantId = merchantOpCity.merchantId,
         merchantOperatingCityId = merchantOpCity.id,
         rcId,
@@ -178,10 +165,10 @@ mediaFileDocumentConfirm ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
-  Common.MediaFileDocumentReq ->
+  UCommon.MediaFileDocumentReq ->
   Flow APISuccess
 mediaFileDocumentConfirm merchantShortId opCity requestorId req = do
-  let mediaFileDocumentId = cast @CommonMFD.MediaFileDocument @DMFD.MediaFileDocument req.mediaFileDocumentId
+  let mediaFileDocumentId = req.mediaFileDocumentId
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeConfirmMediaDocHitsCountKey mediaFileDocumentId) externalServiceRateLimitOptions
   merchant <- findMerchantByShortId merchantShortId
@@ -237,10 +224,10 @@ mediaFileDocumentDelete ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
-  Common.MediaFileDocumentReq ->
+  UCommon.MediaFileDocumentReq ->
   Flow APISuccess
 mediaFileDocumentDelete merchantShortId _opCity requestorId req = do
-  let mediaFileDocumentId = cast @CommonMFD.MediaFileDocument @DMFD.MediaFileDocument req.mediaFileDocumentId
+  let mediaFileDocumentId = req.mediaFileDocumentId
   mediaFileDocument <- QMFD.findByPrimaryKey mediaFileDocumentId >>= fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
   merchant <- findMerchantByShortId merchantShortId
   let uploadlinkExpiredIn = fromIntegral merchant.mediaFileDocumentLinkExpires + 300 -- 5 minutes buffer
@@ -260,15 +247,14 @@ mediaFileDocumentDelete merchantShortId _opCity requestorId req = do
 mediaFileDocumentDownloadLink ::
   ShortId DM.Merchant ->
   Context.City ->
-  Common.MediaFileDocumentType ->
+  DCommon.MediaFileDocumentType ->
   Text ->
   Text ->
-  Flow Common.MediaFileDocumentResp
-mediaFileDocumentDownloadLink merchantShortId opCity mediaFileDocumentType' rcNumber _requestorId = do
+  Flow UCommon.MediaFileDocumentResp
+mediaFileDocumentDownloadLink merchantShortId opCity mediaFileDocumentType rcNumber _requestorId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
   rc <- QRC.findLastVehicleRCWrapper rcNumber >>= fromMaybeM (RCNotFound rcNumber)
-  let mediaFileDocumentType = castMediaFileDocumentType mediaFileDocumentType'
   mediaFileDocuments <- filter (\mfd -> mfd.status /= DMFD.DELETED) <$> QMFD.findAllByMerchantOpCityIdAndRcIdAndType Nothing Nothing merchantOpCity.id rc.id mediaFileDocumentType
 
   when (length mediaFileDocuments > 1) $ do
@@ -290,10 +276,10 @@ mediaFileDocumentDownloadLink merchantShortId opCity mediaFileDocumentType' rcNu
       then Just <$> S3.generateDownloadUrl (T.unpack mediaFileDocument.s3Path) merchant.mediaFileDocumentLinkExpires
       else pure Nothing
   pure $
-    Common.MediaFileDocumentResp
+    UCommon.MediaFileDocumentResp
       { mediaFileLink = mbMediaFileLink,
-        mediaFileDocumentId = cast @DMFD.MediaFileDocument @CommonMFD.MediaFileDocument mediaFileDocument.id,
-        mediaFileDocumentStatus = castMediaFileDocumentStatus mediaFileDocument.status
+        mediaFileDocumentId = mediaFileDocument.id,
+        mediaFileDocumentStatus = mediaFileDocument.status
       }
 
 mediaFileDocumentComplete ::

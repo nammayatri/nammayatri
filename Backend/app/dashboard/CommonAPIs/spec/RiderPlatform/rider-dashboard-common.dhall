@@ -373,6 +373,7 @@ let defaultConfigs =
       , _folderName = None Text
       , _apiDashboardPrefix = None Text
       , _serverNameTypePrefix = None Text
+      , _importsMapping = [] : List { _1 : Text, _2 : Optional Text }
       , _migrationParams =
         [ { _migrationName = "localAccessForRoleId"
           , _migrationParam = Some "37947162-3b5d-4ed6-bcac-08841be1534d"
