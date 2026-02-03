@@ -1815,6 +1815,9 @@ instance FromNamedRecord FarePolicyCSVRow where
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
 
+ambulanceSlabsCreateLockKey :: Text
+ambulanceSlabsCreateLockKey = "Driver:FarePolicy:AmbulanceSlabs:CreateLock"
+
 -- | Export all enabled fare policies for a merchant operating city as CSV
 getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> Context.City -> Flow Text
 getMerchantConfigFarePolicyExport merchantShortId opCity = do
@@ -2254,8 +2257,10 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
           CQFP.create finalFarePolicy
           case finalFarePolicy.farePolicyDetails of
             FarePolicy.AmbulanceDetails details ->
-              forM_ (NE.toList details.slabs) $ \slab ->
-                QueriesFPAD.create (finalFarePolicy.id, slab)
+              Hedis.withLockRedis ambulanceSlabsCreateLockKey 60 $ do
+                QueriesFPAD.delete finalFarePolicy.id
+                forM_ (NE.toList details.slabs) $ \slab ->
+                  QueriesFPAD.create (finalFarePolicy.id, slab)
             _ -> pure ()
           let merchanOperatingCityId = merchantOpCity.id
           (oldFareProducts, newBoundedAlreadyDeletedMap) <-
