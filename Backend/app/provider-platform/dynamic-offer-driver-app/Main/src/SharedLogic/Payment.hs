@@ -31,6 +31,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payment.Interface.Types
+import qualified Kernel.External.Payment.Types as PaymentTypes
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -321,3 +322,57 @@ data DeepLinkData = DeepLinkData
     expiryTimeInMinutes :: Maybe Int
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON, Show, Ord, Eq)
+
+-- create order v2 -----------------------------------------------------
+createOrderV2 ::
+  ( CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    CoreMetrics m,
+    MonadFlow m,
+    ServiceFlow m r
+  ) =>
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Payment.CreateOrderReq ->
+  Maybe DOrder.PaymentServiceType ->
+  m Payment.CreateOrderResp
+createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbPaymentServiceType = do
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- PaymentServiceType for createOrderService (STCL, Normal, etc.)
+  let paymentServiceType = fromMaybe DOrder.STCL mbPaymentServiceType
+
+  -- ServiceName for decidePaymentService (which payment provider: Juspay, Stripe, etc.)
+  -- Using MembershipPaymentService to fetch MembershipPaymentServiceConfig from merchant_service_config
+  defaultPaymentServiceName <- case paymentServiceType of
+    DOrder.STCL -> pure (DMSC.MembershipPaymentService PaymentTypes.Juspay)
+    _ -> throwError $ InternalError $ "Unhandled Payment Service Type, " <> show paymentServiceType
+
+  -- Decide payment service provider based on person's clientSdkVersion
+  paymentServiceName <- TPayment.decidePaymentService defaultPaymentServiceName person.clientSdkVersion merchantOperatingCityId
+  entityName <- case paymentServiceType of
+    DOrder.STCL -> pure DPayment.DRIVER_STCL
+    _ -> throwError $ InternalError $ "Unhandled Payment Service Type, " <> show paymentServiceType
+  -- Get payment service call function
+  (createOrderCall, _) <- TPayment.createOrder merchantId merchantOperatingCityId paymentServiceName (Just person.id.getId)
+
+  -- Cast types for Lib.Payment
+  let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
+      commonPersonId = cast @DP.Person @DPayment.Person personId
+
+  -- Call createOrderService with all optional params as Nothing/False
+  mbCreateOrderResp <-
+    DPayment.createOrderService
+      commonMerchantId
+      (Just $ cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId)
+      commonPersonId
+      Nothing -- mbPaymentOrderValidity
+      (Just entityName) -- mbEntityName
+      paymentServiceType -- DOrder.STCL
+      False -- isTestTransaction
+      createOrderReq
+      createOrderCall
+      Nothing -- mbCreateWalletCall
+      False -- isMockPayment
+  mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")

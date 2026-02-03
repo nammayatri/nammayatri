@@ -1,10 +1,9 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.UI.StclMembership (postSubmitApplication, getMembership) where
+module Domain.Action.UI.StclMembership (postSubmitApplication, getMembership, stclMemberShipOrderStatusHandler) where
 
 import qualified API.Types.UI.StclMembership as APITypes
 import qualified Data.Text as T
-import qualified Domain.Action.UI.Payment as DPayment
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -15,17 +14,25 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.StclMembership as Domain
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions as B (runInReplica)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as PaymentInterface
+import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Interface.Types as PaymentTypes
-import qualified Kernel.External.Payment.Types as Payment
+import qualified Kernel.External.Payment.Types as PaymentService
 import qualified Kernel.Prelude
 import Kernel.Types.Common (Money (..), toHighPrecMoney)
 import Kernel.Types.Error
+import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Action as LibPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.Common as LibPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import Storage.Beam.Payment ()
+import qualified SharedLogic.Payment
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
@@ -56,7 +63,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
     throwError $ InvalidRequest "An application already exists for this driver"
 
   -- Get person details
-  person <- QP.findById driverId >>= fromMaybeM (InvalidRequest "Person not found")
+  person <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
 
   -- Decrypt mobile number for payment
   mbMobileNumber <- person.mobileNumber & fromMaybeM (InvalidRequest "Mobile number not found")
@@ -72,7 +79,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
 
   -- Fetch gatewayReferenceId from merchant service config
   mbGatewayReferenceId <- do
-    mbServiceConfig <- CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService Payment.Juspay) merchantOperatingCityId
+    mbServiceConfig <- CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId
     case mbServiceConfig of
       Just serviceConfig -> case serviceConfig.serviceConfig of
         DMSC.MembershipPaymentServiceConfig paymentServiceConfig ->
@@ -103,8 +110,11 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             basket = Nothing
           }
 
-  -- Call createOrderV2
-  createOrderResp <- DPayment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq
+  -- PaymentServiceType for createOrderService (STCL)
+  let paymentServiceType = fromMaybe DOrder.STCL req.paymentServiceType
+
+  -- Create payment order
+  createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType)
 
   -- Encrypt sensitive fields for storage
   encryptedAadhar <- encrypt req.aadharNumber
@@ -277,3 +287,62 @@ getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
             },
         ..
       }
+
+-- Handle STCL membership order status updates
+stclMemberShipOrderStatusHandler ::
+  ( EsqDBFlow m r,
+    MonadFlow m,
+    CacheFlow m r
+  ) =>
+  LibPayment.PaymentStatusResp ->
+  Id DOrder.PaymentOrder ->
+  m ()
+stclMemberShipOrderStatusHandler paymentStatusResp paymentOrderId = do
+  logInfo $ "STCL Membership Order Status Handler - Payment Order ID: " <> show paymentOrderId
+  logInfo $ "STCL Membership Order Status Handler - Payment Status Response: " <> show paymentStatusResp
+
+  -- Extract payment status string
+  let paymentStatusText = case paymentStatusResp of
+        LibPayment.PaymentStatus {status} -> Just $ show status
+        LibPayment.MandatePaymentStatus {status} -> Just $ show status
+        _ -> Nothing
+  logInfo $ "Payment Status Text: " <> show paymentStatusText
+
+  -- Find StclMembership by orderId (orderId is the same as membership.id)
+  -- Convert Id PaymentOrder to Id StclMembership using the underlying Text
+  let membershipId = Kernel.Types.Id.Id (paymentOrderId.getId)
+  logInfo $ "Looking up membership with ID: " <> show membershipId
+  mbMembership <- QStclMembership.findById membershipId
+
+  -- If not found by ID, try looking up by shortId (from payment order)
+  mbMembership' <- case mbMembership of
+    Just _ -> pure mbMembership
+    Nothing -> do
+      -- Get payment order to find shortId
+      paymentOrder <- QOrder.findById paymentOrderId
+      case paymentOrder of
+        Just order -> do
+          logInfo $ "Membership not found by ID, trying shortId: " <> show order.shortId.getShortId
+          QStclMembership.findByShortId (Just order.shortId.getShortId)
+        Nothing -> do
+          logError $ "Payment order not found: " <> show paymentOrderId
+          pure Nothing
+
+  case mbMembership' of
+    Just membership -> do
+      logInfo $ "Found membership: " <> show membership.id <> ", current status: " <> show membership.status
+      let newStatus = case paymentStatusResp of
+            LibPayment.PaymentStatus {status}
+              | status == PaymentTypes.CHARGED -> Domain.SUBMITTED
+              | otherwise -> Domain.PENDING
+            LibPayment.MandatePaymentStatus {status}
+              | status == PaymentTypes.CHARGED -> Domain.SUBMITTED
+              | otherwise -> Domain.PENDING
+            _ -> Domain.PENDING
+      logInfo $ "Updating membership to status: " <> show newStatus <> ", paymentStatus: " <> show paymentStatusText
+      -- Update membership with new status and payment status
+      -- updateStatusAndPaymentStatus generates updatedAt internally
+      QStclMembership.updateStatusAndPaymentStatus newStatus paymentStatusText membership.id
+      logInfo $ "Successfully updated membership"
+    Nothing -> do
+      logError $ "Membership not found for payment order ID: " <> show paymentOrderId <> ", membership ID: " <> show membershipId

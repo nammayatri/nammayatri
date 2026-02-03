@@ -15,7 +15,6 @@
 module Domain.Action.UI.Payment
   ( DPayment.PaymentStatusResp (..),
     createOrder,
-    createOrderV2,
     getStatus,
     getStatusV2,
     getOrder,
@@ -33,6 +32,7 @@ import qualified Domain.Action.UI.Driver as DADriver
 import qualified Domain.Action.UI.Payout as PayoutA
 import qualified Domain.Action.UI.Plan as ADPlan
 import Domain.Action.UI.Ride.EndRide.Internal
+import qualified Domain.Action.UI.StclMembership as DStclMembership
 import qualified Domain.Action.WebhookHandler as AWebhook
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
@@ -46,7 +46,6 @@ import Domain.Types.Notification (Notification)
 import qualified Domain.Types.Notification as DNTF
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
-import qualified Domain.Types.StclMembership as Domain
 import qualified Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.SubscriptionTransaction as SubscriptionTransaction
 import qualified Domain.Types.WebhookExtra as WT
@@ -104,7 +103,6 @@ import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.StclMembership as QStclMembership
 import qualified Storage.Queries.SubscriptionTransaction as QSubscriptionTransaction
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VendorFeeExtra as QVF
@@ -133,43 +131,7 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)
 
--- create order v2 -----------------------------------------------------
-createOrderV2 :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Payment.CreateOrderReq -> Flow Payment.CreateOrderResp
-createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq = do
-  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
-  -- PaymentServiceType for createOrderService (STCL, Normal, etc.)
-  let paymentServiceType = DOrder.STCL
-
-  -- ServiceName for decidePaymentService (which payment provider: Juspay, Stripe, etc.)
-  -- Using MembershipPaymentService to fetch MembershipPaymentServiceConfig from merchant_service_config
-  let defaultPaymentServiceName = DMSC.MembershipPaymentService Payment.Juspay
-
-  -- Decide payment service provider based on person's clientSdkVersion
-  paymentServiceName <- Payment.decidePaymentService defaultPaymentServiceName person.clientSdkVersion merchantOperatingCityId
-
-  -- Get payment service call function
-  (createOrderCall, _) <- Payment.createOrder merchantId merchantOperatingCityId paymentServiceName (Just person.id.getId)
-
-  -- Cast types for Lib.Payment
-  let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
-      commonPersonId = cast @DP.Person @DPayment.Person personId
-
-  -- Call createOrderService with all optional params as Nothing/False
-  mbCreateOrderResp <-
-    DPayment.createOrderService
-      commonMerchantId
-      (Just $ cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId)
-      commonPersonId
-      Nothing -- mbPaymentOrderValidity
-      (Just DPayment.DRIVER_STCL) -- mbEntityName
-      paymentServiceType -- DOrder.STCL
-      False -- isTestTransaction
-      createOrderReq
-      createOrderCall
-      Nothing -- mbCreateWalletCall
-      False -- isMockPayment
-  mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")
 
 getOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> Flow DOrder.PaymentOrderAPIEntity
 getOrder (personId, _, _) orderId = do
@@ -292,38 +254,32 @@ getStatusV2 ::
   Text ->
   m DPayment.PaymentStatusResp
 getStatusV2 tokenDetails orderIdText = do
+  logInfo $ "getStatusV2 called with orderIdText: " <> orderIdText
   -- Lookup by shortId only
   paymentOrder <- QOrder.findByShortId (ShortId orderIdText) >>= fromMaybeM (PaymentOrderNotFound orderIdText)
+  logInfo $ "Found payment order: " <> show paymentOrder.id <> ", paymentServiceType: " <> show paymentOrder.paymentServiceType
 
   -- Get payment status using existing getStatus function with the found order ID
   paymentStatusResp <- getStatus tokenDetails paymentOrder.id
-  logDebug $ "Payment Status Response: " <> show paymentStatusResp
-  -- Extract payment status string
-  let paymentStatusText = case paymentStatusResp of
-        DPayment.PaymentStatus {status} -> Just $ show status
-        DPayment.MandatePaymentStatus {status} -> Just $ show status
-        _ -> Nothing
-  logDebug $ "Payment Status Text: " <> show paymentStatusText
-  -- Find StclMembership by orderId (orderId is the same as membership.id)
-  -- Convert Id PaymentOrder to Id StclMembership using the underlying Text
-  let membershipId = Id (paymentOrder.id.getId)
-  mbMembership <- QStclMembership.findById membershipId
+  logInfo $ "Payment Status Response: " <> show paymentStatusResp
 
-  -- Update membership if found
-  whenJust mbMembership $ \_ -> do
-    let newStatus = case paymentStatusResp of
-          DPayment.PaymentStatus {status}
-            | status == Payment.CHARGED -> Domain.SUBMITTED
-            | otherwise -> Domain.PENDING
-          DPayment.MandatePaymentStatus {status}
-            | status == Payment.CHARGED -> Domain.SUBMITTED
-            | otherwise -> Domain.PENDING
-          _ -> Domain.PENDING
-    logDebug $ "New Status: " <> show newStatus
-    -- Update membership with new status and payment status
-    -- updateStatusAndPaymentStatus generates updatedAt internally
-    QStclMembership.updateStatusAndPaymentStatus newStatus paymentStatusText membershipId
-
+  -- Handle domain-specific logic based on payment service type
+  -- Update payment status in domain tables regardless of charge status
+  case paymentOrder.paymentServiceType of
+    Just DOrder.STCL -> do
+      logInfo $ "Calling stclMemberShipOrderStatusHandler for STCL order"
+      DStclMembership.stclMemberShipOrderStatusHandler paymentStatusResp paymentOrder.id
+    Just otherType -> do
+      logInfo $ "Payment Service Type not STCL: " <> show otherType
+      throwError $ InternalError "Payment Service Type Not Handled"
+    Nothing -> do
+      logInfo $ "No payment service type, checking entityName: " <> show paymentOrder.entityName
+      -- Also check entityName as fallback
+      case paymentOrder.entityName of
+        Just DPayment.DRIVER_STCL -> do
+          logInfo $ "Found DRIVER_STCL entityName, calling handler"
+          DStclMembership.stclMemberShipOrderStatusHandler paymentStatusResp paymentOrder.id
+        _ -> pure () -- No payment service type, skip domain-specific handling
   return paymentStatusResp
 
 -- webhook ----------------------------------------------------------
