@@ -110,7 +110,8 @@ data NightShiftInfo = NightShiftInfo
   }
   deriving (Generic, Show)
 
-data PersonalDiscountInfo = PersonalDiscountInfo {personalDiscount :: Kernel.Types.Common.Price, personalDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, Show)
+data PersonalDiscountInfo = PersonalDiscountInfo {personalDiscount :: Kernel.Types.Common.Price, personalDiscountPercentage :: Kernel.Prelude.Double}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
 

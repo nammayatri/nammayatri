@@ -61,7 +61,7 @@ Estimate:
     PersonalDiscountInfo:
       personalDiscount: Price
       personalDiscountPercentage: Double
-      derive': "Generic, Show"
+      derive': "Generic, Show, ToJSON, FromJSON, ToSchema"
 
     TollChargesInfo:
       tollCharges: Price

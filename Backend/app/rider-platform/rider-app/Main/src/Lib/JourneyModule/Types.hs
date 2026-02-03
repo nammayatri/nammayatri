@@ -13,6 +13,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
+import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
@@ -350,6 +351,7 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     exoPhoneNumber :: Maybe Text,
     legStartTime :: Maybe UTCTime,
     legEndTime :: Maybe UTCTime,
+    personalDiscountInfo :: Maybe DEstimate.PersonalDiscountInfo,
     trackingStatus :: JMState.TrackingStatus,
     trackingStatusLastUpdatedAt :: UTCTime
   }
@@ -600,7 +602,10 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
   (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mRide
   tollDifference <- getTollDifference fareBreakups estimatedFareBreakups
   batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
-  (oldStatus, bookingStatus, trackingStatus, trackingStatusLastUpdatedAt) <- JMStateUtils.getTaxiAllStatuses journeyLeg (Just booking) mRide Nothing
+  mbEstimate <- case journeyLeg.legPricingId of
+    Just estId -> QEstimate.findById (Id estId)
+    Nothing -> pure Nothing
+  (oldStatus, bookingStatus, trackingStatus, trackingStatusLastUpdatedAt) <- JMStateUtils.getTaxiAllStatuses journeyLeg (Just booking) mRide mbEstimate
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
@@ -648,6 +653,7 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
                 exoPhoneNumber = Just booking.primaryExophone,
                 legStartTime = listToMaybe journeyLeg.routeDetails >>= (.legStartTime),
                 legEndTime = listToMaybe journeyLeg.routeDetails >>= (.legEndTime),
+                personalDiscountInfo = mbEstimate >>= (.personalDiscountInfo),
                 trackingStatus = trackingStatus,
                 trackingStatusLastUpdatedAt
               },
@@ -727,6 +733,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
                 exoPhoneNumber = Nothing,
                 legStartTime = Nothing,
                 legEndTime = Nothing,
+                personalDiscountInfo = mbEstimate >>= (.personalDiscountInfo),
                 trackingStatus = trackingStatus,
                 trackingStatusLastUpdatedAt
               },
