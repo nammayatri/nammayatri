@@ -71,3 +71,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN react_bundle_version 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN commission_charges double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN special_location_name text ;

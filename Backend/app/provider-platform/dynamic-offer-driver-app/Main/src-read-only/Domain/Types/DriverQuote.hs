@@ -51,6 +51,7 @@ data DriverQuote = DriverQuote
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     searchRequestForDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver),
     searchTryId :: Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry,
+    specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.DriverQuote.DriverQuoteStatus,
     tripCategory :: Domain.Types.Common.TripCategory,

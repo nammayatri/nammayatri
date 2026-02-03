@@ -46,6 +46,7 @@ SearchRequest:
     bapCity: Maybe City
     bapCountry: Maybe Country
     specialLocationTag: Maybe Text
+    specialLocationName: Maybe Text
     autoAssignEnabled: Maybe Bool
     device: Maybe Text
     customerLanguage: Maybe Language

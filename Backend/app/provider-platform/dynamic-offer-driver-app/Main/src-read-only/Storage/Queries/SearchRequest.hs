@@ -95,6 +95,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.riderId (Kernel.Types.Id.getId <$> riderId),
       Se.Set Beam.roundTrip roundTrip,
       Se.Set Beam.searchTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType searchTags),
+      Se.Set Beam.specialLocationName specialLocationName,
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.startTime (Just startTime),
       Se.Set Beam.toLocGeohash toLocGeohash,

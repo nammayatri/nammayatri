@@ -54,6 +54,7 @@ DriverQuote:
     fareParams : FareParameters|NoRelation
     providerId : Id Merchant
     specialLocationTag : Maybe Text
+    specialLocationName: Maybe Text
     goHomeRequestId : Maybe (Id DriverGoHomeRequest)
     clientSdkVersion : Maybe Version
     reactBundleVersion : Maybe Text

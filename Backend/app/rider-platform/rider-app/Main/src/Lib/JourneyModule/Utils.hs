@@ -691,7 +691,7 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
               arrivalTimeInSeconds = estimatedArrivalTimeInSeconds,
               nextAvailableTimings = (rst.timeOfArrival, rst.timeOfDeparture),
               source = rst.source,
-              serviceSubTypes = Nothing  -- Will be populated below for LIVE vehicles
+              serviceSubTypes = Nothing -- Will be populated below for LIVE vehicles
             }
           | rst <- filteredByService,
             let arrivalTimeInSeconds' = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime rst.timeOfArrival currentTime) currentTimeIST,
@@ -711,7 +711,7 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
         mbServiceSubTypes <- case mbVehicleId of
           Just vehicleId -> getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleId
           Nothing -> pure Nothing
-        pure $ (info { serviceSubTypes = mbServiceSubTypes } :: UpcomingVehicleInfo)
+        pure $ (info {serviceSubTypes = mbServiceSubTypes} :: UpcomingVehicleInfo)
       else pure info
 
   logDebug $ "tripTimingsWithCalendars after filtering on current time : " <> show tripTimingsWithSubTypes

@@ -231,6 +231,7 @@ handler merchantId req validatedReq = do
             estimatedDuration = searchRequest.estimatedDuration,
             fareParams = driverQuote.fareParams,
             specialLocationTag = driverQuote.specialLocationTag,
+            specialLocationName = searchRequest.specialLocationName,
             specialZoneOtpCode = Nothing,
             disabilityTag = searchRequest.disabilityTag,
             area = searchRequest.area,

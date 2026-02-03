@@ -66,6 +66,7 @@ data BppEstimate = BppEstimate
     smartTipReason :: Maybe Text,
     smartTipSuggestion :: Maybe HighPrecMoney,
     specialLocationTag :: Maybe Text,
+    specialLocationName :: Maybe Text,
     supplyDemandRatioFromLoc :: Maybe Double,
     supplyDemandRatioToLoc :: Maybe Double,
     tipOptions :: Maybe [Int],
