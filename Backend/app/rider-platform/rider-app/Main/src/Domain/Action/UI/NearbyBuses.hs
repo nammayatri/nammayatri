@@ -119,8 +119,8 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
                   routeCode = route_id,
                   routeState = Just routeInfo.route_state,
                   serviceType = (\(sType, _, _) -> sType) <$> maybeServiceType,
-                  serviceTierName = (\(_, sName, _) -> sName) =<< maybeServiceType,
-                  serviceSubTypes = (\(_, _, sSubTypes) -> sSubTypes) =<< maybeServiceType,
+                  serviceTierName = maybeServiceType >>= (\(_, sName, _) -> sName),
+                  serviceSubTypes = maybeServiceType >>= (\(_, _, sSubTypes) -> sSubTypes),
                   shortName = routeInfo.route_number,
                   vehicleNumber = bus.vehicle_number,
                   bearing = round <$> bus.bearing
