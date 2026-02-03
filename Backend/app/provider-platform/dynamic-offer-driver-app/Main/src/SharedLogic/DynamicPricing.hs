@@ -83,6 +83,7 @@ data DynamicPricingData = DynamicPricingData
     congestionMultiplierPast :: Maybe Double,
     serviceTier :: DServiceTierType.ServiceTierType,
     rainStatus :: Maybe Text,
+    mbSpecialLocName :: Maybe Text,
     toss :: Int --,
   }
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -100,5 +101,6 @@ instance Default DynamicPricingData where
         congestionMultiplier = Nothing,
         congestionMultiplierPast = Nothing,
         rainStatus = Nothing,
+        mbSpecialLocName = Nothing,
         toss = 1 --,
       }

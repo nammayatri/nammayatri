@@ -55,6 +55,7 @@ data Estimate = Estimate
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     smartTipReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     smartTipSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplyDemandRatioFromLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     supplyDemandRatioToLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

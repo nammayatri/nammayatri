@@ -169,3 +169,8 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN personal_discount double 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN commission_charges double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN special_location_name text ;

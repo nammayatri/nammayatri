@@ -55,6 +55,7 @@ Estimate:
       fareParams: Maybe FareParameters|WithIdCreate
       farePolicy: Maybe FarePolicy|NoRelation
       specialLocationTag: Maybe Text
+      specialLocationName: Maybe Text
       tipOptions: Maybe [Int]
       isScheduled: Bool
       isCustomerPrefferedSearchRoute: Maybe Bool

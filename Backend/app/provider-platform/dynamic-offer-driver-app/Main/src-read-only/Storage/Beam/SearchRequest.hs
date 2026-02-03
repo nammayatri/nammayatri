@@ -68,6 +68,7 @@ data SearchRequestT f = SearchRequestT
     riderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     searchTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     toLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

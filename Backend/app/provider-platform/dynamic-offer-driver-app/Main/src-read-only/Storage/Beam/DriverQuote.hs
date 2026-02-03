@@ -50,6 +50,7 @@ data DriverQuoteT f = DriverQuoteT
     requestId :: B.C f Kernel.Prelude.Text,
     searchRequestForDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchTryId :: B.C f Kernel.Prelude.Text,
+    specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Domain.Types.DriverQuote.DriverQuoteStatus,
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),

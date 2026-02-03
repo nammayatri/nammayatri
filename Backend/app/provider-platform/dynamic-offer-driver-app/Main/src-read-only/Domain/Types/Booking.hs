@@ -83,6 +83,7 @@ data Booking = Booking
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     senderDetails :: Kernel.Prelude.Maybe Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
+    specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialZoneOtpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,

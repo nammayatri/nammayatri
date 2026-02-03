@@ -43,6 +43,7 @@ Booking:
     tripCategory: TripCategory
     specialZoneOtpCode: Maybe Text
     specialLocationTag: Maybe Text
+    specialLocationName: Maybe Text
     disabilityTag: Maybe Text
     area: Maybe Area
     providerId: Id Merchant

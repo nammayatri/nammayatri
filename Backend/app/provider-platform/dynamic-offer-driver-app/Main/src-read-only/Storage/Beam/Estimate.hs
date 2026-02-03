@@ -58,6 +58,7 @@ data EstimateT f = EstimateT
     requestId :: B.C f Kernel.Prelude.Text,
     smartTipReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     smartTipSuggestion :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     supplyDemandRatioFromLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     supplyDemandRatioToLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
