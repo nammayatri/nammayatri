@@ -57,15 +57,12 @@ type PostConfirmRideSearchQuotesConfirmHelper =
       :> QueryParam
            "isAdvancedBookingEnabled"
            Kernel.Prelude.Bool
-      :> QueryParam
-           "requiresPaymentBeforeConfirm"
-           Kernel.Prelude.Bool
       :> Post
            '[JSON]
            API.UI.Confirm.ConfirmRes
   )
 
-newtype ConfirmAPIs = ConfirmAPIs {postConfirmRideSearchQuotes :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient API.UI.Confirm.ConfirmRes}
+newtype ConfirmAPIs = ConfirmAPIs {postConfirmRideSearchQuotes :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient API.UI.Confirm.ConfirmRes}
 
 mkConfirmAPIs :: (Client EulerHS.Types.EulerClient API -> ConfirmAPIs)
 mkConfirmAPIs confirmClient = (ConfirmAPIs {..})

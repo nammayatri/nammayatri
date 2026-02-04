@@ -37,7 +37,6 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
-import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified API.UI.Select as DSelect
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
@@ -46,6 +45,7 @@ import qualified Data.Aeson
 import Data.List (sortBy)
 import Data.Maybe ()
 import Data.Ord (comparing)
+import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
 import qualified Domain.Types as DT
 import Domain.Types.BppDetails

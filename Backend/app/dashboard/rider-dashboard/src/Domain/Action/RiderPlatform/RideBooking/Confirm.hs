@@ -23,4 +23,4 @@ postConfirmRideSearchQuotes merchantShortId opCity apiTokenInfo customerId quote
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ do
-    API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.confirmDSL.postConfirmRideSearchQuotes) customerId quoteId (Just apiTokenInfo.personId.getId) paymentMethodId paymentInstrument isAdvanceBookingEnabled Nothing
+    API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.confirmDSL.postConfirmRideSearchQuotes) customerId quoteId (Just apiTokenInfo.personId.getId) paymentMethodId paymentInstrument isAdvanceBookingEnabled

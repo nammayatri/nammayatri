@@ -1,0 +1,40 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+EDCMachineMapping:
+  tableName: edc_machine_mapping
+  derives: "Generic"
+
+  fields:
+    id: Id EDCMachineMapping
+    personId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    terminalId: Text
+    merchantKey: Text
+    merchantChannelId: Text
+    paytmMid: Text
+    clientId: Text
+    machineName: Maybe Text
+    isActive: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    createdBy: Maybe (Id Person)
+
+  constraints:
+    id: PrimaryKey
+    personId: !SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+
+  extraOperations:
+    - GENERATE_INDEXES
+    - EXTRA_QUERY_FILE

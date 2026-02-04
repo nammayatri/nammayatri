@@ -335,6 +335,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId mbExistingOrde
             domainTransactionId = Nothing,
             effectAmount = Nothing,
             isMockPayment = Just False,
+            paytmTid = Nothing,
             groupId = Nothing
           }
 
@@ -689,6 +690,7 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             domainTransactionId = Nothing,
             effectAmount = Nothing,
             isMockPayment = Just isMockPayment,
+            paytmTid = Nothing,
             groupId = mbGroupId
           }
   buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
@@ -812,7 +814,13 @@ orderStatusService personId orderId orderStatusCall mbWalletPostingCall = do
       Nothing -> throwError $ InternalError "Wallet posting call not found"
 
   unless (personId == order.personId) $ throwError NotAnExecutor
-  let orderStatusReq = Payment.OrderStatusReq {orderShortId = order.shortId.getShortId}
+  let orderStatusReq =
+        Payment.OrderStatusReq
+          { orderShortId = order.shortId.getShortId,
+            orderId = order.id.getId,
+            transactionDateTime = Just order.createdAt,
+            terminalId = order.paytmTid -- Paytm EDC: send terminal ID for status enquiry
+          }
   now <- getCurrentTime
   orderStatusResp <- orderStatusCall orderStatusReq -- api call
   case orderStatusResp of
@@ -1298,6 +1306,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             domainTransactionId = Nothing,
             effectAmount = Nothing,
             isMockPayment = Just False,
+            paytmTid = Nothing,
             groupId = Nothing
           }
 

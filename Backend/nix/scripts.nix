@@ -190,6 +190,7 @@ _:
           Run the nammayatri backend components via "cabal run".
         '';
         exec = ''
+          export DEV=1
           nix run .#run-mobility-stack-dev -- "$@"
         '';
       };
