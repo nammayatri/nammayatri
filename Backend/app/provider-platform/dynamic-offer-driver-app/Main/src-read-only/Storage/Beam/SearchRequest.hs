@@ -8,7 +8,7 @@ import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.ParcelType
-import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.RiderPreferredOption
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -67,7 +67,7 @@ data SearchRequestT f = SearchRequestT
     providerId :: (B.C f Kernel.Prelude.Text),
     returnTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     riderId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    riderPreferredOption :: (B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequest.RiderPreferredOption)),
+    riderPreferredOption :: (B.C f (Kernel.Prelude.Maybe Domain.Types.RiderPreferredOption.RiderPreferredOption)),
     roundTrip :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     searchTags :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     specialLocationTag :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),

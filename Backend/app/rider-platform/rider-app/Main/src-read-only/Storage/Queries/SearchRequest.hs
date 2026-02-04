@@ -5,6 +5,7 @@
 module Storage.Queries.SearchRequest (module Storage.Queries.SearchRequest, module ReExport) where
 
 import qualified Domain.Types.Person
+import qualified Domain.Types.RiderPreferredOption
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.Trip
 import Kernel.Beam.Functions
@@ -36,8 +37,10 @@ updatePetRide isPetRide id = do updateOneWithKV [Se.Set Beam.isPetRide isPetRide
 updateRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateRiderId riderId id = do updateOneWithKV [Se.Set Beam.riderId (Kernel.Types.Id.getId riderId)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateRiderPreferredOption :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchRequest.RiderPreferredOption -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
-updateRiderPreferredOption riderPreferredOption id = do updateOneWithKV [Se.Set Beam.riderPreferredOption (Just riderPreferredOption)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateRiderPreferredOption ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.RiderPreferredOption.RiderPreferredOption -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateRiderPreferredOption riderPreferredOption id = do updateOneWithKV [Se.Set Beam.riderPreferredOption ((Just riderPreferredOption))] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTotalRidesCount ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

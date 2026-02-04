@@ -26,7 +26,7 @@ import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search
 import qualified Domain.Action.Internal.Estimate as DBppEstimate
-import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.RiderPreferredOption as DRPO
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -73,12 +73,12 @@ buildSearchReq messageId subscriber req context = do
   userBundleVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserBundleVersion req)
   userSdkVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserSdkVersion req)
   riderPreferredOption <- case Beckn.OnDemand.Utils.Search.buildRiderPreferredOption req of
-    Nothing -> pure Domain.Types.SearchRequest.OneWay
+    Nothing -> pure DRPO.OneWay
     Just txt -> case readMaybe (T.unpack txt) of
       Just val -> pure val
       Nothing -> do
         logDebug $ "Invalid riderPreferredOption value: " <> txt <> ", defaulting to OneWay"
-        pure Domain.Types.SearchRequest.OneWay
+        pure DRPO.OneWay
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   customerPhoneNum_ <- getPhoneNumberFromTag $ Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress

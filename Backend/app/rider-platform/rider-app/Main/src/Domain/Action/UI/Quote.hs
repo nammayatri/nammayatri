@@ -48,6 +48,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
+import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.RouteDetails
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
@@ -250,7 +251,7 @@ getOffers searchRequest = do
       bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
       let quotes = case searchRequest.riderPreferredOption of
-            SSR.Rental -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+            DRPO.Rental -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
             _ -> OnDemandCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
       return . sortBy (compare `on` creationTime) $ quotes
     Nothing -> do

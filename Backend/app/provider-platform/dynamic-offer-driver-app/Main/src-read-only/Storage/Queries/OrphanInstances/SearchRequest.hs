@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.SearchRequest where
 
 import qualified Data.Text
+import qualified Domain.Types.RiderPreferredOption
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -88,7 +89,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             providerId = Kernel.Types.Id.Id providerId,
             returnTime = returnTime,
             riderId = Kernel.Types.Id.Id <$> riderId,
-            riderPreferredOption = fromMaybe Domain.Types.SearchRequest.OneWay riderPreferredOption,
+            riderPreferredOption = fromMaybe Domain.Types.RiderPreferredOption.OneWay riderPreferredOption,
             roundTrip = roundTrip,
             searchTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType searchTags,
             specialLocationTag = specialLocationTag,

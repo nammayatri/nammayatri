@@ -52,6 +52,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RefereeLink as DRL
+import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.ServiceTierType as STT
@@ -161,7 +162,7 @@ data DSearchReq = DSearchReq
     userBundleVersion :: Maybe Version,
     userSdkVersion :: Maybe Version,
     userBackendAppVersion :: Maybe Text,
-    riderPreferredOption :: DSR.RiderPreferredOption
+    riderPreferredOption :: DRPO.RiderPreferredOption
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo

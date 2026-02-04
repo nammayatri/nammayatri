@@ -26,14 +26,10 @@ imports:
   Version: Kernel.Types.Version
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
+  RiderPreferredOption: Domain.Types.RiderPreferredOption
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
-
-  types:
-    RiderPreferredOption:
-      enum: "Rental, OneWay, InterCity, Ambulance, Delivery, PublicTransport, FixedRoute"
-      derive: "HttpInstance"
 
   fields:
     id: Id SearchRequest
@@ -98,7 +94,7 @@ SearchRequest:
     userBundleVersion: Maybe Version
     userSdkVersion: Maybe Version
     userBackendAppVersion: Maybe Text
-    riderPreferredOption: RiderPreferredOption
+    riderPreferredOption: RiderPreferredOption|NoRelation
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime
@@ -185,7 +181,7 @@ SearchRequest:
     userClientDevice: Kernel.Utils.Version.mkClientDevice userOsType userOsVersion userModelName userManufacturer|E
     userBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userBundleVersion)|EM
     userSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userSdkVersion)|EM
-    riderPreferredOption: fromMaybe Domain.Types.SearchRequest.OneWay riderPreferredOption|E
+    riderPreferredOption: fromMaybe Domain.Types.RiderPreferredOption.OneWay riderPreferredOption|E
 
   constraints:
     id: PrimaryKey

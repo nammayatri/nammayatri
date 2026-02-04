@@ -160,3 +160,12 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN user_backend_app_ve
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN rider_preferred_option character varying(255) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
