@@ -82,6 +82,10 @@ VehicleServiceTier:
         and:
           - serviceTierType
           - merchantOperatingCityId
+    findByMerchantOpCityIdForList:
+      kvFunction: findAllWithKV
+      where:
+        merchantOperatingCityId
     findBaseServiceTierTypeByCategoryAndCityId:
       kvFunction: findOneWithKV
       where:

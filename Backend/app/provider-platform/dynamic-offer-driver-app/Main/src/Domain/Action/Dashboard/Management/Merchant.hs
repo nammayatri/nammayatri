@@ -3652,7 +3652,7 @@ getMerchantConfigVehicleServiceTierList ::
 getMerchantConfigVehicleServiceTierList merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  configs <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+  configs <- QVST.findByMerchantOpCityIdForList merchantOpCityId
   pure $ mkVehicleServiceTierItem <$> configs
 
 postMerchantConfigVehicleServiceTierUpdate ::
