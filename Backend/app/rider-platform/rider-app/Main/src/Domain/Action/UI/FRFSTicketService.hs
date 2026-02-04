@@ -90,9 +90,9 @@ import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Seat as CQSeat
@@ -633,7 +633,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId_.getId)
   sortedQuotesWithCategories <- case search.vehicleType of
     Spec.BUS -> do
-      mbRiderConfig <- QRC.findByMerchantOperatingCityId search.merchantOperatingCityId Nothing
+      mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = search.merchantOperatingCityId.getId, txnId = Nothing})
       let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
       let cfgMap' = FRFSUtils.adjustCfgMapForPreferredTier (mbJourneyLeg >>= (.userPreferredServiceTier)) cfgMap
       let serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)

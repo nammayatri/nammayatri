@@ -37,7 +37,8 @@ import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -71,7 +72,7 @@ callOnClickTracker :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFl
 callOnClickTracker rideId = do
   ride <- runInReplica $ QRide.findById (ID.Id rideId.getId) >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   buildCallStatus <- callStatusObj booking.merchantOperatingCityId booking.merchantId
   QCallStatus.create buildCallStatus
   scheduleJobs ride booking.merchantId booking.merchantOperatingCityId (riderConfig.exotelStatusCheckSchedulerDelay)

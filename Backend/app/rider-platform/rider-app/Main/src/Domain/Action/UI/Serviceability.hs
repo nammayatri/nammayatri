@@ -42,7 +42,8 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.Queries.Geometry (findGeometriesContaining)
 import Tools.Error
@@ -94,7 +95,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
       let city = Just nearestOperatingCity.city
       specialLocationBody <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull location
       let filteredSpecialLocationBody = QSpecialLocation.filterGates specialLocationBody isOrigin
-      riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
       now <- getCurrentTime
       let isOutsideMetroBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.qrTicketRestrictionStartTime riderConfig.qrTicketRestrictionEndTime now riderConfig.timeDiffFromUtc
       let isOutsideSubwayBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.subwayRestrictionStartTime riderConfig.subwayRestrictionEndTime now riderConfig.timeDiffFromUtc

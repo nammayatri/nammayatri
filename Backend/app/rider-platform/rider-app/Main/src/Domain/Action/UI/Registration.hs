@@ -115,7 +115,8 @@ import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.MerchantConfig as CQM
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.DepotManager as QDepotManager
@@ -353,7 +354,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
   when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError IpHitsLimitExceeded
   void $ cachePersonOTPChannel person.id otpChannel
   let merchantOperatingCityId = person.merchantOperatingCityId
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   merchantConfigs <- CQM.findAllByMerchantOperatingCityId merchantOperatingCityId Nothing
   fork "Fraud Auth Check Processing" $ do
     when (fromMaybe False person.authBlocked || maybe False (now >) person.blockedUntil) $ Person.updatingAuthEnabledAndBlockedState person.id Nothing (Just False) Nothing
@@ -1079,7 +1080,7 @@ resend tokenId mbSenderHash = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   let otpCode = authValueHash
   otpChannel <- getPersonOTPChannel person.id
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
 
   mobileNumber <- mapM decrypt person.mobileNumber
   receiverEmail <- mapM decrypt person.email
@@ -1243,7 +1244,7 @@ sendBusinessEmailVerification personId merchantId merchantOperatingCityId = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   businessEmail <- person.businessEmail & fromMaybeM (PersonFieldNotPresent "businessEmail")
   decryptedBusinessEmail <- decrypt businessEmail
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   emailBusinessVerificationConfig <- riderConfig.emailBusinessVerificationConfig & fromMaybeM (RiderConfigNotFound $ "emailBusinessVerificationConfig not found for merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   emailServiceConfig <- asks (.emailServiceConfig)
 
@@ -1382,7 +1383,7 @@ resendBusinessEmailVerification personId _merchantId merchantOperatingCityId = d
   when (person.businessProfileVerified == Just True) $
     throwError $ AuthBlocked "Business email already verified"
 
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   emailBusinessVerificationConfig <- riderConfig.emailBusinessVerificationConfig & fromMaybeM (RiderConfigNotFound $ "emailBusinessVerificationConfig not found for merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   emailServiceConfig <- asks (.emailServiceConfig)
 

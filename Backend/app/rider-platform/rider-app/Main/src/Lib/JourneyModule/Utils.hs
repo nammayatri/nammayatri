@@ -69,7 +69,8 @@ import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleSe
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
@@ -479,7 +480,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           routeStopTimings
 
   -- Group by service tier
-  mbRiderConfig <- measureLatency (QRiderConfig.findByMerchantOperatingCityId mocid Nothing) "QRiderConfig.findByMerchantOperatingCityId"
+  mbRiderConfig <- measureLatency (getConfig (RiderDimensions {merchantOperatingCityId = mocid.getId, txnId = Nothing})) "getConfig RiderConfig"
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
   maxBusTimingPerTier <- liftIO $ fromMaybe 3 . (>>= readMaybe) <$> lookupEnv "BUS_TIER_MAX_PER_TIER"
   let groupedByTier = (if vc == Enums.BUS then map (take maxBusTimingPerTier) else (\a -> a)) $ groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (tierRank cfgMap . (.serviceTierType))) routeStopTimings
@@ -1533,7 +1534,7 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
 sortAndGetBusFares :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id MerchantOperatingCity -> Maybe Spec.ServiceTierType -> [FRFSFare] -> m (Maybe FRFSFare)
 sortAndGetBusFares _ _ [] = return Nothing
 sortAndGetBusFares merchantOpCityId mbPreferredTier finalFares = do
-  mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOpCityId Nothing
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId, txnId = Nothing})
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
   let cfgMap' = FRFSUtils.adjustCfgMapForPreferredTier mbPreferredTier cfgMap
   let serviceTierTypeFromFare fare = Just fare.vehicleServiceTier.serviceTierType

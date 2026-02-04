@@ -24,7 +24,8 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
@@ -48,7 +49,7 @@ postRideSafetyNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   ride <- B.runInReplica $ QR.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   when (isNothing ride.wasRideSafe && isNothing ride.rideRating) $ do
-    riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     let entityData = NotifReq {title = "Did you have a safe journey?", message = "Thank you for riding with us. Please share your ride experience."}
     logDebug "Triggering notification for post ride safety check"
     notifyPersonOnEvents person entityData POST_RIDE_SAFETY_CHECK
