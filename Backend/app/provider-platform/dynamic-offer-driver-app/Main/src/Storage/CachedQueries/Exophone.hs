@@ -22,6 +22,7 @@ module Storage.CachedQueries.Exophone
     findAllExophones,
     updateAffectedPhones,
     deleteByMerchantOpCityId,
+    deleteById,
     clearCache,
     findByEndRidePhone,
     findByMerchantOpCityIdServiceAndExophoneType,
@@ -125,3 +126,6 @@ updateAffectedPhones = Queries.updateAffectedPhones
 
 deleteByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
 deleteByMerchantOpCityId = Queries.deleteByMerchantOpCityId
+
+deleteById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Exophone -> m ()
+deleteById = Queries.deleteById
