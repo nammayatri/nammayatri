@@ -36,6 +36,7 @@ library
       Domain.Action.Management.Transaction
       Domain.Action.Provider.Fleet.HealthCheck
       Domain.Action.Provider.Management.HealthCheck
+      Domain.Action.Provider.Management.MediaFileDocument
       Domain.Action.Provider.Management.Person
       Domain.Action.Provider.Operator.HealthCheck
       Domain.Action.Provider.RideBooking.HealthCheck
@@ -67,6 +68,7 @@ library
       API.Action.Provider.Fleet.HealthCheck
       API.Action.Provider.Management
       API.Action.Provider.Management.HealthCheck
+      API.Action.Provider.Management.MediaFileDocument
       API.Action.Provider.Management.Person
       API.Action.Provider.Operator
       API.Action.Provider.Operator.HealthCheck
@@ -83,10 +85,12 @@ library
       API.Client.Rider.Management
       API.Client.Rider.RideBooking
       API.Types.Management
+      API.Types.Management.Endpoints.HealthCheck
       API.Types.Management.Endpoints.Person
       API.Types.Management.Endpoints.Registration
       API.Types.Management.Endpoints.Role
       API.Types.Management.Endpoints.Transaction
+      API.Types.Management.HealthCheck
       API.Types.Management.Person
       API.Types.Management.Registration
       API.Types.Management.Role

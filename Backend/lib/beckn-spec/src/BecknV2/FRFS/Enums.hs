@@ -118,7 +118,7 @@ data ServiceSubType = LF | EV
 instance FromJSON ServiceSubType where
   parseJSON (String "LF") = pure LF
   parseJSON (String "EV") = pure EV
-  parseJSON _ = mzero  -- Silently ignore unknown values
+  parseJSON _ = mzero -- Silently ignore unknown values
 
 instance ToJSON ServiceSubType where
   toJSON LF = String "LF"

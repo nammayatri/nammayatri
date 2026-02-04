@@ -1,16 +1,16 @@
 module Storage.Clickhouse.FRFSTicketBooking where
 
+import Control.Applicative ((<|>))
+import qualified Data.List as List
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Time
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Common
-import qualified Data.List as List
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import qualified Domain.Types.Quote as DQuote
-import Control.Applicative ((<|>))
 import Kernel.Types.Id
 import qualified Storage.Clickhouse.FRFSQuoteCategory as QCategory
 

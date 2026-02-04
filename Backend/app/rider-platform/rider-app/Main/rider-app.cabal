@@ -65,6 +65,7 @@ library
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.Types.UI.PartnerBookingStatementExtra
       API.Types.UI.Payment
+      API.Types.UnifiedDashboard.Common
       API.UI
       API.UI.AadhaarVerification
       API.UI.AppInstalls
