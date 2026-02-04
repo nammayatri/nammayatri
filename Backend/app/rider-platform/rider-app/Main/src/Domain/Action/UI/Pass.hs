@@ -71,6 +71,7 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.CachedQueries.Pass as CQPass
 import qualified Storage.CachedQueries.Translations as QT
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
@@ -603,6 +604,10 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
 
   let daysToExpire = fromIntegral $ DT.diffDays purchasedPass.endDate today
 
+  passes <- CQPass.findAllByPassTypeIdAndEnabled purchasedPass.passTypeId True
+  let maxSwitchCount = case listToMaybe passes >>= (.passConfig) of
+        Just pc -> pc.maxSwitchCount
+        Nothing -> 1
   mbLastVerified <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
   let lastVerifiedVehicleNumber = fmap fst mbLastVerified
   let isAutoVerified = (mbLastVerified >>= snd) == Just True
@@ -617,7 +622,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         status = purchasedPass.status,
         startDate = purchasedPass.startDate,
         deviceMismatch,
-        deviceSwitchAllowed = purchasedPass.deviceSwitchCount == 0,
+        deviceSwitchAllowed = purchasedPass.deviceSwitchCount < maxSwitchCount,
         profilePicture = purchasedPass.profilePicture <|> person.profilePicture,
         daysToExpire = daysToExpire,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
