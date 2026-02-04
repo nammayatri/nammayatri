@@ -240,6 +240,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     scheduledRideJobRescheduleTime :: Kernel.Prelude.NominalDiffTime,
     scheduledRideSearchRepeatLimit :: Kernel.Prelude.Int,
     searchRepeatLimit :: Kernel.Prelude.Int,
+    shouldDeleteRc :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     snapToRoadConfidenceThreshold :: Kernel.Prelude.Double,
     specialDrivers :: [Kernel.Prelude.Text],
     specialLocationTags :: [Kernel.Prelude.Text],

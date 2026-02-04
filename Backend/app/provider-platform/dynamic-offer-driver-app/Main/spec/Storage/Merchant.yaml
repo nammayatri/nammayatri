@@ -1123,6 +1123,7 @@ TransporterConfig:
     enableMobileNumberValidation: Maybe Bool
     allowRcUnlinkWhenDriverOffline: Maybe Bool
     deleteDriverBankAccountWhenLinkToFleet: Maybe Bool
+    shouldDeleteRc: Maybe Bool
     digilockerEnabled: Maybe Bool
     allowDisableDriverToTakeSpecialZoneRide: Maybe Bool
     payoutRideMoneyToDriver: Maybe Bool

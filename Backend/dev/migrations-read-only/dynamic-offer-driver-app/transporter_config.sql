@@ -617,3 +617,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_multi_fle
 
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN missing_mapping_fallback_variant text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN should_delete_rc boolean ;
