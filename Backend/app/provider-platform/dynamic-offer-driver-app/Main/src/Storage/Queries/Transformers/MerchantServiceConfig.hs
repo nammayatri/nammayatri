@@ -70,6 +70,7 @@ getConfigJSON = \case
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
+    Payment.PaytmEDCConfig cfg -> toJSON cfg
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
   Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
@@ -77,14 +78,17 @@ getConfigJSON = \case
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
+    Payment.PaytmEDCConfig cfg -> toJSON cfg
   Domain.RidePayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
   Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
+    Payment.PaytmEDCConfig cfg -> toJSON cfg
   Domain.MembershipPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
+    Payment.PaytmEDCConfig cfg -> toJSON cfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> toJSON cfg
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
@@ -109,6 +113,7 @@ getConfigJSON = \case
   Domain.JuspayWalletServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
+    Payment.PaytmEDCConfig cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -181,6 +186,7 @@ getServiceName = \case
   Domain.JuspayWalletServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> Domain.JuspayWalletService Payment.Juspay
     Payment.StripeConfig _ -> Domain.JuspayWalletService Payment.Stripe
+    Payment.PaytmEDCConfig _ -> Domain.JuspayWalletService Payment.PaytmEDC
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -191,6 +197,7 @@ getPaymentServiceConfigJson = \case
     Just Stripe.Live -> Payment.Stripe
     Just Stripe.Test -> Payment.StripeTest
     Nothing -> Payment.Stripe
+  Payment.PaytmEDCConfig _ -> Payment.PaytmEDC
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
@@ -261,3 +268,4 @@ mkPaymentServiceConfig configJSON = \case
   Payment.AAJuspay -> Payment.JuspayConfig <$> eitherValue configJSON
   Payment.Stripe -> Payment.StripeConfig <$> eitherValue configJSON
   Payment.StripeTest -> Payment.StripeConfig <$> eitherValue configJSON
+  Payment.PaytmEDC -> Payment.PaytmEDCConfig <$> eitherValue configJSON

@@ -165,6 +165,7 @@ instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
               (Just encryptedToken, Just hash) -> Just $ EncryptedHashed (Encrypted encryptedToken) hash
               (_, _) -> Nothing,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
+            paytmTid = paytmTidEncrypted,
             groupId = groupId,
             ..
           }
@@ -194,6 +195,7 @@ instance ToTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
         serviceProvider = Just serviceProvider,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
         effectAmount = Nothing,
+        paytmTidEncrypted = paytmTid,
         groupId = groupId,
         ..
       }
@@ -205,6 +207,15 @@ updatePaymentFulfillmentStatus orderId paymentFulfillmentStatus domainEntityId d
     [ Se.Set BeamPO.paymentFulfillmentStatus paymentFulfillmentStatus,
       Se.Set BeamPO.domainEntityId domainEntityId,
       Se.Set BeamPO.domainTransactionId domainTransactionId,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+
+updatePaytmTid :: BeamFlow m r => Id DOrder.PaymentOrder -> Maybe Text -> m ()
+updatePaytmTid orderId mbPaytmTid = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.paytmTidEncrypted mbPaytmTid,
       Se.Set BeamPO.updatedAt now
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]

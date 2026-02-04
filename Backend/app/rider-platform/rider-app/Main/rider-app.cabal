@@ -581,6 +581,7 @@ library
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReasonExtra
       Storage.Queries.DisabilityExtra
+      Storage.Queries.EDCMachineMappingExtra
       Storage.Queries.EstimateBreakup
       Storage.Queries.EstimateExtra
       Storage.Queries.ExophoneExtra
@@ -888,6 +889,7 @@ library
       Domain.Types.DraftTicketChange
       Domain.Types.DraftTicketChangeHistory
       Domain.Types.DriverOffer
+      Domain.Types.EDCMachineMapping
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareBreakup
@@ -1044,6 +1046,7 @@ library
       Storage.Beam.DraftTicketChange
       Storage.Beam.DraftTicketChangeHistory
       Storage.Beam.DriverOffer
+      Storage.Beam.EDCMachineMapping
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.FareBreakup
@@ -1203,6 +1206,7 @@ library
       Storage.Queries.DraftTicketChange
       Storage.Queries.DraftTicketChangeHistory
       Storage.Queries.DriverOffer
+      Storage.Queries.EDCMachineMapping
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
@@ -1266,6 +1270,7 @@ library
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.Disability
+      Storage.Queries.OrphanInstances.EDCMachineMapping
       Storage.Queries.OrphanInstances.Estimate
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareBreakup

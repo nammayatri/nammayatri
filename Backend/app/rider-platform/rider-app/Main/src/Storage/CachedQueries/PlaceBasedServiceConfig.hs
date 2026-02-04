@@ -83,27 +83,35 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> PaymentService Payment.Juspay
     Payment.StripeConfig _ -> PaymentService Payment.Stripe
+    Payment.PaytmEDCConfig _ -> PaymentService Payment.PaytmEDC
   MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> MetroPaymentService Payment.Juspay
     Payment.StripeConfig _ -> MetroPaymentService Payment.Stripe
+    Payment.PaytmEDCConfig _ -> MetroPaymentService Payment.PaytmEDC
   BusPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> BusPaymentService Payment.Juspay
     Payment.StripeConfig _ -> BusPaymentService Payment.Stripe
+    Payment.PaytmEDCConfig _ -> BusPaymentService Payment.PaytmEDC
   BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> BbpsPaymentService Payment.Juspay
     Payment.StripeConfig _ -> BbpsPaymentService Payment.Stripe
+    Payment.PaytmEDCConfig _ -> BbpsPaymentService Payment.PaytmEDC
   MultiModalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> MultiModalPaymentService Payment.Juspay
     Payment.StripeConfig _ -> MultiModalPaymentService Payment.Stripe
+    Payment.PaytmEDCConfig _ -> MultiModalPaymentService Payment.PaytmEDC
   PassPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> PassPaymentService Payment.Juspay
     Payment.StripeConfig _ -> PassPaymentService Payment.Stripe
+    Payment.PaytmEDCConfig _ -> PassPaymentService Payment.PaytmEDC
   ParkingPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> ParkingPaymentService Payment.Juspay
     Payment.StripeConfig _ -> ParkingPaymentService Payment.Stripe
+    Payment.PaytmEDCConfig _ -> ParkingPaymentService Payment.PaytmEDC
   MembershipPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> MembershipPaymentService Payment.Juspay
     Payment.StripeConfig _ -> MembershipPaymentService Payment.Stripe
+    Payment.PaytmEDCConfig _ -> MembershipPaymentService Payment.PaytmEDC
   IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
   IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
@@ -124,6 +132,7 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   JuspayWalletServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> JuspayWalletService Payment.Juspay
     Payment.StripeConfig _ -> JuspayWalletService Payment.Stripe
+    Payment.PaytmEDCConfig _ -> JuspayWalletService Payment.PaytmEDC
   MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
     MultiModal.GoogleTransitConfig _ -> MultiModalStaticDataService MultiModal.GoogleTransit
     MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit

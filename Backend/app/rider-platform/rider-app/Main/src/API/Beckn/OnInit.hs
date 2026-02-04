@@ -60,7 +60,13 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
             (onInitRes, booking) <- DOnInit.onInit onInitReq
             fork "on init received pushing ondc logs" do
               void $ pushLogs "on_init" (toJSON reqV2) onInitRes.merchant.id.getId "MOBILITY"
-            if booking.requiresPaymentBeforeConfirm && (booking.paymentInstrument == Just DMPM.BoothOnline)
+            -- Paytm EDC (BoothOnline): when requiresPaymentBeforeConfirm and paymentInstrument is BoothOnline,
+            -- create payment order and do NOT send confirm to BPP until payment succeeds.
+            -- Client must send paymentInstrument=BoothOnline (typed) in the confirm request.
+            let isPaytmEdcPaymentBeforeConfirm =
+                  booking.requiresPaymentBeforeConfirm
+                    && booking.paymentInstrument == Just DMPM.BoothOnline
+            if isPaytmEdcPaymentBeforeConfirm
               then void $ DPayment.createRideBookingPaymentOrder booking
               else handle (errHandler booking) . void . withShortRetry $ do
                 confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes

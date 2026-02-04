@@ -86,6 +86,7 @@ mkPaymentServiceConfig configJSON = \case
   Payment.AAJuspay -> Payment.JuspayConfig <$> valueToMaybe configJSON
   Payment.Stripe -> Payment.StripeConfig <$> valueToMaybe configJSON
   Payment.StripeTest -> Payment.StripeConfig <$> valueToMaybe configJSON
+  Payment.PaytmEDC -> Payment.PaytmEDCConfig <$> valueToMaybe configJSON
 
 getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJson = \case
@@ -130,6 +131,7 @@ getServiceNameConfigJson = \case
       Just Stripe.Live -> (Domain.ParkingPaymentService Payment.Stripe, toJSON cfg)
       Just Stripe.Test -> (Domain.ParkingPaymentService Payment.StripeTest, toJSON cfg)
       Nothing -> (Domain.ParkingPaymentService Payment.Stripe, toJSON cfg)
+    Payment.PaytmEDCConfig cfg -> (Domain.ParkingPaymentService Payment.PaytmEDC, toJSON cfg)
   Domain.MembershipPaymentServiceConfig paymentCfg -> first Domain.MembershipPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
@@ -164,3 +166,4 @@ getPaymentServiceConfigJson = \case
     Just Stripe.Live -> (Payment.Stripe, toJSON cfg)
     Just Stripe.Test -> (Payment.StripeTest, toJSON cfg)
     Nothing -> (Payment.Stripe, toJSON cfg)
+  Payment.PaytmEDCConfig cfg -> (Payment.PaytmEDC, toJSON cfg)

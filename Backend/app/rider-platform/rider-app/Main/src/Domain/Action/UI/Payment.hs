@@ -34,14 +34,24 @@ where
 import qualified API.Types.UI.Payment as PaymentAPI
 import qualified Beckn.ACL.Confirm as ACL
 import Control.Applicative ((<|>))
+-- import Data.Aeson (defaultOptions, withObject, (.:?))
+import Data.Aeson.Types ()
+import Data.OpenApi ()
 import qualified Data.Text
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.BBPS as BBPS
+import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Action.UI.RidePayment as DRidePayment
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingStatus as SRB
+import Domain.Types.CancellationReason (CancellationReasonCode (..), CancellationStage (..))
+-- TODO: Uncomment when PaytmEDC module is available in shared-kernel
+-- import qualified Kernel.External.Payment.PaytmEDC.Checksum as PaytmEDCChecksum
+
 import Domain.Types.Extra.MerchantPaymentMethod ()
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -51,17 +61,18 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import Environment
+import GHC.Generics ()
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import qualified Kernel.External.Payment.Interface.Events.Types as PEInterface
 import qualified Kernel.External.Payment.Interface as KPayment
+import qualified Kernel.External.Payment.Interface.Events.Types as PEInterface
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Stripe as Stripe
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Payment.Stripe.Webhook (RawByteString (..))
 import qualified Kernel.External.Payment.Types as Payment
 import qualified Kernel.External.Wallet as Wallet
-import Kernel.Prelude
+import Kernel.Prelude hiding (head)
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -89,15 +100,13 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import qualified Storage.Queries.Booking as QRideB
+import qualified Storage.Queries.BookingPartiesLink as QBPL
+import qualified Storage.Queries.EDCMachineMappingExtra as QEDCMachineMapping
 import qualified Storage.Queries.PaymentInvoiceExtra as QPaymentInvoiceExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
-import Data.Aeson (defaultOptions, withObject, (.:?))
-import Data.Aeson.Types ()
-import Data.OpenApi ()
-import GHC.Generics ()
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
@@ -170,6 +179,21 @@ createRideBookingPaymentOrder booking = do
   isSplitEnabled <- Payment.getIsSplitEnabled booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount [] isPercentageSplitEnabled False
+
+  -- Check if dashboardAgentId exists and fetch EDC machine mapping
+  mbPaytmTid <- case booking.dashboardAgentId of
+    Just dashboardAgentId -> do
+      -- Dashboard user must have assigned EDC machine
+      mapping <-
+        QEDCMachineMapping.findActiveByPersonIdAndMerchant
+          (Id dashboardAgentId)
+          booking.merchantId
+          merchantOperatingCityId
+          >>= fromMaybeM (InvalidRequest "Dashboard user does not have an assigned EDC machine. Booking cannot be done.")
+      -- terminalId is plain Text (not encrypted) - use directly
+      pure $ Just mapping.terminalId
+    Nothing -> pure Nothing
+
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -187,7 +211,7 @@ createRideBookingPaymentOrder booking = do
             mandateEndDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing,
+            metadataGatewayReferenceId = mbPaytmTid, -- Set terminal ID from machine mapping
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing
           }
@@ -196,13 +220,122 @@ createRideBookingPaymentOrder booking = do
       createOrderCall = Payment.createOrder booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking (Just person.id.getId) person.clientSdkVersion Nothing
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createWalletCall = TWallet.createWallet booking.merchantId merchantOperatingCityId
-  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId Nothing Nothing DOrder.RideBooking isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False
+  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId Nothing Nothing DOrder.RideBooking isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing
   whenJust mbOrderResp $ \resp -> do
     void $ QOrder.updatePaymentFulfillmentStatus (Id paymentOrderId) (Just DPayment.FulfillmentPending) (Just booking.id.getId) Nothing
+    -- Store paytmTid in PaymentOrder for audit trail (plain text)
+    whenJust mbPaytmTid $ \paytmTid ->
+      void $ QOrder.updatePaytmTid (Id paymentOrderId) (Just paytmTid)
     whenJust resp.payment_links $ \links ->
       whenJust links.web $ \url ->
         void $ QRideB.updatePaymentInfo booking.id booking.estimatedFare booking.discount booking.estimatedTotalFare (Just $ showBaseUrl url)
+    -- Fork background status polling as fallback alongside Paytm EDC webhook
+    fork "RideBooking:PaytmEDC:StatusPoll" $
+      pollPaytmEdcPaymentStatus booking.merchantId booking.merchantOperatingCityId booking.riderId (Id paymentOrderId)
   pure mbOrderResp
+
+-- | Background polling for Paytm EDC payment status.
+-- Reuses orderStatusHandler (via syncOrderStatus): one status fetch + fulfillment handling per attempt.
+-- Stops when a terminal status is reached or max attempts / consecutive failures exhausted.
+pollPaytmEdcPaymentStatus ::
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  Id DOrder.PaymentOrder ->
+  Flow ()
+pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId = do
+  let maxAttempts = 20 :: Int -- ~5 minutes total (15s * 20)
+      pollIntervalSec = 15 :: Int
+      pollKey = "PaytmEDC:StatusPoll:" <> orderId.getId
+      maxConsecutiveFailures = 3 :: Int
+  Redis.setExp pollKey ("polling" :: Text) (maxAttempts * pollIntervalSec + 60)
+  go pollKey 1 maxAttempts pollIntervalSec maxConsecutiveFailures 0
+  where
+    go pollKey attempt maxAttempts pollIntervalSec maxConsecutiveFailures consecutiveFailures = do
+      when (attempt <= maxAttempts) $ do
+        liftIO $ threadDelay (pollIntervalSec * 1000000)
+        mbOrder <- QOrder.findById orderId
+        case mbOrder of
+          Nothing -> logError $ "PaytmEDC poll: Order not found " <> orderId.getId
+          Just order -> do
+            let paymentServiceType = fromMaybe DOrder.Normal order.paymentServiceType
+            if isTerminalStatus order.status
+              then do
+                logInfo $ "PaytmEDC poll: Order " <> orderId.getId <> " already terminal: " <> show order.status
+                when (paymentServiceType == DOrder.RideBooking && order.status /= Payment.CHARGED) $
+                  cancelBookingOnPollFailure order
+                Redis.del pollKey
+              else do
+                logInfo $ "PaytmEDC poll attempt " <> show attempt <> "/" <> show maxAttempts <> " for order " <> orderId.getId
+                let fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast order.merchantId) order.id
+                eitherResult <-
+                  withTryCatch "PaytmEDC:StatusPoll" $
+                    SPayment.syncOrderStatus fulfillmentHandler merchantId personId order
+                case eitherResult of
+                  Left err -> do
+                    let newConsecutiveFailures = consecutiveFailures + 1 :: Int
+                    logError $ "PaytmEDC poll error for " <> orderId.getId <> ": " <> show err <> " (consecutive failures: " <> show newConsecutiveFailures <> ")"
+                    if newConsecutiveFailures >= maxConsecutiveFailures
+                      then do
+                        logError $ "PaytmEDC poll: Cancelling booking due to " <> show newConsecutiveFailures <> " consecutive failures for order " <> orderId.getId
+                        cancelBookingOnPollFailure order
+                        Redis.del pollKey
+                      else go pollKey (attempt + 1) maxAttempts pollIntervalSec maxConsecutiveFailures newConsecutiveFailures
+                  Right statusResp -> do
+                    resolvedStatus <- DPayment.getTransactionStatus statusResp
+                    if isTerminalStatus resolvedStatus
+                      then do
+                        logInfo $ "PaytmEDC poll: Order " <> orderId.getId <> " resolved to " <> show resolvedStatus
+                        when (paymentServiceType == DOrder.RideBooking && resolvedStatus /= Payment.CHARGED) $
+                          cancelBookingOnPollFailure order
+                        Redis.del pollKey
+                      else
+                        if attempt >= maxAttempts
+                          then do
+                            logError $ "PaytmEDC poll: Exhausted " <> show maxAttempts <> " attempts for order " <> orderId.getId <> " - status " <> show resolvedStatus <> ". Cancelling booking."
+                            cancelBookingOnPollFailure order
+                            Redis.del pollKey
+                          else go pollKey (attempt + 1) maxAttempts pollIntervalSec maxConsecutiveFailures 0
+
+    cancelBookingOnPollFailure :: DOrder.PaymentOrder -> Flow ()
+    cancelBookingOnPollFailure paymentOrder = do
+      case paymentOrder.domainEntityId of
+        Just bookingIdText -> do
+          let bookingId = Id bookingIdText :: Id DRB.Booking
+          mbBooking <- QRideB.findById bookingId
+          case mbBooking of
+            Just booking -> do
+              -- Only cancel if booking is still in a cancellable state (not confirmed/started/completed)
+              if booking.status `elem` [SRB.NEW, SRB.AWAITING_REASSIGNMENT]
+                then do
+                  let cancelReq =
+                        DCancel.CancelReq
+                          { reasonCode = CancellationReasonCode "Paytm EDC status check failed: unable to verify payment status",
+                            reasonStage = OnInit,
+                            additionalInfo = Just "Payment status polling failed repeatedly - unable to verify payment status",
+                            reallocate = Nothing,
+                            blockOnCancellationRate = Nothing
+                          }
+                  eitherCancelResult <- withTryCatch "PaytmEDC:CancelBookingOnPollFailure" $ DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
+                  case eitherCancelResult of
+                    Right _ -> do
+                      void $ QRideB.updateStatus booking.id SRB.CANCELLED
+                      void $ QBPL.makeAllInactiveByBookingId booking.id
+                      logInfo $ "PaytmEDC poll: Successfully cancelled booking " <> bookingIdText <> " due to poll failures"
+                    Left cancelErr -> logError $ "PaytmEDC poll: Failed to cancel booking " <> bookingIdText <> ": " <> show cancelErr
+                else logInfo $ "PaytmEDC poll: Booking " <> bookingIdText <> " already in non-cancellable state: " <> show booking.status
+            Nothing -> logError $ "PaytmEDC poll: Booking not found for domainEntityId: " <> bookingIdText
+        Nothing -> logError $ "PaytmEDC poll: PaymentOrder " <> paymentOrder.id.getId <> " has no domainEntityId, cannot cancel booking"
+
+    isTerminalStatus :: Payment.TransactionStatus -> Bool
+    isTerminalStatus = \case
+      Payment.CHARGED -> True
+      Payment.AUTHENTICATION_FAILED -> True
+      Payment.AUTHORIZATION_FAILED -> True
+      Payment.JUSPAY_DECLINED -> True
+      Payment.CANCELLED -> True
+      Payment.CLIENT_AUTH_TOKEN_EXPIRED -> True
+      _ -> False
 
 -- | Get payment status by booking id. With Paytm EDC callback, confirm is triggered server-side on success; this is optional (UI refresh / fallback only).
 getRideBookingPaymentStatusByBookingId ::
@@ -284,93 +417,60 @@ mkOrderAPIEntity DOrder.PaymentOrder {..} = do
   clientAuthToken_ <- decrypt `mapM` clientAuthToken
   return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = clientAuthToken_, ..}
 
--- Paytm EDC callback types (flat ORDERID/STATUS or nested body.resultInfo)
-data PaytmEdcCallbackReq = PaytmEdcCallbackReq
-  { orderId :: Text,
-    status :: Text,
-    txnId :: Maybe Text,
-    resultCode :: Maybe Text,
-    resultMsg :: Maybe Text,
-    checksumHash :: Maybe Text
+-- Paytm EDC callback types following standard Paytm webhook structure: { head: {...}, body: {...} }
+data PaytmEdcCallbackHead = PaytmEdcCallbackHead
+  { requestTimestamp :: Text,
+    checksum :: Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
-instance FromJSON PaytmEdcCallbackReq where
-  parseJSON = withObject "PaytmEdcCallbackReq" $ \o -> do
-    -- Support flat (ORDERID, STATUS) and nested (body.orderId, body.resultInfo.resultStatus)
-    orderId' <-
-      (o .:? "ORDERID" <|> o .:? "orderId")
-        <|> (o .:? "body" >>= \mbBody -> case mbBody of
-              Just bodyVal -> withObject "body" (\b -> b .:? "orderId") bodyVal
-              Nothing -> pure Nothing)
-        >>= \m -> case m of
-          Nothing -> fail "Paytm callback: ORDERID/orderId required"
-          Just t -> pure t
-    status' <-
-      (o .:? "STATUS" <|> o .:? "status")
-        <|> (o .:? "body" >>= \mbBody -> case mbBody of
-              Just bodyVal ->
-                withObject "body" (\b -> b .:? "resultInfo" >>= \mbR -> case mbR of
-                  Just rVal -> withObject "resultInfo" (\r -> r .:? "resultStatus") rVal
-                  Nothing -> pure Nothing)
-                  bodyVal
-              Nothing -> pure Nothing)
-        >>= \m -> case m of
-          Nothing -> fail "Paytm callback: STATUS/resultStatus required"
-          Just t -> pure t
-    txnId' <- o .:? "TXNID" <|> o .:? "txnId"
-      <|> (o .:? "body" >>= \mbBody -> case mbBody of
-            Just bodyVal -> withObject "body" (\b -> b .:? "txnId") bodyVal
-            Nothing -> pure Nothing)
-    resultCode' <- o .:? "RESPCODE" <|> o .:? "resultCode"
-      <|> (o .:? "body" >>= \mbBody -> case mbBody of
-            Just bodyVal ->
-              withObject "body" (\b -> b .:? "resultInfo" >>= \mbR -> case mbR of
-                Just rVal -> withObject "resultInfo" (\r -> r .:? "resultCode") rVal
-                Nothing -> pure Nothing)
-                bodyVal
-            Nothing -> pure Nothing)
-    resultMsg' <- o .:? "RESPMSG" <|> o .:? "resultMsg"
-      <|> (o .:? "body" >>= \mbBody -> case mbBody of
-            Just bodyVal ->
-              withObject "body" (\b -> b .:? "resultInfo" >>= \mbR -> case mbR of
-                Just rVal -> withObject "resultInfo" (\r -> r .:? "resultMsg") rVal
-                Nothing -> pure Nothing)
-                bodyVal
-            Nothing -> pure Nothing)
-    checksumHash' <- o .:? "CHECKSUMHASH" <|> o .:? "checksumHash"
-      <|> (o .:? "head" >>= \mbHead -> case mbHead of
-            Just headVal -> withObject "head" (\h -> h .:? "signature") headVal
-            Nothing -> pure Nothing)
-    pure $
-      PaytmEdcCallbackReq
-        { orderId = orderId',
-          status = status',
-          txnId = txnId',
-          resultCode = resultCode',
-          resultMsg = resultMsg',
-          checksumHash = checksumHash'
-        }
+instance ToSchema PaytmEdcCallbackHead
 
-instance ToJSON PaytmEdcCallbackReq where
-  toJSON = genericToJSON defaultOptions
+data PaytmEdcCallbackBody = PaytmEdcCallbackBody
+  { resultInfo :: ResultInfo,
+    merchantRefereneceNo :: Text,
+    merchantTransactionId :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance ToSchema PaytmEdcCallbackBody
+
+data ResultInfo = ResultInfo
+  { resultStatus :: Text,
+    resultCodeId :: Text,
+    resultCode :: Text,
+    resultMsg :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance ToSchema ResultInfo
+
+data PaytmEdcCallbackReq = PaytmEdcCallbackReq
+  { head :: PaytmEdcCallbackHead,
+    body :: PaytmEdcCallbackBody
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 instance ToSchema PaytmEdcCallbackReq
 
--- Map Paytm resultStatus/STATUS to our TransactionStatus (TXN_SUCCESS/SUCCESS/A/S -> CHARGED, TXN_FAILURE/FAIL/F -> CANCELLED, else STARTED)
+-- Map Paytm resultStatus to our TransactionStatus
+-- Paytm values: "MA" (Accepted), "S" (Success), "F" (Failed), "U" (Pending), or numeric codes like "01"
 paytmStatusToTransactionStatus :: Text -> KPayment.TransactionStatus
 paytmStatusToTransactionStatus s =
   case Data.Text.toUpper s of
+    "S" -> KPayment.CHARGED -- Success
+    "MA" -> KPayment.CHARGED -- Accepted (treated as success)
+    "01" -> KPayment.CHARGED -- Numeric success code
+    "F" -> KPayment.CANCELLED -- Failed
+    "U" -> KPayment.STARTED -- Pending
+    -- Legacy support for old format
     "TXN_SUCCESS" -> KPayment.CHARGED
     "SUCCESS" -> KPayment.CHARGED
     "A" -> KPayment.CHARGED
-    "S" -> KPayment.CHARGED
     "TXN_FAILURE" -> KPayment.CANCELLED
     "FAIL" -> KPayment.CANCELLED
-    "F" -> KPayment.CANCELLED
     "PENDING" -> KPayment.STARTED
-    "U" -> KPayment.STARTED
-    _ -> KPayment.STARTED
+    _ -> KPayment.STARTED -- Default to pending for unknown statuses
 
 -- webhook ----------------------------------------------------------
 
@@ -474,30 +574,38 @@ confirmRideBookingFromPaymentOrder paymentOrder = do
 -- | Paytm EDC callback: update order status; for RideBooking+CHARGED run confirm only (no PaymentStatus build). Other types use orderStatusHandlerWithRefunds.
 paytmEdcCallbackHandler :: PaytmEdcCallbackReq -> Flow AckResponse
 paytmEdcCallbackHandler req = do
+  let PaytmEdcCallbackReq {body = PaytmEdcCallbackBody {resultInfo = ResultInfo {resultStatus = statusText, resultCode = resultCode', resultMsg = resultMsg'}, merchantRefereneceNo = orderIdText, merchantTransactionId = merchantTxnId}, head = PaytmEdcCallbackHead {checksum = checksumValue}} = req
+      -- merchantRefereneceNo is our orderId (UUID) we sent to Paytm
+      -- merchantTransactionId is our orderShortId we sent to Paytm (Paytm may echo it back or use their own)
+      resultCode = Just resultCode'
+      resultMsg = Just resultMsg'
+      _checksumHash = Just checksumValue
+  logDebug $ "Paytm EDC callback received: " <> show req
+  -- Try finding by shortId first (merchantTransactionId), then by orderId (merchantRefereneceNo)
   paymentOrder <-
-    QOrder.findByShortId (ShortId req.orderId)
-      >>= maybe (QOrder.findById (Id req.orderId) >>= fromMaybeM (PaymentOrderNotFound req.orderId)) pure
+    QOrder.findByShortId (ShortId merchantTxnId)
+      >>= maybe (QOrder.findById (Id orderIdText) >>= fromMaybeM (PaymentOrderNotFound $ "orderId:" <> orderIdText <> " or shortId:" <> merchantTxnId)) pure
   let lockKey = "PaytmEdcCallback:" <> getShortId paymentOrder.shortId
-      mappedStatus = paytmStatusToTransactionStatus req.status
+      mappedStatus = paytmStatusToTransactionStatus statusText
       paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
+  -- TODO: Validate checksumHash when Paytm merchant config is available
   Redis.whenWithLockRedis lockKey 60 $ do
-    QOrder.updateStatus paymentOrder.id (fromMaybe "" req.txnId) mappedStatus
+    QOrder.updateStatus paymentOrder.id merchantTxnId mappedStatus
     if paymentServiceType == DOrder.RideBooking
-      then
-        when (mappedStatus == Payment.CHARGED) $ do
-          eitherResult <- withTryCatch "paytmEdcCallback:fulfillment" $ confirmRideBookingFromPaymentOrder paymentOrder
-          case eitherResult of
-            Right (fulfillmentStatus, domainEntityId, domainTransactionId) ->
-              void $ QOrder.updatePaymentFulfillmentStatus paymentOrder.id (Just fulfillmentStatus) domainEntityId domainTransactionId
-            Left err -> logError $ "Paytm EDC fulfillment failed: " <> show err
+      then when (mappedStatus == Payment.CHARGED) $ do
+        eitherResult <- withTryCatch "paytmEdcCallback:fulfillment" $ confirmRideBookingFromPaymentOrder paymentOrder
+        case eitherResult of
+          Right (fulfillmentStatus, domainEntityId, domainTransactionId) ->
+            void $ QOrder.updatePaymentFulfillmentStatus paymentOrder.id (Just fulfillmentStatus) domainEntityId domainTransactionId
+          Left err -> logError $ "Paytm EDC fulfillment failed: " <> show err
       else do
         let paymentStatusResp =
               DPayment.PaymentStatus
                 { orderId = paymentOrder.id,
                   orderShortId = paymentOrder.shortId,
                   status = mappedStatus,
-                  bankErrorMessage = req.resultMsg,
-                  bankErrorCode = req.resultCode,
+                  bankErrorMessage = resultMsg,
+                  bankErrorCode = resultCode, -- Using resultCode (alphabetical) instead of resultCodeId (numeric)
                   isRetried = Nothing,
                   isRetargeted = Nothing,
                   retargetLink = Nothing,
@@ -507,7 +615,7 @@ paytmEdcCallbackHandler req = do
                   paymentMethodType = Nothing,
                   authIdCode = Nothing,
                   txnUUID = Nothing,
-                  txnId = req.txnId,
+                  txnId = Just merchantTxnId,
                   effectAmount = Nothing,
                   offers = Nothing,
                   paymentServiceType = paymentOrder.paymentServiceType,
