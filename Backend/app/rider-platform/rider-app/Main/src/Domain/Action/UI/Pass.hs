@@ -67,6 +67,7 @@ import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.CachedQueries.PassType as CQPassType
 import qualified Storage.CachedQueries.Translations as QT
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
 import qualified Storage.Queries.PassExtra as QPass
@@ -79,7 +80,6 @@ import Tools.Error
 import qualified Tools.Payment as TPayment
 import Tools.SMS as Sms hiding (Success)
 import qualified Tools.Wallet as TWallet
-import qualified Storage.CachedQueries.PassType as CQPassType
 
 defaultDashboardDeviceId :: Text
 defaultDashboardDeviceId = "dashboard-default-device-id"

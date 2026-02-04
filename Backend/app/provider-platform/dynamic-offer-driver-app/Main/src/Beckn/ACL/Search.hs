@@ -18,17 +18,20 @@ import qualified Beckn.OnDemand.Transformer.Search as TSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.Search as DSearch
+import Kernel.External.BapHostRedirect (BapHostRedirectMap)
 import Kernel.Prelude
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 
 buildSearchReqV2 ::
-  (HasFlowEnv m r '["_version" ::: Text], CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (HasFlowEnv m r '["_version" ::: Text, "cloudType" ::: Maybe CloudType, "bapHostRedirectMap" ::: BapHostRedirectMap], CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   Subscriber.Subscriber ->
   Search.SearchReqV2 ->
+  BaseUrl ->
   m DSearch.DSearchReq
-buildSearchReqV2 subscriber req = do
+buildSearchReqV2 subscriber req actualBapUri = do
   let context = req.searchReqContext
   messageId <- Utils.getMessageId context
   let message = req.searchReqMessage
-  TSearch.buildSearchReq messageId subscriber message context
+  TSearch.buildSearchReq messageId subscriber message context actualBapUri

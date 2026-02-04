@@ -114,7 +114,7 @@ onSelect OnSelectValidatedReq {..} = do
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
   QQuote.createMany quotes
-  void $ QEstimate.updateStatus DEstimate.GOT_DRIVER_QUOTE estimate.id
+  void $ QEstimate.updateStatusAndProviderUrl DEstimate.GOT_DRIVER_QUOTE providerInfo.url estimate.id
   if searchRequest.autoAssignEnabledV2 == Just True
     then do
       let lowestFareQuote = selectLowestFareQuote quotes
