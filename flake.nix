@@ -14,7 +14,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/metrics/Redis-metrics-multicloud";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
