@@ -18,9 +18,9 @@ import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
-postConfirmRideSearchQuotes :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument -> Maybe Bool -> Environment.Flow API.UI.Confirm.ConfirmRes
-postConfirmRideSearchQuotes merchantShortId opCity apiTokenInfo customerId quoteId paymentMethodId paymentInstrument isAdvanceBookingEnabled = do
+postConfirmRideSearchQuotes :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument -> Maybe Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow API.UI.Confirm.ConfirmRes
+postConfirmRideSearchQuotes merchantShortId opCity apiTokenInfo customerId quoteId paymentMethodId paymentInstrument isAdvanceBookingEnabled mbRequiresPaymentBeforeConfirm = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ do
-    API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.confirmDSL.postConfirmRideSearchQuotes) customerId quoteId (Just apiTokenInfo.personId.getId) paymentMethodId paymentInstrument isAdvanceBookingEnabled Nothing
+    API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.confirmDSL.postConfirmRideSearchQuotes) customerId quoteId (Just apiTokenInfo.personId.getId) paymentMethodId paymentInstrument isAdvanceBookingEnabled mbRequiresPaymentBeforeConfirm

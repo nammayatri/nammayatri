@@ -34,6 +34,9 @@ where
 import qualified API.Types.UI.Payment as PaymentAPI
 import qualified Beckn.ACL.Confirm as ACL
 import Control.Applicative ((<|>))
+import Data.Aeson (defaultOptions, withObject, (.:?))
+import Data.Aeson.Types ()
+import Data.OpenApi ()
 import qualified Data.Text
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.BBPS as BBPS
@@ -51,10 +54,11 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import Environment
+import GHC.Generics ()
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import qualified Kernel.External.Payment.Interface.Events.Types as PEInterface
 import qualified Kernel.External.Payment.Interface as KPayment
+import qualified Kernel.External.Payment.Interface.Events.Types as PEInterface
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Stripe as Stripe
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -94,10 +98,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
-import Data.Aeson (defaultOptions, withObject, (.:?))
-import Data.Aeson.Types ()
-import Data.OpenApi ()
-import GHC.Generics ()
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
@@ -271,51 +271,77 @@ data PaytmEdcCallbackReq = PaytmEdcCallbackReq
 
 instance FromJSON PaytmEdcCallbackReq where
   parseJSON = withObject "PaytmEdcCallbackReq" $ \o -> do
-    -- Support flat (ORDERID, STATUS) and nested (body.orderId, body.resultInfo.resultStatus)
-    orderId' <-
-      (o .:? "ORDERID" <|> o .:? "orderId")
-        <|> (o .:? "body" >>= \mbBody -> case mbBody of
-              Just bodyVal -> withObject "body" (\b -> b .:? "orderId") bodyVal
-              Nothing -> pure Nothing)
-        >>= \m -> case m of
-          Nothing -> fail "Paytm callback: ORDERID/orderId required"
-          Just t -> pure t
-    status' <-
-      (o .:? "STATUS" <|> o .:? "status")
-        <|> (o .:? "body" >>= \mbBody -> case mbBody of
-              Just bodyVal ->
-                withObject "body" (\b -> b .:? "resultInfo" >>= \mbR -> case mbR of
+    -- .:? succeeds with Nothing when key is missing, so (<|>) never tries the second key.
+    -- Parse both keys and take the first Just.
+    mOrderIdFlat <- (fmap (<|>) (o .:? "ORDERID")) <*> (o .:? "orderId")
+    mOrderIdBody <-
+      o .:? "body" >>= \mbBody -> case mbBody of
+        Just bodyVal -> withObject "body" (\b -> (fmap (<|>) (b .:? "ORDERID")) <*> (b .:? "orderId")) bodyVal
+        Nothing -> pure Nothing
+    orderId' <- case mOrderIdFlat <|> mOrderIdBody of
+      Nothing -> fail "Paytm callback: ORDERID/orderId required"
+      Just t -> pure t
+
+    mStatusFlat <- (fmap (<|>) (o .:? "STATUS")) <*> (o .:? "status")
+    mStatusBody <-
+      o .:? "body" >>= \mbBody -> case mbBody of
+        Just bodyVal ->
+          withObject
+            "body"
+            ( \b ->
+                b .:? "resultInfo" >>= \mbR -> case mbR of
                   Just rVal -> withObject "resultInfo" (\r -> r .:? "resultStatus") rVal
-                  Nothing -> pure Nothing)
-                  bodyVal
-              Nothing -> pure Nothing)
-        >>= \m -> case m of
-          Nothing -> fail "Paytm callback: STATUS/resultStatus required"
-          Just t -> pure t
-    txnId' <- o .:? "TXNID" <|> o .:? "txnId"
-      <|> (o .:? "body" >>= \mbBody -> case mbBody of
-            Just bodyVal -> withObject "body" (\b -> b .:? "txnId") bodyVal
-            Nothing -> pure Nothing)
-    resultCode' <- o .:? "RESPCODE" <|> o .:? "resultCode"
-      <|> (o .:? "body" >>= \mbBody -> case mbBody of
-            Just bodyVal ->
-              withObject "body" (\b -> b .:? "resultInfo" >>= \mbR -> case mbR of
-                Just rVal -> withObject "resultInfo" (\r -> r .:? "resultCode") rVal
-                Nothing -> pure Nothing)
-                bodyVal
-            Nothing -> pure Nothing)
-    resultMsg' <- o .:? "RESPMSG" <|> o .:? "resultMsg"
-      <|> (o .:? "body" >>= \mbBody -> case mbBody of
-            Just bodyVal ->
-              withObject "body" (\b -> b .:? "resultInfo" >>= \mbR -> case mbR of
-                Just rVal -> withObject "resultInfo" (\r -> r .:? "resultMsg") rVal
-                Nothing -> pure Nothing)
-                bodyVal
-            Nothing -> pure Nothing)
-    checksumHash' <- o .:? "CHECKSUMHASH" <|> o .:? "checksumHash"
-      <|> (o .:? "head" >>= \mbHead -> case mbHead of
-            Just headVal -> withObject "head" (\h -> h .:? "signature") headVal
-            Nothing -> pure Nothing)
+                  Nothing -> pure Nothing
+            )
+            bodyVal
+        Nothing -> pure Nothing
+    status' <- case mStatusFlat <|> mStatusBody of
+      Nothing -> fail "Paytm callback: STATUS/resultStatus required"
+      Just t -> pure t
+
+    mTxnIdFlat <- (fmap (<|>) (o .:? "TXNID")) <*> (o .:? "txnId")
+    mTxnIdBody <-
+      o .:? "body" >>= \mbBody -> case mbBody of
+        Just bodyVal -> withObject "body" (\b -> b .:? "txnId") bodyVal
+        Nothing -> pure Nothing
+    let txnId' = mTxnIdFlat <|> mTxnIdBody
+
+    mResultCodeFlat <- (fmap (<|>) (o .:? "RESPCODE")) <*> (o .:? "resultCode")
+    mResultCodeBody <-
+      o .:? "body" >>= \mbBody -> case mbBody of
+        Just bodyVal ->
+          withObject
+            "body"
+            ( \b ->
+                b .:? "resultInfo" >>= \mbR -> case mbR of
+                  Just rVal -> withObject "resultInfo" (\r -> r .:? "resultCode") rVal
+                  Nothing -> pure Nothing
+            )
+            bodyVal
+        Nothing -> pure Nothing
+    let resultCode' = mResultCodeFlat <|> mResultCodeBody
+
+    mResultMsgFlat <- (fmap (<|>) (o .:? "RESPMSG")) <*> (o .:? "resultMsg")
+    mResultMsgBody <-
+      o .:? "body" >>= \mbBody -> case mbBody of
+        Just bodyVal ->
+          withObject
+            "body"
+            ( \b ->
+                b .:? "resultInfo" >>= \mbR -> case mbR of
+                  Just rVal -> withObject "resultInfo" (\r -> r .:? "resultMsg") rVal
+                  Nothing -> pure Nothing
+            )
+            bodyVal
+        Nothing -> pure Nothing
+    let resultMsg' = mResultMsgFlat <|> mResultMsgBody
+
+    mChecksumFlat <- (fmap (<|>) (o .:? "CHECKSUMHASH")) <*> (o .:? "checksumHash")
+    mChecksumHead <-
+      o .:? "head" >>= \mbHead -> case mbHead of
+        Just headVal -> withObject "head" (\h -> h .:? "signature") headVal
+        Nothing -> pure Nothing
+    let checksumHash' = mChecksumFlat <|> mChecksumHead
     pure $
       PaytmEdcCallbackReq
         { orderId = orderId',
@@ -457,13 +483,12 @@ paytmEdcCallbackHandler req = do
   Redis.whenWithLockRedis lockKey 60 $ do
     QOrder.updateStatus paymentOrder.id (fromMaybe "" req.txnId) mappedStatus
     if paymentServiceType == DOrder.RideBooking
-      then
-        when (mappedStatus == Payment.CHARGED) $ do
-          eitherResult <- withTryCatch "paytmEdcCallback:fulfillment" $ confirmRideBookingFromPaymentOrder paymentOrder
-          case eitherResult of
-            Right (fulfillmentStatus, domainEntityId, domainTransactionId) ->
-              void $ QOrder.updatePaymentFulfillmentStatus paymentOrder.id (Just fulfillmentStatus) domainEntityId domainTransactionId
-            Left err -> logError $ "Paytm EDC fulfillment failed: " <> show err
+      then when (mappedStatus == Payment.CHARGED) $ do
+        eitherResult <- withTryCatch "paytmEdcCallback:fulfillment" $ confirmRideBookingFromPaymentOrder paymentOrder
+        case eitherResult of
+          Right (fulfillmentStatus, domainEntityId, domainTransactionId) ->
+            void $ QOrder.updatePaymentFulfillmentStatus paymentOrder.id (Just fulfillmentStatus) domainEntityId domainTransactionId
+          Left err -> logError $ "Paytm EDC fulfillment failed: " <> show err
       else do
         let paymentStatusResp =
               DPayment.PaymentStatus

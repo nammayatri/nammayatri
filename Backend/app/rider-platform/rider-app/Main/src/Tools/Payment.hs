@@ -105,12 +105,9 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import System.Environment as SE
 
--- Paytm POS (RideBooking): createOrder/config will use PaymentEDC from shared-kernel.
--- Until shared-kernel PR is merged, use Juspay so the app compiles.
--- After merge: build with cabal flag usePaymentEDC (e.g. cabal build -f usePaymentEDC) to test Paytm EDC flow.
+-- RideBooking (BoothOnline / Kaali-Peeli): uses Paytm EDC from shared-kernel (PaytmEDCConfig).
 rideBookingPaymentService :: Payment.PaymentService
-rideBookingPaymentService = Payment.Juspay
-
+rideBookingPaymentService = Payment.PaytmEDC
 
 createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfigAndServiceName Payment.createOrder
@@ -195,7 +192,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
   paymentServiceName <- getPaymentServiceByType paymentServiceType
   merchantServiceConfig <-
     CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId paymentServiceName
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show rideBookingPaymentService))
   case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     Just (DMSC.MetroPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
@@ -211,6 +208,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     overrideMockUrlIfNeeded vsc _ =
       case vsc of
         Payment.JuspayConfig cfg -> Payment.JuspayConfig $ cfg {JuspayConfig.mockStatusUrl = Nothing}
+        Payment.PaytmEDCConfig _ -> vsc
         _ -> vsc
     getPaymentServiceByType = \case
       Normal -> decidePaymentService (DMSC.PaymentService Payment.Juspay) clientSdkVersion
@@ -238,6 +236,7 @@ modifyPaymentServiceByMode Payment.Stripe DMPM.TEST = Payment.StripeTest
 modifyPaymentServiceByMode Payment.StripeTest _ = Payment.StripeTest
 modifyPaymentServiceByMode Payment.Juspay _ = Payment.Juspay
 modifyPaymentServiceByMode Payment.AAJuspay _ = Payment.AAJuspay
+modifyPaymentServiceByMode Payment.PaytmEDC _ = Payment.PaytmEDC
 
 runWithServiceConfig1 ::
   ServiceFlow m r =>

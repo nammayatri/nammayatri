@@ -125,6 +125,7 @@ modifyPaymentServiceByMode Payment.Stripe DMPM.TEST = Payment.StripeTest
 modifyPaymentServiceByMode Payment.StripeTest _ = Payment.StripeTest
 modifyPaymentServiceByMode Payment.Juspay _ = Payment.Juspay
 modifyPaymentServiceByMode Payment.AAJuspay _ = Payment.AAJuspay
+modifyPaymentServiceByMode Payment.PaytmEDC _ = Payment.PaytmEDC
 
 runWithServiceConfig ::
   ServiceFlow m r =>

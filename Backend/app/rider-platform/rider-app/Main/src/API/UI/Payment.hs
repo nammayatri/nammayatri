@@ -48,17 +48,17 @@ type API =
 type S2SAPI =
   "s2s"
     :> "payment"
-    :> ( Capture "orderId" (Id DOrder.PaymentOrder)
-           :> Capture "customerId" (Id DP.Person)
-           :> "status"
-           :> Header "api-key" Data.Text.Text
-           :> Get '[JSON] DPayment.PaymentStatusResp
+    :> ( "paytm"
+           :> "edc"
+           :> "callback"
+           :> ReqBody '[JSON] DPayment.PaytmEdcCallbackReq
+           :> Post '[JSON] AckResponse
        )
-      :<|> ( "paytm"
-               :> "edc"
-               :> "callback"
-               :> ReqBody '[JSON] DPayment.PaytmEdcCallbackReq
-               :> Post '[JSON] AckResponse
+      :<|> ( Capture "orderId" (Id DOrder.PaymentOrder)
+               :> Capture "customerId" (Id DP.Person)
+               :> "status"
+               :> Header "api-key" Data.Text.Text
+               :> Get '[JSON] DPayment.PaymentStatusResp
            )
 
 handler :: FlowServer API
@@ -71,7 +71,7 @@ handler authInfo =
     :<|> getWalletBalance authInfo
 
 handlerS2S :: FlowServer S2SAPI
-handlerS2S = getStatusS2S :<|> paytmEdcCallback
+handlerS2S = paytmEdcCallback :<|> getStatusS2S
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DRide.Ride -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails rideId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails rideId

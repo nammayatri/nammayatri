@@ -36,6 +36,9 @@ type PostConfirmRideSearchQuotes =
       :> QueryParam
            "isAdvancedBookingEnabled"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "requiresPaymentBeforeConfirm"
+           Kernel.Prelude.Bool
       :> Post
            '[JSON]
            API.UI.Confirm.ConfirmRes
