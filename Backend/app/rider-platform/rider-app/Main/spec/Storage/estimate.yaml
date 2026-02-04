@@ -299,6 +299,11 @@ Estimate:
       params: [updatedAt, status]
       where: id
 
+    updateStatusAndProviderUrl:
+      kvFunction: updateOneWithKV
+      params: [updatedAt, status, providerUrl]
+      where: id
+
     findBySRIdAndStatus:
       kvFunction: findOneWithKV
       where:

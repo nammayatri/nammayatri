@@ -17,6 +17,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
+import qualified Servant.Client.Core
 import qualified Storage.Beam.Estimate as Beam
 import Storage.Queries.EstimateExtra as ReExport
 import Storage.Queries.Transformers.Estimate
@@ -37,6 +38,13 @@ findBySRIdAndStatus status requestId = do findOneWithKV [Se.And [Se.Is Beam.stat
 
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.EstimateStatus.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateStatusAndProviderUrl ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.EstimateStatus.EstimateStatus -> Servant.Client.Core.BaseUrl -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
+updateStatusAndProviderUrl status providerUrl id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status, Se.Set Beam.providerUrl (Kernel.Prelude.showBaseUrl providerUrl)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

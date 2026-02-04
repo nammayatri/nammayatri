@@ -22,26 +22,36 @@ import qualified BecknV2.OnDemand.Types as Spec
 -- import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.Utils as Utils
+import qualified Data.HashMap.Strict as H
 import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search
 import qualified Domain.Action.Internal.Estimate as DBppEstimate
 import EulerHS.Prelude hiding (id)
+import Kernel.External.BapHostRedirect (BapHostRedirectMap)
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common (decodeFromText, fromMaybeM, type (:::))
 import Kernel.Utils.Logging (logDebug)
+import Servant.Client.Core (BaseUrl)
 import Tools.Error
 
-buildSearchReq :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text], EncFlow m r) => Data.Text.Text -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> m Domain.Action.Beckn.Search.DSearchReq
-buildSearchReq messageId subscriber req context = do
+buildSearchReq :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text, "cloudType" ::: Maybe CloudType, "bapHostRedirectMap" ::: BapHostRedirectMap], EncFlow m r) => Data.Text.Text -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> BaseUrl -> m Domain.Action.Beckn.Search.DSearchReq
+buildSearchReq messageId subscriber req context actualBapUri = do
+  cloudType_ <- asks (.cloudType)
+  bapHostRedirectMap <- asks (.bapHostRedirectMap)
+  -- If driver's cloud is in bapHostRedirectMap, use actualBapUri (from request); else use subscriber URL.
+  let newBapUri_ = case cloudType_ of
+        Just c | H.member (T.pack (show c)) bapHostRedirectMap -> actualBapUri
+        _ -> subscriber.subscriber_url
   now <- Kernel.Types.Common.getCurrentTime
   let bapId_ = subscriber.subscriber_id
-      bapUri_ = subscriber.subscriber_url
+      bapUri_ = newBapUri_
       customerLanguage_ = Beckn.OnDemand.Utils.Search.buildCustomerLanguage req
       customerNammaTags_ = Beckn.OnDemand.Utils.Search.buildCustomerNammaTags req
       isDashboardRequest_ = Beckn.OnDemand.Utils.Search.checkIfDashboardSearch req

@@ -1745,7 +1745,7 @@ data RouteServiceabilityContext = RouteServiceabilityContext
   }
 
 data ResolvedLeg = ResolvedLeg
-  { rlOrder      :: Int,
+  { rlOrder :: Int,
     rlRouteCodes :: [Text]
   }
 
@@ -1871,7 +1871,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
 
     onlyBusLegs :: MultiModalTypes.MultiModalRoute -> MultiModalTypes.MultiModalRoute
     onlyBusLegs route =
-      route { legs = filter (\l -> l.mode == MultiModal.Bus) route.legs }
+      route {legs = filter (\l -> l.mode == MultiModal.Bus) route.legs}
 
     getStopGtfsCode :: Maybe MultiModalStopDetails -> Maybe Text
     getStopGtfsCode =
@@ -1990,21 +1990,19 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
     getRouteNotFoundError MultiModalTypes.Subway source dest = NoValidSubwayRoute source dest
     getRouteNotFoundError MultiModalTypes.Bus source dest = NoValidBusRoute source dest
     getRouteNotFoundError _ source dest = NoValidMetroRoute source dest -- fallback
-
-    getRouteServiceability
-      :: Maybe ApiTypes.EffectiveStops
-      -> RouteServiceabilityContext
-      -> [ResolvedLeg]
-      -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    getRouteServiceability ::
+      Maybe ApiTypes.EffectiveStops ->
+      RouteServiceabilityContext ->
+      [ResolvedLeg] ->
+      Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
     getRouteServiceability mEffStops ctx legs = do
       legRoutes <- enrichResolvedLegs ctx legs
       pure $ ApiTypes.RouteServiceabilityResp mEffStops legRoutes
 
-
-    handleProvidedRouteCodes
-      :: RouteServiceabilityContext
-      -> Maybe [ApiTypes.RouteCodesWithLeg]
-      -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    handleProvidedRouteCodes ::
+      RouteServiceabilityContext ->
+      Maybe [ApiTypes.RouteCodesWithLeg] ->
+      Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
     handleProvidedRouteCodes ctx routeCodes' = do
       let routeCodesWithLegs = fromMaybe [] routeCodes'
       when (null routeCodesWithLegs) $
@@ -2013,45 +2011,45 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
             resolveLegsFromProvidedRouteCodes routeCodes'
       getRouteServiceability Nothing ctx resolvedLegs
 
-    handleDirectRoute
-      :: RouteServiceabilityContext
-      -> Text
-      -> Text
-      -> [Text]
-      -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    handleDirectRoute ::
+      RouteServiceabilityContext ->
+      Text ->
+      Text ->
+      [Text] ->
+      Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
     handleDirectRoute ctx srcCode destCode directRouteCodes = do
       let resolvedLegs =
             resolveLegsForDirectRoute srcCode destCode directRouteCodes
           effectiveStops =
             ApiTypes.EffectiveStops
-              { requestedSourceStop      = srcCode,
+              { requestedSourceStop = srcCode,
                 requestedDestinationStop = destCode,
-                effectiveSourceStop      = srcCode,
+                effectiveSourceStop = srcCode,
                 effectiveDestinationStop = destCode,
-                sourceChanged            = False,
-                destinationChanged       = False
+                sourceChanged = False,
+                destinationChanged = False
               }
       getRouteServiceability (Just effectiveStops) ctx resolvedLegs
 
-    handleOtpRoute
-      :: RouteServiceabilityContext
-      -> Text
-      -> Text
-      -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    handleOtpRoute ::
+      RouteServiceabilityContext ->
+      Text ->
+      Text ->
+      Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
     handleOtpRoute ctx srcCode destCode = do
       (effectiveStops, resolvedLegs) <-
         resolveLegsViaOtp srcCode destCode ctx
 
       getRouteServiceability effectiveStops ctx resolvedLegs
 
-    enrichResolvedLegs
-      :: RouteServiceabilityContext
-      -> [ResolvedLeg]
-      -> Environment.Flow [ApiTypes.LegRouteWithLiveVehicle]
+    enrichResolvedLegs ::
+      RouteServiceabilityContext ->
+      [ResolvedLeg] ->
+      Environment.Flow [ApiTypes.LegRouteWithLiveVehicle]
     enrichResolvedLegs ctx =
       mapConcurrently enrichLeg
       where
-        enrichLeg ResolvedLeg{..} = do
+        enrichLeg ResolvedLeg {..} = do
           busesForRoutes <-
             CQMMB.getBusesForRoutes rlRouteCodes ctx.integratedBPPConfig
 
@@ -2063,74 +2061,76 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
 
           pure $
             ApiTypes.LegRouteWithLiveVehicle
-              { legOrder = rlOrder
-              , routeWithLiveVehicles = routesWithLiveVehicles
+              { legOrder = rlOrder,
+                routeWithLiveVehicles = routesWithLiveVehicles
               }
 
-    resolveLegsFromProvidedRouteCodes
-      :: Maybe [ApiTypes.RouteCodesWithLeg]
-      -> [ResolvedLeg]
+    resolveLegsFromProvidedRouteCodes ::
+      Maybe [ApiTypes.RouteCodesWithLeg] ->
+      [ResolvedLeg]
     resolveLegsFromProvidedRouteCodes routeCodes' =
       let routeCodesWithLegs = fromMaybe [] routeCodes'
-      in map
-           (\leg ->
-              ResolvedLeg
-                { rlOrder = leg.legOrder
-                , rlRouteCodes = leg.routeCodes
-                })
-           routeCodesWithLegs
+       in map
+            ( \leg ->
+                ResolvedLeg
+                  { rlOrder = leg.legOrder,
+                    rlRouteCodes = leg.routeCodes
+                  }
+            )
+            routeCodesWithLegs
 
-    resolveLegsViaOtp
-      :: Text
-      -> Text
-      -> RouteServiceabilityContext
-      -> Environment.Flow (Maybe ApiTypes.EffectiveStops, [ResolvedLeg])
+    resolveLegsViaOtp ::
+      Text ->
+      Text ->
+      RouteServiceabilityContext ->
+      Environment.Flow (Maybe ApiTypes.EffectiveStops, [ResolvedLeg])
     resolveLegsViaOtp srcCode destCode ctx = do
       validatedRoute <- getValidSingleModeRoute ctx srcCode destCode
       case validatedRoute.legs of
         [] -> pure (Nothing, [])
         legs -> do
           let firstLeg = head legs
-              lastLeg  = last legs
+              lastLeg = last legs
           (effSrc, effDest) <-
             fromMaybeM
               (InvalidRequest "OTP returned legs without stop codes")
               ( (,) <$> getStopGtfsCode firstLeg.fromStopDetails
-                    <*> getStopGtfsCode lastLeg.toStopDetails
+                  <*> getStopGtfsCode lastLeg.toStopDetails
               )
           resolvedLegs <-
             mapM
-              (\(idx, leg) -> do
+              ( \(idx, leg) -> do
                   codes <- getLegRouteCodes leg ctx.integratedBPPConfig
                   pure $
                     ResolvedLeg
-                      { rlOrder = idx
-                      , rlRouteCodes = codes
+                      { rlOrder = idx,
+                        rlRouteCodes = codes
                       }
               )
               (zip [0 ..] legs)
 
           pure
-            ( Just ApiTypes.EffectiveStops
-                { requestedSourceStop = srcCode,
-                  requestedDestinationStop = destCode,
-                  effectiveSourceStop = effSrc,
-                  effectiveDestinationStop = effDest,
-                  sourceChanged = effSrc /= srcCode,
-                  destinationChanged = effDest /= destCode
-                }
-            , resolvedLegs
+            ( Just
+                ApiTypes.EffectiveStops
+                  { requestedSourceStop = srcCode,
+                    requestedDestinationStop = destCode,
+                    effectiveSourceStop = effSrc,
+                    effectiveDestinationStop = effDest,
+                    sourceChanged = effSrc /= srcCode,
+                    destinationChanged = effDest /= destCode
+                  },
+              resolvedLegs
             )
 
-    resolveLegsForDirectRoute
-      :: Text
-      -> Text
-      -> [Text]
-      -> [ResolvedLeg]
+    resolveLegsForDirectRoute ::
+      Text ->
+      Text ->
+      [Text] ->
+      [ResolvedLeg]
     resolveLegsForDirectRoute _src _dest directRouteCodes =
       [ ResolvedLeg
-          { rlOrder = 0
-          , rlRouteCodes = directRouteCodes
+          { rlOrder = 0,
+            rlRouteCodes = directRouteCodes
           }
       ]
 

@@ -395,6 +395,7 @@ let bapHostRedirectMap =
       [ { mapKey = "staging.localhost"
         , mapValue = Some "http://localhost:8010"
         }
+      , { mapKey = "cloudType.GCP", mapValue = Some "http://localhost:8010" }
       ]
 
 let emailServiceConfig =
