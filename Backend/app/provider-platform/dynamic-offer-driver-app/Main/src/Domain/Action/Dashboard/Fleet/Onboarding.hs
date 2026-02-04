@@ -210,5 +210,5 @@ castResponseStatus = \case
   SStatus.LIMIT_EXCEED -> CommonOnboarding.LIMIT_EXCEED
   SStatus.MANUAL_VERIFICATION_REQUIRED -> CommonOnboarding.MANUAL_VERIFICATION_REQUIRED
   SStatus.UNAUTHORIZED -> CommonOnboarding.UNAUTHORIZED
-  SStatus.PULL_REQUIRED -> CommonOnboarding.PENDING -- Map to PENDING until Fleet API supports PULL_REQUIRED
-  SStatus.CONSENT_DENIED -> CommonOnboarding.FAILED -- Map to FAILED as consent was denied
+  SStatus.PULL_REQUIRED -> CommonOnboarding.PULL_REQUIRED
+  SStatus.CONSENT_DENIED -> CommonOnboarding.CONSENT_DENIED

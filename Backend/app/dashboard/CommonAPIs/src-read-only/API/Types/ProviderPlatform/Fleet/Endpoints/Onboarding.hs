@@ -110,6 +110,8 @@ data ResponseStatus
   | LIMIT_EXCEED
   | MANUAL_VERIFICATION_REQUIRED
   | UNAUTHORIZED
+  | PULL_REQUIRED
+  | CONSENT_DENIED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
