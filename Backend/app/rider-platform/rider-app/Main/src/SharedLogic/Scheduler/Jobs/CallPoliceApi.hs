@@ -34,7 +34,8 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
@@ -55,7 +56,7 @@ sendCallPoliceApi Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   booking <- B.runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let merchantOperatingCityId = booking.merchantOperatingCityId
       merchantId = booking.merchantId
-  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   rideCallPoliceAPIKeyExists <- Hedis.withCrossAppRedis $ Hedis.get (mkRideCallPoliceAPIKey rideId)
   case rideCallPoliceAPIKeyExists of
     Nothing -> do

@@ -28,7 +28,8 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
 import SharedLogic.Person as SLP
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.Sos as QSos
@@ -68,7 +69,7 @@ createSafetyTicket ::
   m ()
 createSafetyTicket person ride = do
   logDebug $ "Creating Safety Ticket for ride : " <> show ride.id
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
   phoneNumber <- mapM decrypt person.mobileNumber
   let rideInfo = buildRideInfo ride person phoneNumber

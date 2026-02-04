@@ -122,6 +122,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMP
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
 import qualified Storage.Queries.BusinessHourExtra as SQBHE
@@ -532,10 +534,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- rider_config
   mbRiderConfig <- do
-    let baseVersion = LYT.ConfigVersionMap {version = 1, config = LYT.RIDER_CONFIG LYT.RiderConfig}
-    QRC.findByMerchantOperatingCityId newMerchantOperatingCityId (Just [baseVersion]) >>= \case
+    getConfig (RiderDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, txnId = Nothing}) >>= \case
       Nothing -> do
-        riderConfig <- QRC.findByMerchantOperatingCityId baseOperatingCityId (Just [baseVersion]) >>= fromMaybeM (InvalidRequest "Rider Config not found")
+        riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = baseOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (InvalidRequest "Rider Config not found")
         let newRiderConfig = buildRiderConfig newMerchantId newMerchantOperatingCityId now riderConfig
         return $ Just newRiderConfig
       _ -> return Nothing

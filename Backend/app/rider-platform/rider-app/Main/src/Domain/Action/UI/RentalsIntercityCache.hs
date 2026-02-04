@@ -26,7 +26,8 @@ import qualified Lib.Types.SpecialLocation as LSS
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (RiderError (..))
 
@@ -41,7 +42,7 @@ rentalsIntercityCache personId merchantId req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show person.merchantOperatingCityId)
   checkForServiceable <- SVC.checkServiceability fetchOriginSuccessor (personId, merchantId) req.currentLatLong False False
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let checkForSpecialLocation = isJust checkForServiceable.specialLocation
       specialLocationId = fmap (.id) checkForServiceable.specialLocation
       cityCenterLatLong = Just $ LatLong {lat = merchantOperatingCity.lat, lon = merchantOperatingCity.long}

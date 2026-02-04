@@ -23,7 +23,8 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
 import qualified Tools.Metrics as Metrics
@@ -77,7 +78,7 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
     _ -> do
       fork "FRFS External Confirm Req" $ do
         let ptMode = CB.vehicleCategoryToPTMode booking.vehicleType
-        mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing
+        mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, txnId = Nothing})
         let circuitOpen = CB.isCircuitOpen ptMode CB.BookingAPI mRiderConfig
         let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
 

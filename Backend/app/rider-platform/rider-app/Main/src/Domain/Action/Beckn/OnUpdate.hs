@@ -81,7 +81,8 @@ import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as QCM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -502,7 +503,7 @@ onUpdate = \case
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> do
     logDebug $ "Safety alert triggered for rideId: " <> ride.id.getId
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
-    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     void $ QRide.updateSafetyJourneyStatus ride.id (DRide.UnexpectedCondition DRide.DriverDeviated)
     safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId Nothing
     let triggerIVRFlow

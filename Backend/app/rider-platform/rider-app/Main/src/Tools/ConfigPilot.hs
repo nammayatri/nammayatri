@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-deprecations -Wno-orphans #-}
 
 module Tools.ConfigPilot where
 
@@ -22,7 +22,8 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.FRFSConfig as SCFRFS
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SCMMPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as SCMPC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.MerchantConfig as SCMC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRN
 import qualified Storage.CachedQueries.UiRiderConfig as SCU
@@ -35,11 +36,14 @@ import qualified Storage.Queries.RiderConfig as SQR
 import qualified Storage.Queries.UiRiderConfig as SQU
 import qualified Tools.DynamicLogic as DynamicLogic
 
+
+
+
 returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYTU.LogicDomain -> Id LYTU.MerchantOperatingCity -> Id LYTU.Merchant -> Kernel.Types.Beckn.Context.City -> m LYTU.TableDataResp
 returnConfigs cfgType merchantOpCityId merchantId opCity = do
   case cfgType of
     LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
-      riderCfg <- QRC.findByMerchantOperatingCityId (cast merchantOpCityId) (Just [])
+      riderCfg <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId, txnId = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList riderCfg)}
     LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
       payoutCfg <- SCMPC.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])

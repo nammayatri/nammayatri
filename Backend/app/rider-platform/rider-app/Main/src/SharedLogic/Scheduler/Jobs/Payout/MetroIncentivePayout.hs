@@ -40,7 +40,8 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Payout as TP
@@ -65,7 +66,7 @@ sendCustomerRefund Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       statusForRetry = jobData.statusForRetry
       toScheduleNextPayout = jobData.toScheduleNextPayout
   payoutConfig <- CPC.findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity merchantOpCityId True METRO_TICKET_CASHBACK Nothing
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (InternalError $ "RiderConfig not found for mocId: " <> show merchantOpCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId, txnId = Nothing}) >>= fromMaybeM (InternalError $ "RiderConfig not found for mocId: " <> show merchantOpCityId.getId)
   let rescheduleTimeDiff = payoutConfig <&> (.timeDiff)
   eligibleBookingsList <- QFTB.findAllByCashbackStatus riderConfig.payoutBatchSize (Just 0) (Just statusForRetry)
   logDebug $ "Bookings eligible for cashback: " <> show eligibleBookingsList

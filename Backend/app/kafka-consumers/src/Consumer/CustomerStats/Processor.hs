@@ -69,7 +69,7 @@ updateCustomerStats event _ = do
                       case payload.rs of
                         DDR.COMPLETED -> do
                           let createdAt = payload.cAt
-                          riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+                          riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
                           let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
                           -- Esq.runNoTransaction $ do
                           let ifIsWeekend = SP.isWeekend createdAt minuteDiffFromUTC

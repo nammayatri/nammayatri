@@ -66,7 +66,8 @@ import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PassType as CQPassType
 import qualified Storage.CachedQueries.Translations as QT
@@ -787,7 +788,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
       then do
         case (passVerifyReq.currentLat, passVerifyReq.currentLon) of
           (Just lat, Just lon) -> do
-            riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+            riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
             case integratedBPPConfigs of
               [] -> throwError (InvalidRequest "No integrated BPP config available for auto activation")
               (nearbyConfig : _) -> do
