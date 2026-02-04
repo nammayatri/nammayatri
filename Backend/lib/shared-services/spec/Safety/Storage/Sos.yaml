@@ -1,24 +1,29 @@
 imports:
   UTCTime: Kernel.Prelude
   ShortId: Kernel.Types.Id
+  Person: Safety.Domain.Types.Common
+  Merchant: Safety.Domain.Types.Common
+  Ride: Safety.Domain.Types.Common
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  MerchantOperatingCity: Safety.Domain.Types.Common
 
 Sos:
   tableName: sos
-  derives: "Generic"
+  derives: "Generic, Show, ToJSON, FromJSON, ToSchema"
 
   fields:
     id : Id Sos
-    personId : Text
-    rideId : Text
+    personId : Id Person
+    rideId : Id Ride
     flow : SosType
     status : SosStatus
     ticketId : Maybe Text
-    mediaFiles : "[Text]"
+    mediaFiles : "Maybe [Text]"
     trackingExpiresAt : Maybe UTCTime
     sosState : Maybe SosState
     entityType : Maybe SosEntityType
-    merchantId : Maybe Text
-    merchantOperatingCityId : Maybe Text
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
     createdAt : UTCTime
     updatedAt : UTCTime
 
@@ -39,7 +44,7 @@ Sos:
       enum: "Ride,NonRide"
 
     SosMockDrill:
-      personId: Text
+      personId: Id Person
       status : SosStatus
 
   queries:
@@ -76,21 +81,11 @@ Sos:
       kvFunction: findAllWithKV
       where: personId
 
-  beamType:
-    mediaFiles: Maybe [Text]
-
-  fromTType:
-    mediaFiles: Kernel.Prelude.fromMaybe [] mediaFiles|E
-
-  toTType:
-    mediaFiles: Kernel.Prelude.Just mediaFiles|E
-
   sqlType:
     mediaFiles: "text[]"
 
   constraints:
     id: PrimaryKey
-    rideId: SecondaryKey
 
   defaultQueryTypeConstraint: "(Safety.Storage.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

@@ -14,10 +14,10 @@
 
 module Safety.Storage.BeamFlow where
 
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Utils.Common
 import qualified Safety.Storage.Beam.SafetySettings as BeamSS
 import qualified Safety.Storage.Beam.Sos as BeamSos
-import Tools.Beam.UtilsTH
 
 type BeamFlow m r =
   ( MonadFlow m,

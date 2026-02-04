@@ -1,9 +1,9 @@
 let rootDir = env:GIT_ROOT_PATH
 
 let outputPrefixReadOnly =
-      rootDir ++ "Backend/lib/shared-services/src-read-only/Safety/"
+      rootDir ++ "/Backend/lib/shared-services/src-read-only/Safety/"
 
-let outputPrefix = rootDir ++ "Backend/lib/shared-services/src/Safety/"
+let outputPrefix = rootDir ++ "/Backend/lib/shared-services/src/Safety/"
 
 let migrationPath =
       rootDir ++ "/Backend/dev/migrations-read-only/dynamic-offer-driver-app/"
@@ -82,10 +82,17 @@ let defaultTypeImportMapper =
       , { _1 = "Kilometers", _2 = "Kernel.Types.Common" }
       , { _1 = "HighPrecMoney", _2 = "Kernel.Types.Common" }
       , { _1 = "Seconds", _2 = "Kernel.Types.Common" }
+      , { _1 = "Distance", _2 = "Kernel.Types.Common" }
+      , { _1 = "HighPrecDistance", _2 = "Kernel.Types.Common" }
+      , { _1 = "DistanceUnit", _2 = "Kernel.Types.Common" }
+      , { _1 = "Money", _2 = "Kernel.Types.Common" }
       ]
 
 let extraDefaultFields =
       [ { _1 = "merchantId", _2 = "Maybe (Id Merchant)" }
+      , { _1 = "merchantOperatingCityId"
+        , _2 = "Maybe (Id MerchantOperatingCity)"
+        }
       , { _1 = "createdAt", _2 = "UTCTime" }
       , { _1 = "updatedAt", _2 = "UTCTime" }
       ]
@@ -108,19 +115,15 @@ let sqlMapper =
       , { _1 = "Seconds", _2 = "integer" }
       , { _1 = "Kilometers", _2 = "integer" }
       , { _1 = "Meters", _2 = "integer" }
+      , { _1 = "HighPrecDistance", _2 = "double precision" }
+      , { _1 = "DistanceUnit", _2 = "character varying(255)" }
       ]
 
 let defaultImports =
       [ { _simpleImports =
           [ "EulerHS.Prelude", "Servant", "Tools.Auth", "Kernel.Utils.Common" ]
         , _qualifiedImports =
-          [ "Domain.Types.Person"
-          , "Kernel.Prelude"
-          , "Control.Lens"
-          , "Domain.Types.Merchant"
-          , "Environment"
-          , "Kernel.Types.Id"
-          ]
+          [ "Kernel.Prelude", "Control.Lens", "Environment", "Kernel.Types.Id" ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.SERVANT_API
         }
@@ -131,12 +134,7 @@ let defaultImports =
           , "Data.OpenApi (ToSchema)"
           ]
         , _qualifiedImports =
-          [ "Kernel.Prelude"
-          , "Domain.Types.Person"
-          , "Domain.Types.Merchant"
-          , "Environment"
-          , "Kernel.Types.Id"
-          ]
+          [ "Kernel.Prelude", "Environment", "Kernel.Types.Id" ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.API_TYPES
         }
@@ -147,17 +145,13 @@ let defaultImports =
           , "Data.OpenApi (ToSchema)"
           ]
         , _qualifiedImports =
-          [ "Kernel.Prelude"
-          , "Domain.Types.Person"
-          , "Domain.Types.Merchant"
-          , "Environment"
-          , "Kernel.Types.Id"
-          ]
+          [ "Kernel.Prelude", "Environment", "Kernel.Types.Id" ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_HANDLER
         }
-      , { _simpleImports = [] : List Text
-        , _qualifiedImports = [ "!Kernel.Beam.Lib.UtilsTH" ]
+      , { _simpleImports = [ "Data.Aeson", "Kernel.Prelude" ] : List Text
+        , _qualifiedImports =
+          [ "!Kernel.Beam.Lib.UtilsTH", "!Tools.Beam.UtilsTH" ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_TYPE
         }
@@ -182,7 +176,7 @@ let defaultImports =
         , _generationType = GeneratorType.BEAM_QUERIES
         }
       , { _simpleImports = [ "Kernel.Prelude", "Kernel.Utils.Common" ]
-        , _qualifiedImports = [ "Kernel.Storage.Hedis as Hedis" ]
+        , _qualifiedImports = [ "!Kernel.Storage.Hedis as Hedis" ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.CACHED_QUERIES
         }
@@ -204,7 +198,11 @@ in  { _output = outputPath
       [ GeneratorType.DOMAIN_TYPE
       , GeneratorType.BEAM_TABLE
       , GeneratorType.BEAM_QUERIES
+      , GeneratorType.DOMAIN_HANDLER
+      , GeneratorType.SERVANT_API
+      , GeneratorType.API_TYPES
       , GeneratorType.SQL
+      , GeneratorType.CACHED_QUERIES
       ]
     , _packageMapping = [] : List { _1 : GeneratorType, _2 : Text }
     , _apiKind = ApiKind.UI

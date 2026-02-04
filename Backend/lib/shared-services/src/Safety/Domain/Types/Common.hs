@@ -11,14 +11,18 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Safety.Domain.Types.Common
   ( RideShareOptions (..),
+    Person,
+    Merchant,
+    Ride,
+    MerchantOperatingCity,
   )
 where
 
 import Data.Aeson
-import Data.OpenApi (ToParamSchema, ToSchema)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)
 import Kernel.Prelude
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
@@ -28,6 +32,14 @@ data RideShareOptions
   | SHARE_WITH_TIME_CONSTRAINTS
   | NEVER_SHARE
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data Person
+
+data Merchant
+
+data Ride
+
+data MerchantOperatingCity
 
 $(mkBeamInstancesForEnumAndList ''RideShareOptions)
 

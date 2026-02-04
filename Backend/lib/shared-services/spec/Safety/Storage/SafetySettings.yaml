@@ -1,13 +1,14 @@
 imports:
   UTCTime: Kernel.Prelude
   RideShareOptions: Safety.Domain.Types.Common
+  Person: Safety.Domain.Types.Common
 
 SafetySettings:
   tableName: safety_settings
   derives: "Generic"
 
   fields:
-    personId : Text
+    personId : Id Person
     nightSafetyChecks : Bool
     hasCompletedMockSafetyDrill : Maybe Bool
     hasCompletedSafetySetup : Bool
