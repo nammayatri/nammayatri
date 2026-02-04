@@ -52,7 +52,8 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 
 deriving instance Hashable Meters
@@ -77,7 +78,7 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
   cityRes <- getNearestOperatingAndCurrentCity (.origin) (personId, merchantId) False req.location
   let reqCity = cityRes.currentCity.city
   moc <- CQMOC.findByMerchantIdAndCity merchantId reqCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId:" <> merchantId.getId <> "city:" <> show reqCity)
-  riderConfig <- CQRC.findByMerchantOperatingCityId moc.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
   case req.travelMode of
     Just DTrip.Bus -> do
       vehicleDataBuckets <- getNearbyBusesAsBuckets moc.id riderConfig req.location

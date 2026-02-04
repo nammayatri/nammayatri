@@ -19,7 +19,8 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRiderConfig
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PopularLocation as QPopularLocation
 import qualified Storage.Queries.RecentLocation as QRecentLocation
@@ -37,7 +38,7 @@ mkWayPointV2 lat lon =
 
 getMultiModalModes :: API.PlacesRequest -> LatLong -> Id.Id DMerchant.Merchant -> DPerson.Person -> Id.Id MerchantOperatingCity -> Env.Flow (Maybe MultiModal.MultiModalResponse)
 getMultiModalModes req toLatLong merchantId person merchantOperatingCityId = do
-  riderConfig <- CQRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   userPref <- DAUM.getMultimodalUserPreferences (Just person.id, merchantId)
   let transitRoutesReq =
         MultiModal.GetTransitRoutesReq

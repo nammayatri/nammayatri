@@ -568,6 +568,13 @@ library
       Storage.Clickhouse.QuoteBreakup
       Storage.Clickhouse.Ride
       Storage.Clickhouse.Sos
+      Storage.ConfigPilot.Config.CommonConfig
+      Storage.ConfigPilot.Config.DriverPoolConfig
+      Storage.ConfigPilot.Config.PayoutConfig
+      Storage.ConfigPilot.Config.RiderConfig
+      Storage.ConfigPilot.Interface.Getter
+      Storage.ConfigPilot.Interface.Setter
+      Storage.ConfigPilot.Interface.Types
       Storage.GraphqlQueries.Client
       Storage.GraphqlQueries.RouteStopTimeTable
       Storage.GraphqlQueries.Types

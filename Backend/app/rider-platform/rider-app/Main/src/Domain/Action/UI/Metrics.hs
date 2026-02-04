@@ -11,7 +11,8 @@ import Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common (fork, logError)
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQR
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
 import Text.Regex.Posix ((=~))
 import Tools.Metrics
@@ -28,7 +29,7 @@ processMetrics mbPersonId metricName message = do
       mbPerson <- runInReplica $ QPerson.findById personId
       case mbPerson of
         Just person -> do
-          mbRiderConfig <- CQR.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing
+          mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing})
           pure $ case mbRiderConfig of
             Just riderConfig -> fromMaybe [] riderConfig.metricsBlacklistPatterns
             Nothing -> []

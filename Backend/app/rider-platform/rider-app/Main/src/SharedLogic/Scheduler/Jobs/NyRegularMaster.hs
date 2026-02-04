@@ -15,7 +15,8 @@ import SharedLogic.JobScheduler
 import SharedLogic.NyRegularSubscriptionHasher (calculateSubscriptionSchedulingHash)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QCMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as RiderConfig
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.NyRegularSubscription as NyRegularSubscription
 import qualified Tools.Error as Tools
 
@@ -32,7 +33,7 @@ runNyRegularMasterJob ::
 runNyRegularMasterJob Job {merchantOperatingCityId} = do
   cityId <- merchantOperatingCityId & fromMaybeM (Tools.InternalError "Job is missing merchantOperatingCityId")
   merchantCity <- QCMOC.findById cityId >>= fromMaybeM (Tools.MerchantOperatingCityNotFound $ "merchantOpCityid: " <> cityId.getId)
-  riderConfig <- RiderConfig.findByMerchantOperatingCityId cityId Nothing >>= fromMaybeM (Tools.RiderConfigNotFound $ "merchantOpCityid: " <> cityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = cityId.getId, txnId = Nothing}) >>= fromMaybeM (Tools.RiderConfigNotFound $ "merchantOpCityid: " <> cityId.getId)
   let batchSize = fromMaybe 10 (riderConfig.nyRegularSubscriptionBatchSize)
       executionTimeOffsetMinutes = fromMaybe 15 (riderConfig.nyRegularExecutionTimeOffsetMinutes)
 
