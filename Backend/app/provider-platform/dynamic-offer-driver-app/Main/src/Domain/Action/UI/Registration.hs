@@ -239,7 +239,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId merchantId
-  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SMS SR.OTP
+  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId (castChannelToMedium otpChannel) SR.OTP
   _ <- QR.create token
   QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId cloudType
   let otpCode = SR.authValueHash token
@@ -257,6 +257,11 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
   let attempts = SR.attempts token
       authId = SR.id token
   return $ AuthWithOtpRes {attempts, authId, otpCode}
+  where
+    castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
+    castChannelToMedium SOTP.SMS = SR.SMS
+    castChannelToMedium SOTP.EMAIL = SR.EMAIL
+    castChannelToMedium SOTP.WHATSAPP = SR.WHATSAPP
 
 createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
 createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
