@@ -751,10 +751,12 @@ postDriverFleetRemoveVehicle ::
   Text ->
   Maybe Text ->
   Flow APISuccess
-postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequestorId = do
+postDriverFleetRemoveVehicle merchantShortId opCity fleetOwnerId_ vehicleNo mbRequestorId = do
   void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId_
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId_ merchant.fleetOwnerEnabledCheck
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   vehicle <- QVehicle.findByRegistrationNo vehicleNo
   whenJust vehicle $ \veh -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_ True
@@ -765,8 +767,10 @@ postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequest
   forM_ associations $ \assoc -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId assoc.driverId fleetOwnerId_ True
     when (isJust isFleetDriver) $ QRCAssociation.endAssociationForRC assoc.driverId vehicleRC.id
-  RCQuery.upsert (updatedVehicleRegistrationCertificate vehicleRC)
   FRAE.endAssociationForRC (Id fleetOwnerId_ :: Id DP.Person) vehicleRC.id
+  if transporterConfig.shouldDeleteRc == Just True
+    then RCQuery.deleteById vehicleRC.id
+    else RCQuery.upsert (updatedVehicleRegistrationCertificate vehicleRC)
   pure Success
   where
     updatedVehicleRegistrationCertificate DVRC.VehicleRegistrationCertificate {..} = DVRC.VehicleRegistrationCertificate {fleetOwnerId = Nothing, ..}
