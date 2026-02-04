@@ -361,6 +361,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       commission = booking.commission
       pickupSpeedInMPS = Nothing
       refundRequestStatus = Nothing
+      driverCancellationDeductionOnPreviousRide = Nothing
   pure $ DRide.Ride {cloudType = cloudType, ..}
 
 mkBookingCancellationReason ::

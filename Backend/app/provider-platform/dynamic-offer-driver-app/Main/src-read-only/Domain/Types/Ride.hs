@@ -48,6 +48,7 @@ data Ride = Ride
     distanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    driverCancellationDeductionOnNextRideAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverCancellationPenaltyAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverCancellationPenaltyFeeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverCancellationPenaltyWaivedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

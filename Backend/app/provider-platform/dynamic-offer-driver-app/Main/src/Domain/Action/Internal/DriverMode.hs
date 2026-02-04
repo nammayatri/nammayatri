@@ -271,3 +271,25 @@ updateDriverModeAndFlowStatus driverId transporterConfig isActive mbNewMode newF
     else QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode Nothing mbHasRideStarted lastOfflineTime driverId
   fork "update driver online duration" $
     processingChangeOnline driverId transporterConfig mbNewMode oldDriverInfo.mode
+
+updateDriverModeAndFlowStatusWithCancellationDeduction ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
+  Id DP.Person ->
+  DTC.TransporterConfig ->
+  Bool ->
+  Maybe DriverInfo.DriverMode ->
+  DDFS.DriverFlowStatus ->
+  DI.DriverInformation ->
+  Maybe Bool ->
+  Maybe UTCTime ->
+  Maybe (Maybe HighPrecMoney) ->
+  m ()
+updateDriverModeAndFlowStatusWithCancellationDeduction driverId transporterConfig isActive mbNewMode newFlowStatus oldDriverInfo mbHasRideStarted lastOfflineTime mbCancellationDeduction = do
+  let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+  if allowCacheDriverFlowStatus
+    then do
+      QDriverInformation.updateActivityWithDriverFlowStatusAndCancellationDeduction isActive mbNewMode (Just newFlowStatus) mbHasRideStarted lastOfflineTime mbCancellationDeduction driverId
+      updateFleetOperatorStatusKeyForDriver driverId newFlowStatus oldDriverInfo
+    else QDriverInformation.updateActivityWithDriverFlowStatusAndCancellationDeduction isActive mbNewMode Nothing mbHasRideStarted lastOfflineTime mbCancellationDeduction driverId
+  fork "update driver online duration" $
+    processingChangeOnline driverId transporterConfig mbNewMode oldDriverInfo.mode

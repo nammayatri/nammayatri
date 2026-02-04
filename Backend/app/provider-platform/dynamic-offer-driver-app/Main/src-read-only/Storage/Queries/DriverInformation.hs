@@ -83,6 +83,13 @@ updateAirConditionScore airConditionScore driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.airConditionScore airConditionScore, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateCancellationDeductionOnNextRideAmount ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateCancellationDeductionOnNextRideAmount cancellationDeductionOnNextRideAmount driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.cancellationDeductionOnNextRideAmount cancellationDeductionOnNextRideAmount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateCompAadhaarImagePath :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateCompAadhaarImagePath compAadhaarImagePath driverId = do
   _now <- getCurrentTime
@@ -370,6 +377,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.canSwitchToInterCity (Kernel.Prelude.Just canSwitchToInterCity),
       Se.Set Beam.canSwitchToIntraCity (Kernel.Prelude.Just canSwitchToIntraCity),
       Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
+      Se.Set Beam.cancellationDeductionOnNextRideAmount cancellationDeductionOnNextRideAmount,
       Se.Set Beam.compAadhaarImagePath compAadhaarImagePath,
       Se.Set Beam.dailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown,
       Se.Set Beam.dailyExtraKms dailyExtraKms,

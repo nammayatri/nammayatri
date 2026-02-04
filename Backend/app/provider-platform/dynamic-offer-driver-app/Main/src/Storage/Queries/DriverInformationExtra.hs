@@ -519,3 +519,20 @@ updateMerchantIdAndCityIdByDriverId driverId merchantId merchantOperatingCityId 
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq $ getId driverId)]
+
+updateActivityWithDriverFlowStatusAndCancellationDeduction ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Bool -> Maybe Common.DriverMode -> Maybe DFS.DriverFlowStatus -> Maybe Bool -> Maybe UTCTime -> Maybe (Maybe HighPrecMoney) -> Id Person.Driver -> m ())
+updateActivityWithDriverFlowStatusAndCancellationDeduction active mode driverFlowStatus mbHasRideStarted lastOfflineTime mbCancellationDeduction driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [ Se.Set BeamDI.active active,
+        Se.Set BeamDI.updatedAt now
+      ]
+        <> [Se.Set BeamDI.mode mode | isJust mode]
+        <> [Se.Set BeamDI.driverFlowStatus driverFlowStatus | isJust driverFlowStatus]
+        <> [Se.Set BeamDI.hasRideStarted mbHasRideStarted | isJust mbHasRideStarted]
+        <> [Se.Set BeamDI.lastOfflineTime lastOfflineTime | isJust lastOfflineTime]
+        <> [Se.Set BeamDI.cancellationDeductionOnNextRideAmount (fromJust mbCancellationDeduction) | isJust mbCancellationDeduction]
+    )
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]

@@ -95,6 +95,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       customerCancellationDuesCaption = show Enums.CANCELLATION_CHARGES
       mbCustomerCancellationDues = mkBreakupItem customerCancellationDuesCaption . mkPrice <$> fareParams.customerCancellationDues
 
+      driverCancellationDeductionCaption = show Enums.DRIVER_CANCELLATION_DEDUCTION_ON_PREVIOUS_RIDE
+      mbDriverCancellationDeduction = mkBreakupItem driverCancellationDeductionCaption . mkPrice <$> fareParams.driverCancellationDeductionOnPreviousRide
+
       tollChargesCaption = show Enums.TOLL_CHARGES
       mbTollChargesItem = mkBreakupItem tollChargesCaption . mkPrice <$> fareParams.tollCharges
 
@@ -156,6 +159,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mkExtraTimeFareCaption,
       mbTollChargesItem,
       mbCustomerCancellationDues,
+      mbDriverCancellationDeduction,
       mbInsuranceChargeItem,
       mbCardChargesFareItem,
       mbCardChargesFixedItem,
@@ -303,6 +307,7 @@ pureFareSum fareParams conditionalChargeCategories = do
     + fromMaybe 0.0 fareParams.tollVat
     -- Commission is intentionally excluded - stored for breakdown only
     + (sum $ map (.charge) (filter (\addCharges -> maybe True (KP.elem addCharges.chargeCategory) conditionalChargeCategories) fareParams.conditionalCharges))
+    - fromMaybe 0.0 fareParams.driverCancellationDeductionOnPreviousRide
 
 perRideKmFareParamsSum :: FareParameters -> HighPrecMoney
 perRideKmFareParamsSum fareParams = do
@@ -488,6 +493,7 @@ calculateFareParameters params = do
             merchantOperatingCityId = params.merchantOperatingCityId,
             conditionalCharges = filter (\addCharges -> maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
             driverCancellationPenaltyAmount = fp.driverCancellationPenaltyAmount,
+            driverCancellationDeductionOnPreviousRide = Nothing,
             businessDiscount = businessDiscount,
             personalDiscount = personalDiscount,
             paymentProcessingFee = Nothing,

@@ -374,3 +374,8 @@ ALTER TABLE atlas_app.ride ADD COLUMN refund_request_status text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN cloud_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN driver_cancellation_deduction_on_previous_ride numeric(30,2) ;

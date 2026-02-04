@@ -617,3 +617,44 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_multi_fle
 
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN missing_mapping_fallback_variant text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_deduction_on_next_ride_amount double precision ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -----
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_cancellation_deduction_on_next_ride_amount double precision ;
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

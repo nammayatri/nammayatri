@@ -182,13 +182,23 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active
-  DDriverMode.updateDriverModeAndFlowStatus driverId thresholdConfig oldDriverInfo.active Nothing newFlowStatus oldDriverInfo (Just False) Nothing
-  let driverInfo = oldDriverInfo {DI.driverFlowStatus = Just newFlowStatus}
+      mbCancellationDeductionUpdate = oldDriverInfo.cancellationDeductionOnNextRideAmount >>= \amount -> if amount > 0 then Just (Just 0) else Nothing
+
+  DDriverMode.updateDriverModeAndFlowStatusWithCancellationDeduction driverId thresholdConfig oldDriverInfo.active Nothing newFlowStatus oldDriverInfo (Just False) Nothing mbCancellationDeductionUpdate
+
+  let driverInfo =
+        oldDriverInfo
+          { DI.driverFlowStatus = Just newFlowStatus,
+            DI.cancellationDeductionOnNextRideAmount = if isJust mbCancellationDeductionUpdate then Just 0 else oldDriverInfo.cancellationDeductionOnNextRideAmount
+          }
+
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbRiderDetailsId $ \riderDetailsId -> do
     QRiderDetails.updateCompletedRidesCount riderDetailsId.getId
   whenJust mbFareParams QFare.create
+
   QRide.updateAll ride.id ride
+
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
   void $ QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
   when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do

@@ -136,6 +136,7 @@ Ride:
     commission: Maybe HighPrecMoney
     driverGpsTurnedOff: Maybe Bool
     finalFarePolicyId: Maybe (Id FarePolicy)
+    driverCancellationDeductionOnNextRideAmount: Maybe HighPrecMoney
 
   sqlType:
     id: character(36)
@@ -334,6 +335,10 @@ Ride:
     updateFinalFarePolicyId:
       kvFunction: updateOneWithKV
       params: [finalFarePolicyId]
+      where: id
+    updateDriverCancellationDeductionOnNextRide:
+      kvFunction: updateOneWithKV
+      params: [driverCancellationDeductionOnNextRideAmount]
       where: id
 
   excludedDefaultQueries:

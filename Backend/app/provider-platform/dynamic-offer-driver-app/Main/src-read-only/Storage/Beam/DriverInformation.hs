@@ -42,6 +42,7 @@ data DriverInformationT f = DriverInformationT
     canSwitchToInterCity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     canSwitchToIntraCity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     canSwitchToRental :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    cancellationDeductionOnNextRideAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     compAadhaarImagePath :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dailyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     dailyExtraKms :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
