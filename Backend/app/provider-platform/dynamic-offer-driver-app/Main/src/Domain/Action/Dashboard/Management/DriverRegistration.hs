@@ -459,10 +459,10 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   isFleetOwner <- QFOI.findByPrimaryKey (cast driverId_)
-  let (vehicleDetailsToPass, vehicleCategoryToPass) =
+  let (vehicleDetailsToPass, vehicleCategoryToPass, vehicleClassToPass) =
         if transporterConfig.allowDashboardToPassVehicleDetails == Just True
-          then (castVehicleDetails <$> req.vehicleDetails, req.vehicleCategory)
-          else (Nothing, Nothing)
+          then (castVehicleDetails <$> req.vehicleDetails, req.vehicleCategory, req.vehicleClass)
+          else (Nothing, Nothing, Nothing)
   verifyRC
     True
     (Just merchant)
@@ -471,6 +471,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
         { imageId = cast imageId,
           udinNumber = udinNumber,
           vehicleCategory = vehicleCategoryToPass,
+          vehicleClass = vehicleClassToPass,
           vehicleDetails = vehicleDetailsToPass,
           isRCImageValidated = Nothing,
           ..

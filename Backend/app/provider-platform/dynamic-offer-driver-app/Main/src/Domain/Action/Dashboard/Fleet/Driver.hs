@@ -514,6 +514,7 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
             ventilator = req.ventilator,
             vehicleCategory = req.vehicleCategory,
             vehicleDetails = Nothing,
+            vehicleClass = Nothing,
             isRCImageValidated = Nothing
           }
   void $ DomainRC.verifyRC False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq False (Just personId)
@@ -974,6 +975,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
               operatingCity = show moc.city,
               imageId = Id "bulkVehicleUpload",
               vehicleDetails = Nothing,
+              vehicleClass = Nothing,
               vehicleCategory = Just $ fromMaybe DVC.CAR vehicleCategory,
               udinNumber = Nothing,
               ..

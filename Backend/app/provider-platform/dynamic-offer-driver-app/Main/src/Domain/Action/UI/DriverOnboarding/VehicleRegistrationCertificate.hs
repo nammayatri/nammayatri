@@ -137,6 +137,7 @@ data DriverRCReq = DriverRCReq
     operatingCity :: Text,
     dateOfRegistration :: Maybe UTCTime, -- updatable
     vehicleCategory :: Maybe DVC.VehicleCategory,
+    vehicleClass :: Maybe Text,
     airConditioned :: Maybe Bool,
     oxygen :: Maybe Bool,
     ventilator :: Maybe Bool,
@@ -273,7 +274,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
             |<|>| CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel Nothing
         let mbVehicleVariant =
               (vehicleDetails <&> (.vehicleVariant)) <|> transporterConfig.missingMappingFallbackVariant
-        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel) req.vehicleCategory mbAirConditioned req.imageId mbVehicleVariant vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.imageId Nothing Nothing
+        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel req.vehicleCategory req.vehicleClass) req.vehicleCategory mbAirConditioned req.imageId mbVehicleVariant vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.imageId Nothing Nothing
       Nothing -> verifyRCFlow person merchantOpCityId req.vehicleRegistrationCertNumber req.imageId req.dateOfRegistration req.vehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation req.udinNumber
   return Success
   where
@@ -287,14 +288,14 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
       Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
 
-    buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel =
+    buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel mbVehicleCategory mbVehicleClass =
       Verification.RCVerificationResponse
         { registrationDate = show <$> req.dateOfRegistration,
           registrationNumber = Just req.vehicleRegistrationCertNumber,
           fitnessUpto = Nothing,
           insuranceValidity = Nothing,
-          vehicleClass = Nothing,
-          vehicleCategory = Nothing,
+          vehicleClass = mbVehicleClass,
+          vehicleCategory = show <$> mbVehicleCategory,
           seatingCapacity = Just . String . show <$> (.capacity) =<< vehicleDetails,
           manufacturer = Just vehicleManufacturer,
           permitValidityFrom = Nothing,
