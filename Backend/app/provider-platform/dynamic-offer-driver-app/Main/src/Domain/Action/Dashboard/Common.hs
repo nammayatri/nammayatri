@@ -90,6 +90,7 @@ castVehicleVariantDashboard = \case
   Just DV.BIKE_PLUS -> Just Common.BIKE_PLUS
   Just DV.E_RICKSHAW -> Just Common.E_RICKSHAW
   Just DV.AUTO_LITE -> Just Common.AUTO_LITE
+  Just DV.PINK_AUTO -> Just Common.PINK_AUTO
   _ -> Nothing
 
 runVerifyRCFlow :: Bool -> Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Bool -> Maybe (Id DP.Person) -> Flow ()
@@ -207,3 +208,4 @@ castDashboardVehicleVariantToDomain = \case
   Common.BIKE_PLUS -> DV.BIKE_PLUS
   Common.E_RICKSHAW -> DV.E_RICKSHAW
   Common.AUTO_LITE -> DV.AUTO_LITE
+  Common.PINK_AUTO -> DV.PINK_AUTO
