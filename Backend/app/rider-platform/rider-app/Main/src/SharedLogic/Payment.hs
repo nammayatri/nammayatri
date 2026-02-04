@@ -45,7 +45,8 @@ import qualified SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer
 import Storage.Beam.Payment ()
 import Storage.CachedQueries.BecknConfig as CQBC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
@@ -440,7 +441,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
       m ()
     processRefund person paymentOrder paymentServiceType = do
       let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-      riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
       let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
       mbRefundResp <- DPayment.createRefundService paymentOrder.shortId refundsOrderCall
       whenJust mbRefundResp $ \refundResp -> do

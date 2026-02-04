@@ -51,6 +51,8 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.Queries.PTCircuitBreakerHistory as QPTCBH
 
@@ -292,7 +294,7 @@ updateFareCachingFlag ::
   Bool ->
   m ()
 updateFareCachingFlag mode mocId enabled = do
-  mRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocId Nothing
+  mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId, txnId = Nothing})
   case mRiderConfig of
     Nothing -> logError $ "RiderConfig not found for mocId: " <> mocId.getId
     Just riderConfig -> do
@@ -310,7 +312,7 @@ updateBookingFlag ::
   Bool ->
   m ()
 updateBookingFlag mode mocId enabled = do
-  mRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocId Nothing
+  mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId, txnId = Nothing})
   case mRiderConfig of
     Nothing -> logError $ "RiderConfig not found for mocId: " <> mocId.getId
     Just riderConfig -> do

@@ -75,7 +75,8 @@ import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
@@ -588,7 +589,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   quotesWithCategories <- mapM (\quote -> (quote,) <$> QFRFSQuoteCategory.findAllByQuoteId quote.id) quotes
   sortedQuotesWithCategories <- case search.vehicleType of
     Spec.BUS -> do
-      mbRiderConfig <- QRC.findByMerchantOperatingCityId search.merchantOperatingCityId Nothing
+      mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = search.merchantOperatingCityId.getId, txnId = Nothing})
       let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
           serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)
       return $

@@ -100,7 +100,8 @@ import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.ClientPersonInfo as QCP
@@ -298,7 +299,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let device = getDeviceFromText mbDevice
       totalRides = personStats.completedRides + personStats.driverCancelledRides + personStats.userCancelledRides
       rate = (personStats.userCancelledRides * 100) `div` max 1 totalRides
@@ -553,7 +554,7 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
   let oldList = (.mobileNumber) <$> decOld
       newList = DPDEN.makePersonDefaultEmergencyNumberAPIEntity False <$> decNew
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   buildSmsReq <-
     MessageBuilder.buildAddedAsEmergencyContactMessage person.merchantOperatingCityId $
       MessageBuilder.BuildAddedAsEmergencyContactMessageReq
@@ -668,7 +669,7 @@ getEmergencySettings personId = do
   personENList <- QPersonDEN.findpersonENListWithFallBack personId (Just person)
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
   let SafetySettings {personId = _id, ..} = safetySettings
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   decPersonENList <- decrypt `mapM` personENList
   return $
     EmergencySettingsRes
@@ -713,7 +714,7 @@ triggerUpdateAuthDataOtp ::
 triggerUpdateAuthDataOtp (personId, _merchantId) req = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   smsCfg <- asks (.smsCfg)
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
 
   identifierType <- req.identifier & fromMaybeM (InvalidRequest "Identifier type is required")
   let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp

@@ -46,8 +46,9 @@ import SharedLogic.NyRegularSubscriptionHasher (calculateSubscriptionSchedulingH
 import qualified SharedLogic.Search as SLS
 import qualified SharedLogic.Search as Search
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Estimate as QEstimate
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
@@ -219,7 +220,7 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
     Just opCityId -> do
       -- Fetch RiderConfig to get the correct timeDiffFromUtc and execution time offset
       riderConfig <-
-        QRC.findByMerchantOperatingCityId opCityId Nothing
+        getConfig (RiderDimensions {merchantOperatingCityId = opCityId.getId, txnId = Nothing})
           >>= fromMaybeM (RiderConfigDoesNotExist opCityId.getId)
 
       -- Use UTC for reference time; the offset is only for interpreting scheduledTimeOfDay
@@ -377,7 +378,7 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
       case finalUpdatedSubscription.merchantOperatingCityId of
         Nothing -> throwM $ InvalidRequest "Subscription is missing merchantOperatingCityId, cannot determine local time."
         Just opCityId ->
-          QRC.findByMerchantOperatingCityId opCityId Nothing
+          getConfig (RiderDimensions {merchantOperatingCityId = opCityId.getId, txnId = Nothing})
             >>= fromMaybeM (RiderConfigDoesNotExist opCityId.getId)
 
     -- Use UTC for reference time; the offset is only for interpreting scheduledTimeOfDay
@@ -534,7 +535,7 @@ getNextRideTime subs = do
     case subs.merchantOperatingCityId of
       Nothing -> throwM $ InvalidRequest "Subscription is missing merchantOperatingCityId, cannot determine local time."
       Just opCityId ->
-        QRC.findByMerchantOperatingCityId opCityId Nothing
+        getConfig (RiderDimensions {merchantOperatingCityId = opCityId.getId, txnId = Nothing})
           >>= fromMaybeM (RiderConfigDoesNotExist opCityId.getId)
   -- Use UTC for reference time; the offset is only for interpreting scheduledTimeOfDay
   currentTime <- getCurrentTime

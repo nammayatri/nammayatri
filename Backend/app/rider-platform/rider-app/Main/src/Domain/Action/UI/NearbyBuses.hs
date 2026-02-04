@@ -29,7 +29,8 @@ import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import qualified Storage.Queries.Person as QP
@@ -46,7 +47,7 @@ postNearbyBusBooking ::
 postNearbyBusBooking (mbPersonId, _) req = do
   riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound "No person found")
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   -- let radius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius --TODO: To be moved to config.
   -- nearbyBuses <-
   --   if req.requireNearbyBuses
