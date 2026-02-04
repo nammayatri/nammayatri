@@ -12,6 +12,7 @@ import qualified API.Types.ProviderPlatform.Management.DriverGoHome
 import qualified API.Types.ProviderPlatform.Management.DriverReferral
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified API.Types.ProviderPlatform.Management.EntityInfo
+import qualified API.Types.ProviderPlatform.Management.Exophone
 import qualified API.Types.ProviderPlatform.Management.Media
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
 import qualified API.Types.ProviderPlatform.Management.Merchant
@@ -40,6 +41,7 @@ data ManagementUserActionType
   | DRIVER_REFERRAL API.Types.ProviderPlatform.Management.DriverReferral.DriverReferralUserActionType
   | DRIVER_REGISTRATION API.Types.ProviderPlatform.Management.DriverRegistration.DriverRegistrationUserActionType
   | ENTITY_INFO API.Types.ProviderPlatform.Management.EntityInfo.EntityInfoUserActionType
+  | EXOPHONE API.Types.ProviderPlatform.Management.Exophone.ExophoneUserActionType
   | MEDIA API.Types.ProviderPlatform.Management.Media.MediaUserActionType
   | MEDIA_FILE_DOCUMENT API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentUserActionType
   | MERCHANT API.Types.ProviderPlatform.Management.Merchant.MerchantUserActionType
@@ -65,6 +67,7 @@ instance Text.Show.Show ManagementUserActionType where
     DRIVER_REFERRAL e -> "DRIVER_REFERRAL/" <> show e
     DRIVER_REGISTRATION e -> "DRIVER_REGISTRATION/" <> show e
     ENTITY_INFO e -> "ENTITY_INFO/" <> show e
+    EXOPHONE e -> "EXOPHONE/" <> show e
     MEDIA e -> "MEDIA/" <> show e
     MEDIA_FILE_DOCUMENT e -> "MEDIA_FILE_DOCUMENT/" <> show e
     MERCHANT e -> "MERCHANT/" <> show e
@@ -147,6 +150,10 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "ENTITY_INFO/" r,
+            ++ [ ( EXOPHONE v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "EXOPHONE/" r,
                    ( v1,
                      r2
                      ) <-
@@ -256,4 +263,4 @@ instance Text.Read.Read ManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])

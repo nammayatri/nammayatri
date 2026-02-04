@@ -56,6 +56,7 @@ library
       Domain.Action.ProviderPlatform.Management.DriverReferral
       Domain.Action.ProviderPlatform.Management.DriverRegistration
       Domain.Action.ProviderPlatform.Management.EntityInfo
+      Domain.Action.ProviderPlatform.Management.Exophone
       Domain.Action.ProviderPlatform.Management.Media
       Domain.Action.ProviderPlatform.Management.MediaFileDocument
       Domain.Action.ProviderPlatform.Management.Merchant
@@ -108,6 +109,7 @@ library
       API.Action.ProviderPlatform.Management.DriverReferral
       API.Action.ProviderPlatform.Management.DriverRegistration
       API.Action.ProviderPlatform.Management.EntityInfo
+      API.Action.ProviderPlatform.Management.Exophone
       API.Action.ProviderPlatform.Management.Media
       API.Action.ProviderPlatform.Management.MediaFileDocument
       API.Action.ProviderPlatform.Management.Merchant

@@ -41,6 +41,17 @@ findByMerchantOpCityIdServiceAndExophoneType merchantOperatingCityId callService
         ]
     ]
 
+findByMerchantOpCityIdAndExophoneType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Exophone.ExophoneType -> m [Domain.Types.Exophone.Exophone])
+findByMerchantOpCityIdAndExophoneType merchantOperatingCityId exophoneType = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.exophoneType $ Se.Eq exophoneType
+        ]
+    ]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Exophone.Exophone -> m (Maybe Domain.Types.Exophone.Exophone))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 

@@ -1,0 +1,89 @@
+imports:
+  Merchant: Dashboard.Common
+  MerchantOperatingCity: Dashboard.Common
+
+module: Exophone
+apiPrefix: exophone
+
+apis:
+  - POST: # CreateExophoneAPI
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateExophoneReq
+      response:
+        type: ExophoneRes
+
+  - GET: # ListExophonesAPI
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - merchantOperatingCityId: Text
+      response:
+        type: ExophoneListRes
+
+  - GET: # GetExophoneAPI
+      endpoint: /{exophoneId}
+      auth: ApiAuthV2
+      params:
+        exophoneId: Text
+      response:
+        type: ExophoneRes
+
+  - POST: # UpdateExophoneAPI
+      endpoint: /{exophoneId}/update
+      auth: ApiAuthV2
+      params:
+        exophoneId: Text
+      request:
+        type: UpdateExophoneReq
+      response:
+        type: APISuccess
+
+  - DELETE: # DeleteExophoneAPI
+      endpoint: /{exophoneId}/delete
+      auth: ApiAuthV2
+      params:
+        exophoneId: Text
+      response:
+        type: APISuccess
+
+types:
+  ExophoneCallService:
+    enum: "Exotel, Knowlarity"
+    derive: "Read, HttpInstance"
+
+  ExophoneExophoneType:
+    enum: "CALL_RIDE, END_RIDE, CALL_DELIVERY_SENDER, CALL_DELIVERY_RECEIVER"
+    derive: "Read, HttpInstance"
+
+  ExophoneItem:
+    - exophoneId: Text
+    - exophonePrimaryPhone: Text
+    - exophoneBackupPhone: Text
+    - exophoneCallService: ExophoneCallService
+    - exophoneExophoneType: ExophoneExophoneType
+    - exophoneIsPrimaryDown: Bool
+    - exophoneMerchantId: Text
+    - exophoneMerchantOperatingCityId: Text
+    - exophoneCreatedAt: UTCTime
+    - exophoneUpdatedAt: UTCTime
+
+  ExophoneRes:
+    - exophone: ExophoneItem
+
+  ExophoneListRes:
+    - exophones: "[ExophoneItem]"
+
+  CreateExophoneReq:
+    - exophonePrimaryPhone: Text
+    - exophoneBackupPhone: Text
+    - exophoneCallService: ExophoneCallService
+    - exophoneExophoneType: ExophoneExophoneType
+    - derive: "'HideSecrets"
+
+  UpdateExophoneReq:
+    - exophonePrimaryPhone: Maybe Text
+    - exophoneBackupPhone: Maybe Text
+    - exophoneIsPrimaryDown: Maybe Bool
+    - derive: "'HideSecrets"
