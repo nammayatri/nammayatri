@@ -1,0 +1,98 @@
+# Finance Kernel - Invoice & Invoice Ledger Link Tables
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  Currency: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Value: Data.Aeson
+  LedgerEntry: Lib.Finance.Domain.Types.LedgerEntry
+
+Invoice:
+  tableName: finance_invoice
+  derives: "Generic"
+  
+  types:
+    InvoiceStatus:
+      enum: "Draft,Issued,Paid,PartiallyPaid,Cancelled,Voided"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id Invoice
+    invoiceNumber: Text
+    invoiceType: Text
+    issuedToType: Text
+    issuedToId: Text
+    issuedToName: Maybe Text
+    issuedByType: Text
+    issuedById: Text
+    issuedByName: Maybe Text
+    lineItems: Value
+    subtotal: HighPrecMoney
+    taxBreakdown: Maybe Value
+    totalAmount: HighPrecMoney
+    currency: Currency
+    status: InvoiceStatus
+    issuedAt: UTCTime
+    dueAt: Maybe UTCTime
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    invoiceNumber: "!SecondaryKey"
+    issuedToId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByNumber:
+      kvFunction: findOneWithKV
+      where: invoiceNumber
+
+    findByIssuedTo:
+      kvFunction: findAllWithKV
+      where:
+        and: [issuedToType, issuedToId]
+
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status]
+      where: id
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <InvoiceStatus>
+
+
+InvoiceLedgerLink:
+  tableName: finance_invoice_ledger_link
+  derives: "Generic"
+  fields:
+    id: Id InvoiceLedgerLink
+    invoiceId: Id Invoice
+    ledgerEntryId: Id LedgerEntry
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    invoiceId: SecondaryKey
+    ledgerEntryId: SecondaryKey
+
+  queries:
+    findByInvoice:
+      kvFunction: findAllWithKV
+      where: invoiceId
+
+    findByLedgerEntry:
+      kvFunction: findOneWithKV
+      where: ledgerEntryId
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

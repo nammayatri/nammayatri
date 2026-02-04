@@ -1,0 +1,74 @@
+# Finance Kernel - Account Table
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  Currency: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+
+Account:
+  tableName: finance_account
+  derives: "Generic"
+  
+  types:
+    AccountType:
+      enum: "Asset,Liability,Revenue,Expense,Equity"
+      derive: "ToParamSchema"
+    
+    AccountCategory:
+      enum: "Driver,Fleet,Platform,Settlement,Suspense"
+      derive: "ToParamSchema"
+    
+    AccountStatus:
+      enum: "Active,Suspended,Closed"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id Account
+    accountType: AccountType
+    accountCategory: AccountCategory
+    ownerType: Text
+    ownerId: Text
+    currency: Currency
+    balance: HighPrecMoney
+    status: AccountStatus
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    ownerId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByOwner:
+      kvFunction: findAllWithKV
+      where:
+        and: [ownerType, ownerId]
+
+    findByOwnerAndType:
+      kvFunction: findOneWithKV
+      where:
+        and: [ownerType, ownerId, accountType, currency]
+
+    updateBalance:
+      kvFunction: updateWithKV
+      params: [balance, updatedAt]
+      where: id
+
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: id
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AccountType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AccountCategory>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AccountStatus>
