@@ -294,6 +294,7 @@ types:
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
     - vehicleCategory: Maybe VehicleCategory
+    - vehicleClass: Maybe Text
     - vehicleDetails: Maybe DriverVehicleDetails
     - udinNumber: Maybe Text
     - derive: "'HideSecrets"
