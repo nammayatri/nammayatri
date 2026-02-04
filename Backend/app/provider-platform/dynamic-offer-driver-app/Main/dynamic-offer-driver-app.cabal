@@ -172,6 +172,7 @@ library
       Domain.Action.Dashboard.Management.DriverGoHome
       Domain.Action.Dashboard.Management.DriverReferral
       Domain.Action.Dashboard.Management.DriverRegistration
+      Domain.Action.Dashboard.Management.Exophone
       Domain.Action.Dashboard.Management.Media
       Domain.Action.Dashboard.Management.MediaFileDocument
       Domain.Action.Dashboard.Management.Merchant
@@ -821,6 +822,7 @@ library
       API.Action.Dashboard.Management.DriverGoHome
       API.Action.Dashboard.Management.DriverReferral
       API.Action.Dashboard.Management.DriverRegistration
+      API.Action.Dashboard.Management.Exophone
       API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.MediaFileDocument
       API.Action.Dashboard.Management.Merchant
