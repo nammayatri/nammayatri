@@ -326,9 +326,11 @@ optionsCancelReqMessage =
       ]
 
 -- | Describes a cancellation event
-newtype Cancellation = Cancellation
+data Cancellation = Cancellation
   { -- |
-    cancellationCancelledBy :: Maybe Text
+    cancellationCancelledBy :: Maybe Text,
+    -- | Reason code for the cancellation
+    cancellationReasonCode :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -346,7 +348,8 @@ optionsCancellation =
     }
   where
     table =
-      [ ("cancellationCancelledBy", "cancelled_by")
+      [ ("cancellationCancelledBy", "cancelled_by"),
+        ("cancellationReasonCode", "reason_code")
       ]
 
 -- | Describes the cancellation terms of an item or an order. This can be referenced at an item or order level. Item-level cancellation terms can override the terms at the order level.
