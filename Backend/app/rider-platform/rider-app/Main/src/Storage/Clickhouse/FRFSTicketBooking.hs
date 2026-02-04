@@ -1,16 +1,16 @@
 module Storage.Clickhouse.FRFSTicketBooking where
 
+import Control.Applicative ((<|>))
+import qualified Data.List as List
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Time
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Common
-import qualified Data.List as List
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import qualified Domain.Types.Quote as DQuote
-import Control.Applicative ((<|>))
 import Kernel.Types.Id
 import qualified Storage.Clickhouse.FRFSQuoteCategory as QCategory
 
@@ -105,11 +105,11 @@ getBookingMetricsByDateRange merchantOpCityId targetDate = do
             -- Quantity Logic
             quoteTotal = Map.findWithDefault 0 b.quoteId quoteMap
 
-            -- If booking has explicitly recorded quantities (even 0), use them.
-            -- If both are missing (Nothing), fallback to the quote's total.
-            ticketsCount = case (b.quantity, b.childTicketQuantity) of
-              (Nothing, Nothing) -> quoteTotal
-              _ -> fromMaybe 0 b.quantity + fromMaybe 0 b.childTicketQuantity
+            adultQty = fromMaybe 0 b.quantity
+            childQty = fromMaybe 0 b.childTicketQuantity
+            bookingTotal = adultQty + childQty
+
+            ticketsCount = if bookingTotal > 0 then bookingTotal else quoteTotal
 
             (curPrice, curIds, curTickets) = Map.findWithDefault (0, Set.empty, 0) b.vehicleType acc
          in Map.insert b.vehicleType (curPrice + priceVal, Set.insert b.bookingId curIds, curTickets + ticketsCount) acc
