@@ -1,0 +1,59 @@
+# Finance Kernel - Audit Entry Table
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  Value: Data.Aeson
+
+AuditEntry:
+  tableName: finance_audit_entry
+  derives: "Generic"
+  
+  types:
+    AuditAction:
+      enum: "Created,Updated,Reversed,StatusChanged"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id AuditEntry
+    entityType: Text
+    entityId: Text
+    action: AuditAction
+    actorType: Text
+    actorId: Maybe Text
+    previousState: Maybe Value
+    newState: Maybe Value
+    metadata: Maybe Value
+    ipAddress: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByEntity:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityType, entityId]
+
+    findByActor:
+      kvFunction: findAllWithKV
+      where:
+        and: [actorType, actorId]
+
+    findByAction:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityType, action]
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AuditAction>

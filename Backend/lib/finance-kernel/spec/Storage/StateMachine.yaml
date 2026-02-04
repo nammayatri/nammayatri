@@ -1,0 +1,83 @@
+# Finance Kernel - State Machine Tables
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  Value: Data.Aeson
+  PaymentState: Lib.Finance.Domain.Types.StateTransition
+
+StateTransition:
+  tableName: finance_state_transition
+  derives: "Generic"
+  
+  types:
+    PaymentState:
+      enum: "Pending,Authorized,Captured,Settled,Failed,Refunded,Cancelled"
+      derive: "ToParamSchema"
+    
+    PaymentEvent:
+      enum: "Initiate,Authorize,Capture,Settle,Fail,Refund,Cancel"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id StateTransition
+    entityType: Text
+    entityId: Text
+    fromState: PaymentState
+    toState: PaymentState
+    event: PaymentEvent
+    eventData: Maybe Value
+    actorType: Text
+    actorId: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByEntity:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityType, entityId]
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentState>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentEvent>
+
+CurrentState:
+  tableName: finance_current_state
+  derives: "Generic"
+  fields:
+    entityType: Text
+    entityId: Text
+    currentState: PaymentState
+    merchantId: Text
+    merchantOperatingCityId: Text
+    updatedAt: UTCTime
+
+  constraints:
+    entityId: PrimaryKey
+
+  queries:
+    findByEntity:
+      kvFunction: findOneWithKV
+      where:
+        and: [entityType, entityId]
+
+    updateState:
+      kvFunction: updateWithKV
+      params: [currentState, updatedAt]
+      where:
+        and: [entityType, entityId]
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

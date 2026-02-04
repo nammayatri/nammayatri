@@ -1,0 +1,109 @@
+# Finance Kernel - Ledger Entry Table
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  Currency: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Value: Data.Aeson
+  Account: Lib.Finance.Domain.Types.Account
+
+LedgerEntry:
+  tableName: finance_ledger_entry
+  derives: "Generic"
+  
+  types:
+    EntryType:
+      enum: "Transfer,LiabilityCreated,LiabilitySettled,Reversal,Adjustment"
+      derive: "ToParamSchema"
+    
+    EntryStatus:
+      enum: "PENDING,DUE,SETTLED,VOIDED"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id LedgerEntry
+    entryNumber: Int
+    timestamp: UTCTime
+    fromAccountId: Id Account
+    toAccountId: Id Account
+    amount: HighPrecMoney
+    currency: Currency
+    entryType: EntryType
+    status: EntryStatus
+    ownerType: Text  # "DRIVER", "FLEET_OWNER", "PLATFORM"
+    ownerId: Text    # ID of the owner entity
+    referenceType: Text
+    referenceId: Text
+    reversalOf: Maybe (Id LedgerEntry)
+    voidReason: Maybe Text
+    settledAt: Maybe UTCTime
+    metadata: Maybe Value
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    fromAccountId: SecondaryKey
+    toAccountId: SecondaryKey
+    referenceId: "!SecondaryKey"
+    ownerId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByReference:
+      kvFunction: findAllWithKV
+      where:
+        and: [referenceType, referenceId]
+
+    findByFromAccount:
+      kvFunction: findAllWithKV
+      where: fromAccountId
+
+    findByToAccount:
+      kvFunction: findAllWithKV
+      where: toAccountId
+
+    findReversalOf:
+      kvFunction: findOneWithKV
+      where: reversalOf
+
+    findByOwner:
+      kvFunction: findAllWithKV
+      where:
+        and: [ownerType, ownerId]
+
+    findByOwnerAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [ownerType, ownerId, status]
+
+    findByStatus:
+      kvFunction: findAllWithKV
+      where: status
+
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status]
+      where: id
+
+    updateSettled:
+      kvFunction: updateWithKV
+      params: [status, settledAt]
+      where: id
+
+    updateVoided:
+      kvFunction: updateWithKV
+      params: [status, voidReason]
+      where: id
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EntryType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EntryStatus>
+
