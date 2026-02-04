@@ -644,6 +644,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       Just "AMBULANCE" -> Just DVC.AMBULANCE
       Just "TRUCK" -> Just DVC.TRUCK
       Just "AUTO_LITE" -> Just DVC.AUTO_CATEGORY
+      Just "PINK_AUTO" -> Just DVC.AUTO_CATEGORY
       Just "BUS" -> Just DVC.BUS
       Just "TOTO" -> Just DVC.TOTO
       _ -> Nothing
