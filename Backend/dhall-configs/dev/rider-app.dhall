@@ -388,7 +388,7 @@ in  { esqDBCfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
     , port = +8013
-    , metricsPort = +9999
+    , metricsPort = +8789
     , hostName = "localhost"
     , nwAddress = "http://localhost:8013/beckn/cab/v1"
     , selfUIUrl = "http://localhost:8013/v2/"
