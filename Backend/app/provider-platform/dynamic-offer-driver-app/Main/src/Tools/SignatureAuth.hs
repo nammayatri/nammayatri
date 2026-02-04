@@ -71,7 +71,7 @@ newtype SignatureAuthResult req = SignatureAuthResult
   }
 
 data SignatureAuthReq = SignatureAuthReq
-  { merchantId :: ShortId Merchant,
+  { merchantId :: Id Merchant,
     timestamp :: UTCTime
   }
   deriving (Generic, Show)
@@ -126,7 +126,7 @@ instance
         request :: req <- rawReq & A.eitherDecodeStrict & fromEitherM (InvalidRequest . T.pack)
 
         -- Use standard QMerchant query now that schema is updated
-        merchant <- QMerchant.findByShortId signatureAuthReq.merchantId >>= fromMaybeM (MerchantDoesNotExist signatureAuthReq.merchantId.getShortId)
+        merchant <- QMerchant.findById signatureAuthReq.merchantId >>= fromMaybeM (MerchantDoesNotExist signatureAuthReq.merchantId.getId)
 
         -- Use standard Merchant fields
         -- Use standard Merchant fields
