@@ -21,9 +21,9 @@ import qualified Storage.Queries.Transformers.Person
 instance FromTType' Beam.Person Domain.Types.Person.Person where
   fromTType' (Beam.PersonT {..}) = do
     updateMerchantOpIdAndCity <- Storage.Queries.Transformers.Person.backfillCityAndMOCId currentCity merchantOperatingCityId merchantId
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     customerNammaTags' <- Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryFromTType customerNammaTags
     pure $
       Just
@@ -41,7 +41,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             businessProfileVerified = businessProfileVerified,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
+            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
             clientReactNativeVersion = clientReactNativeVersion,
             clientSdkVersion = clientSdkVersion',
             cloudType = cloudType,
@@ -124,19 +124,19 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.authBlocked = authBlocked,
         Beam.backendAppVersion = backendAppVersion,
         Beam.blocked = blocked,
-        Beam.blockedAt = Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt,
+        Beam.blockedAt = (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt),
         Beam.blockedByRuleId = Kernel.Types.Id.getId <$> blockedByRuleId,
         Beam.blockedCount = blockedCount,
         Beam.blockedUntil = blockedUntil,
-        Beam.businessEmailEncrypted = businessEmail <&> unEncrypted . (.encrypted),
-        Beam.businessEmailHash = businessEmail <&> (.hash),
+        Beam.businessEmailEncrypted = ((businessEmail <&> unEncrypted . (.encrypted))),
+        Beam.businessEmailHash = (businessEmail <&> (.hash)),
         Beam.businessProfileVerified = businessProfileVerified,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
+        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
+        Beam.clientOsType = (clientDevice <&> (.deviceType)),
+        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
         Beam.clientReactNativeVersion = clientReactNativeVersion,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.cloudType = cloudType,
@@ -153,11 +153,11 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.description = description,
         Beam.deviceId = deviceId,
         Beam.deviceToken = deviceToken,
-        Beam.emailEncrypted = email <&> unEncrypted . (.encrypted),
-        Beam.emailHash = email <&> (.hash),
+        Beam.emailEncrypted = ((email <&> unEncrypted . (.encrypted))),
+        Beam.emailHash = (email <&> (.hash)),
         Beam.enableOtpLessRide = enableOtpLessRide,
         Beam.enabled = enabled,
-        Beam.falseSafetyAlarmCount = Just falseSafetyAlarmCount,
+        Beam.falseSafetyAlarmCount = (Just falseSafetyAlarmCount),
         Beam.firstName = firstName,
         Beam.followsRide = followsRide,
         Beam.frequentLocGeohashes = frequentLocGeohashes,
@@ -169,8 +169,8 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.identifier = identifier,
         Beam.identifierType = identifierType,
-        Beam.imeiNumberEncrypted = imeiNumber <&> unEncrypted . (.encrypted),
-        Beam.imeiNumberHash = imeiNumber <&> (.hash),
+        Beam.imeiNumberEncrypted = ((imeiNumber <&> unEncrypted . (.encrypted))),
+        Beam.imeiNumberHash = (imeiNumber <&> (.hash)),
         Beam.informPoliceSos = Just informPoliceSos,
         Beam.isNew = isNew,
         Beam.isValidRating = isValidRating,
@@ -183,11 +183,11 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.latestLon = latestLon,
         Beam.liveActivityToken = liveActivityToken,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = (Kernel.Prelude.Just . Kernel.Types.Id.getId) merchantOperatingCityId,
+        Beam.merchantOperatingCityId = ((Kernel.Prelude.Just . Kernel.Types.Id.getId)) merchantOperatingCityId,
         Beam.middleName = middleName,
         Beam.mobileCountryCode = mobileCountryCode,
-        Beam.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
-        Beam.mobileNumberHash = mobileNumber <&> (.hash),
+        Beam.mobileNumberEncrypted = ((mobileNumber <&> unEncrypted . (.encrypted))),
+        Beam.mobileNumberHash = (mobileNumber <&> (.hash)),
         Beam.nightSafetyChecks = nightSafetyChecks,
         Beam.notificationToken = notificationToken,
         Beam.passwordHash = passwordHash,
