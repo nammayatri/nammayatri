@@ -71,3 +71,18 @@ ALTER TABLE atlas_app.pass ADD COLUMN verification_validity integer ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN max_switch_count integer ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
