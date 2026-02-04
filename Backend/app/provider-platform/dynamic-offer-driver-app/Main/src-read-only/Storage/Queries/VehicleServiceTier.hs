@@ -48,6 +48,11 @@ findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOperatingCity
         ]
     ]
 
+findByMerchantOpCityIdForList ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
+findByMerchantOpCityIdForList merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
 findByServiceTierTypeAndCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.Common.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
