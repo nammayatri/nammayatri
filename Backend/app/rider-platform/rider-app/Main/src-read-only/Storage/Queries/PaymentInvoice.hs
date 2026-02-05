@@ -43,10 +43,22 @@ findByPaymentOrderIdAndInvoiceType paymentOrderId invoiceType = do
         ]
     ]
 
+findBySettledByInvoiceId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PaymentInvoice.PaymentInvoice) -> m [Domain.Types.PaymentInvoice.PaymentInvoice])
+findBySettledByInvoiceId settledByInvoiceId = do findAllWithKV [Se.Is Beam.settledByInvoiceId $ Se.Eq (Kernel.Types.Id.getId <$> settledByInvoiceId)]
+
 updatePaymentStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PaymentInvoice.InvoicePaymentStatus -> Kernel.Types.Id.Id Domain.Types.PaymentInvoice.PaymentInvoice -> m ())
 updatePaymentStatus paymentStatus id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.paymentStatus paymentStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateSettledBy ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PaymentInvoice.PaymentInvoice) -> Kernel.Types.Id.Id Domain.Types.PaymentInvoice.PaymentInvoice -> m ())
+updateSettledBy settledByInvoiceId id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.settledByInvoiceId (Kernel.Types.Id.getId <$> settledByInvoiceId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PaymentInvoice.PaymentInvoice -> m (Maybe Domain.Types.PaymentInvoice.PaymentInvoice))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -59,11 +71,13 @@ updateByPrimaryKey (Domain.Types.PaymentInvoice.PaymentInvoice {..}) = do
       Se.Set Beam.currency currency,
       Se.Set Beam.invoiceNumber invoiceNumber,
       Se.Set Beam.invoiceType invoiceType,
+      Se.Set Beam.parentInvoiceIds ((Kernel.Types.Id.getId <$>) <$> parentInvoiceIds),
       Se.Set Beam.paymentInstrument paymentInstrument,
       Se.Set Beam.paymentOrderId (Kernel.Types.Id.getId <$> paymentOrderId),
       Se.Set Beam.paymentPurpose paymentPurpose,
       Se.Set Beam.paymentStatus paymentStatus,
       Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
+      Se.Set Beam.settledByInvoiceId (Kernel.Types.Id.getId <$> settledByInvoiceId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now
@@ -80,11 +94,13 @@ instance FromTType' Beam.PaymentInvoice Domain.Types.PaymentInvoice.PaymentInvoi
             id = Kernel.Types.Id.Id id,
             invoiceNumber = invoiceNumber,
             invoiceType = invoiceType,
+            parentInvoiceIds = (Kernel.Types.Id.Id <$>) <$> parentInvoiceIds,
             paymentInstrument = paymentInstrument,
             paymentOrderId = Kernel.Types.Id.Id <$> paymentOrderId,
             paymentPurpose = paymentPurpose,
             paymentStatus = paymentStatus,
             rideId = Kernel.Types.Id.Id rideId,
+            settledByInvoiceId = Kernel.Types.Id.Id <$> settledByInvoiceId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -99,11 +115,13 @@ instance ToTType' Beam.PaymentInvoice Domain.Types.PaymentInvoice.PaymentInvoice
         Beam.id = Kernel.Types.Id.getId id,
         Beam.invoiceNumber = invoiceNumber,
         Beam.invoiceType = invoiceType,
+        Beam.parentInvoiceIds = (Kernel.Types.Id.getId <$>) <$> parentInvoiceIds,
         Beam.paymentInstrument = paymentInstrument,
         Beam.paymentOrderId = Kernel.Types.Id.getId <$> paymentOrderId,
         Beam.paymentPurpose = paymentPurpose,
         Beam.paymentStatus = paymentStatus,
         Beam.rideId = Kernel.Types.Id.getId rideId,
+        Beam.settledByInvoiceId = Kernel.Types.Id.getId <$> settledByInvoiceId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

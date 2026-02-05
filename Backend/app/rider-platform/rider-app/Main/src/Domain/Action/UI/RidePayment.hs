@@ -8,6 +8,7 @@ import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Types.Booking
 import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
 import Domain.Types.PaymentInvoice (PaymentPurpose (RIDE_TIP, TIP))
@@ -20,7 +21,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Payment.Interface
+import qualified Kernel.External.Payment.Interface as PaymentInterface
 import Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -32,7 +33,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
-import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransaction
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
@@ -40,6 +41,7 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.PaymentInvoice as SPInvoice
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
@@ -49,7 +51,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import qualified Tools.Payment as Payment
+import qualified Tools.Payment as TPayment
 
 data DFareBreakup = DFareBreakup
   { amount :: Price,
@@ -57,8 +59,17 @@ data DFareBreakup = DFareBreakup
   }
   deriving (Generic, Show)
 
+-- | Filter invoices to find pending dues: FAILED PAYMENT invoices that are not settled and not excluded
+filterPendingDuesInvoices :: [DPI.PaymentInvoice] -> [DPI.PaymentPurpose] -> [DPI.PaymentInvoice]
+filterPendingDuesInvoices allInvoices excludedPurposes =
+  allInvoices
+    & filter (\inv -> inv.invoiceType == DPI.PAYMENT && inv.paymentStatus == DPI.FAILED)
+    & filter (\inv -> inv.paymentPurpose `notElem` excludedPurposes)
+    & filter (\inv -> isNothing inv.settledByInvoiceId)
+    & filter (\inv -> inv.paymentPurpose /= DPI.DEBT_SETTLEMENT)
+
 getcustomer ::
-  Domain.Types.Person.Person -> Environment.Flow Payment.CreateCustomerResp
+  Domain.Types.Person.Person -> Environment.Flow TPayment.CreateCustomerResp
 getcustomer person = do
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
   mbCustomer <- QPaymentCustomer.findByCustomerIdAndPaymentMode person.id.getId (Just paymentMode)
@@ -68,17 +79,17 @@ getcustomer person = do
       if maybe False (> now) customer.clientAuthTokenExpiry
         then
           return $
-            Payment.CreateCustomerResp
+            TPayment.CreateCustomerResp
               { customerId = customer.customerId,
                 clientAuthToken = customer.clientAuthToken,
                 clientAuthTokenExpiry = customer.clientAuthTokenExpiry
               }
         else do
-          getCustomer <- Payment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode person.id.getId
+          getCustomer <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode person.id.getId
           QPaymentCustomer.updateCATAndExipry getCustomer.clientAuthToken getCustomer.clientAuthTokenExpiry getCustomer.customerId (Just paymentMode)
           return $ getCustomer
     Nothing -> do
-      customer <- Payment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode person.id.getId
+      customer <- TPayment.getCustomer person.merchantId person.merchantOperatingCityId person.paymentMode person.id.getId
       paymentCustomer <- buildCreateCustomer customer paymentMode
       QPaymentCustomer.create paymentCustomer
       return customer
@@ -88,7 +99,7 @@ buildCreateCustomer ::
     EsqDBFlow m r,
     EncFlow m r
   ) =>
-  Payment.CreateCustomerResp ->
+  TPayment.CreateCustomerResp ->
   DMPM.PaymentMode ->
   m DPaymentCustomer.PaymentCustomer
 buildCreateCustomer createCustomerResp paymentMode = do
@@ -116,8 +127,8 @@ getCustomerPaymentId person = do
       --- Create a customer in payment service if not there ---
       mbEmailDecrypted <- mapM decrypt person.email
       phoneDecrypted <- mapM decrypt person.mobileNumber
-      let req = Payment.CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Nothing, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
-      customer <- Payment.createCustomer person.merchantId person.merchantOperatingCityId person.paymentMode req
+      let req = CreateCustomerReq {email = mbEmailDecrypted, name = person.firstName, phone = phoneDecrypted, lastName = Nothing, objectReferenceId = Nothing, mobileCountryCode = Nothing, optionsGetClientAuthToken = Nothing}
+      customer <- TPayment.createCustomer person.merchantId person.merchantOperatingCityId person.paymentMode req
       case paymentMode of
         DMPM.LIVE -> QPerson.updateCustomerPaymentId (Just customer.customerId) person.id
         DMPM.TEST -> QPerson.updateTestCustomerPaymentId (Just customer.customerId) person.id
@@ -126,7 +137,7 @@ getCustomerPaymentId person = do
 checkIfPaymentMethodExists :: Domain.Types.Person.Person -> PaymentMethodId -> Environment.Flow Bool
 checkIfPaymentMethodExists person paymentMethodId = do
   customerPaymentId <- getCustomerPaymentId person
-  cardList <- Payment.getCardList person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
+  cardList <- TPayment.getCardList person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
   return $ paymentMethodId `elem` (cardList <&> (.cardId))
 
 getPaymentMethods ::
@@ -139,7 +150,7 @@ getPaymentMethods (mbPersonId, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   customerPaymentId <- getCustomerPaymentId person
-  resp <- Payment.getCardList person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId -- TODO: Add pagination, do we need to store the card details in our DB?
+  resp <- TPayment.getCardList person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId -- TODO: Add pagination, do we need to store the card details in our DB?
   let savedPaymentMethodIds = resp <&> (.cardId)
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
   let defaultPaymentMethodId =
@@ -176,8 +187,8 @@ getPaymentIntentSetup (mbPersonId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
   customerPaymentId <- getCustomerPaymentId person
-  ephemeralKey <- Payment.createEphemeralKeys person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
-  setupIntent <- Payment.createSetupIntent person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
+  ephemeralKey <- TPayment.createEphemeralKeys person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
+  setupIntent <- TPayment.createSetupIntent person.merchantId person.merchantOperatingCityId person.paymentMode customerPaymentId
   return $
     API.Types.UI.RidePayment.SetupIntentResponse
       { setupIntentClientSecret = setupIntent.clientSecret,
@@ -217,7 +228,7 @@ postPaymentMethodUpdate (mbPersonId, _) rideId newPaymentMethodId = do
       let bookingPaymentMode = fromMaybe DMPM.LIVE booking.paymentMode
       unless (paymentMode == bookingPaymentMode) $ throwError (InvalidRequest "Invalid payment mode")
   order <- runInReplica $ QPaymentOrder.findById (Kernel.Types.Id.cast rideId) >>= fromMaybeM (InternalError $ "No payment order found for the ride " <> rideId.getId)
-  Payment.updatePaymentMethodInIntent person.merchantId person.merchantOperatingCityId person.paymentMode order.paymentServiceOrderId newPaymentMethodId
+  TPayment.updatePaymentMethodInIntent person.merchantId person.merchantOperatingCityId person.paymentMode order.paymentServiceOrderId newPaymentMethodId
   SPayment.updateDefaultPersonPaymentMethodId person (Just newPaymentMethodId)
   -- Update booking payment method
   return Success
@@ -232,7 +243,7 @@ deletePaymentMethodsDelete ::
 deletePaymentMethodsDelete (mbPersonId, _) paymentMethodId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Payment.deleteCard person.merchantId person.merchantOperatingCityId person.paymentMode paymentMethodId
+  TPayment.deleteCard person.merchantId person.merchantOperatingCityId person.paymentMode paymentMethodId
   return Success
 
 postPaymentAddTip ::
@@ -436,7 +447,7 @@ buildRefundRequest ::
   Kernel.Types.Id.Id DPaymentOrder.PaymentOrder ->
   Domain.Types.Booking.Booking ->
   DRefundRequest.RefundPurpose ->
-  DTransaction.PaymentTransaction ->
+  DPaymentTransaction.PaymentTransaction ->
   Kernel.Prelude.Maybe Text ->
   API.Types.UI.RidePayment.RefundRequestReq ->
   Environment.Flow DRefundRequest.RefundRequest
@@ -522,7 +533,7 @@ mkRefundRequestResp DRefundRequest.RefundRequest {..} evidence =
 
 data RefundRequestInfoHandler resp = RefundRequestInfoHandler
   { validateRefundRequestOwner :: DRefundRequest.RefundRequest -> Environment.Flow (),
-    mkRefundRequestInfoResp :: DRefundRequest.RefundRequest -> Maybe Text -> Maybe Kernel.External.Payment.Interface.RefundStatus -> Maybe Text -> resp,
+    mkRefundRequestInfoResp :: DRefundRequest.RefundRequest -> Maybe Text -> Maybe PaymentInterface.RefundStatus -> Maybe Text -> resp,
     fetchRefunds :: Kernel.Types.Id.Id DRefunds.Refunds -> Environment.Flow (Maybe DRefunds.Refunds), -- required only for error code and status
     notifyRefunds :: DRefundRequest.RefundRequest -> Environment.Flow ()
   }
@@ -575,14 +586,14 @@ fetchPaymentRefundRequestInfo h refreshRefunds rideId = do
       throwError (InvalidRequest "Order refund locked")
     Right result -> return result
 
-castRefundRequestStatus :: Payment.RefundStatus -> DRefundRequest.RefundRequestStatus
+castRefundRequestStatus :: TPayment.RefundStatus -> DRefundRequest.RefundRequestStatus
 castRefundRequestStatus = \case
-  Payment.REFUND_PENDING -> DRefundRequest.APPROVED -- did not changed
-  Payment.REFUND_FAILURE -> DRefundRequest.FAILED
-  Payment.REFUND_SUCCESS -> DRefundRequest.REFUNDED
-  Payment.MANUAL_REVIEW -> DRefundRequest.APPROVED -- did not changed
-  Payment.REFUND_CANCELED -> DRefundRequest.FAILED
-  Payment.REFUND_REQUIRES_ACTION -> DRefundRequest.APPROVED -- did not changed
+  TPayment.REFUND_PENDING -> DRefundRequest.APPROVED -- did not changed
+  TPayment.REFUND_FAILURE -> DRefundRequest.FAILED
+  TPayment.REFUND_SUCCESS -> DRefundRequest.REFUNDED
+  TPayment.MANUAL_REVIEW -> DRefundRequest.APPROVED -- did not changed
+  TPayment.REFUND_CANCELED -> DRefundRequest.FAILED
+  TPayment.REFUND_REQUIRES_ACTION -> DRefundRequest.APPROVED -- did not changed
 
 fetchEvidenceFromS3 :: DRefundRequest.RefundRequest -> Environment.Flow (Maybe Text)
 fetchEvidenceFromS3 refundRequest = forM refundRequest.evidenceS3Path $ \evidenceS3Path -> do
@@ -594,3 +605,331 @@ fetchEvidenceFromS3 refundRequest = forM refundRequest.evidenceS3Path $ \evidenc
       logError $ "Evidence image locked: " <> refundRequest.orderId.getId
       throwError (InvalidRequest "Evidence image locked")
     Right image -> pure image
+
+-- | Internal data type for single pending ride payment info
+-- Note: With the new approach, only one ride can have pending payment at a time
+-- because we capture pending payments before allowing a new ride
+-- | SIMPLIFIED: Get pending dues for authenticated rider using invoice-based approach
+-- Returns dues from FAILED invoices on most recent ride, excluding TIP and already-settled invoices
+getPaymentGetDueAmount ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Environment.Flow API.Types.UI.RidePayment.GetDueAmountResp
+  )
+getPaymentGetDueAmount (mbPersonId, _) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  riderConfig <- runInReplica $ QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing
+  let excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
+        Nothing -> [] -- No config = don't exclude anything
+        Just textList -> mapMaybe (readMaybe . Text.unpack) textList :: [DPI.PaymentPurpose]
+
+  -- 1. Find most recent ride for this rider
+  mbLatestRide <- runInReplica $ QRide.findMostRecentRideForRider personId
+
+  case mbLatestRide of
+    Nothing -> returnNoDues personId
+    Just ride -> do
+      -- 2. Get all invoices for this ride and filter for pending dues
+      allInvoices <- runInReplica $ QPaymentInvoice.findAllByRideId ride.id
+      let filteredInvoices = filterPendingDuesInvoices allInvoices excludedPurposes
+
+      -- Audit logging for debugging
+      let failedPaymentInvoices = filter (\inv -> inv.invoiceType == DPI.PAYMENT && inv.paymentStatus == DPI.FAILED) allInvoices
+      let numSettled = length $ filter (isJust . (.settledByInvoiceId)) failedPaymentInvoices
+      when (numSettled > 0 || length failedPaymentInvoices /= length filteredInvoices) $
+        logInfo $
+          "Get Dues filtering for ride " <> ride.id.getId <> ": "
+            <> "failed="
+            <> show (length failedPaymentInvoices)
+            <> ", settled="
+            <> show numSettled
+            <> ", final_due="
+            <> show (length filteredInvoices)
+
+      -- 4. Calculate total
+      if null filteredInvoices
+        then returnNoDues personId
+        else do
+          let totalAmount = sum $ map (.amount) filteredInvoices
+          let currency = Kernel.Prelude.head filteredInvoices & (.currency)
+          logInfo $
+            "AUDIT: Get Dues - person_id: " <> personId.getId
+              <> ", ride_id: "
+              <> ride.id.getId
+              <> ", due_invoices: "
+              <> show (length filteredInvoices)
+              <> ", total_amount: "
+              <> show totalAmount
+          pure $
+            API.Types.UI.RidePayment.GetDueAmountResp
+              { rides = [API.Types.UI.RidePayment.DueAmountRide {rideId = ride.id, amount = totalAmount}],
+                totalDueAmount = totalAmount,
+                currency = Just currency
+              }
+  where
+    returnNoDues _ = do
+      -- No currency when no dues (avoids sending a wrong default like INR)
+      pure $
+        API.Types.UI.RidePayment.GetDueAmountResp
+          { rides = [],
+            totalDueAmount = 0,
+            currency = Nothing
+          }
+
+-- | SIMPLIFIED: Clear pending dues by creating NEW payment order and DEBT_SETTLEMENT invoice
+-- Creates a new order for the total due amount and settles parent invoices on success
+postPaymentClearDues ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.RidePayment.ClearDuesReq ->
+    Environment.Flow API.Types.UI.RidePayment.ClearDuesResp
+  )
+postPaymentClearDues (mbPersonId, merchantId) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+
+  -- 1. Re-fetch dues using Get Dues logic (DRY principle)
+  duesResp <- getPaymentGetDueAmount (mbPersonId, merchantId)
+  when (duesResp.totalDueAmount <= 0 || null duesResp.rides) $
+    throwError $ InvalidRequest "No pending dues to clear"
+  currency <- duesResp.currency & fromMaybeM (InvalidRequest "Currency required when dues present")
+
+  -- 2. Get failed invoices to link as parents (same exclusion as Get Dues: config-based)
+  riderConfig <- runInReplica $ QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing
+  let excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
+        Nothing -> [] -- No config = don't exclude anything
+        Just textList -> mapMaybe (readMaybe . Text.unpack) textList :: [DPI.PaymentPurpose]
+  let rideId = Kernel.Prelude.head duesResp.rides & (.rideId)
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  allInvoices <- QPaymentInvoice.findAllByRideId rideId
+  let parentInvoices = filterPendingDuesInvoices allInvoices excludedPurposes
+
+  -- 3. Validate and get payment details
+  paymentMethodId <- case req.paymentMethodId of
+    Just pmId -> do
+      checkIfPaymentMethodExists person pmId >>= \case
+        False -> throwError $ InvalidRequest "Payment method doesn't belong to Customer"
+        True -> return pmId
+    Nothing -> getDefaultPaymentMethodForDues person
+
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  (customerPaymentId, _) <- SPayment.getCustomerAndPaymentMethod booking person
+  driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+  email <- mapM decrypt person.email
+
+  -- 4. Create NEW payment order for debt settlement
+  let createPaymentIntentServiceReq =
+        DPayment.CreatePaymentIntentServiceReq
+          { amount = duesResp.totalDueAmount,
+            applicationFeeAmount = 0, -- No app fee for debt settlement
+            currency = currency,
+            customer = customerPaymentId,
+            paymentMethod = paymentMethodId,
+            receiptEmail = email,
+            driverAccountId
+          }
+
+  paymentIntentResp <-
+    SPayment.makePaymentIntent
+      person.merchantId booking.merchantOperatingCityId booking.paymentMode
+      person.id Nothing createPaymentIntentServiceReq
+
+  -- 5. Create DEBT_SETTLEMENT invoice with parent links
+  now <- getCurrentTime
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  let paymentMethod = fromMaybe DMPM.Cash booking.paymentInstrument
+
+  debtSettlementInvoice <-
+    buildDebtSettlementInvoice
+      merchant.shortId
+      rideId
+      (Just paymentIntentResp.orderId)
+      duesResp.totalDueAmount
+      currency
+      paymentMethod
+      (map (.id) parentInvoices) -- parent_invoice_ids
+      booking.merchantId booking.merchantOperatingCityId now
+
+  -- Audit log: Creating DEBT_SETTLEMENT invoice
+  logInfo $
+    "Creating DEBT_SETTLEMENT invoice " <> debtSettlementInvoice.id.getId <> " for ride " <> rideId.getId
+      <> ", amount: "
+      <> show duesResp.totalDueAmount
+      <> ", parent_invoices: "
+      <> show (map ((.getId) . (.id)) parentInvoices)
+
+  QPaymentInvoice.create debtSettlementInvoice
+
+  -- 6. Attempt capture
+  captureResult <-
+    try $
+      SPayment.chargePaymentIntent
+        person.merchantId booking.merchantOperatingCityId person.paymentMode
+        paymentIntentResp.paymentIntentId
+
+  case captureResult of
+    Right True -> do
+      -- Success: update invoice and settle parents
+      QPaymentInvoice.updatePaymentStatus DPI.CAPTURED debtSettlementInvoice.id
+      QPaymentInvoiceExtra.updateSettledByForInvoices (map (.id) parentInvoices) debtSettlementInvoice.id
+
+      -- Audit log: Settlement successful
+      logInfo $
+        "AUDIT: Debt settlement CAPTURED - invoice_id: " <> debtSettlementInvoice.id.getId
+          <> ", order_id: "
+          <> paymentIntentResp.orderId.getId
+          <> ", amount: "
+          <> show duesResp.totalDueAmount
+          <> ", ride_id: "
+          <> rideId.getId
+      logInfo $
+        "AUDIT: Marked " <> show (length parentInvoices) <> " parent invoice(s) as settled: "
+          <> show (map ((.getId) . (.id)) parentInvoices)
+
+      pure $
+        API.Types.UI.RidePayment.ClearDuesResp
+          { orderId = Just paymentIntentResp.orderId,
+            status = API.Types.UI.RidePayment.SUCCESS,
+            amountCleared = duesResp.totalDueAmount,
+            currency = currency,
+            ridesCleared = [rideId],
+            errorMessage = Nothing
+          }
+    Right False -> do
+      QPaymentInvoice.updatePaymentStatus DPI.FAILED debtSettlementInvoice.id
+      logError $
+        "AUDIT: Debt settlement FAILED - invoice_id: " <> debtSettlementInvoice.id.getId
+          <> ", order_id: "
+          <> paymentIntentResp.orderId.getId
+          <> ", amount: "
+          <> show duesResp.totalDueAmount
+          <> ", ride_id: "
+          <> rideId.getId
+          <> " (parent invoices remain unsettled)"
+      pure $
+        API.Types.UI.RidePayment.ClearDuesResp
+          { orderId = Just paymentIntentResp.orderId,
+            status = API.Types.UI.RidePayment.FAILED,
+            amountCleared = 0,
+            currency = currency,
+            ridesCleared = [],
+            errorMessage = Just "Payment failed. Please try again."
+          }
+    Left (err :: SomeException) -> do
+      QPaymentInvoice.updatePaymentStatus DPI.FAILED debtSettlementInvoice.id
+      let userFriendlyMessage = mapPaymentErrorToUserMessage (show err)
+      logError $
+        "AUDIT: Debt settlement EXCEPTION - invoice_id: " <> debtSettlementInvoice.id.getId
+          <> ", order_id: "
+          <> paymentIntentResp.orderId.getId
+          <> ", ride_id: "
+          <> rideId.getId
+          <> ", error: "
+          <> show err
+          <> " (parent invoices remain unsettled)"
+      pure $
+        API.Types.UI.RidePayment.ClearDuesResp
+          { orderId = Just paymentIntentResp.orderId,
+            status = API.Types.UI.RidePayment.FAILED,
+            amountCleared = 0,
+            currency = currency,
+            ridesCleared = [],
+            errorMessage = Just userFriendlyMessage
+          }
+  where
+    getDefaultPaymentMethodForDues :: Domain.Types.Person.Person -> Environment.Flow PaymentMethodId
+    getDefaultPaymentMethodForDues p = do
+      let paymentMode = fromMaybe DMPM.LIVE p.paymentMode
+      let mbDefaultPmId = case paymentMode of
+            DMPM.LIVE -> p.defaultPaymentMethodId
+            DMPM.TEST -> p.defaultTestPaymentMethodId
+      mbDefaultPmId & fromMaybeM (InvalidRequest "No default payment method found. Please provide a payment method.")
+
+    buildDebtSettlementInvoice ::
+      Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+      Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+      Maybe (Kernel.Types.Id.Id DPaymentOrder.PaymentOrder) ->
+      HighPrecMoney ->
+      Currency ->
+      DMPM.PaymentInstrument ->
+      [Kernel.Types.Id.Id DPI.PaymentInvoice] ->
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
+      Kernel.Types.Id.Id DMOC.MerchantOperatingCity ->
+      Kernel.Prelude.UTCTime ->
+      Environment.Flow DPI.PaymentInvoice
+    buildDebtSettlementInvoice merchantShortId rideId' paymentOrderId amount currency paymentInstrument parentInvoiceIds merchantId' merchantOperatingCityId' now' = do
+      invoiceId <- generateGUID
+      invoiceNumber <- SPInvoice.generateInvoiceNumber merchantShortId DPI.DEBT_SETTLEMENT DPI.PAYMENT now'
+      pure
+        DPI.PaymentInvoice
+          { id = Kernel.Types.Id.Id invoiceId,
+            rideId = rideId',
+            paymentOrderId = paymentOrderId,
+            paymentStatus = DPI.PENDING,
+            paymentInstrument = paymentInstrument,
+            paymentPurpose = DPI.DEBT_SETTLEMENT,
+            invoiceType = DPI.PAYMENT,
+            invoiceNumber = invoiceNumber,
+            amount = amount,
+            currency = currency,
+            parentInvoiceIds = Just parentInvoiceIds,
+            settledByInvoiceId = Nothing,
+            merchantId = Just merchantId',
+            merchantOperatingCityId = Just merchantOperatingCityId',
+            createdAt = now',
+            updatedAt = now'
+          }
+
+    mapPaymentErrorToUserMessage :: Text -> Text
+    mapPaymentErrorToUserMessage errMsg
+      | "insufficient" `Text.isInfixOf` Text.toLower errMsg = "Payment failed due to insufficient funds. Please check your payment method."
+      | "declined" `Text.isInfixOf` Text.toLower errMsg = "Payment was declined by your bank. Please try a different payment method."
+      | "expired" `Text.isInfixOf` Text.toLower errMsg = "Payment method has expired. Please update your payment method."
+      | "invalid" `Text.isInfixOf` Text.toLower errMsg = "Invalid payment method. Please check your payment details."
+      | "timeout" `Text.isInfixOf` Text.toLower errMsg = "Payment request timed out. Please try again."
+      | "network" `Text.isInfixOf` Text.toLower errMsg = "Network error occurred. Please check your connection and try again."
+      | otherwise = "Payment failed. Please try again or contact support if the issue persists."
+
+-- | Capture a PENDING invoice by ID. Updates invoice and ride (and payment order via gateway flow).
+-- Returns error if invoice not found, not PENDING, or caller is not the ride owner.
+postPaymentInvoiceCapture ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id DPI.PaymentInvoice ->
+    Environment.Flow APISuccess
+  )
+postPaymentInvoiceCapture (mbPersonId, _merchantId) invoiceId = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  invoice <- QPaymentInvoice.findById invoiceId >>= fromMaybeM (InvalidRequest "Invoice not found")
+  Redis.withWaitOnLockRedisWithExpiry (paymentJobExecLockKey invoice.rideId.getId) 10 20 $ do
+    when (invoice.paymentStatus /= DPI.PENDING) $
+      throwError $ InvalidRequest "Invoice is not pending; already captured or failed"
+    ride <- QRide.findById invoice.rideId >>= fromMaybeM (RideNotFound invoice.rideId.getId)
+    booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    unless (booking.riderId == personId) $
+      throwError $ InvalidRequest "Person is not the owner of the ride"
+    order <-
+      invoice.paymentOrderId
+        & fromMaybeM (InvalidRequest "Invoice has no payment order")
+    paymentOrder <- QPaymentOrder.findById order >>= fromMaybeM (InvalidRequest "Payment order not found")
+    let paymentIntentId = paymentOrder.paymentServiceOrderId
+    paymentCharged <-
+      SPayment.chargePaymentIntent
+        booking.merchantId
+        booking.merchantOperatingCityId
+        booking.paymentMode
+        paymentIntentId
+    if paymentCharged
+      then do
+        QPaymentInvoice.updatePaymentStatus DPI.CAPTURED invoice.id
+        QRide.markPaymentStatus Domain.Types.Ride.Completed ride.id
+        pure ()
+      else do
+        QPaymentInvoice.updatePaymentStatus DPI.FAILED invoice.id
+        QRide.markPaymentStatus Domain.Types.Ride.Failed ride.id
+        throwError $ InvalidRequest "Payment capture failed. Please try again."
+  pure Success

@@ -16,9 +16,11 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParkingTransaction as DPT
+import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as Ride
+import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -46,13 +48,16 @@ import SharedLogic.Offer
 import Storage.Beam.Payment ()
 import Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.ParkingTransaction as QPT
+import qualified Storage.Queries.PaymentInvoice as QPaymentInvoice
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error
 import Tools.Metrics.BAPMetrics
@@ -729,3 +734,102 @@ updateDefaultPersonPaymentMethodId person paymentMethodId = do
   case paymentMode of
     DMPM.LIVE -> QPerson.updateDefaultPaymentMethodId paymentMethodId person.id
     DMPM.TEST -> QPerson.updateDefaultTestPaymentMethodId paymentMethodId person.id
+
+-------------------------------------------------------------------------------------------------------
+------------------------------------- Pending Payment Validation --------------------------------------
+-------------------------------------------------------------------------------------------------------
+
+-- | Capture pending payment before allowing new ride.
+-- Finds rides with uncaptured payment (Initiated or NotInitiated), attempts capture.
+-- Success -> allow new ride. Failure -> block ride; user can retry via Get Dues / Clear Dues.
+-- | SIMPLIFIED: Check for failed invoices on most recent ride and block new ride if found
+-- Uses invoice-based approach instead of ride.payment_status
+capturePendingPaymentIfExists ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasKafkaProducer r
+  ) =>
+  Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+capturePendingPaymentIfExists person merchantOperatingCityId = do
+  -- Load config for excluded payment purposes
+  riderConfig <- runInReplica $ QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
+  let excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
+        Nothing -> [] -- No config = don't exclude anything
+        Just textList -> mapMaybe (readMaybe . T.unpack) textList :: [DPI.PaymentPurpose]
+
+  -- Find most recent ride for this rider
+  mbLatestRide <- QRide.findMostRecentRideForRider person.id
+
+  case mbLatestRide of
+    Nothing -> pure () -- No rides, allow new ride
+    Just ride -> do
+      -- Get all PAYMENT invoices for this ride
+      allInvoices <- QPaymentInvoice.findAllByRideId ride.id
+
+      -- Apply filters: PAYMENT type, not settled, not DEBT_SETTLEMENT, not excluded by config
+      let relevantInvoices =
+            allInvoices
+              & filter (\inv -> inv.invoiceType == DPI.PAYMENT)
+              & filter (\inv -> isNothing inv.settledByInvoiceId)
+              & filter (\inv -> inv.paymentPurpose /= DPI.DEBT_SETTLEMENT)
+              & filter (\inv -> inv.paymentPurpose `notElem` excludedPurposes)
+
+      -- Check for FAILED invoices first -> block immediately
+      let failedInvoices = filter (\inv -> inv.paymentStatus == DPI.FAILED) relevantInvoices
+      unless (null failedInvoices) $ do
+        let totalDue = sum $ map (.amount) failedInvoices
+        logError $ "Blocking new ride: rider has " <> show (length failedInvoices) <> " failed invoice(s) totaling " <> show totalDue <> " on ride " <> ride.id.getId
+        throwError $ InvalidRequest "You have pending dues from a previous ride. Please clear your dues before booking a new ride."
+
+      -- Find PENDING invoices and attempt capture
+      let pendingInvoices = filter (\inv -> inv.paymentStatus == DPI.PENDING) relevantInvoices
+      unless (null pendingInvoices) $ do
+        logInfo $ "Found " <> show (length pendingInvoices) <> " pending invoice(s) for ride " <> ride.id.getId <> ", attempting capture"
+        booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+
+        -- Attempt to capture each pending invoice
+        forM_ pendingInvoices $ \invoice -> do
+          case invoice.paymentOrderId of
+            Nothing -> do
+              logWarning $ "PENDING invoice " <> invoice.id.getId <> " has no payment order ID, marking as FAILED"
+              QPaymentInvoice.updatePaymentStatus DPI.FAILED invoice.id
+            Just orderId -> do
+              mbOrder <- QPaymentOrder.findById orderId
+              case mbOrder of
+                Nothing -> do
+                  logWarning $ "Payment order " <> orderId.getId <> " not found for invoice " <> invoice.id.getId <> ", marking as FAILED"
+                  QPaymentInvoice.updatePaymentStatus DPI.FAILED invoice.id
+                Just order -> do
+                  -- Attempt to charge the payment (PaymentOrder uses paymentServiceOrderId, not paymentIntentId)
+                  let paymentIntentId = order.paymentServiceOrderId
+                  paymentCharged <- chargePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode paymentIntentId
+                  if paymentCharged
+                    then do
+                      logInfo $ "Successfully captured payment for invoice " <> invoice.id.getId
+                      QPaymentInvoice.updatePaymentStatus DPI.CAPTURED invoice.id
+                      QRide.markPaymentStatus Ride.Completed ride.id
+                    else do
+                      logError $ "Failed to capture payment for invoice " <> invoice.id.getId
+                      QPaymentInvoice.updatePaymentStatus DPI.FAILED invoice.id
+                      QRide.markPaymentStatus Ride.Failed ride.id
+
+      -- After capture attempts, recheck all invoice statuses
+      updatedInvoices <- QPaymentInvoice.findAllByRideId ride.id
+      let updatedRelevantInvoices =
+            updatedInvoices
+              & filter (\inv -> inv.invoiceType == DPI.PAYMENT)
+              & filter (\inv -> isNothing inv.settledByInvoiceId)
+              & filter (\inv -> inv.paymentPurpose /= DPI.DEBT_SETTLEMENT)
+              & filter (\inv -> inv.paymentPurpose `notElem` excludedPurposes)
+
+      -- Check if any unpaid invoices remain (FAILED or PENDING)
+      let unpaidInvoices = filter (\inv -> inv.paymentStatus `elem` [DPI.FAILED, DPI.PENDING]) updatedRelevantInvoices
+      unless (null unpaidInvoices) $ do
+        let totalDue = sum $ map (.amount) unpaidInvoices
+        logError $ "Blocking new ride: rider has " <> show (length unpaidInvoices) <> " unpaid invoice(s) totaling " <> show totalDue <> " after capture attempt"
+        throwError $ InvalidRequest "You have pending dues from a previous ride. Please clear your dues before booking a new ride."

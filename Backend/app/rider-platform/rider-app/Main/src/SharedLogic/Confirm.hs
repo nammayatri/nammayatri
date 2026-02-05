@@ -122,6 +122,11 @@ tryInitTriggerLock searchRequestId = do
       lockExpiryTime = 10 -- Note: this value should be decided based on the delay between consecutive quotes in on_select api & also considering reallocation.
   Redis.tryLockRedis initTriggerLockKey lockExpiryTime
 
+-- | Capture pending payment before allowing new ride.
+-- Finds rides with uncaptured payment (Initiated or NotInitiated), attempts capture.
+-- Success -> allow new ride. Failure -> block ride; user can retry via Get Dues / Clear Dues.
+-- | SIMPLIFIED: Check for failed invoices on most recent ride and block new ride if found
+-- Uses invoice-based approach instead of ride.payment_status
 confirm ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,

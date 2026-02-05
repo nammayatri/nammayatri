@@ -59,6 +59,7 @@ data RiderConfigT f = RiderConfigT
     domainPublicTransportDataVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     domainRouteCalculationEnabledModes :: B.C f (Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType]),
     driverReferredSearchReqExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    duesExcludedPaymentPurposes :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     dynamicLogicUpdatePassword :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     emailBusinessVerificationConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailBusinessVerificationConfig),
     emailMagicLinkConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailMagicLinkConfig),
