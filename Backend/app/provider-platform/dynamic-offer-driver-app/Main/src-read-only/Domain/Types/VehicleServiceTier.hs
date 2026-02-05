@@ -24,6 +24,7 @@ data VehicleServiceTier = VehicleServiceTier
     fareAdditionPerKmOverBaseServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleServiceTier.VehicleServiceTier,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isIntercityEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isRentalsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -27,7 +27,13 @@ createMany = traverse_ create
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
-findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+findAllByMerchantOpCityId merchantOperatingCityId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Or [Se.Is Beam.isEnabled $ Se.Eq (Just True), Se.Is Beam.isEnabled $ Se.Eq Nothing]
+        ]
+    ]
 
 findBaseServiceTierTypeByCategoryAndCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -37,14 +43,32 @@ findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOperatingCity
     [ Se.And
         [ Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.baseVehicleServiceTier $ Se.Eq (Just True)
+          Se.Is Beam.baseVehicleServiceTier $ Se.Eq (Just True),
+          Se.Or [Se.Is Beam.isEnabled $ Se.Eq (Just True), Se.Is Beam.isEnabled $ Se.Eq Nothing]
         ]
     ]
+
+findByMerchantOpCityIdForList ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
+findByMerchantOpCityIdForList merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByServiceTierTypeAndCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.Common.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
 findByServiceTierTypeAndCityId serviceTierType merchantOperatingCityId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Or [Se.Is Beam.isEnabled $ Se.Eq (Just True), Se.Is Beam.isEnabled $ Se.Eq Nothing]
+        ]
+    ]
+
+findByServiceTierTypeAndCityIdForUpdate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.Common.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
+findByServiceTierTypeAndCityIdForUpdate serviceTierType merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
@@ -69,6 +93,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
       Se.Set Beam.driverRating driverRating,
       Se.Set Beam.fareAdditionPerKmOverBaseServiceTier fareAdditionPerKmOverBaseServiceTier,
       Se.Set Beam.isAirConditioned isAirConditioned,
+      Se.Set Beam.isEnabled isEnabled,
       Se.Set Beam.isIntercityEnabled isIntercityEnabled,
       Se.Set Beam.isRentalsEnabled isRentalsEnabled,
       Se.Set Beam.longDescription longDescription,
@@ -107,6 +132,7 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
             fareAdditionPerKmOverBaseServiceTier = fareAdditionPerKmOverBaseServiceTier,
             id = Kernel.Types.Id.Id id,
             isAirConditioned = isAirConditioned,
+            isEnabled = isEnabled,
             isIntercityEnabled = isIntercityEnabled,
             isRentalsEnabled = isRentalsEnabled,
             longDescription = longDescription,
@@ -142,6 +168,7 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
         Beam.fareAdditionPerKmOverBaseServiceTier = fareAdditionPerKmOverBaseServiceTier,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAirConditioned = isAirConditioned,
+        Beam.isEnabled = isEnabled,
         Beam.isIntercityEnabled = isIntercityEnabled,
         Beam.isRentalsEnabled = isRentalsEnabled,
         Beam.longDescription = longDescription,

@@ -21,7 +21,10 @@ where
 
 import Dashboard.Common as Reexport
 import Data.Aeson
+import qualified Data.Text as T
+import qualified Kernel.External.Payment.Stripe.Types as Stripe
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Id
@@ -174,3 +177,25 @@ data DriverFeeStatus
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance CH.ClickhouseValue DriverFeeStatus
+
+-- to avoid naming conflict
+type StripeAddress = Stripe.Address
+
+---------------------------------------------------------
+-- Upsert driver service tiers using csv file -----------
+
+newtype UpsertDriverServiceTiersCsvReq = UpsertDriverServiceTiersCsvReq {file :: Kernel.Prelude.FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertDriverServiceTiersCsvReq where
+  hideSecrets = identity
+
+instance FromMultipart Tmp UpsertDriverServiceTiersCsvReq where
+  fromMultipart form = do
+    UpsertDriverServiceTiersCsvReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp UpsertDriverServiceTiersCsvReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]

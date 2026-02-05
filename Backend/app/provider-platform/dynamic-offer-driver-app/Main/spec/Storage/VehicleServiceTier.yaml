@@ -39,6 +39,7 @@ VehicleServiceTier:
     stopFcmThreshold: Maybe Int
     stopFcmSuppressCount: Maybe Int
     scheduleBookingListEligibilityTags: Maybe [Text]
+    isEnabled: Maybe Bool
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]
@@ -47,6 +48,7 @@ VehicleServiceTier:
     vehicleIconUrl: character varying(255)
   default:
     priority: '0'
+    isEnabled: 'true'
     autoSelectedVehicleVariant: "'{}'"
   beamType:
     vehicleIconUrl: Maybe Text
@@ -59,11 +61,31 @@ VehicleServiceTier:
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
-      where: merchantOperatingCityId
+      where:
+        and:
+          - merchantOperatingCityId
+          - or:
+              - isEnabled: "(Just True)|CIM"
+              - isEnabled: "Nothing|CIM"
     findByServiceTierTypeAndCityId:
       kvFunction: findOneWithKV
       where:
-        and: [serviceTierType, merchantOperatingCityId]
+        and:
+          - serviceTierType
+          - merchantOperatingCityId
+          - or:
+              - isEnabled: "(Just True)|CIM"
+              - isEnabled: "Nothing|CIM"
+    findByServiceTierTypeAndCityIdForUpdate:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - serviceTierType
+          - merchantOperatingCityId
+    findByMerchantOpCityIdForList:
+      kvFunction: findAllWithKV
+      where:
+        merchantOperatingCityId
     findBaseServiceTierTypeByCategoryAndCityId:
       kvFunction: findOneWithKV
       where:
@@ -71,3 +93,6 @@ VehicleServiceTier:
           - vehicleCategory
           - merchantOperatingCityId
           - baseVehicleServiceTier: "(Just True)|CIM"
+          - or:
+              - isEnabled: "(Just True)|CIM"
+              - isEnabled: "Nothing|CIM"

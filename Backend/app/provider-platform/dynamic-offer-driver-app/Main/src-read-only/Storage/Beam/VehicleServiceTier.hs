@@ -24,6 +24,7 @@ data VehicleServiceTierT f = VehicleServiceTierT
     fareAdditionPerKmOverBaseServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     id :: B.C f Kernel.Prelude.Text,
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isIntercityEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isRentalsEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     longDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
