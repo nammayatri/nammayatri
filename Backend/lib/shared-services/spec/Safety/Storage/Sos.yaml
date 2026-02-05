@@ -1,0 +1,91 @@
+imports:
+  UTCTime: Kernel.Prelude
+  ShortId: Kernel.Types.Id
+  Person: Safety.Domain.Types.Common
+  Merchant: Safety.Domain.Types.Common
+  Ride: Safety.Domain.Types.Common
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  MerchantOperatingCity: Safety.Domain.Types.Common
+
+Sos:
+  tableName: sos
+  derives: "Generic, Show, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id : Id Sos
+    personId : Id Person
+    rideId : Id Ride
+    flow : SosType
+    status : SosStatus
+    ticketId : Maybe Text
+    mediaFiles : "Maybe [Text]"
+    trackingExpiresAt : Maybe UTCTime
+    sosState : Maybe SosState
+    entityType : Maybe SosEntityType
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  types:
+    EmergencyContactId:
+      enum: "EmergencyContactId Text"
+
+    SosType:
+      enum: "Police,CustomerCare,EmergencyContact EmergencyContactId,SafetyFlow,CSAlertSosTicket,AudioRecording,KaptureDashboard"
+
+    SosStatus:
+      enum: "Resolved,NotResolved,Pending,MockPending,MockResolved"
+
+    SosState:
+      enum: "LiveTracking,SosActive"
+
+    SosEntityType:
+      enum: "Ride,NonRide"
+
+    SosMockDrill:
+      personId: Id Person
+      status : SosStatus
+
+  queries:
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateMediaFiles:
+      kvFunction: updateOneWithKV
+      params: [mediaFiles]
+      where: id
+    updateTrackingExpiresAt:
+      kvFunction: updateOneWithKV
+      params: [trackingExpiresAt]
+      where: id
+    updateState:
+      kvFunction: updateOneWithKV
+      params: [sosState]
+      where: id
+    updateEntityType:
+      kvFunction: updateOneWithKV
+      params: [entityType]
+      where: id
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByRideId:
+      kvFunction: findOneWithKV
+      where: rideId
+    findByTicketId:
+      kvFunction: findOneWithKV
+      where: ticketId
+    findByPersonId:
+      kvFunction: findAllWithKV
+      where: personId
+
+  sqlType:
+    mediaFiles: "text[]"
+
+  constraints:
+    id: PrimaryKey
+
+  defaultQueryTypeConstraint: "(Safety.Storage.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
