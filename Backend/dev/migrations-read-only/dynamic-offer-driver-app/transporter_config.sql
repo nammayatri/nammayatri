@@ -599,3 +599,5 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_multi_fle
 
 ------- SQL updates -------
 
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN link_fleet_to_un_verified_existing_rc boolean ;

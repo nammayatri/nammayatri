@@ -114,6 +114,7 @@ import Storage.Queries.Ride as RQuery
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleDetails as CQVD
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
 import Tools.Error
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
@@ -254,6 +255,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
         Nothing -> throwImageError req.imageId ImageExtractionFailed
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
     Redis.set (makeFleetOwnerKey req.vehicleRegistrationCertNumber) fleetOwnerId.getId
+    -- Optionally update existing RC's fleetOwnerId in DB if enabled via transporterConfig
+    updateExistingRCFleetOwnerIfEnabled transporterConfig req.vehicleRegistrationCertNumber fleetOwnerId
   encryptedRC <- encrypt req.vehicleRegistrationCertNumber
   let imageExtractionValidation = bool Domain.Skipped Domain.Success (isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction)
   Redis.whenWithLockRedis (rcVerificationLockKey req.vehicleRegistrationCertNumber) 60 $ do
@@ -275,6 +278,24 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) "")
       Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
+
+    -- When enabled via transporterConfig, update any existing VehicleRegistrationCertificate
+    -- row for this registration number with the new fleetOwnerId.
+    updateExistingRCFleetOwnerIfEnabled ::
+      DTC.TransporterConfig ->
+      Text ->
+      Id Person.Person ->
+      Flow ()
+    updateExistingRCFleetOwnerIfEnabled transporterConfig regNumber fleetOwnerId = do
+      when (fromMaybe False transporterConfig.linkFleetToUnVerifiedExistingRC) $ do
+        mbExistingRC <- VRCExtra.findLastVehicleRCWrapper regNumber
+        whenJust mbExistingRC $ \existingRC -> do
+          now <- getCurrentTime
+          let updatedRC = existingRC {DVRC.fleetOwnerId = Just fleetOwnerId.getId}
+          RCQuery.upsert updatedRC
+          mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId fleetOwnerId updatedRC.id now
+          when (isNothing mbFleetAssoc) $
+            createFleetRCAssociationIfPossible transporterConfig fleetOwnerId updatedRC
 
     buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel =
       Verification.RCVerificationResponse
