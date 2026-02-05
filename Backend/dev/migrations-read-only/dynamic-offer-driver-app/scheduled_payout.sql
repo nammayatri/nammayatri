@@ -37,3 +37,13 @@ ALTER TABLE atlas_driver_offer_bpp.scheduled_payout ADD COLUMN mark_cash_paid_by
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -5,11 +5,11 @@ module Storage.Beam.ScheduledPayout where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
-import qualified Domain.Types.ScheduledPayout
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Payment.Domain.Types.PayoutStatusHistory
 import Tools.Beam.UtilsTH
 
 data ScheduledPayoutT f = ScheduledPayoutT
@@ -24,7 +24,7 @@ data ScheduledPayoutT f = ScheduledPayoutT
     payoutTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     retryCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideId :: B.C f Kernel.Prelude.Text,
-    status :: B.C f Domain.Types.ScheduledPayout.ScheduledPayoutStatus,
+    status :: B.C f Lib.Payment.Domain.Types.PayoutStatusHistory.ScheduledPayoutStatus,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)

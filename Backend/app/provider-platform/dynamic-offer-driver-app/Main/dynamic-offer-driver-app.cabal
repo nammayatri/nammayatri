@@ -1069,7 +1069,6 @@ library
       Domain.Types.OperationHubRequests
       Domain.Types.Overlay
       Domain.Types.PayoutConfig
-      Domain.Types.PayoutStatusHistory
       Domain.Types.Person
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
@@ -1232,7 +1231,6 @@ library
       Storage.Beam.OperationHubRequests
       Storage.Beam.Overlay
       Storage.Beam.PayoutConfig
-      Storage.Beam.PayoutStatusHistory
       Storage.Beam.Person
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
@@ -1489,7 +1487,6 @@ library
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
-      Storage.Queries.PayoutStatusHistory
       Storage.Queries.Person
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan

@@ -18,6 +18,7 @@ import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.ScheduledPayout as DSP
+import qualified Lib.Payment.Domain.Types.PayoutStatusHistory as LPPS
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Payout.Types as PT
@@ -77,31 +78,31 @@ sendSpecialZonePayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
           Just scheduledPayout -> do
             -- 3. Check status (idempotency + cancellation check)
             case scheduledPayout.status of
-              DSP.FAILED -> do
+              LPPS.FAILED -> do
                 logInfo $ "Payout was cancelled/failed, skipping: " <> show scheduledPayoutId
                 pure Complete
-              DSP.CREDITED -> do
+              LPPS.CREDITED -> do
                 logInfo $ "Payout already processed: " <> show scheduledPayoutId
                 pure Complete
-              DSP.CASH_PAID -> do
+              LPPS.CASH_PAID -> do
                 logInfo $ "Payout already marked as cash paid: " <> show scheduledPayoutId
                 pure Complete
-              DSP.CASH_PENDING -> do
+              LPPS.CASH_PENDING -> do
                 logInfo $ "Payout already marked as cash pending: " <> show scheduledPayoutId
                 pure Complete
-              DSP.PROCESSING -> do
+              LPPS.PROCESSING -> do
                 logInfo $ "Payout already being processed: " <> show scheduledPayoutId
                 pure Complete
-              DSP.AUTO_PAY_FAILED -> do
+              LPPS.AUTO_PAY_FAILED -> do
                 logInfo $ "Payout auto-pay failed, needs admin retry: " <> show scheduledPayoutId
                 pure Complete
-              DSP.RETRYING -> do
+              LPPS.RETRYING -> do
                 logInfo $ "Payout is being retried: " <> show scheduledPayoutId
                 pure Complete
-              DSP.CANCELLED -> do
+              LPPS.CANCELLED -> do
                 logInfo $ "Payout was cancelled, skipping: " <> show scheduledPayoutId
                 pure Complete
-              DSP.INITIATED -> do
+              LPPS.INITIATED -> do
                 -- 4. Execute payout logic
                 executeSpecialZonePayout scheduledPayout
 
@@ -124,7 +125,7 @@ executeSpecialZonePayout scheduledPayout = do
   let merchantOpCityId = scheduledPayout.merchantOperatingCityId
 
   -- 1. Mark as PROCESSING
-  QSPE.updateStatusWithHistoryById DSP.PROCESSING (Just "Payment in progress") scheduledPayout
+  QSPE.updateStatusWithHistoryById LPPS.PROCESSING (Just "Payment in progress") scheduledPayout
 
   -- 2. Fetch driver info
   driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -153,13 +154,13 @@ executeSpecialZonePayout scheduledPayout = do
     Nothing -> do
       -- No VPA configured, mark as failed
       logWarning $ "Driver " <> driverId.getId <> " has no payout VPA configured"
-      QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Driver has no payout VPA configured") scheduledPayout
+      QSPE.updateStatusWithHistoryById LPPS.AUTO_PAY_FAILED (Just "Driver has no payout VPA configured") scheduledPayout
       pure Complete
     Just vpa -> do
       case merchantOpCityId of
         Nothing -> do
           logWarning $ "No merchant operating city for payout: " <> show scheduledPayout.id
-          QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Missing merchant operating city") scheduledPayout
+          QSPE.updateStatusWithHistoryById LPPS.AUTO_PAY_FAILED (Just "Missing merchant operating city") scheduledPayout
           pure Complete
         Just opCityId -> do
           -- 6. Get amount and create payout order
@@ -167,7 +168,7 @@ executeSpecialZonePayout scheduledPayout = do
           if amount <= 0
             then do
               logWarning $ "Invalid payout amount: " <> show amount
-              QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Invalid payout amount") scheduledPayout
+              QSPE.updateStatusWithHistoryById LPPS.AUTO_PAY_FAILED (Just "Invalid payout amount") scheduledPayout
               pure Complete
             else do
               -- 7. Create payout order
@@ -179,7 +180,7 @@ executeSpecialZonePayout scheduledPayout = do
               case merchantId of
                 Nothing -> do
                   logWarning $ "No merchant ID for payout: " <> show scheduledPayout.id
-                  QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Missing merchant ID") scheduledPayout
+                  QSPE.updateStatusWithHistoryById LPPS.AUTO_PAY_FAILED (Just "Missing merchant ID") scheduledPayout
                   pure Complete
                 Just mId -> do
                   -- 8. Call payout service
@@ -193,7 +194,7 @@ executeSpecialZonePayout scheduledPayout = do
                     Left (err :: SomeException) -> do
                       -- 9. Handle failure
                       logError $ "Payout service call failed: " <> show err
-                      QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) scheduledPayout
+                      QSPE.updateStatusWithHistoryById LPPS.AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) scheduledPayout
                       pure Complete
                     Right (mbPayoutResp, mbPayoutOrder) -> do
                       let payoutOrderId = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
@@ -209,6 +210,6 @@ executeSpecialZonePayout scheduledPayout = do
                       QSPE.updatePayoutTransactionId (Just payoutOrderId) scheduledPayout.id
 
                       -- Keep as PROCESSING - actual status will be updated by Juspay webhook
-                      QSPE.updateStatusWithHistoryById DSP.PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderId <> ", TxnRef: " <> transactionRef) scheduledPayout
+                      QSPE.updateStatusWithHistoryById LPPS.PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderId <> ", TxnRef: " <> transactionRef) scheduledPayout
                       logInfo $ "Special Zone Payout request submitted for id: " <> show scheduledPayout.id <> " | orderId: " <> payoutOrderId
                       pure Complete

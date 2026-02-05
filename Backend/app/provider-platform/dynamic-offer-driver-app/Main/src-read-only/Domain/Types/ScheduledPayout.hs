@@ -10,6 +10,7 @@ import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Payment.Domain.Types.PayoutStatusHistory
 import qualified Tools.Beam.UtilsTH
 
 data ScheduledPayout = ScheduledPayout
@@ -24,23 +25,9 @@ data ScheduledPayout = ScheduledPayout
     payoutTransactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideId :: Kernel.Prelude.Text,
-    status :: Domain.Types.ScheduledPayout.ScheduledPayoutStatus,
+    status :: Lib.Payment.Domain.Types.PayoutStatusHistory.ScheduledPayoutStatus,
     updatedAt :: Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
-
-data ScheduledPayoutStatus
-  = INITIATED
-  | PROCESSING
-  | CREDITED
-  | AUTO_PAY_FAILED
-  | RETRYING
-  | FAILED
-  | CANCELLED
-  | CASH_PAID
-  | CASH_PENDING
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledPayoutStatus)

@@ -4,13 +4,11 @@ imports:
   Person: Domain.Types.Person
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  ScheduledPayoutStatus: Lib.Payment.Domain.Types.PayoutStatusHistory
 
 ScheduledPayout:
   tableName: scheduled_payout
   derives: "Generic,Show,Eq,ToJSON,FromJSON"
-  types:
-    ScheduledPayoutStatus:
-      enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED,CANCELLED,CASH_PAID,CASH_PENDING"
   fields:
     id: Id ScheduledPayout
     rideId: Text

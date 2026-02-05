@@ -31,7 +31,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Plan as DP
-import qualified Domain.Types.ScheduledPayout as DSP
+import Domain.Types.ScheduledPayout ()
 import qualified Domain.Types.VehicleCategory as DVC
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
@@ -51,6 +51,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutStatusHistory as LPPS
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
@@ -119,7 +120,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
             Just scheduledPayoutId -> do
               scheduledPayout <- QSPE.findById (Id scheduledPayoutId) >>= fromMaybeM (InternalError $ "Scheduled Payout Not Found: " <> show scheduledPayoutId)
               let newStatus = QSPE.castPayoutOrderStatusToScheduledPayoutStatus payoutStatus
-              when (scheduledPayout.status /= newStatus && scheduledPayout.status `notElem` [DSP.CREDITED, DSP.CASH_PAID, DSP.CASH_PENDING]) do
+              when (scheduledPayout.status /= newStatus && scheduledPayout.status `notElem` [LPPS.CREDITED, LPPS.CASH_PAID, LPPS.CASH_PENDING]) do
                 let statusMsg = "Bank Webhook: " <> show payoutStatus
                 QSPE.updateStatusWithHistoryById newStatus (Just statusMsg) scheduledPayout
         _ -> do

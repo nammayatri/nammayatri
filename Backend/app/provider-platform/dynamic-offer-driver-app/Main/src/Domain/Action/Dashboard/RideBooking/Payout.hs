@@ -13,7 +13,6 @@ import qualified API.Types.Dashboard.RideBooking.Payout as API
 import Data.Maybe (listToMaybe)
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.PayoutStatusHistory as DPSH
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Environment
@@ -27,11 +26,12 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutStatusHistory as LPPS
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPO
+import qualified Lib.Payment.Storage.Queries.PayoutStatusHistory as QPSH
 import qualified SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout as SpecialZonePayout
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QM
-import qualified Storage.Queries.PayoutStatusHistory as QPSH
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSP
@@ -55,7 +55,7 @@ getPayoutStatus _merchantShortId _opCity rideId = do
             createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchantOpCityId (DEMSC.RidePayoutService TPayout.Juspay) (Just payout.driverId)
         resp <- DPayment.payoutStatusService (Kernel.Types.Id.cast merchantId) (Kernel.Types.Id.Id payout.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall
         let newStatus = QSP.castPayoutOrderStatusToScheduledPayoutStatus resp.status
-        if (payout.status /= newStatus && payout.status `notElem` [DSP.CREDITED, DSP.CASH_PAID, DSP.CASH_PENDING])
+        if payout.status /= newStatus && payout.status `notElem` [LPPS.CREDITED, LPPS.CASH_PAID, LPPS.CASH_PENDING]
           then do
             let statusMsg = "Order Status Updated: " <> show resp.status
             QSP.updateStatusWithHistoryById newStatus (Just statusMsg) payout
@@ -65,7 +65,7 @@ getPayoutStatus _merchantShortId _opCity rideId = do
         logError $ "Payout Order not found for scheduled payoutId: " <> show payout.id
         pure payout.status
 
-  statusHistory <- QPSH.findByScheduledPayoutId Nothing Nothing payout.id
+  statusHistory <- QPSH.findByScheduledPayoutId Nothing Nothing (Kernel.Types.Id.getId payout.id)
   pure $
     API.PayoutStatusResp
       { status = convertStatus updatedStatus,
@@ -91,7 +91,7 @@ postPayoutCancel _merchantShortId _opCity rideId req = do
   now <- getCurrentTime
 
   -- Validation: Can only cancel if INITIATED
-  unless (payout.status == DSP.INITIATED) $
+  unless (payout.status == LPPS.INITIATED) $
     throwError $ InvalidRequest "Can only cancel INITIATED payouts"
 
   -- Validation: Can only cancel within 2 hours of creation
@@ -100,8 +100,8 @@ postPayoutCancel _merchantShortId _opCity rideId req = do
     throwError $ InvalidRequest "Cancel window expired (2 hours)"
 
   -- Update status to FAILED with reason and record history
-  QSP.updateStatusWithReasonByRideId DSP.FAILED (Just req.reason) rideId
-  QSP.updateStatusWithHistoryById DSP.FAILED (Just $ "Cancelled: " <> req.reason) payout
+  QSP.updateStatusWithReasonByRideId LPPS.FAILED (Just req.reason) rideId
+  QSP.updateStatusWithHistoryById LPPS.FAILED (Just $ "Cancelled: " <> req.reason) payout
 
   logInfo $ "Payout cancelled for rideId: " <> rideId <> " reason: " <> req.reason
   pure Kernel.Types.APISuccess.Success
@@ -116,7 +116,7 @@ postPayoutRetry _merchantShortId _opCity rideId = do
   payout <- QSP.findByRideId rideId >>= fromMaybeM (InvalidRequest "Payout not found for this ride")
 
   -- Validation: Can only retry AUTO_PAY_FAILED payouts
-  unless (payout.status == DSP.AUTO_PAY_FAILED) $
+  unless (payout.status == LPPS.AUTO_PAY_FAILED) $
     throwError $ InvalidRequest "Can only retry AUTO_PAY_FAILED payouts"
 
   -- Validation: Can only retry once (retryCount must be Nothing or 0)
@@ -130,7 +130,7 @@ postPayoutRetry _merchantShortId _opCity rideId = do
   logInfo $ "Retrying payout for rideId: " <> rideId
 
   -- Mark as RETRYING with history
-  QSP.updateStatusWithHistoryById DSP.RETRYING (Just "Admin initiated retry...") payout
+  QSP.updateStatusWithHistoryById LPPS.RETRYING (Just "Admin initiated retry...") payout
 
   -- Execute the same payout logic as in SpecialZonePayout
   _ <- SpecialZonePayout.executeSpecialZonePayout payout
@@ -139,19 +139,19 @@ postPayoutRetry _merchantShortId _opCity rideId = do
   pure Kernel.Types.APISuccess.Success
 
 -- Helper to convert domain status to API status
-convertStatus :: DSP.ScheduledPayoutStatus -> API.PayoutStatus
-convertStatus DSP.INITIATED = API.INITIATED
-convertStatus DSP.PROCESSING = API.PROCESSING
-convertStatus DSP.CREDITED = API.CREDITED
-convertStatus DSP.AUTO_PAY_FAILED = API.AUTO_PAY_FAILED
-convertStatus DSP.RETRYING = API.RETRYING
-convertStatus DSP.FAILED = API.FAILED
-convertStatus DSP.CANCELLED = API.CANCELLED
-convertStatus DSP.CASH_PAID = API.CASH_PAID
-convertStatus DSP.CASH_PENDING = API.CASH_PENDING
+convertStatus :: LPPS.ScheduledPayoutStatus -> API.PayoutStatus
+convertStatus LPPS.INITIATED = API.INITIATED
+convertStatus LPPS.PROCESSING = API.PROCESSING
+convertStatus LPPS.CREDITED = API.CREDITED
+convertStatus LPPS.AUTO_PAY_FAILED = API.AUTO_PAY_FAILED
+convertStatus LPPS.RETRYING = API.RETRYING
+convertStatus LPPS.FAILED = API.FAILED
+convertStatus LPPS.CANCELLED = API.CANCELLED
+convertStatus LPPS.CASH_PAID = API.CASH_PAID
+convertStatus LPPS.CASH_PENDING = API.CASH_PENDING
 
 -- Helper to convert domain status history to API status event
-convertHistory :: DPSH.PayoutStatusHistory -> API.PayoutStatusEvent
+convertHistory :: LPPS.PayoutStatusHistory -> API.PayoutStatusEvent
 convertHistory h =
   API.PayoutStatusEvent
     { status = convertStatus h.status,
@@ -169,14 +169,14 @@ postPayoutMarkCashPaid _merchantShortId _opCity rideId mbAgentIdText = do
   agentIdText <- mbAgentIdText & fromMaybeM (InvalidRequest "Agent Id is required")
   payout <- QSP.findByRideId rideId >>= fromMaybeM (InvalidRequest "Payout not found for this ride")
   agent <- QPerson.findById (Kernel.Types.Id.Id agentIdText) >>= fromMaybeM (InvalidRequest $ "Agent not found for id: " <> agentIdText)
-  when (payout.status == DSP.CREDITED) $ do
+  when (payout.status == LPPS.CREDITED) $ do
     throwError $ InvalidRequest "Payout is already credited online via bank!"
-  when (payout.status == DSP.PROCESSING) $ do
+  when (payout.status == LPPS.PROCESSING) $ do
     throwError $ InvalidRequest "Payout is already being processed for online credit!"
-  when (payout.status == DSP.CASH_PAID) $ do
+  when (payout.status == LPPS.CASH_PAID) $ do
     throwError $ InvalidRequest "Payout is already marked as cash paid!"
   let agentName = agent.firstName <> " " <> (fromMaybe "" agent.lastName)
-  QSP.updateStatusWithHistoryById DSP.CASH_PAID (Just $ "Cash Paid Marked by " <> agentName) payout
+  QSP.updateStatusWithHistoryById LPPS.CASH_PAID (Just $ "Cash Paid Marked by " <> agentName) payout
   QSP.updateMarkCashPaidByById (Just agent.id) payout.id
   logInfo $ "Cash paid marked for rideId: " <> rideId
   pure Kernel.Types.APISuccess.Success

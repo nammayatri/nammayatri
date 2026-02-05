@@ -3,7 +3,7 @@ imports:
   Merchant: Domain.Types.Merchant
   Person: Domain.Types.Person
   Text: Data.Text
-  ScheduledPayoutStatus: Domain.Types.ScheduledPayout
+  ScheduledPayoutStatus: Lib.Payment.Domain.Types.PayoutStatusHistory
 
 module: PayoutDriverStatus
 
