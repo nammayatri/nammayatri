@@ -65,6 +65,7 @@ Location:
       state: Maybe Text
       country: Maybe Text
       building: Maybe Text
+      door: Maybe Text
       areaCode: Maybe Text
       area: Maybe Text
       fullAddress: Maybe Text
