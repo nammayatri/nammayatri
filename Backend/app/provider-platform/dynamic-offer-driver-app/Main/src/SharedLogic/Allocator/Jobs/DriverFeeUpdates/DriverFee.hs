@@ -50,6 +50,7 @@ import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
@@ -661,93 +662,97 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
       scheduleOverlay = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleOverlay
       scheduleManualPaymentLink = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleManualPaymentLink
       scheduleDriverFeeCalc = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleDriverFeeCalc
-  when scheduleNotification $ do
-    createJobIn @_ @'SendPDNNotificationToDriver (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
-      SendPDNNotificationToDriverJobData
-        { merchantId = merchantId,
-          merchantOperatingCityId = Just merchantOpCityId,
-          startTime = startTime,
-          endTime = endTime,
-          retryCount = Just 0,
-          serviceName = Just serviceName
-        }
-  when (subscriptionConfigs.useOverlayService && scheduleOverlay) $ do
-    createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
-      SendOverlayJobData
-        { merchantId = merchantId,
-          rescheduleInterval = Nothing,
-          overlayKey = manualInvoiceGeneratedNudgeKey,
-          udf1 = Just $ show MANUAL,
-          condition = InvoiceGenerated MANUAL,
-          scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
-          freeTrialDays = transporterConfig.freeTrialDays,
-          timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
-          driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
-          driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
-          driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
-          merchantOperatingCityId = Just merchantOpCityId,
-          overlayBatchSize = transporterConfig.overlayBatchSize,
-          serviceName = Just serviceName,
-          vehicleCategory = Nothing
-        }
-    createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
-      SendOverlayJobData
-        { merchantId = merchantId,
-          rescheduleInterval = Nothing,
-          overlayKey = autopayInvoiceGeneratedNudgeKey,
-          udf1 = Just $ show AUTOPAY,
-          condition = InvoiceGenerated AUTOPAY,
-          scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
-          freeTrialDays = transporterConfig.freeTrialDays,
-          timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
-          driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
-          driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
-          merchantOperatingCityId = Just merchantOpCityId,
-          driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
-          overlayBatchSize = transporterConfig.overlayBatchSize,
-          serviceName = Just serviceName,
-          vehicleCategory = Nothing
-        }
-  when (subscriptionConfigs.allowManualPaymentLinks && scheduleManualPaymentLink) $ do
-    createJobIn @_ @'SendManualPaymentLink (Just merchantId) (Just merchantOpCityId) paymentLinkSendJobTs $
-      SendManualPaymentLinkJobData
-        { merchantId = merchantId,
-          merchantOperatingCityId = merchantOpCityId,
-          serviceName = serviceName,
-          startTime = startTime,
-          endTime = endTime,
-          channel = subscriptionConfigs.paymentLinkChannel
-        }
+  when scheduleNotification $
+    Redis.runInMasterCloudRedisCell $
+      createJobIn @_ @'SendPDNNotificationToDriver (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
+        SendPDNNotificationToDriverJobData
+          { merchantId = merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
+            startTime = startTime,
+            endTime = endTime,
+            retryCount = Just 0,
+            serviceName = Just serviceName
+          }
+  when (subscriptionConfigs.useOverlayService && scheduleOverlay) $
+    Redis.runInMasterCloudRedisCell $ do
+      createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
+        SendOverlayJobData
+          { merchantId = merchantId,
+            rescheduleInterval = Nothing,
+            overlayKey = manualInvoiceGeneratedNudgeKey,
+            udf1 = Just $ show MANUAL,
+            condition = InvoiceGenerated MANUAL,
+            scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
+            freeTrialDays = transporterConfig.freeTrialDays,
+            timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+            driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
+            driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
+            driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
+            merchantOperatingCityId = Just merchantOpCityId,
+            overlayBatchSize = transporterConfig.overlayBatchSize,
+            serviceName = Just serviceName,
+            vehicleCategory = Nothing
+          }
+      createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
+        SendOverlayJobData
+          { merchantId = merchantId,
+            rescheduleInterval = Nothing,
+            overlayKey = autopayInvoiceGeneratedNudgeKey,
+            udf1 = Just $ show AUTOPAY,
+            condition = InvoiceGenerated AUTOPAY,
+            scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
+            freeTrialDays = transporterConfig.freeTrialDays,
+            timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+            driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
+            driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
+            merchantOperatingCityId = Just merchantOpCityId,
+            driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
+            overlayBatchSize = transporterConfig.overlayBatchSize,
+            serviceName = Just serviceName,
+            vehicleCategory = Nothing
+          }
+  when (subscriptionConfigs.allowManualPaymentLinks && scheduleManualPaymentLink) $
+    Redis.runInMasterCloudRedisCell $
+      createJobIn @_ @'SendManualPaymentLink (Just merchantId) (Just merchantOpCityId) paymentLinkSendJobTs $
+        SendManualPaymentLinkJobData
+          { merchantId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
+            serviceName = serviceName,
+            startTime = startTime,
+            endTime = endTime,
+            channel = subscriptionConfigs.paymentLinkChannel
+          }
   when (subscriptionConfigs.allowDriverFeeCalcSchedule && scheduleDriverFeeCalc) $ do
     let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay endTime) (secondsToDiffTime 0))
         startTime' = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
         endTime' = addUTCTime transporterConfig.driverPaymentCycleDuration startTime'
     case transporterConfig.driverFeeCalculationTime of
       Nothing -> pure ()
-      Just dfCalcTime -> do
-        isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache startTime' endTime' merchantOpCityId serviceName
-        let dfCalculationJobTs' = diffUTCTime (addUTCTime dfCalcTime endTime') now
-        case isDfCaclculationJobScheduled of
-          ----- marker ---
-          Nothing -> do
-            createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs' $
-              CalculateDriverFeesJobData
-                { merchantId = merchantId,
-                  merchantOperatingCityId = Just merchantOpCityId,
-                  startTime = startTime',
-                  serviceName = Just serviceName,
-                  endTime = endTime',
-                  scheduleNotification = Just True,
-                  scheduleOverlay = Just True,
-                  scheduleManualPaymentLink = Just True,
-                  scheduleDriverFeeCalc = Just True,
-                  recalculateManualReview = Nothing,
-                  createChildJobs = Just True
-                }
-            setDriverFeeCalcJobCache startTime endTime' merchantOpCityId serviceName dfCalculationJobTs
-            setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
-            setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
-          _ -> pure ()
+      Just dfCalcTime ->
+        Redis.runInMasterCloudRedisCell $ do
+          isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache startTime' endTime' merchantOpCityId serviceName
+          let dfCalculationJobTs' = diffUTCTime (addUTCTime dfCalcTime endTime') now
+          case isDfCaclculationJobScheduled of
+            ----- marker ---
+            Nothing -> do
+              createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs' $
+                CalculateDriverFeesJobData
+                  { merchantId = merchantId,
+                    merchantOperatingCityId = Just merchantOpCityId,
+                    startTime = startTime',
+                    serviceName = Just serviceName,
+                    endTime = endTime',
+                    scheduleNotification = Just True,
+                    scheduleOverlay = Just True,
+                    scheduleManualPaymentLink = Just True,
+                    scheduleDriverFeeCalc = Just True,
+                    recalculateManualReview = Nothing,
+                    createChildJobs = Just True
+                  }
+              setDriverFeeCalcJobCache startTime endTime' merchantOpCityId serviceName dfCalculationJobTs
+              setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
+              setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
+            _ -> pure ()
 
 calcFinalOrderAmounts ::
   ( MonadFlow m,
