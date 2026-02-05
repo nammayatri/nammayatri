@@ -246,7 +246,8 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
         orderCancellation =
           Just $
             Spec.Cancellation
-              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
+              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource,
+                cancellationReason = Nothing
               },
         orderBilling = Nothing,
         orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing Nothing,

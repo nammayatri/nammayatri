@@ -71,6 +71,7 @@ module BecknV2.OnDemand.Types
     QuotationBreakupInner (..),
     Rating (..),
     RatingReq (..),
+    Reason (..),
     RatingReqMessage (..),
     SearchReq (..),
     SearchReqMessage (..),
@@ -326,9 +327,11 @@ optionsCancelReqMessage =
       ]
 
 -- | Describes a cancellation event
-newtype Cancellation = Cancellation
+data Cancellation = Cancellation
   { -- |
-    cancellationCancelledBy :: Maybe Text
+    cancellationCancelledBy :: Maybe Text,
+    -- | Reason for the cancellation with descriptor
+    cancellationReason :: Maybe Reason
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -346,7 +349,31 @@ optionsCancellation =
     }
   where
     table =
-      [ ("cancellationCancelledBy", "cancelled_by")
+      [ ("cancellationCancelledBy", "cancelled_by"),
+        ("cancellationReason", "reason")
+      ]
+
+-- | Describes a reason with a descriptor
+newtype Reason = Reason
+  { reasonDescriptor :: Maybe Descriptor
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Reason where
+  parseJSON = genericParseJSON optionsReason
+
+instance ToJSON Reason where
+  toJSON = genericToJSON optionsReason
+
+optionsReason :: Options
+optionsReason =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("reasonDescriptor", "descriptor")
       ]
 
 -- | Describes the cancellation terms of an item or an order. This can be referenced at an item or order level. Item-level cancellation terms can override the terms at the order level.

@@ -347,7 +347,8 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
         orderCancellation =
           Just $
             Spec.Cancellation
-              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
+              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource,
+                cancellationReason = mkReason cancellationReasonCode
               },
         orderBilling = Nothing,
         orderCancellationTerms = Just $ Utils.tfCancellationTerms cancellationFee (Just EventEnum.RIDE_CANCELLED),
@@ -358,6 +359,19 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
       }
+  where
+    mkReason Nothing = Nothing
+    mkReason (Just code) =
+      Just $
+        Spec.Reason
+          { reasonDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just code,
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Just code
+                  }
+          }
 
 tfArrivedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DDriverArrivedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
 tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do

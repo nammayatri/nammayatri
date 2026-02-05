@@ -96,7 +96,7 @@ handler transporterId req = withDynamicLogLevel "bpp-status-domain" $ do
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
         DBooking.CANCELLED -> do
           bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo Nothing
-          pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Nothing, cancellationFee = Nothing, cancellationSource = bookingCancelledInfo.cancellationSource, ..}
+          pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Nothing, cancellationFee = Nothing, cancellationSource = bookingCancelledInfo.cancellationSource, cancellationReasonCode = bookingCancelledInfo.cancellationReasonCode, ..}
         DBooking.REALLOCATED -> do
           logDebug $ "BPP_STATUS_DEBUG: ERROR: REALLOCATED booking without ride record: " <> booking.id.getId
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
