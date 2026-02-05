@@ -1289,6 +1289,8 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.AC_PRIORITY -> [DVST.AC_PRIORITY]
               DV.BIKE_PLUS -> [DVST.BIKE_PLUS]
               DV.E_RICKSHAW -> [DVST.E_RICKSHAW]
+              DV.AUTO_LITE -> [DVST.AUTO_LITE]
+              DV.PINK_AUTO -> [DVST.PINK_AUTO]
 
       QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
@@ -1329,14 +1331,14 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
     -- logic is deprecated, should be handle from driver service tier options now, kept it for backward compatibility
     checkIfCanDowngrade vehicle = do
       when
-        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.AUTO_PLUS || vehicle.variant == DV.TAXI || vehicle.variant == DV.HATCHBACK)
+        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.AUTO_PLUS || vehicle.variant == DV.TAXI || vehicle.variant == DV.HATCHBACK || vehicle.variant == DV.AUTO_LITE || vehicle.variant == DV.PINK_AUTO)
             && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)
         )
         $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
       when (vehicle.variant == DV.SUV && req.canDowngradeToTaxi == Just True) $
         throwError $ InvalidRequest $ "Can't downgrade to NON-AC TAXI from " <> (show vehicle.variant)
       when
-        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.AUTO_PLUS || vehicle.variant == DV.TAXI)
+        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.AUTO_PLUS || vehicle.variant == DV.TAXI || vehicle.variant == DV.AUTO_LITE || vehicle.variant == DV.PINK_AUTO)
             && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True)
         )
         $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)

@@ -20,6 +20,7 @@ imports:
   CreateMerchantOperatingCityRes: Dashboard.Common.Merchant
   CreateMerchantOperatingCityReqT: Dashboard.Common.Merchant
   UpsertSpecialLocationCsvReq: Dashboard.Common.Merchant
+  UpsertDriverPoolConfigCsvReq: Dashboard.Common.Merchant
   APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
   SpecialLocation: Lib.Types.SpecialLocation
   SpecialLocationFull: Lib.Queries.SpecialLocation
@@ -127,6 +128,20 @@ apis:
         endpoint: MerchantAPI DriverPoolConfigCreateEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG_CREATE
+  - POST: # DriverPoolConfigCsvUpsertAPI
+      endpoint: /config/driverPool/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertDriverPoolConfigCsvReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG_CSV_UPSERT
+  - GET: # DriverPoolConfigListAPI
+      endpoint: /config/driverPool/list
+      auth: ApiAuthV2
+      response:
+        type: DriverPoolConfigListRes
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG_LIST
   - GET: # DriverIntelligentPoolConfigAPI
       endpoint: /config/driverIntelligentPool
       auth: ApiAuthV2
@@ -543,6 +558,11 @@ apis:
         - serviceTierType: ServiceTierType
       response:
         type: VehicleServiceTierRes
+  - GET: # VehicleServiceTierConfigListAPI
+      endpoint: /config/vehicleServiceTier/list
+      auth: ApiAuthV2
+      response:
+        type: VehicleServiceTierListRes
   - POST: # VehicleServiceTierConfigUpdateAPI
       endpoint: /config/vehicleServiceTier/update
       auth: ApiAuthV2
@@ -550,6 +570,13 @@ apis:
         - serviceTierType: ServiceTierType
       request:
         type: VehicleServiceTierConfigUpdateReq
+      response:
+        type: APISuccess
+  - POST: # VehicleServiceTierConfigCreateAPI
+      endpoint: /config/vehicleServiceTier/create
+      auth: ApiAuthV2
+      request:
+        type: VehicleServiceTierConfigCreateReq
       response:
         type: APISuccess
 
@@ -736,6 +763,49 @@ types:
   BatchSplitByPickupDistance: # FIXME the same as previous
     - batchSplitSize: Int
     - batchSplitDelay: Seconds
+  DriverPoolConfigListRes:
+    - recordType: Type
+    - type: [DriverPoolConfigListItem]
+  DriverPoolConfigListItem:
+    - minRadiusOfSearch: Meters
+    - maxRadiusOfSearch: Meters
+    - radiusStepSize: Meters
+    - driverPositionInfoExpiry: Maybe Seconds
+    - actualDistanceThreshold: Maybe Meters
+    - maxDriverQuotesRequired: Int
+    - driverQuoteLimit: Int
+    - driverRequestCountLimit: Int
+    - driverBatchSize: Int
+    - maxNumberOfBatches: Int
+    - maxParallelSearchRequests: Int
+    - poolSortingType: PoolSortingType
+    - singleBatchProcessTime: Seconds
+    - tripDistance: Meters
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - radiusShrinkValueForDriversOnRide: Meters
+    - driverToDestinationDistanceThreshold: Meters
+    - driverToDestinationDuration: Seconds
+    - distanceBasedBatchSplit: [BatchSplitByPickupDistance]
+    - vehicleVariant: Maybe ServiceTierType
+    - scheduleTryTimes: [Int]
+    - tripCategory: Text
+    - thresholdToIgnoreActualDistanceThreshold: Maybe Meters
+    - area: Area
+    - onRideBatchSplitConfig: [BatchSplitByPickupDistanceOnRide]
+    - maxParallelSearchRequestsOnRide: Int
+    - enableForwardBatching: Bool
+    - currentRideTripCategoryValidForForwardBatching: [Text]
+    - batchSizeOnRide: Int
+    - actualDistanceThresholdOnRide: Maybe Meters
+    - onRideRadiusConfig: [OnRideRadiusConfig]
+    - timeBounds: Text
+    - distanceUnit: DistanceUnit
+    - useOneToOneOsrmMapping: Maybe Bool
+    - batchSizeOnRideWithStraightLineDistance: Maybe Int
+    - enableUnifiedPooling: Maybe Bool
+    - dynamicBatchSize: Vector Int
+    - selfRequestIfRiderIsDriver: Bool
   DriverIntelligentPoolConfigRes:
     - availabilityTimeWeightage: Int
     - availabilityTimeWindowOption: SlidingWindowOptions
@@ -971,6 +1041,7 @@ types:
     - stopFcmThreshold: Maybe Int
     - stopFcmSuppressCount: Maybe Int
     - scheduleBookingListEligibilityTags: Maybe [Text]
+    - isEnabled: Maybe Bool
   VehicleServiceTierConfigUpdateReq:
     - name: Maybe Text
     - shortDescription: Maybe Text
@@ -988,6 +1059,7 @@ types:
     - vehicleRating: Maybe Double
     - priority: Maybe Int
     - baseVehicleServiceTier: Maybe Bool
+    - vehicleCategory: Maybe VehicleCategory
     - fareAdditionPerKmOverBaseServiceTier: Maybe Int
     - oxygen: Maybe Double
     - ventilator: Maybe Int
@@ -995,9 +1067,50 @@ types:
     - stopFcmThreshold: Maybe Int
     - stopFcmSuppressCount: Maybe Int
     - scheduleBookingListEligibilityTags: Maybe [Text]
+    - isEnabled: Maybe Bool
     - derive: "'HideSecrets"
-
-
+  VehicleServiceTierConfigCreateReq:
+    - serviceTierType: ServiceTierType
+    - name: Text
+    - shortDescription: Text
+    - longDescription: Maybe Text
+    - seatingCapacity: Int
+    - airConditionedThreshold: Maybe Double
+    - isAirConditioned: Maybe Bool
+    - isIntercityEnabled: Maybe Bool
+    - isRentalsEnabled: Maybe Bool
+    - allowedVehicleVariant: [VehicleVariant]
+    - autoSelectedVehicleVariant: [VehicleVariant]
+    - defaultForVehicleVariant: [VehicleVariant]
+    - vehicleIconUrl: Text
+    - driverRating: Maybe Centesimal
+    - vehicleRating: Maybe Double
+    - priority: Int
+    - baseVehicleServiceTier: Bool
+    - fareAdditionPerKmOverBaseServiceTier: Maybe Int
+    - oxygen: Maybe Double
+    - ventilator: Maybe Int
+    - luggageCapacity: Maybe Int
+    - stopFcmThreshold: Maybe Int
+    - stopFcmSuppressCount: Maybe Int
+    - scheduleBookingListEligibilityTags: Maybe [Text]
+    - vehicleCategory: VehicleCategory
+    - isEnabled: Bool
+    - derive: "'HideSecrets"
+  VehicleServiceTierListRes:
+    - recordType: Type
+    - type: [VehicleServiceTierItem]
+  SpecialLocationResp:
+    - recordType: Type
+    - type: [SpecialLocationFull]
+  GeometryResp:
+    - recordType: Type
+    - type: [GeometryAPIEntity]
+  GeometryAPIEntity:
+    - region: Text
+    - state: IndianState
+    - city: City
+    - geom: Maybe Text
 extraOperations:
   - EXTRA_API_TYPES_FILE
   - EXTRA_API_COMMON_TYPES_FILE

@@ -174,6 +174,17 @@ instance Csv.FromNamedRecord DriverTagBulkCSVRow where
       <*> r Csv..: "tagName"
       <*> r Csv..: "tagValue"
 
+data DriverServiceTiersCsvRow = DriverServiceTiersCsvRow
+  { driverId :: Text,
+    selectedServiceTiers :: Text
+  }
+
+instance Csv.FromNamedRecord DriverServiceTiersCsvRow where
+  parseNamedRecord r =
+    DriverServiceTiersCsvRow
+      <$> r Csv..: "driverId"
+      <*> r Csv..: "selectedServiceTiers"
+
 newtype PersonIdsReq = PersonIdsReq {file :: FilePath}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
