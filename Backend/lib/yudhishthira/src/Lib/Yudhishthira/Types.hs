@@ -178,7 +178,8 @@ instance HideSecrets ChakraQueryDeleteReq where
   hideSecrets = identity
 
 data YudhishthiraDecideReq = YudhishthiraDecideReq
-  { source :: Source,
+  { merchantOperatingCityId :: Id MerchantOperatingCity,
+    source :: Source,
     sourceData :: SourceData
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)

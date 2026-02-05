@@ -17,7 +17,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (elem, filter, id, map, whenJust)
 import Kernel.Prelude
 import Kernel.Types.Common
-import qualified Kernel.Types.Id
+import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import qualified Lib.Queries.SpecialLocation
 import qualified Lib.Queries.SpecialLocation as SpecialLocation
@@ -30,9 +30,9 @@ import qualified Storage.Queries.Transformers.DriverInformation as TDI
 import Tools.Error
 
 getSpecialLocationListCategory ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ( ( Kernel.Prelude.Maybe (Id Domain.Types.Person.Person),
+      Id Domain.Types.Merchant.Merchant,
+      Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Data.Text.Text ->
     Environment.Flow [Lib.Queries.SpecialLocation.SpecialLocationWarrior]
@@ -42,11 +42,11 @@ getSpecialLocationListCategory (_, _, merchanOperatingCityId) category = do
   mapM SpecialLocation.specialLocToSpecialLocWarrior (filter (notNull . (.gates)) specialLocations)
 
 getGetInfoSpecialLocWarrior ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ( ( Kernel.Prelude.Maybe (Id Domain.Types.Person.Person),
+      Id Domain.Types.Merchant.Merchant,
+      Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Types.Id.Id Domain.Types.Person.Person ->
+    Id Domain.Types.Person.Person ->
     Environment.Flow API.Types.UI.SpecialLocationWarrior.SpecialLocWarriorInfoRes
   )
 getGetInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId = do
@@ -58,22 +58,22 @@ getGetInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId = do
       }
 
 postUpdateInfoSpecialLocWarrior ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ( ( Kernel.Prelude.Maybe (Id Domain.Types.Person.Person),
+      Id Domain.Types.Merchant.Merchant,
+      Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Types.Id.Id Domain.Types.Person.Person ->
+    Id Domain.Types.Person.Person ->
     API.Types.UI.SpecialLocationWarrior.SpecialLocWarriorInfoReq ->
     Environment.Flow API.Types.UI.SpecialLocationWarrior.SpecialLocWarriorInfoRes
   )
-postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId SpecialLocWarriorInfoReq {..} = do
+postUpdateInfoSpecialLocWarrior (_, _, merchantOperatingCityId) personId SpecialLocWarriorInfoReq {..} = do
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   logDebug $ "Driver Tag driver:preferredPrimarySpecialLocId ----------" <> personId.getId <> "  " <> show preferredPrimarySpecialLocId
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   let preferredPrimarySpecialLocationId = preferredPrimarySpecialLocId <|> driverInfo.preferredPrimarySpecialLocId
   preferredPrimarySpecialLocation <- maybe (return Nothing) (\locId -> TDI.getPreferredPrimarySpecialLoc (Just locId.getId)) preferredPrimarySpecialLocationId
   when (isSpecialLocWarrior && isNothing preferredPrimarySpecialLocation) $ throwError (InvalidRequest "preferredPrimarySpecialLoc is required when isSpecialLocWarrior is true")
-  metroWarriorTagValidity <- Yudhishthira.fetchNammaTagValidity $ LYT.TagName "MetroWarrior"
+  metroWarriorTagValidity <- Yudhishthira.fetchNammaTagValidity (cast merchantOperatingCityId) $ LYT.TagName "MetroWarrior"
   now <- getCurrentTime
   mbOlderDriverTag <- runMaybeT $ do
     preferredPrimarySpecialLocationId' <- MaybeT $ pure driverInfo.preferredPrimarySpecialLocId

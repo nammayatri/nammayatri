@@ -53,7 +53,7 @@ rejectUpgrade (personId, merchantId) estimateId = withFlowHandlerAPI . withPerso
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let personTags = fromMaybe [] person.customerNammaTags
   unless (rejectUpgradeTag `Yudhishthira.elemTagNameValue` personTags) $ do
-    rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry rejectUpgradeTag
+    rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry (cast person.merchantOperatingCityId) rejectUpgradeTag
     QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
   cancelSearch' (personId, merchantId) estimateId
 

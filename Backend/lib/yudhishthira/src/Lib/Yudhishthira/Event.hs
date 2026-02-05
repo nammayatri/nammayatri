@@ -6,13 +6,14 @@ import JsonLogic
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
-import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as SQNT
-import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTrigger as SQNTT
+import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2 as SQNTTV2
+import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as SQNTV2
 import Lib.Yudhishthira.Tools.Utils (mkTagNameValue, mkTagNameValueExpiry)
 import Lib.Yudhishthira.Types
-import qualified Lib.Yudhishthira.Types.NammaTag as DNT
+import qualified Lib.Yudhishthira.Types.NammaTagV2 as DNTv2
 
 yudhishthiraDecide ::
   ( MonadFlow m,
@@ -25,19 +26,20 @@ yudhishthiraDecide ::
   YudhishthiraDecideReq ->
   m YudhishthiraDecideResp
 yudhishthiraDecide req = do
+  let merchantOpCityId = req.merchantOperatingCityId
   nammaTags <-
     case req.source of
       Application event -> do
-        nammaTagsTrigger <- SQNTT.findAllByEvent event
+        nammaTagsTrigger <- SQNTTV2.findAllByMerchantOperatingCityIdAndEvent merchantOpCityId event
         let tagNames = nammaTagsTrigger <&> (.tagName)
         when (null tagNames) $
           logWarning $ "No triggers found for event: " <> show event
-        nammaTags <- SQNT.findAllByPrimaryKeys tagNames
+        nammaTags <- SQNTV2.findAllByMerchantOperatingCityIdAndNames merchantOpCityId tagNames
         let missedTags = filter (`notElem` (nammaTags <&> (.name))) tagNames
         unless (null missedTags) $
           logError $ "Some tags missing for event: " <> show event <> "; tags: " <> show missedTags
         pure nammaTags
-      KaalChakra chakra -> SQNT.findAllByChakra chakra
+      KaalChakra chakra -> SQNTV2.findAllByChakra merchantOpCityId chakra
   logDebug $ "NammaTags for source <> " <> show req.source <> ": " <> show nammaTags
   logDebug $ "SourceData: " <> show req.sourceData
   tags <- convertToTagResponses nammaTags
@@ -45,13 +47,13 @@ yudhishthiraDecide req = do
   where
     convertToTagResponses ::
       (MonadFlow m) =>
-      [DNT.NammaTag] ->
+      [DNTv2.NammaTagV2] ->
       m [NammaTagResponse]
     convertToTagResponses tags = do
       mbTagResponses <- mapM convertToTagResponse tags
       return $ catMaybes mbTagResponses
 
-    convertToTagResponse :: (MonadFlow m) => DNT.NammaTag -> m (Maybe NammaTagResponse)
+    convertToTagResponse :: (MonadFlow m) => DNTv2.NammaTagV2 -> m (Maybe NammaTagResponse)
     convertToTagResponse tag = do
       let tagValidity = tag.validity
       mbRespValue <-
@@ -97,12 +99,13 @@ computeNammaTags ::
     HasYudhishthiraTablesSchema,
     ToJSON a
   ) =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   ApplicationEvent ->
   a ->
   m [TagNameValue]
-computeNammaTags event sourceData_ = do
+computeNammaTags merchantOpCityId event sourceData_ = do
   let sourceData = A.toJSON sourceData_
-  let req = YudhishthiraDecideReq {source = Application event, sourceData}
+  let req = YudhishthiraDecideReq {merchantOperatingCityId = merchantOpCityId, source = Application event, sourceData}
   resp <- yudhishthiraDecide req
   pure $ resp.tags <&> (\tag -> mkTagNameValue (TagName tag.tagName) tag.tagValue)
 
@@ -114,12 +117,13 @@ computeNammaTagsWithExpiry ::
     HasYudhishthiraTablesSchema,
     ToJSON a
   ) =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   ApplicationEvent ->
   a ->
   m [TagNameValueExpiry]
-computeNammaTagsWithExpiry event sourceData_ = do
+computeNammaTagsWithExpiry merchantOpCityId event sourceData_ = do
   let sourceData = A.toJSON sourceData_
-  let req = YudhishthiraDecideReq {source = Application event, sourceData}
+  let req = YudhishthiraDecideReq {merchantOperatingCityId = merchantOpCityId, source = Application event, sourceData}
   resp <- yudhishthiraDecide req
   now <- getCurrentTime
   pure $ resp.tags <&> (\tag -> mkTagNameValueExpiry (TagName tag.tagName) tag.tagValue tag.tagValidity now)

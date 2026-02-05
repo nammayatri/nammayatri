@@ -16,11 +16,12 @@ import qualified Data.Vector as Vector
 import JsonLogic
 import Kernel.Prelude
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
-import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as QNammaTag
+import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNammaTagV2
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified Lib.Yudhishthira.Types.NammaTag as DNT
+import qualified Lib.Yudhishthira.Types.NammaTagV2 as DNTv2
 
 mandatoryChakraFields :: [Text]
 mandatoryChakraFields = [userIdField]
@@ -173,7 +174,7 @@ showNammaTagExpiry :: UTCTime -> Text
 showNammaTagExpiry = T.pack . Time.formatTime Time.defaultTimeLocale nammaTagExpiryFormat
 
 -- inverse conversion for mkTagNameValue
-parseTagValueFromText :: HasTagNameValue tag => DNT.NammaTag -> tag -> Either Text LYT.TagValue
+parseTagValueFromText :: HasTagNameValue tag => DNTv2.NammaTagV2 -> tag -> Either Text LYT.TagValue
 parseTagValueFromText tag txt = case T.splitOn "#" . (.getTagNameValue) $ convertToTagNameValue txt of
   _tagName : tagValue : _xs -> do
     case tag.possibleValues of
@@ -247,18 +248,18 @@ parseTagName tag = case T.splitOn "#" . (.getTagNameValue) $ convertToTagNameVal
   _ -> Nothing
 
 -- used if we don't want fetch the same tag multiple times
-fetchNammaTagValidity :: BeamFlow m r => LYT.TagName -> m (Maybe Hours)
-fetchNammaTagValidity (LYT.TagName tagName) = runMaybeT $ do
-  nammaTag <- MaybeT $ QNammaTag.findByPrimaryKey tagName
+fetchNammaTagValidity :: BeamFlow m r => Id LYT.MerchantOperatingCity -> LYT.TagName -> m (Maybe Hours)
+fetchNammaTagValidity merchantOpCityId (LYT.TagName tagName) = runMaybeT $ do
+  nammaTag <- MaybeT $ QNammaTagV2.findByPrimaryKey merchantOpCityId tagName
   MaybeT $ pure nammaTag.validity
 
-fetchNammaTagExpiry :: BeamFlow m r => LYT.TagNameValue -> m LYT.TagNameValueExpiry
-fetchNammaTagExpiry tagValue = do
+fetchNammaTagExpiry :: BeamFlow m r => Id LYT.MerchantOperatingCity -> LYT.TagNameValue -> m LYT.TagNameValueExpiry
+fetchNammaTagExpiry merchantOpCityId tagValue = do
   now <- getCurrentTime
   let defaulTagValueExpiry = addTagExpiry tagValue Nothing now
   mbTagValueExpiry <- runMaybeT $ do
     LYT.TagName tagName <- MaybeT $ pure (parseTagName tagValue)
-    nammaTag <- MaybeT $ QNammaTag.findByPrimaryKey tagName
+    nammaTag <- MaybeT $ QNammaTagV2.findByPrimaryKey merchantOpCityId tagName
     validity <- MaybeT $ pure nammaTag.validity
     pure $ addTagExpiry tagValue (Just validity) now
   pure $ fromMaybe defaulTagValueExpiry mbTagValueExpiry

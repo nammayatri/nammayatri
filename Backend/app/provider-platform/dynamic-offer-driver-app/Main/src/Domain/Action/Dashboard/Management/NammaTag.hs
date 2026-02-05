@@ -109,9 +109,10 @@ $(genToSchema ''GpsTollBehavior.GpsTollBehaviorData)
 $(genToSchema ''UserCancellationDuesWaiveOffData)
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateNammaTagRequest -> Environment.Flow LYT.CreateNammaTagResponse)
-postNammaTagTagCreate _merchantShortId _opCity req = do
+postNammaTagTagCreate merchantShortId opCity req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   defaultRunResult <- runAgainstDefault
-  void $ YudhishthiraFlow.postTagCreate req
+  void $ YudhishthiraFlow.postTagCreate (cast merchantOperatingCity.id) req
   pure defaultRunResult
   where
     runAgainstDefault = do
@@ -133,10 +134,14 @@ postNammaTagTagCreate _merchantShortId _opCity req = do
         _ -> pure $ LYT.CreateNammaTagResponse {results = NE.singleton LYT.Success}
 
 postNammaTagTagUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UpdateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postNammaTagTagUpdate _merchantShortId _opCity req = YudhishthiraFlow.postTagUpdate req
+postNammaTagTagUpdate merchantShortId opCity req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.postTagUpdate (cast merchantOperatingCity.id) req
 
 postNammaTagTagVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.VerifyNammaTagRequest -> Environment.Flow LYT.VerifyNammaTagResponse)
-postNammaTagTagVerify _merchantShortId _opCity LYT.VerifyNammaTagRequest {..} = do
+postNammaTagTagVerify merchantShortId opCity LYT.VerifyNammaTagRequest {..} = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let merchantOpCityId = cast merchantOperatingCity.id
   case source of
     LYT.Application tagStage -> do
       let val =
@@ -147,7 +152,7 @@ postNammaTagTagVerify _merchantShortId _opCity LYT.VerifyNammaTagRequest {..} = 
         Just value -> do
           -- validating data provided gets parsed to Stage InputData type.
           validateInputType tagStage value
-          result <- YudhishthiraFlow.verifyEventLogic tagStage [logic] value
+          result <- YudhishthiraFlow.verifyEventLogic merchantOpCityId tagStage [logic] value
           pure $ LYT.VerifyNammaTagResponse {executionResult = result, dataUsed = value}
         Nothing -> throwError $ InvalidRequest "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
     _ -> do
@@ -172,7 +177,9 @@ postNammaTagTagVerify _merchantShortId _opCity LYT.VerifyNammaTagRequest {..} = 
         A.Error err -> throwError $ InvalidRequest $ show err
 
 deleteNammaTagTagDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-deleteNammaTagTagDelete _merchantShortId _opCity tagName = YudhishthiraFlow.deleteTag tagName
+deleteNammaTagTagDelete merchantShortId opCity tagName = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.deleteTag (cast merchantOperatingCity.id) tagName
 
 postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagQueryCreate _merchantShortId _opCity req = YudhishthiraFlow.postQueryCreate req

@@ -623,7 +623,7 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
         logInfo "Tag already exists, updating expiry"
 
       -- Verify tag
-      mbNammTag <- Yudhishthira.verifyTag tagNameValue
+      mbNammTag <- Yudhishthira.verifyTag (cast merchantOpCityId) tagNameValue
       now <- getCurrentTime
 
       -- Update tag (always add/replace)
@@ -892,7 +892,7 @@ postDriverUpdateDriverTag merchantShortId opCity driverId req = do
     logInfo "Tag already exists, update expiry"
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  mbNammTag <- Yudhishthira.verifyTag req.driverTag
+  mbNammTag <- Yudhishthira.verifyTag (cast merchantOpCityId) req.driverTag
   now <- getCurrentTime
   let tag =
         if req.isAddingTag

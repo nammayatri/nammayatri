@@ -849,7 +849,7 @@ addOffersNammaTags ride person = do
   now <- getCurrentTime
   let rideData = mkRideData ride
       customerData = Y.CustomerData {mobileNumber = decryptedMobileNumber, gender = person.gender}
-  tags <- Yudhishthira.computeNammaTagsWithExpiry Yudhishthira.RideEndOffers (Y.EndRideOffersTagData customerData rideData)
+  tags <- Yudhishthira.computeNammaTagsWithExpiry (cast person.merchantOperatingCityId) Yudhishthira.RideEndOffers (Y.EndRideOffersTagData customerData rideData)
   newTags <- modifiedNewNammaTags tags (fromMaybe [] person.customerNammaTags) now
   when (not $ null newTags) $ do
     QP.updateCustomerTags (Just $ (fromMaybe [] person.customerNammaTags) <> newTags) person.id
@@ -1060,10 +1060,10 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
                     merchantOperatingCityId = booking.merchantOperatingCityId,
                     driverArrivalTime
                   }
-          nammaTags <- withTryCatch "computeNammaTags:RideCancel" (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
+          nammaTags <- withTryCatch "computeNammaTags:RideCancel" (Yudhishthira.computeNammaTags (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel tagData)
           logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags)
           let mbNammaTags = eitherToMaybe nammaTags
-          tagsWithExpiry <- forM (fromMaybe [] mbNammaTags) $ \tag -> Yudhishthira.fetchNammaTagExpiry tag
+          tagsWithExpiry <- forM (fromMaybe [] mbNammaTags) $ \tag -> Yudhishthira.fetchNammaTagExpiry (cast booking.merchantOperatingCityId) tag
           person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
           let existingTags = fromMaybe [] person.customerNammaTags
           let updatedTags = existingTags <> tagsWithExpiry
@@ -1100,7 +1100,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
             person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
             let personTags = fromMaybe [] person.customerNammaTags
             unless (rejectUpgradeTag `Yudhishthira.elemTagNameValue` personTags) $ do
-              rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry rejectUpgradeTag
+              rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry (cast booking.merchantOperatingCityId) rejectUpgradeTag
               QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
         _ -> pure ()
 

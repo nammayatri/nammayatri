@@ -11,9 +11,9 @@ import qualified Lib.Yudhishthira.Types
 import Tools.Beam.UtilsTH
 
 data NammaTagTriggerT f = NammaTagTriggerT
-  { event :: B.C f Lib.Yudhishthira.Types.ApplicationEvent,
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    event :: B.C f Lib.Yudhishthira.Types.ApplicationEvent,
     tagName :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
