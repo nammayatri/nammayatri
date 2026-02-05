@@ -1,5 +1,6 @@
 module Domain.Action.UI.Conductor.Stats where
 
+import Data.List (partition)
 import qualified Data.Time as Time
 import Environment
 import Kernel.Prelude
@@ -8,58 +9,58 @@ import Kernel.Utils.Common
 import qualified Storage.Clickhouse.ConductorStats as CHConductor
 
 data StatsResp = StatsResp
-  { yesterdayTickets :: Int,
-    yesterdayRevenue :: Money,
+  { todayTickets :: Int,
+    todayRevenue :: Money,
     mtdTickets :: Int,
     mtdRevenue :: Money,
-    activeCount :: Int, -- Will default to 1 if has today's data
-    busNo :: Maybe Text, -- Will need to map from conductor token
-    newUsersToday :: Int, -- Placeholder for now
-    newUsersMtd :: Int -- Placeholder for now
+    activeCount :: Int,
+    busNo :: Maybe Text,
+    newUsersToday :: Int,
+    newUsersMtd :: Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data Agg = Agg
+  { tickets :: Int,
+    revenue :: Double,
+    newUsers :: Int
+  }
+
+emptyAgg :: Agg
+emptyAgg = Agg 0 0 0
+
+aggStat :: CHConductor.ConductorStats -> Agg -> Agg
+aggStat stat acc =
+  Agg
+    { tickets = acc.tickets + fromMaybe 0 stat.numberTicketsBooked,
+      revenue = acc.revenue + fromMaybe 0 stat.totalRevenueInADay,
+      newUsers = acc.newUsers + fromMaybe 0 stat.numberOfNewCustomers
+    }
 
 statsHandler :: Text -> FlowHandler StatsResp
 statsHandler conductorToken = withFlowHandlerAPI $ do
   now <- liftIO getCurrentTime
   let today = Time.utctDay now
-  let yesterday = Time.addDays (-1) today
-  let (year, month, _) = Time.toGregorian yesterday
+  let (year, month, _) = Time.toGregorian today
   let monthStartDay = Time.fromGregorian year month 1
 
-  allStats <- CHConductor.findConductorStatsByToken conductorToken
-  logDebug $ "allStats: " <> show allStats
-
-  let yesterdayStats = filter (\stat -> stat.bookingDate == yesterday) allStats
-
-  logDebug $ "yesterdayStats: " <> show yesterdayStats
-
-  let mtdStats =
-        filter
-          ( \stat ->
-              stat.bookingDate >= monthStartDay
-                && stat.bookingDate <= yesterday
-          )
-          allStats
+  mtdStats <- CHConductor.findConductorStatsBetween conductorToken monthStartDay today
   logDebug $ "mtdStats: " <> show mtdStats
 
-  let yesterdayTickets = sum $ map (.numberTicketsBooked) yesterdayStats
-      mtdTickets = sum $ map (.numberTicketsBooked) mtdStats
+  let (todayStats, _) =
+        partition (\stat -> stat.bookingDate == today) mtdStats
+  let todayAgg = foldr aggStat emptyAgg todayStats
+  let mtdAgg = foldr aggStat emptyAgg mtdStats
 
-      -- Calculate revenue from ClickHouse data
-      --
-      yesterdayRevenue =
-        Money . round $
-          sum (map (.totalRevenueInADay) yesterdayStats)
+  let todayTickets = todayAgg.tickets
+  let mtdTickets = mtdAgg.tickets
 
-      mtdRevenue =
-        Money . round $
-          sum (map (.totalRevenueInADay) mtdStats)
+  let todayRevenue = Money . round $ todayAgg.revenue
+  let mtdRevenue = Money . round $ mtdAgg.revenue
 
-      -- TODO
-      activeCount = -1
-      busNo = Nothing -- TODO: implement bus number mapping
-      newUsersToday = sum (map (fromMaybe 0 . (.numberOfNewCustomers)) yesterdayStats)
-      newUsersMtd = sum (map (fromMaybe 0 . (.numberOfNewCustomers)) mtdStats)
+  let newUsersToday = todayAgg.newUsers
+  let newUsersMtd = mtdAgg.newUsers
+  let activeCount = 0
+  let busNo = Nothing
   return StatsResp {..}
