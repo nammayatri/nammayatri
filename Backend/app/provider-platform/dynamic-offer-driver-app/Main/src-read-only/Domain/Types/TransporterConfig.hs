@@ -174,6 +174,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     kaptureQueue :: Kernel.Prelude.Text,
     languagesToBeTranslated :: [Kernel.External.Types.Language],
     lastNdaysToCheckForPayoutOrderStatus :: Kernel.Prelude.Int,
+    linkFleetToUnVerifiedExistingRC :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     liveEKD :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     localAmbulanceNumbers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     localPoliceNumbers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],

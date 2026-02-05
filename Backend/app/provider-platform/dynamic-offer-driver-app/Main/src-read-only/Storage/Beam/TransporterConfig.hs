@@ -170,6 +170,7 @@ data TransporterConfigT f = TransporterConfigT
     kaptureQueue :: B.C f Kernel.Prelude.Text,
     languagesToBeTranslated :: B.C f [Kernel.External.Types.Language],
     lastNdaysToCheckForPayoutOrderStatus :: B.C f Kernel.Prelude.Int,
+    linkFleetToUnVerifiedExistingRC :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     liveEKD :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     localAmbulanceNumbers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     localPoliceNumbers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

@@ -48,6 +48,8 @@ module SharedLogic.MessageBuilder
     BuildFleetLinkUnlinkSuccessMessageReq (..),
     buildFleetLinkSuccessMessage,
     buildFleetUnlinkSuccessMessage,
+    BuildDriverPayoutMessageReq (..),
+    buildDriverPayoutMessage,
   )
 where
 
@@ -198,6 +200,29 @@ buildCollectCashMessage merchantOpCityId req = do
         merchantMessage.message
           & T.replace (templateText "amount") req.amount
 
+  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId)
+
+data BuildDriverPayoutMessageReq = BuildDriverPayoutMessageReq
+  { payoutAmount :: Text,
+    bookingId :: Maybe Text
+  }
+  deriving (Generic)
+
+buildDriverPayoutMessage ::
+  (EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  BuildDriverPayoutMessageReq ->
+  m (Maybe Text, Text, Text)
+buildDriverPayoutMessage merchantOpCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.DRIVER_PAYOUT Nothing Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.DRIVER_PAYOUT))
+  let baseUrl = fromMaybe "" merchantMessage.jsonData.var1
+      payoutUrl = baseUrl <> "id=" <> fromMaybe "" req.bookingId
+  let msg =
+        merchantMessage.message
+          & T.replace (templateText "numeric") req.payoutAmount
+          & T.replace (templateText "url") payoutUrl
   pure (merchantMessage.senderHeader, msg, merchantMessage.templateId)
 
 data BuildGenericMessageReq = BuildGenericMessageReq {}
