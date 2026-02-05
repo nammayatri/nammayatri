@@ -96,14 +96,15 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
           Just timeDiff' -> do
             logDebug $ "Rescheduling the Job for Next Day"
             now <- getCurrentTime
-            createJobInWithCheck @_ @'DriverReferralPayout (Just merchantId) (Just merchantOpCityId) timeDiff' (addUTCTime timeDiff' now) (addUTCTime (timeDiff' + 3600) now) "DriverReferralPayout" (Just 1) $
-              DriverReferralPayoutJobData
-                { merchantId = merchantId,
-                  merchantOperatingCityId = merchantOpCityId,
-                  toScheduleNextPayout = toScheduleNextPayout,
-                  statusForRetry = statusForRetry,
-                  schedulePayoutForDay = Nothing
-                }
+            Redis.runInMasterCloudRedisCell $
+              createJobInWithCheck @_ @'DriverReferralPayout (Just merchantId) (Just merchantOpCityId) timeDiff' (addUTCTime timeDiff' now) (addUTCTime (timeDiff' + 3600) now) "DriverReferralPayout" (Just 1) $
+                DriverReferralPayoutJobData
+                  { merchantId = merchantId,
+                    merchantOperatingCityId = merchantOpCityId,
+                    toScheduleNextPayout = toScheduleNextPayout,
+                    statusForRetry = statusForRetry,
+                    schedulePayoutForDay = Nothing
+                  }
           Nothing -> pure ()
       return Complete
     else do

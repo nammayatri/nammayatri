@@ -19,6 +19,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
@@ -92,15 +93,16 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
             return Complete
           else do
             let dfCalculationJobTs = 2 ^ retryCount * transporterConfig.notificationRetryTimeGap
-            createJobIn @_ @'SendPDNNotificationToDriver (Just merchant.id) (Just merchantOpCityId) dfCalculationJobTs $
-              SendPDNNotificationToDriverJobData
-                { merchantId = merchantId,
-                  merchantOperatingCityId = Just merchantOpCityId,
-                  startTime = startTime,
-                  endTime = endTime,
-                  retryCount = Just $ retryCount + 1,
-                  serviceName = Just serviceName
-                }
+            Redis.runInMasterCloudRedisCell $
+              createJobIn @_ @'SendPDNNotificationToDriver (Just merchant.id) (Just merchantOpCityId) dfCalculationJobTs $
+                SendPDNNotificationToDriverJobData
+                  { merchantId = merchantId,
+                    merchantOperatingCityId = Just merchantOpCityId,
+                    startTime = startTime,
+                    endTime = endTime,
+                    retryCount = Just $ retryCount + 1,
+                    serviceName = Just serviceName
+                  }
             return Complete
       else do
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
@@ -177,19 +179,20 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
   let normalFlowOrderStatusTime = addUTCTime (dfStatusCheckTime + dfNotificationTime) endTime
   let dfCalculationJobTs = max (diffUTCTime normalFlowExecutionTime now) fallBackExecutionTime
   let orderAndNotificationJobTs = max (diffUTCTime normalFlowOrderStatusTime now) fallBackOrderStatusCheckTime
-  createJobIn @_ @'MandateExecution (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
-    MandateExecutionInfo
-      { merchantId = merchantId,
-        merchantOperatingCityId = Just merchantOpCityId,
-        startTime = startTime,
-        endTime = endTime,
-        serviceName = Just serviceName
-      }
-  createJobIn @_ @'OrderAndNotificationStatusUpdate (Just merchantId) (Just merchantOpCityId) orderAndNotificationJobTs $
-    OrderAndNotificationStatusUpdateJobData
-      { merchantId = merchantId,
-        merchantOperatingCityId = Just merchantOpCityId
-      }
+  Redis.runInMasterCloudRedisCell $ do
+    createJobIn @_ @'MandateExecution (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
+      MandateExecutionInfo
+        { merchantId = merchantId,
+          merchantOperatingCityId = Just merchantOpCityId,
+          startTime = startTime,
+          endTime = endTime,
+          serviceName = Just serviceName
+        }
+    createJobIn @_ @'OrderAndNotificationStatusUpdate (Just merchantId) (Just merchantOpCityId) orderAndNotificationJobTs $
+      OrderAndNotificationStatusUpdateJobData
+        { merchantId = merchantId,
+          merchantOperatingCityId = Just merchantOpCityId
+        }
 
 sendAsyncNotification ::
   ( MonadFlow m,

@@ -859,7 +859,7 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
   void $
     case transporterConfig.driverFeeCalculationTime of
       Nothing -> pure ()
-      Just dfCalcTime -> Redis.runInSecondaryCloudRedis $ do
+      Just dfCalcTime -> Redis.runInMasterCloudRedisCell $ do
         whenWithLockRedis (mkLockKeyForDriverFeeCalculation driverFee.startTime driverFee.endTime merchantOpCityId) 60 $ do
           isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId driverFee.serviceName
           let dfCalculationJobTs = diffUTCTime (addUTCTime dfCalcTime driverFee.endTime) now
