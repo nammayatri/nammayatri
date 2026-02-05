@@ -1,10 +1,10 @@
-name: payment
+name: finance-kernel
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
 author: "nammayatri"
 maintainer: "nammayatri"
-copyright: "2023 Juspay Technologies Private Limited"
+copyright: "2024 Juspay Technologies Private Limited"
 
 flags:
   Local:
@@ -12,14 +12,7 @@ flags:
     manual: true
     default: false
 
-# Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
-
-# To avoid duplicated efforts in documentation and dealing with the
-# complications of embedding Haddock markup inside cabal files, it is
-# common to point users to the README.md file.
-description: Please see the README on GitHub
+description: Finance Kernel - Domain-agnostic financial primitives (Ledger, Account, Invoice, StateMachine, Audit)
 
 default-extensions:
   - ConstraintKinds
@@ -63,29 +56,17 @@ dependencies:
   - base >= 4.7 && < 5
   - record-dot-preprocessor
   - record-hasfield
-  - uri-encode
-  - base16-bytestring
-  - bytestring
-  - cryptohash
   - text
   - time
   - aeson
-  - servant-client
-  - servant
-  - servant-server
-  - euler-hs
-  - http-types
   - exceptions
-  - http-client
   - containers
   - unordered-containers
-  - cereal
   - beam-core
   - beam-mysql
   - beam-postgres
   - postgresql-simple
   - sequelize
-
 
 ghc-options:
   - -fwrite-ide-info
