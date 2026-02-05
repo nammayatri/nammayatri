@@ -21,6 +21,8 @@ import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout as Reexport
 import Lib.Yudhishthira.Storage.Beam.ChakraQueries as Reexport
 import Lib.Yudhishthira.Storage.Beam.NammaTag as Reexport
 import Lib.Yudhishthira.Storage.Beam.NammaTagTrigger as Reexport
+import Lib.Yudhishthira.Storage.Beam.NammaTagTriggerV2 as Reexport
+import Lib.Yudhishthira.Storage.Beam.NammaTagV2 as Reexport
 import Lib.Yudhishthira.Storage.Beam.TagActionNotificationConfig as Reexport
 import Lib.Yudhishthira.Storage.Beam.TimeBoundConfig as Reexport
 import Lib.Yudhishthira.Storage.Beam.UserData as Reexport
@@ -36,6 +38,12 @@ instance HasSchemaName NammaTagT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName NammaTagTriggerT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName NammaTagTriggerV2T where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName NammaTagV2T where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName ChakraQueriesT where

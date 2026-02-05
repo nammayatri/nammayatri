@@ -39,13 +39,13 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger {..})
   updateWithKV [Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.event $ Se.Eq event, Se.Is Beam.tagName $ Se.Eq tagName]]
 
 instance FromTType' Beam.NammaTagTrigger Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger where
-  fromTType' (Beam.NammaTagTriggerT {..}) = do pure $ Just Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger {event = event, tagName = tagName, createdAt = createdAt, updatedAt = updatedAt}
+  fromTType' (Beam.NammaTagTriggerT {..}) = do pure $ Just Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger {createdAt = createdAt, event = event, tagName = tagName, updatedAt = updatedAt}
 
 instance ToTType' Beam.NammaTagTrigger Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger where
   toTType' (Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger {..}) = do
     Beam.NammaTagTriggerT
-      { Beam.event = event,
+      { Beam.createdAt = createdAt,
+        Beam.event = event,
         Beam.tagName = tagName,
-        Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

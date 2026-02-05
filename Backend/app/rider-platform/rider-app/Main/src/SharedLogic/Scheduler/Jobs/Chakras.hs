@@ -49,7 +49,8 @@ mkKaalChakraHandle merchantId merchantOperatingCityId =
       updateUserTags = \userId customerTags -> QPerson.updateCustomerTags (Just customerTags) (cast @LYT.User @DPerson.Person userId),
       action = Actions.kaalChakraAction merchantOperatingCityId . cast @LYT.User @DPerson.Person,
       createFetchUserDataJob = createFetchUserDataJob merchantId merchantOperatingCityId,
-      createUpdateUserTagDataJob = createUpdateUserTagDataJob merchantId merchantOperatingCityId
+      createUpdateUserTagDataJob = createUpdateUserTagDataJob merchantId merchantOperatingCityId,
+      merchantOperatingCityId = fmap cast merchantOperatingCityId
     }
 
 runDailyJob ::

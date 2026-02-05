@@ -18,7 +18,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Types as YT
@@ -54,7 +54,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
   (isApplicable, penaltyAmount) <- case booking.fareParams.driverCancellationPenaltyAmount of
     Just penaltyAmount -> do
       tagData <- CancelRideInternal.buildPenaltyCheckContext booking ride req.point
-      tagsE <- withTryCatch "computeNammaTags:PenaltyCheck" $ Yudhishthira.computeNammaTags YA.PenaltyCheck tagData
+      tagsE <- withTryCatch "computeNammaTags:PenaltyCheck" $ Yudhishthira.computeNammaTags (cast booking.merchantOperatingCityId) YA.PenaltyCheck tagData
       let tags = fromMaybe [] $ eitherToMaybe tagsE
           isPenaltyApplicable = validCancellationPenaltyApplicable `elem` tags
           existingTags = fromMaybe [] ride.rideTags
@@ -97,7 +97,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
               driverArrivalTime = driverArrivalTime,
               merchantOperatingCityId = booking.merchantOperatingCityId
             }
-    tagsE <- withTryCatch "computeNammaTags:RideCancel" $ Yudhishthira.computeNammaTags YA.RideCancel tagData
+    tagsE <- withTryCatch "computeNammaTags:RideCancel" $ Yudhishthira.computeNammaTags (cast booking.merchantOperatingCityId) YA.RideCancel tagData
     let tags = fromMaybe [] $ eitherToMaybe tagsE
         isValid = validDriverCancellation `elem` tags
         isInvalid = invalidDriverCancellation `elem` tags

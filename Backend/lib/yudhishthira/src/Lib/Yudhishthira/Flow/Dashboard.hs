@@ -30,8 +30,8 @@ import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as QADL
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as LYSQADLR
 import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as QChakraQueries
 import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as SQCQ
-import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as QNT
-import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTrigger as QNTT
+import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2 as QNTTV2
+import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNTV2
 import Lib.Yudhishthira.Tools.Error
 import Lib.Yudhishthira.Tools.Utils
 import qualified Lib.Yudhishthira.Types
@@ -40,25 +40,25 @@ import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as DTADLE
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified Lib.Yudhishthira.Types.ChakraQueries as LYTCQ
-import qualified Lib.Yudhishthira.Types.NammaTag as DNT
-import qualified Lib.Yudhishthira.Types.NammaTagTrigger as DNTT
+import qualified Lib.Yudhishthira.Types.NammaTagTriggerV2 as DNTTV2
+import qualified Lib.Yudhishthira.Types.NammaTagV2 as DNTv2
 import Lib.Yudhishthira.Types.TimeBoundConfig
 import qualified System.Environment as Se
 
-postTagCreate :: forall m r. BeamFlow m r => Lib.Yudhishthira.Types.CreateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
-postTagCreate tagRequest = do
+postTagCreate :: forall m r. BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
+postTagCreate merchantOpCityId tagRequest = do
   now <- getCurrentTime
   let nammaTag = mkNammaTag now
   mbNammaTagTriggers <- buildNammaTagTriggers now
   checkForDuplicacy nammaTag.name
 
-  QNT.create nammaTag
-  QNTT.deleteAllByTagName nammaTag.name -- Just in case if old data persists
-  whenJust mbNammaTagTriggers (QNTT.createMany . NE.toList)
+  QNTV2.create nammaTag
+  QNTTV2.deleteAllByMerchantOperatingCityIdAndTagName merchantOpCityId nammaTag.name -- Just in case if old data persists
+  whenJust mbNammaTagTriggers (QNTTV2.createMany . NE.toList)
   pure Kernel.Types.APISuccess.Success
   where
     checkForDuplicacy name = do
-      QNT.findByPrimaryKey name >>= \case
+      QNTV2.findByPrimaryKey merchantOpCityId name >>= \case
         Just _ -> throwError (TagAlreadyExists name)
         Nothing -> pure ()
 
@@ -67,9 +67,10 @@ postTagCreate tagRequest = do
           updatedAt = now
       case tagRequest of
         Lib.Yudhishthira.Types.ApplicationTag Lib.Yudhishthira.Types.NammaTagApplication {..} ->
-          DNT.NammaTag
-            { category = tagCategory,
-              info = DNT.Application,
+          DNTv2.NammaTagV2
+            { merchantOperatingCityId = merchantOpCityId,
+              category = tagCategory,
+              info = DNTv2.Application,
               name = tagName,
               possibleValues = tagPossibleValues,
               rule = tagRule,
@@ -79,9 +80,10 @@ postTagCreate tagRequest = do
               ..
             }
         Lib.Yudhishthira.Types.KaalChakraTag Lib.Yudhishthira.Types.NammaTagChakra {..} ->
-          DNT.NammaTag
-            { category = tagCategory,
-              info = DNT.KaalChakra (DNT.KaalChakraTagInfo tagChakra),
+          DNTv2.NammaTagV2
+            { merchantOperatingCityId = merchantOpCityId,
+              category = tagCategory,
+              info = DNTv2.KaalChakra (DNTv2.KaalChakraTagInfo tagChakra),
               name = tagName,
               possibleValues = tagPossibleValues,
               rule = tagRule,
@@ -91,9 +93,10 @@ postTagCreate tagRequest = do
               ..
             }
         Lib.Yudhishthira.Types.ManualTag Lib.Yudhishthira.Types.NammaTagManual {..} ->
-          DNT.NammaTag
-            { category = tagCategory,
-              info = DNT.Manual,
+          DNTv2.NammaTagV2
+            { merchantOperatingCityId = merchantOpCityId,
+              category = tagCategory,
+              info = DNTv2.Manual,
               name = tagName,
               possibleValues = tagPossibleValues,
               rule = Lib.Yudhishthira.Types.LLM "empty-context",
@@ -103,36 +106,37 @@ postTagCreate tagRequest = do
               ..
             }
 
-    buildNammaTagTriggers :: UTCTime -> m (Maybe (NE.NonEmpty DNTT.NammaTagTrigger))
+    buildNammaTagTriggers :: UTCTime -> m (Maybe (NE.NonEmpty DNTTV2.NammaTagTriggerV2))
     buildNammaTagTriggers now = case tagRequest of
       Lib.Yudhishthira.Types.ApplicationTag Lib.Yudhishthira.Types.NammaTagApplication {..} -> do
         let createdAt = now
             updatedAt = now
         unless (length tagStages == length (NE.nub tagStages)) $
           throwError (InvalidRequest "Tag stages should be unique")
-        pure . Just $ tagStages <&> \event -> DNTT.NammaTagTrigger {event, tagName, ..}
+        pure . Just $ tagStages <&> \event -> DNTTV2.NammaTagTriggerV2 {merchantOperatingCityId = merchantOpCityId, event, tagName, ..}
       _ -> pure Nothing
 
-postTagUpdate :: forall m r. BeamFlow m r => Lib.Yudhishthira.Types.UpdateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
-postTagUpdate tagRequest = do
-  tag <- QNT.findByPrimaryKey tagRequest.tagName >>= fromMaybeM (InvalidRequest "Tag not found in the system, please create the tag")
+postTagUpdate :: forall m r. BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.UpdateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
+postTagUpdate merchantOpCityId tagRequest = do
+  tag <- QNTV2.findByPrimaryKey merchantOpCityId tagRequest.tagName >>= fromMaybeM (InvalidRequest "Tag not found in the system, please create the tag")
   now <- getCurrentTime
 
   let updatedTag = mkUpdateNammaTagEntity tag now
   mbNammaTagTriggers <- buildNammaTagTriggers tag now
 
-  QNT.updateByPrimaryKey updatedTag
+  QNTV2.updateByPrimaryKey updatedTag
   whenJust mbNammaTagTriggers \nammaTagTriggers -> do
-    QNTT.deleteAllByTagName tagRequest.tagName
-    QNTT.createMany (NE.toList nammaTagTriggers)
+    QNTTV2.deleteAllByMerchantOperatingCityIdAndTagName merchantOpCityId tagRequest.tagName
+    QNTTV2.createMany (NE.toList nammaTagTriggers)
   return Kernel.Types.APISuccess.Success
   where
     mkUpdateNammaTagEntity tag now = do
       let validity = case tagRequest.resetTagValidity of
             Just True -> Nothing
             _ -> tagRequest.tagValidity <|> tag.validity
-      DNT.NammaTag
-        { category = fromMaybe tag.category tagRequest.tagCategory,
+      DNTv2.NammaTagV2
+        { merchantOperatingCityId = merchantOpCityId,
+          category = fromMaybe tag.category tagRequest.tagCategory,
           info = mkTagInfo tag,
           name = tag.name,
           possibleValues = fromMaybe tag.possibleValues tagRequest.tagPossibleValues,
@@ -144,28 +148,28 @@ postTagUpdate tagRequest = do
           updatedAt = now
         }
     mkTagInfo tag = case tag.info of
-      DNT.Application -> DNT.Application
-      DNT.KaalChakra (DNT.KaalChakraTagInfo tagChakra) -> DNT.KaalChakra (DNT.KaalChakraTagInfo (fromMaybe tagChakra tagRequest.tagChakra))
-      DNT.Manual -> DNT.Manual
+      DNTv2.Application -> DNTv2.Application
+      DNTv2.KaalChakra (DNTv2.KaalChakraTagInfo tagChakra) -> DNTv2.KaalChakra (DNTv2.KaalChakraTagInfo (fromMaybe tagChakra tagRequest.tagChakra))
+      DNTv2.Manual -> DNTv2.Manual
 
-    buildNammaTagTriggers :: DNT.NammaTag -> UTCTime -> m (Maybe (NE.NonEmpty DNTT.NammaTagTrigger))
+    buildNammaTagTriggers :: DNTv2.NammaTagV2 -> UTCTime -> m (Maybe (NE.NonEmpty DNTTV2.NammaTagTriggerV2))
     buildNammaTagTriggers tag now = do
       case tag.info of
-        DNT.Application -> do
+        DNTv2.Application -> do
           let createdAt = now
               updatedAt = now
           whenJust tagRequest.tagStages $ \events -> do
             unless (length events == length (NE.nub events)) $
               throwError (InvalidRequest "Tag stages should be unique")
-          pure $ tagRequest.tagStages <&> fmap \event -> DNTT.NammaTagTrigger {event, tagName = tagRequest.tagName, ..}
+          pure $ tagRequest.tagStages <&> fmap \event -> DNTTV2.NammaTagTriggerV2 {merchantOperatingCityId = merchantOpCityId, event, tagName = tagRequest.tagName, ..}
         _ -> do
           whenJust tagRequest.tagStages $ \_ -> throwError (InvalidRequest "tagStage relevant only for application tags")
           pure Nothing
 
-deleteTag :: BeamFlow m r => T.Text -> m Kernel.Types.APISuccess.APISuccess
-deleteTag tagName = do
-  QNTT.deleteAllByTagName tagName
-  QNT.deleteByPrimaryKey tagName
+deleteTag :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> T.Text -> m Kernel.Types.APISuccess.APISuccess
+deleteTag merchantOpCityId tagName = do
+  QNTTV2.deleteAllByMerchantOperatingCityIdAndTagName merchantOpCityId tagName
+  QNTV2.deleteByPrimaryKey merchantOpCityId tagName
   return Kernel.Types.APISuccess.Success
 
 postQueryCreate ::
@@ -240,11 +244,11 @@ queryDelete queryRequest = do
   SQCQ.deleteByPrimaryKey queryRequest.chakra queryRequest.queryName
   return Kernel.Types.APISuccess.Success
 
-verifyTag :: BeamFlow m r => Lib.Yudhishthira.Types.TagNameValue -> m (Maybe DNT.NammaTag)
-verifyTag (Lib.Yudhishthira.Types.TagNameValue fullTag) = do
+verifyTag :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.TagNameValue -> m (Maybe DNTv2.NammaTagV2)
+verifyTag merchantOpCityId (Lib.Yudhishthira.Types.TagNameValue fullTag) = do
   case T.splitOn "#" fullTag of
     [name, tagValueText] -> do
-      tag <- QNT.findByPrimaryKey name >>= fromMaybeM (InvalidRequest "Tag not found in the system, please create the tag")
+      tag <- QNTV2.findByPrimaryKey merchantOpCityId name >>= fromMaybeM (InvalidRequest "Tag not found in the system, please create the tag")
       if ("&" `T.isInfixOf` tagValueText) -- don't check for condition if value type is array
         then pure ()
         else do
@@ -265,7 +269,7 @@ verifyTag (Lib.Yudhishthira.Types.TagNameValue fullTag) = do
                 _ -> throwError $ InvalidRequest "Tag value should be a number"
             Lib.Yudhishthira.Types.AnyText -> pure ()
       return (Just tag)
-    [name] -> QNT.findByPrimaryKey name -- this is required for update of tag expiry
+    [name] -> QNTV2.findByPrimaryKey merchantOpCityId name -- this is required for update of tag expiry
     _ -> throwError $ InvalidRequest "Tag should have format of name#value or just name"
 
 postRunKaalChakraJob ::
@@ -318,11 +322,11 @@ data VerifyTagData = VerifyTagData
     possibleRanges :: [(Double, Double)]
   }
 
-verifyEventLogic :: (BeamFlow m r, ToJSON a) => Lib.Yudhishthira.Types.ApplicationEvent -> [Value] -> a -> m Lib.Yudhishthira.Types.RunLogicResp
-verifyEventLogic event logics data_ = do
+verifyEventLogic :: (BeamFlow m r, ToJSON a) => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.ApplicationEvent -> [Value] -> a -> m Lib.Yudhishthira.Types.RunLogicResp
+verifyEventLogic merchantOpCityId event logics data_ = do
   result <- runLogics logics data_
-  nammaTagsTrigger <- QNTT.findAllByEvent event
-  nammaTags <- QNT.findAllByPrimaryKeys (nammaTagsTrigger <&> (.tagName))
+  nammaTagsTrigger <- QNTTV2.findAllByMerchantOperatingCityIdAndEvent merchantOpCityId event
+  nammaTags <- QNTV2.findAllByMerchantOperatingCityIdAndNames merchantOpCityId (nammaTagsTrigger <&> (.tagName))
   let allTags =
         foldl'
           ( \(VerifyTagData tagsAcc isAnyText rangeAcc) x ->

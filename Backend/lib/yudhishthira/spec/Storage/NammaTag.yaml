@@ -3,6 +3,7 @@ imports:
   Chakra: Lib.Yudhishthira.Types
   ApplicationEvent: Lib.Yudhishthira.Types
   TagValues: Lib.Yudhishthira.Types
+  MerchantOperatingCity: Lib.Yudhishthira.Types
   Hours: Kernel.Types.Common
   Value: Data.Aeson
 
@@ -76,11 +77,89 @@ NammaTag:
   beamInstance: MakeTableInstancesGenericSchema
   defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
 
+NammaTagV2:
+  tableName: namma_tag_v2
+  types:
+    TagInfo:
+      enum: "Application, KaalChakra KaalChakraTagInfo, Manual"
+    TagType:
+      enum: "ApplicationTag, KaalChakraTag, ManualTag"
+    KaalChakraTagInfo:
+      recordType: NewType
+      chakra: Chakra
+      derive: "Eq,Ord,Read"
+
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    description: Maybe Text
+    category: Text
+    possibleValues: TagValues
+    rule: TagRule
+    info: TagInfo
+    validity: Maybe Hours
+    actionEngine: Maybe Value
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    name: PrimaryKey
+
+  beamFields:
+    info:
+      tagType: TagType
+      chakra: Maybe Chakra
+    possibleValues:
+      tags: Maybe [Text]
+      rangeStart: Maybe Double
+      rangeEnd: Maybe Double
+    rule:
+      llmContext: Maybe Text
+      ruleEngine: Maybe Value
+
+  fromTType:
+    info: mkTagInfo
+    possibleValues: mkTagValues
+    rule: mkTagRule
+
+  toTType:
+    tagType: getTag
+    chakra: getChakra
+    tags: getTags
+    rangeStart: getRangeStart
+    rangeEnd: getRangeEnd
+    ruleEngine: getRuleEngine
+    llmContext: getLlmContext
+
+  queries:
+    deleteByPrimaryKey:
+      kvFunction: deleteWithKV
+      where:
+        and: [merchantOperatingCityId, name]
+    findAllByPrimaryKeys:
+      kvFunction: findAllWithKV
+      where:
+        and: [name, merchantOperatingCityId]
+
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+  sqlType:
+    ruleEngine: json
+    actionEngine: json
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
+
 NammaTagTrigger:
   tableName: namma_tag_trigger
   fields:
     tagName: Text
     event: ApplicationEvent
+    createdAt: UTCTime
+    updatedAt: UTCTime
   constraints:
     tagName: PrimaryKey
     event: PrimaryKey
@@ -94,3 +173,28 @@ NammaTagTrigger:
     deleteAllByTagName:
       kvFunction: deleteWithKV
       where: tagName
+
+NammaTagTriggerV2:
+  tableName: namma_tag_trigger_v2
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    tagName: Text
+    event: ApplicationEvent
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    event: PrimaryKey
+    tagName: PrimaryKey
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
+
+  queries:
+    findAllByMerchantOperatingCityIdAndEvent:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, event]
+    deleteAllByMerchantOperatingCityIdAndTagName:
+      kvFunction: deleteWithKV
+      where:
+        and: [merchantOperatingCityId, tagName]

@@ -433,7 +433,7 @@ handler ValidatedDSearchReq {..} sReq = do
 
     addNammaTags :: Y.TagData -> Flow ()
     addNammaTags tagData = do
-      newSearchTags <- withTryCatch "computeNammaTags:Search" (Yudhishthira.computeNammaTags Yudhishthira.Search tagData)
+      newSearchTags <- withTryCatch "computeNammaTags:Search" (Yudhishthira.computeNammaTags (cast tagData.searchRequest.merchantOperatingCityId) Yudhishthira.Search tagData)
       let tags = tagData.searchRequest.searchTags <> eitherToMaybe newSearchTags
       QSR.updateSearchTags tags tagData.searchRequest.id
 
