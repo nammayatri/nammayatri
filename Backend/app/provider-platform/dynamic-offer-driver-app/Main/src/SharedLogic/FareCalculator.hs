@@ -461,7 +461,7 @@ calculateFareParameters params = do
                   fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
             tollCharges = addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing),
-            stateEntryPermitCharges = addMaybes fp.stateEntryPermitCharges params.stateEntryPermitCharges,
+            stateEntryPermitCharges = params.stateEntryPermitCharges <|> fp.stateEntryPermitCharges,
             govtCharges = govtCharges,
             insuranceCharge = insuranceChargeResult,
             luggageCharge = luggageCharge,
