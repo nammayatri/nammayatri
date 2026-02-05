@@ -71,12 +71,12 @@ data ChangeStopsResp = ChangeStopsResp {stationsChanged :: Kernel.Prelude.Bool}
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data EffectiveStops = EffectiveStops
-  { destinationChanged :: Kernel.Prelude.Bool,
+  { destStopNameChanged :: Kernel.Prelude.Bool,
     effectiveDestinationStop :: Kernel.Prelude.Text,
     effectiveSourceStop :: Kernel.Prelude.Text,
     requestedDestinationStop :: Kernel.Prelude.Text,
     requestedSourceStop :: Kernel.Prelude.Text,
-    sourceChanged :: Kernel.Prelude.Bool
+    sourceStopNameChanged :: Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -323,11 +323,8 @@ data RouteCodesWithLeg = RouteCodesWithLeg {legOrder :: Kernel.Prelude.Int, rout
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteServiceabilityReq = RouteServiceabilityReq
-  { callOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    onlySelectedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+  { destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeCodes :: Kernel.Prelude.Maybe [RouteCodesWithLeg],
-    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic, Show)
@@ -341,13 +338,7 @@ data RouteStopMapping = RouteStopMapping {code :: Kernel.Prelude.Text, lat :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteWithLiveVehicle = RouteWithLiveVehicle
-  { alternateRouteInfo :: Kernel.Prelude.Maybe [AlternateRouteDetails],
-    liveVehicles :: [LiveVehicleInfo],
-    routeCode :: Kernel.Prelude.Text,
-    routeShortName :: Kernel.Prelude.Text,
-    schedules :: [ScheduledVehicleInfo]
-  }
+data RouteWithLiveVehicle = RouteWithLiveVehicle {liveVehicles :: [LiveVehicleInfo], routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text, schedules :: [ScheduledVehicleInfo]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

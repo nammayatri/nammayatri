@@ -5,7 +5,7 @@ import Domain.Types.Location
 makeLocationAPIEntity :: Location -> LocationAPIEntity
 makeLocationAPIEntity Location {..} =
   let LocationAddress {..} = address
-  in LocationAPIEntity
-    { door = door,
-      ..
-    }
+   in LocationAPIEntity
+        { door = door,
+          ..
+        }
