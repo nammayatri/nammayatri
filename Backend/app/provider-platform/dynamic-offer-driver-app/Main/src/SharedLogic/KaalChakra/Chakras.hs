@@ -54,7 +54,8 @@ mkKaalChakraHandle merchantId merchantOperatingCityId =
       updateUserTags = \userId driverTags -> QPerson.updateDriverTag (Just driverTags) (cast @LYT.User @DPerson.Person userId),
       action = Actions.kaalChakraAction merchantOperatingCityId . cast @LYT.User @DPerson.Person,
       createFetchUserDataJob = createFetchUserDataJob merchantId merchantOperatingCityId,
-      createUpdateUserTagDataJob = createUpdateUserTagDataJob merchantId merchantOperatingCityId
+      createUpdateUserTagDataJob = createUpdateUserTagDataJob merchantId merchantOperatingCityId,
+      merchantOperatingCityId = fmap cast merchantOperatingCityId
     }
 
 createFetchUserDataJob ::

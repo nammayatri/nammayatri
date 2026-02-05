@@ -572,7 +572,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) now
         rideDurationSeconds = maybe 0 (\tStart -> max 0 $ roundToIntegral (diffUTCTime now tStart)) updRide'.tripStartTime
     priorRidesSameCustomer <- QRide.countPriorCompletedRidesWithSameCustomerOnSameDay (cast driverId) booking.riderId updRide'.id merchantLocalDay thresholdConfig.timeDiffFromUtc
-    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer priorRidesSameCustomer rideDurationSeconds))
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking isDriverSameAsCustomer priorRidesSameCustomer rideDurationSeconds))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do

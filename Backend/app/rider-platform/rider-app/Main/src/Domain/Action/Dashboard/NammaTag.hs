@@ -113,13 +113,19 @@ $(genToSchema ''PickupETA.PickupETAInput)
 $(genToSchema ''EstimateTagsData)
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postNammaTagTagCreate _merchantShortId _opCity req = YudhishthiraFlow.postTagCreate req
+postNammaTagTagCreate merchantShortId opCity req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.postTagCreate (cast merchantOperatingCity.id) req
 
 postNammaTagTagUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UpdateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postNammaTagTagUpdate _merchantShortId _opCity req = YudhishthiraFlow.postTagUpdate req
+postNammaTagTagUpdate merchantShortId opCity req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.postTagUpdate (cast merchantOperatingCity.id) req
 
 deleteNammaTagTagDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-deleteNammaTagTagDelete _merchantShortId _opCity tagName = YudhishthiraFlow.deleteTag tagName
+deleteNammaTagTagDelete merchantShortId opCity tagName = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.deleteTag (cast merchantOperatingCity.id) tagName
 
 postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagQueryCreate _merchantShortId _opCity req = YudhishthiraFlow.postQueryCreate req
@@ -131,7 +137,9 @@ deleteNammaTagQueryDelete :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 deleteNammaTagQueryDelete _merchantShortId _opCity = YudhishthiraFlow.queryDelete
 
 postNammaTagTagVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.VerifyNammaTagRequest -> Environment.Flow LYTU.VerifyNammaTagResponse)
-postNammaTagTagVerify _merchantShortId _opCity LYTU.VerifyNammaTagRequest {..} = do
+postNammaTagTagVerify merchantShortId opCity LYTU.VerifyNammaTagRequest {..} = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let merchantOpCityId = cast merchantOperatingCity.id
   case source of
     LYTU.Application tagStage -> do
       let val =
@@ -142,7 +150,7 @@ postNammaTagTagVerify _merchantShortId _opCity LYTU.VerifyNammaTagRequest {..} =
         Just value -> do
           -- validating data provided gets parsed to Stage InputData type.
           validateInputType tagStage value
-          result <- YudhishthiraFlow.verifyEventLogic tagStage [logic] value
+          result <- YudhishthiraFlow.verifyEventLogic merchantOpCityId tagStage [logic] value
           pure $ LYTU.VerifyNammaTagResponse {executionResult = result, dataUsed = value}
         Nothing -> throwError $ InvalidRequest "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
     _ -> do
@@ -398,7 +406,7 @@ postNammaTagUpdateCustomerTag merchantShortId opCity userId req = do
     logInfo "Tag already exists, update expiry"
   -- merchant access checking
   unless (merchantOpCityId == person.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  mbNammTag <- YudhishthiraFlow.verifyTag req.tag
+  mbNammTag <- YudhishthiraFlow.verifyTag (cast merchantOpCityId) req.tag
   now <- getCurrentTime
   let tag =
         if req.isAddingTag
