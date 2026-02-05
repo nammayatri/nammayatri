@@ -603,7 +603,7 @@ ALTER TABLE atlas_app.estimate ADD COLUMN business_discount double precision ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.estimate ALTER COLUMN boost_search_pre_selection_service_tier_config TYPE text;
+-- ALTER TABLE atlas_app.estimate ALTER COLUMN boost_search_pre_selection_service_tier_config TYPE text;
 
 
 ------- SQL updates -------

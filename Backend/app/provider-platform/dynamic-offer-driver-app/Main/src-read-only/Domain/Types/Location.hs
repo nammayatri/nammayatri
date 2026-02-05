@@ -43,6 +43,7 @@ data LocationAPIEntity = LocationAPIEntity
     building :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     city :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     country :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    door :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     extras :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fullAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Location.Location,
