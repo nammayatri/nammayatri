@@ -80,6 +80,7 @@ import Tools.Error
 import qualified Tools.Payment as TPayment
 import Tools.SMS as Sms hiding (Success)
 import qualified Tools.Wallet as TWallet
+import Domain.Action.UI.RidePayment as DRidePayment
 
 defaultDashboardDeviceId :: Text
 defaultDashboardDeviceId = "dashboard-default-device-id"
@@ -312,7 +313,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   metadataExpiryInMins = Nothing,
                   metadataGatewayReferenceId = Nothing,
                   splitSettlementDetails,
-                  basket = Nothing
+                  basket = Nothing,
+                  paymentRules = Nothing
                 }
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId
@@ -320,8 +322,9 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just staticCustomerId) person.clientSdkVersion Nothing
         mbPaymentOrderValidity <- TPayment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         isMetroTestTransaction <- asks (.isMetroTestTransaction)
-        let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False
+        let createWalletCall = TPayment.createWallet merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase Nothing Nothing Nothing
+        getCustomerResp <- DRidePayment.getcustomer person
+        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (Just False) (Just getCustomerResp.customerId.getId) False
       else return Nothing
   QPurchasedPassPayment.create purchasedPassPayment
   return $

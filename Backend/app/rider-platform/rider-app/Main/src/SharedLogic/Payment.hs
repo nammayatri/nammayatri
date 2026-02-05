@@ -101,10 +101,7 @@ orderStatusHandler fulfillmentHandler paymentService paymentOrder orderStatusCal
     60
     100
     ( do
-        let walletPostingCall = case paymentOrder.merchantOperatingCityId of
-              Just merchantOperatingCityId -> Just $ TWallet.walletPosting (cast paymentOrder.merchantId) (cast merchantOperatingCityId)
-              Nothing -> Nothing
-        orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall walletPostingCall
+        orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
         mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
         let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
         orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder updatedPaymentOrder orderStatusResponse
@@ -419,8 +416,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
   processRefund person paymentOrder paymentServiceType
   let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
       orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
-      walletPostingCall = TWallet.walletPosting (cast paymentOrder.merchantId) merchantOperatingCityId
-  paymentStatusResp <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall (Just walletPostingCall)
+  paymentStatusResp <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
   refundStatusHandler paymentOrder paymentServiceType
   return paymentStatusResp
   where

@@ -166,6 +166,18 @@ createRefund = runWithServiceConfig1 Payment.createRefund (.createRefunds)
 getRefund :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> Payment.GetRefundReq -> m Payment.GetRefundResp
 getRefund = runWithServiceConfig1 Payment.getRefund (.getRefunds)
 
+---- wallet specific functions ----
+
+createWallet :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.CreateWalletReq -> m Payment.CreateWalletResp
+createWallet =
+  runWithServiceConfigAndServiceName
+    (Payment.createWallet :: Payment.PaymentServiceConfig -> Maybe Text -> Payment.CreateWalletReq -> m Payment.CreateWalletResp)
+
+refreshWallet :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.RefreshWalletReq -> m Payment.RefreshWalletResp
+refreshWallet =
+  runWithServiceConfigAndServiceName
+    (Payment.refreshWallet :: Payment.PaymentServiceConfig -> Maybe Text -> Payment.RefreshWalletReq -> m Payment.RefreshWalletResp)
+
 runWithServiceConfigAndServiceName ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> Maybe Text -> req -> m resp) ->

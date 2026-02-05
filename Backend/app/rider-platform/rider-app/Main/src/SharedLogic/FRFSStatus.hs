@@ -70,6 +70,7 @@ import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
+import Domain.Action.UI.RidePayment as DRidePayment
 
 -- pass isMultiModalBooking = True in case of multimodal flow
 frfsBookingStatus ::
@@ -382,13 +383,15 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 metadataExpiryInMins = Nothing,
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
                 splitSettlementDetails = splitSettlementDetails,
-                basket = Nothing
+                basket = Nothing,
+                paymentRules = Nothing
               }
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isMetroTestTransaction <- asks (.isMetroTestTransaction)
-      let createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
+      let createWalletCall = Payment.createWallet person.merchantId person.merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) (Just person.id.getId) person.clientSdkVersion Nothing
           isMockPayment = fromMaybe False booking.isMockPayment
-      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) isMetroTestTransaction createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion isMockPayment) (Just createWalletCall) isMockPayment
+      getCustomerResp <- DRidePayment.getcustomer person
+      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) isMetroTestTransaction createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion isMockPayment) (Just createWalletCall) (Just False) (Just getCustomerResp.customerId.getId) isMockPayment
 
     createOrderCall merchantOperatingCityId booking mRoutingId sdkVersion isMockPayment = Payment.createOrder merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) mRoutingId sdkVersion (Just isMockPayment)
 

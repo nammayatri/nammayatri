@@ -165,6 +165,7 @@ import Tools.MultiModal as MM
 import qualified Tools.MultiModal as TMultiModal
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
+import Domain.Action.UI.RidePayment as DRidePayment
 
 -- Custom JSON instance for PublicTransportData with omitNothingFields
 -- Type of these fields are Defined in Backend/app/rider-platform/rider-app/Main/src-read-only/API/Types/UI/MultimodalConfirm.hs
@@ -387,13 +388,15 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
-      createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
-  DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (fromMaybe False paymentOrder.isMockPayment)
+      createWalletCall = Payment.createWallet person.merchantId person.merchantOperatingCityId Nothing paymentServiceType Nothing Nothing Nothing
+  getCustomerResp <- DRidePayment.getcustomer person
+  DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (Just False) (Just getCustomerResp.customerId.getId) (fromMaybe False paymentOrder.isMockPayment)
 
 -- TODO :: To be deprecated @Kavyashree
 postMultimodalPaymentUpdateOrder ::

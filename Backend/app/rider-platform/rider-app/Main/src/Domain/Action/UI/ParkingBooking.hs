@@ -25,6 +25,7 @@ import qualified Storage.Queries.ParkingTransaction as QPT
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Payment as TPayment
 import qualified Tools.Wallet as TWallet
+import Domain.Action.UI.RidePayment as DRidePayment
 
 postMultimodalParkingBook ::
   ( Kernel.Prelude.Maybe Data.Text.Text ->
@@ -91,15 +92,17 @@ postMultimodalParkingBook mbApiKey req = do
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing
+            basket = Nothing,
+            paymentRules = Nothing
           }
 
   let commonMerchantId = Kernel.Types.Id.cast @Domain.Types.Merchant.Merchant @DPayment.Merchant person.merchantId
       commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person req.customerId
       createOrderCall = TPayment.createOrder person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking (Just req.customerId.getId) person.clientSdkVersion Nothing
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let createWalletCall = TWallet.createWallet person.merchantId merchantOpCityId
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCityId) commonPersonId Nothing Nothing TPayment.ParkingBooking isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False >>= fromMaybeM (InternalError "Failed to create payment order")
+  let createWalletCall = Payment.createWallet person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking Nothing Nothing Nothing
+  getCustomerResp <- DRidePayment.getcustomer person
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCityId) commonPersonId Nothing Nothing TPayment.ParkingBooking isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (Just False) (Just getCustomerResp.customerId.getId) False >>= fromMaybeM (InternalError "Failed to create payment order")
 
   paymentLink <- case orderResp.payment_links of
     Just links -> fromMaybeM (InternalError "Payment link not found") links.web
