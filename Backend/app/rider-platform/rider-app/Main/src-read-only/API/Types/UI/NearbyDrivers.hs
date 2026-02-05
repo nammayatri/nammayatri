@@ -76,12 +76,7 @@ data PilotRideInfo = PilotRideInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PublicTransportBucket = PublicTransportBucket
-  { serviceSubTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
-    serviceTierName :: Kernel.Prelude.Maybe Data.Text.Text,
-    serviceType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
-    vehicles :: [PublicTransportInfo]
-  }
+data PublicTransportBucket = PublicTransportBucket {serviceTierName :: Kernel.Prelude.Maybe Data.Text.Text, serviceType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType, vehicles :: [PublicTransportInfo]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -91,6 +86,7 @@ data PublicTransportInfo = PublicTransportInfo
     distance :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     routeCode :: Data.Text.Text,
     routeState :: Kernel.Prelude.Maybe Storage.CachedQueries.Merchant.MultiModalBus.RouteState,
+    serviceSubTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     shortName :: Kernel.Prelude.Maybe Data.Text.Text,
     vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
   }

@@ -38,7 +38,6 @@ types:
   PublicTransportBucket:
     serviceType: Maybe BecknV2.FRFS.Enums.ServiceTierType
     serviceTierName: Maybe Text
-    serviceSubTypes: Maybe [BecknV2.FRFS.Enums.ServiceSubType]
     vehicles: "[PublicTransportInfo]"
 
   PublicTransportInfo:
@@ -49,6 +48,7 @@ types:
     shortName: Maybe Text
     routeState: Maybe RouteState
     bearing: Maybe Int
+    serviceSubTypes: Maybe [BecknV2.FRFS.Enums.ServiceSubType]
 
   DriverInfo:
     lat: Double
