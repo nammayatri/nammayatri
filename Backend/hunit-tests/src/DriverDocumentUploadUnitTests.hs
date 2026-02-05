@@ -338,8 +338,8 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
                 Environment.Flow Kernel.Types.APISuccess.APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different RC data and validates request handling" $ do
-        let req1 = Common.RegisterRCReq "RC123456789" (Kernel.Types.Id.Id "rc-image-1") "Delhi" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just True) (Just False) (Just False) Nothing Nothing Nothing
-            req2 = Common.RegisterRCReq "RC987654321" (Kernel.Types.Id.Id "rc-image-2") "Mumbai" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just False) (Just True) (Just True) Nothing Nothing Nothing
+        let req1 = Common.RegisterRCReq "RC123456789" (Kernel.Types.Id.Id "rc-image-1") "Delhi" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just True) (Just False) (Just False) Nothing Nothing Nothing Nothing
+            req2 = Common.RegisterRCReq "RC987654321" (Kernel.Types.Id.Id "rc-image-2") "Mumbai" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just False) (Just True) (Just True) Nothing Nothing Nothing Nothing
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.City "Delhi"
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
@@ -353,8 +353,8 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
           (evaluate $ DDriverReg.postDriverRegistrationRegisterRc merchantShortId opCity driverId req2)
 
         -- Validate that different RC requests are handled correctly
-        let Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber1, Common.operatingCity = operatingCity1, Common.airConditioned = airConditioned1, Common.oxygen = oxygen1, Common.udinNumber = Nothing} = req1
-            Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber2, Common.operatingCity = operatingCity2, Common.airConditioned = airConditioned2, Common.oxygen = oxygen2, Common.udinNumber = Nothing} = req2
+        let Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber1, Common.operatingCity = operatingCity1, Common.airConditioned = airConditioned1, Common.oxygen = oxygen1} = req1
+            Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber2, Common.operatingCity = operatingCity2, Common.airConditioned = airConditioned2, Common.oxygen = oxygen2} = req2
 
         rcNumber1 @?= "RC123456789"
         rcNumber2 @?= "RC987654321"

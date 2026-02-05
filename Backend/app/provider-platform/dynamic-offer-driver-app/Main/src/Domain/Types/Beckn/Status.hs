@@ -45,8 +45,9 @@ data DStatusRes = DStatusRes
 
 type BookingReallocationInfo = BookingCancelledInfo
 
-newtype BookingCancelledInfo = BookingCancelledInfo
-  { cancellationSource :: DBCR.CancellationSource
+data BookingCancelledInfo = BookingCancelledInfo
+  { cancellationSource :: DBCR.CancellationSource,
+    cancellationReasonCode :: Maybe Text
   }
 
 newtype DNewBookingBuildReq = DNewBookingBuildReq

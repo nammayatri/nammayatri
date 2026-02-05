@@ -105,6 +105,7 @@ RiderConfig:
     exotelStatusCheckSchedulerDelay: Int
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
+    validCancellationReasonCodesForImmediateCharge: "Maybe [Text]"
     cxAgentDetails: "Maybe [CxAgentDetails]"
     csAlertTriggerDelay: NominalDiffTime
     avgSpeedInKmPerHr: Kilometers
@@ -451,6 +452,7 @@ RiderConfig:
     cxAgentDetails: text []
     sensitiveWords: text []
     sensitiveWordsForExactMatch: text []
+    validCancellationReasonCodesForImmediateCharge: text []
     permissibleModes: text []
     busTransitTypes: text []
     subwayTransitTypes: text []

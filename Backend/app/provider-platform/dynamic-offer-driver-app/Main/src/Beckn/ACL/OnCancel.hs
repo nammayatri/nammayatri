@@ -116,23 +116,23 @@ buildOnCancelReq action domain messageId bppSubscriberId bppUri city country can
     Spec.OnCancelReq
       { onCancelReqError = Nothing,
         onCancelReqContext = context,
-        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone
+        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone
       }
 
-buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> DM.Merchant -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe Spec.ConfirmReqMessage
-buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone = do
+buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe Spec.ConfirmReqMessage
+buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone = do
   Just $
     Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource cancellationFee merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone
+      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone
       }
 
-tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> DM.Merchant -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Spec.Order
-tfOrder booking cancelStatus cancellationSource cancellationFee merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone = do
+tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Spec.Order
+tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone = do
   Spec.Order
     { orderId = Just booking.id.getId,
       orderStatus = Just cancelStatus,
       orderFulfillments = tfFulfillments booking driverName customerPhoneNo rideStatus mbVehicle driverPhone,
-      orderCancellation = tfCancellation cancellationSource,
+      orderCancellation = tfCancellation cancellationSource cancellationReasonCode,
       orderBilling = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms cancellationFee,
       orderItems = tfItems booking merchant mbFarePolicy,
@@ -301,11 +301,12 @@ tfCustomer booking customerPhoneNo = do
               }
       }
 
-tfCancellation :: SBCR.CancellationSource -> Maybe Spec.Cancellation
-tfCancellation cancellationSource =
+tfCancellation :: SBCR.CancellationSource -> Maybe Text -> Maybe Spec.Cancellation
+tfCancellation cancellationSource cancellationReasonCode =
   Just $
     Spec.Cancellation
-      { cancellationCancelledBy = castCancellatonSource cancellationSource
+      { cancellationCancelledBy = castCancellatonSource cancellationSource,
+        cancellationReason = Common.mkReason cancellationReasonCode Nothing
       }
   where
     castCancellatonSource = \case

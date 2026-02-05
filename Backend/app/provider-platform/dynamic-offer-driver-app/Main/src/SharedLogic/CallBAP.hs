@@ -76,6 +76,7 @@ import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
+import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.ConditionalCharges as DTCC
 import qualified Domain.Types.DocumentVerificationConfig as DIT
 import qualified Domain.Types.DriverQuote as DDQ
@@ -126,6 +127,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -681,7 +683,9 @@ sendBookingCancelledUpdateToBAP ::
   Maybe PriceAPIEntity ->
   m ()
 sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellationFee = do
-  let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {..}
+  mbBookingCancellationReason <- QBCR.findByBookingId booking.id
+  let cancellationReasonCode = mbBookingCancellationReason >>= (.reasonCode) <&> (\(DCR.CancellationReasonCode code) -> code)
+  let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {cancellationReasonCode, ..}
   retryConfig <- asks (.longDurationRetryCfg)
   bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing
   void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig transporter.id

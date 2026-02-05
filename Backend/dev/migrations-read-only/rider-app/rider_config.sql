@@ -581,3 +581,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN static_customer_id_threshold_day d
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_logo_url text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN valid_cancellation_reason_codes_for_immediate_charge text [] ;
