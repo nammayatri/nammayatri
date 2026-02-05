@@ -22,11 +22,13 @@ data PaymentInvoice = PaymentInvoice
     id :: Kernel.Types.Id.Id Domain.Types.PaymentInvoice.PaymentInvoice,
     invoiceNumber :: Kernel.Prelude.Text,
     invoiceType :: Domain.Types.PaymentInvoice.InvoiceType,
+    parentInvoiceIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.PaymentInvoice.PaymentInvoice],
     paymentInstrument :: Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentOrderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
     paymentPurpose :: Domain.Types.PaymentInvoice.PaymentPurpose,
     paymentStatus :: Domain.Types.PaymentInvoice.InvoicePaymentStatus,
     rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    settledByInvoiceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PaymentInvoice.PaymentInvoice),
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -38,7 +40,7 @@ data InvoicePaymentStatus = PENDING | CAPTURED | FAILED | CANCELLED deriving (Sh
 
 data InvoiceType = PAYMENT | REFUNDS deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data PaymentPurpose = RIDE | TIP | RIDE_TIP | CANCELLATION_FEE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PaymentPurpose = RIDE | TIP | RIDE_TIP | CANCELLATION_FEE | DEBT_SETTLEMENT deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''InvoicePaymentStatus)
 

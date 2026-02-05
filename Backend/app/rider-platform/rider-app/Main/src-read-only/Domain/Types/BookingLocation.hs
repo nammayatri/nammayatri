@@ -18,7 +18,7 @@ data BookingLocation = BookingLocation
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show), (Eq), (Kernel.External.Maps.HasCoordinates.HasCoordinates))
+  deriving (Generic, Show, Eq, Kernel.External.Maps.HasCoordinates.HasCoordinates)
 
 data BookingLocationAPIEntity = BookingLocationAPIEntity
   { area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
