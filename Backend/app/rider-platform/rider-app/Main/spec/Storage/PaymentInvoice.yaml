@@ -17,7 +17,7 @@ PaymentInvoice:
       enum: "PENDING,CAPTURED,FAILED,CANCELLED"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
     PaymentPurpose:
-      enum: "RIDE,TIP,RIDE_TIP,CANCELLATION_FEE"
+      enum: "RIDE,TIP,RIDE_TIP,CANCELLATION_FEE,DEBT_SETTLEMENT"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
     InvoiceType:
       enum: "PAYMENT,REFUNDS"
@@ -39,18 +39,31 @@ PaymentInvoice:
     invoiceNumber: Text
     amount: HighPrecMoney
     currency: Currency
+    parentInvoiceIds: Maybe [Id PaymentInvoice]
+    settledByInvoiceId: Maybe (Id PaymentInvoice)
 
   constraints:
     id: PrimaryKey
     rideId: SecondaryKey
     paymentOrderId: SecondaryKey
     invoiceNumber: SecondaryKey
+    settledByInvoiceId: SecondaryKey
 
   # merchantId and merchantOperatingCityId kept for future filtering/analytics
   excludedFields: []
 
+  beamType:
+    parentInvoiceIds: Maybe [Text]
+
+  fromTType:
+    parentInvoiceIds: (Kernel.Types.Id.Id <$>) <$> parentInvoiceIds|E
+
+  toTType:
+    parentInvoiceIds: (Kernel.Types.Id.getId <$>) <$> parentInvoiceIds|E
+
   sqlType:
     paymentInstrument: text
+    parentInvoiceIds: text[]
 
   queries:
     findById:
@@ -70,4 +83,11 @@ PaymentInvoice:
       kvFunction: updateWithKV
       params: [paymentStatus]
       where: id
+    updateSettledBy:
+      kvFunction: updateWithKV
+      params: [settledByInvoiceId]
+      where: id
+    findBySettledByInvoiceId:
+      kvFunction: findAllWithKV
+      where: settledByInvoiceId
 

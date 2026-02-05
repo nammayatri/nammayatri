@@ -20,6 +20,7 @@ imports:
   TimeOfDay: Data.Time
   Day: Data.Time
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
+  PaymentPurpose: Domain.Types.PaymentInvoice
 
 RiderConfig:
   types:
@@ -213,6 +214,7 @@ RiderConfig:
     singleModeWalkSpeed: Maybe Double
     kafkaTopicName: Text
     staticCustomerIdThresholdDay: Maybe Day
+    duesExcludedPaymentPurposes: "Maybe [Text]"
     invoiceLogoUrl: Maybe Text
 
   beamType:
@@ -266,6 +268,7 @@ RiderConfig:
     enableRideEndOffers: Maybe Bool
     kafkaTopicName: Maybe Text
     staticCustomerIdThresholdDay: Maybe Day
+    duesExcludedPaymentPurposes: "Maybe [Text]"
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -474,6 +477,7 @@ RiderConfig:
     metricsBlacklistPatterns: text []
     ptCircuitBreakerConfig: "json"
     staticCustomerIdThresholdDay: date
+    duesExcludedPaymentPurposes: text []
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

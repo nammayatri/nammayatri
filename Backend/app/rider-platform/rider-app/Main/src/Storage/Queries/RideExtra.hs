@@ -586,3 +586,47 @@ updateIsSafetyPlus rideId isSafetyPlus = do
 
 findCompletedRideByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
 findCompletedRideByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId, Se.Is BeamR.status $ Se.Eq Ride.COMPLETED] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+
+-- | Find all rides with payment status Initiated for a given person (via booking)
+findRidesWithPaymentStatusInitiated :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [Ride]
+findRidesWithPaymentStatusInitiated (Id personId) = do
+  -- First get all bookings for this person
+  bookings <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq personId]
+  -- Then get rides with payment status Initiated for those bookings
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings,
+          Se.Is BeamR.paymentStatus $ Se.Eq (Just Ride.Initiated)
+        ]
+    ]
+    (Se.Desc BeamR.createdAt)
+    Nothing
+    Nothing
+
+-- | Find rides with uncaptured payment: Initiated (attempted but failed) or NotInitiated (ride ended, capture not yet attempted).
+-- Used by: (1) Confirm flow to attempt capture before allowing new ride, (2) Get Dues / Clear Dues to show and clear dues.
+findRidesWithUncapturedPayment :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [Ride]
+findRidesWithUncapturedPayment (Id personId) = do
+  bookings <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq personId]
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings,
+          Se.Is BeamR.paymentStatus $ Se.In [Just Ride.Initiated, Just Ride.NotInitiated]
+        ]
+    ]
+    (Se.Desc BeamR.createdAt)
+    Nothing
+    Nothing
+
+-- | Find most recent ride for a rider (regardless of payment status).
+-- Used by simplified Get Dues API to check the most recent ride for failed invoices.
+findMostRecentRideForRider :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
+findMostRecentRideForRider (Id personId) = do
+  bookings <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq personId]
+  rides <-
+    findAllWithOptionsKV
+      [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings]
+      (Se.Desc BeamR.createdAt)
+      (Just 1)
+      Nothing
+  pure $ listToMaybe rides

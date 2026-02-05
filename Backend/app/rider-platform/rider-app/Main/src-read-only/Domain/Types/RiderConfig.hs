@@ -60,6 +60,7 @@ data RiderConfig = RiderConfig
     domainPublicTransportDataVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     domainRouteCalculationEnabledModes :: Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType],
     driverReferredSearchReqExpiry :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    duesExcludedPaymentPurposes :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     dynamicLogicUpdatePassword :: Kernel.Prelude.Text,
     emailBusinessVerificationConfig :: Kernel.Prelude.Maybe Email.Types.EmailBusinessVerificationConfig,
     emailMagicLinkConfig :: Kernel.Prelude.Maybe Email.Types.EmailMagicLinkConfig,

@@ -475,6 +475,12 @@ Booking:
       orderBy:
         field: createdAt
         order: desc
+    findLatestByRiderId:
+      kvFunction: findAllWithOptionsKV
+      where: riderId
+      orderBy:
+        field: createdAt
+        order: desc
 
 BookingPartiesLink:
   fields:

@@ -5,6 +5,7 @@
 module Storage.Queries.Booking (module Storage.Queries.Booking, module ReExport) where
 
 import qualified Domain.Types.Booking
+import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -23,6 +24,9 @@ findByDashboardAgentId limit offset dashboardAgentId = do findAllWithOptionsKV [
 
 findByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote) -> m (Maybe Domain.Types.Booking.Booking))
 findByQuoteId quoteId = do findOneWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId <$> quoteId)]
+
+findLatestByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.Booking.Booking])
+findLatestByRiderId limit offset riderId = do findAllWithOptionsKV [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)] (Se.Desc Beam.createdAt) limit offset
 
 updateIsBookingUpdated :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())
 updateIsBookingUpdated isBookingUpdated id = do
