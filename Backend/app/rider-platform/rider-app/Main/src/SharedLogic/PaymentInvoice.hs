@@ -57,6 +57,7 @@ showPurpose = \case
   TIP -> FInvNum.purposeTip
   RIDE_TIP -> FInvNum.purposeRideTip
   CANCELLATION_FEE -> FInvNum.purposeCancellation
+  DEBT_SETTLEMENT -> FInvNum.purposeDebtSettlement -- Debt Settlement
 
 -- | Show InvoiceType as abbreviated string for invoice number
 showInvoiceType :: DPI.InvoiceType -> Text
@@ -104,7 +105,9 @@ buildInvoice merchantShortId rideId mbPaymentOrderId invoiceType paymentPurpose 
         createdAt = now,
         updatedAt = now,
         merchantId = Just merchantId,
-        merchantOperatingCityId = Just merchantOperatingCityId
+        merchantOperatingCityId = Just merchantOperatingCityId,
+        parentInvoiceIds = Nothing,
+        settledByInvoiceId = Nothing
       }
 
 -- | Create PaymentInvoice after order creation

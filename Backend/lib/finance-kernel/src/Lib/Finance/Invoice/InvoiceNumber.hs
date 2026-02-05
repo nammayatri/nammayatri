@@ -17,6 +17,7 @@ module Lib.Finance.Invoice.InvoiceNumber
     purposeRideTip,
     purposeCancellation,
     purposeSubscription,
+    purposeDebtSettlement,
 
     -- * Type abbreviations
     typePayment,
@@ -33,12 +34,13 @@ import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, nominalDiffTim
 import Prelude (length, map, replicate)
 
 -- | Purpose abbreviations
-purposeRideFare, purposeTip, purposeRideTip, purposeCancellation, purposeSubscription :: Text
+purposeRideFare, purposeTip, purposeRideTip, purposeCancellation, purposeSubscription, purposeDebtSettlement :: Text
 purposeRideFare = "RF"
 purposeTip = "T"
 purposeRideTip = "TRF"
 purposeCancellation = "C"
 purposeSubscription = "S"
+purposeDebtSettlement = "DS"
 
 -- | Type abbreviations
 typePayment, typeRefund :: Text

@@ -72,3 +72,46 @@ updateAmount invoiceId newAmount = do
       Se.Set BeamPI.updatedAt now
     ]
     [Se.Is BeamPI.id $ Se.Eq (getId invoiceId)]
+
+-- | Find failed payment invoices for a ride (excluding settled ones and DEBT_SETTLEMENT purpose).
+-- Used by Get Dues API to calculate pending dues.
+-- Note: Filtering for DEBT_SETTLEMENT and TIP purposes happens in application code for flexibility
+findFailedUnsettledByRideId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DRide.Ride ->
+  m [DPI.PaymentInvoice]
+findFailedUnsettledByRideId rideId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamPI.rideId $ Se.Eq (getId rideId),
+          Se.Is BeamPI.invoiceType $ Se.Eq DPI.PAYMENT,
+          Se.Is BeamPI.paymentStatus $ Se.Eq DPI.FAILED,
+          Se.Is BeamPI.settledByInvoiceId $ Se.Eq Nothing
+        ]
+    ]
+
+-- | Update settled_by_invoice_id for a single invoice.
+-- Used when a DEBT_SETTLEMENT invoice successfully settles parent invoices.
+updateSettledBy ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DPI.PaymentInvoice ->
+  Maybe (Id DPI.PaymentInvoice) ->
+  m ()
+updateSettledBy invoiceId mbSettledById = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPI.settledByInvoiceId (getId <$> mbSettledById),
+      Se.Set BeamPI.updatedAt now
+    ]
+    [Se.Is BeamPI.id $ Se.Eq (getId invoiceId)]
+
+-- | Update settled_by_invoice_id for multiple invoices (batch operation).
+-- Used when a DEBT_SETTLEMENT invoice successfully settles multiple parent invoices.
+updateSettledByForInvoices ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id DPI.PaymentInvoice] ->
+  Id DPI.PaymentInvoice ->
+  m ()
+updateSettledByForInvoices invoiceIds settledById = do
+  forM_ invoiceIds $ \invoiceId ->
+    updateSettledBy invoiceId (Just settledById)

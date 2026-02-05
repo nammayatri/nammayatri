@@ -20,11 +20,13 @@ data PaymentInvoiceT f = PaymentInvoiceT
     id :: B.C f Kernel.Prelude.Text,
     invoiceNumber :: B.C f Kernel.Prelude.Text,
     invoiceType :: B.C f Domain.Types.PaymentInvoice.InvoiceType,
+    parentInvoiceIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     paymentInstrument :: B.C f Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentPurpose :: B.C f Domain.Types.PaymentInvoice.PaymentPurpose,
     paymentStatus :: B.C f Domain.Types.PaymentInvoice.InvoicePaymentStatus,
     rideId :: B.C f Kernel.Prelude.Text,
+    settledByInvoiceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
@@ -38,6 +40,6 @@ instance B.Table PaymentInvoiceT where
 
 type PaymentInvoice = PaymentInvoiceT Identity
 
-$(enableKVPG ''PaymentInvoiceT ['id] [['invoiceNumber], ['paymentOrderId], ['rideId]])
+$(enableKVPG ''PaymentInvoiceT ['id] [['invoiceNumber], ['paymentOrderId], ['rideId], ['settledByInvoiceId]])
 
 $(mkTableInstances ''PaymentInvoiceT "payment_invoice")
