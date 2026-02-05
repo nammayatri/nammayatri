@@ -55,6 +55,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ondcOnInitReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    ondcOnInitReceivedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     osBuildVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     osType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),

@@ -73,7 +73,7 @@ getFareAPI :: Proxy GetFareAPI
 getFareAPI = Proxy
 
 getFare :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> CMRLV2Config -> T.Text -> GetFareReq -> m [FRFSUtils.FRFSFare]
-getFare _ config _riderId fareReq = do
+getFare integrationBPPConfig config _riderId fareReq = do
   logInfo $ "[CMRLV2:GetFare] Getting fare from: " <> fareReq.fromStationId <> " to: " <> fareReq.toStationId
   logDebug $ "[CMRLV2:GetFare] Request params - operatorNameId: " <> show fareReq.operatorNameId <> ", ticketTypeId: " <> show fareReq.ticketTypeId <> ", fareTypeId: " <> show fareReq.fareTypeId
 
@@ -141,7 +141,8 @@ getFare _ config _riderId fareReq = do
                                 amount = offeredPrice,
                                 currency = INR
                               },
-                          eligibility = True
+                          eligibility = True,
+                          bppItemId = FRFSUtils.getProviderName integrationBPPConfig
                         }
                     ],
                   fareDetails = Nothing,

@@ -34,21 +34,43 @@ select merchant merchantOperatingCity bapConfig quote quoteCategories crisSdkRes
   Metrics.startMetrics Metrics.SELECT_FRFS merchant.name quote.searchId.getId merchantOperatingCity.id.getId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   case integratedBPPConfig.providerConfig of
-    ONDC _ -> do
-      fork ("FRFS ONDC SelectReq for " <> show bapConfig.vehicleCategory) $ do
-        let categories =
-              mapMaybe
-                ( \category -> do
-                    if category.selectedQuantity > 0
-                      then Just $ DCategorySelect {bppItemId = category.bppItemId, quantity = category.selectedQuantity, category = category.category, price = category.price}
-                      else Nothing
-                )
-                quoteCategories
-        providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
-        let requestCity = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
-        bknSelectReq <- ACL.buildSelectReq quote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} requestCity categories
-        logDebug $ "FRFS SelectReq " <> encodeToText bknSelectReq
-        void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
+    ONDC ondcCfg -> do
+      let fareCachingAllowed = fromMaybe False ondcCfg.fareCachingAllowed
+
+      if fareCachingAllowed
+        then do
+          onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote quoteCategories
+          processOnSelect integratedBPPConfig onSelectReq crisSdkResponse isSingleMode mbEnableOffer
+
+          fork ("FRFS ONDC SelectReq for " <> show bapConfig.vehicleCategory) $ do
+            let categories =
+                  mapMaybe
+                    ( \category -> do
+                        if category.selectedQuantity > 0
+                          then Just $ DCategorySelect {bppItemId = category.bppItemId, quantity = category.selectedQuantity, category = category.category, price = category.price}
+                          else Nothing
+                    )
+                    quoteCategories
+            providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
+            let requestCity = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
+            bknSelectReq <- ACL.buildSelectReq quote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} requestCity categories
+            logDebug $ "FRFS SelectReq " <> encodeToText bknSelectReq
+            void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
+        else do
+          fork ("FRFS ONDC SelectReq for " <> show bapConfig.vehicleCategory) $ do
+            let categories =
+                  mapMaybe
+                    ( \category -> do
+                        if category.selectedQuantity > 0
+                          then Just $ DCategorySelect {bppItemId = category.bppItemId, quantity = category.selectedQuantity, category = category.category, price = category.price}
+                          else Nothing
+                    )
+                    quoteCategories
+            providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
+            let requestCity = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
+            bknSelectReq <- ACL.buildSelectReq quote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} requestCity categories
+            logDebug $ "FRFS SelectReq " <> encodeToText bknSelectReq
+            void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
     _ -> do
       onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote quoteCategories
       processOnSelect integratedBPPConfig onSelectReq crisSdkResponse isSingleMode mbEnableOffer
