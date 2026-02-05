@@ -102,6 +102,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.MultiModal.Interface as MultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude hiding (foldl')
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types
@@ -1748,6 +1749,8 @@ data ResolvedLeg = ResolvedLeg
   { rlOrder :: Int,
     rlRouteCodes :: [Text]
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 postMultimodalRouteServiceability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -1765,10 +1768,11 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
             merchantOperatingCityId = person.merchantOperatingCityId,
             merchantId = person.merchantId
           }
-  let callOtp = fromMaybe False req.callOtp
-  if not callOtp
-    then handleProvidedRouteCodes routeServiceabilityContext req.routeCodes
-    else do
+  case req.routeCodes of
+    Just xs
+      | not (null xs) ->
+        handleProvidedRouteCodes routeServiceabilityContext req.routeCodes
+    _ -> do
       (srcCode, destCode) <- resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode
       directRouteCodes <- JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
       if null directRouteCodes
@@ -1841,8 +1845,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                 { liveVehicles,
                   schedules,
                   routeCode = routeInfo.routeId,
-                  routeShortName = route.shortName,
-                  alternateRouteInfo = Nothing
+                  routeShortName = route.shortName
                 }
 
     getValidSingleModeRoute :: RouteServiceabilityContext -> Text -> Text -> Environment.Flow MultiModalTypes.MultiModalRoute
@@ -2020,16 +2023,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
     handleDirectRoute ctx srcCode destCode directRouteCodes = do
       let resolvedLegs =
             resolveLegsForDirectRoute srcCode destCode directRouteCodes
-          effectiveStops =
-            ApiTypes.EffectiveStops
-              { requestedSourceStop = srcCode,
-                requestedDestinationStop = destCode,
-                effectiveSourceStop = srcCode,
-                effectiveDestinationStop = destCode,
-                sourceChanged = False,
-                destinationChanged = False
-              }
-      getRouteServiceability (Just effectiveStops) ctx resolvedLegs
+      getRouteServiceability Nothing ctx resolvedLegs
 
     handleOtpRoute ::
       RouteServiceabilityContext ->
@@ -2038,9 +2032,44 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
     handleOtpRoute ctx srcCode destCode = do
       (effectiveStops, resolvedLegs) <-
-        resolveLegsViaOtp srcCode destCode ctx
+        resolveLegsViaOtpCached ctx srcCode destCode
 
       getRouteServiceability effectiveStops ctx resolvedLegs
+
+    makeOtpResolvedRouteKey ::
+      RouteServiceabilityContext ->
+      Text -> -- src stop
+      Text -> -- dest stop
+      Text
+    makeOtpResolvedRouteKey ctx srcCode destCode =
+      "otp-resolved-route-"
+        <> show ctx.merchantOperatingCityId
+        <> "-"
+        <> normalize srcCode
+        <> "-"
+        <> normalize destCode
+        <> "-"
+        <> show ctx.integratedBPPConfig.id.getId
+      where
+        normalize = T.toUpper . T.strip
+
+    resolveLegsViaOtpCached ::
+      RouteServiceabilityContext ->
+      Text ->
+      Text ->
+      Environment.Flow (Maybe ApiTypes.EffectiveStops, [ResolvedLeg])
+    resolveLegsViaOtpCached ctx srcCode destCode = do
+      let key = makeOtpResolvedRouteKey ctx srcCode destCode
+      cached <- Hedis.safeGet key
+      case cached of
+        Just result ->
+          pure result
+        Nothing -> do
+          result@(_, legs) <- resolveLegsViaOtp srcCode destCode ctx
+          -- IMPORTANT: only cache non-empty successful results
+          unless (null legs) $
+            Hedis.setExp key result 86400
+          pure result
 
     enrichResolvedLegs ::
       RouteServiceabilityContext ->
@@ -2108,19 +2137,48 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                       }
               )
               (zip [0 ..] legs)
-
+          effectiveStops <- calculateEffectiveStops srcCode destCode effSrc effDest ctx.integratedBPPConfig
           pure
-            ( Just
-                ApiTypes.EffectiveStops
-                  { requestedSourceStop = srcCode,
-                    requestedDestinationStop = destCode,
-                    effectiveSourceStop = effSrc,
-                    effectiveDestinationStop = effDest,
-                    sourceChanged = effSrc /= srcCode,
-                    destinationChanged = effDest /= destCode
-                  },
-              resolvedLegs
-            )
+            (Just effectiveStops, resolvedLegs)
+
+    sameStation :: DStation.Station -> DStation.Station -> Bool
+    sameStation a b =
+      normalize (a.name) == normalize (b.name)
+      where
+        normalize = T.toCaseFold . T.strip
+
+    sameStationMaybe :: Maybe DStation.Station -> Maybe DStation.Station -> Bool
+    sameStationMaybe (Just a) (Just b) = sameStation a b
+    sameStationMaybe Nothing Nothing   = False
+    sameStationMaybe _ _               = False
+
+    calculateEffectiveStops ::
+      Text ->
+      Text ->
+      Text ->
+      Text ->
+      DIBC.IntegratedBPPConfig ->
+      Environment.Flow ApiTypes.EffectiveStops
+    calculateEffectiveStops srcCode destCode snappedSrcCode snappedDestCode integratedBPPConfig' = do
+      srcStop <-
+        OTPRest.getStationByGtfsIdAndStopCode srcCode integratedBPPConfig'
+      destStop <-
+        OTPRest.getStationByGtfsIdAndStopCode destCode integratedBPPConfig'
+      snappedSrcStop <-
+        OTPRest.getStationByGtfsIdAndStopCode snappedSrcCode integratedBPPConfig'
+      snappedDestStop <-
+        OTPRest.getStationByGtfsIdAndStopCode snappedDestCode integratedBPPConfig'
+      let sourceChanged = not (sameStationMaybe srcStop snappedSrcStop)
+      let destinationChanged = not (sameStationMaybe destStop snappedDestStop)
+      pure
+        ApiTypes.EffectiveStops
+          { requestedSourceStop = srcCode,
+            requestedDestinationStop = destCode,
+            effectiveSourceStop = snappedSrcCode,
+            effectiveDestinationStop = snappedDestCode,
+            sourceStopNameChanged = sourceChanged,
+            destStopNameChanged = destinationChanged
+          }
 
     resolveLegsForDirectRoute ::
       Text ->

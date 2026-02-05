@@ -345,7 +345,6 @@ types:
     routeShortName: Text
     liveVehicles: [LiveVehicleInfo]
     schedules: [ScheduledVehicleInfo]
-    alternateRouteInfo: Maybe [AlternateRouteDetails]
 
   LegRouteWithLiveVehicle:
     legOrder: Int
@@ -356,8 +355,8 @@ types:
     requestedDestinationStop: Text
     effectiveSourceStop: Text
     effectiveDestinationStop: Text
-    sourceChanged: Bool
-    destinationChanged: Bool
+    sourceStopNameChanged: Bool
+    destStopNameChanged: Bool
 
   RouteServiceabilityResp:
     legs: [LegRouteWithLiveVehicle]
@@ -370,11 +369,8 @@ types:
 
   RouteServiceabilityReq:
     routeCodes: Maybe [RouteCodesWithLeg]
-    callOtp: Maybe Bool
-    onlySelectedRoute: Maybe Bool
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
-    serviceTierType: Maybe ServiceTierType
     derive: "Show"
 
   AvailableRoute:
@@ -386,7 +382,6 @@ types:
     routeShortName: Text
     routeLongName: Text
     routeTimings: "[Seconds]"
-    serviceSubTypes: "Maybe [ServiceSubType]"
 
   SwitchRouteReq:
     journeyId: Id Journey
