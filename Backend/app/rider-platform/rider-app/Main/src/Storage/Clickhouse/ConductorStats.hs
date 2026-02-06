@@ -12,10 +12,12 @@ import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 data ConductorStatsT f = ConductorStatsT
   { bookingDate :: C f Day,
     conductorTokenNo :: C f Text,
-    numberTicketsBooked :: C f Int,
-    totalRevenueInADay :: C f Double,
+    fleetNo :: C f (Maybe Text),
+    depotNo :: C f (Maybe Text),
+    numberTicketsBooked :: C f (Maybe Int),
+    totalRevenueInADay :: C f (Maybe Double),
     numberOfNewCustomers :: C f (Maybe Int),
-    depotNo :: C f (Maybe Text)
+    date :: C f UTCTime
   }
   deriving (Generic)
 
@@ -24,10 +26,12 @@ conductorStatsTTable =
   ConductorStatsT
     { bookingDate = "booking_date",
       conductorTokenNo = "conductor_token_no",
+      fleetNo = "fleet_no",
+      depotNo = "depot_no",
       numberTicketsBooked = "number_tickets_booked",
       totalRevenueInADay = "total_revenue_in_a_day",
       numberOfNewCustomers = "number_of_new_customers",
-      depotNo = "depot_no"
+      date = "date"
     }
 
 type ConductorStats = ConductorStatsT Identity
