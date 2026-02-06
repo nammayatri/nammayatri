@@ -11,11 +11,11 @@ import qualified Data.Singletons.TH
 import qualified Data.Time
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
-import qualified Kernel.External.Payment.Juspay.Types.Common
 import qualified Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Servant
 import Servant.Client
 
@@ -35,7 +35,7 @@ type GetSubscriptionTransactionSubscriptionTransactions =
            Kernel.Prelude.Int
       :> QueryParam
            "status"
-           Kernel.External.Payment.Juspay.Types.Common.TransactionStatus
+           Lib.Finance.Domain.Types.LedgerEntry.EntryStatus
       :> QueryParam
            "toDate"
            Data.Time.UTCTime
@@ -65,7 +65,7 @@ type GetSubscriptionTransactionSubscriptionTransactionsHelper =
            Kernel.Prelude.Int
       :> QueryParam
            "status"
-           Kernel.External.Payment.Juspay.Types.Common.TransactionStatus
+           Lib.Finance.Domain.Types.LedgerEntry.EntryStatus
       :> QueryParam
            "toDate"
            Data.Time.UTCTime
@@ -74,7 +74,7 @@ type GetSubscriptionTransactionSubscriptionTransactionsHelper =
            [API.Types.UI.SubscriptionTransaction.SubscriptionTransactionEntity]
   )
 
-newtype SubscriptionTransactionAPIs = SubscriptionTransactionAPIs {getSubscriptionTransactionSubscriptionTransactions :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.Common.TransactionStatus -> Kernel.Prelude.Maybe Data.Time.UTCTime -> EulerHS.Types.EulerClient [API.Types.UI.SubscriptionTransaction.SubscriptionTransactionEntity]}
+newtype SubscriptionTransactionAPIs = SubscriptionTransactionAPIs {getSubscriptionTransactionSubscriptionTransactions :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Data.Time.UTCTime -> EulerHS.Types.EulerClient [API.Types.UI.SubscriptionTransaction.SubscriptionTransactionEntity]}
 
 mkSubscriptionTransactionAPIs :: (Client EulerHS.Types.EulerClient API -> SubscriptionTransactionAPIs)
 mkSubscriptionTransactionAPIs subscriptionTransactionClient = (SubscriptionTransactionAPIs {..})

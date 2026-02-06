@@ -332,11 +332,6 @@ updateUpgradedTiers ruleBasedUpgradeTiers driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.ruleBasedUpgradeTiers (Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateWalletBalance :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateWalletBalance walletBalance driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.walletBalance walletBalance, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
 updateWeeklyCancellationRateBlockingCooldown :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateWeeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown driverId = do
   _now <- getCurrentTime
@@ -417,10 +412,8 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.payoutVpa payoutVpa,
       Se.Set Beam.payoutVpaBankAccount payoutVpaBankAccount,
       Se.Set Beam.payoutVpaStatus payoutVpaStatus,
-      Se.Set Beam.planExpiryDate planExpiryDate,
       Se.Set Beam.preferredPrimarySpecialLocId (Kernel.Types.Id.getId <$> preferredPrimarySpecialLocId),
       Se.Set Beam.preferredSecondarySpecialLocIds (Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)),
-      Se.Set Beam.prepaidSubscriptionBalance prepaidSubscriptionBalance,
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredByDriverId (Kernel.Types.Id.getId <$> referredByDriverId),
       Se.Set Beam.referredByFleetOwnerId referredByFleetOwnerId,
@@ -440,7 +433,6 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.tripDistanceMaxThreshold tripDistanceMaxThreshold,
       Se.Set Beam.tripDistanceMinThreshold tripDistanceMinThreshold,
       Se.Set Beam.verified verified,
-      Se.Set Beam.walletBalance walletBalance,
       Se.Set Beam.weeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown,
       Se.Set Beam.weeklyExtraKms weeklyExtraKms,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

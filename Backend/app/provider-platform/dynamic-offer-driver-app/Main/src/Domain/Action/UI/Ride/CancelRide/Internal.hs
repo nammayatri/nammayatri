@@ -173,7 +173,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
             vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
-            cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy userNoShowCharges transporterConfig merchant
+            cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy userNoShowCharges transporterConfig
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
 
             fork "DriverRideCancelledCoin Event : " $ do
@@ -232,11 +232,10 @@ cancelRideTransaction ::
   DRide.RideEndedBy ->
   Maybe PriceAPIEntity ->
   DTC.TransporterConfig ->
-  DMerc.Merchant ->
   m ()
-cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancellationFee transporterConfig merchant = do
+cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancellationFee transporterConfig = do
   let driverId = cast ride.driverId
-  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ releaseLien booking ride
+  when (isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ releaseLien booking ride
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   updateOnRideStatusWithAdvancedRideCheck driverId (Just ride)
   when booking.isScheduled $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing driverId

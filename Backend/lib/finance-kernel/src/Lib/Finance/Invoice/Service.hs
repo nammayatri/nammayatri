@@ -26,8 +26,8 @@ module Lib.Finance.Invoice.Service
 where
 
 import qualified Data.Aeson as Aeson
-import qualified Data.Text
 import Data.Text (pack)
+import qualified Data.Text
 import Data.Time (defaultTimeLocale, formatTime)
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))

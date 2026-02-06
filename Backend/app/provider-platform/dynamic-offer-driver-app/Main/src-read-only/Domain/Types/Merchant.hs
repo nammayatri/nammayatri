@@ -39,7 +39,6 @@ data MerchantD (s :: UsageSafety) = Merchant
     name :: Kernel.Prelude.Text,
     onlinePayment :: Kernel.Prelude.Bool,
     overwriteAssociation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    prepaidSubscriptionAndWalletEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     registryUrl :: Kernel.Prelude.BaseUrl,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     signatureExpiry :: Kernel.Prelude.Int,

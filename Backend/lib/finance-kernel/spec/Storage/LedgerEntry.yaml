@@ -11,12 +11,12 @@ imports:
 LedgerEntry:
   tableName: finance_ledger_entry
   derives: "Generic"
-  
+
   types:
     EntryType:
       enum: "Transfer,LiabilityCreated,LiabilitySettled,Reversal,Adjustment"
       derive: "ToParamSchema"
-    
+
     EntryStatus:
       enum: "PENDING,DUE,SETTLED,VOIDED"
       derive: "ToParamSchema"
@@ -106,4 +106,5 @@ LedgerEntry:
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EntryType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EntryStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <EntryStatus>
 

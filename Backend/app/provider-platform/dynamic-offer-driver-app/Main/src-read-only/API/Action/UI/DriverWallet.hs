@@ -30,7 +30,7 @@ type API =
   ( TokenAuth :> "wallet" :> "transactions" :> QueryParam "fromDate" Data.Time.UTCTime :> QueryParam "toDate" Data.Time.UTCTime
       :> QueryParam
            "transactionType"
-           Domain.Types.DriverWallet.TransactionType
+           Domain.Types.DriverWallet.WalletTransactionType
       :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
       :> Get
@@ -63,7 +63,7 @@ getWalletTransactions ::
     ) ->
     Kernel.Prelude.Maybe Data.Time.UTCTime ->
     Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe Domain.Types.DriverWallet.TransactionType ->
+    Kernel.Prelude.Maybe Domain.Types.DriverWallet.WalletTransactionType ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.DriverWallet.TransactionResponse
