@@ -67,6 +67,7 @@ import Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import Lib.JourneyModule.Utils
+import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
