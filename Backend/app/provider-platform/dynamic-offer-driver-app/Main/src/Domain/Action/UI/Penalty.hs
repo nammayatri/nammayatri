@@ -39,7 +39,7 @@ postPenaltyCheck ::
     API.Types.UI.Penalty.PenaltyCheckReq ->
     Environment.Flow API.Types.UI.Penalty.PenaltyCheckRes
   )
-postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
+postPenaltyCheck (mbPersonId, _merchantId, merchantOpCityId) req = do
   driverId <- mbPersonId & fromMaybeM (InvalidRequest "Driver not authenticated")
 
   ride <- QRide.findById (Kernel.Types.Id.Id req.rideId) >>= fromMaybeM (RideNotFound req.rideId)
@@ -53,7 +53,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
 
   (isApplicable, penaltyAmount) <- case booking.fareParams.driverCancellationPenaltyAmount of
     Just penaltyAmount -> do
-      tagData <- CancelRideInternal.buildPenaltyCheckContext booking ride req.point
+      tagData <- CancelRideInternal.buildPenaltyCheckContext merchantOpCityId booking ride req.point
       tagsE <- withTryCatch "computeNammaTags:PenaltyCheck" $ Yudhishthira.computeNammaTags YA.PenaltyCheck tagData
       let tags = fromMaybe [] $ eitherToMaybe tagsE
           isPenaltyApplicable = validCancellationPenaltyApplicable `elem` tags
