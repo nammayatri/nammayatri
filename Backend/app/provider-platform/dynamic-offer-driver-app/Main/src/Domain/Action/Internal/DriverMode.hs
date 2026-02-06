@@ -29,6 +29,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFlowStatus as SDF
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.DriverInformation as QDriverInformation
@@ -110,6 +111,28 @@ updateFleetOperatorStatusKeyForDriver driverId newStatus driverInfo = do
       forM_ fleetOperatorAssociations $ \foa -> do
         decrementFleetOperatorStatusKeyForDriver DP.OPERATOR foa.operatorId (Just oldStatus)
         incrementFleetOperatorStatusKeyForDriver DP.OPERATOR foa.operatorId (Just newStatus)
+
+-- | Update current online driver count for fleet owners based on mode field changes
+-- This function only runs when analytics is enabled, not when flowStatus caching is enabled
+updateFleetOwnerCurrentOnlineDriverCount ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
+  Id DP.Person ->
+  Maybe DriverInfo.DriverMode ->
+  DI.DriverInformation ->
+  m ()
+updateFleetOwnerCurrentOnlineDriverCount driverId mbNewMode oldDriverInfo = do
+  let oldMode = oldDriverInfo.mode
+  -- Try to find active FleetDriverAssociation
+  mbFleetDriverAssociation <- QFleetDriverAssociationExtra.findByDriverId driverId True
+  whenJust mbFleetDriverAssociation $ \fda -> do
+    let fleetOwnerId = fda.fleetOwnerId
+    -- Update current online driver count for fleet owner based on mode field
+    -- Check transitions: if going from non-ONLINE mode to ONLINE mode, increment
+    -- If going from ONLINE mode to non-ONLINE mode, decrement
+    when (oldMode /= Just DriverInfo.ONLINE && mbNewMode == Just DriverInfo.ONLINE) $
+      Analytics.incrementFleetOwnerAnalyticsCurrentOnlineDriverCount (Just fleetOwnerId) driverId
+    when (oldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $
+      Analytics.decrementFleetOwnerAnalyticsCurrentOnlineDriverCount (Just fleetOwnerId) driverId
 
 updateAtomicallyFleetOperatorStatusKeyForDriver ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
@@ -264,10 +287,17 @@ updateDriverModeAndFlowStatus ::
   m ()
 updateDriverModeAndFlowStatus driverId transporterConfig isActive mbNewMode newFlowStatus oldDriverInfo mbHasRideStarted lastOfflineTime = do
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+  let enableAnalytics = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics
+
   if allowCacheDriverFlowStatus
     then do
       QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode (Just newFlowStatus) mbHasRideStarted lastOfflineTime driverId
       updateFleetOperatorStatusKeyForDriver driverId newFlowStatus oldDriverInfo
     else QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode Nothing mbHasRideStarted lastOfflineTime driverId
+
+  -- Update current online driver count only when analytics is enabled (not flowStatus)
+  when enableAnalytics $
+    updateFleetOwnerCurrentOnlineDriverCount driverId mbNewMode oldDriverInfo
+
   fork "update driver online duration" $
     processingChangeOnline driverId transporterConfig mbNewMode oldDriverInfo.mode

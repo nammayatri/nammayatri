@@ -502,6 +502,8 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
     Nothing
     ( \driverInfo -> do
         Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetDriverAssociation.fleetOwnerId) driver.id
+        when (driverInfo.mode == Just ONLINE) $
+          Analytics.incrementFleetOwnerAnalyticsCurrentOnlineDriverCount (Just fleetDriverAssociation.fleetOwnerId) driver.id
         operators <- QFOA.findAllByFleetOwnerId (Id fleetDriverAssociation.fleetOwnerId) True
         when (null operators) $ logTagError "AnalyticsAddDriver" "No operators found for fleet owner"
         forM_ operators $ \operator -> do
