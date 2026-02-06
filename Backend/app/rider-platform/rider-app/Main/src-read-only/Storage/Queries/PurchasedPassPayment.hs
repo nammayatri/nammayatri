@@ -84,6 +84,19 @@ findOneByPaymentOrderId ::
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m (Maybe Domain.Types.PurchasedPassPayment.PurchasedPassPayment))
 findOneByPaymentOrderId orderId = do findOneWithKV [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
 
+updateProfilePictureByPurchasedPassIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> [Domain.Types.PurchasedPass.StatusType] -> m ())
+updateProfilePictureByPurchasedPassIdAndStatus profilePicture purchasedPassId status = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.profilePicture profilePicture, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.purchasedPassId $ Se.Eq (Kernel.Types.Id.getId purchasedPassId),
+          Se.Is Beam.status $ Se.In status
+        ]
+    ]
+
 updateStatusAndDatesById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> Domain.Types.PurchasedPass.StatusType -> Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> m ())
