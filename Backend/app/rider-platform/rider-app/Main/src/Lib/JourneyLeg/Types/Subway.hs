@@ -28,7 +28,8 @@ data SubwayLegRequestSearchData = SubwayLegRequestSearchData
     recentLocationId :: Maybe (Id DRecentLocation.RecentLocation),
     upsertJourneyLegAction :: forall m r c. JL.SearchRequestFlow m r c => Text -> m (),
     blacklistedServiceTiers :: [Spec.ServiceTierType],
-    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType]
+    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
+    isSingleMode :: Bool
   }
 
 data SubwayLegRequestUpdateData = SubwayLegRequestUpdateData
@@ -85,5 +86,6 @@ data SubwayLegRequestGetFareData = SubwayLegRequestGetFareData
     riderId :: Id DPerson.Person,
     searchReqId :: Maybe Text,
     blacklistedServiceTiers :: [Spec.ServiceTierType],
-    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType]
+    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
+    isSingleMode :: Bool
   }

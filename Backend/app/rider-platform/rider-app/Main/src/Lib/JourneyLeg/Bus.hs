@@ -12,7 +12,7 @@ import Lib.JourneyLeg.Types.Bus
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg BusLegRequest m where
-  search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId serviceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes
+  search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId serviceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode
   search _ = throwError (InternalError "Not supported")
 
   confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId bookLater bookingAllowed Nothing Spec.BUS categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment
@@ -36,5 +36,5 @@ instance JT.JourneyLeg BusLegRequest m where
   getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.journeyLeg req.journeyLegs
   getInfo _ = throwError (InternalError "Not supported")
 
-  getFare (BusLegRequestGetFare BusLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.BUS serviceType routeDetails fromArrivalTime agencyGtfsId Nothing blacklistedServiceTiers blacklistedFareQuoteTypes
+  getFare (BusLegRequestGetFare BusLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.BUS serviceType routeDetails fromArrivalTime agencyGtfsId Nothing blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode
   getFare _ = throwError (InternalError "Not supported")
