@@ -19,6 +19,7 @@ data DailyStatsT f = DailyStatsT
   { activatedValidRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     bonusEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancellationCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    commissionCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverId :: B.C f Data.Text.Text,

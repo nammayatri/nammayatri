@@ -247,7 +247,8 @@ postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
                     updatedAt = now,
                     merchantId = ride.merchantId,
                     merchantOperatingCityId = Just ride.merchantOperatingCityId,
-                    onlineDuration = Nothing
+                    onlineDuration = Nothing,
+                    commissionCharges = 0.0
                   }
 
           QDS.create dailyStats -- create dstats for that date

@@ -284,7 +284,8 @@ incrementOnboardedCount refType referredEntityId transporterConfig = do
                 numFleetsOnboarded = fleetCount,
                 merchantId = Just transporterConfig.merchantId,
                 merchantOperatingCityId = Just transporterConfig.merchantOperatingCityId,
-                onlineDuration = Nothing
+                onlineDuration = Nothing,
+                commissionCharges = 0.0
               }
       QDailyStats.create dailyStatsOfDriver'
       let logTagPrefix = if refType == DriverReferral then "DRIVER" else "FLEET"

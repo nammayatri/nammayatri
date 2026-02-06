@@ -142,7 +142,8 @@ updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCal
             numFleetsOnboarded = 0,
             merchantId = Just merchantId,
             merchantOperatingCityId = Just merchantOpCityId,
-            onlineDuration = Just onlineDuration
+            onlineDuration = Just onlineDuration,
+            commissionCharges = 0.0
           }
 
     addDataToDriverStats newOnlineDuration = do
