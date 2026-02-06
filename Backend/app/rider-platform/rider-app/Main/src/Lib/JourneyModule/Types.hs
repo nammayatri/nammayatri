@@ -68,6 +68,7 @@ import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import Lib.JourneyModule.Utils
 import Lib.Payment.Storage.Beam.BeamFlow
+import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.SessionizerMetrics.Types.Event
@@ -309,9 +310,11 @@ data LegExtraInfo = Walk WalkLegExtraInfo | Taxi TaxiLegExtraInfo | Metro MetroL
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LegRefundInfo = LegRefundInfo
-  { amount :: HighPrecMoney,
+  { id :: Id DRefunds.Refunds,
+    amount :: HighPrecMoney,
     status :: Payment.RefundStatus,
     arn :: Maybe Text,
+    completedAt :: Maybe UTCTime,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
@@ -898,7 +901,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
       paymentOrders <- mapMaybeM QPaymentOrder.findById paymentOrderIds
       let orderShortIds = map (.shortId) paymentOrders
       refunds <- concat <$> mapM QRefunds.findAllByOrderId orderShortIds
-      let refunds' = map (\refundEntry -> LegRefundInfo {amount = totalBookingAmount.amount, status = refundEntry.status, arn = refundEntry.arn, updatedAt = refundEntry.updatedAt, createdAt = refundEntry.createdAt}) refunds
+      let refunds' = map (\refundEntry -> LegRefundInfo {id = refundEntry.id, amount = totalBookingAmount.amount, status = refundEntry.status, arn = refundEntry.arn, completedAt = refundEntry.completedAt, updatedAt = refundEntry.updatedAt, createdAt = refundEntry.createdAt}) refunds
       let refundBloc = listToMaybe refunds'
       let adultTicketQuantity = find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
           childTicketQuantity = find (\priceItem -> priceItem.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)

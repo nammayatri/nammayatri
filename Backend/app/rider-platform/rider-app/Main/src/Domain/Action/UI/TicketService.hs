@@ -763,6 +763,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             isApiCallSuccess = Nothing,
             idAssignedByServiceProvider = Nothing,
             initiatedBy = Nothing,
+            completedAt = Nothing,
             createdAt = now,
             updatedAt = now,
             ..

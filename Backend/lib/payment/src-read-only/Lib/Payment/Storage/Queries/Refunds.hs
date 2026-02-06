@@ -38,8 +38,8 @@ updateIsApiCallSuccess isApiCallSuccess id = do
 
 updateRefundsEntryByResponse ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Payment.Interface.RefundStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds -> m ())
-updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn id = do
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Payment.Interface.RefundStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds -> m ())
+updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn completedAt id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.initiatedBy initiatedBy,
@@ -48,20 +48,22 @@ updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessag
       Se.Set Beam.errorCode errorCode,
       Se.Set Beam.status status,
       Se.Set Beam.arn arn,
+      Se.Set Beam.completedAt completedAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateRefundsEntryByStripeResponse ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Payment.Interface.RefundStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds -> m ())
-updateRefundsEntryByStripeResponse idAssignedByServiceProvider errorCode status isApiCallSuccess id = do
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Payment.Interface.RefundStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds -> m ())
+updateRefundsEntryByStripeResponse idAssignedByServiceProvider errorCode status isApiCallSuccess completedAt id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.idAssignedByServiceProvider idAssignedByServiceProvider,
       Se.Set Beam.errorCode errorCode,
       Se.Set Beam.status status,
       Se.Set Beam.isApiCallSuccess isApiCallSuccess,
+      Se.Set Beam.completedAt completedAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
