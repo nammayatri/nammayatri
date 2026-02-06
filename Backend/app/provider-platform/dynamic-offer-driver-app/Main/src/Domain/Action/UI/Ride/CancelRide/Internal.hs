@@ -93,6 +93,8 @@ import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 cancelRideImpl ::
   ( MonadFlow m,
@@ -473,12 +475,14 @@ buildPenaltyCheckContext ::
     LT.HasLocationService m r,
     HasKafkaProducer r
   ) =>
+  Id DMOC.MerchantOperatingCity ->
   SRB.Booking ->
   DRide.Ride ->
   LatLong ->
   m TY.PenaltyCheckTagData
-buildPenaltyCheckContext booking ride point = do
+buildPenaltyCheckContext merchantOpCityId booking ride point = do
   now <- getCurrentTime
+  merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   numberOfCallAttempts <- QCallStatus.countCallsByEntityId ride.id
 
   driverDistanceFromPickupNow <- do
@@ -506,5 +510,6 @@ buildPenaltyCheckContext booking ride point = do
         driverArrivedAtPickup,
         driverDistanceFromPickupNow,
         driverDistanceFromPickupAtAcceptance,
-        numberOfCallAttempts
+        numberOfCallAttempts,
+        merchantOperatingCity = merchantOpCity
       }

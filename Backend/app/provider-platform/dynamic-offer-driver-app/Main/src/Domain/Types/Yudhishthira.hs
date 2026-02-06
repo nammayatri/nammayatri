@@ -58,7 +58,8 @@ data PenaltyCheckTagData = PenaltyCheckTagData
     driverArrivedAtPickup :: Bool,
     driverDistanceFromPickupNow :: Maybe Meters,
     driverDistanceFromPickupAtAcceptance :: Maybe Meters,
-    numberOfCallAttempts :: Int
+    numberOfCallAttempts :: Int,
+    merchantOperatingCity :: DMOC.MerchantOperatingCity
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
