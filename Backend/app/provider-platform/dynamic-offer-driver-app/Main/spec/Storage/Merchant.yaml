@@ -96,7 +96,6 @@ Merchant:
     fleetOwnerEnabledCheck: Maybe Bool
     overwriteAssociation: Maybe Bool
     mediaFileDocumentLinkExpires: Seconds
-    prepaidSubscriptionAndWalletEnabled: Maybe Bool # This is a top level switch to enable prepaid subscription and wallet features for drivers and fleet owners
     signingPublicKey: Base64
     signingPrivateKey: Maybe Base64
     signatureExpiry: Int

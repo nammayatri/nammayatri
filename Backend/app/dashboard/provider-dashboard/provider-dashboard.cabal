@@ -192,6 +192,7 @@ library
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
+    , finance-kernel
     , http-client
     , http-client-tls
     , lib-dashboard

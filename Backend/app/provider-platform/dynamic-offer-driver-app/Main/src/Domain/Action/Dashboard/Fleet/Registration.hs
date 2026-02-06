@@ -206,9 +206,6 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             registeredAt = Nothing,
             isEligibleForSubscription = True,
             ticketPlaceId = mbTicketPlaceId,
-            lienAmount = Nothing,
-            prepaidSubscriptionBalance = Nothing,
-            planExpiryDate = Nothing,
             fleetDob = Nothing,
             stripeAddress = Nothing,
             merchantOperatingCityId = mbMerchantOperatingCityId

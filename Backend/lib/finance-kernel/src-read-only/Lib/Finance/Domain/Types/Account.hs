@@ -28,7 +28,7 @@ data AccountCategory = Driver | Fleet | Platform | Settlement | Suspense derivin
 
 data AccountStatus = Active | Suspended | Closed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data AccountType = Asset | Liability | Revenue | Expense | Equity deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data AccountType = Asset | Liability | Revenue | DeferredRevenue | Expense | Equity | External deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''AccountType))
 

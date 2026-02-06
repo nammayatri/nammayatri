@@ -34,6 +34,7 @@ module Lib.Finance.Ledger.Service
     -- * Query by owner (the main way domain queries)
     findByOwner,
     findByOwnerAndStatus,
+    findByOwnerWithFilters,
 
     -- * Aggregations (common for domain use)
     sumByOwnerAndStatus,
@@ -45,11 +46,11 @@ module Lib.Finance.Ledger.Service
 where
 
 import qualified Data.Aeson as Aeson
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Kernel.Prelude
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Lib.Finance.Core.Types (TimeRange (..))
 import Lib.Finance.Domain.Types.Account (Account)
 import Lib.Finance.Domain.Types.LedgerEntry
@@ -274,6 +275,19 @@ findByOwnerAndStatus ::
   EntryStatus -> -- Status to filter
   m [LedgerEntry]
 findByOwnerAndStatus = QLedger.findByOwnerAndStatus
+
+findByOwnerWithFilters ::
+  (BeamFlow.BeamFlow m r) =>
+  Text ->
+  Text ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe EntryStatus ->
+  Maybe [Text] ->
+  m [LedgerEntry]
+findByOwnerWithFilters = QLedger.findByOwnerWithFilters
 
 --------------------------------------------------------------------------------
 -- AGGREGATIONS (Common operations domain needs)

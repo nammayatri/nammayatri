@@ -6,7 +6,6 @@ import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
@@ -215,19 +214,3 @@ getFleetOwnerByTicketPlaceId mbTicketPlaceId = do
           <> [Se.Is Beam.verified $ Se.Eq True]
           <> [Se.Is Beam.ticketPlaceId $ Se.Eq mbTicketPlaceId]
     ]
-
--- Update prepaidSubscriptionBalance and lienAmount together for a fleet owner in one DB write.
-updatePrepaidSubscriptionBalanceAndLienAmount ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Maybe HighPrecMoney ->
-  Maybe HighPrecMoney ->
-  Id DP.Person ->
-  m ()
-updatePrepaidSubscriptionBalanceAndLienAmount prepaidSubscriptionBalance lienAmount fleetOwnerPersonId = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.prepaidSubscriptionBalance prepaidSubscriptionBalance,
-      Se.Set Beam.lienAmount lienAmount,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (getId fleetOwnerPersonId)]
