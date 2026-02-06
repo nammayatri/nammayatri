@@ -24,7 +24,27 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
   Metrics.startMetrics Metrics.INIT_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
-    ONDC _ -> do
+    ONDC ondcCfg -> do
+      let fareCachingAllowed = fromMaybe False ondcCfg.fareCachingAllowed
+
+      if fareCachingAllowed
+        then do
+          result <- withTryCatch "ExternalBPP:init" $ Flow.init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories
+          case result of
+            Left err -> throwError $ InternalError $ "Init failed: " <> show err
+            Right onInitReq -> processOnInit onInitReq
+        else do
+          logInfo $ "Fare caching disabled, calling ONDC init for booking: " <> booking.id.getId
+          callONDCInit integratedBPPConfig
+    _ -> do
+      result <- withTryCatch "ExternalBPP:init" $ Flow.init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories
+      case result of
+        Left err -> do
+          throwError $ InternalError $ "Init failed: " <> show err
+        Right onInitReq -> do
+          processOnInit onInitReq
+  where
+    callONDCInit integratedBPPConfig = do
       providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
       let categories =
             mapMaybe
@@ -38,14 +58,7 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} requestCity categories
       logDebug $ "FRFS InitReq " <> encodeToText bknInitReq
       void $ CallFRFSBPP.init providerUrl bknInitReq merchant.id
-    _ -> do
-      result <- withTryCatch "ExternalBPP:init" $ Flow.init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories
-      case result of
-        Left err -> do
-          throwError $ InternalError $ "Init failed: " <> show err
-        Right onInitReq -> do
-          processOnInit onInitReq
-  where
+
     processOnInit :: (FRFSConfirmFlow m r c) => DOnInit.DOnInit -> m ()
     processOnInit onInitReq = do
       (merchant', booking', quoteCategories') <- DOnInit.validateRequest onInitReq

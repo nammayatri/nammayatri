@@ -148,6 +148,8 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 failureReason = Nothing,
                 isSingleMode = isSingleMode,
                 isMockPayment = mbMockPayment,
+                ondcOnInitReceived = Nothing,
+                ondcOnInitReceivedAt = Nothing,
                 ..
               }
       QFRFSTicketBooking.create booking

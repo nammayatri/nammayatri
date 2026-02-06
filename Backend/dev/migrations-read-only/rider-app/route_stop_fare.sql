@@ -11,3 +11,16 @@ ALTER TABLE atlas_app.route_stop_fare ADD COLUMN start_stop_code text NOT NULL;
 ALTER TABLE atlas_app.route_stop_fare ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.route_stop_fare ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.route_stop_fare ADD PRIMARY KEY ( end_stop_code, fare_policy_id, start_stop_code);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_stop_fare ADD COLUMN category text  default 'ADULT';
+ALTER TABLE atlas_app.route_stop_fare ADD COLUMN bpp_item_id text ;
+ALTER TABLE atlas_app.route_stop_fare DROP CONSTRAINT route_stop_fare_pkey;
+ALTER TABLE atlas_app.route_stop_fare ADD PRIMARY KEY ( category, end_stop_code, fare_policy_id, start_stop_code);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_stop_fare ADD COLUMN offered_amount double precision ;

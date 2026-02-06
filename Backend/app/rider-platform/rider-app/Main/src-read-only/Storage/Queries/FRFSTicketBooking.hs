@@ -100,6 +100,18 @@ updateOnInitDoneBySearchId journeyOnInitDone searchId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.journeyOnInitDone journeyOnInitDone, Se.Set Beam.updatedAt _now] [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
+updateOndcOnInitReceivedById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateOndcOnInitReceivedById ondcOnInitReceived ondcOnInitReceivedAt id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.ondcOnInitReceived ondcOnInitReceived,
+      Se.Set Beam.ondcOnInitReceivedAt ondcOnInitReceivedAt,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePayoutOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updatePayoutOrderId cashbackPayoutOrderId id = do
   _now <- getCurrentTime
@@ -210,6 +222,8 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.multimodalSearchRequestId multimodalSearchRequestId,
+      Se.Set Beam.ondcOnInitReceived ondcOnInitReceived,
+      Se.Set Beam.ondcOnInitReceivedAt ondcOnInitReceivedAt,
       Se.Set Beam.osBuildVersion osBuildVersion,
       Se.Set Beam.osType osType,
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),

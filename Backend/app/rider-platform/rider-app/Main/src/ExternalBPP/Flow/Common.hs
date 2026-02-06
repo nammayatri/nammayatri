@@ -112,6 +112,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
         map
           ( \FRFSFare {..} ->
               let adultPrice = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.price) (find (\category -> category.category == ADULT) categories)
+                  adultBppItemId = maybe (CallAPI.getProviderName integratedBPPConfig) (.bppItemId) (find (\category -> category.category == ADULT) categories)
                   routeStations =
                     map
                       ( \routeInfo ->
@@ -132,7 +133,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                       )
                       routesInfo
                in DQuote
-                    { bppItemId = CallAPI.getProviderName integratedBPPConfig,
+                    { bppItemId = adultBppItemId,
                       routeCode = (NE.head nonEmptyFareRouteDetails).routeCode,
                       _type = DFRFSQuote.SingleJourney,
                       routeStations = routeStations,
@@ -147,7 +148,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
 
     mkDCategory FRFSTicketCategory {..} =
       DCategory
-        { bppItemId = CallAPI.getProviderName integratedBPPConfig,
+        { bppItemId = bppItemId,
           offeredPrice = offeredPrice,
           price = price,
           ..
