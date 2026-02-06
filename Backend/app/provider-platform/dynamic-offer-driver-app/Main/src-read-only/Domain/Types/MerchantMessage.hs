@@ -74,6 +74,7 @@ data MessageKey
   | FLEET_LINK_SUCCESS_MESSAGE
   | FLEET_UNLINK_SUCCESS_MESSAGE
   | DOCUMENT_INVALID
+  | DRIVER_PAYOUT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe
