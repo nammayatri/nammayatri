@@ -43,8 +43,9 @@ getFare ::
   Maybe Text ->
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
+  Bool ->
   m (Bool, Maybe JL.GetFareResponse)
-getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveInfo leg mode searchReqId blacklistedServiceTiers blacklistedFareQuoteTypes = case mode of
+getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveInfo leg mode searchReqId blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode = case mode of
   DTrip.Taxi -> do
     getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq
     JL.getFare getFareReq

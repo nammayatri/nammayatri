@@ -153,7 +153,7 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
     mapWithIndex
       ( \idx (mbPrev, leg, mbNext) -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) journeyReq.maximumWalkDistance
-          legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.routeLiveInfo leg travelMode (Just journeyReq.parentSearchId.getId) blacklistedServiceTiers blacklistedFareQuoteTypes) "multimodal getFare"
+          legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.routeLiveInfo leg travelMode (Just journeyReq.parentSearchId.getId) blacklistedServiceTiers blacklistedFareQuoteTypes journeyReq.isSingleMode) "multimodal getFare"
           let onboardedSingleModeVehicle =
                 if travelMode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]
                   then
@@ -176,7 +176,7 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
 
   let journeyFareLegs@(mbTotalFares, journeyLeg) = unzip legsAndFares
   logDebug $ "[Multimodal - Legs] : Is Multimodal Testing => " <> show riderConfig.multimodalTesting <> ", " <> show journeyFareLegs
-  if not riderConfig.multimodalTesting && (any (\(isFareMandatory, mbLegFare) -> isFareMandatory && isNothing mbLegFare) mbTotalFares)
+  if not riderConfig.multimodalTesting && any (\(isFareMandatory, mbLegFare) -> isFareMandatory && isNothing mbLegFare) mbTotalFares
     then do return Nothing
     else do
       forM_ journeyLeg QJourneyLeg.create
@@ -299,7 +299,7 @@ checkAndMarkTerminalJourneyStatus ::
   m ()
 checkAndMarkTerminalJourneyStatus journey allLegStates = do
   let flattenedLegStates = concatLegStates allLegStates
-      isSingleTaxiJourneyLeg = length flattenedLegStates == 1 && ((KP.listToMaybe flattenedLegStates) <&> (.mode)) == Just DTrip.Taxi -- This Would Be A Single Leg Journey With Only A Taxi Leg.
+      isSingleTaxiJourneyLeg = length flattenedLegStates == 1 && (KP.listToMaybe flattenedLegStates <&> (.mode)) == Just DTrip.Taxi -- This Would Be A Single Leg Journey With Only A Taxi Leg.
   go flattenedLegStates isSingleTaxiJourneyLeg
   where
     concatLegStates =
@@ -524,7 +524,7 @@ startJourneyLeg legInfo isSingleMode = do
       JL.Subway legExtraInfo -> do
         mbBooking <- QTBooking.findBySearchId (Id legInfo.searchId)
         let crisSdkResponse =
-              case ((mbBooking >>= (.bookingAuthCode)), (mbBooking >>= (.osType)), (mbBooking >>= (.osBuildVersion))) of
+              case (mbBooking >>= (.bookingAuthCode), mbBooking >>= (.osType), mbBooking >>= (.osBuildVersion)) of
                 (Just bookingAuthCode, Just osType, Just osBuildVersion) -> Just APITypes.CrisSdkResponse {bookAuthCode = bookingAuthCode, osType = osType, osBuildVersion = osBuildVersion, latency = Nothing}
                 _ -> Nothing
         return (legExtraInfo.categories, crisSdkResponse)
@@ -749,7 +749,8 @@ addMetroLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers bl
             journeyLeg,
             upsertJourneyLegAction,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
+            isSingleMode = fromMaybe False journey.isSingleMode
           }
 
 addSubwayLeg ::
@@ -777,7 +778,8 @@ addSubwayLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers b
             journeyLeg,
             upsertJourneyLegAction,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
+            isSingleMode = fromMaybe False journey.isSingleMode
           }
 
 addBusLeg ::
@@ -807,7 +809,8 @@ addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedSer
             upsertJourneyLegAction,
             serviceTier = mbServiceTier,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
+            isSingleMode = fromMaybe False journey.isSingleMode
           }
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
@@ -1193,7 +1196,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation _ = do
       let distance = convertMetersToDistance Meter distResp.distance
       now <- getCurrentTime
       let multiModalLeg = mkMultiModalTaxiLeg distance distResp.duration MultiModalTypes.Unspecified startLocation.lat startLocation.lon endLocation.lat endLocation.lon
-      (isFareMandatory, estimatedFare) <- JLI.getFare (Just now) journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId Nothing multiModalLeg DTrip.Taxi Nothing [] []
+      (isFareMandatory, estimatedFare) <- JLI.getFare (Just now) journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId Nothing multiModalLeg DTrip.Taxi Nothing [] [] (fromMaybe False journey.isSingleMode)
       when (isFareMandatory && isNothing estimatedFare) $ throwError (InvalidRequest "Fare is mandatory for this leg, but unavailable")
       return $
         APITypes.ExtendLegGetFareResp
