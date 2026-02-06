@@ -194,6 +194,14 @@ PurchasedPassPayment:
       params: [startDate, endDate, status]
       where: id
 
+    updateProfilePictureByPurchasedPassIdAndStatus:
+      kvFunction: updateWithKV
+      params: [profilePicture]
+      where:
+        and:
+          - purchasedPassId
+          - status
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
