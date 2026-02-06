@@ -1,0 +1,43 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+CrisRdsBalanceHistory:
+  tableName: cris_rds_balance_history
+
+  fields:
+    id: Id CrisRdsBalanceHistory
+    integratedBppConfigId: Id IntegratedBPPConfig
+    balance: HighPrecMoney
+    executionTime: UTCTime
+    dateIst: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    dateIst: "date"
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findByDate:
+      kvFunction: findAllWithKV
+      where:
+        and: [dateIst]
+    findByDateAndConfig:
+      kvFunction: findOneWithKV
+      where:
+        and: [dateIst, integratedBppConfigId]
+    findAllByIntegratedBppConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [integratedBppConfigId]
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+
+  excludedFields: [merchantOperatingCityId, merchantId]

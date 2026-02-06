@@ -270,6 +270,7 @@ let RiderJobType =
       | PaymentOrderStatusCheck
       | PartnerInvoiceDataExport
       | UnblockCustomer
+      | UpdateCRISRDSBalanceData
       >
 
 let jobInfoMapx =
@@ -310,6 +311,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.PaymentOrderStatusCheck, mapValue = True }
       , { mapKey = RiderJobType.PartnerInvoiceDataExport, mapValue = True }
       , { mapKey = RiderJobType.UnblockCustomer, mapValue = True }
+      , { mapKey = RiderJobType.UpdateCRISRDSBalanceData, mapValue = True }
       ]
 
 let cacConfig =
