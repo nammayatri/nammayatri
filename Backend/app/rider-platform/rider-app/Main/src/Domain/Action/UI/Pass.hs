@@ -13,6 +13,7 @@ module Domain.Action.UI.Pass
     postMultimodalPassActivateTodayUtil,
     postMultimodalPassSelectUtil,
     postMultimodalPassUploadProfilePicture,
+    postMultimodalPassUpdateProfilePictureUtil,
     buildPurchasedPassAPIEntity,
   )
 where
@@ -1085,5 +1086,26 @@ postMultimodalPassUploadProfilePicture (mbCallerPersonId, _merchantId) req = do
   purchasedPassPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PhotoPending purchasedPass.startDate
   forM_ purchasedPassPayments $ \payment -> do
     QPurchasedPassPayment.updateStatusAndProfilePictureByOrderId newStatus (Just req.profilePicture) payment.orderId
+
+  return APISuccess.Success
+
+-- | Dashboard utility to update profile picture (no person validation for admin use)
+postMultimodalPassUpdateProfilePictureUtil ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id.Id DPurchasedPass.PurchasedPass ->
+  Text ->
+  m APISuccess.APISuccess
+postMultimodalPassUpdateProfilePictureUtil purchasedPassId profilePicture = do
+  purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
+  QPurchasedPass.updateProfilePictureById (Just profilePicture) purchasedPass.id
+
+  let validStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
+  purchasedPassPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing purchasedPass.id validStatuses
+
+  forM_ purchasedPassPayments $ \payment -> do
+    QPurchasedPassPayment.updateStatusAndProfilePictureByOrderId purchasedPass.status (Just profilePicture) payment.orderId
 
   return APISuccess.Success
