@@ -8,6 +8,7 @@ module Domain.Action.RiderPlatform.AppManagement.Pass
     postPassCustomerPassSelect,
     getPassCustomerPaymentStatus,
     postPassCustomerPassResetDeviceSwitchCount,
+    postPassCustomerPassUpdateProfilePicture,
   )
 where
 
@@ -72,3 +73,10 @@ postPassCustomerPassResetDeviceSwitchCount merchantShortId opCity apiTokenInfo c
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.postPassCustomerPassResetDeviceSwitchCount) customerId purchasedPassId)
+
+
+postPassCustomerPassUpdateProfilePicture :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> API.Types.Dashboard.AppManagement.Pass.UpdateProfilePictureReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPassCustomerPassUpdateProfilePicture merchantShortId opCity apiTokenInfo customerId purchasedPassId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.postPassCustomerPassUpdateProfilePicture) customerId purchasedPassId req)

@@ -29,6 +29,10 @@ types:
     - profilePicture: Maybe Text
     - derive: "'HideSecrets"
 
+  UpdateProfilePictureReq:
+    - profilePicture: Text
+    - derive: "'HideSecrets"
+
 apis:
   - GET:
       endpoint: /customer/{customerId}/availablePasses
@@ -99,5 +103,16 @@ apis:
       params:
         customerId: Id Person
         passId: Id PurchasedPass
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /customer/{customerId}/pass/{purchasedPassId}/updateProfilePicture
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        purchasedPassId: Id PurchasedPass
+      request:
+        type: UpdateProfilePictureReq
       response:
         type: APISuccess
