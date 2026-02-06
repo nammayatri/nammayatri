@@ -41,6 +41,7 @@ let schedulerConfig =
       , block = +10000
       , readCount = +1
       , kafkaProducerCfg = appCfg.kafkaProducerCfg
+      , secondaryKafkaProducerCfg = appCfg.secondaryKafkaProducerCfg
       , cacConfig = appCfg.cacConfig
       , inMemConfig
       , hedisSecondaryClusterCfg = appCfg.hedisSecondaryClusterCfg

@@ -206,6 +206,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let secondaryKafkaProducerCfg = Some kafkaProducerCfg
+
 let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
@@ -426,6 +428,7 @@ in  { esqDBCfg
     , disableSignatureAuth = False
     , encTools
     , kafkaProducerCfg
+    , secondaryKafkaProducerCfg
     , dashboardToken = sec.dashboardToken
     , cacheConfig
     , cacheTranslationConfig

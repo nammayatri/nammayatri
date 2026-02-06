@@ -62,6 +62,7 @@ data AppCfg = AppCfg
     hedisClusterCfg :: HedisCfg,
     kvConfigUpdateFrequency :: Int,
     kafkaProducerCfg :: KafkaProducerCfg,
+    secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     loggerConfig :: LoggerConfig,
     dontEnableForDb :: [Text],
     dontEnableForKafka :: [Text],

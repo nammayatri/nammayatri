@@ -124,6 +124,7 @@ data AppCfg = AppCfg
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     cacheTranslationConfig :: CacheTranslationConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
+    secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     driverLocationUpdateTopic :: Text,
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
@@ -324,7 +325,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   eventRequestCounter <- registerEventRequestCounterMetric
   let modifierFunc = ("dynamic-offer-driver-app:" <>)

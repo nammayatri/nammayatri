@@ -129,6 +129,7 @@ data AppCfg = AppCfg
     cacheConfig :: CacheConfig,
     cacConfig :: CacConfig,
     kafkaProducerCfg :: Kafka.KafkaProducerCfg,
+    secondaryKafkaProducerCfg :: Maybe Kafka.KafkaProducerCfg,
     kvConfigUpdateFrequency :: Int,
     passwordExpiryDays :: Maybe Int,
     enforceStrongPasswordPolicy :: Bool,
@@ -146,7 +147,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- Metrics.registerCoreMetricsContainer
   slackEnv <- createSlackConfig slackToken slackChannel
-  kafkaProducerTools <- Kafka.buildKafkaProducerTools kafkaProducerCfg
+  kafkaProducerTools <- Kafka.buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
   let modifierFunc = ("dashboard:" <>)
   let nonCriticalModifierFunc = ("dashboard:non-critical:" <>)
   let requestId = Nothing

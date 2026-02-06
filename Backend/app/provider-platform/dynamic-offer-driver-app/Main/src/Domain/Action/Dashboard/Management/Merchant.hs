@@ -2582,15 +2582,15 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                 slab :: FarePolicy.FPAmbulanceDetailsSlab
                 slab =
                   FarePolicy.FPAmbulanceDetailsSlab
-                    { id = 0  -- Placeholder: database will auto-generate
-                    , baseFare = baseFare
-                    , baseDistance = baseDistance
-                    , vehicleAge = 0 -- Hardcoded to 0 for now
-                    , perKmRate = perKmRate
-                    , currency = currency
-                    , waitingChargeInfo = waitingChargeInfo
-                    , platformFeeInfo = platformFeeInfo
-                    , nightShiftCharge = nightShiftCharge
+                    { id = 0, -- Placeholder: database will auto-generate
+                      baseFare = baseFare,
+                      baseDistance = baseDistance,
+                      vehicleAge = 0, -- Hardcoded to 0 for now
+                      perKmRate = perKmRate,
+                      currency = currency,
+                      waitingChargeInfo = waitingChargeInfo,
+                      platformFeeInfo = platformFeeInfo,
+                      nightShiftCharge = nightShiftCharge
                     }
                 details = FarePolicy.FPAmbulanceDetails (NE.fromList [slab])
             return $ FarePolicy.AmbulanceDetails details

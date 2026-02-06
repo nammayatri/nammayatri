@@ -32,7 +32,7 @@ getNextSlabId = do
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BeamFPAD.FullFarePolicyAmbulanceDetailsSlab -> m ()
 create (farePolicyId, slab) = do
   nextId <- getNextSlabId
-  createWithKV ((farePolicyId, slab { FPASlab.id = nextId }) :: BeamFPAD.FullFarePolicyAmbulanceDetailsSlab)
+  createWithKV ((farePolicyId, slab {FPASlab.id = nextId}) :: BeamFPAD.FullFarePolicyAmbulanceDetailsSlab)
 
 delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
 delete farePolicyId = deleteWithKV [Se.Is BeamFPAD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]

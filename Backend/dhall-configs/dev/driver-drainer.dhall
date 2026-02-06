@@ -51,6 +51,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let secondaryKafkaProducerCfg = Some kafkaProducerCfg
+
 let kvConfigUpdateFrequency = +60
 
 let dontEnableForDb = [] : List Text
@@ -73,6 +75,7 @@ in  { esqDBCfg
             , logRawSql = True
             }
     , kafkaProducerCfg
+    , secondaryKafkaProducerCfg
     , kvConfigUpdateFrequency
     , dontEnableForDb
     , dontEnableForKafka

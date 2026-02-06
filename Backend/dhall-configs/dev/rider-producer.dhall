@@ -74,6 +74,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let secondaryKafkaProducerCfg = Some kafkaProducerCfg
+
 let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
 
 in  { hedisCfg
@@ -105,6 +107,7 @@ in  { hedisCfg
     , kvConfigUpdateFrequency
     , runReviver = True
     , kafkaProducerCfg
+    , secondaryKafkaProducerCfg
     , cacConfig
     , producersPerPod = +5
     , inMemConfig

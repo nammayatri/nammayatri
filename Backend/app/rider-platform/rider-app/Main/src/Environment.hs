@@ -146,6 +146,7 @@ data AppCfg = AppCfg
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
+    secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     nwAddress :: BaseUrl,
     selfUIUrl :: BaseUrl,
     dashboardToken :: Text,
@@ -342,7 +343,7 @@ buildAppEnv cfg@AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   eventRequestCounter <- registerEventRequestCounterMetric
-  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let nonCriticalModifierFunc = ("ab:n_c:" <>)

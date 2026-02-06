@@ -51,6 +51,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let secondaryKafkaProducerCfg = Some kafkaProducerCfg
+
 let kvConfigUpdateFrequency = +60
 
 let dontEnableForDb = [] : List Text
@@ -71,6 +73,7 @@ in  { esqDBCfg
             common.loggerConfig
         //  { logFilePath = "/tmp/rider-app.log", logRawSql = True }
     , kafkaProducerCfg
+    , secondaryKafkaProducerCfg
     , kvConfigUpdateFrequency
     , dontEnableForDb
     , dontEnableForKafka

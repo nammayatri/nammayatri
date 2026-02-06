@@ -153,7 +153,7 @@ buildHandlerEnv HandlerCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   eventRequestCounter <- registerEventRequestCounterMetric
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
-  kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
+  kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg appCfg.secondaryKafkaProducerCfg
   passettoContext <- uncurry mkDefPassettoContext encTools.service
   hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)

@@ -226,6 +226,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let secondaryKafkaProducerCfg = Some kafkaProducerCfg
+
 let kvConfigUpdateFrequency = +10
 
 let appBackendBapInternal =
@@ -467,6 +469,7 @@ in  { esqDBCfg
     , driverLocationUpdateTopic = "location-updates"
     , broadcastMessageTopic = "broadcast-messages"
     , kafkaProducerCfg
+    , secondaryKafkaProducerCfg
     , snapToRoadSnippetThreshold = +300
     , droppedPointsThreshold = +2000
     , osrmMatchThreshold = +1500

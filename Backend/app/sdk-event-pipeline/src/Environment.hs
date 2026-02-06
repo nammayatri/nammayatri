@@ -40,6 +40,7 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     kafkaProducerCfg :: KafkaProducerCfg,
+    secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     riderSDKEventsKafkaTopic :: Text,
     driverSDKEventsKafkaTopic :: Text,
     metroWebviewEventsKafkaTopic :: Text,
@@ -84,7 +85,7 @@ buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
-  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
   coreMetrics <- registerCoreMetricsContainer
   version <- lookupDeploymentVersion
   isShuttingDown <- mkShutdown

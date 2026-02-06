@@ -1,4 +1,4 @@
-source_url https://raw.githubusercontent.com/juspay/omnix/3a82640921c61528b3a4660f2a1611d2a2ca0bed/omnixrc 'sha256-8C2Jb5bHx/0cvm1+9gOlBEdWzbikCWT5UsJWewUAFt4='
+source_url https://omnix.page/om/develop/omnixrc/v1 'sha256-FBAVRYkaexKeFKQGUxaPHqhBnqA7km7++O77dKiyD0I='
 
 watch_file \
     $(find Backend -name "*.cabal" | tr '\n' ' ') \

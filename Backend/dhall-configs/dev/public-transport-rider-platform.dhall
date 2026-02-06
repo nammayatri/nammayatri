@@ -38,6 +38,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let secondaryKafkaProducerCfg = Some kafkaProducerCfg
+
 let rccfg =
       { connectHost = "localhost"
       , connectPort = 30001
@@ -82,6 +84,7 @@ in  { esqDBCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , registryUrl = common.nammayatriRegistryConfig.url
     , kafkaProducerCfg
+    , secondaryKafkaProducerCfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , internalEndPointMap = common.internalEndPointMap
