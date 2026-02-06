@@ -61,6 +61,7 @@ data AppCfg = AppCfg
     disableSignatureAuth :: Bool,
     hostName :: Text,
     kafkaProducerCfg :: KafkaProducerCfg,
+    secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
@@ -121,7 +122,7 @@ buildAppEnv AppCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
-  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
   hedisEnv <- connectHedis hedisCfg publicTransportBapPrefix
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg publicTransportBapPrefix

@@ -74,6 +74,7 @@ data SchedulerConfig = SchedulerConfig
     enablePrometheusMetricLogging :: Bool,
     cacConfig :: CacConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
+    secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     inMemConfig :: InMemConfig,
     blackListedJobs :: [Text]
   }

@@ -111,6 +111,7 @@ data AppCfg = AppCfg
     metricsPort :: Int,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
+    secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     serviceClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
     dashboardClickhouseCfg :: ClickhouseCfg,
@@ -217,7 +218,7 @@ buildAppEnv AppCfg {..} consumerType = do
   coreMetrics <- Metrics.registerCoreMetricsContainer
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
-  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
   isShuttingDown <- mkShutdown
   serviceClickhouseEnv <- createConn serviceClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg

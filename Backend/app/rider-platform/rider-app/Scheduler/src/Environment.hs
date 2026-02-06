@@ -150,7 +150,7 @@ buildHandlerEnv HandlerCfg {..} = do
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
-  kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
+  kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg appCfg.secondaryKafkaProducerCfg
   eventRequestCounter <- registerEventRequestCounterMetric
   passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   let requestId = Nothing

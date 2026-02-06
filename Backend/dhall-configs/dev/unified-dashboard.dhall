@@ -38,6 +38,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let secondaryKafkaProducerCfg = Some kafkaProducerCfg
+
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let shareRideApiRateLimitOptions = { limit = +20, limitResetTimeInSec = +60 }
@@ -128,6 +130,7 @@ in  { esqDBCfg
     , hedisMigrationStage = False
     , cutOffHedisCluster = False
     , kafkaProducerCfg
+    , secondaryKafkaProducerCfg
     , port = +8021
     , migrationPath =
       [   env:UNIFIED_DASHBOARD_MIGRATION_PATH as Text

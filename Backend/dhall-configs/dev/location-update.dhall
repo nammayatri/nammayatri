@@ -110,6 +110,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let secondaryKafkaProducerCfg = Some kafkaProducerCfg
+
 let serviceClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
@@ -162,6 +164,7 @@ in  { hedisCfg
     , kafkaClickhouseCfg
     , serviceClickhouseCfg
     , kafkaProducerCfg
+    , secondaryKafkaProducerCfg
     , kafkaReadBatchDelay = +10
     , kafkaReadBatchSize = +10
     , consumerStartTime = Some +14

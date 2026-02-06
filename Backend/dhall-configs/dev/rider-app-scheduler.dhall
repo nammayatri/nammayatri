@@ -40,6 +40,7 @@ let schedulerConfig =
       , block = +10000
       , readCount = +1
       , kafkaProducerCfg = appCfg.kafkaProducerCfg
+      , secondaryKafkaProducerCfg = appCfg.secondaryKafkaProducerCfg
       , cacConfig = appCfg.cacConfig
       , inMemConfig
       , blackListedJobs = [] : List Text
@@ -50,7 +51,7 @@ in  { appCfg =
         //  { loggerConfig =
                     appCfg.loggerConfig
                 //  { logFilePath = "/tmp/driver-offer-allocator.log" }
-            , cityDBSchema = "atlas_app" -- Note : For Production, verify the schema exists with `merchant_operating_city` table in the DB host specified in the esqDBCfg
+            , cityDBSchema = "atlas_app"
             }
     , schedulerConfig
     }

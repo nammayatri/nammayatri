@@ -96,6 +96,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let secondaryKafkaProducerCfg = Some kafkaProducerCfg
+
 let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
 
 let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
@@ -110,6 +112,7 @@ in  { esqDBCfg
     , hedisMigrationStage = False
     , cutOffHedisCluster = False
     , kafkaProducerCfg
+    , secondaryKafkaProducerCfg
     , port = +8017
     , migrationPath =
       [   env:RIDER_DASHBOARD_MIGRATION_PATH as Text

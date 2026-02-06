@@ -39,7 +39,7 @@ main = do
   let connString = getConnectionString $ appCfg.esqDBCfg
   connectionPool <- createDbPool appCfg.esqDBCfg
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
-  kafkaProducerTools <- buildKafkaProducerTools' appCfg.kafkaProducerCfg appCfg.kafkaProperties
+  kafkaProducerTools <- buildKafkaProducerTools' appCfg.kafkaProducerCfg appCfg.secondaryKafkaProducerCfg appCfg.kafkaProperties
   bracket (async NW.runMetricServer) cancel $ \_ -> do
     R.withFlowRuntime
       (Just loggerRt)

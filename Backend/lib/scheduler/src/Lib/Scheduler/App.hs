@@ -58,7 +58,7 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- Metrics.registerCoreMetricsContainer
-  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
   let kafkaProducerForART = Just kafkaProducerTools
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k)

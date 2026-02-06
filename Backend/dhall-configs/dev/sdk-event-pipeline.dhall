@@ -5,6 +5,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let secondaryKafkaProducerCfg = Some kafkaProducerCfg
+
 let hedisClusterCfg =
       { connectHost = "localhost"
       , connectPort = 30001
@@ -17,6 +19,7 @@ let hedisClusterCfg =
       }
 
 in  { kafkaProducerCfg
+    , secondaryKafkaProducerCfg
     , port = +8090
     , loggerConfig =
             common.loggerConfig

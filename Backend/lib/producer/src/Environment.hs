@@ -64,6 +64,7 @@ data AppCfg = AppCfg
     kvConfigUpdateFrequency :: Int,
     runReviver :: Bool,
     kafkaProducerCfg :: KafkaProducerCfg,
+    secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     inMemConfig :: CF.InMemConfig,
     blackListedJobs :: [Text]
   }
@@ -119,7 +120,7 @@ buildAppEnv AppCfg {..} producerType = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
-  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
