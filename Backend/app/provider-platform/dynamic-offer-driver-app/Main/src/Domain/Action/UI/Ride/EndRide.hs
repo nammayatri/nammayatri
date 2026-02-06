@@ -549,7 +549,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                hasStops = Just (not $ null ride.stops),
                commission = finalCommission
               }
-    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (Yudhishthira.computeNammaTags (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do

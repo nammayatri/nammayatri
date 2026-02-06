@@ -282,7 +282,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
             merchantOperatingCityId = booking.merchantOperatingCityId,
             ..
           }
-  nammaTags <- withTryCatch "computeNammaTags:RideCancel" (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
+  nammaTags <- withTryCatch "computeNammaTags:RideCancel" (Yudhishthira.computeNammaTags (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel tagData)
   logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags) <> "| tagdata: " <> show tagData
   let allTags = ride.rideTags <> eitherToMaybe nammaTags
   QRide.updateRideTags allTags ride.id

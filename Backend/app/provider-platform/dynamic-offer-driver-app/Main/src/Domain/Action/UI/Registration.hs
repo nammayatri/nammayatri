@@ -404,7 +404,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
             pure (Just email, Nothing, useFakeOtp)
           Nothing -> throwError $ InvalidRequest "Email is required"
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
-  safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry $ LYT.TagNameValue "SafetyCohort#New"
+  safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry (cast merchantOperatingCityId) $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person
       { id = pid,

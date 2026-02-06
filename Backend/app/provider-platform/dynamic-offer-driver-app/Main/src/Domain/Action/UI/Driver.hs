@@ -233,7 +233,7 @@ import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
-import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
+import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
@@ -1345,7 +1345,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
     tag <-
       if isPetModeEnabled
         then do
-          mbNammTag <- Yudhishthira.verifyTag petTag
+          mbNammTag <- YudhishthiraFlow.verifyTag (cast merchantOpCityId) petTag
           now <- getCurrentTime
           let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
           return $ Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
@@ -1357,7 +1357,9 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
   QPerson.updatePersonRec personId updPerson
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  driverEntity <- buildDriverEntityRes (updPerson, updatedDriverInfo, driverStats, merchantOpCityId) Plan.YATRI_SUBSCRIPTION
+  let driverEntityArg :: (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity)
+      driverEntityArg = (updPerson, updatedDriverInfo, driverStats, merchantOpCityId)
+  driverEntity <- buildDriverEntityRes driverEntityArg Plan.YATRI_SUBSCRIPTION
   driverReferralCode <- QDR.findById personId
   allFdas <- QFDA.findAllByDriverIdWithStatus personId
   let activeFda = find (.isActive) allFdas
