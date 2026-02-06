@@ -337,6 +337,9 @@ type API =
       :> Capture
            "vehicleNumber"
            Kernel.Prelude.Text
+      :> QueryParam
+           "returnServiceTier"
+           Kernel.Prelude.Bool
       :> Get
            '[JSON]
            API.Types.UI.MultimodalConfirm.PublicTransportData
@@ -796,9 +799,10 @@ getPublicTransportVehicleData ::
     ) ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportVehicleData a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportVehicleData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getPublicTransportVehicleData a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportVehicleData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getMultimodalOrderGetLegTierOptions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

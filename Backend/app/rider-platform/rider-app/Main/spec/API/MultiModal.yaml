@@ -231,9 +231,9 @@ types:
     bookingStatus: FRFSTicketBookingStatus
 
   TransportRoute:
-    cd: Text
-    sN: Text
-    lN: Text
+    cd: Maybe Text
+    sN: Maybe Text
+    lN: Maybe Text
     dTC: Maybe Int
     stC: Maybe Int
     vt: Text
@@ -242,6 +242,8 @@ types:
     sst: Maybe [ServiceSubType]
     clr: Maybe Text
     ibc: Id IntegratedBPPConfig
+    ec: Maybe Text
+    en: Maybe Text
     derive': "Generic, ToSchema"
 
   TransportStation:
@@ -619,6 +621,8 @@ apis:
       params:
         vehicleType: VehicleCategory
         vehicleNumber: Text
+      query:
+        returnServiceTier: Bool
       response:
         type: PublicTransportData
 
