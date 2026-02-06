@@ -104,7 +104,8 @@ data CRISConfig = CRISConfig
     reconDuration :: Maybe Int,
     singleModeWalkThreshold :: Maybe Int,
     useRouteFareV4 :: Maybe Bool,
-    enableBookType :: Maybe Bool
+    enableBookType :: Maybe Bool,
+    balanceCheckTimeOfDay :: Maybe Int -- Time in seconds from midnight (e.g., 86340 for 11:59 PM)
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

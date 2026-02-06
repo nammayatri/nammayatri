@@ -391,6 +391,7 @@ library
       ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3
       ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
       ExternalBPP.ExternalAPI.Subway.CRIS.Types
+      ExternalBPP.ExternalAPI.Subway.CRIS.UpdateRDSBalance
       ExternalBPP.ExternalAPI.Subway.CRIS.Uts
       ExternalBPP.ExternalAPI.Types
       ExternalBPP.Flow
@@ -489,6 +490,7 @@ library
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
       SharedLogic.Scheduler.Jobs.UnblockCustomer
+      SharedLogic.Scheduler.Jobs.UpdateCRISRDSBalance
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
@@ -877,6 +879,7 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.ClientPersonInfo
+      Domain.Types.CrisRdsBalanceHistory
       Domain.Types.CrisRecon
       Domain.Types.DeletedPerson
       Domain.Types.Depot
@@ -1033,6 +1036,7 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.ClientPersonInfo
+      Storage.Beam.CrisRdsBalanceHistory
       Storage.Beam.CrisRecon
       Storage.Beam.DeletedPerson
       Storage.Beam.Depot
@@ -1192,6 +1196,7 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.ClientPersonInfo
+      Storage.Queries.CrisRdsBalanceHistory
       Storage.Queries.CrisRecon
       Storage.Queries.DeletedPerson
       Storage.Queries.Depot
