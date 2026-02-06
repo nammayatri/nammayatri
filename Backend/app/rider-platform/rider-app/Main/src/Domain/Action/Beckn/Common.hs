@@ -393,6 +393,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         -- If commission is needed on BAP, it should be calculated here or received from BPP.
         commission = booking.commission,
         cloudType = cloudType,
+        driverCancellationDeductionOnPreviousRide = Nothing,
         ..
       }
 

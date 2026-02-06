@@ -130,6 +130,7 @@ Ride:
     insuredAmount: Maybe Text
     pickupEtaLogicVersion: Maybe Int
     commission: Maybe HighPrecMoney
+    driverCancellationDeductionOnPreviousRide: Maybe HighPrecMoney
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -161,6 +162,7 @@ Ride:
     driverNumberHash: bytea
     driverAlternateNumberHash: bytea
     tipAmount: numeric(30,2)
+    driverCancellationDeductionOnPreviousRide: numeric(30,2)
 
 # FIXME separate distanceUnit/currency for each column
   beamFields:

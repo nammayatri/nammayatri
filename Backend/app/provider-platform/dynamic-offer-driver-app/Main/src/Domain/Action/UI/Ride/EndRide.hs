@@ -528,7 +528,12 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                         then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
                         else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint
                 pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
-    let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
+
+    -- Fetch driver info to get pending cancellation deduction
+    driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+    let pendingCancellationDeduction = driverInfo.cancellationDeductionOnNextRideAmount
+
+    let newFareParams = (fromMaybe booking.fareParams mbUpdatedFareParams) {driverCancellationDeductionOnPreviousRide = pendingCancellationDeduction}
     mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
     finalCommission <- FareV2.calculateCommission newFareParams mbFarePolicy
     clearEditDestinationWayAndSnappedPointsFork <- awaitableFork "endRide->clearEditDestinationWayAndSnappedPoints" $ withTimeAPI "endRide" "clearEditDestinationWayAndSnappedPoints" $ clearEditDestinationWayAndSnappedPoints driverId
@@ -547,7 +552,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                endOdometerReading = mbOdometer,
                driverGoHomeRequestId = ghInfo.driverGoHomeRequestId,
                hasStops = Just (not $ null ride.stops),
-               commission = finalCommission
+               commission = finalCommission,
+               driverCancellationDeductionOnNextRideAmount = pendingCancellationDeduction
               }
     newRideTags <- withTryCatch "computeNammaTags:RideEnd" (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}

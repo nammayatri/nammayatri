@@ -42,6 +42,7 @@ data RideT f = RideT
     distanceCalculationFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    driverCancellationDeductionOnNextRideAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     driverCancellationPenaltyAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     driverCancellationPenaltyFeeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverCancellationPenaltyWaivedReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

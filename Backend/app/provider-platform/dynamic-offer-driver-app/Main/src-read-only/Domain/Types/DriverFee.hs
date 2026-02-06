@@ -108,6 +108,7 @@ data FeeType
   | PREPAID_RECHARGE
   | WALLET_TOPUP
   | CANCELLATION_PENALTY
+  | NEXT_RIDE_CANCELLATION_DEDUCTION
   deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord, Enum)
 
 data PlatformFee = PlatformFee {cgst :: Kernel.Types.Common.HighPrecMoney, currency :: Kernel.Types.Common.Currency, fee :: Kernel.Types.Common.HighPrecMoney, sgst :: Kernel.Types.Common.HighPrecMoney}

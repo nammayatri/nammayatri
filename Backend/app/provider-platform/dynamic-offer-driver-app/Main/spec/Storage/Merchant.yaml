@@ -1129,6 +1129,8 @@ TransporterConfig:
     payoutRideScheduleTimeBuffer: Maybe Seconds
     allowedPaymentInstrumentForPayout: Maybe [PaymentInstrument]
     vehicleCategoryExcludedFromVerification: "Maybe [VehicleCategory]"
+    cancellationDeductionOnNextRideAmount: Maybe HighPrecMoney
+    maxCancellationDeductionOnNextRideAmount: Maybe HighPrecMoney
 
   beamType:
     currency: Maybe Currency

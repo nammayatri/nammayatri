@@ -165,7 +165,8 @@ data DriverRideRes = DriverRideRes
     riderMobileNumber :: Maybe Text,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     paymentMode :: Maybe DMPM.PaymentMode,
-    commissionCharges :: Maybe HighPrecMoney
+    commissionCharges :: Maybe HighPrecMoney,
+    driverCancellationDeductionOnPreviousRideWithCurrency :: Maybe PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -287,7 +288,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         billingCategory = booking.billingCategory,
         paymentInstrument = booking.paymentInstrument,
         paymentMode = booking.paymentMode,
-        commissionCharges = ride.commission
+        commissionCharges = ride.commission,
+        driverCancellationDeductionOnPreviousRideWithCurrency = flip PriceAPIEntity ride.currency <$> ride.driverCancellationDeductionOnNextRideAmount
       }
 
 -- calculateLocations moved from UI.Ride

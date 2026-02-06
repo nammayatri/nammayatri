@@ -195,6 +195,7 @@ data QuoteBreakupTitle
   | PER_STOP_CHARGES
   | NYREGULAR_SUBSCRIPTION_CHARGE
   | COMMISSION
+  | DRIVER_CANCELLATION_DEDUCTION_ON_PREVIOUS_RIDE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId

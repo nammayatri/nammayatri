@@ -543,6 +543,7 @@ buildRideAPIEntity DRide.Ride {..} = do
         talkedWithDriver = fromMaybe False talkedWithDriver,
         isInsured = Just isInsured,
         tipAmount = mkPriceAPIEntity <$> tipAmount,
+        driverCancellationDeductionOnPreviousRide = driverCancellationDeductionOnPreviousRide,
         ..
       }
 

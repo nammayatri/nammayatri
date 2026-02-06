@@ -118,7 +118,8 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.RETURN_FEE),
                      Just (show Enums.BOOTH_CHARGE),
                      Just (show Enums.RIDE_VAT),
-                     Just (show Enums.TOLL_VAT)
+                     Just (show Enums.TOLL_VAT),
+                     Just (show Enums.DRIVER_CANCELLATION_DEDUCTION_ON_PREVIOUS_RIDE)
                    ]
         DFParams.Slab ->
           title
@@ -144,7 +145,8 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.RETURN_FEE),
                      Just (show Enums.BOOTH_CHARGE),
                      Just (show Enums.RIDE_VAT),
-                     Just (show Enums.TOLL_VAT)
+                     Just (show Enums.TOLL_VAT),
+                     Just (show Enums.DRIVER_CANCELLATION_DEDUCTION_ON_PREVIOUS_RIDE)
                    ]
         DFParams.Rental ->
           title
@@ -168,7 +170,8 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.RETURN_FEE),
                      Just (show Enums.BOOTH_CHARGE),
                      Just (show Enums.RIDE_VAT),
-                     Just (show Enums.TOLL_VAT)
+                     Just (show Enums.TOLL_VAT),
+                     Just (show Enums.DRIVER_CANCELLATION_DEDUCTION_ON_PREVIOUS_RIDE)
                    ]
         DFParams.InterCity ->
           title
@@ -193,7 +196,8 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.PERSONAL_DISCOUNT),
                      Just (show Enums.PARKING_CHARGE),
                      Just (show Enums.RIDE_VAT),
-                     Just (show Enums.TOLL_VAT)
+                     Just (show Enums.TOLL_VAT),
+                     Just (show Enums.DRIVER_CANCELLATION_DEDUCTION_ON_PREVIOUS_RIDE)
                    ]
         _ -> True
 

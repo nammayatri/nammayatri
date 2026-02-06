@@ -427,6 +427,7 @@ library
       SharedLogic.Cancel
       SharedLogic.CancellationCoins
       SharedLogic.DeleteDriver
+      SharedLogic.DriverCancellationOnNextRide
       SharedLogic.DriverCancellationPenalty
       SharedLogic.DriverFee
       SharedLogic.DriverFleetOperatorAssociation

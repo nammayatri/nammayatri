@@ -144,6 +144,7 @@ DriverInformation:
     dailyExtraKms: Maybe HighPrecMeters
     weeklyExtraKms: Maybe HighPrecMeters
     onboardingAs: Maybe OnboardingAs
+    cancellationDeductionOnNextRideAmount: Maybe HighPrecMoney
 
   default:
     active: "false"
@@ -452,4 +453,8 @@ DriverInformation:
     updateDailyAndWeeklyExtraKms:
       kvFunction: updateOneWithKV
       params: [dailyExtraKms, weeklyExtraKms]
+      where: driverId
+    updateCancellationDeductionOnNextRideAmount:
+      kvFunction: updateOneWithKV
+      params: [cancellationDeductionOnNextRideAmount]
       where: driverId

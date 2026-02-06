@@ -89,3 +89,42 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN added_to_fee_id charact
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN collected_at_vendor_id text ;
+
+
+
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
