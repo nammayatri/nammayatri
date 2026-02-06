@@ -47,13 +47,15 @@ notifyEmergencyContactsInternal person notificationType mbNotificationKey mbBuil
             Nothing -> sendMessageToContact emergencyContact
             Just emergencyContactId -> do
               contactPersonEntity <- runInReplica $ QPerson.findById emergencyContactId >>= fromMaybeM (PersonNotFound (getId emergencyContactId))
-              case contactPersonEntity.deviceToken of
-                Nothing -> sendMessageToContact emergencyContact
-                Just _ -> do
-                  mbBodyAndTitle <- getBodyAndTitle contactPersonEntity
-                  case mbBodyAndTitle of
-                    Just (title, body) -> sendNotificationToEmergencyContact person.id contactPersonEntity body title notificationType mbNotificationKey mbSosId
-                    Nothing -> sendMessageToContact emergencyContact
+              if contactPersonEntity.merchantOperatingCityId /= person.merchantOperatingCityId
+                then sendMessageToContact emergencyContact
+                else case contactPersonEntity.deviceToken of
+                  Nothing -> sendMessageToContact emergencyContact
+                  Just _ -> do
+                    mbBodyAndTitle <- getBodyAndTitle contactPersonEntity
+                    case mbBodyAndTitle of
+                      Just (title, body) -> sendNotificationToEmergencyContact person.id contactPersonEntity body title notificationType mbNotificationKey mbSosId
+                      Nothing -> sendMessageToContact emergencyContact
       )
       emergencyContacts
   where
