@@ -1,0 +1,10 @@
+{
+  "short_name": "Namma Yatri",
+  "name": "Namma Yatri: Zero Commission Ride App",
+  "description": "Book auto and cab rides with 0% commission. Direct-to-driver open mobility app.",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "icons": []
+}
