@@ -2,7 +2,7 @@ module API where
 
 import Data.Aeson (Value)
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payment.Juspay.Types.Common as Juspay
 import qualified Lib.Payment.Domain.Action as PaymentAction
 import Servant
 
@@ -24,7 +24,7 @@ type InternalOrderStatusAPI =
     :> "orders"
     :> Capture "orderId" Text
     :> "status"
-    :> Get '[JSON] Payment.OrderStatusResp
+    :> Get '[JSON] Juspay.OrderData
 
 type API = ExternalPaymentAPI :<|> InternalOrderStatusAPI
 
