@@ -9,16 +9,16 @@ imports:
 Account:
   tableName: finance_account
   derives: "Generic"
-  
+
   types:
     AccountType:
-      enum: "Asset,Liability,Revenue,Expense,Equity"
+      enum: "Asset,Liability,Revenue,DeferredRevenue,Expense,Equity,External"
       derive: "ToParamSchema"
-    
+
     AccountCategory:
       enum: "Driver,Fleet,Platform,Settlement,Suspense"
       derive: "ToParamSchema"
-    
+
     AccountStatus:
       enum: "Active,Suspended,Closed"
       derive: "ToParamSchema"

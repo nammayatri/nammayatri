@@ -26,6 +26,7 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Aeson as A
 import qualified Data.Tuple.Extra as Tuple
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Driver as DADriver
@@ -36,7 +37,6 @@ import qualified Domain.Action.UI.StclMembership as DStclMembership
 import qualified Domain.Action.WebhookHandler as AWebhook
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
-import qualified Domain.Types.DriverWallet as DW
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
@@ -47,7 +47,6 @@ import qualified Domain.Types.Notification as DNTF
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
-import qualified Domain.Types.SubscriptionTransaction as SubscriptionTransaction
 import qualified Domain.Types.WebhookExtra as WT
 import Environment
 import Kernel.Beam.Functions (runInMasterDb)
@@ -71,6 +70,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -84,6 +84,8 @@ import Servant (BasicAuthData)
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
+import SharedLogic.Finance.Prepaid
+import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
@@ -94,16 +96,13 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDP
-import qualified Storage.Queries.DriverWallet as QDW
-import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.SubscriptionTransaction as QSubscriptionTransaction
+import qualified Storage.Queries.StclMembership as QStclMembership
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VendorFeeExtra as QVF
 import Tools.Error
@@ -329,29 +328,24 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
           let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
           forM_ nonClearedDriverFees $ \driverFee -> do
             Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driver.id.getId) 10 10 $ do
-              driverInfo <- QDI.findById driver.id >>= fromMaybeM (PersonNotFound driver.id.getId)
-              let newBalance = fromMaybe 0 driverInfo.walletBalance + driverFee.totalEarnings
-              QDI.updateWalletBalance (Just newBalance) driver.id
-              newId <- generateGUID
-              let transaction =
-                    DW.DriverWallet
-                      { id = newId,
-                        merchantId = Just merchantId,
-                        merchantOperatingCityId = driver.merchantOperatingCityId,
-                        driverId = driver.id,
-                        rideId = Nothing,
-                        transactionType = DW.TOPUP,
-                        collectionAmount = Nothing,
-                        gstDeduction = Nothing,
-                        merchantPayable = Nothing,
-                        driverPayable = Just driverFee.totalEarnings,
-                        runningBalance = newBalance,
-                        payoutOrderId = Nothing,
-                        payoutStatus = Nothing,
-                        createdAt = now,
-                        updatedAt = now
-                      }
-              QDW.create transaction
+              let metadata =
+                    A.object
+                      [ "driverPayable" A..= driverFee.totalEarnings,
+                        "driverFeeId" A..= driverFee.id.getId
+                      ]
+              _ <-
+                createWalletEntryDelta
+                  ownerTypeDriver
+                  driver.id.getId
+                  driverFee.totalEarnings
+                  driverFee.currency
+                  merchantId.getId
+                  driver.merchantOperatingCityId.getId
+                  walletReferenceTopup
+                  driverFee.id.getId
+                  (Just metadata)
+                  >>= fromEitherM (\err -> InternalError ("Failed to create wallet topup entry: " <> show err))
+              pure ()
               QDF.updateStatusByIds CLEARED [driverFee.id] now
               let notificationTitle = "Wallet Top-up Successful"
                   notificationMessage = "Your wallet has been topped up with Rs." <> show driverFee.totalEarnings
@@ -422,8 +416,8 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
       driverFees <- QDF.findAllByDriverFeeIds driverFeeIds
       let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
       QDF.updateStatusByIds CLEARED driverFeeIds now
-      let utcTime = addUTCTime (secondsToNominalDiffTime $ -1 * transporterConfig.timeDiffFromUtc) now
-      mapM_ (processNonClearedDriverFees merchantId driver utcTime) nonClearedDriverFees
+      -- let utcTime = addUTCTime (secondsToNominalDiffTime $ -1 * transporterConfig.timeDiffFromUtc) now
+      mapM_ (processNonClearedDriverFees merchantId driver) nonClearedDriverFees
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
     when (sendNotification && subsConfig.sendInAppFcmNotifications && serviceName /= DP.PREPAID_SUBSCRIPTION) $ notifyPaymentSuccessIfNotNotified driver orderId
@@ -436,33 +430,13 @@ processNonClearedDriverFees ::
   ) =>
   Id DM.Merchant ->
   DP.Person ->
-  UTCTime ->
   DriverFee ->
   m ()
-processNonClearedDriverFees merchantId person now driverFee = do
+processNonClearedDriverFees merchantId person driverFee = do
   when (driverFee.feeType == PREPAID_RECHARGE) $
     Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey person.id.getId) 10 10 $ do
-      (newBalance, mbFleetOwnerId) <- updatePrepaidBalanceAndExpiry person now driverFee
-      id <- generateGUID
-      let transaction =
-            SubscriptionTransaction.SubscriptionTransaction
-              { id = id,
-                merchantId = Just merchantId,
-                fleetOwnerId = mbFleetOwnerId,
-                merchantOperatingCityId = person.merchantOperatingCityId,
-                driverId = person.id,
-                entityId = (.getId) <$> driverFee.planId,
-                transactionType = SubscriptionTransaction.PLAN_PURCHASE,
-                amount = driverFee.totalEarnings,
-                status = Juspay.CHARGED,
-                runningBalance = newBalance,
-                fromLocationId = Nothing,
-                toLocationId = Nothing,
-                createdAt = now,
-                updatedAt = now
-              }
-
-      QSubscriptionTransaction.create transaction
+      _ <- updatePrepaidBalanceAndExpiry merchantId person driverFee
+      pure ()
 
 updatePrepaidBalanceAndExpiry ::
   ( MonadFlow m,
@@ -470,21 +444,47 @@ updatePrepaidBalanceAndExpiry ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r
   ) =>
+  Id DM.Merchant ->
   DP.Person ->
-  UTCTime ->
   DriverFee ->
   m (HighPrecMoney, Maybe (Id DP.Person))
-updatePrepaidBalanceAndExpiry person now driverFee = do
+updatePrepaidBalanceAndExpiry merchantId person driverFee = do
+  let creditAmount = driverFee.totalEarnings
+  let paidAmount = driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
+  let gstAmount = driverFee.platformFee.cgst + driverFee.platformFee.sgst
+  let referenceId = fromMaybe driverFee.id.getId ((.getId) <$> driverFee.planId)
   if DCommon.checkFleetOwnerRole person.role
     then do
-      fleetOwnerInfo <- QFOI.findByPrimaryKey (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
-      let (finalExpiry, newBalance) = computeExpiryAndBalance now fleetOwnerInfo.planExpiryDate fleetOwnerInfo.prepaidSubscriptionBalance driverFee
-      QFOI.updatePrepaidSubscriptionBalanceAndExpiry (Just newBalance) (Just finalExpiry) driverFee.driverId
+      newBalance <-
+        creditPrepaidBalance
+          ownerTypeFleetOwner
+          person.id.getId
+          FAccount.Fleet
+          creditAmount
+          paidAmount
+          gstAmount
+          driverFee.currency
+          merchantId.getId
+          person.merchantOperatingCityId.getId
+          referenceId
+          Nothing
+          >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       pure (newBalance, Just person.id)
     else do
-      driverInfo <- QDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
-      let (finalExpiry, newBalance) = computeExpiryAndBalance now driverInfo.planExpiryDate driverInfo.prepaidSubscriptionBalance driverFee
-      QDIExtra.updatePrepaidSubscriptionBalanceAndExpiry driverFee.driverId newBalance (Just finalExpiry)
+      newBalance <-
+        creditPrepaidBalance
+          ownerTypeDriver
+          person.id.getId
+          FAccount.Driver
+          creditAmount
+          paidAmount
+          gstAmount
+          driverFee.currency
+          merchantId.getId
+          person.merchantOperatingCityId.getId
+          referenceId
+          Nothing
+          >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       logInfo $ "Prepaid recharge completed " <> show person.id.getId
       let prepaidRechargeMessage =
             "Your recharge worth Rs."
@@ -493,19 +493,6 @@ updatePrepaidBalanceAndExpiry person now driverFee = do
           prepaidRechargeTitle = "Recharge Successful!"
       sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
       pure (newBalance, Nothing)
-
-computeExpiryAndBalance ::
-  UTCTime ->
-  Maybe UTCTime ->
-  Maybe HighPrecMoney ->
-  DriverFee ->
-  (UTCTime, HighPrecMoney)
-computeExpiryAndBalance now mbExpiry mbBalance driverFee =
-  let currentExpiry = fromMaybe now mbExpiry
-      newExpiry = addUTCTime (fromIntegral (fromMaybe 0 driverFee.validDays) * 24 * 60 * 60) now
-      finalExpiry = max currentExpiry newExpiry
-      newBalance = fromMaybe 0.0 mbBalance + driverFee.totalEarnings
-   in (finalExpiry, newBalance)
 
 updatePaymentStatus ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>

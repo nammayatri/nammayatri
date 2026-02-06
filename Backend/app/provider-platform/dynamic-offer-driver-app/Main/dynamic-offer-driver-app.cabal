@@ -337,6 +337,7 @@ library
       Domain.Types.Driver.DriverInformation
       Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation
+      Domain.Types.DriverWallet
       Domain.Types.External.LiveEKD
       Domain.Types.Extra.ConditionalCharges
       Domain.Types.Extra.DriverFee
@@ -455,6 +456,8 @@ library
       SharedLogic.FareCalculatorV2
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
+      SharedLogic.Finance.Prepaid
+      SharedLogic.Finance.Wallet
       SharedLogic.Fleet
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
@@ -508,6 +511,7 @@ library
       Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
+      Storage.Beam.Finance
       Storage.Beam.Geometry
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
@@ -723,7 +727,6 @@ library
       Storage.Queries.StationExtra
       Storage.Queries.Status
       Storage.Queries.StclMembershipExtra
-      Storage.Queries.SubscriptionTransactionExtra
       Storage.Queries.Transformers.Booking
       Storage.Queries.Transformers.BookingLocation
       Storage.Queries.Transformers.CancellationReason
@@ -1110,7 +1113,6 @@ library
       Domain.Types.StclMembership
       Domain.Types.StopInformation
       Domain.Types.SubscriptionConfig
-      Domain.Types.SubscriptionTransaction
       Domain.Types.SurgePricing
       Domain.Types.Toll
       Domain.Types.Translations
@@ -1278,7 +1280,6 @@ library
       Storage.Beam.StclMembership
       Storage.Beam.StopInformation
       Storage.Beam.SubscriptionConfig
-      Storage.Beam.SubscriptionTransaction
       Storage.Beam.SurgePricing
       Storage.Beam.Toll
       Storage.Beam.Translations
@@ -1444,7 +1445,6 @@ library
       Storage.Queries.OrphanInstances.DriverReferral
       Storage.Queries.OrphanInstances.DriverSSN
       Storage.Queries.OrphanInstances.DriverStats
-      Storage.Queries.OrphanInstances.DriverWallet
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareProduct
       Storage.Queries.OrphanInstances.Feedback
@@ -1492,7 +1492,6 @@ library
       Storage.Queries.OrphanInstances.SearchTry
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.StclMembership
-      Storage.Queries.OrphanInstances.SubscriptionTransaction
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.TransporterConfig
       Storage.Queries.OrphanInstances.TripAlertRequest
@@ -1540,7 +1539,6 @@ library
       Storage.Queries.StclMembership
       Storage.Queries.StopInformation
       Storage.Queries.SubscriptionConfig
-      Storage.Queries.SubscriptionTransaction
       Storage.Queries.SurgePricing
       Storage.Queries.Toll
       Storage.Queries.Translations
@@ -1633,6 +1631,7 @@ library
     , exceptions
     , external
     , extra
+    , finance-kernel
     , generic-lens
     , geohash ==1.0.1
     , hashable
@@ -1772,6 +1771,7 @@ executable dynamic-offer-driver-app-exe
     , euler-hs
     , exceptions
     , extra
+    , finance-kernel
     , generic-lens
     , geohash ==1.0.1
     , hashable

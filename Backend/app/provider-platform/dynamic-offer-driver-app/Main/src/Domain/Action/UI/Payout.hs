@@ -24,7 +24,6 @@ import Data.Time (utctDay)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverFee as DDF
-import qualified Domain.Types.DriverWallet as DW
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -54,6 +53,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
+import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
@@ -65,7 +65,6 @@ import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.DriverWallet as QDW
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ScheduledPayout as QSPE
 import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
@@ -188,39 +187,14 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
               Just DPayment.DRIVER_WALLET_TRANSACTION -> do
                 let driverId = Id payoutOrder.customerId
                 Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
-                  driverWalletRecords <- QDW.findAllByPayoutOrderId (Just payoutOrder.id)
-                  let isSettledOrFailed = any (\dw -> dw.payoutStatus == Just DW.SETTLED || dw.payoutStatus == Just DW.FAILED) driverWalletRecords
-                  unless isSettledOrFailed $ do
-                    driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-                    now <- getCurrentTime
-                    newId <- generateGUID
-                    let newRunningBalance = if isSuccessStatus payoutStatus then fromMaybe 0 driverInfo.walletBalance else fromMaybe 0 driverInfo.walletBalance + amount
-                    let transaction =
-                          DW.DriverWallet
-                            { id = newId,
-                              merchantId = Just merchantId,
-                              merchantOperatingCityId = merchantOperatingCityId,
-                              driverId = driverId,
-                              rideId = Nothing,
-                              transactionType = DW.PAYOUT,
-                              collectionAmount = Nothing,
-                              gstDeduction = Nothing,
-                              merchantPayable = Nothing,
-                              driverPayable = Just (-1 * amount),
-                              runningBalance = newRunningBalance,
-                              payoutOrderId = Just payoutOrder.id,
-                              payoutStatus = if isSuccessStatus payoutStatus then Just DW.SETTLED else Just DW.FAILED,
-                              createdAt = now,
-                              updatedAt = now
-                            }
-                    QDW.create transaction
-                    unless (isSuccessStatus payoutStatus) $ QDI.updateWalletBalance (Just newRunningBalance) driverId
-                    person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-                    let (notificationTitle, notificationMessage, notificationType) =
-                          if isSuccessStatus payoutStatus
-                            then ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
-                            else ("Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
-                    Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
+                  unless (isSuccessStatus payoutStatus) $ do
+                    reverseWalletEntryByReference walletReferencePayout payoutOrder.id.getId "Payout failed"
+                  person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+                  let (notificationTitle, notificationMessage, notificationType) =
+                        if isSuccessStatus payoutStatus
+                          then ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
+                          else ("Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
+                  Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
               _ -> pure ()
       pure ()
     IPayout.BadStatusResp -> pure ()

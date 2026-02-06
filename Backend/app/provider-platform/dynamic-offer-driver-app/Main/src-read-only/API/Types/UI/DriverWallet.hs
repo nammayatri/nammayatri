@@ -11,6 +11,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Servant
 import Tools.Auth
 
@@ -24,12 +25,12 @@ data TransactionDetails = TransactionDetails
     driverPayable :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fromLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     gstDeduction :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    id :: Kernel.Types.Id.Id Domain.Types.DriverWallet.DriverWallet,
+    id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry,
     merchantPayable :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
     runningBalance :: Kernel.Types.Common.HighPrecMoney,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
-    transactionType :: Domain.Types.DriverWallet.TransactionType
+    transactionType :: Domain.Types.DriverWallet.WalletTransactionType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

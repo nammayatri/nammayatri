@@ -87,8 +87,6 @@ DriverInformation:
     mode: Maybe DriverMode
     aadhaarVerified: Bool
     autoPayStatus: Maybe DriverAutoPayStatus
-    prepaidSubscriptionBalance: Maybe HighPrecMoney
-    planExpiryDate: Maybe UTCTime
     blockedReason: Maybe Text
     blockExpiryTime: Maybe UTCTime
     payerVpa: Maybe Text
@@ -132,7 +130,6 @@ DriverInformation:
     aadhaarNumber: Maybe (EncryptedHashedField e Text)
     dlNumber: Maybe (EncryptedHashedField e Text)
     driverFlowStatus: Maybe DriverFlowStatus
-    walletBalance: Maybe HighPrecMoney
     onlineDurationRefreshedAt: Maybe UTCTime
     maxPickupRadius: Maybe Meters
     tripDistanceMaxThreshold: Maybe Meters
@@ -455,10 +452,6 @@ DriverInformation:
     updateDrunkAndDriveViolationCount:
       kvFunction: updateOneWithKV
       params: [drunkAndDriveViolationCount]
-      where: driverId
-    updateWalletBalance:
-      kvFunction: updateOneWithKV
-      params: [walletBalance]
       where: driverId
     updateUpgradedTiers:
       kvFunction: updateOneWithKV
