@@ -153,20 +153,24 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
       diffInMill = Milliseconds (div (fromEnum diff) 1000000000)
   logDebug $ "diffTime in picking up the job : " <> show diffInMill
   fork "" $ addGenericLatency ("Job_pickup_" <> jobType') $ diffInMill
-  case findJobHandlerFunc job jobHandlers of
-    Nothing -> failExecution jobType' "No handler function found for the job type = "
-    Just handlerFunc_ -> do
-      -- TODO: Fix this logic, that's not how we have to handle this issue
-      latestState' <- case schedulerType of
-        RedisBased -> pure [AnyJob job]
-        DbBased -> getTasksById [id job]
-      case latestState' of
-        [AnyJob latestState] ->
-          if scheduledAt latestState > scheduledAt job || status latestState /= Pending
-            then pure DuplicateExecution
-            else do
-              handlerFunc_ job
-        _ -> failExecution jobType' "Found multiple tasks by single id."
+  blackListedJobs <- asks (.blackListedJobs)
+  let isBlacklisted = jobType' `elem` blackListedJobs
+  if isBlacklisted
+    then pure SkipBlacklistedJob
+    else case findJobHandlerFunc job jobHandlers of
+      Nothing -> failExecution jobType' "No handler function found for the job type = "
+      Just handlerFunc_ -> do
+        -- TODO: Fix this logic, that's not how we have to handle this issue
+        latestState' <- case schedulerType of
+          RedisBased -> pure [AnyJob job]
+          DbBased -> getTasksById [id job]
+        case latestState' of
+          [AnyJob latestState] ->
+            if scheduledAt latestState > scheduledAt job || status latestState /= Pending
+              then pure DuplicateExecution
+              else do
+                handlerFunc_ job
+          _ -> failExecution jobType' "Found multiple tasks by single id."
   where
     failExecution jobType' description = do
       logError $ "failed to execute job: " <> description <> jobType'
@@ -184,6 +188,8 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
   case result of
     DuplicateExecution -> do
       logInfo $ "job id " <> show id <> " already executed "
+    SkipBlacklistedJob -> do
+      logInfo $ "job id " <> show id <> " is blacklisted, skipping"
     Complete -> do
       logInfo $ "job successfully completed on try " <> show (currErrors + 1)
       markAsComplete jobType' job.id
