@@ -154,7 +154,7 @@ getRecentRides person req = do
                 Kernel.Prelude.listToMaybe
                   <$> ( SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
                           let fareRouteDetails = fromList [CallAPI.BasicRouteDetail {routeCode, startStopCode = fromStopCode, endStopCode = toStopCode}]
-                          snd <$> Flow.getFares person.id person.merchantId person.merchantOperatingCityId integratedBPPConfig fareRouteDetails req.vehicleType Nothing Nothing [] [] False
+                          snd <$> Flow.getFares person.id person.merchantId person.merchantOperatingCityId integratedBPPConfig fareRouteDetails req.vehicleType Nothing Nothing [] [] False False
                       )
               return $
                 (mbFare >>= (\fare -> find (\category -> category.category == ADULT) fare.categories)) <&> \fare ->

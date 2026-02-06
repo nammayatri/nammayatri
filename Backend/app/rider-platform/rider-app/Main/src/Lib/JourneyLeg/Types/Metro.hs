@@ -28,7 +28,8 @@ data MetroLegRequestSearchData = MetroLegRequestSearchData
     recentLocationId :: Maybe (Id DRecentLocation.RecentLocation),
     upsertJourneyLegAction :: forall m r c. JL.SearchRequestFlow m r c => Text -> m (),
     blacklistedServiceTiers :: [Spec.ServiceTierType],
-    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType]
+    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
+    isSingleMode :: Bool
   }
 
 data MetroLegRequestUpdateData = MetroLegRequestUpdateData
@@ -83,5 +84,6 @@ data MetroLegRequestGetFareData = MetroLegRequestGetFareData
     merchantOpCity :: DMOC.MerchantOperatingCity,
     riderId :: Id DPerson.Person,
     blacklistedServiceTiers :: [Spec.ServiceTierType],
-    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType]
+    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
+    isSingleMode :: Bool
   }

@@ -20,8 +20,8 @@ import qualified SharedLogic.PTCircuitBreaker as CB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Prelude as P
 
-getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty CallAPI.BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> m (Bool, [FRFSFare])
-getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes getAllSubwayFares = do
+getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty CallAPI.BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Bool -> m (Bool, [FRFSFare])
+getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes getAllSubwayFares isSingleMode = do
   subwayFareDetail <-
     case integratedBPPConfig.providerConfig of
       CRIS _ -> do
@@ -58,35 +58,15 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
   let (firstRoute NE.:| restRoutes) = fareRouteDetails
   let lastRoute = fromMaybe firstRoute (listToMaybe $ reverse restRoutes)
 
-  -- Build cache key - for CRIS include searchId for session-specific caching
-  let baseCacheKey =
+      baseCacheKey =
         CB.makeFareCacheKey
           merchantOperatingCityId
           ptMode
-          firstRoute.routeCode firstRoute.startStopCode lastRoute.endStopCode
+          (getCacheRouteCode firstRoute)
+          firstRoute.startStopCode lastRoute.endStopCode
           serviceTier
-      setCacheKeys = case integratedBPPConfig.providerConfig of
-        CRIS _ ->
-          ( case (mbParentSearchReqId, getAllSubwayFares) of
-              (Just parentSearchReqId, True) -> [baseCacheKey <> ":" <> parentSearchReqId]
-              _ -> []
-          )
-            <> [ baseCacheKey
-                   <> maybe "" (\subwayFareDetail' -> ":" <> subwayFareDetail'.changeOver) subwayFareDetail
-               ]
-        _ -> [baseCacheKey]
-      getCacheKeys = case integratedBPPConfig.providerConfig of
-        CRIS _ ->
-          ( case (mbParentSearchReqId, subwayFareDetail) of
-              (Just parentSearchReqId, Just subwayFareDetail') -> [(baseCacheKey <> ":" <> parentSearchReqId, \fares -> filter (\fare -> maybe False (\fd -> fd.via == subwayFareDetail'.rawChangeOver) fare.fareDetails) fares)]
-              _ -> []
-          )
-            <> [ ( baseCacheKey
-                     <> maybe "" (\subwayFareDetail' -> ":" <> subwayFareDetail'.changeOver) subwayFareDetail,
-                   P.id
-                 )
-               ]
-        _ -> [(baseCacheKey, P.id)]
+      setCacheKey = buildCacheKeySuffix subwayFareDetail <&> \suffix -> (baseCacheKey <> suffix, getCacheTTL)
+      getCacheKey = buildCacheKeySuffix subwayFareDetail <&> \suffix -> (baseCacheKey <> suffix, getCacheFilterFn subwayFareDetail)
 
   -- Get threshold for 2x probing
   let failureThreshold = CB.getFirstThresholdFailureCount apiConfig
@@ -95,7 +75,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
   -- Determine if we should always probe (for Suburban)
   let alwaysProbe =
         case integratedBPPConfig.providerConfig of
-          CRIS _ -> True
+          CRIS _ -> not isSingleMode
           _ -> False
       isFareMandatory =
         case integratedBPPConfig.providerConfig of
@@ -104,12 +84,39 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
 
   fares <-
     if circuitOpen
-      then handleCircuitOpen cbConfig ptMode setCacheKeys getCacheKeys subwayFareDetail apiConfig
-      else handleCircuitClosed cbConfig ptMode setCacheKeys getCacheKeys subwayFareDetail probeLimit apiConfig alwaysProbe
+      then handleCircuitOpen cbConfig ptMode setCacheKey getCacheKey subwayFareDetail apiConfig
+      else handleCircuitClosed cbConfig ptMode setCacheKey getCacheKey subwayFareDetail probeLimit apiConfig alwaysProbe
   return $ (isFareMandatory, filterBlacklistedFaresForUI fares)
   where
+    -- Helper functions for cache key construction and metadata
+    buildCacheKeySuffix :: Maybe CallAPI.SubwayFareDetail -> Maybe Text
+    buildCacheKeySuffix subwayFareDetail = case integratedBPPConfig.providerConfig of
+      CRIS _ -> case (mbParentSearchReqId, isSingleMode) of
+        (Just parentSearchReqId, True) -> Just $ ":" <> parentSearchReqId
+        (_, False) -> Just $ maybe "" (\sd -> ":" <> sd.rawChangeOver) subwayFareDetail
+        _ -> Nothing
+      _ -> Just ""
+
+    getCacheTTL :: Int
+    getCacheTTL = case integratedBPPConfig.providerConfig of
+      CRIS _ -> if isSingleMode then 1800 else 3600
+      _ -> 1800
+
+    getCacheRouteCode :: CallAPI.BasicRouteDetail -> Text
+    getCacheRouteCode firstRoute = case integratedBPPConfig.providerConfig of
+      CRIS _ -> "-"
+      _ -> firstRoute.routeCode
+
+    getCacheFilterFn :: Maybe CallAPI.SubwayFareDetail -> ([FRFSFare] -> [FRFSFare])
+    getCacheFilterFn subwayFareDetail = case integratedBPPConfig.providerConfig of
+      CRIS _ -> case (subwayFareDetail, isSingleMode) of
+        (Just subwayFareDetail', True) ->
+          \fares -> filter (\fare -> maybe False (\fd -> fd.via == subwayFareDetail'.rawChangeOver) fare.fareDetails) fares
+        _ -> P.id
+      _ -> P.id
+
     -- When circuit is OPEN: clear cache and try canary request
-    handleCircuitOpen cbConfig ptMode setCacheKeys getCacheKeys subwayFareDetail apiConfig = do
+    handleCircuitOpen cbConfig ptMode setCacheKey getCacheKey subwayFareDetail apiConfig = do
       let canaryAllowed = fromMaybe 2 (apiConfig <&> (.canaryAllowedPerWindow))
       let canaryWindow = fromMaybe 60 (apiConfig <&> (.canaryWindowSeconds))
       canarySlot <- CB.tryAcquireCanarySlot ptMode CB.FareAPI merchantOperatingCityId canaryAllowed canaryWindow
@@ -118,20 +125,19 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
         then do
           logInfo $ "PT Circuit Breaker: Canary request for " <> show ptMode
           -- Make the canary API call
-          callFareAPI cbConfig True setCacheKeys getCacheKeys subwayFareDetail
+          callFareAPI cbConfig True setCacheKey getCacheKey subwayFareDetail
         else return [] -- Circuit open, no canary slot
 
     -- When circuit is CLOSED: use cache with background probing (fallback through multiple cache keys)
-    handleCircuitClosed cbConfig ptMode setCacheKeys getCacheKeys subwayFareDetail probeLimit apiConfig alwaysProbe = do
+    handleCircuitClosed cbConfig ptMode setCacheKey getCacheKey subwayFareDetail probeLimit apiConfig alwaysProbe = do
       -- Try to get from caches in fallback manner (filter applied inside tryGetFromCaches)
-      cachedResult <- tryGetFromCaches getCacheKeys
+      cachedResult <- tryGetFromCaches getCacheKey
 
       case cachedResult of
         Just filteredFares | not (null filteredFares) -> do
           -- Cached fares available: fork probing calls in background
           let probeWindow = fromMaybe 60 (apiConfig <&> (.canaryWindowSeconds))
           probeCount <- CB.getProbeCounter ptMode CB.FareAPI merchantOperatingCityId
-          -- For Suburban (alwaysProbe=True), skip probe limit check
           when (alwaysProbe || probeCount < probeLimit) $ do
             -- Fork a background probe request for circuit breaker tracking
             fork "probe-fare-api" $ do
@@ -155,32 +161,28 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
                   CB.recordSuccess ptMode CB.FareAPI merchantOperatingCityId
                   -- Update all caches with fresh data if successful (store unfiltered)
                   unless (null freshFares) $
-                    setToCaches setCacheKeys freshFares
+                    setToCaches setCacheKey freshFares
           return filteredFares
         _ -> do
           -- No cached fares: call API and cache result
-          callFareAPI cbConfig False setCacheKeys getCacheKeys subwayFareDetail
+          callFareAPI cbConfig False setCacheKey getCacheKey subwayFareDetail
 
-    -- Try getting from multiple cache keys in fallback order, apply filter and fallback if empty after filter
-    tryGetFromCaches :: (MonadFlow m, CacheFlow m r) => [(Text, [FRFSFare] -> [FRFSFare])] -> m (Maybe [FRFSFare])
-    tryGetFromCaches [] = return Nothing
-    tryGetFromCaches ((key, filterFn) : rest) = do
+    -- Try getting from cache key with optional filter
+    tryGetFromCaches :: (MonadFlow m, CacheFlow m r) => Maybe (Text, [FRFSFare] -> [FRFSFare]) -> m (Maybe [FRFSFare])
+    tryGetFromCaches Nothing = pure Nothing
+    tryGetFromCaches (Just (key, filterFn)) = do
       cachedFares <- Redis.safeGet key
       case cachedFares of
-        Just fares | not (null fares) -> do
-          let filteredFares = filterFn fares
-          if null filteredFares
-            then tryGetFromCaches rest -- Filter returned empty, try next cache
-            else return $ Just filteredFares
-        _ -> tryGetFromCaches rest
+        Just fares | not (null fares) -> return $ Just $ filterFn fares
+        _ -> return Nothing
 
-    -- Set to multiple cache keys
-    setToCaches :: (MonadFlow m, CacheFlow m r) => [Text] -> [FRFSFare] -> m ()
-    setToCaches keys fares =
-      forM_ keys $ \key -> Redis.setExp key fares 1800 -- 30 min TTL
+    -- Set to cache with TTL
+    setToCaches :: (MonadFlow m, CacheFlow m r) => Maybe (Text, Int) -> [FRFSFare] -> m ()
+    setToCaches Nothing _ = pure ()
+    setToCaches (Just (key, ttl)) fares = Redis.setExp key fares ttl
 
     -- Helper to call fare API with circuit breaker tracking
-    callFareAPI cbConfig isCanary setCacheKeys getCacheKeys subwayFareDetail = do
+    callFareAPI cbConfig isCanary setCacheKey getCacheKey subwayFareDetail = do
       let ptMode = CB.vehicleCategoryToPTMode vehicleCategory
       result <-
         withTryCatch "callExternalBPP:getFares" $
@@ -201,7 +203,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
           -- When circuit opens, clear cache
           circuitNowOpen <- CB.isCircuitOpen ptMode CB.FareAPI <$> QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
           when circuitNowOpen $ do
-            CB.clearFareCache (fst <$> getCacheKeys)
+            whenJust getCacheKey $ CB.clearFareCache . fst
             CB.resetProbeCounter ptMode CB.FareAPI merchantOperatingCityId
           return []
         Right fares -> do
@@ -214,7 +216,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
 
           -- Cache the fares to all cache keys (store unfiltered)
           unless (null fares) $
-            setToCaches setCacheKeys fares
+            setToCaches setCacheKey fares
           return fares
 
     -- Filter fares based on blacklisted service tiers and quote types that UI cannot parse
