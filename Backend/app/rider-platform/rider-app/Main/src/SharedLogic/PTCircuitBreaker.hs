@@ -367,12 +367,11 @@ mkProbeCounterKey mocId mode apiType =
 -- | Clear fare cache for specific cache keys
 clearFareCache ::
   (MonadFlow m, Hedis.HedisFlow m r) =>
-  [Text] -> -- cache keys to clear
+  Text ->
   m ()
-clearFareCache keys = do
-  forM_ keys $ \key -> do
-    logInfo $ "PT Circuit Breaker: Clearing cached fares for key: " <> key
-    void $ Hedis.del key
+clearFareCache key = do
+  logInfo $ "PT Circuit Breaker: Clearing cached fares for key: " <> key
+  void $ Hedis.del key
 
 -- | Get failure count within a specific window
 getFailureCountInWindow ::

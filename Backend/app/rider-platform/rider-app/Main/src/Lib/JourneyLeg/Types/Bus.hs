@@ -29,7 +29,8 @@ data BusLegRequestSearchData = BusLegRequestSearchData
     serviceTier :: Maybe Spec.ServiceTierType,
     upsertJourneyLegAction :: forall m r c. JL.SearchRequestFlow m r c => Text -> m (),
     blacklistedServiceTiers :: [Spec.ServiceTierType],
-    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType]
+    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
+    isSingleMode :: Bool
   }
 
 data BusLegRequestConfirmData = BusLegRequestConfirmData
@@ -78,7 +79,8 @@ data BusLegRequestGetFareData = BusLegRequestGetFareData
     serviceType :: Maybe Spec.ServiceTierType,
     merchantOpCity :: DMOC.MerchantOperatingCity,
     blacklistedServiceTiers :: [Spec.ServiceTierType],
-    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType]
+    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
+    isSingleMode :: Bool
   }
 
 data BusLegRequest
