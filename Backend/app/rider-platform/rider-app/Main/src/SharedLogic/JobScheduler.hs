@@ -68,6 +68,7 @@ data RiderJobType
   | PaymentOrderStatusCheck
   | PartnerInvoiceDataExport
   | UnblockCustomer
+  | UpdateCRISRDSBalance
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -108,6 +109,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SPaymentOrderStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SPaymentOrderStatusCheck jobData
   restoreAnyJobInfo SPartnerInvoiceDataExport jobData = AnyJobInfo <$> restoreJobInfo SPartnerInvoiceDataExport jobData
   restoreAnyJobInfo SUnblockCustomer jobData = AnyJobInfo <$> restoreJobInfo SUnblockCustomer jobData
+  restoreAnyJobInfo SUpdateCRISRDSBalance jobData = AnyJobInfo <$> restoreJobInfo SUpdateCRISRDSBalance jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -396,3 +398,11 @@ data UnblockCustomerJobData = UnblockCustomerJobData
 instance JobInfoProcessor 'UnblockCustomer
 
 type instance JobContent 'UnblockCustomer = UnblockCustomerJobData
+
+data UpdateCRISRDSBalanceJobData = UpdateCRISRDSBalanceJobData
+  {integratedBPPConfigId :: Id DIntegratedBPPConfig.IntegratedBPPConfig}
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'UpdateCRISRDSBalance
+
+type instance JobContent 'UpdateCRISRDSBalance = UpdateCRISRDSBalanceJobData

@@ -1,3 +1,17 @@
+{-
+ Copyright 2022-23, Juspay India Pvt Ltd
+
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
 module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare where
 
 import Data.Aeson
@@ -53,7 +67,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
   let fareRequest =
         object
           [ "tpAccountId" .= (config.tpAccountId :: Int), -- Explicitly mark as Int
-            "mobileNo" .= (fromMaybe 9999999999 mobileNo),
+            "mobileNo" .= fromMaybe 9999999999 mobileNo,
             "imeiNo" .= request.imeiNo,
             "appCode" .= config.appCode,
             "appSession" .= request.appSession,
@@ -108,7 +122,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
           fares =
             if request.changeOver == " "
               then if null fares'' || getAllFares then fares' else fares''
-              else if (length uniqueViaPoints) == 1 then allFares else filter (\fare -> fare.via == request.rawChangeOver) allFares
+              else if length uniqueViaPoints == 1 then allFares else filter (\fare -> fare.via == request.rawChangeOver) allFares
       fares `forM` \fare -> do
         let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
             mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare
