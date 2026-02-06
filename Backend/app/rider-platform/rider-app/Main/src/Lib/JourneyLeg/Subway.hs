@@ -12,7 +12,7 @@ import Lib.JourneyLeg.Types.Subway
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg SubwayLegRequest m where
-  search (SubwayLegRequestSearch SubwayLegRequestSearchData {..}) = CFRFS.search Spec.SUBWAY personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId Nothing upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes
+  search (SubwayLegRequestSearch SubwayLegRequestSearchData {..}) = CFRFS.search Spec.SUBWAY personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId Nothing upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode
   search _ = throwError (InternalError "Not supported")
 
   confirm (SubwayLegRequestConfirm SubwayLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId bookLater bookingAllowed crisSdkResponse Spec.SUBWAY categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment
@@ -30,5 +30,5 @@ instance JT.JourneyLeg SubwayLegRequest m where
   getInfo (SubwayLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.journeyLeg req.journeyLegs
   getInfo _ = throwError (InternalError "Not supported")
 
-  getFare (SubwayLegRequestGetFare SubwayLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.SUBWAY Nothing routeDetails fromArrivalTime agencyGtfsId searchReqId blacklistedServiceTiers blacklistedFareQuoteTypes
+  getFare (SubwayLegRequestGetFare SubwayLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.SUBWAY Nothing routeDetails fromArrivalTime agencyGtfsId searchReqId blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode
   getFare _ = throwError (InternalError "Not supported")
