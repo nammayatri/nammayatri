@@ -13,6 +13,7 @@ import qualified Kernel.Types.Common
 
 data RefundsT f = RefundsT
   { arn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    completedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     errorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     errorMessage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

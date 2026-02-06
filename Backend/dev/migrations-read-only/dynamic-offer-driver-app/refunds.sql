@@ -40,3 +40,9 @@ ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN arn text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN completed_at timestamp with time zone ;

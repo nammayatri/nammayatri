@@ -1211,7 +1211,9 @@ updateRefundsByWebhook refundInfo = do
   refundsId <- (Id @Refunds <$>) $ refundInfo.refundsId & fromMaybeM (InvalidRequest "refundsId not found")
   refunds <- QRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist.")
   when (refundInfo.errorCode /= refunds.errorCode || refundInfo.status /= refunds.status) $ do
-    QRefunds.updateRefundsEntryByStripeResponse refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status refunds.isApiCallSuccess refunds.id
+    now <- getCurrentTime
+    let newCompletedAt = calculateCompletedAt refundInfo.status now
+    QRefunds.updateRefundsEntryByStripeResponse refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status refunds.isApiCallSuccess newCompletedAt refunds.id
 
 --- notification api ----------
 
@@ -1395,19 +1397,23 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         initiatedBy = Nothing,
         createdAt = now,
         updatedAt = now,
-        arn = Nothing
+        arn = Nothing,
+        completedAt = Nothing
       }
+
 
 upsertRefundStatus :: (BeamFlow m r) => DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
 upsertRefundStatus order Payment.RefundsData {..} =
   do
+    now <- getCurrentTime
+    let newCompletedAt = calculateCompletedAt status now
     Redis.whenWithLockRedisAndReturnValue upsertRefundProcessingKey 60 $
       ( do
           QRefunds.findById (Id requestId)
             >>= \case
               Just refundEntry -> do
-                QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn (Id requestId)
-                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn}
+                QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn newCompletedAt (Id requestId)
+                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn, completedAt = newCompletedAt}
               Nothing -> do
                 refundEntry <- mkRefundsEntry order.merchantId requestId order.shortId order.amount status
                 QRefunds.create refundEntry
@@ -1418,6 +1424,14 @@ upsertRefundStatus order Payment.RefundsData {..} =
       Right refundEntry -> return $ Just refundEntry
   where
     upsertRefundProcessingKey = "RefundUpsert:Processing:RequestId:" <> requestId
+
+-- | Calculate completedAt timestamp for terminal refund statuses
+calculateCompletedAt :: Payment.RefundStatus -> UTCTime -> Maybe UTCTime
+calculateCompletedAt status now =
+  case status of
+    Payment.REFUND_SUCCESS -> Just now
+    Payment.REFUND_FAILURE -> Just now
+    _ -> Nothing
 
 txnProccessingKey :: Text -> Text
 txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid
@@ -1512,7 +1526,9 @@ initiateStripeRefundService req createRefundsCall getRefundsCall = do
       case resp of
         Right response -> do
           let isApiCallSuccess = Just True
-          QRefunds.updateRefundsEntryByStripeResponse (Just response.id.getRefundId) response.errorCode response.status isApiCallSuccess refundId
+          now <- getCurrentTime
+          let newCompletedAt = calculateCompletedAt response.status now
+          QRefunds.updateRefundsEntryByStripeResponse (Just response.id.getRefundId) response.errorCode response.status isApiCallSuccess newCompletedAt refundId
           return $ mkInitiateStripeRefundResp refundId response
         Left err -> do
           logError $ "Create Refund API Call Failure with Error: " <> show err
@@ -1540,11 +1556,15 @@ fetchRefundInfo driverAccountId latestRefunds getRefundsCall = do
   resp <- withTryCatch "getRefundsCall:refundService" (getRefundsCall refundReq)
   case resp of
     Right response -> do
-      QRefunds.updateRefundsEntryByStripeResponse (Just response.id.getRefundId) response.errorCode response.status latestRefunds.isApiCallSuccess latestRefunds.id
+      now <- getCurrentTime
+      let newCompletedAt = calculateCompletedAt response.status now
+      QRefunds.updateRefundsEntryByStripeResponse (Just response.id.getRefundId) response.errorCode response.status latestRefunds.isApiCallSuccess newCompletedAt latestRefunds.id
+
       let updRefunds =
             latestRefunds{idAssignedByServiceProvider = Just response.id.getRefundId,
                           errorCode = response.errorCode,
-                          status = response.status
+                          status = response.status,
+                          completedAt = newCompletedAt
                          }
       pure (mkRefreshInitiateStripeRefundResp latestRefunds.id response, updRefunds)
     Left err -> do
