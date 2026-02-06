@@ -49,3 +49,6 @@ findAllByPhone phone = do
 
 findAllMerchantIdsByPhone :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Id DMOC.MerchantOperatingCity]
 findAllMerchantIdsByPhone phone = findAllWithKV [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]] <&> (DE.merchantOperatingCityId <$>)
+
+deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DE.Exophone -> m ()
+deleteById exophoneId = deleteWithKV [Se.Is BeamE.id $ Se.Eq (getId exophoneId)]
