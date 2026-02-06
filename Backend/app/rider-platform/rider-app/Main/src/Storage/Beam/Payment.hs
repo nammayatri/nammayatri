@@ -21,6 +21,7 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamSplit
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamP
+import qualified Lib.Payment.Storage.Beam.PayoutStatusHistory as BeamPSH
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamT
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
@@ -37,6 +38,9 @@ instance HasSchemaName BeamRF.RefundsT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamP.PayoutOrderT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPSH.PayoutStatusHistoryT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamT.PayoutTransactionT where

@@ -7,7 +7,6 @@ import Data.Maybe (listToMaybe)
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.PayoutStatusHistory as DPSH
 import qualified Domain.Types.Person
 import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Environment
@@ -19,9 +18,10 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutStatusHistory as LPPS
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPO
+import qualified Lib.Payment.Storage.Queries.PayoutStatusHistory as QPSH
 import Storage.Beam.Payment ()
-import qualified Storage.Queries.PayoutStatusHistory as QPSH
 import qualified Storage.Queries.ScheduledPayout as QSP
 import qualified Storage.Queries.ScheduledPayoutExtra as QSP
 import Tools.Error
@@ -57,7 +57,7 @@ getPayoutStatus (mbPersonId, merchantId, merchantOpCityId) rideId = do
                   createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchantOpCityId (DEMSC.RidePayoutService TPayout.Juspay) (Just payout.driverId)
               resp <- DPayment.payoutStatusService (Kernel.Types.Id.cast merchantId) (Kernel.Types.Id.Id payout.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall
               let newStatus = QSP.castPayoutOrderStatusToScheduledPayoutStatus resp.status
-              if (payout.status /= newStatus && payout.status `notElem` [DSP.CREDITED, DSP.CASH_PAID, DSP.CASH_PENDING])
+              if payout.status /= newStatus && payout.status `notElem` [LPPS.CREDITED, LPPS.CASH_PAID, LPPS.CASH_PENDING]
                 then do
                   let statusMsg = "Juspay Order Status Updated: " <> show resp.status
                   QSP.updateStatusWithHistoryById newStatus (Just statusMsg) payout
@@ -67,7 +67,7 @@ getPayoutStatus (mbPersonId, merchantId, merchantOpCityId) rideId = do
               logError $ "Payout Order not found for scheduled payoutId: " <> show payout.id
               pure payout.status
 
-        statusHistory <- QPSH.findByScheduledPayoutId Nothing Nothing payout.id
+        statusHistory <- QPSH.findByScheduledPayoutId Nothing Nothing (Kernel.Types.Id.getId payout.id)
 
         pure $
           Just $
@@ -85,7 +85,7 @@ getPayoutStatus (mbPersonId, merchantId, merchantOpCityId) rideId = do
   return $ API.DriverPayoutStatusRespSuccess payoutResp
 
 -- Helper to convert domain status history to API status event
-convertHistory :: DPSH.PayoutStatusHistory -> API.DriverPayoutStatusEvent
+convertHistory :: LPPS.PayoutStatusHistory -> API.DriverPayoutStatusEvent
 convertHistory h =
   API.DriverPayoutStatusEvent
     { status = h.status,

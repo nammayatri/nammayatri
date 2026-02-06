@@ -1,0 +1,33 @@
+imports:
+  UTCTime: Kernel.Prelude
+
+PayoutStatusHistory:
+  tableName: payout_status_history
+  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+  types:
+    ScheduledPayoutStatus:
+      enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED,CANCELLED,CASH_PAID,CASH_PENDING"
+  fields:
+    id: Id PayoutStatusHistory
+    scheduledPayoutId: Text
+    status: ScheduledPayoutStatus
+    message: Maybe Text
+    merchantId: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    scheduledPayoutId: SecondaryKey
+
+  queries:
+    findByScheduledPayoutId:
+      kvFunction: findAllWithOptionsKV
+      where: scheduledPayoutId
+      orderBy: createdAt
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <Lib.Payment.Domain.Types.PayoutStatusHistory.ScheduledPayoutStatus>

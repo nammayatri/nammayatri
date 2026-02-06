@@ -13,6 +13,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.Payment.Domain.Types.PayoutStatusHistory
 import qualified Sequelize as Se
 import qualified Storage.Beam.ScheduledPayout as Beam
 
@@ -46,12 +47,14 @@ updatePayoutTransactionIdById payoutTransactionId id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.payoutTransactionId payoutTransactionId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ScheduledPayout.ScheduledPayoutStatus -> Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout -> m ())
+updateStatusById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Lib.Payment.Domain.Types.PayoutStatusHistory.ScheduledPayoutStatus -> Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout -> m ())
 updateStatusById status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatusWithReasonByRideId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.ScheduledPayout.ScheduledPayoutStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+  (Lib.Payment.Domain.Types.PayoutStatusHistory.ScheduledPayoutStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
 updateStatusWithReasonByRideId status failureReason rideId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.failureReason failureReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.rideId $ Se.Eq rideId]

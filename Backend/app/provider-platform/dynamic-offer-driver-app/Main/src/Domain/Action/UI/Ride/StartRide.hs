@@ -37,6 +37,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.ScheduledPayout as DSP
+import qualified Lib.Payment.Domain.Types.PayoutStatusHistory as LPPS
 import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Trip
 import Environment (Flow)
@@ -63,6 +64,7 @@ import qualified SharedLogic.FareCalculatorV2 as FCV2
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Ride (calculateEstimatedEndTimeRange)
 import qualified SharedLogic.ScheduledNotifications as SN
+import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.Queries.Booking as QRB
@@ -236,8 +238,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                     if ( paymentInstrument `elem` (fromMaybe [] transporterConfig.allowedPaymentInstrumentForPayout)
                            && isJust driverInfo.payoutVpa
                        )
-                      then DSP.INITIATED
-                      else DSP.CASH_PENDING
+                      then LPPS.INITIATED
+                      else LPPS.CASH_PENDING
               let scheduledPayout =
                     DSP.ScheduledPayout
                       { id = scheduledPayoutId,
@@ -250,7 +252,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                         failureReason = Nothing,
                         payoutTransactionId = Nothing,
                         markCashPaidBy = Nothing,
-                        expectedCreditTime = if payoutStatus == DSP.INITIATED then Just scheduledTime else Nothing,
+                        expectedCreditTime = if payoutStatus == LPPS.INITIATED then Just scheduledTime else Nothing,
                         createdAt = now,
                         updatedAt = now,
                         merchantId = Just booking.providerId,
@@ -258,7 +260,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                       }
               QSP.create scheduledPayout
               QSPE.createInitialHistory scheduledPayout
-              when (payoutStatus == DSP.INITIATED) $ do
+              when (payoutStatus == LPPS.INITIATED) $ do
                 let jobData = SpecialZonePayoutJobData {scheduledPayoutId = scheduledPayoutId}
                 QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
 
