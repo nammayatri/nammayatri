@@ -31,6 +31,8 @@ upsert a@VehicleRegistrationCertificate {..} = do
     then
       updateWithKV
         [ Se.Set BeamVRC.permitExpiry permitExpiry,
+          Se.Set BeamVRC.merchantId (merchantId & fmap (.getId)),
+          Se.Set BeamVRC.merchantOperatingCityId (merchantOperatingCityId & fmap (.getId)),
           Se.Set BeamVRC.pucExpiry pucExpiry,
           Se.Set BeamVRC.insuranceValidity insuranceValidity,
           Se.Set BeamVRC.vehicleClass vehicleClass,
