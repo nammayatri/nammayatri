@@ -1,0 +1,24 @@
+CREATE TABLE atlas_app.student ();
+
+ALTER TABLE atlas_app.student ADD COLUMN address text ;
+ALTER TABLE atlas_app.student ADD COLUMN age integer ;
+ALTER TABLE atlas_app.student ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.student ADD COLUMN graduation_date timestamp with time zone ;
+ALTER TABLE atlas_app.student ADD COLUMN guardian_name text ;
+ALTER TABLE atlas_app.student ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN id_card_picture text ;
+ALTER TABLE atlas_app.student ADD COLUMN name text NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN number_of_stages integer ;
+ALTER TABLE atlas_app.student ADD COLUMN organization_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN person_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN remark text ;
+ALTER TABLE atlas_app.student ADD COLUMN route_pairs jsonb ;
+ALTER TABLE atlas_app.student ADD COLUMN student_class text ;
+ALTER TABLE atlas_app.student ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.student ADD COLUMN verification_date timestamp with time zone ;
+ALTER TABLE atlas_app.student ADD COLUMN verification_status text NOT NULL;
+ALTER TABLE atlas_app.student ADD COLUMN merchant_id character varying(36) ;
+ALTER TABLE atlas_app.student ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_app.student ADD PRIMARY KEY ( id);
+CREATE INDEX student_idx_organization_id ON atlas_app.student USING btree (organization_id);
+CREATE INDEX student_idx_person_id ON atlas_app.student USING btree (person_id);

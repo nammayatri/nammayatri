@@ -2149,8 +2149,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
 
     sameStationMaybe :: Maybe DStation.Station -> Maybe DStation.Station -> Bool
     sameStationMaybe (Just a) (Just b) = sameStation a b
-    sameStationMaybe Nothing Nothing   = False
-    sameStationMaybe _ _               = False
+    sameStationMaybe Nothing Nothing = False
+    sameStationMaybe _ _ = False
 
     calculateEffectiveStops ::
       Text ->

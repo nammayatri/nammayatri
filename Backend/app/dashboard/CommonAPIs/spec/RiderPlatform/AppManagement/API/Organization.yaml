@@ -1,0 +1,89 @@
+imports:
+  Student: Domain.Types.Student
+  Organization: Domain.Types.Organization
+  VerificationStatus: Domain.Types.Student
+  RoutePair: Domain.Types.Student
+  Person: Domain.Types.Person
+  UTCTime: Data.Time
+  APISuccess: Kernel.Types.APISuccess
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Types.Student: "rider-app"
+  Domain.Types.Organization: "rider-app"
+
+module: Organization
+
+types:
+  StudentInfoResp:
+    studentId: Id Student
+    personId: Id Person
+    name: Text
+    idCardPicture: Maybe Text
+    verificationStatus: VerificationStatus
+    verificationDate: Maybe UTCTime
+    address: Maybe Text
+    age: Maybe Int
+    guardianName: Maybe Text
+    studentClass: Maybe Text
+    graduationDate: Maybe UTCTime
+    numberOfStages: Maybe Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  StudentsListResp:
+    students: "[StudentInfoResp]"
+    totalCount: Int
+    offset: Int
+
+  StudentVerification:
+    studentId: Id Student
+    graduationDate: Maybe UTCTime
+    verificationStatus: VerificationStatus
+    remark: Maybe Text
+
+  VerifyStudentsReq:
+    studentVerifications: "[StudentVerification]"
+    derive: "'HideSecrets"
+
+  OrganizationUpdateReq:
+    organizationId: Maybe (Id Organization)
+    organizationName: Text
+    organizationAddress: Maybe Text
+    derive: "'HideSecrets"
+
+apis:
+  - GET:
+      endpoint: /getOrganizationId/{personId}
+      auth: ApiAuthV2
+      params:
+        personId: Id Person
+      response:
+        type: (Id Organization)
+  - GET:
+      endpoint: /student/organization/{organizationId}
+      auth: ApiAuthV2
+      params:
+        organizationId: Id Organization
+      query:
+        - status: VerificationStatus
+        - limit: Int
+        - offset: Int
+      response:
+        type: StudentsListResp
+  - POST:
+      endpoint: /student/verify
+      auth: ApiAuthV2
+      request:
+        type: VerifyStudentsReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /organization/update/{personId}
+      auth: ApiAuthV2
+      params:
+        personId: Id Person
+      request:
+        type: OrganizationUpdateReq
+      response:
+        type: APISuccess

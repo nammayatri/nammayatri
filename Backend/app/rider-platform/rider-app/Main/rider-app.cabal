@@ -172,6 +172,7 @@ library
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
+      Domain.Action.Dashboard.AppManagement.Organization
       Domain.Action.Dashboard.AppManagement.Pass
       Domain.Action.Dashboard.AppManagement.Payment
       Domain.Action.Dashboard.AppManagement.TicketDashboard
@@ -291,6 +292,7 @@ library
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialZoneQuote
+      Domain.Action.UI.Student
       Domain.Action.UI.Support
       Domain.Action.UI.TicketDashboard
       Domain.Action.UI.TicketKapture
@@ -700,6 +702,7 @@ library
       API.Action.Dashboard.AppManagement.Customer
       API.Action.Dashboard.AppManagement.EventManagement
       API.Action.Dashboard.AppManagement.MerchantOnboarding
+      API.Action.Dashboard.AppManagement.Organization
       API.Action.Dashboard.AppManagement.Pass
       API.Action.Dashboard.AppManagement.Payment
       API.Action.Dashboard.AppManagement.TicketDashboard
@@ -767,6 +770,7 @@ library
       API.Action.UI.RiderLocation
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
+      API.Action.UI.Student
       API.Action.UI.TicketKapture
       API.Action.UI.TicketService
       API.Action.UI.TrackRoute
@@ -780,12 +784,14 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.Customer
       API.Types.Dashboard.AppManagement.Endpoints.EventManagement
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
+      API.Types.Dashboard.AppManagement.Endpoints.Organization
       API.Types.Dashboard.AppManagement.Endpoints.Pass
       API.Types.Dashboard.AppManagement.Endpoints.Payment
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
       API.Types.Dashboard.AppManagement.EventManagement
       API.Types.Dashboard.AppManagement.MerchantOnboarding
+      API.Types.Dashboard.AppManagement.Organization
       API.Types.Dashboard.AppManagement.Pass
       API.Types.Dashboard.AppManagement.Payment
       API.Types.Dashboard.AppManagement.TicketDashboard
@@ -846,6 +852,7 @@ library
       API.Types.UI.RiderLocation
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
+      API.Types.UI.Student
       API.Types.UI.TicketKapture
       API.Types.UI.TicketService
       API.Types.UI.TrackRoute
@@ -941,6 +948,7 @@ library
       Domain.Types.NyRegularInstanceLog
       Domain.Types.NyRegularSubscription
       Domain.Types.OnSearchEvent
+      Domain.Types.Organization
       Domain.Types.ParcelDetails
       Domain.Types.ParkingTransaction
       Domain.Types.PartnerInvoiceDataLog
@@ -995,6 +1003,7 @@ library
       Domain.Types.StationsExtraInformation
       Domain.Types.StopFare
       Domain.Types.StopInformation
+      Domain.Types.Student
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
       Domain.Types.TicketBookingService
@@ -1097,6 +1106,7 @@ library
       Storage.Beam.NyRegularInstanceLog
       Storage.Beam.NyRegularSubscription
       Storage.Beam.OnSearchEvent
+      Storage.Beam.Organization
       Storage.Beam.ParcelDetails
       Storage.Beam.ParkingTransaction
       Storage.Beam.PartnerInvoiceDataLog
@@ -1150,6 +1160,7 @@ library
       Storage.Beam.StationsExtraInformation
       Storage.Beam.StopFare
       Storage.Beam.StopInformation
+      Storage.Beam.Student
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
       Storage.Beam.TicketBookingService
@@ -1256,6 +1267,7 @@ library
       Storage.Queries.NyRegularInstanceLog
       Storage.Queries.NyRegularSubscription
       Storage.Queries.OnSearchEvent
+      Storage.Queries.Organization
       Storage.Queries.OrphanInstances.AppInstalls
       Storage.Queries.OrphanInstances.BBPS
       Storage.Queries.OrphanInstances.BecknConfig
@@ -1374,6 +1386,7 @@ library
       Storage.Queries.StationsExtraInformation
       Storage.Queries.StopFare
       Storage.Queries.StopInformation
+      Storage.Queries.Student
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory
       Storage.Queries.TicketBookingService

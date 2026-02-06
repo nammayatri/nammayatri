@@ -1,0 +1,114 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Organization: Domain.Types.Organization
+  UTCTime: Data.Time
+  Value: Data.Aeson
+
+Student:
+  tableName: student
+
+  types:
+    VerificationStatus:
+      enum: "PENDING, VERIFIED, REJECTED, EXPIRED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+    TripType:
+      enum: "FORWARD, RETURN"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    RoutePair:
+      sourceLon: Double
+      sourceLat: Double
+      destinationLon: Double
+      destinationLat: Double
+      tripType: TripType
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VerificationStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <VerificationStatus>
+
+  fields:
+    id: Id Student
+    personId: Id Person
+    organizationId: Id Organization
+    name: Text
+    studentClass: Maybe Text
+    age: Maybe Int
+    guardianName: Maybe Text
+    address: Maybe Text
+    idCardPicture: Maybe Text
+    verificationStatus: VerificationStatus
+    verificationDate: Maybe UTCTime
+    remark: Maybe Text
+    routePairs: "[RoutePair]"
+    graduationDate: Maybe UTCTime
+    numberOfStages: Maybe Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    routePairs: Maybe Value
+  fromTType:
+    routePairs: |-
+      fromMaybe [] ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< routePairs)|E
+  toTType:
+    routePairs: Just (Kernel.Prelude.toJSON routePairs)|E
+
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+    organizationId: SecondaryKey
+
+  sqlType:
+    name: text
+    idCardPicture: text
+    verificationStatus: text
+    address: text
+    guardianName: text
+    studentClass: text
+    routePairs: jsonb
+    remark: text
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+
+    findAllByOrganizationId:
+      kvFunction: findAllWithOptionsKV
+      where: organizationId
+      limit: limit
+      offset: offset
+
+    findAllByOrganizationIdAndVerificationStatus:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [organizationId, verificationStatus]
+      limit: limit
+      offset: offset
+
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, verificationDate, graduationDate, remark, updatedAt]
+      where: personId
+
+    updateStudentDetails:
+      kvFunction: updateWithKV
+      params: [name, organizationId, idCardPicture, address, age, guardianName, studentClass, routePairs, graduationDate, verificationStatus, numberOfStages, updatedAt]
+      where: personId
+
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: personId
+
+  extraOperations:
+    - GENERATE_INDEXES
+
+  excludedFields: [createdAt, updatedAt]
