@@ -50,7 +50,7 @@ onConfirm _ reqBS = withFlowHandlerAPI $ do
   bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback ticketBooking.merchantOperatingCityId ticketBooking.merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
   logDebug $ "Received OnConfirm request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
-    dOnConfirmReq <- ACL.buildOnConfirmReq req
+    dOnConfirmReq <- ACL.buildOnConfirmReq ticketBooking.fromStationCode ticketBooking.toStationCode req
     case dOnConfirmReq of
       Just onConfirmReq -> do
         (merchant, booking, quoteCategories) <- DOnConfirm.validateRequest onConfirmReq

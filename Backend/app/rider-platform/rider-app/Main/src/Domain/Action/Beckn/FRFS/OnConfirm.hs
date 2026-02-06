@@ -359,7 +359,8 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.createdAt = now,
         Ticket.updatedAt = now,
         Ticket.isTicketFree = Just isTicketFree,
-        Ticket.commencingHours = dTicket.commencingHours
+        Ticket.commencingHours = dTicket.commencingHours,
+        Ticket.isReturnTicket = dTicket.isReturnTicket
       }
 
 processQRData ::
