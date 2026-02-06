@@ -12,6 +12,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 
 data Refunds = Refunds
   { arn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    completedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     createdAt :: Kernel.Prelude.UTCTime,
     errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
