@@ -39,3 +39,9 @@ ALTER TABLE atlas_app.refunds ADD COLUMN arn text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.refunds ADD COLUMN completed_at timestamp with time zone ;
