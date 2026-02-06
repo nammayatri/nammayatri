@@ -1,0 +1,86 @@
+imports:
+  Student: Domain.Types.Student
+  Organization: Domain.Types.Organization
+  VerificationStatus: Domain.Types.Student
+  RoutePair: Domain.Types.Student
+  Person: Domain.Types.Person
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Pass: Domain.Types.Pass
+  UTCTime: Data.Time
+  APISuccess: Kernel.Types.APISuccess
+
+module: Student
+
+types:
+  StudentUpdateReq:
+    organizationId: Id Organization
+    name: Text
+    idCardPicture: Maybe Text
+    address: Maybe Text
+    age: Maybe Int
+    guardianName: Maybe Text
+    studentClass: Maybe Text
+    routePairs: "[RoutePair]"
+    graduationDate: Maybe UTCTime
+
+  StudentActivateReq:
+    sourceLon: Double
+    sourceLat: Double
+    destinationLon: Double
+    destinationLat: Double
+
+  StudentDataResp:
+    studentId: Id Student
+    name: Text
+    age: Maybe Int
+    guardianName: Maybe Text
+    address: Maybe Text
+    studentClass: Maybe Text
+    idCardPicture: Maybe Text
+    routePairs: "[RoutePair]"
+    organizationId: Id Organization
+    organizationName: Text
+    graduationDate: Maybe UTCTime
+
+  StudentStatusResp:
+    verificationStatus: VerificationStatus
+    verificationDate: Maybe UTCTime
+    remark: Maybe Text
+
+  GetOrganizationResp:
+    organizationId: Id Organization
+    organizationName: Text
+    organizationAddress: Maybe Text
+
+apis:
+  - GET:
+      endpoint: /getOrganizations
+      auth: TokenAuth
+      response:
+        type: "[GetOrganizationResp]"
+  - POST:
+      endpoint: /student/update
+      auth: TokenAuth
+      request:
+        type: StudentUpdateReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /student/data
+      auth: TokenAuth
+      response:
+        type: StudentDataResp
+  - GET:
+      endpoint: /student/verificationStatus
+      auth: TokenAuth
+      response:
+        type: StudentStatusResp
+  - POST:
+      endpoint: /student/{passId}/activate
+      auth: TokenAuth
+      params:
+        passId: Id Pass
+      request:
+        type: StudentActivateReq
+      response:
+        type: APISuccess

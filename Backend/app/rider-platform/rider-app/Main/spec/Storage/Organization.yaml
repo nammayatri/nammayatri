@@ -1,0 +1,53 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  UTCTime: Data.Time
+
+Organization:
+  tableName: organization
+
+  fields:
+    id: Id Organization
+    organizationName: Text
+    personId: Id Person
+    organizationAddress: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+
+  sqlType:
+    organizationName: character varying(255)
+    organizationAddress: text
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+
+    findByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    updateOrganization:
+      kvFunction: updateWithKV
+      params: [organizationName, organizationAddress, updatedAt]
+      where: id
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+  extraOperations:
+    - GENERATE_INDEXES
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
