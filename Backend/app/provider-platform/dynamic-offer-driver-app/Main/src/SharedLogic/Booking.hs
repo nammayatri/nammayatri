@@ -70,7 +70,7 @@ cancelBooking booking mbDriver transporter = do
   -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
   -- Lock Release: Held for 30 seconds and released at the end of the OnCancel.
   SharedCancel.tryCancellationLock booking.transactionId $ do
-    when (fromMaybe False transporter.prepaidSubscriptionAndWalletEnabled && isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ whenJust mbRide $ \ride -> releaseLien booking ride
+    when (isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ whenJust mbRide $ \ride -> releaseLien booking ride
     whenJust mbDriver $ \driver ->
       updateOnRideStatusWithAdvancedRideCheck driver.id mbRide
     QRB.updateStatus booking.id DRB.CANCELLED

@@ -2,20 +2,20 @@ imports:
   Id: Kernel.Types.Id
   UTCTime: Data.Time
   APISuccess: Kernel.Types.APISuccess
-  DriverWallet: Domain.Types.DriverWallet
+  LedgerEntry: Lib.Finance.Domain.Types.LedgerEntry
   Location: Domain.Types.Location
   HighPrecMoney: Kernel.Types.Common
   Ride: Domain.Types.Ride
-  TransactionType: Domain.Types.DriverWallet
+  WalletTransactionType: Domain.Types.DriverWallet
   PlanSubscribeRes: Domain.Action.UI.Plan
 
 module: DriverWallet
 
 types:
   TransactionDetails:
-    id: Id DriverWallet
+    id: Id LedgerEntry
     rideId: Maybe (Id Ride)
-    transactionType: TransactionType
+    transactionType: WalletTransactionType
     collectionAmount: Maybe HighPrecMoney
     gstDeduction: Maybe HighPrecMoney
     merchantPayable: Maybe HighPrecMoney
@@ -37,7 +37,7 @@ apis:
       query:
         - fromDate: UTCTime
         - toDate: UTCTime
-        - transactionType: TransactionType
+        - transactionType: WalletTransactionType
         - limit: Int
         - offset: Int
       response:

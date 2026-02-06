@@ -4,10 +4,9 @@ imports:
   Driver: API.Types.ProviderPlatform.Fleet.Driver
   SubscriptionTransaction: Domain.Types.SubscriptionTransaction
   SubscriptionTransactionEntity: API.Types.UI.SubscriptionTransaction
-  TransactionType: Domain.Types.SubscriptionTransaction
   Location: Domain.Types.Location
   HighPrecMoney: Kernel.Types.Common
-  TransactionStatus: Kernel.External.Payment.Juspay.Types.Common
+  EntryStatus: Lib.Finance.Domain.Types.LedgerEntry
 
 module: SubscriptionTransaction
 types: {}
@@ -18,7 +17,7 @@ apis:
       query:
         fromDate: UTCTime
         toDate: UTCTime
-        status: TransactionStatus
+        status: EntryStatus
         minAmount: HighPrecMoney
         maxAmount: HighPrecMoney
         limit: Int
@@ -34,7 +33,7 @@ apis:
             query:
               fromDate: UTCTime
               toDate: UTCTime
-              status: TransactionStatus
+              status: EntryStatus
               minAmount: HighPrecMoney
               maxAmount: HighPrecMoney
               limit: Int

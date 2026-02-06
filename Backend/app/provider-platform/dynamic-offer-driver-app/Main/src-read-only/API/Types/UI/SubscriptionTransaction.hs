@@ -4,12 +4,12 @@ module API.Types.UI.SubscriptionTransaction where
 
 import Data.OpenApi (ToSchema)
 import qualified Data.Time
+import qualified Domain.Types.DriverWallet
 import qualified Domain.Types.Location
-import qualified Domain.Types.SubscriptionTransaction
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.External.Payment.Juspay.Types.Common
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Servant
 import Tools.Auth
 
@@ -20,9 +20,9 @@ data SubscriptionTransactionEntity = SubscriptionTransactionEntity
     entityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     runningBalance :: Kernel.Types.Common.HighPrecMoney,
-    status :: Kernel.External.Payment.Juspay.Types.Common.TransactionStatus,
+    status :: Lib.Finance.Domain.Types.LedgerEntry.EntryStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
-    transactionType :: Domain.Types.SubscriptionTransaction.TransactionType,
+    transactionType :: Domain.Types.DriverWallet.RideTransactionType,
     updatedAt :: Data.Time.UTCTime
   }
   deriving stock (Generic)

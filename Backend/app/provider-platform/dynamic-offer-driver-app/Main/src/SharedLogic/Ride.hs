@@ -45,12 +45,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import qualified SharedLogic.FarePolicy as SFP
+import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -60,7 +62,6 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
-import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideD
@@ -85,16 +86,28 @@ initializeRide ::
 initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId = do
   let merchantId = merchant.id
   transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ do
+  when (isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ do
     whenJust mFleetOwnerId $ \fleetOwnerId -> do
       Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
-        fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonNotFound fleetOwnerId.getId)
+        mbAvailableBalance <- getPrepaidAvailableBalanceByOwner ownerTypeFleetOwner fleetOwnerId.getId
         let rideFare = booking.estimatedFare
             threshold = fromMaybe 0 transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
-            lien = fromMaybe 0 fleetOwnerInfo.lienAmount
-            balance = fromMaybe 0 fleetOwnerInfo.prepaidSubscriptionBalance
-        when (balance - lien < rideFare + threshold) $ throwError (InvalidRequest "Low fleet balance.")
-        QFOI.updateLienAmount (Just (lien + rideFare)) fleetOwnerId
+            balance = fromMaybe 0 mbAvailableBalance
+        when (balance < rideFare + threshold) $ throwError (InvalidRequest "Low fleet balance.")
+        _ <-
+          createPrepaidHold
+            ownerTypeFleetOwner
+            fleetOwnerId.getId
+            FAccount.Fleet
+            rideFare
+            booking.currency
+            booking.providerId.getId
+            booking.merchantOperatingCityId.getId
+            "RIDE_HOLD"
+            booking.id.getId
+            Nothing
+            >>= fromEitherM (\err -> InternalError ("Failed to create prepaid hold: " <> show err))
+        pure ()
   otpCode <-
     case mbOtpCode of
       Just otp -> pure otp
@@ -182,10 +195,12 @@ releaseLien booking ride = do
   result <- try $
     whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
       Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
-        fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonNotFound fleetOwnerId.getId)
-        let reservedFare = booking.estimatedFare
-            lien = fromMaybe 0 fleetOwnerInfo.lienAmount
-        QFOI.updateLienAmount (Just (lien - reservedFare)) fleetOwnerId
+        voidPrepaidHold
+          ownerTypeFleetOwner
+          fleetOwnerId.getId
+          "RIDE_HOLD"
+          booking.id.getId
+          "Ride cancelled"
   case result of
     Left (e :: SomeException) ->
       logTagError ("releaseLien failed for rideId " <> getId ride.id) (show e)

@@ -27,6 +27,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.VehicleServiceTier
+import Storage.Beam.Finance ()
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
@@ -87,7 +88,6 @@ data NearestDriversOnRideReq = NearestDriversOnRideReq
     paymentInstrument :: Maybe MP.PaymentInstrument,
     onlinePayment :: Bool,
     now :: UTCTime,
-    prepaidSubscriptionAndWalletEnabled :: Bool,
     paymentMode :: Maybe MP.PaymentMode
   }
 
@@ -103,8 +103,9 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       allowedVehicleVariant = DL.nub $ concatMap (.allowedVehicleVariant) allowedCityServiceTiers
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong onRideRadius (Just allowedVehicleVariant)
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
-  driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity minWalletAmountForCashRides paymentInstrument
-  driverInfos <- QGND.filterDriversBySufficientBalance prepaidSubscriptionAndWalletEnabled rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
+  driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity
+  driverInfosPrepaid <- QGND.filterDriversBySufficientBalance rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
+  driverInfos <- QGND.filterDriversByMinWalletBalance minWalletAmountForCashRides paymentInstrument driverInfosPrepaid
   logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show (DIAPI.convertToDriverInfoAPIEntity <$> driverInfos)
   vehicles <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicles

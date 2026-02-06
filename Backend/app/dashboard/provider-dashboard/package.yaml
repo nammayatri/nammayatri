@@ -131,6 +131,7 @@ library:
     - special-zone-a
     - shared-services
     - special-zone-a
+    - finance-kernel
 
 executables:
   provider-dashboard-exe:

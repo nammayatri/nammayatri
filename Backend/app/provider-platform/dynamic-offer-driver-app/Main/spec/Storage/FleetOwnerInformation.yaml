@@ -35,9 +35,6 @@ FleetOwnerInformation:
     referredByOperatorId: Maybe Text
     registeredAt: Maybe UTCTime
     ticketPlaceId: Maybe Text
-    prepaidSubscriptionBalance: Maybe HighPrecMoney
-    lienAmount: Maybe HighPrecMoney
-    planExpiryDate: Maybe UTCTime
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     fleetDob: Maybe UTCTime
     stripeAddress: Maybe Address
@@ -127,14 +124,6 @@ FleetOwnerInformation:
     updateReferredByOperatorId:
       kvFunction: updateOneWithKV
       params: [referredByOperatorId]
-      where: fleetOwnerPersonId
-    updateLienAmount:
-      kvFunction: updateOneWithKV
-      params: [lienAmount]
-      where: fleetOwnerPersonId
-    updatePrepaidSubscriptionBalanceAndExpiry:
-      kvFunction: updateOneWithKV
-      params: [prepaidSubscriptionBalance, planExpiryDate]
       where: fleetOwnerPersonId
     deleteByFleetOwnerPersonId:
       kvFunction: deleteWithKV

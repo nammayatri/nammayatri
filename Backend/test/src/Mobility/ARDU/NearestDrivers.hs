@@ -63,7 +63,6 @@ createNearestDriverReq nearestRadius now =
       onlinePayment = False,
       prepaidSubscriptionThreshold = Nothing,
       fleetPrepaidSubscriptionThreshold = Nothing,
-      prepaidSubscriptionAndWalletEnabled = False,
       rideFare = Nothing,
       paymentInstrument = Nothing,
       paymentMode = Nothing,

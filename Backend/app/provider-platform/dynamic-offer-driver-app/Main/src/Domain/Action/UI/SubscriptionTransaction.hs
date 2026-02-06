@@ -18,18 +18,19 @@ module Domain.Action.UI.SubscriptionTransaction
 where
 
 import API.Types.UI.SubscriptionTransaction
+import Domain.Types.DriverWallet
+import Data.List (lookup)
 import Data.Time hiding (getCurrentTime)
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
-import Domain.Types.SubscriptionTransaction
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Payment.Juspay.Types.Common
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.SubscriptionTransactionExtra as QSubscriptionTransaction
+import Lib.Finance
+import SharedLogic.Finance.Prepaid
 import qualified Tools.Utils as Utils
 
 getSubscriptionTransactions ::
@@ -43,7 +44,7 @@ getSubscriptionTransactions ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Maybe Int ->
-  Maybe TransactionStatus ->
+  Maybe EntryStatus ->
   Maybe UTCTime ->
   m [SubscriptionTransactionEntity]
 getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinAmount mbOffset mbStatus mbTo = do
@@ -53,17 +54,58 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
       toDate = fromMaybe now mbTo
       limit = min maxLimit . fromMaybe 10 $ mbLimit
       offset = fromMaybe 0 mbOffset
-  transactions <- QSubscriptionTransaction.findAllByDriverDateAmountAndStatus driverId' fromDate toDate mbStatus mbMinAmount mbMaxAmount limit offset
-  let rideIds = mapMaybe (\st -> if st.transactionType == RIDE then st.entityId else Nothing) transactions
-  (rideMap, bookingMap) <- Utils.fetchRideLocationData (map Id rideIds)
-  forM transactions $ \SubscriptionTransaction {..} -> do
-    (fromLocation, toLocation) <- case transactionType of
-      RIDE -> Utils.extractLocationFromMaps (Id <$> entityId) rideMap bookingMap
-      _ -> return (Nothing, Nothing)
-    return $
-      SubscriptionTransactionEntity
-        { driverId = driverId'.getId,
-          ..
-        }
+  mbAccount <- getPrepaidAccountByOwner ownerTypeDriver driverId'.getId
+  case mbAccount of
+    Nothing -> pure []
+    Just account -> do
+      let referenceTypes = ["RIDE", "PLAN_PURCHASE"]
+      allEntries <- findByOwnerWithFilters ownerTypeDriver driverId'.getId Nothing Nothing Nothing Nothing Nothing (Just referenceTypes)
+      let relevantEntries = allEntries
+      let balanceByEntryId = buildRunningBalances account.id (sortOn (.timestamp) relevantEntries)
+      filteredEntries <-
+        findByOwnerWithFilters
+          ownerTypeDriver
+          driverId'.getId
+          (Just fromDate)
+          (Just toDate)
+          mbMinAmount
+          mbMaxAmount
+          mbStatus
+          (Just referenceTypes)
+      let sortedFilteredEntries = sortOn (.timestamp) filteredEntries
+      let pagedEntries = take limit . drop offset $ sortOn (Down . (.timestamp)) sortedFilteredEntries
+      let rideIds = mapMaybe (\e -> if e.referenceType == "RIDE" then Just e.referenceId else Nothing) pagedEntries
+      (rideMap, bookingMap) <- Utils.fetchRideLocationData (map Id rideIds)
+      forM pagedEntries $ \entry -> do
+        let transactionType = if entry.referenceType == "RIDE" then RIDE else PLAN_PURCHASE
+        (fromLocation, toLocation) <- case transactionType of
+          RIDE -> Utils.extractLocationFromMaps (Just (Id entry.referenceId)) rideMap bookingMap
+          _ -> return (Nothing, Nothing)
+        let runningBalance = fromMaybe 0 (lookup entry.id balanceByEntryId)
+        return
+          SubscriptionTransactionEntity
+            { driverId = driverId'.getId,
+              entityId = Just entry.referenceId,
+              transactionType,
+              amount = entry.amount,
+              status = entry.status,
+              runningBalance,
+              fromLocation,
+              toLocation,
+              createdAt = entry.timestamp,
+              updatedAt = entry.updatedAt
+            }
   where
     maxLimit = 10
+    buildRunningBalances accountId entries =
+      let step (accBal, accMap) entry =
+            let delta =
+                  if entry.fromAccountId == accountId
+                    then (-1) * entry.amount
+                    else
+                      if entry.toAccountId == accountId
+                        then entry.amount
+                        else 0
+                newBal = accBal + delta
+             in (newBal, accMap <> [(entry.id, newBal)])
+       in snd $ foldl step (0, []) entries

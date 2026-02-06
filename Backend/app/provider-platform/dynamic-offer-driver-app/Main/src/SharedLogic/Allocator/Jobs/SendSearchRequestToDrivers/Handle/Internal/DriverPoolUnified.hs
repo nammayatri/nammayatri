@@ -213,7 +213,6 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     onlinePayment = merchant.onlinePayment,
                     rideFare = Just searchTry.baseFare, -- TODO: add walletBalance check
                     paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
-                    prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                     paymentMode = searchReq.paymentMode,
                     ..
                   }
@@ -342,7 +341,6 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         isInterCity = isInterCityTrip searchTry.tripCategory,
                         onlinePayment = merchant.onlinePayment,
                         rideFare = Just searchTry.baseFare,
-                        prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                         paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         paymentMode = searchReq.paymentMode,
                         ..
@@ -495,7 +493,6 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
                   configsInExperimentVersions = searchReq.configInExperimentVersions,
                   rideFare = Just searchTry.baseFare,
                   paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
-                  prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                   paymentMode = searchReq.paymentMode,
                   ..
                 }

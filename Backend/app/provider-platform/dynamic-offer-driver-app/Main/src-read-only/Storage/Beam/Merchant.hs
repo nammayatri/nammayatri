@@ -41,7 +41,6 @@ data MerchantT f = MerchantT
     name :: B.C f Kernel.Prelude.Text,
     onlinePayment :: B.C f Kernel.Prelude.Bool,
     overwriteAssociation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    prepaidSubscriptionAndWalletEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     registryUrl :: B.C f Kernel.Prelude.Text,
     shortId :: B.C f Kernel.Prelude.Text,
     signatureExpiry :: B.C f Kernel.Prelude.Int,

@@ -15,7 +15,6 @@ module Storage.Queries.DriverInformation.Internal where
 
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DriverInfo
-import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import qualified Domain.Types.Person as DP
 import Domain.Types.VehicleCategory as DV
 import Kernel.Beam.Functions (findAllWithKV, findOneWithKV, updateOneWithKV)
@@ -40,8 +39,8 @@ getDriverInfos ::
 getDriverInfos personKeys = do
   findAllWithKV [Se.Is BeamDI.driverId $ Se.In personKeys]
 
-getDriverInfosWithCond :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> Bool -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe MP.PaymentInstrument -> m [DriverInfo.DriverInformation]
-getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity minWalletAmountForCashRides paymentInstrument = do
+getDriverInfosWithCond :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> Bool -> Bool -> Bool -> Bool -> m [DriverInfo.DriverInformation]
+getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity = do
   findAllWithKV
     [ Se.And
         ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
@@ -66,7 +65,6 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity 
             <> ([Se.Is BeamDI.canSwitchToRental $ Se.Eq (Just True) | isRental])
             <> ([Se.Is BeamDI.canSwitchToInterCity $ Se.Eq (Just True) | isInterCity])
             <> ([Se.Is BeamDI.canSwitchToIntraCity $ Se.Eq (Just True) | (not isInterCity && not isRental)])
-            <> [Se.Is BeamDI.walletBalance $ Se.GreaterThan minWalletAmountForCashRides | isJust minWalletAmountForCashRides && (isNothing paymentInstrument || paymentInstrument == Just MP.Cash || paymentInstrument == Just MP.BoothOnline)]
             <> [Se.Is BeamDI.subscribed $ Se.Eq True]
         )
     ]

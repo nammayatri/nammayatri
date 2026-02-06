@@ -55,7 +55,6 @@ data NearestGoHomeDriversReq = NearestGoHomeDriversReq
     onlinePayment :: Bool,
     isValueAddNP :: Bool,
     now :: UTCTime,
-    prepaidSubscriptionAndWalletEnabled :: Bool,
     paymentMode :: Maybe MP.PaymentMode
   }
 
@@ -101,9 +100,10 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius (Just allowedVehicleVariant)
   specialLocWarriorDriverInfos <- Int.getSpecialLocWarriorDriverInfoWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
-  driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity minWalletAmountForCashRides paymentInstrument
+  driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity
   let driverInfos_ = specialLocWarriorDriverInfos <> driverInfoWithoutSpecialLocWarrior
-  driverInfos <- QGND.filterDriversBySufficientBalance prepaidSubscriptionAndWalletEnabled rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
+  driverInfosPrepaid <- QGND.filterDriversBySufficientBalance rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
+  driverInfos <- QGND.filterDriversByMinWalletBalance minWalletAmountForCashRides paymentInstrument driverInfosPrepaid
   logDebug $ "MetroWarriorDebugging getNearestGoHomeDrivers" <> show (DIAPI.convertToDriverInfoAPIEntity <$> specialLocWarriorDriverInfos)
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle

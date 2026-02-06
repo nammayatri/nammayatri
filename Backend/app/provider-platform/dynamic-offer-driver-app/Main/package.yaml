@@ -97,6 +97,7 @@ dependencies:
   - record-dot-preprocessor
   - servant-openapi3
   - openapi3
+  - finance-kernel
   - string-conversions
   - either
   - persistent

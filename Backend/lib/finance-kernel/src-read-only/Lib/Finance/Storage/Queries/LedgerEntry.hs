@@ -11,6 +11,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Types.Common (HighPrecMoney)
 import qualified Lib.Finance.Domain.Types.Account
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import qualified Lib.Finance.Storage.Beam.BeamFlow
@@ -36,6 +37,33 @@ findByOwnerAndStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
 findByOwnerAndStatus ownerType ownerId status = do findAllWithKV [Se.And [Se.Is Beam.ownerType $ Se.Eq ownerType, Se.Is Beam.ownerId $ Se.Eq ownerId, Se.Is Beam.status $ Se.Eq status]]
+
+findByOwnerWithFilters ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  ( Kernel.Prelude.Text ->
+    Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney ->
+    Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney ->
+    Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus ->
+    Kernel.Prelude.Maybe [Kernel.Prelude.Text] ->
+    m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]
+  )
+findByOwnerWithFilters ownerType ownerId mbFrom mbTo mbMin mbMax mbStatus mbReferenceTypes = do
+  findAllWithKV
+    [ Se.And
+        ( [ Se.Is Beam.ownerType $ Se.Eq ownerType,
+            Se.Is Beam.ownerId $ Se.Eq ownerId
+          ]
+            <> [Se.Is Beam.timestamp $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
+            <> [Se.Is Beam.timestamp $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
+            <> [Se.Is Beam.amount $ Se.GreaterThanOrEq (fromJust mbMin) | isJust mbMin]
+            <> [Se.Is Beam.amount $ Se.LessThanOrEq (fromJust mbMax) | isJust mbMax]
+            <> [Se.Is Beam.status $ Se.Eq (fromJust mbStatus) | isJust mbStatus]
+            <> [Se.Is Beam.referenceType $ Se.In (fromJust mbReferenceTypes) | isJust mbReferenceTypes]
+        )
+    ]
 
 findByReference :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
 findByReference referenceType referenceId = do findAllWithKV [Se.And [Se.Is Beam.referenceType $ Se.Eq referenceType, Se.Is Beam.referenceId $ Se.Eq referenceId]]

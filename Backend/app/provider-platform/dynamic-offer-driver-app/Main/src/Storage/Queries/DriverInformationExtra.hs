@@ -407,25 +407,6 @@ updateServicesEnabled driverIds services = do
     ]
     [Se.Is BeamDI.driverId (Se.In driverIds)]
 
-updatePrepaidSubscriptionBalanceAndExpiry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> HighPrecMoney -> Maybe UTCTime -> m ()
-updatePrepaidSubscriptionBalanceAndExpiry driverId amount expiryDate = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamDI.prepaidSubscriptionBalance (Just amount),
-      Se.Set BeamDI.planExpiryDate expiryDate,
-      Se.Set BeamDI.updatedAt now
-    ]
-    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
-
-updatePrepaidSubscriptionBalance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Id Person.Driver -> m ()
-updatePrepaidSubscriptionBalance amount driverId = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamDI.prepaidSubscriptionBalance (Just amount),
-      Se.Set BeamDI.updatedAt now
-    ]
-    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
-
 findByIdAndVerified ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Person.Driver ->

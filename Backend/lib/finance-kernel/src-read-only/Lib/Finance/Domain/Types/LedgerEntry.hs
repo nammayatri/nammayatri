@@ -3,11 +3,12 @@
 
 module Lib.Finance.Domain.Types.LedgerEntry where
 
-import qualified Data.Aeson
+import Data.Aeson
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.TH
 import qualified Lib.Finance.Domain.Types.Account
 
 data LedgerEntry = LedgerEntry
@@ -42,3 +43,5 @@ data EntryType = Transfer | LiabilityCreated | LiabilitySettled | Reversal | Adj
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EntryType))
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EntryStatus))
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''EntryStatus))
