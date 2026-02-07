@@ -15,6 +15,10 @@ Pass:
       enum: "ProfilePicture,Aadhaar"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
+    PassConfig:
+      maxSwitchCount: Int
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
     Benefit:
       enum: "FullSaving,FixedSaving HighPrecMoney,PercentageSaving HighPrecMoney"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
@@ -46,15 +50,23 @@ Pass:
     autoApply: Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    passConfig: Maybe PassConfig
+
+  beamFields:
+    passConfig:
+      maxSwitchCount: Maybe Int
 
   beamType:
     verificationValidity: Maybe Seconds
+    maxSwitchCount: Maybe Int
 
   fromTType:
     verificationValidity: Kernel.Prelude.fromMaybe 9000|I
+    passConfig: (Domain.Types.Pass.PassConfig <$> maxSwitchCount)|E
 
   toTType:
     verificationValidity: Kernel.Prelude.Just|I
+    maxSwitchCount: ((.maxSwitchCount) <$> passConfig)|E
 
   constraints:
     id: PrimaryKey
