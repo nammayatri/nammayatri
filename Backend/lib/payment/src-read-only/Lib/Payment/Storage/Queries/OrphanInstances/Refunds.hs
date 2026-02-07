@@ -18,6 +18,7 @@ instance FromTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
       Just
         Lib.Payment.Domain.Types.Refunds.Refunds
           { arn = arn,
+            completedAt = completedAt,
             createdAt = createdAt,
             errorCode = errorCode,
             errorMessage = errorMessage,
@@ -37,6 +38,7 @@ instance ToTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
   toTType' (Lib.Payment.Domain.Types.Refunds.Refunds {..}) = do
     Beam.RefundsT
       { Beam.arn = arn,
+        Beam.completedAt = completedAt,
         Beam.createdAt = createdAt,
         Beam.errorCode = errorCode,
         Beam.errorMessage = errorMessage,

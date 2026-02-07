@@ -24,6 +24,7 @@ Refunds:
     updatedAt : UTCTime
     isApiCallSuccess: Maybe Bool
     arn: Maybe Text
+    completedAt: Maybe UTCTime
 
   constraints:
     orderId: SecondaryKey
@@ -33,6 +34,7 @@ Refunds:
     refund_amount: double precision
     createdAt: timestamp with time zone
     updatedAt: timestamp with time zone
+    completedAt: timestamp with time zone
     split: "json"
 
   queries:
@@ -47,11 +49,11 @@ Refunds:
       where: orderId
     updateRefundsEntryByResponse:
       kvFunction: updateWithKV
-      params: [initiatedBy, idAssignedByServiceProvider, errorMessage, errorCode, status, arn]
+      params: [initiatedBy, idAssignedByServiceProvider, errorMessage, errorCode, status, arn, completedAt]
       where: id
     updateRefundsEntryByStripeResponse:
       kvFunction: updateWithKV
-      params: [idAssignedByServiceProvider, errorCode, status, isApiCallSuccess]
+      params: [idAssignedByServiceProvider, errorCode, status, isApiCallSuccess, completedAt]
       where: id
     updateIsApiCallSuccess:
       kvFunction: updateWithKV
