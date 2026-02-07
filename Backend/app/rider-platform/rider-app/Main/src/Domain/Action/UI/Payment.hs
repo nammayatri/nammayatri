@@ -78,6 +78,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import qualified Storage.Queries.PaymentInvoiceExtra as QPaymentInvoiceExtra
+import qualified Storage.Queries.PaymentInvoice as QPI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
@@ -337,6 +338,29 @@ stripeWebhookAction resp respDump = do
               QPaymentInvoiceExtra.updatePaymentStatusByRideIdAndTypeAndPurpose rideId DPI.REFUNDS paymentPurpose invoiceStatus
               Notify.notifyRefunds updRefundRequest
       pure Ack
+    DPayment.OrderTxnWebhookData (mbOrderShortId, txnInfo) -> do
+      case mbOrderShortId of
+        Just shortId -> do
+          let orderShortId = ShortId shortId
+          QOrder.findByShortId orderShortId >>= \case
+            Nothing -> logInfo $ "Payment Order not found for shortId: " <> shortId
+            Just paymentOrder -> do
+              mbInvoice <- QPI.findByPaymentOrderIdAndInvoiceType (Just paymentOrder.id) DPI.PAYMENT
+              case mbInvoice of
+                Just invoice -> do
+                  let status = case txnInfo.transactionStatus of
+                        Payment.CHARGED -> DPI.CAPTURED
+                        Payment.CANCELLED -> DPI.CANCELLED
+                        Payment.AUTHORIZATION_FAILED -> DPI.FAILED
+                        Payment.AUTHENTICATION_FAILED -> DPI.FAILED
+                        Payment.JUSPAY_DECLINED -> DPI.FAILED
+                        _ -> DPI.PENDING
+                  QPI.updatePaymentStatus status invoice.id
+                Nothing -> logInfo $ "No payment invoice found for order: " <> paymentOrder.id.getId
+        Nothing -> logError "Payment order shortId not found in webhook data"
+
+      DPayment.stripeWebhookService resp respDump stripeWebhookData
+
     _ -> DPayment.stripeWebhookService resp respDump stripeWebhookData
 
 ----------------------------------------- wallet apis -----------------------------------------------------

@@ -17,6 +17,7 @@ import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
 import qualified SharedLogic.Type as SLT
+import Domain.Types.Extra.PaymentInvoice (InvoiceAPIEntity)
 
 -- Extra code goes here --
 data EditLocation = EditLocation
@@ -76,6 +77,7 @@ data RideAPIEntity = RideAPIEntity
     insuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     paymentStatus :: Domain.Types.Ride.PaymentStatus,
-    refundRequestStatus :: Maybe Domain.Types.RefundRequest.RefundRequestStatus
+    refundRequestStatus :: Maybe Domain.Types.RefundRequest.RefundRequestStatus,
+    invoices :: [InvoiceAPIEntity]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
