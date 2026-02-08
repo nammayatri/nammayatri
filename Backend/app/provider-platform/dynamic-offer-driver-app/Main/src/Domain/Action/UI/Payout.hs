@@ -55,14 +55,12 @@ import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Merchant
-import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -75,7 +73,6 @@ import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
-import qualified Tools.SMS as SMS
 import Utils.Common.Cac.KeyNameConstants
 
 -- webhook ----------------------------------------------------------
@@ -126,12 +123,6 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
               when (scheduledPayout.status /= newStatus && scheduledPayout.status `notElem` [DSP.CREDITED, DSP.CASH_PAID, DSP.CASH_PENDING]) do
                 let statusMsg = "Bank Webhook: " <> show payoutStatus
                 QSPE.updateStatusWithHistoryById newStatus (Just statusMsg) scheduledPayout
-                fork "Send Payout Notification to Driver" $ do
-                  case (scheduledPayout.merchantId, scheduledPayout.merchantOperatingCityId) of
-                    (Just mId, Just mocId) -> do
-                      whenJust scheduledPayout.amount $ \amountVal -> do
-                        when (amountVal > 0.0) $ sendDriverPayoutSms mId mocId scheduledPayout amountVal
-                    _ -> pure ()
         _ -> do
           unless (isSuccessStatus payoutOrder.status) do
             mbVehicle <- QV.findById (Id payoutOrder.customerId)
@@ -260,22 +251,6 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
       let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
           createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchantOperatingCityId paymentServiceName (Just $ getId dailyStats.driverId)
       void $ DPayment.payoutStatusService (cast merchantId) (cast dailyStats.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall
-
-    sendDriverPayoutSms mId mocId scheduledPayout amount = do
-      let driverId = Id scheduledPayout.driverId
-      driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      booking <- QBooking.findById (Id scheduledPayout.bookingId) >>= fromMaybeM (BookingNotFound scheduledPayout.bookingId)
-      smsCfg <- asks (.smsCfg)
-      mobile <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-      let countryCode = fromMaybe "+91" driver.mobileCountryCode
-          phoneNumber = countryCode <> mobile
-          sender = smsCfg.sender
-          amountText = show amount
-      (mbSender, message, templateId) <-
-        MessageBuilder.buildDriverPayoutMessage
-          mocId
-          (MessageBuilder.BuildDriverPayoutMessageReq {payoutAmount = amountText, bookingId = booking.displayBookingId})
-      SMS.sendSMS mId mocId (SMS.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= SMS.checkSmsResult
 
 castPayoutOrderStatus :: Payout.PayoutOrderStatus -> DS.PayoutStatus
 castPayoutOrderStatus payoutOrderStatus =
