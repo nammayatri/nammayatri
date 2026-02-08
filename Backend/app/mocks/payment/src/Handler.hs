@@ -140,7 +140,7 @@ externalPaymentHandler merchantShortId mCity mServiceType paymentStatusResp =
 
             webhookPayload =
               buildJuspayWebhookPayload
-                orderShortId
+                orderId
                 status
                 bankErrorMessage
                 bankErrorCode
@@ -216,7 +216,7 @@ externalPaymentHandler merchantShortId mCity mServiceType paymentStatusResp =
           InternalError "Expected PaymentStatus constructor"
 
 buildJuspayWebhookPayload ::
-  ShortId a ->
+  Id DOrder.PaymentOrder ->
   Payment.TransactionStatus ->
   Maybe Text ->
   Maybe Text ->
@@ -241,7 +241,7 @@ buildJuspayWebhookPayload ::
   Maybe Payment.SplitSettlementResponse ->
   Juspay.WebhookReq
 buildJuspayWebhookPayload
-  orderShortId
+  orderId
   transactionStatus
   bankErrorMessage
   bankErrorCode
@@ -273,7 +273,7 @@ buildJuspayWebhookPayload
             { order =
                 Just
                   Juspay.OrderData
-                    { order_id = getShortId orderShortId,
+                    { order_id = getId orderId,
                       txn_uuid = txnUUID,
                       txn_id = txnId,
                       status_id = Just 21,
