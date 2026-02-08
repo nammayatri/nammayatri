@@ -99,9 +99,9 @@ postPayoutCancel _merchantShortId _opCity rideId req = do
   unless (now < cutoffTime) $
     throwError $ InvalidRequest "Cancel window expired (2 hours)"
 
-  -- Update status to FAILED with reason and record history
-  QSP.updateStatusWithReasonByRideId DSP.FAILED (Just req.reason) rideId
-  QSP.updateStatusWithHistoryById DSP.FAILED (Just $ "Cancelled: " <> req.reason) payout
+  -- Update status to CANCELLED with reason and record history
+  QSP.updateStatusWithReasonByRideId DSP.CANCELLED (Just req.reason) rideId
+  QSP.updateStatusWithHistoryById DSP.CANCELLED (Just $ "Cancelled: " <> req.reason) payout
 
   logInfo $ "Payout cancelled for rideId: " <> rideId <> " reason: " <> req.reason
   pure Kernel.Types.APISuccess.Success
