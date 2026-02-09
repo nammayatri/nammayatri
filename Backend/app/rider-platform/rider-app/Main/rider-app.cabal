@@ -507,6 +507,7 @@ library
       Storage.Beam.IssueManagement
       Storage.Beam.Payment
       Storage.Beam.SchedulerJob
+      Storage.Beam.Sos
       Storage.Beam.SystemConfigs
       Storage.Beam.Yudhishthira
       Storage.CachedQueries.BecknConfig
@@ -989,7 +990,6 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
-      Domain.Types.Sos
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
       Domain.Types.StationsExtraInformation
@@ -1144,7 +1144,6 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
-      Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.StationsExtraInformation
@@ -1368,7 +1367,6 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
-      Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.StationsExtraInformation

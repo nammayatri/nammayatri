@@ -8,17 +8,17 @@ import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Domain.Action.UI.Sos as Sos
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Sos
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import qualified Safety.Domain.Types.Sos as SafetyDSos
 import Servant
 import Tools.Auth
 
 getSosTracking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow API.Types.RiderPlatform.Management.Sos.SosTrackingRes)
 getSosTracking _merchantShortId _opCity sosId = do
-  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @Domain.Types.Sos.Sos sosId
+  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
   res <- Sos.getSosTracking sosId'
   pure $ convertToApiRes res
 
@@ -39,13 +39,13 @@ convertLocation loc =
       accuracy = loc.accuracy
     }
 
-convertSosState :: Domain.Types.Sos.SosState -> API.Types.RiderPlatform.Management.Sos.SosState
-convertSosState Domain.Types.Sos.LiveTracking = API.Types.RiderPlatform.Management.Sos.LiveTracking
-convertSosState Domain.Types.Sos.SosActive = API.Types.RiderPlatform.Management.Sos.SosActive
+convertSosState :: SafetyDSos.SosState -> API.Types.RiderPlatform.Management.Sos.SosState
+convertSosState SafetyDSos.LiveTracking = API.Types.RiderPlatform.Management.Sos.LiveTracking
+convertSosState SafetyDSos.SosActive = API.Types.RiderPlatform.Management.Sos.SosActive
 
-convertSosStatus :: Domain.Types.Sos.SosStatus -> API.Types.RiderPlatform.Management.Sos.SosStatus
-convertSosStatus Domain.Types.Sos.Resolved = API.Types.RiderPlatform.Management.Sos.Resolved
-convertSosStatus Domain.Types.Sos.NotResolved = API.Types.RiderPlatform.Management.Sos.NotResolved
-convertSosStatus Domain.Types.Sos.Pending = API.Types.RiderPlatform.Management.Sos.Pending
-convertSosStatus Domain.Types.Sos.MockPending = API.Types.RiderPlatform.Management.Sos.MockPending
-convertSosStatus Domain.Types.Sos.MockResolved = API.Types.RiderPlatform.Management.Sos.MockResolved
+convertSosStatus :: SafetyDSos.SosStatus -> API.Types.RiderPlatform.Management.Sos.SosStatus
+convertSosStatus SafetyDSos.Resolved = API.Types.RiderPlatform.Management.Sos.Resolved
+convertSosStatus SafetyDSos.NotResolved = API.Types.RiderPlatform.Management.Sos.NotResolved
+convertSosStatus SafetyDSos.Pending = API.Types.RiderPlatform.Management.Sos.Pending
+convertSosStatus SafetyDSos.MockPending = API.Types.RiderPlatform.Management.Sos.MockPending
+convertSosStatus SafetyDSos.MockResolved = API.Types.RiderPlatform.Management.Sos.MockResolved

@@ -1,30 +1,29 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Beam.Sos where
+module Safety.Storage.Beam.Sos where
 
 import qualified Database.Beam as B
-import Domain.Types.Common ()
-import qualified Domain.Types.Sos
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Safety.Domain.Types.Sos
 
 data SosT f = SosT
-  { entityType :: B.C f (Kernel.Prelude.Maybe Domain.Types.Sos.SosEntityType),
-    flow :: B.C f Domain.Types.Sos.SosType,
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    entityType :: B.C f (Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosEntityType),
+    flow :: B.C f Safety.Domain.Types.Sos.SosType,
     id :: B.C f Kernel.Prelude.Text,
     mediaFiles :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
-    personId :: B.C f Kernel.Prelude.Text,
-    rideId :: B.C f Kernel.Prelude.Text,
-    sosState :: B.C f (Kernel.Prelude.Maybe Domain.Types.Sos.SosState),
-    status :: B.C f Domain.Types.Sos.SosStatus,
-    ticketId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    trackingExpiresAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    personId :: B.C f Kernel.Prelude.Text,
+    rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    sosState :: B.C f (Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosState),
+    status :: B.C f Safety.Domain.Types.Sos.SosStatus,
+    ticketId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    trackingExpiresAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
@@ -35,6 +34,6 @@ instance B.Table SosT where
 
 type Sos = SosT Identity
 
-$(enableKVPG ''SosT ['id] [['rideId]])
+$(enableKVPG ''SosT ['id] [])
 
-$(mkTableInstances ''SosT "sos")
+$(mkTableInstancesGenericSchema ''SosT "sos")

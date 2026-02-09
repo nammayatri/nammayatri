@@ -17,7 +17,6 @@ module SharedLogic.Scheduler.Jobs.SafetyCSAlert where
 import API.Types.UI.Sos
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.Sos as DSos
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -26,12 +25,14 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
+import qualified Safety.Domain.Action.UI.Sos as SafetySos
+import qualified Safety.Domain.Types.Sos as SafetyDSos
 import SharedLogic.JobScheduler
 import SharedLogic.Person as SLP
+import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
-import qualified Storage.Queries.Sos as QSos
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import Tools.Ticket as Ticket
@@ -73,7 +74,7 @@ createSafetyTicket person ride = do
   phoneNumber <- mapM decrypt person.mobileNumber
   let rideInfo = buildRideInfo ride person phoneNumber
       kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
-  ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo DSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
+  ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo SafetyDSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
   ticketId <- do
     case ticketResponse of
       Right ticketResponse' -> do
@@ -83,10 +84,10 @@ createSafetyTicket person ride = do
       Left err -> do
         logError $ "Ticket didn't created when rider didn't picked up call with error : " <> show err
         return Nothing
-  sosDetails <- buildSosDetails person SosReq {flow = DSos.CSAlertSosTicket, rideId = Just ride.id, isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing} ticketId
-  void $ QSos.create sosDetails
+  sosDetails <- buildSosDetails person SosReq {flow = SafetyDSos.CSAlertSosTicket, rideId = Just ride.id, isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing} ticketId
+  void $ SafetySos.createSos sosDetails
 
-mkTicket :: DP.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> DSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
+mkTicket :: DP.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> SafetyDSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
 mkTicket person phoneNumber mediaLinks info flow disposition queue = do
   Ticket.CreateTicketReq
     { category = "Code Red",
@@ -105,10 +106,10 @@ mkTicket person phoneNumber mediaLinks info flow disposition queue = do
     }
   where
     issueDescription = case flow of
-      DSos.Police -> "112 called"
-      DSos.CSAlertSosTicket -> "SOS ticket created for night safety when rider didn't picked exotel call"
-      DSos.AudioRecording -> "Audio recording shared."
-      DSos.CustomerCare -> "Customer care called."
+      SafetyDSos.Police -> "112 called"
+      SafetyDSos.CSAlertSosTicket -> "SOS ticket created for night safety when rider didn't picked exotel call"
+      SafetyDSos.AudioRecording -> "Audio recording shared."
+      SafetyDSos.CustomerCare -> "Customer care called."
       _ -> "SOS activated"
 
 buildRideInfo :: DRide.Ride -> DP.Person -> Maybe Text -> Ticket.RideInfo
@@ -143,27 +144,27 @@ buildRideInfo ride person phoneNumber =
           area = ent.address.area
         }
 
-buildSosDetails :: (EncFlow m r) => DP.Person -> SosReq -> Maybe Text -> m DSos.Sos
+buildSosDetails :: (EncFlow m r) => DP.Person -> SosReq -> Maybe Text -> m SafetyDSos.Sos
 buildSosDetails person req ticketId = do
   pid <- generateGUID
   now <- getCurrentTime
   rideId <- case req.rideId of
-    Just existingRideId -> return existingRideId
-    Nothing -> Id <$> generateGUID
+    Just existingRideId -> return (cast existingRideId)
+    Nothing -> cast . Id <$> generateGUID
   return
-    DSos.Sos
+    SafetyDSos.Sos
       { id = pid,
-        personId = person.id,
-        status = DSos.Pending,
+        personId = cast person.id,
+        status = SafetyDSos.Pending,
         flow = req.flow,
-        rideId = rideId,
+        rideId = Just rideId,
         ticketId = ticketId,
         mediaFiles = [],
-        merchantId = Just person.merchantId,
-        merchantOperatingCityId = Just person.merchantOperatingCityId,
+        merchantId = Just (cast person.merchantId),
+        merchantOperatingCityId = Just (cast person.merchantOperatingCityId),
         trackingExpiresAt = Nothing,
-        entityType = Just DSos.Ride,
-        sosState = Just DSos.SosActive,
+        entityType = Just SafetyDSos.Ride,
+        sosState = Just SafetyDSos.SosActive,
         createdAt = now,
         updatedAt = now
       }

@@ -2,10 +2,10 @@ imports:
   Text: Data.Text
   Person: Domain.Types.Person
   Ride: Domain.Types.Ride
-  SosType : Domain.Types.Sos
-  SosStatus : Domain.Types.Sos
-  SosState : Domain.Types.Sos
-  Sos : Domain.Types.Sos
+  SosType : Safety.Domain.Types.Sos
+  SosStatus : Safety.Domain.Types.Sos
+  SosState : Safety.Domain.Types.Sos
+  Sos : Safety.Domain.Types.Sos
   LatLong : Kernel.External.Maps.Types
 
 module: Sos
@@ -68,6 +68,9 @@ types:
 
   UpdateStateReq:
     sosState: SosState
+
+  UpdateToRideReq:
+    rideId: Id Ride
 
   SosTrackingDetailsRes:
     personName: Text
@@ -192,3 +195,14 @@ apis:
         sosId: Id Sos
       response:
         type: API.Types.UI.Sos.SosTrackingDetailsRes
+
+  # POST /sos/{sosId}/updateToRide
+  - POST:
+      endpoint: /sos/{sosId}/updateToRide
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.UI.Sos.UpdateToRideReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

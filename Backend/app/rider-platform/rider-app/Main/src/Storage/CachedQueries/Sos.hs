@@ -22,17 +22,17 @@ where
 
 import qualified Domain.Types.Person as Person
 import Domain.Types.Ride
-import Domain.Types.Sos as DSos
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Domain.Types.Sos as SafetyDSos
 
-findByRideId :: (CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe DSos.Sos)
+findByRideId :: (CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe SafetyDSos.Sos)
 findByRideId rideId = do
   Hedis.safeGet $ makeIdKey rideId
 
-cacheSosIdByRideId :: (CacheFlow m r) => Id Ride -> DSos.Sos -> m ()
+cacheSosIdByRideId :: (CacheFlow m r) => Id Ride -> SafetyDSos.Sos -> m ()
 cacheSosIdByRideId rideId sos = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey rideId

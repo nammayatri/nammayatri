@@ -94,8 +94,10 @@ library
       Registry.Beckn.Interface.Types
       Registry.Beckn.Nammayatri.Flow
       Registry.Beckn.Nammayatri.Types
+      Safety.Domain.Action.UI.Sos
       Safety.Domain.Types.Common
       Safety.Storage.BeamFlow
+      Safety.Storage.Queries.SafetySettingsExtra
       UrlShortner.Common
       UrlShortner.Types
       API.Types.ProviderPlatform.IssueManagement
@@ -106,8 +108,15 @@ library
       API.Types.RiderPlatform.IssueManagement.Endpoints.IssueList
       API.Types.RiderPlatform.IssueManagement.Issue
       API.Types.RiderPlatform.IssueManagement.IssueList
+      Safety.Domain.Types.SafetySettings
+      Safety.Domain.Types.Sos
+      Safety.Storage.Beam.SafetySettings
+      Safety.Storage.Beam.Sos
+      Safety.Storage.Queries.OrphanInstances.SafetySettings
+      Safety.Storage.Queries.SafetySettings
+      Safety.Storage.Queries.Sos
   other-modules:
-      Paths_shared_services
+      Tools.Beam.UtilsTH
   hs-source-dirs:
       src
       src-read-only
