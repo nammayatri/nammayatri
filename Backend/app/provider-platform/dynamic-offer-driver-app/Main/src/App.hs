@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module App where
 
@@ -39,6 +40,7 @@ import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
 import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
@@ -63,6 +65,11 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
 import "utils" Utils.Common.Events as UE
+import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
+import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+
+instance HasSchemaName Beam.MerchantOperatingCityT where
+  schemaName _ = T.pack currentSchemaName
 
 createCAC :: AppCfg -> IO ()
 createCAC appCfg = do
@@ -121,6 +128,7 @@ runDynamicOfferDriverApp' appCfg = do
       withLogTag "Server startup" $ do
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+        initCityMaps
         logInfo "Setting up for signature auth..."
         kvConfigs <-
           findById "kv_configs" >>= pure . decodeFromText' @Tables

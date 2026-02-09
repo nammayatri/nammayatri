@@ -16,7 +16,6 @@ module Environment where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
-import qualified Data.Text as T
 import Domain.Types.ServerName
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
@@ -81,7 +80,6 @@ data AppCfg = AppCfg
     kvConfigUpdateFrequency :: Int,
     passwordExpiryDays :: Maybe Int,
     enforceStrongPasswordPolicy :: Bool,
-    cityDBSchema :: Text,
     inMemConfig :: InMemConfig
   }
   deriving (Generic, FromDhall)
@@ -141,7 +139,6 @@ data AppEnv = AppEnv
 
 buildAppEnv :: Text -> AppCfg -> IO AppEnv
 buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
-  setEnv "CITY_SCHEMA" (T.unpack cityDBSchema)
   podName <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName

@@ -28,6 +28,7 @@ import Kernel.Beam.Types (KafkaConn (..), Tables (..))
 import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Flow
 import Kernel.Utils.App
 import qualified Kernel.Utils.Common as KUC
@@ -55,6 +56,7 @@ runService configModifier = do
     L.setOption Tables KUC.defaultTableData
     migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+    initCityMaps
     let flowRt' = flowRt {R._httpClientManagers = HMS.singleton "default" (R._defaultHttpClientManager flowRt)}
     pure flowRt'
   where

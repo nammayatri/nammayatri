@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module App where
 
@@ -30,6 +31,7 @@ import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Tokenize
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration
+import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Storage.Queries.SystemConfigs as QSC
 import Kernel.Types.Error
 import Kernel.Types.Flow (runFlowR)
@@ -62,8 +64,14 @@ import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.UnblockCustomer
 import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
+import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
+import Tools.Beam.UtilsTH (HasSchemaName(..), currentSchemaName)
+import qualified Data.Text as T
+
+instance HasSchemaName Beam.MerchantOperatingCityT where
+  schemaName _ = T.pack currentSchemaName
 
 schedulerHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle RiderJobType
 schedulerHandle flowRt env =
@@ -140,6 +148,7 @@ runRiderAppScheduler configModifier = do
       withLogTag "Server startup" $ do
         migrateIfNeeded handlerCfg.appCfg.migrationPath handlerCfg.appCfg.autoMigrate handlerCfg.appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+        initCityMaps
         logInfo "Setting up for signature auth..."
         kvConfigs <-
           findById "kv_configs" >>= pure . decodeFromText' @Tables

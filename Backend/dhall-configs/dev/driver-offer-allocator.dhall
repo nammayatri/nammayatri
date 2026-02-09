@@ -53,7 +53,6 @@ in  { appCfg =
         //  { loggerConfig =
                     appCfg.loggerConfig
                 //  { logFilePath = "/tmp/driver-offer-allocator.log" }
-            , cityDBSchema = "atlas_driver_offer_bpp"
             }
     , schedulerConfig
     }

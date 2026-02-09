@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module App where
 
@@ -32,6 +33,7 @@ import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
@@ -57,6 +59,11 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import System.Environment (lookupEnv)
 import Tools.HTTPManager (prepareCRISHttpManager)
 import "utils" Utils.Common.Events as UE
+import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
+import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+
+instance HasSchemaName Beam.MerchantOperatingCityT where
+  schemaName _ = T.pack currentSchemaName
 
 createCAC :: AppCfg -> IO ()
 createCAC appCfg = do
@@ -115,6 +122,7 @@ runRiderApp' appCfg = do
       withLogTag "Server startup" $ do
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+        initCityMaps
         logInfo "Setting up for signature auth..."
         kvConfigs <-
           findById "kv_configs" >>= pure . decodeFromText' @Tables
