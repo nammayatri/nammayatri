@@ -32,6 +32,8 @@ import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import TransactionLogs.PushLogs
 
 type API = Spec.OnConfirmAPIBS
@@ -48,9 +50,14 @@ onConfirm _ reqBS = withFlowHandlerAPI $ do
   bookingId <- req.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   ticketBooking <- QFRFSTicketBooking.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "Invalid booking id")
   bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback ticketBooking.merchantOperatingCityId ticketBooking.merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
+  integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity ticketBooking
+  routeStopMappingFromStation <- OTPRest.getRouteStopMappingByStopCode ticketBooking.fromStationCode integratedBppConfig
+  routeStopMappingToStation <- OTPRest.getRouteStopMappingByStopCode ticketBooking.toStationCode integratedBppConfig
+  let fromStationProviderCode = fromMaybe ticketBooking.fromStationCode (listToMaybe routeStopMappingFromStation <&> (.providerCode))
+      toStationProviderCode = fromMaybe ticketBooking.toStationCode (listToMaybe routeStopMappingToStation <&> (.providerCode))
   logDebug $ "Received OnConfirm request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
-    dOnConfirmReq <- ACL.buildOnConfirmReq req
+    dOnConfirmReq <- ACL.buildOnConfirmReq fromStationProviderCode toStationProviderCode req
     case dOnConfirmReq of
       Just onConfirmReq -> do
         (merchant, booking, quoteCategories) <- DOnConfirm.validateRequest onConfirmReq

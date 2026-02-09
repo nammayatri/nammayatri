@@ -102,7 +102,7 @@ mergeQuotes config quotes = case config.providerConfig of
   DIBC.ONDC ondcConfig ->
     case ondcConfig.mergeQuoteCriteria of
       Just DIBCExtra.FULFILLMENT -> mergeQuotesByFulfillment quotes
-      Just _ -> quotes
+      Just DIBCExtra.QUOTE_TYPE -> mergeQuotesByQuoteType quotes
       Nothing -> quotes
   _ -> quotes
 
@@ -119,6 +119,28 @@ mergeQuotesForFulfillment quotes = do
   quote <- find (\q -> q._type == DQuote.SingleJourney) quotes
   let allCategories = concatMap (.categories) quotes
   return $ quote {Domain.categories = allCategories}
+
+
+mergeQuotesByQuoteType :: [Domain.DQuote] -> [Domain.DQuote]
+mergeQuotesByQuoteType quotes =
+  let sjtQuotes = filter (\q -> q._type == DQuote.SingleJourney || q._type == DQuote.SpecialFareSingleJourney) quotes
+      rjtQuotes = filter (\q -> q._type == DQuote.ReturnJourney) quotes
+      mergedRjtQuotes = mergeReturnJourneyQuotes sjtQuotes rjtQuotes
+   in sjtQuotes ++ mergedRjtQuotes
+
+mergeReturnJourneyQuotes :: [Domain.DQuote] -> [Domain.DQuote] -> [Domain.DQuote]
+mergeReturnJourneyQuotes sjtQuotes rjtQuotes =
+  case (listToMaybe sjtQuotes, rjtQuotes) of
+    (Just sjtQuote, rjts@(_ : _)) ->
+      let sjtStartStation = listToMaybe $ filter (\s -> s.stationType == Station.START) sjtQuote.stations
+       in case sjtStartStation of
+            Just refStart ->
+              let forwardRjt = find (\rjt -> any (\s -> s.stationType == Station.START && s.stationCode == refStart.stationCode) rjt.stations) rjts
+               in case forwardRjt of
+                    Just fwdQuote -> [fwdQuote]
+                    Nothing -> rjts
+            Nothing -> rjts
+    _ -> rjtQuotes
 
 parseItems :: (MonadFlow m) => [Spec.Fulfillment] -> Spec.Item -> m [Domain.DQuote]
 parseItems fulfillments item = do

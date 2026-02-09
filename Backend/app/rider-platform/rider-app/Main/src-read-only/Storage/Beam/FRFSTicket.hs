@@ -16,6 +16,7 @@ data FRFSTicketT f = FRFSTicketT
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     frfsTicketBookingId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    isReturnTicket :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isTicketFree :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
