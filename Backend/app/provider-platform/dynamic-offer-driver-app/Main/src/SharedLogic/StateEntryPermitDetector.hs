@@ -10,21 +10,35 @@
 module SharedLogic.StateEntryPermitDetector
   ( JourneySegment (..),
     SegmentChargeResult (..),
+    SegmentCalculationContext (..),
     buildJourneySegments,
     buildJourneySegmentsFromActualStops,
     calculateTotalStateEntryPermitCharges,
     calculateSegmentStateEntryPermitCharge,
-    constructSegmentTripCategories,
+    constructSegmentTripCategory,
     determineOverallRideType,
+    calculateStateEntryPermitChargesWithSegments,
   )
 where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types as DTC
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.TransporterConfig as DTConf
 import Kernel.External.Maps.Types (LatLong)
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.CallInternalMLPricing as ML
+import qualified SharedLogic.CityDetector as CityDetector
+import qualified SharedLogic.FarePolicy as SFP
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Utils.Common.Cac.KeyNameConstants (CacKey (..))
 
 -- | Data structure representing a journey segment between two points
 data JourneySegment = JourneySegment
@@ -42,6 +56,20 @@ data SegmentChargeResult = SegmentChargeResult
     charge :: Maybe HighPrecMoney
   }
   deriving (Show, Eq, Generic)
+
+-- | Context data needed for calculating segment-based state entry permit charges
+-- This encapsulates all the parameters needed to call getFarePolicy for each segment
+data SegmentCalculationContext = SegmentCalculationContext
+  { merchant :: DM.Merchant,
+    transporterConfig :: DTConf.TransporterConfig,
+    isDashboardRequest :: Bool,
+    transactionId :: Text,
+    vehicleServiceTier :: Maybe DTC.ServiceTierType, -- Maybe because it could be Nothing in Search flow
+    dynamicPricingLogicVersion :: Maybe Int,
+    configInExperimentVersions :: [LYT.ConfigVersionMap],
+    isScheduled :: Bool -- Whether the overall journey is scheduled (used for trip category determination)
+  }
+  deriving (Generic)
 
 -- | Build journey segments from source, stops, and destination
 -- e.g., source + [stop1, stop2] + destination -> [(source, stop1, 0), (stop1, stop2, 1), (stop2, destination, 2)]
@@ -108,24 +136,22 @@ calculateSegmentStateEntryPermitCharge isIntercity isCrossCity mbFarePolicy segm
         charge = charge
       }
 
--- | Construct trip categories for a segment based on whether it crosses cities
--- Similar logic to getPossibleTripOption but for individual segments
--- Used in both Search and EndRide flows
-constructSegmentTripCategories :: Bool -> Bool -> Maybe Text -> Bool -> [DTC.TripCategory]
-constructSegmentTripCategories segmentIsIntercity segmentIsCrossCity mbDestinationTravelCityName isScheduled =
+-- | Construct trip category for a segment based on whether it crosses cities
+-- Returns the appropriate trip category for a single segment
+-- Uses the same logic as getPossibleTripOption to ensure consistency
+constructSegmentTripCategory :: Bool -> Bool -> Maybe Text -> Bool -> DTC.TripCategory
+constructSegmentTripCategory segmentIsIntercity segmentIsCrossCity mbDestinationTravelCityName isScheduled =
   if segmentIsIntercity
-    then do
+    then
       if segmentIsCrossCity
-        then do
-          [DTC.CrossCity DTC.OneWayOnDemandStaticOffer mbDestinationTravelCityName]
-            <> (if not isScheduled then [DTC.CrossCity DTC.OneWayRideOtp mbDestinationTravelCityName, DTC.CrossCity DTC.OneWayOnDemandDynamicOffer mbDestinationTravelCityName] else [])
-        else do
-          [DTC.InterCity DTC.OneWayOnDemandStaticOffer mbDestinationTravelCityName]
-            <> (if not isScheduled then [DTC.InterCity DTC.OneWayRideOtp mbDestinationTravelCityName, DTC.InterCity DTC.OneWayOnDemandDynamicOffer mbDestinationTravelCityName] else [])
-    else do
-      -- Intracity segment - use OneWay trip categories
-      [DTC.Rental DTC.OnDemandStaticOffer]
-        <> (if not isScheduled then [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer, DTC.Ambulance DTC.OneWayOnDemandDynamicOffer, DTC.Rental DTC.RideOtp, DTC.Delivery DTC.OneWayOnDemandDynamicOffer] else [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandStaticOffer])
+        then DTC.CrossCity DTC.OneWayOnDemandStaticOffer mbDestinationTravelCityName
+        else DTC.InterCity DTC.OneWayOnDemandStaticOffer mbDestinationTravelCityName
+    else -- Intracity segment - use Rental for scheduled, OneWay for on-demand
+    -- This matches the original getPossibleTripOption logic
+
+      if isScheduled
+        then DTC.Rental DTC.OnDemandStaticOffer
+        else DTC.OneWay DTC.OneWayRideOtp
 
 -- | Determine overall ride type from trip categories
 -- Returns (isInterCity, isCrossCity) based on the trip categories
@@ -135,3 +161,111 @@ determineOverallRideType tripCategories =
   let hasInterCity = any (\cat -> case cat of DTC.InterCity _ _ -> True; _ -> False) tripCategories
       hasCrossCity = any (\cat -> case cat of DTC.CrossCity _ _ -> True; _ -> False) tripCategories
    in (hasInterCity && not hasCrossCity, hasCrossCity)
+
+-- | Main function to calculate state entry permit charges for journeys with multiple segments
+-- This function encapsulates all the logic for segment-based calculation
+-- Returns Nothing if:
+--   - Single segment (no stops) - caller should use farePolicy.stateEntryPermitCharges
+--   - Intercity non-cross-city ride - no segment charges apply
+--   - No charges calculated from segments
+calculateStateEntryPermitChargesWithSegments ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    Log m,
+    ServiceFlow m r,
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  SegmentCalculationContext ->
+  LatLong -> -- source
+  [LatLong] -> -- stops
+  Maybe LatLong -> -- destination
+  [DTC.TripCategory] -> -- trip categories for overall ride type
+  Text -> -- flow name for logging (e.g., "Search", "EndRide", "EditDestination")
+  m (Maybe HighPrecMoney)
+calculateStateEntryPermitChargesWithSegments ctx source stops mbDestination tripCategories flowName = do
+  let journeySegments = buildJourneySegments source stops mbDestination
+  let (isOverallIntercity, isOverallCrossCity) = determineOverallRideType tripCategories
+
+  if length journeySegments <= 1
+    then do
+      -- Simple A-to-B (no stops): return Nothing to use fare policy's stateEntryPermitCharges
+      logDebug $ "[STATE_ENTRY_PERMIT][" <> flowName <> "] Single segment (no stops), using fare policy's stateEntryPermitCharges"
+      return Nothing
+    else
+      if isOverallIntercity && not isOverallCrossCity
+        then do
+          logDebug $ "[STATE_ENTRY_PERMIT][" <> flowName <> "] Overall intercity (non-cross-city), skipping segment-based stateEntryPermitCharges"
+          return Nothing
+        else do
+          segmentChargeResults <- processSegmentsForCharges ctx journeySegments flowName
+          let totalCharges = calculateTotalStateEntryPermitCharges segmentChargeResults
+          logInfo $ "[STATE_ENTRY_PERMIT][" <> flowName <> "] Calculated segment charges: segments=" <> show (length journeySegments) <> ", totalCharges=" <> show totalCharges
+          return totalCharges
+
+-- | Process all segments to calculate charges for each
+-- Internal helper function called by calculateStateEntryPermitChargesWithSegments
+processSegmentsForCharges ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    Log m,
+    ServiceFlow m r,
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  SegmentCalculationContext ->
+  [JourneySegment] ->
+  Text -> -- flow name for logging
+  m [SegmentChargeResult]
+processSegmentsForCharges ctx journeySegments flowName = do
+  forM journeySegments $ \segment -> do
+    logDebug $ "[STATE_ENTRY_PERMIT][" <> flowName <> "] evaluating segment from=" <> show segment.segmentFrom <> " to=" <> show segment.segmentTo
+
+    -- Get source city information for this segment
+    segmentSourceCityResult <- CityDetector.getNearestOperatingAndSourceCity ctx.merchant segment.segmentFrom
+    segmentMerchantOpCity <- CQMOC.getMerchantOpCity ctx.merchant (Just segmentSourceCityResult.nearestOperatingCity.city)
+
+    -- Check if this segment crosses city/state boundaries
+    (segmentIsIntercity, segmentIsCrossCity, mbSegmentDestinationTravelCityName) <-
+      CityDetector.checkForIntercityOrCrossCity ctx.transporterConfig (Just segment.segmentTo) segmentSourceCityResult.sourceCity ctx.merchant
+
+    logDebug $ "[STATE_ENTRY_PERMIT][" <> flowName <> "] segment classification isIntercity=" <> show segmentIsIntercity <> ", isCrossCity=" <> show segmentIsCrossCity <> ", destTravelCityName=" <> show mbSegmentDestinationTravelCityName
+
+    -- Get fare policy for this segment if it crosses boundaries
+    mbSegmentFarePolicy <-
+      if segmentIsIntercity || segmentIsCrossCity
+        then do
+          let segmentTripCategory = constructSegmentTripCategory segmentIsIntercity segmentIsCrossCity mbSegmentDestinationTravelCityName ctx.isScheduled
+
+          -- Use getFarePolicy directly to get the fare policy for this segment
+          -- Provide default service tier based on trip category if not specified
+          let defaultServiceTier = case segmentTripCategory of
+                DTC.CrossCity _ _ -> DTC.AUTO_RICKSHAW
+                DTC.InterCity _ _ -> DTC.AUTO_RICKSHAW
+                _ -> DTC.AUTO_RICKSHAW -- Default for intracity
+              serviceTier = fromMaybe defaultServiceTier ctx.vehicleServiceTier
+
+          segmentFarePolicy <-
+            SFP.getFarePolicy
+              (Just segment.segmentFrom)
+              (Just segment.segmentTo)
+              Nothing -- fromLocGeohash (optional)
+              Nothing -- toLocGeohash (optional)
+              Nothing -- distance (optional)
+              Nothing -- duration (optional)
+              segmentMerchantOpCity.id
+              ctx.isDashboardRequest
+              segmentTripCategory
+              serviceTier
+              Nothing -- area (optional)
+              Nothing -- booking start time (optional)
+              ctx.dynamicPricingLogicVersion
+              (Just (TransactionId (Id ctx.transactionId)))
+              ctx.configInExperimentVersions
+
+          return $ Just segmentFarePolicy
+        else return Nothing
+
+    calculateSegmentStateEntryPermitCharge segmentIsIntercity segmentIsCrossCity mbSegmentFarePolicy segment

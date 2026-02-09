@@ -17,13 +17,11 @@ module Domain.Action.Beckn.Update where
 import qualified API.Types.UI.EditBooking as EditBooking
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified BecknV2.OnDemand.Enums as Enums
-import qualified Data.Geohash as Geohash
 import Data.List (last)
 import Data.List.Split (chunksOf)
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text as Text
-import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.EditBooking as EditBooking
 import qualified Domain.Action.UI.Location as DL
@@ -272,32 +270,30 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               throwError $ InvalidRequest "Auto rickshaw not allowed for toll route."
 
             -- Calculate state entry permit charges for edited destination
+            -- Calculate state entry permit charges for rides with stops
+            -- Comment 1: Logic moved to SharedLogic.StateEntryPermitDetector
+            -- Comment 2: Wrap in error handling
+            -- Comment 3: Only runs for rides with stops (> 1 segment) - handled inside shared function
             merchant <- CQM.findById merchantOperatingCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOperatingCity.merchantId.getId)
-            let journeySegments = SEPD.buildJourneySegments srcPt stopLatLongs (Just dropLatLong)
-            let (isOverallIntercity, isOverallCrossCity) = SEPD.determineOverallRideType [booking.tripCategory]
-            mbSegmentStateEntryPermitCharges <-
-              if length journeySegments <= 1
-                then do
-                  -- Simple A-to-B (no stops): return Nothing to use fare policy's stateEntryPermitCharges
-                  logDebug "[STATE_ENTRY_PERMIT][EditDestination] Single segment (no stops), using fare policy's stateEntryPermitCharges"
-                  return Nothing
-                else
-                  if isOverallIntercity && not isOverallCrossCity
-                    then do
-                      logDebug "[STATE_ENTRY_PERMIT][EditDestination] Overall intercity (non-cross-city), skipping segment-based stateEntryPermitCharges"
-                      return Nothing
-                    else do
-                      -- Calculate segment-based charges for rides with stops
-                      result <- withTryCatch "calculateSegmentCharges:EditDestination" $ do
-                        segmentChargeResults <- calculateSegmentChargesForEditDestination merchant merchantOperatingCity transporterConfig booking journeySegments
-                        let totalCharges = SEPD.calculateTotalStateEntryPermitCharges segmentChargeResults
-                        logInfo $ "[STATE_ENTRY_PERMIT][EditDestination] Calculated segment charges: segments=" <> show (length journeySegments) <> ", totalCharges=" <> show totalCharges
-                        return totalCharges
-                      case result of
-                        Right charges -> return charges
-                        Left err -> do
-                          logError $ "[STATE_ENTRY_PERMIT][EditDestination] Segment calculation failed: " <> show err <> ". Defaulting stateEntryPermitCharges to Nothing (zero charges)."
-                          return Nothing
+            let ctx =
+                  SEPD.SegmentCalculationContext
+                    { merchant = merchant,
+                      transporterConfig = transporterConfig,
+                      isDashboardRequest = booking.isDashboardRequest,
+                      transactionId = booking.transactionId,
+                      vehicleServiceTier = Just booking.vehicleServiceTier,
+                      dynamicPricingLogicVersion = booking.dynamicPricingLogicVersion,
+                      configInExperimentVersions = booking.configInExperimentVersions,
+                      isScheduled = booking.isScheduled
+                    }
+            result <-
+              withTryCatch "calculateSegmentCharges:EditDestination" $
+                SEPD.calculateStateEntryPermitChargesWithSegments ctx srcPt stopLatLongs (Just dropLatLong) [booking.tripCategory] "EditDestination"
+            mbSegmentStateEntryPermitCharges <- case result of
+              Right charges -> return charges
+              Left err -> do
+                logError $ "[STATE_ENTRY_PERMIT][EditDestination] Segment calculation failed: " <> show err <> ". Defaulting stateEntryPermitCharges to Nothing (zero charges)."
+                return Nothing
 
             fareParameters <-
               FCV2.calculateFareParametersV2
@@ -403,29 +399,6 @@ handler (UEditLocationReq EditLocationReq {..}) = do
           latlongs'
       logTagError "DebugErrorLog: EditDestSnapToRoad" $ "Total snapped points count: " <> show (length snappedLatLongs)
       return (failed, map (,False) snappedLatLongs)
-
-    -- Helper function to calculate segment charges for edit destination
-    calculateSegmentChargesForEditDestination merchant_ merchantOperatingCity_ transporterConfig_ booking_ journeySegments_ = do
-      forM journeySegments_ $ \segment -> do
-        logDebug $ "[STATE_ENTRY_PERMIT][EditDestination] evaluating segment from=" <> show segment.segmentFrom <> " to=" <> show segment.segmentTo
-        segmentSourceCityResult <- DSearch.getNearestOperatingAndSourceCity merchant_ segment.segmentFrom
-        segmentMerchantOpCity <- CQMOC.findById merchantOperatingCity_.id >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCity_.id.getId)
-        (segmentIsIntercity, segmentIsCrossCity, mbSegmentDestinationTravelCityName) <- DSearch.checkForIntercityOrCrossCity transporterConfig_ (Just segment.segmentTo) segmentSourceCityResult.sourceCity merchant_
-        logDebug $ "[STATE_ENTRY_PERMIT][EditDestination] segment classification isIntercity=" <> show segmentIsIntercity <> ", isCrossCity=" <> show segmentIsCrossCity <> ", destTravelCityName=" <> show mbSegmentDestinationTravelCityName
-        mbSegmentFarePolicy <-
-          if segmentIsIntercity || segmentIsCrossCity
-            then do
-              let segmentFromGeohash = Text.pack <$> Geohash.encode (fromMaybe 5 transporterConfig_.dpGeoHashPercision) (segment.segmentFrom.lat, segment.segmentFrom.lon)
-                  segmentToGeohash = Text.pack <$> Geohash.encode (fromMaybe 5 transporterConfig_.dpGeoHashPercision) (segment.segmentTo.lat, segment.segmentTo.lon)
-              let segmentTripCategories = SEPD.constructSegmentTripCategories segmentIsIntercity segmentIsCrossCity mbSegmentDestinationTravelCityName False
-              case listToMaybe segmentTripCategories of
-                Just segmentTripCategory -> do
-                  segmentFarePoliciesProduct <- SFP.getAllFarePoliciesProduct merchantOperatingCity_.merchantId segmentMerchantOpCity.id booking_.isDashboardRequest segment.segmentFrom (Just segment.segmentTo) (Just (TransactionId (Id booking_.transactionId))) segmentFromGeohash segmentToGeohash Nothing Nothing booking_.dynamicPricingLogicVersion segmentTripCategory booking_.configInExperimentVersions
-                  let segmentFarePolicies = filter (\fp -> fp.vehicleServiceTier == booking_.vehicleServiceTier) segmentFarePoliciesProduct.farePolicies
-                  return $ listToMaybe segmentFarePolicies
-                Nothing -> return Nothing
-            else return Nothing
-        SEPD.calculateSegmentStateEntryPermitCharge segmentIsIntercity segmentIsCrossCity mbSegmentFarePolicy segment
 
 mkActions2 :: Text -> Double -> Double -> FCM.FCMActions -> FCM.FCMActions
 mkActions2 bookingUpdateReqId lat long action = do

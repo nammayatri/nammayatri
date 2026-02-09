@@ -29,12 +29,10 @@ where
 
 import qualified Beckn.OnDemand.Utils.Common as BODUC
 import Data.Either.Extra (eitherToMaybe)
-import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
-import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as DUIRideCommon
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
@@ -93,7 +91,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FareCalculatorV2 as FareV2
 import qualified SharedLogic.FarePolicy as FarePolicy
-import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.StateEntryPermitDetector as SEPD
@@ -103,7 +100,6 @@ import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as MerchantS
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -728,34 +724,29 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
       -- Case 2: Cross City Ride - apply charges for segments that cross cities
       -- Case 3: Intercity Ride - don't apply segment-based charges
       -- Calculate state entry permit charges for rides with stops
-      -- Comment 3: Only run for rides with stops (> 1 segment)
+      -- Comment 1: Logic moved to SharedLogic.StateEntryPermitDetector
       -- Comment 2: Wrap in error handling
-      let (isOverallIntercity, isOverallCrossCity) = SEPD.determineOverallRideType [booking.tripCategory]
+      -- Comment 3: Only runs for rides with stops (> 1 segment) - handled inside shared function
       merchant <- getMerchant merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-      mbSegmentStateEntryPermitCharges <-
-        if length journeySegments <= 1
-          then do
-            -- Simple A-to-B (no stops): return Nothing to use fare policy's stateEntryPermitCharges
-            logDebug "[STATE_ENTRY_PERMIT][EndRide] Single segment (no stops), using fare policy's stateEntryPermitCharges"
-            return Nothing
-          else
-            if isOverallIntercity && not isOverallCrossCity
-              then do
-                logDebug "[STATE_ENTRY_PERMIT][EndRide] Overall intercity (non-cross-city), skipping segment-based stateEntryPermitCharges"
-                return Nothing
-              else do
-                -- Comment 1: Extract to helper function for better maintainability
-                -- Comment 2: Wrap in error handling
-                result <- withTryCatch "calculateSegmentCharges:EndRide" $ do
-                  segmentChargeResults <- calculateSegmentChargesForEndRide merchant merchantId thresholdConfig booking journeySegments
-                  let totalCharges = SEPD.calculateTotalStateEntryPermitCharges segmentChargeResults
-                  logInfo $ "[STATE_ENTRY_PERMIT][EndRide] Calculated segment charges: segments=" <> show (length journeySegments) <> ", totalCharges=" <> show totalCharges
-                  return totalCharges
-                case result of
-                  Right charges -> return charges
-                  Left err -> do
-                    logError $ "[STATE_ENTRY_PERMIT][EndRide] Segment calculation failed: " <> show err <> ". Defaulting stateEntryPermitCharges to Nothing (zero charges)."
-                    return Nothing
+      let ctx =
+            SEPD.SegmentCalculationContext
+              { merchant = merchant,
+                transporterConfig = thresholdConfig,
+                isDashboardRequest = False,
+                transactionId = booking.transactionId,
+                vehicleServiceTier = Just booking.vehicleServiceTier,
+                dynamicPricingLogicVersion = booking.dynamicPricingLogicVersion,
+                configInExperimentVersions = booking.configInExperimentVersions,
+                isScheduled = booking.isScheduled
+              }
+      result <-
+        withTryCatch "calculateSegmentCharges:EndRide" $
+          SEPD.calculateStateEntryPermitChargesWithSegments ctx pickupLocation actualStopLocations (Just tripEndPoint) [booking.tripCategory] "EndRide"
+      mbSegmentStateEntryPermitCharges <- case result of
+        Right charges -> return charges
+        Left err -> do
+          logError $ "[STATE_ENTRY_PERMIT][EndRide] Segment calculation failed: " <> show err <> ". Defaulting stateEntryPermitCharges to Nothing (zero charges)."
+          return Nothing
       fareParams <-
         calculateFareParameters
           Fare.CalculateFareParametersParams
@@ -937,34 +928,3 @@ isUnloadingTimeRequired str =
              DVST.DELIVERY_TRUCK_LARGE,
              DVST.DELIVERY_TRUCK_ULTRA_LARGE
            ]
-
--- Helper function to calculate segment charges (Comment 1: move logic to helper)
-calculateSegmentChargesForEndRide ::
-  (MonadFlow m, MonadThrow m, Log m, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, ServiceFlow m r, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) =>
-  DM.Merchant ->
-  Id DM.Merchant ->
-  DTConf.TransporterConfig ->
-  SRB.Booking ->
-  [SEPD.JourneySegment] ->
-  m [SEPD.SegmentChargeResult]
-calculateSegmentChargesForEndRide merchant merchantId thresholdConfig booking journeySegments = do
-  forM journeySegments $ \segment -> do
-    logDebug $ "[STATE_ENTRY_PERMIT][EndRide] evaluating segment from=" <> show segment.segmentFrom <> " to=" <> show segment.segmentTo
-    segmentSourceCityResult <- DSearch.getNearestOperatingAndSourceCity merchant segment.segmentFrom
-    segmentMerchantOpCityForSegment <- CQMOC.getMerchantOpCity merchant (Just segmentSourceCityResult.nearestOperatingCity.city)
-    (segmentIsIntercity, segmentIsCrossCity, mbSegmentDestinationTravelCityName) <- DSearch.checkForIntercityOrCrossCity thresholdConfig (Just segment.segmentTo) segmentSourceCityResult.sourceCity merchant
-    logDebug $ "[STATE_ENTRY_PERMIT][EndRide] segment classification isIntercity=" <> show segmentIsIntercity <> ", isCrossCity=" <> show segmentIsCrossCity <> ", destTravelCityName=" <> show mbSegmentDestinationTravelCityName
-    mbSegmentFarePolicy <-
-      if segmentIsIntercity || segmentIsCrossCity
-        then do
-          let segmentFromGeohash = Text.pack <$> Geohash.encode (fromMaybe 5 thresholdConfig.dpGeoHashPercision) (segment.segmentFrom.lat, segment.segmentFrom.lon)
-              segmentToGeohash = Text.pack <$> Geohash.encode (fromMaybe 5 thresholdConfig.dpGeoHashPercision) (segment.segmentTo.lat, segment.segmentTo.lon)
-          let segmentTripCategories = SEPD.constructSegmentTripCategories segmentIsIntercity segmentIsCrossCity mbSegmentDestinationTravelCityName False
-          case listToMaybe segmentTripCategories of
-            Just segmentTripCategory -> do
-              segmentFarePoliciesProduct <- SFP.getAllFarePoliciesProduct merchantId segmentMerchantOpCityForSegment.id booking.isDashboardRequest segment.segmentFrom (Just segment.segmentTo) (Just (TransactionId (Id booking.transactionId))) segmentFromGeohash segmentToGeohash Nothing Nothing booking.dynamicPricingLogicVersion segmentTripCategory booking.configInExperimentVersions
-              let segmentFarePolicies = filter (\fp -> fp.vehicleServiceTier == booking.vehicleServiceTier) segmentFarePoliciesProduct.farePolicies
-              return $ listToMaybe segmentFarePolicies
-            Nothing -> return Nothing
-        else return Nothing
-    SEPD.calculateSegmentStateEntryPermitCharge segmentIsIntercity segmentIsCrossCity mbSegmentFarePolicy segment

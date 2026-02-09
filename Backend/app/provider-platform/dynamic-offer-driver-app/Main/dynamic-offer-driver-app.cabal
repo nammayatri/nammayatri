@@ -411,6 +411,7 @@ library
       SharedLogic.CallInternalMLPricing
       SharedLogic.Cancel
       SharedLogic.CancellationCoins
+      SharedLogic.CityDetector
       SharedLogic.DeleteDriver
       SharedLogic.DriverCancellationPenalty
       SharedLogic.DriverFee
