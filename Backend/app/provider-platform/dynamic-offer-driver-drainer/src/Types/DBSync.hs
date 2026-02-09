@@ -25,7 +25,6 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET hiding (Tag)
-import Kafka.Producer as Producer
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis.Config
 import Kernel.Streaming.Kafka.Producer.Types
@@ -38,7 +37,7 @@ import Types.Event as Event
 data Env = Env
   { _streamRedisInfo :: Text,
     _counterHandles :: Event.DBSyncCounterHandler,
-    _kafkaConnection :: Producer.KafkaProducer,
+    _kafkaProducerTools :: KafkaProducerTools,
     -- _pgConnection :: Connection,
     _dontEnableDbTables :: [Text],
     _dontEnableForKafka :: [Text],

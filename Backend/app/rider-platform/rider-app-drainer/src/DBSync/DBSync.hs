@@ -339,7 +339,7 @@ flushKafkaProducerAndPublishMetrics :: Flow ()
 flushKafkaProducerAndPublishMetrics = do
   Env {..} <- ask
   _beforeFlush <- EL.getCurrentDateInMillis
-  flushResult <- try @_ @SomeException $ EL.runIO $ KafkaProd.flushProducer _kafkaConnection
+  flushResult <- try @_ @SomeException $ EL.runIO $ KafkaProd.flushProducer _kafkaProducerTools.producer
   case flushResult of
     Left err -> do
       EL.logError ("KAFKA_FLUSH_ERROR" :: Text) (T.pack $ show err)

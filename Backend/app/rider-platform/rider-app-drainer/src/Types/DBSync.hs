@@ -25,7 +25,6 @@ import EulerHS.KVConnector.DBSync
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
-import Kafka.Producer as Producer
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis.Config
 import Kernel.Streaming.Kafka.Producer.Types
@@ -47,7 +46,7 @@ data DBSyncConfig = DBSyncConfig
 data Env = Env
   { _streamRedisInfo :: Text,
     _counterHandles :: Event.DBSyncCounterHandler,
-    _kafkaConnection :: Producer.KafkaProducer,
+    _kafkaProducerTools :: KafkaProducerTools,
     -- _pgConnection :: Connection,
     _dontEnableDbTables :: [Text],
     _dontEnableForKafka :: [Text],

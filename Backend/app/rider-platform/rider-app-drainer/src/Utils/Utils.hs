@@ -22,8 +22,9 @@ import EulerHS.Prelude hiding (id)
 import GHC.Float (int2Double)
 import Kafka.Producer
 import qualified Kafka.Producer as KafkaProd
-import qualified Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
+import Kernel.Streaming.Kafka.Producer (produceToSecondaryProducer)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import System.Posix.Signals (raiseSignal, sigKILL)
 import System.Random.PCG
@@ -174,13 +175,18 @@ shutDownHandler = do
   delay shutDownPeriod
   raiseSignal sigKILL
 
-createInKafka :: Producer.KafkaProducer -> A.Value -> Text -> DBModel -> IO (Either Text ())
-createInKafka producer dbObject dbStreamKey model = do
+createInKafka :: KafkaProducerTools -> A.Value -> Text -> DBModel -> IO (Either Text ())
+createInKafka kafkaProducerTools dbObject dbStreamKey model = do
   let topicName = "aap-sessionizer-" <> T.toLower model.getDBModel
-  result' <- KafkaProd.produceMessage producer (message topicName dbObject)
+      msg = message topicName dbObject
+  -- Push to primary producer
+  result' <- KafkaProd.produceMessage kafkaProducerTools.producer msg
   case result' of
     Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
-    _ -> pure $ Right ()
+    _ -> do
+      -- Push to secondary producer if configured
+      produceToSecondaryProducer kafkaProducerTools.secondaryProducer msg (\_ -> pure ())
+      pure $ Right ()
   where
     message topicName event =
       ProducerRecord

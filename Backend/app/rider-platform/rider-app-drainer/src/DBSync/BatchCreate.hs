@@ -35,8 +35,8 @@ import Database.PostgreSQL.Simple.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
 import GHC.Float (int2Double)
-import Kafka.Producer as Producer
 import Kernel.Beam.Lib.Utils as KBLU
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -221,7 +221,7 @@ pushEntriesToKafka streamName entries = do
   if null entries
     then pure ([], [])
     else do
-      results <- mapM (pushSingleEntryToKafka streamName isPushToKafka' _kafkaConnection _dontEnableForKafka) entries
+      results <- mapM (pushSingleEntryToKafka streamName isPushToKafka' _kafkaProducerTools _dontEnableForKafka) entries
       let (kafkaFailures, kafkaSuccesses) = partitionEithers results
       pure (kafkaSuccesses, kafkaFailures)
 
@@ -230,8 +230,8 @@ pushEntriesToKafka streamName entries = do
 --    consistency between batch and individual processing paths.
 --
 --    Returns Either for success/failure tracking at the entry level.
-pushSingleEntryToKafka :: Text -> Bool -> Producer.KafkaProducer -> [Text] -> ParsedCreateEntry -> Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
-pushSingleEntryToKafka streamName isPushToKafka' kafkaConnection dontEnableForKafka entry = do
+pushSingleEntryToKafka :: Text -> Bool -> KafkaProducerTools -> [Text] -> ParsedCreateEntry -> Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
+pushSingleEntryToKafka streamName isPushToKafka' kafkaProducerTools dontEnableForKafka entry = do
   let createDBModel = entry.createObject
       tableName = createDBModel.dbModel
       entryId = entry.entryId
@@ -242,7 +242,7 @@ pushSingleEntryToKafka streamName isPushToKafka' kafkaConnection dontEnableForKa
     else do
       -- Use exact same object preparation logic as runCreate
       let createObject = KBLU.replaceMappings (A.Object createDBModel.contentsObj) (HM.fromList . M.toList $ createDBModel.mappings.getMapping)
-      res <- EL.runIO $ createInKafka kafkaConnection createObject streamName tableName
+      res <- EL.runIO $ createInKafka kafkaProducerTools createObject streamName tableName
       case res of
         Left err -> do
           EL.logError ("KAFKA CREATE FAILED" :: Text) ("Kafka create failed for drainer : " <> err <> " for table :: " <> show tableName)
