@@ -17,12 +17,13 @@ module Lib.Payment.Domain.Types.PaymentOrder where
 
 import Data.Aeson
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude hiding (show)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
+
 import Lib.Payment.Domain.Types.Common
 
 data PaymentOrderE e = PaymentOrder
@@ -105,5 +106,6 @@ type PaymentOrder = PaymentOrderE 'AsEncrypted
 data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMultiModalBooking | FRFSPassPurchase | ParkingBooking | Wallet | STCL
   deriving (Generic, Eq, Ord, FromJSON, ToJSON, Show, Read, ToSchema, ToParamSchema)
 
-$(mkHttpInstancesForEnum ''PaymentServiceType)
 $(mkBeamInstancesForEnum ''PaymentServiceType)
+
+$(mkHttpInstancesForEnum ''PaymentServiceType)
