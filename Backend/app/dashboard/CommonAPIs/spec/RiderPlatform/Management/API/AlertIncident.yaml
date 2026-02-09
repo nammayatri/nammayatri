@@ -24,6 +24,7 @@ types:
     status: IncidentStatus
     receiver: Maybe Text
     externalURL: Maybe Text
+    isManuallyEntered: Maybe Bool
     createdAt: UTCTime
 
   IncidentStatus:

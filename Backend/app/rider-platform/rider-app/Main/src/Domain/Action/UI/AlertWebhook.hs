@@ -18,8 +18,8 @@ import qualified Storage.Queries.AlertIncident as QAlertIncident
 
 -- | Process VictoriaMetrics vmalert webhook
 -- Handles both 'firing' and 'resolved' alert statuses
-postApiV1AlertsUpdate :: Types.VmAlertWebhookReq -> Environment.Flow APISuccess.APISuccess
-postApiV1AlertsUpdate req = do
+postApiV1AlertsUpdate :: Maybe Bool -> Types.VmAlertWebhookReq -> Environment.Flow APISuccess.APISuccess
+postApiV1AlertsUpdate isManual req = do
   logInfo $
     "Received alert webhook: status=" <> req.status
       <> ", alerts_count="
@@ -32,7 +32,7 @@ postApiV1AlertsUpdate req = do
 
   forM_ req.alerts $ \alert -> do
     case T.toLower req.status of
-      "firing" -> handleFiringAlert req alert rawPayload
+      "firing" -> handleFiringAlert isManual req alert rawPayload
       "resolved" -> handleResolvedAlert req alert rawPayload
       unknownStatus -> do
         logError $ "Unknown alert status: " <> unknownStatus <> " for alert: " <> alert.labels.alertname
@@ -46,8 +46,8 @@ getServiceName :: Types.AlertLabels -> Text
 getServiceName labels = fromMaybe "unknown" (labels.alert)
 
 -- | Handle firing alert - create new incident if not already exists
-handleFiringAlert :: Types.VmAlertWebhookReq -> Types.AlertDetail -> Text -> Environment.Flow ()
-handleFiringAlert req alert rawPayload = do
+handleFiringAlert :: Maybe Bool -> Types.VmAlertWebhookReq -> Types.AlertDetail -> Text -> Environment.Flow ()
+handleFiringAlert isManual req alert rawPayload = do
   let alertName = alert.labels.alertname
       serviceName = getServiceName alert.labels
       alertGroup' = alert.labels.alertgroup
@@ -101,6 +101,7 @@ handleFiringAlert req alert rawPayload = do
                 receiver = receiver',
                 externalURL = externalURL',
                 rawPayload = Just rawPayload,
+                isManuallyEntered = isManual,
                 createdAt = now,
                 updatedAt = now
               }

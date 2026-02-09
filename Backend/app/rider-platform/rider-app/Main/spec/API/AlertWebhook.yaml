@@ -34,5 +34,7 @@ apis:
       auth: NoAuth
       request:
         type: VmAlertWebhookReq
+      query:
+        isManual: Bool
       response:
         type: APISuccess

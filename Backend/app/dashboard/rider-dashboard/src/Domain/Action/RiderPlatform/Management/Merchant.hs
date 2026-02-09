@@ -46,11 +46,13 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import qualified Kernel.Storage.Queries.MerchantOperatingCity as KQMOC
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
+import qualified Kernel.Types.MerchantOperatingCity as KMOC
 import Kernel.Utils.Common
 import Kernel.Utils.Geometry (getGeomFromKML)
 import Kernel.Utils.Validation (runRequestValidation)
@@ -60,8 +62,6 @@ import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as SQM
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
-import qualified Kernel.Storage.Queries.MerchantOperatingCity as KQMOC
-import qualified Kernel.Types.MerchantOperatingCity as KMOC
 
 buildTransaction ::
   ( MonadFlow m,
@@ -245,7 +245,7 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
     SQM.updateSupportedOperatingCities merchant.shortId (merchant.supportedOperatingCities <> [req.city])
   whenJust cityStdCode $ \stdCode -> do
     id <- generateGUID
-    KQMOC.createIfNotExist $ KMOC.MerchantOperatingCity { id = Id id, city = show req.city, stdCode = Just stdCode }
+    KQMOC.createIfNotExist $ KMOC.MerchantOperatingCity {id = Id id, city = show req.city, stdCode = Just stdCode}
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
   where
     buildMerchant now merchantD baseMerchant =

@@ -15,6 +15,7 @@ AlertIncident:
     receiver: Maybe Text
     externalURL: Maybe Text
     rawPayload: Maybe Text
+    isManuallyEntered: Maybe Bool
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -72,6 +73,7 @@ AlertIncident:
     receiver: character varying(255)
     externalURL: character varying(500)
     rawPayload: text
+    isManuallyEntered: boolean
     createdAt: timestamp with time zone
     updatedAt: timestamp with time zone
 

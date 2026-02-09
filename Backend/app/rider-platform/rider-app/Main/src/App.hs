@@ -32,11 +32,12 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
+import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
-import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
+import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.App
@@ -57,10 +58,9 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import System.Environment (lookupEnv)
+import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 import Tools.HTTPManager (prepareCRISHttpManager)
 import "utils" Utils.Common.Events as UE
-import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
-import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName

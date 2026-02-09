@@ -17,6 +17,7 @@ module App where
 
 import qualified Client.Main as CM
 import qualified Data.Bool as B
+import qualified Data.Text as T
 import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import EulerHS.Interpreters (runFlow)
@@ -29,9 +30,10 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.Prelude
+import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration
-import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Storage.Queries.SystemConfigs as QSC
+import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Error
 import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.App (getPodName, handleLeft)
@@ -67,9 +69,7 @@ import SharedLogic.Allocator.Jobs.Webhook.Webhook
 import SharedLogic.KaalChakra.Chakras
 import SharedLogic.MediaFileDocument (mediaFileDocumentComplete)
 import Storage.Beam.SystemConfigs ()
-import qualified Data.Text as T
 import qualified Storage.CachedQueries.Merchant as Storage
-import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
