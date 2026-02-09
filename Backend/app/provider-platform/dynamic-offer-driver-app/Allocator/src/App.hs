@@ -172,12 +172,12 @@ runDriverOfferAllocator configModifier = do
       withLogTag "Server startup" $ do
         migrateIfNeeded handlerCfg.appCfg.migrationPath handlerCfg.appCfg.autoMigrate handlerCfg.appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-        initCityMaps
         logInfo "Setting up for signature auth..."
         kvConfigs <-
           findById "kv_configs" >>= pure . decodeFromText' @Tables
             >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
+        initCityMaps
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "

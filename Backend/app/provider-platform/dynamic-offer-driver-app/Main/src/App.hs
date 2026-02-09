@@ -128,13 +128,13 @@ runDynamicOfferDriverApp' appCfg = do
       withLogTag "Server startup" $ do
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-        initCityMaps
         logInfo "Setting up for signature auth..."
         kvConfigs <-
           findById "kv_configs" >>= pure . decodeFromText' @Tables
             >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
         _ <- liftIO $ createCAC appCfg
+        initCityMaps
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
