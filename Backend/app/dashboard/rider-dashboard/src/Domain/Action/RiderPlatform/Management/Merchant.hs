@@ -60,6 +60,8 @@ import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as SQM
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
+import qualified Kernel.Storage.Queries.MerchantOperatingCity as KQMOC
+import qualified Kernel.Types.MerchantOperatingCity as KMOC
 
 buildTransaction ::
   ( MonadFlow m,
@@ -241,6 +243,9 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
       (Nothing, _) -> return baseMerchant
   unless (req.city `elem` merchant.supportedOperatingCities) $
     SQM.updateSupportedOperatingCities merchant.shortId (merchant.supportedOperatingCities <> [req.city])
+  whenJust cityStdCode $ \stdCode -> do
+    id <- generateGUID
+    KQMOC.createIfNotExist $ KMOC.MerchantOperatingCity { id = Id id, city = show req.city, stdCode = Just stdCode }
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
   where
     buildMerchant now merchantD baseMerchant =

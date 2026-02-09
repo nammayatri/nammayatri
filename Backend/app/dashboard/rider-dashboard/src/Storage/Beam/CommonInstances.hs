@@ -24,6 +24,7 @@ import qualified "lib-dashboard" Storage.Beam.Person as BeamP
 import qualified "lib-dashboard" Storage.Beam.RegistrationToken as BeamRT
 import qualified "lib-dashboard" Storage.Beam.Role as BeamR
 import qualified "lib-dashboard" Storage.Beam.Transaction as BeamT
+import qualified Kernel.Storage.Beam.MerchantOperatingCity as BeamMOC
 
 instance HasSchemaName BeamAM.AccessMatrixT where
   schemaName _ = T.pack "atlas_bap_dashboard"
@@ -44,4 +45,7 @@ instance HasSchemaName BeamR.RoleT where
   schemaName _ = T.pack "atlas_bap_dashboard"
 
 instance HasSchemaName BeamT.TransactionT where
+  schemaName _ = T.pack "atlas_bap_dashboard"
+
+instance HasSchemaName BeamMOC.MerchantOperatingCityT where
   schemaName _ = T.pack "atlas_bap_dashboard"

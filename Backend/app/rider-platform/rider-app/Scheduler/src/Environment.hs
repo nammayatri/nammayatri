@@ -26,7 +26,6 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import Data.String.Conversions (cs)
-import qualified Data.Text as T
 import "rider-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
@@ -54,7 +53,7 @@ import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event hiding (id)
 import Passetto.Client
 import SharedLogic.GoogleTranslate
-import System.Environment (lookupEnv, setEnv)
+import System.Environment (lookupEnv)
 import Tools.Metrics
 import Tools.Metrics.BAPMetrics.Types
 import TransactionLogs.Types
@@ -144,7 +143,6 @@ data HandlerEnv = HandlerEnv
 buildHandlerEnv :: HandlerCfg -> IO HandlerEnv
 buildHandlerEnv HandlerCfg {..} = do
   let AppCfg {..} = appCfg
-  setEnv "CITY_SCHEMA" (T.unpack cityDBSchema)
   hostname <- fmap cs <$> lookupEnv "POD_NAME" :: IO (Maybe Text)
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname

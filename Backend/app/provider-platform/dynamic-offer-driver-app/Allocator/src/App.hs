@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module App where
 
@@ -29,6 +30,7 @@ import Kernel.Exit
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration
+import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Storage.Queries.SystemConfigs as QSC
 import Kernel.Types.Error
 import Kernel.Types.Flow (runFlowR)
@@ -65,7 +67,13 @@ import SharedLogic.Allocator.Jobs.Webhook.Webhook
 import SharedLogic.KaalChakra.Chakras
 import SharedLogic.MediaFileDocument (mediaFileDocumentComplete)
 import Storage.Beam.SystemConfigs ()
+import qualified Data.Text as T
 import qualified Storage.CachedQueries.Merchant as Storage
+import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
+import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+
+instance HasSchemaName Beam.MerchantOperatingCityT where
+  schemaName _ = T.pack currentSchemaName
 
 createCAC :: AppCfg -> IO ()
 createCAC appCfg = do
@@ -164,6 +172,7 @@ runDriverOfferAllocator configModifier = do
       withLogTag "Server startup" $ do
         migrateIfNeeded handlerCfg.appCfg.migrationPath handlerCfg.appCfg.autoMigrate handlerCfg.appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+        initCityMaps
         logInfo "Setting up for signature auth..."
         kvConfigs <-
           findById "kv_configs" >>= pure . decodeFromText' @Tables

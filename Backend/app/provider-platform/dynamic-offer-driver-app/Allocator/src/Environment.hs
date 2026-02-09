@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Environment
   ( HandlerCfg (..),
@@ -27,7 +28,6 @@ import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Data.Map.Strict as MS
 import Data.String.Conversions (cs)
-import qualified Data.Text as T
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
@@ -56,7 +56,7 @@ import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import SharedLogic.CallInternalMLPricing (MLPricingInternal)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
-import System.Environment (lookupEnv, setEnv)
+import System.Environment (lookupEnv)
 import Tools.Metrics
 import Tools.Metrics.ARDUBPPMetrics.Types
 import TransactionLogs.Types
@@ -146,7 +146,6 @@ data HandlerEnv = HandlerEnv
 buildHandlerEnv :: HandlerCfg -> IO HandlerEnv
 buildHandlerEnv HandlerCfg {..} = do
   let AppCfg {..} = appCfg
-  setEnv "CITY_SCHEMA" (T.unpack cityDBSchema)
   hostname <- fmap cs <$> lookupEnv "POD_NAME" :: IO (Maybe Text)
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
