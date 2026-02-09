@@ -207,7 +207,8 @@ confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfi
                   status = ticket.qrStatus,
                   description = ticket.description,
                   qrRefreshAt = ticket.qrRefreshAt,
-                  commencingHours = ticket.commencingHours
+                  commencingHours = ticket.commencingHours,
+                  isReturnTicket = Nothing
                 }
           )
           order.tickets
@@ -240,7 +241,8 @@ status _merchantId _merchantOperatingCity integratedBPPConfig bapConfig booking 
                   status = ticket.qrStatus,
                   qrRefreshAt = ticket.qrRefreshAt,
                   description = ticket.description,
-                  commencingHours = ticket.commencingHours
+                  commencingHours = ticket.commencingHours,
+                  isReturnTicket = Nothing
                 }
           )
           tickets'

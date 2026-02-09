@@ -101,6 +101,11 @@ getStartStop stops = stops & find (\stop -> stop.stopType == start)
   where
     start = encodeToText' Spec.START
 
+getEndStop :: [Spec.Stop] -> Maybe Spec.Stop
+getEndStop stops = stops & find (\stop -> stop.stopType == end)
+  where
+    end = encodeToText' Spec.END
+
 mkFareBreakup :: (MonadFlow m) => Spec.QuotationBreakupInner -> m Domain.DFareBreakUp
 mkFareBreakup fareBreakup = do
   title <- fareBreakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "Title not found")
@@ -118,16 +123,16 @@ mkFareBreakup fareBreakup = do
         quantity
       }
 
-parseTickets :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> m [Domain.DTicket]
-parseTickets item fulfillments = do
+parseTickets :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> Maybe Text -> Maybe Text -> m [Domain.DTicket]
+parseTickets item fulfillments mbFromStationCode mbToStationCode = do
   fulfillmentIds <- item.itemFulfillmentIds & fromMaybeM (InvalidRequest "FulfillmentIds not found")
   when (null fulfillmentIds) $ throwError $ InvalidRequest "Empty fulfillmentIds"
-
+  logDebug $ "Station Check " <> encodeToText mbFromStationCode <> " " <> encodeToText mbToStationCode
   let ticketFulfillments = filterByIds "TICKET"
       finalTicketFulfillments = if not (null ticketFulfillments) then ticketFulfillments else filterByIds "TRIP"
   when (null finalTicketFulfillments) $ throwError $ InvalidRequest "No ticket fulfillment found"
   fallbackTicketNumber <- getTicketNumber
-  return $ mapMaybe (parseTicket fallbackTicketNumber) finalTicketFulfillments
+  return $ mapMaybe (parseTicket fallbackTicketNumber mbFromStationCode mbToStationCode) finalTicketFulfillments
   where
     filterByIds fullfillmentType = filter (\f -> f.fulfillmentType == Just fullfillmentType) fulfillments
 
@@ -137,8 +142,8 @@ getTicketNumber = do
   pure $
     UU.fromText id <&> \uuid -> show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Integer)
 
-parseTicket :: Maybe Text -> Spec.Fulfillment -> Maybe Domain.DTicket
-parseTicket fallbackTicketNumber fulfillment = do
+parseTicket :: Maybe Text -> Maybe Text -> Maybe Text -> Spec.Fulfillment -> Maybe Domain.DTicket
+parseTicket fallbackTicketNumber mbFromStationCode mbToStationCode fulfillment = do
   fId <- fulfillment.fulfillmentId
   stops <- fulfillment.fulfillmentStops
   startStopAuth <- getStartStop stops >>= (.stopAuthorization)
@@ -149,6 +154,9 @@ parseTicket fallbackTicketNumber fulfillment = do
 
   let mbTags = fulfillment.fulfillmentTags
   ticketNumber <- (mbTags >>= Utils.getTag "TICKET_INFO" "NUMBER") <|> fallbackTicketNumber
+
+  let isReturnTicket = determineJourneyDirection stops mbFromStationCode mbToStationCode
+
   pure $
     Domain.DTicket
       { qrData,
@@ -159,8 +167,24 @@ parseTicket fallbackTicketNumber fulfillment = do
         status,
         description = Nothing,
         qrRefreshAt = Nothing,
-        commencingHours = Nothing
+        commencingHours = Nothing,
+        isReturnTicket
       }
+  where
+    determineJourneyDirection :: [Spec.Stop] -> Maybe Text -> Maybe Text -> Maybe Bool
+    determineJourneyDirection stops fromCode toCode = do
+      startStop <- getStartStop stops
+      endStop <- getEndStop stops
+      startCode <- startStop.stopLocation >>= (.locationDescriptor) >>= (.descriptorCode)
+      endCode <- endStop.stopLocation >>= (.locationDescriptor) >>= (.descriptorCode)
+      from <- fromCode
+      to <- toCode
+      if startCode == from && endCode == to
+        then Just False -- Forward journey
+        else
+          if startCode == to && endCode == from
+            then Just True -- Return journey
+            else Nothing -- Unknown, defaults to forward for backward compatibility
 
 type TxnId = Text
 

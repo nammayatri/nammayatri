@@ -26,14 +26,16 @@ import Tools.Error
 
 buildOnConfirmReq ::
   (MonadFlow m) =>
+  Text ->
+  Text ->
   Spec.OnConfirmReq ->
   m (Maybe Domain.DOrder)
-buildOnConfirmReq onConfirmReq = do
+buildOnConfirmReq fromStationCode toStationCode onConfirmReq = do
   Utils.validateContext Spec.ON_CONFIRM onConfirmReq.onConfirmReqContext
   handleError onConfirmReq $ \message -> do
     case parseData message of
       Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, item, fulfillments, quoteBreakup, orderStatus) -> do
-        tickets <- Utils.parseTickets item fulfillments
+        tickets <- Utils.parseTickets item fulfillments (Just fromStationCode) (Just toStationCode)
         when (null tickets) $ throwError (InvalidBecknSchema $ "No ticket fulfillment found in onconfirm req: " <> show fulfillments)
         fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
         let dOrder =

@@ -576,6 +576,7 @@ FRFSTicket:
     partnerOrgId: Maybe (Id PartnerOrganization)
     isTicketFree: Maybe Bool
     commencingHours: Maybe Int
+    isReturnTicket: Maybe Bool
 
   constraints:
     id: PrimaryKey
