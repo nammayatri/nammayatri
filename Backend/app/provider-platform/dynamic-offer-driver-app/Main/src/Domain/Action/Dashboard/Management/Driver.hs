@@ -73,6 +73,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce
 import Data.Csv
+import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
 import Data.List (nub, partition, sortOn)
 import Data.List.NonEmpty (nonEmpty)
@@ -88,12 +89,14 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverLicense
+import Domain.Types.DriverLocation
 import qualified Domain.Types.DriverPlan as DDPlan
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
@@ -299,14 +302,26 @@ getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlo
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
   driversWithInfo <- B.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant merchantOpCity limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString
   items <- mapM buildDriverListItem driversWithInfo
+  ltsLocations <- LF.driversLocation (map (cast . (.driverId)) items)
+  let driverLocationMap = HM.fromList $ map (\l -> (l.driverId, l)) ltsLocations
+      getItemsWithLts = map (updateItem driverLocationMap) items
+
   let count = length items
   -- should we consider filters in totalCount, e.g. count all enabled drivers?
   -- totalCount <- Esq.runInReplica $ QPerson.countDrivers merchant.id
   let summary = Common.Summary {totalCount = 10000, count}
-  pure Common.DriverListRes {totalItems = count, summary, drivers = items}
+  pure Common.DriverListRes {totalItems = count, summary, drivers = getItemsWithLts}
   where
     maxLimit = 20
     defaultLimit = 10
+
+    updateItem :: HM.HashMap (Id DP.Person) DriverLocation -> Common.DriverListItem -> Common.DriverListItem
+    updateItem locMap item =
+      let mbLoc = HM.lookup (cast item.driverId) locMap
+       in item
+            { Common.onRide = isJust (mbLoc >>= (.rideDetails)),
+              Common.active = maybe False (\l -> l.mode == Just DriverInfo.ONLINE || l.mode == Just DriverInfo.SILENT) mbLoc
+            }
 
 buildDriverListItem :: EncFlow m r => (DP.Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) -> m Common.DriverListItem
 buildDriverListItem (person, driverInformation, mbVehicle) = do
@@ -323,8 +338,8 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
         blocked = driverInformation.blocked,
         verified = driverInformation.verified,
         subscribed = driverInformation.subscribed,
-        onRide = driverInformation.onRide,
-        active = driverInformation.active,
+        onRide = False, -- This will be updated later with LTS data in getDriverList
+        active = False, -- This will be updated later with LTS data in getDriverList
         onboardingDate = driverInformation.lastEnabledOn
       }
 
@@ -332,7 +347,20 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
 getDriverActivity :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverActivityRes
 getDriverActivity merchantShortId _ = do
   merchant <- findMerchantByShortId merchantShortId
-  Common.mkDriverActivityRes <$> B.runInReplica (QDriverInfo.countDrivers merchant.id)
+  allDrivers <- B.runInReplica $ QPerson.findAllByMerchantId merchant.id [DP.DRIVER]
+  let allDriverIds = map (.id) allDrivers
+  driverLocations <- LF.driversLocation allDriverIds
+  let activeCount = length $ filter isDriverActive driverLocations
+      totalCount = length allDrivers
+      inactiveCount = totalCount - activeCount
+  return $ Common.mkDriverActivityRes (activeCount, inactiveCount)
+  where
+    isDriverActive :: DriverLocation -> Bool
+    isDriverActive driverLoc =
+      case driverLoc.mode of
+        Just DriverInfo.ONLINE -> True
+        Just DriverInfo.SILENT -> True
+        _ -> False
 
 ---------------------------------------------------------------------
 postDriverDisable :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
@@ -476,13 +504,27 @@ getDriverLocation merchantShortId _ mbLimit mbOffset req = do
   let driversNotFound =
         filter (not . (`elem` map ((.id) . (.person)) allDrivers)) driverIds
       limitedDrivers = limitOffset mbLimit mbOffset allDrivers
-  resultList <- mapM buildDriverLocationListItem limitedDrivers
+
+  -- Fetch locations from LTS
+  let driverIdsList = map ((.id) . (.person)) limitedDrivers
+  ltsLocations <- LF.driversLocation driverIdsList
+  let driverLocationMap = HM.fromList $ map (\l -> (l.driverId, l)) ltsLocations
+
+  resultList <- mapM (buildDriverLocationListItem driverLocationMap) limitedDrivers
   pure $ Common.DriverLocationRes (nonEmpty $ coerce driversNotFound) resultList
 
-buildDriverLocationListItem :: EncFlow m r => QPerson.FullDriver -> m Common.DriverLocationItem
-buildDriverLocationListItem f = do
+buildDriverLocationListItem :: EncFlow m r => HM.HashMap (Id DP.Driver) DriverLocation -> QPerson.FullDriver -> m Common.DriverLocationItem
+buildDriverLocationListItem locMap f = do
   let p = f.person
       v = f.vehicle
+      mbLoc = HM.lookup (cast p.id) locMap
+      (lat, lon, ts) = case mbLoc of
+        Just l -> (l.lat, l.lon, l.coordinatesCalculatedAt)
+        Nothing -> (f.location.lat, f.location.lon, f.location.coordinatesCalculatedAt)
+
+      onRide = maybe False (isJust . (.rideDetails)) mbLoc
+      active = maybe False (\l -> l.mode == Just DriverInfo.ONLINE || l.mode == Just DriverInfo.SILENT) mbLoc
+
   phoneNo <- maybe (pure "") decrypt p.mobileNumber
   pure
     Common.DriverLocationItem
@@ -492,10 +534,10 @@ buildDriverLocationListItem f = do
         lastName = p.lastName,
         vehicleNo = v.registrationNo,
         phoneNo,
-        active = f.info.active,
-        onRide = f.info.onRide,
-        location = LatLong f.location.lat f.location.lon,
-        lastLocationTimestamp = f.location.coordinatesCalculatedAt
+        active = active,
+        onRide = onRide,
+        location = LatLong lat lon,
+        lastLocationTimestamp = ts
       }
 
 -- FIXME remove this, all entities should be limited on db level

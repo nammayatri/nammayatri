@@ -166,7 +166,7 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
         Just driverInfoResult -> driverInfoResult.numOfLocks
         Nothing -> 0
   let activeState = (.active) <$> driverInfo
-  let modeState = driverInfo >>= mode
+  let modeState = driverInfo >>= (.mode)
   updateOneWithKV
     ( [ Se.Set BeamDI.blocked isBlocked,
         Se.Set BeamDI.blockedReason blockedReason,

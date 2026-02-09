@@ -1245,17 +1245,23 @@ getDriverFleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode m
   driverListWithInfo <- QPerson.findAllPersonAndDriverInfoWithDriverIds driverIds
 
   -- Process each driver with their corresponding stats
+  ltsLocs <- LF.driversLocation driverIds
+  let ltsLocMap = Map.fromList $ map (\l -> (l.driverId, l)) ltsLocs
+
   res <- forM driverListWithInfo $ \(driver, driverInfo') -> do
     -- Common data preparation for all drivers
     let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
     mobileNumber <- mapM decrypt driver.mobileNumber
+
+    let ltsLoc = Map.lookup driver.id ltsLocMap
+        driverModeInLTS = (ltsLoc >>= (.mode)) <|> driverInfo'.mode
 
     let statsData = Map.lookup (driver.id) driverStatsMap
     pure $
       Common.FleetEarningRes
         { driverId = Just $ cast @DP.Person @Common.Driver driver.id,
           driverName = Just driverName,
-          status = Just $ castDriverStatus driverInfo'.mode,
+          status = Just $ castDriverStatus driverModeInLTS,
           vehicleNo = Nothing,
           vehicleType = Nothing,
           driverPhoneNo = mobileNumber,
@@ -1379,7 +1385,23 @@ getListOfDrivers _ mbDriverPhNo fleetOwnerId _ mbIsActive mbLimit mbOffset mbMod
 
   let mode = castDashboardDriverStatus <$> mbMode
   driverAssociationAndInfo <- FDV.findAllActiveDriverByFleetOwnerIdWithDriverInfo fleetOwnerId limit offset mobileNumberHash mbName mbSearchString mbIsActive mode
-  let (fleetDriverAssociation, person, driverInformation) = unzip3 driverAssociationAndInfo
+
+  -- Fetch LTS locations and update DriverInformation
+  let driverIds = map (\(_, p, _) -> p.id) driverAssociationAndInfo
+  ltsLocs <- LF.driversLocation driverIds
+  let ltsLocMap = Map.fromList $ map (\l -> (l.driverId, l)) ltsLocs
+      updatedDriverAssociationAndInfo =
+        map
+          ( \(fda, p, di) ->
+              let ltsLoc = Map.lookup p.id ltsLocMap
+                  newMode = (ltsLoc >>= (.mode)) <|> di.mode
+                  newOnRide = isJust (ltsLoc >>= (.rideDetails))
+                  newDi = di {DI.mode = newMode, DI.onRide = newOnRide}
+               in (fda, p, newDi)
+          )
+          driverAssociationAndInfo
+
+  let (fleetDriverAssociation, person, driverInformation) = unzip3 updatedDriverAssociationAndInfo
   return (fleetDriverAssociation, person, driverInformation)
 
 castDashboardDriverStatus :: Common.DriverMode -> DrInfo.DriverMode
@@ -1822,15 +1844,20 @@ getFleetDriverInfo :: Text -> Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Te
 getFleetDriverInfo fleetOwnerId driverId isDriver = do
   mbDriver <- QPerson.findById driverId
   mbDriverInfo' <- QDriverInfo.findById driverId
+  ltsLoc <- listToMaybe <$> LF.driversLocation [driverId]
   case (mbDriverInfo', mbDriver) of
     (Just driverInfo', Just driver) -> do
       currentTripTransaction <- WMB.findNextActiveTripTransaction fleetOwnerId driver.id
+      let ltsMode = ltsLoc >>= (.mode)
+          driverModeInLTS = ltsMode <|> driverInfo'.mode
+          isLtsOnRide = isJust (ltsLoc >>= (.rideDetails))
+
       mode <-
         if isDriver
-          then return (driverInfo'.mode)
+          then return driverModeInLTS
           else return Nothing
       (isDriverOnPickup, isDriverOnRide, routeCode) <-
-        if driverInfo'.onRide
+        if isLtsOnRide
           then do
             case currentTripTransaction of
               Just tripTransation -> return (tripTransation.status == TRIP_ASSIGNED, tripTransation.status == IN_PROGRESS, Just tripTransation.routeCode)
