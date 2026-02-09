@@ -185,7 +185,15 @@ getBookJourney config request = do
             data_ = encryptedPayload
           }
 
-  encResponse <- callCRISAPI config bookJourneyAPI (eulerClientFn encReq) "bookJourney"
+  encResponseResult <-
+    withTryCatch "CRIS:bookJourney" $
+      callCRISAPI config bookJourneyAPI (eulerClientFn encReq) "bookJourney"
+
+  encResponse <- case encResponseResult of
+    Left err -> do
+      logError $ "bookJourney API call failed with request: " <> show jsonStr <> ", error: " <> show err
+      throwError $ CRISErrorUnhandled $ "bookJourney API call failed: " <> T.pack (show err)
+    Right res -> pure res
 
   case (respCode encResponse, encResponse.agentTicketData, encResponse.encrypted) of
     -- Case 1: Non-zero response code (API error)
