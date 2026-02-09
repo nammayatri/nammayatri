@@ -17,6 +17,7 @@ data AlertIncident = AlertIncident
     externalURL :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     firingTime :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.AlertIncident.AlertIncident,
+    isManuallyEntered :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rawPayload :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     receiver :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     resolvedTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

@@ -23,6 +23,7 @@ data AlertIncidentInfo = AlertIncidentInfo
     externalURL :: Kernel.Prelude.Maybe Data.Text.Text,
     firingTime :: Kernel.Prelude.UTCTime,
     id :: Data.Text.Text,
+    isManuallyEntered :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     receiver :: Kernel.Prelude.Maybe Data.Text.Text,
     resolvedTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     serviceName :: Data.Text.Text,
@@ -44,9 +45,9 @@ data IncidentStatus
 
 type API = ("alertIncident" :> GetAlertIncidentAlertsIncidents)
 
-type GetAlertIncidentAlertsIncidents = ("alerts" :> "incidents" :> QueryParam "fromTime" Kernel.Prelude.UTCTime :> QueryParam "toTime" Kernel.Prelude.UTCTime :> Get ('[JSON]) AlertIncidentsResponse)
+type GetAlertIncidentAlertsIncidents = ("alerts" :> "incidents" :> QueryParam "fromTime" Kernel.Prelude.UTCTime :> QueryParam "toTime" Kernel.Prelude.UTCTime :> Get '[JSON] AlertIncidentsResponse)
 
-newtype AlertIncidentAPIs = AlertIncidentAPIs {getAlertIncidentAlertsIncidents :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient AlertIncidentsResponse)}
+newtype AlertIncidentAPIs = AlertIncidentAPIs {getAlertIncidentAlertsIncidents :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient AlertIncidentsResponse}
 
 mkAlertIncidentAPIs :: (Client EulerHS.Types.EulerClient API -> AlertIncidentAPIs)
 mkAlertIncidentAPIs alertIncidentClient = (AlertIncidentAPIs {..})
@@ -59,10 +60,10 @@ data AlertIncidentUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON AlertIncidentUserActionType where
-  toJSON (GET_ALERT_INCIDENT_ALERTS_INCIDENTS) = Data.Aeson.String "GET_ALERT_INCIDENT_ALERTS_INCIDENTS"
+  toJSON GET_ALERT_INCIDENT_ALERTS_INCIDENTS = Data.Aeson.String "GET_ALERT_INCIDENT_ALERTS_INCIDENTS"
 
 instance FromJSON AlertIncidentUserActionType where
   parseJSON (Data.Aeson.String "GET_ALERT_INCIDENT_ALERTS_INCIDENTS") = pure GET_ALERT_INCIDENT_ALERTS_INCIDENTS
   parseJSON _ = fail "GET_ALERT_INCIDENT_ALERTS_INCIDENTS expected"
 
-$(Data.Singletons.TH.genSingletons [(''AlertIncidentUserActionType)])
+$(Data.Singletons.TH.genSingletons [''AlertIncidentUserActionType])

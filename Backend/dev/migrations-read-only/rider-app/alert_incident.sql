@@ -22,3 +22,8 @@ ALTER TABLE atlas_app.alert_incident ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.alert_incident ALTER COLUMN alert_name TYPE character varying(255);
 ALTER TABLE atlas_app.alert_incident ADD COLUMN alert_group character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.alert_incident ADD COLUMN is_manually_entered boolean ;

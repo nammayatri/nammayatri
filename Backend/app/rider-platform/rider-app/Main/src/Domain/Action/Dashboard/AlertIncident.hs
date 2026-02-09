@@ -65,6 +65,7 @@ toAlertIncidentInfo incident =
       status = toApiStatus incident.status,
       receiver = incident.receiver,
       externalURL = incident.externalURL,
+      isManuallyEntered = incident.isManuallyEntered,
       createdAt = incident.createdAt
     }
 

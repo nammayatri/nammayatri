@@ -17,6 +17,7 @@ module App where
 
 import qualified Client.Main as CM
 import qualified Data.Bool as B
+import qualified Data.Text as T
 import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
 import "rider-app" Environment (AppCfg (..), buildAppEnv)
 import EulerHS.Interpreters (runFlow)
@@ -30,9 +31,10 @@ import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Tokenize
 import Kernel.Prelude
+import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration
-import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Storage.Queries.SystemConfigs as QSC
+import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Error
 import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.App (getPodName, handleLeft, handleLeftIO)
@@ -64,11 +66,9 @@ import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.UnblockCustomer
 import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
-import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
-import Tools.Beam.UtilsTH (HasSchemaName(..), currentSchemaName)
-import qualified Data.Text as T
+import qualified Storage.CachedQueries.Merchant as QMerchant
+import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName

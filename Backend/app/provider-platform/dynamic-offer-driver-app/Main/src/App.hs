@@ -39,11 +39,12 @@ import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
 import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
+import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
-import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
+import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.App
@@ -64,9 +65,8 @@ import Network.Wai.Handler.Warp
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
-import "utils" Utils.Common.Events as UE
-import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+import "utils" Utils.Common.Events as UE
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName
