@@ -41,6 +41,7 @@ import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Trip
 import Environment (Flow)
 import EulerHS.Prelude
+import Kernel.Prelude (roundToIntegral)
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -229,7 +230,10 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
             when (isNothing existingPayout) $ do
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
               commission <- FCV2.calculateCommission booking.fareParams mbFarePolicy
-              let payoutAmount = maybe booking.estimatedFare (\c -> booking.estimatedFare - c) commission
+              let payoutAmountBase = maybe booking.estimatedFare (\c -> booking.estimatedFare - c) commission
+                  payoutAmount =
+                    toHighPrecMoney
+                      (roundToIntegral (getHighPrecMoney payoutAmountBase) :: Integer)
               scheduledPayoutId <- Id <$> generateGUID
               let scheduledTime = addUTCTime (secondsToNominalDiffTime buffer) now
               let payoutStatus =
