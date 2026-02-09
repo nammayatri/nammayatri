@@ -180,7 +180,7 @@ getQuotes searchRequestId mbAllowMultiple = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   unless (mbAllowMultiple == Just True) $ do
     activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
-    whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
+    whenJust activeBooking $ \booking -> processActiveBooking booking (Just searchRequest.riderPreferredOption) OnSearch
   logDebug $ "search Request is : " <> show searchRequest
   journeyData <- getJourneys searchRequest searchRequest.hasMultimodalSearch
   person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
@@ -206,28 +206,43 @@ getQuotes searchRequestId mbAllowMultiple = do
           journey = journeyData
         }
 
-processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> CancellationStage -> m ()
-processActiveBooking booking cancellationStage = do
-  mbRide <- QRide.findActiveByRBId booking.id
-  case mbRide of
-    Just ride -> do
-      unless (ride.status == DRide.UPCOMING) $ throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
-    Nothing -> do
-      now <- getCurrentTime
-      if addUTCTime 900 booking.startTime < now || not (isRentalOrInterCity booking.bookingDetails) || (addUTCTime 120 booking.startTime < now && isHighPriorityBooking booking.bookingDetails)
-        then do
-          let cancelReq =
-                DCancel.CancelReq
-                  { reasonCode = CancellationReasonCode "Active booking",
-                    reasonStage = cancellationStage,
-                    additionalInfo = Nothing,
-                    reallocate = Nothing,
-                    blockOnCancellationRate = Nothing
-                  }
-          fork "active booking processing" $ do
-            dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
-            void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
-        else throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
+processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> Maybe SSR.RiderPreferredOption -> CancellationStage -> m ()
+processActiveBooking booking mbNewRiderPreferredOption cancellationStage = do
+  -- Check if both bookings are FixedRoute and allow multiple bookings
+  -- Fetch the active booking's SearchRequest through its Quote
+  mbActiveRiderPreferredOption <- case booking.quoteId of
+    Just quoteId -> do
+      mbQuote <- runInReplica $ QQuote.findById quoteId
+      case mbQuote of
+        Just quote -> do
+          mbActiveSearchRequest <- runInReplica $ QSR.findById quote.requestId
+          pure $ (.riderPreferredOption) <$> mbActiveSearchRequest
+        Nothing -> pure Nothing
+    Nothing -> pure Nothing
+  let isFixedRouteMultipleAllowed = canCoexistForFixedRoute mbNewRiderPreferredOption mbActiveRiderPreferredOption
+
+  -- Allow multiple bookings only if both are FixedRoute (based on riderPreferredOption)
+  unless isFixedRouteMultipleAllowed $ do
+    mbRide <- QRide.findActiveByRBId booking.id
+    case mbRide of
+      Just ride -> do
+        unless (ride.status == DRide.UPCOMING) $ throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
+      Nothing -> do
+        now <- getCurrentTime
+        if addUTCTime 900 booking.startTime < now || not (isRentalOrInterCity booking.bookingDetails) || (addUTCTime 120 booking.startTime < now && isHighPriorityBooking booking.bookingDetails)
+          then do
+            let cancelReq =
+                  DCancel.CancelReq
+                    { reasonCode = CancellationReasonCode "Active booking",
+                      reasonStage = cancellationStage,
+                      additionalInfo = Nothing,
+                      reallocate = Nothing,
+                      blockOnCancellationRate = Nothing
+                    }
+            fork "active booking processing" $ do
+              dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
+              void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
+          else throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
 
 isRentalOrInterCity :: DBooking.BookingDetails -> Bool
 isRentalOrInterCity bookingDetails = case bookingDetails of
@@ -239,6 +254,14 @@ isHighPriorityBooking :: DBooking.BookingDetails -> Bool
 isHighPriorityBooking bookingDetails = case bookingDetails of
   DBooking.AmbulanceDetails _ -> True
   _ -> False
+
+-- | Check if two bookings can coexist based on FixedRoute riderPreferredOption
+-- Allows multiple bookings only if both bookings have riderPreferredOption = FixedRoute
+canCoexistForFixedRoute :: Maybe SSR.RiderPreferredOption -> Maybe SSR.RiderPreferredOption -> Bool
+canCoexistForFixedRoute mbNewRiderPreferredOption mbActiveRiderPreferredOption =
+  case (mbNewRiderPreferredOption, mbActiveRiderPreferredOption) of
+    (Just SSR.FixedRoute, Just SSR.FixedRoute) -> True
+    _ -> False
 
 getOffers :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest = do
