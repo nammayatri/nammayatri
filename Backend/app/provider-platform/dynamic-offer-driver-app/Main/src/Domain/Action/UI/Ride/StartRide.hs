@@ -40,6 +40,7 @@ import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Trip
 import Environment (Flow)
 import EulerHS.Prelude
+import Kernel.Prelude (roundToIntegral)
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
