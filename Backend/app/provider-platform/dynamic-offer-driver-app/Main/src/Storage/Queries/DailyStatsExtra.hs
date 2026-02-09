@@ -2,6 +2,7 @@ module Storage.Queries.DailyStatsExtra where
 
 import Data.Time (Day)
 import Domain.Types.DailyStats
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -42,13 +43,14 @@ findAllByPayoutStatusAndReferralEarningsAndDriver status (Id driverId) = do
         ]
     ]
 
-findAllByDateAndPayoutStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Int -> Maybe Int -> Day -> PayoutStatus -> m [DailyStats]
-findAllByDateAndPayoutStatus limit offset merchantLocalDate payoutStatus = do
+findAllByDateAndPayoutStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Int -> Maybe Int -> Day -> PayoutStatus -> Id DMOC.MerchantOperatingCity -> m [DailyStats]
+findAllByDateAndPayoutStatus limit offset merchantLocalDate payoutStatus merchantOpCityId = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate,
           Se.Is Beam.payoutStatus $ Se.Eq (Just payoutStatus),
-          Se.Is Beam.referralEarnings $ Se.GreaterThan (Just 0.0)
+          Se.Is Beam.referralEarnings $ Se.GreaterThan (Just 0.0),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just $ getId merchantOpCityId)
         ]
     ]
     (Se.Desc Beam.createdAt)
