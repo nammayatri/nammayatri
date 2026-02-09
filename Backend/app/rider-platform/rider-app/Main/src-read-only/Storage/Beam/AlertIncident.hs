@@ -22,6 +22,7 @@ data AlertIncidentT f = AlertIncidentT
     id :: B.C f Kernel.Prelude.Text,
     isManuallyEntered :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     rawPayload :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    rca :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     receiver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     resolvedTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     serviceName :: B.C f Kernel.Prelude.Text,

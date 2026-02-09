@@ -18,8 +18,8 @@ import qualified Storage.Queries.AlertIncident as QAlertIncident
 
 -- | Process VictoriaMetrics vmalert webhook
 -- Handles both 'firing' and 'resolved' alert statuses
-postApiV1AlertsUpdate :: Maybe Bool -> Types.VmAlertWebhookReq -> Environment.Flow APISuccess.APISuccess
-postApiV1AlertsUpdate isManual req = do
+postApiV1AlertsUpdate :: Maybe Bool -> Maybe Text -> Types.VmAlertWebhookReq -> Environment.Flow APISuccess.APISuccess
+postApiV1AlertsUpdate isManual mbRca req = do
   logInfo $
     "Received alert webhook: status=" <> req.status
       <> ", alerts_count="
@@ -33,7 +33,7 @@ postApiV1AlertsUpdate isManual req = do
   forM_ req.alerts $ \alert -> do
     case T.toLower req.status of
       "firing" -> handleFiringAlert isManual req alert rawPayload
-      "resolved" -> handleResolvedAlert req alert rawPayload
+      "resolved" -> handleResolvedAlert isManual mbRca req alert rawPayload
       unknownStatus -> do
         logError $ "Unknown alert status: " <> unknownStatus <> " for alert: " <> alert.labels.alertname
         -- Don't throw error to avoid blocking other valid alerts
@@ -46,6 +46,8 @@ getServiceName :: Types.AlertLabels -> Text
 getServiceName labels = fromMaybe "unknown" (labels.alert)
 
 -- | Handle firing alert - create new incident if not already exists
+-- For manual incidents (isManual == Just True), we look up existing FIRING incidents by alertName.
+-- For non-manual incidents, we keep the existing description-based lookup.
 handleFiringAlert :: Maybe Bool -> Types.VmAlertWebhookReq -> Types.AlertDetail -> Text -> Environment.Flow ()
 handleFiringAlert isManual req alert rawPayload = do
   let alertName = alert.labels.alertname
@@ -57,13 +59,22 @@ handleFiringAlert isManual req alert rawPayload = do
       receiver' = req.receiver
       externalURL' = req.externalURL
 
-  -- Query: Check if FIRING incident with same description already exists
+  -- Query: Check if FIRING incident already exists
+  let isManual' = fromMaybe False isManual
   existingIncidents <-
-    QAlertIncident.findFiringIncident
-      (Just 1) -- limit
-      Nothing -- offset
-      description'
-      Domain.FIRING
+    if isManual'
+      then
+        QAlertIncident.findFiringIncidentByAlertName
+          (Just 1) -- limit
+          Nothing -- offset
+          alertName
+          Domain.FIRING
+      else
+        QAlertIncident.findFiringIncident
+          (Just 1) -- limit
+          Nothing -- offset
+          description'
+          Domain.FIRING
 
   case existingIncidents of
     (existingIncident : _) -> do
@@ -102,6 +113,7 @@ handleFiringAlert isManual req alert rawPayload = do
                 externalURL = externalURL',
                 rawPayload = Just rawPayload,
                 isManuallyEntered = isManual,
+                rca = Nothing,
                 createdAt = now,
                 updatedAt = now
               }
@@ -113,20 +125,31 @@ handleFiringAlert isManual req alert rawPayload = do
           <> alertName
 
 -- | Handle resolved alert - find unresolved incident and update it
-handleResolvedAlert :: Types.VmAlertWebhookReq -> Types.AlertDetail -> Text -> Environment.Flow ()
-handleResolvedAlert _req alert _rawPayload = do
+-- If isManual == Just True, we look up unresolved incidents by alertName.
+-- Otherwise we keep the existing description-based lookup.
+handleResolvedAlert :: Maybe Bool -> Maybe Text -> Types.VmAlertWebhookReq -> Types.AlertDetail -> Text -> Environment.Flow ()
+handleResolvedAlert isManual mbRca _req alert _rawPayload = do
   let alertName = alert.labels.alertname
       serviceName = getServiceName alert.labels
       description' = alert.annotations.description
       resolvedTime = alert.endsAt
 
-  -- Query: Find unresolved incident (resolvedTime is NULL) with same description
+  -- Query: Find unresolved incident (resolvedTime is NULL)
+  let isManual' = fromMaybe False isManual
   unresolvedIncidents <-
-    QAlertIncident.findIncidentToResolve
-      (Just 1) -- limit
-      Nothing -- offset
-      description'
-      Nothing -- resolvedTime IS NULL
+    if isManual'
+      then
+        QAlertIncident.findIncidentToResolveByAlertName
+          (Just 1) -- limit
+          Nothing -- offset
+          alertName
+          Nothing -- resolvedTime IS NULL
+      else
+        QAlertIncident.findIncidentToResolve
+          (Just 1) -- limit
+          Nothing -- offset
+          description'
+          Nothing -- resolvedTime IS NULL
   case unresolvedIncidents of
     (incident : _) -> do
       -- Update the incident with resolved time and downtime
@@ -146,6 +169,7 @@ handleResolvedAlert _req alert _rawPayload = do
         Domain.RESOLVED
         (Just resolvedTime)
         (Just downtimeSeconds)
+        mbRca
         incident.id
 
       logInfo $ "Successfully resolved incident " <> show incident.id

@@ -1401,7 +1401,6 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         completedAt = Nothing
       }
 
-
 upsertRefundStatus :: (BeamFlow m r) => DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
 upsertRefundStatus order Payment.RefundsData {..} =
   do

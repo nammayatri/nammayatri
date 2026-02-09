@@ -36,5 +36,6 @@ apis:
         type: VmAlertWebhookReq
       query:
         isManual: Bool
+        rca: Text
       response:
         type: APISuccess
