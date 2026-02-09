@@ -38,6 +38,20 @@ findFiringIncident limit offset description status = do
     limit
     offset
 
+findFiringIncidentByAlertName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Domain.Types.AlertIncident.IncidentStatus -> m [Domain.Types.AlertIncident.AlertIncident])
+findFiringIncidentByAlertName limit offset alertName status = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.alertName $ Se.Eq alertName,
+          Se.Is Beam.status $ Se.Eq status
+        ]
+    ]
+    (Se.Desc Beam.firingTime)
+    limit
+    offset
+
 findIncidentToResolve ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> m [Domain.Types.AlertIncident.AlertIncident])
@@ -52,15 +66,30 @@ findIncidentToResolve limit offset description resolvedTime = do
     limit
     offset
 
+findIncidentToResolveByAlertName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> m [Domain.Types.AlertIncident.AlertIncident])
+findIncidentToResolveByAlertName limit offset alertName resolvedTime = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.alertName $ Se.Eq alertName,
+          Se.Is Beam.resolvedTime $ Se.Eq resolvedTime
+        ]
+    ]
+    (Se.Desc Beam.firingTime)
+    limit
+    offset
+
 updateToResolved ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.AlertIncident.IncidentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.AlertIncident.AlertIncident -> m ())
-updateToResolved status resolvedTime downtimeSeconds id = do
+  (Domain.Types.AlertIncident.IncidentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.AlertIncident.AlertIncident -> m ())
+updateToResolved status resolvedTime downtimeSeconds rca id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.status status,
       Se.Set Beam.resolvedTime resolvedTime,
       Se.Set Beam.downtimeSeconds downtimeSeconds,
+      Se.Set Beam.rca rca,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -83,6 +112,7 @@ instance FromTType' Beam.AlertIncident Domain.Types.AlertIncident.AlertIncident 
             id = Kernel.Types.Id.Id id,
             isManuallyEntered = isManuallyEntered,
             rawPayload = rawPayload,
+            rca = rca,
             receiver = receiver,
             resolvedTime = resolvedTime,
             serviceName = serviceName,
@@ -104,6 +134,7 @@ instance ToTType' Beam.AlertIncident Domain.Types.AlertIncident.AlertIncident wh
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isManuallyEntered = isManuallyEntered,
         Beam.rawPayload = rawPayload,
+        Beam.rca = rca,
         Beam.receiver = receiver,
         Beam.resolvedTime = resolvedTime,
         Beam.serviceName = serviceName,

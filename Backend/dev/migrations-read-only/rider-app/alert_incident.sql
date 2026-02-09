@@ -27,3 +27,8 @@ ALTER TABLE atlas_app.alert_incident ADD COLUMN alert_group character varying(25
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.alert_incident ADD COLUMN is_manually_entered boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.alert_incident ADD COLUMN rca text ;

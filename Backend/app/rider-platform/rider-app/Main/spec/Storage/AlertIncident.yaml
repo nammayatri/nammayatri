@@ -16,6 +16,7 @@ AlertIncident:
     externalURL: Maybe Text
     rawPayload: Maybe Text
     isManuallyEntered: Maybe Bool
+    rca: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -39,11 +40,33 @@ AlertIncident:
         order: desc
       limit: 1
 
+    findFiringIncidentByAlertName:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - alertName
+          - status
+      orderBy:
+        field: firingTime
+        order: desc
+      limit: 1
+
     findIncidentToResolve:
       kvFunction: findAllWithOptionsKV
       where:
         and:
           - description
+          - resolvedTime
+      orderBy:
+        field: firingTime
+        order: desc
+      limit: 1
+
+    findIncidentToResolveByAlertName:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - alertName
           - resolvedTime
       orderBy:
         field: firingTime
@@ -56,6 +79,7 @@ AlertIncident:
         - status
         - resolvedTime
         - downtimeSeconds
+        - rca
         - updatedAt
       where: id
 
@@ -74,6 +98,7 @@ AlertIncident:
     externalURL: character varying(500)
     rawPayload: text
     isManuallyEntered: boolean
+    rca: text
     createdAt: timestamp with time zone
     updatedAt: timestamp with time zone
 

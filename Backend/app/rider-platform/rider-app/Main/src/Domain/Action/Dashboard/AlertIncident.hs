@@ -66,6 +66,7 @@ toAlertIncidentInfo incident =
       receiver = incident.receiver,
       externalURL = incident.externalURL,
       isManuallyEntered = incident.isManuallyEntered,
+      rca = incident.rca,
       createdAt = incident.createdAt
     }
 

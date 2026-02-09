@@ -25,6 +25,7 @@ types:
     receiver: Maybe Text
     externalURL: Maybe Text
     isManuallyEntered: Maybe Bool
+    rca: Maybe Text
     createdAt: UTCTime
 
   IncidentStatus:

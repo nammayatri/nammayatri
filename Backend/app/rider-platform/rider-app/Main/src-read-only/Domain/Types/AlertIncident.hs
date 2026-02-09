@@ -19,6 +19,7 @@ data AlertIncident = AlertIncident
     id :: Kernel.Types.Id.Id Domain.Types.AlertIncident.AlertIncident,
     isManuallyEntered :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rawPayload :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rca :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     receiver :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     resolvedTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     serviceName :: Kernel.Prelude.Text,

@@ -24,6 +24,7 @@ data AlertIncidentT f = AlertIncidentT
     receiver :: C f (Maybe Text),
     externalURL :: C f (Maybe Text),
     isManuallyEntered :: C f (Maybe Bool),
+    rca :: C f (Maybe Text),
     createdAt :: C f UTCTime,
     updatedAt :: C f UTCTime
   }
@@ -47,6 +48,7 @@ alertIncidentTTable =
       receiver = "receiver",
       externalURL = "external_url",
       isManuallyEntered = "is_manually_entered",
+      rca = "rca",
       createdAt = "created_at",
       updatedAt = "updated_at"
     }
@@ -93,6 +95,7 @@ toAlertIncident incident =
       externalURL = incident.externalURL,
       rawPayload = Nothing, -- Not fetched from ClickHouse for performance
       isManuallyEntered = incident.isManuallyEntered,
+      rca = incident.rca,
       createdAt = incident.createdAt,
       updatedAt = incident.updatedAt
     }

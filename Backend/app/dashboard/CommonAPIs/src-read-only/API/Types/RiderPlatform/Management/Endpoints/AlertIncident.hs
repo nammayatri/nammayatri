@@ -24,6 +24,7 @@ data AlertIncidentInfo = AlertIncidentInfo
     firingTime :: Kernel.Prelude.UTCTime,
     id :: Data.Text.Text,
     isManuallyEntered :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rca :: Kernel.Prelude.Maybe Data.Text.Text,
     receiver :: Kernel.Prelude.Maybe Data.Text.Text,
     resolvedTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     serviceName :: Data.Text.Text,
