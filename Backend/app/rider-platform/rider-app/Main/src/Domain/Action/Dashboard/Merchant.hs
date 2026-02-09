@@ -415,6 +415,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
       let canQueueUpOnGate = fromMaybe False $ reqT.canQueueUpOnGate <|> (mbGate <&> (.canQueueUpOnGate))
           defaultDriverExtra = reqT.defaultDriverExtra <|> (mbGate >>= (.defaultDriverExtra))
           geom = reqT.geom <|> mbGeom
+          gateTags = reqT.gateTags <|> (mbGate >>= (.gateTags))
       return $
         D.GateInfo
           { name = reqT.name,
@@ -1375,6 +1376,14 @@ cleanCSVField idx fieldValue fieldName =
 cleanMaybeCSVField :: Int -> Text -> Text -> Maybe Text
 cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
 
+parseGateTags :: Text -> Maybe [Text]
+parseGateTags fieldValue =
+  case cleanField fieldValue of
+    Nothing -> Nothing
+    Just tags ->
+      let tagList = filter (not . T.null) $ map T.strip $ T.splitOn "," tags
+       in if null tagList then Nothing else Just tagList
+
 --------------------------------------------------------------------------------------------------------------------
 
 data SpecialLocationCSVRow = SpecialLocationCSVRow
@@ -1393,6 +1402,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoHasGeom :: Text,
     gateInfoCanQueueUpOnGate :: Text,
     gateInfoType :: Text,
+    gateInfoGateTags :: Text,
     priority :: Text,
     pickupPriority :: Text,
     dropPriority :: Text,
@@ -1418,6 +1428,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "gate_info_has_geom"
       <*> r .: "gate_info_can_queue_up_on_gate"
       <*> r .: "gate_info_type"
+      <*> r .: "gate_info_tags"
       <*> r .: "priority"
       <*> r .: "pickup_priority"
       <*> r .: "drop_priority"
@@ -1478,6 +1489,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       gateInfoLon :: Double <- readCSVField idx row.gateInfoLon "Gate Info (longitude)"
       let gateInfoDefaultDriverExtra :: Maybe Int = readMaybeCSVField idx row.gateInfoDefaultDriverExtra "Gate Info (default_driver_extra)"
           gateInfoAddress :: Maybe Text = cleanMaybeCSVField idx row.gateInfoAddress "Gate Info (address)"
+          gateInfoGateTags :: Maybe [Text] = parseGateTags row.gateInfoGateTags
       gateInfoType :: DGI.GateType <- readCSVField idx row.gateInfoType "Gate Info (type)"
       gateInfoHasGeom :: Bool <- readCSVField idx row.gateInfoHasGeom "Gate Info (geom)"
       gateInfoCanQueueUpOnGate :: Bool <- readCSVField idx row.gateInfoCanQueueUpOnGate "Gate Info (can_queue_up_on_gate)"
@@ -1519,7 +1531,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 merchantId = Just (cast merchantOpCity.merchantId),
                 merchantOperatingCityId = Just (cast merchantOpCity.id),
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                gateTags = gateInfoGateTags
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 

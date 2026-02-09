@@ -42,6 +42,7 @@ mkPersist
       geom Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
+      gateTags [Text] Maybe
       Primary id
       deriving Generic
     |]

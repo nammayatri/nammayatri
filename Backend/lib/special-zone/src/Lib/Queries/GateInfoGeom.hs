@@ -37,7 +37,8 @@ updateGate D.GateInfo {..} = Esq.update $ \tbl -> do
       GateInfoGeomMerchantId =. val merchantId',
       GateInfoGeomUpdatedAt =. val updatedAt,
       GateInfoGeomCanQueueUpOnGate =. val canQueueUpOnGate,
-      GateInfoGeomGeom =. val geom
+      GateInfoGeomGeom =. val geom,
+      GateInfoGeomGateTags =. val gateTags
     ]
   where_ $
     tbl ^. GateInfoGeomSpecialLocationId ==. val (toKey $ cast specialLocationId)

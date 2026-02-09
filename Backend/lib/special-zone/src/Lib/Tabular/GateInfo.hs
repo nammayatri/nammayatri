@@ -44,6 +44,7 @@ mkPersist
       createdAt UTCTime
       updatedAt UTCTime
       gateType Domain.GateType
+      gateTags [Text] Maybe
       Primary id
       deriving Generic
     |]
