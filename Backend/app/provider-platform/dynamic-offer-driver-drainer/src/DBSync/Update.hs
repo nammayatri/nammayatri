@@ -34,7 +34,7 @@ runUpdate updateDataEntries streamName = do
         then runUpdateQuery updateDataEntries updateDBModel
         else do
           let updateObject = KBLU.replaceMappings (maybe (A.object []) A.Object (updateDBModel.updatedModel)) (HM.fromList . M.toList $ updateDBModel.mappings.getMapping)
-          res <- EL.runIO $ createInKafka _kafkaConnection updateObject streamName tableName
+          res <- EL.runIO $ createInKafka _kafkaProducerTools updateObject streamName tableName
           case res of
             Left err -> do
               EL.logError ("KAFKA UPDATE FAILED" :: Text) ("Kafka update failed for drainer : " <> err <> " for table :: " <> show tableName)

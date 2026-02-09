@@ -36,7 +36,7 @@ runCreate createDataEntry streamName = do
         then runCreateQuery createDataEntry createDBModel
         else do
           let createObject = KBLU.replaceMappings (A.Object createDBModel.contentsObj) (HM.fromList . M.toList $ createDBModel.mappings.getMapping)
-          res <- EL.runIO $ createInKafka _kafkaConnection createObject streamName tableName
+          res <- EL.runIO $ createInKafka _kafkaProducerTools createObject streamName tableName
           case res of
             Left err -> do
               EL.logError ("KAFKA CREATE FAILED" :: Text) ("Kafka create failed for drainer : " <> err <> " for table :: " <> show tableName)
