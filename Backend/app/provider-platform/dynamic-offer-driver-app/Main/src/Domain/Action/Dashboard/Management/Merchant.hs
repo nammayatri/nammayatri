@@ -2717,6 +2717,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
       let canQueueUpOnGate = fromMaybe False $ reqT.canQueueUpOnGate <|> (mbGate <&> (.canQueueUpOnGate))
           defaultDriverExtra = reqT.defaultDriverExtra <|> (mbGate >>= (.defaultDriverExtra))
           geom = reqT.geom <|> mbGeom
+          gateTags = reqT.gateTags <|> (mbGate >>= (.gateTags))
       return $
         D.GateInfo
           { name = reqT.name,

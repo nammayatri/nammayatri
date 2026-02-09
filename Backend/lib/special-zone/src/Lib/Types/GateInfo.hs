@@ -28,7 +28,8 @@ data GateInfoFull = GateInfoFull
     address :: Maybe Text,
     geoJson :: Maybe Text,
     canQueueUpOnGate :: Bool,
-    gateType :: GateType
+    gateType :: GateType,
+    gateTags :: Maybe [Text]
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -48,6 +49,7 @@ data GateInfo = GateInfo
     canQueueUpOnGate :: Bool,
     gateType :: GateType,
     merchantId :: Maybe (Id Merchant),
-    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
+    gateTags :: Maybe [Text]
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
