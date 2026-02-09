@@ -1768,32 +1768,57 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
             merchantOperatingCityId = person.merchantOperatingCityId,
             merchantId = person.merchantId
           }
-  case req.routeCodes of
-    Just xs
-      | not (null xs) ->
-        handleProvidedRouteCodes routeServiceabilityContext req.routeCodes
-    _ -> do
-      (srcCode, destCode) <- resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode
-      directRouteCodes <- JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
-      if null directRouteCodes
-        then handleOtpRoute routeServiceabilityContext srcCode destCode
-        else handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes
+  (srcCode, destCode) <- resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext
+  directRouteCodes <- JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
+  if null directRouteCodes
+    then handleOtpRoute routeServiceabilityContext srcCode destCode
+    else handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes
   where
     authenticate :: Maybe (Id Domain.Types.Person.Person) -> Environment.Flow Domain.Types.Person.Person
     authenticate mbPersonId' = do
       personId <- mbPersonId' & fromMaybeM (InvalidRequest "Person not found")
       QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
-    resolveSrcAndDestCode :: Maybe Text -> Maybe Text -> Environment.Flow (Text, Text)
-    resolveSrcAndDestCode srcCode destCode =
-      fromMaybeM
-        ( InvalidRequest $
-            "Source or destination stop code not found. src="
-              <> show srcCode
-              <> " dest="
-              <> show destCode
+    resolveSrcAndDestCode ::
+      Maybe Text ->
+      Maybe Text ->
+      Maybe [ApiTypes.RouteCodesWithLeg] ->
+      RouteServiceabilityContext ->
+      Environment.Flow (Text, Text)
+    resolveSrcAndDestCode mSrc mDest routeCodes ctx
+      | isJust mSrc && isJust mDest =
+          pure (fromJust mSrc, fromJust mDest)
+      | otherwise = do
+          (firstStop, lastStop) <- fetchRouteBoundaryStops routeCodes ctx
+          pure (fromMaybe firstStop mSrc, fromMaybe lastStop mDest)
+
+    fetchRouteBoundaryStops ::
+      Maybe [ApiTypes.RouteCodesWithLeg] ->
+      RouteServiceabilityContext ->
+      Environment.Flow (Text, Text)
+    fetchRouteBoundaryStops routeCodes ctx = do
+      routeCode <- extractRouteCode routeCodes
+      stops <-
+        OTPRest.getRouteStopMappingByRouteCode
+          routeCode
+          ctx.integratedBPPConfig
+      when (null stops) $
+        throwError $
+          InvalidRequest ("No stops found for route: " <> routeCode)
+      let sorted = sortOn (.sequenceNum) stops
+      pure ((.stopCode) (head sorted), (.stopCode) (last sorted))
+
+    extractRouteCode ::
+      Maybe [ApiTypes.RouteCodesWithLeg] ->
+      Environment.Flow Text
+    extractRouteCode =
+      maybe
+        (throwError $ InvalidRequest "routeCodes required when src/dest missing")
+        ( maybe
+            (throwError $ InvalidRequest "No routeCodes found in legs")
+            pure
+            . (listToMaybe >=> listToMaybe . (.routeCodes))
         )
-        ((,) <$> srcCode <*> destCode)
 
     extractSourceDestLatLng :: Text -> Text -> RouteServiceabilityContext -> Environment.Flow (LatLngV2, LatLngV2)
     extractSourceDestLatLng srcCode destCode routeServiceabilityContext = do
@@ -2002,18 +2027,6 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       legRoutes <- enrichResolvedLegs ctx legs
       pure $ ApiTypes.RouteServiceabilityResp mEffStops legRoutes
 
-    handleProvidedRouteCodes ::
-      RouteServiceabilityContext ->
-      Maybe [ApiTypes.RouteCodesWithLeg] ->
-      Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
-    handleProvidedRouteCodes ctx routeCodes' = do
-      let routeCodesWithLegs = fromMaybe [] routeCodes'
-      when (null routeCodesWithLegs) $
-        throwError $ InvalidRequest "routeCodes is required when callOtp=false"
-      let resolvedLegs =
-            resolveLegsFromProvidedRouteCodes routeCodes'
-      getRouteServiceability Nothing ctx resolvedLegs
-
     handleDirectRoute ::
       RouteServiceabilityContext ->
       Text ->
@@ -2093,20 +2106,6 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
               { legOrder = rlOrder,
                 routeWithLiveVehicles = routesWithLiveVehicles
               }
-
-    resolveLegsFromProvidedRouteCodes ::
-      Maybe [ApiTypes.RouteCodesWithLeg] ->
-      [ResolvedLeg]
-    resolveLegsFromProvidedRouteCodes routeCodes' =
-      let routeCodesWithLegs = fromMaybe [] routeCodes'
-       in map
-            ( \leg ->
-                ResolvedLeg
-                  { rlOrder = leg.legOrder,
-                    rlRouteCodes = leg.routeCodes
-                  }
-            )
-            routeCodesWithLegs
 
     resolveLegsViaOtp ::
       Text ->
