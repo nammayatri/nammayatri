@@ -30,8 +30,10 @@ import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Action.UI.SafetyWebhook as SafetyWebhook
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Plan as Plan
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Environment
 import EulerHS.Prelude
+import qualified Data.Aeson as Aeson
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
 import qualified Kernel.External.Payout.Juspay.Webhook as JuspayPayout
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
@@ -69,6 +71,7 @@ type MainAPI =
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> QueryParam "city" Context.City
              :> QueryParam "serviceName" Plan.ServiceNames
+             :> QueryParam "paymentServiceType" DOrder.PaymentServiceType
              :> "v2"
              :> Juspay.JuspayWebhookAPI
          )
@@ -182,11 +185,16 @@ juspayWebhookHandlerV2 ::
   ShortId DM.Merchant ->
   Maybe Context.City ->
   Maybe Plan.ServiceNames ->
+  Maybe DOrder.PaymentServiceType ->
   BasicAuthData ->
-  Value ->
+  Aeson.Value ->
   FlowHandler AckResponse
-juspayWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret value' =
-  withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId mbOpCity mbServiceName secret value'
+juspayWebhookHandlerV2 merchantShortId mbOpCity mbServiceName mbPaymentServiceType secret webhookPayload = do
+  case mbPaymentServiceType of
+    Just paymentServiceType -> do
+      withFlowHandlerAPI $ Payment.juspayWebhookHandlerForPaymentServiceType merchantShortId mbOpCity paymentServiceType secret webhookPayload
+    Nothing -> do
+      withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId mbOpCity mbServiceName secret webhookPayload
 
 safetyWebhookHandler ::
   ShortId DM.Merchant ->
