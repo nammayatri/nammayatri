@@ -68,6 +68,7 @@ data MembershipApplicationResp = MembershipApplicationResp {applicationId :: Ker
 
 data MembershipDetailsResp = MembershipDetailsResp
   { address :: Address,
+    applicationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     applicationId :: Kernel.Prelude.Text,
     bankDetails :: BankDetails,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -84,6 +85,8 @@ data MembershipDetailsResp = MembershipDetailsResp
     nomineeInfo :: NomineeInfo,
     numberOfShares :: Kernel.Prelude.Int,
     panNumber :: Kernel.Prelude.Text,
+    shareEndCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    shareStartCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     status :: Domain.Types.StclMembership.ApplicationStatus,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleInfo :: VehicleInfo
