@@ -705,7 +705,7 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
           paymentOrder <- QPaymentOrder.findById bookingPayment.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found")
           integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
           journeyId <- getJourneyIdFromBooking booking
-          bookingStatus <- frfsBookingStatus (booking.riderId, merchantId) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler bookingPayment paymentOrder) booking person switchFRFSQuoteTier
+          bookingStatus <- frfsBookingStatus (booking.riderId, merchantId) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler bookingPayment paymentOrder) booking person Nothing switchFRFSQuoteTier
           return (bookingStatus, booking, journeyId)
       )
       bookingPayments
@@ -769,7 +769,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  frfsBookingStatus (personId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler integratedBppConfig booking person) booking person (\_ _ -> pure ())
+  frfsBookingStatus (personId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler integratedBppConfig booking person) booking person Nothing (\_ _ -> pure ())
   where
     withPaymentStatusResponseHandler ::
       ( EncFlow m r,

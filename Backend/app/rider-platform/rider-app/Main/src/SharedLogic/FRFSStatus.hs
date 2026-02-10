@@ -79,9 +79,10 @@ frfsBookingStatus ::
   (((DFRFSTicketBookingPayment.FRFSTicketBookingPayment, DPaymentOrder.PaymentOrder, Maybe DPayment.PaymentStatusResp) -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes) -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes) ->
   DFRFSTicketBooking.FRFSTicketBooking ->
   DP.Person ->
+  Maybe Bool ->
   (DJL.JourneyLeg -> Id DFRFSQuote.FRFSQuote -> m ()) ->
   m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusResponseHandler booking' person switchFRFSQuoteTier = do
+frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusResponseHandler booking' person mbIsMockPayment switchFRFSQuoteTier = do
   logInfo $ "frfsBookingStatus for booking: " <> show booking'
   let bookingId = booking'.id
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
@@ -155,7 +156,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
                 let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING Nothing Nothing
-                paymentOrder_ <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCity.id booking
+                paymentOrder_ <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCity.id booking mbIsMockPayment
                 let paymentObj =
                       Just $
                         FRFSTicketService.FRFSBookingPaymentAPI
@@ -230,7 +231,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories mbPaymentObj
                         else do
                           logInfo $ "payment success in payment pending: " <> show booking
-                          paymentOrder_ <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCity.id booking
+                          paymentOrder_ <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCity.id booking mbIsMockPayment
                           txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
                           let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
                               paymentObj =
@@ -355,7 +356,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
     mkPaymentSuccessLockKey :: Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Text
     mkPaymentSuccessLockKey bookingId = "frfsPaymentSuccess:" <> bookingId.getId
 
-    buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCityId booking = do
+    buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCityId booking apiIsMockPayment = do
       personEmail <- mapM decrypt person.email
       personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
       isSplitEnabled_ <- Payment.getIsSplitEnabled merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
@@ -387,7 +388,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isMetroTestTransaction <- asks (.isMetroTestTransaction)
       let createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
-          isMockPayment = fromMaybe False booking.isMockPayment
+          -- Use API parameter value if provided, otherwise fall back to booking value
+          isMockPayment = fromMaybe (fromMaybe False booking.isMockPayment) apiIsMockPayment
       DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) isMetroTestTransaction createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion isMockPayment) (Just createWalletCall) isMockPayment
 
     createOrderCall merchantOperatingCityId booking mRoutingId sdkVersion isMockPayment = Payment.createOrder merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) mRoutingId sdkVersion (Just isMockPayment)
