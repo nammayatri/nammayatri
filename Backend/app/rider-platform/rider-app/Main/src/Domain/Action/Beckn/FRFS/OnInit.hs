@@ -157,7 +157,7 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
         paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment
         return paymentOrder
       else do
-        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer
+        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment
         return updatedPaymentOrder
   case mbPaymentOrder of
     Just paymentOrder -> mapM_ (markBookingApproved paymentOrder) bookings
