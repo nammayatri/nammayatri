@@ -83,6 +83,7 @@ instance FromTType' BeamR.Role Role.Role where
       Just
         Role.Role
           { id = Id id,
+            parentRoleId = Id <$> parentRoleId,
             ..
           }
 
@@ -90,5 +91,6 @@ instance ToTType' BeamR.Role Role.Role where
   toTType' Role.Role {..} =
     BeamR.RoleT
       { id = getId id,
+        parentRoleId = getId <$> parentRoleId,
         ..
       }

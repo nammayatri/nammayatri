@@ -36,6 +36,7 @@ import Tools.Error (RoleError (..))
 data CreateRoleReq = CreateRoleReq
   { name :: Text,
     dashboardAccessType :: Maybe DashboardAccessType,
+    parentRoleId :: Maybe (Id DRole.Role),
     description :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -62,6 +63,7 @@ createRole _ req = do
   runRequestValidation validateCreateRoleReq req
   mbExistingRole <- QRole.findByName req.name
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
+  -- TODO check for cyclic parentRoleId
   role <- buildRole req
   QRole.create role
   pure $ DRole.mkRoleAPIEntity role
@@ -86,6 +88,7 @@ buildRole req = do
       { id = uid,
         name = req.name,
         dashboardAccessType = fromMaybe DRole.DASHBOARD_USER req.dashboardAccessType,
+        parentRoleId = req.parentRoleId,
         description = req.description,
         createdAt = now,
         updatedAt = now
