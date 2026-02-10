@@ -41,6 +41,14 @@ data CreateRoleReq = CreateRoleReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data UpdateRoleReq = UpdateRoleReq
+  { name :: Maybe Text,
+    dashboardAccessType :: Maybe DashboardAccessType,
+    parentRoleId :: Maybe (Id DRole.Role),
+    description :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data AssignAccessLevelReq = AssignAccessLevelReq
   { apiEntity :: DMatrix.ApiEntity,
     userActionType :: DMatrix.UserActionTypeWrapper,
@@ -63,7 +71,6 @@ createRole _ req = do
   runRequestValidation validateCreateRoleReq req
   mbExistingRole <- QRole.findByName req.name
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
-  -- TODO check for cyclic parentRoleId
   role <- buildRole req
   QRole.create role
   pure $ DRole.mkRoleAPIEntity role
@@ -93,6 +100,19 @@ buildRole req = do
         createdAt = now,
         updatedAt = now
       }
+
+updateRole ::
+  BeamFlow m r =>
+  TokenInfo ->
+  UpdateRoleReq ->
+  m DRole.RoleAPIEntity
+updateRole _ _req = do
+  -- runRequestValidation validateUpdateRoleReq req
+  -- mbExistingRole <- QRole.findByName req.name
+  -- whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
+  -- Make sure parentRoleId does not make cycle!
+  -- assignAccessLevel for parentRoleId
+  error "TODO"
 
 assignAccessLevel ::
   BeamFlow m r =>
