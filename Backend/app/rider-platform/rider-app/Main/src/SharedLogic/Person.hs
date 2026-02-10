@@ -20,7 +20,6 @@ import qualified Domain.Types.BookingStatus as DB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonStats as DPS
-import qualified Domain.Types.SafetySettings as DSafety
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto (EsqDBFlow)
@@ -28,12 +27,13 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fork, fromMaybeM, getCurrentTime)
+import qualified Safety.Domain.Types.SafetySettings as DSafety
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.BookingCancellationReason as CHBCR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QP
-import qualified Storage.Queries.SafetySettings as QSafety
+import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
@@ -146,6 +146,6 @@ checkSafetyCenterDisabled person safetySettings = do
           let unblockAfterDays = (intToNominalDiffTime riderConfig.autoUnblockSafetyCenterAfterDays) * 24 * 60 * 60
           if diffUTCTime now safetyCenterDisabledOnDate > unblockAfterDays
             then do
-              fork "" $ QSafety.updateSafetyCenterBlockingCounter person.id Nothing Nothing
+              fork "" $ QSafetyExtra.updateSafetyCenterBlockingCounter person.id Nothing Nothing
               return False
             else return True

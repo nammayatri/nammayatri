@@ -982,7 +982,6 @@ library
       Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
       Domain.Types.RouteTripMapping
-      Domain.Types.SafetySettings
       Domain.Types.SavedReqLocation
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
@@ -1136,7 +1135,6 @@ library
       Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
       Storage.Beam.RouteTripMapping
-      Storage.Beam.SafetySettings
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
@@ -1305,7 +1303,6 @@ library
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.RouteDetails
       Storage.Queries.OrphanInstances.RoutePolylines
-      Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.ServiceCategory
@@ -1359,7 +1356,6 @@ library
       Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender
       Storage.Queries.RouteTripMapping
-      Storage.Queries.SafetySettings
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest

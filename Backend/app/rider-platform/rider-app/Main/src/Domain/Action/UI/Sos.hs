@@ -67,7 +67,7 @@ import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SafetySettings as QSafety
+import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import qualified Tools.Call as Call
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -151,7 +151,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   Redis.del $ CQSos.mockSosKey personId
-  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId (Just person)
   (sosId, trackLink, mbRideEndTime) <- case req.rideId of
     Just rideId -> do
       ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -269,7 +269,7 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
               else List.filter (\ec -> List.elem ec.mobileNumber contactsList) emergencyContacts.defaultEmergencyNumbers
 
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId (Just person)
   case isMock of
     Just True -> do
       mockSos :: Maybe SafetyDSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
@@ -319,7 +319,7 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId (Just person)
   case startDrill of
     Just True -> do
       SPDEN.notifyEmergencyContacts person (notificationBody person True) notificationTitle Notification.SOS_MOCK_DRILL_NOTIFY Nothing False emergencyContacts.defaultEmergencyNumbers Nothing

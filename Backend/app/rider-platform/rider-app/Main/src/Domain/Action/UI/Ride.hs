@@ -71,7 +71,7 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
-import Storage.Queries.SafetySettings as QSafety
+import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Tools.Error
 import qualified Tools.Maps as MapSearch
 
@@ -123,7 +123,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
   let tag = customerDisability <&> (.tag)
   decRider <- decrypt rider
-  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just rider)
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId (Just rider)
   isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled rider safetySettings
   ride' <- buildRideAPIEntity ride
   return $

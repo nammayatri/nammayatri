@@ -63,7 +63,6 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.PersonDisability as PersonDisability
 import qualified Domain.Types.RiderConfig as DRC
-import Domain.Types.SafetySettings
 import qualified Domain.Types.VehicleCategory as VehicleCategory
 import qualified Email.Types
 import Environment
@@ -95,6 +94,7 @@ import Kernel.Utils.Version
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as YUtils
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Cac
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -114,7 +114,7 @@ import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPersonDEN
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import qualified Storage.Queries.PersonStats as QPersonStats
-import qualified Storage.Queries.SafetySettings as QSafety
+import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Text.Regex.Posix ((=~))
 import Tools.Error
 import Tools.Event
@@ -339,7 +339,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
   frntndfgs <- if useCACConfig then getFrontendConfigs person toss tenant' context' else return $ Just DAKM.empty
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
-  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId (Just person)
   isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person safetySettings
   hasTakenValidRide <- QCP.findAllByPersonId personId
   let hasTakenValidFirstCabRide = validRideCount hasTakenValidRide BecknEnums.CAB
@@ -534,8 +534,13 @@ updateDefaultEmergencyNumbers personId merchantId req = do
       return person.shareTripWithEmergencyContactOption
     False -> pure Nothing
   newPersonDENList <- buildPersonDefaultEmergencyNumber now shareTripOptionDefault `mapM` uniqueRecords
-  let updatedWithAggregatedRideShareSetting = QSafety.emptyUpdateEmergencyInfo {QSafety.aggregatedRideShare = Just $ getAggregatedRideShareSetting req.defaultEmergencyNumbers}
-  void $ QSafety.upsert personId updatedWithAggregatedRideShareSetting
+  let convertToSafetyRideShareOptions :: Person.RideShareOptions -> SafetyCommon.RideShareOptions
+      convertToSafetyRideShareOptions = \case
+        Person.ALWAYS_SHARE -> SafetyCommon.ALWAYS_SHARE
+        Person.SHARE_WITH_TIME_CONSTRAINTS -> SafetyCommon.SHARE_WITH_TIME_CONSTRAINTS
+        Person.NEVER_SHARE -> SafetyCommon.NEVER_SHARE
+      updatedWithAggregatedRideShareSetting = QSafetyExtra.emptyUpdateEmergencyInfo {QSafetyExtra.aggregatedRideShare = Just $ convertToSafetyRideShareOptions $ getAggregatedRideShareSetting req.defaultEmergencyNumbers}
+  void $ QSafetyExtra.upsert personId updatedWithAggregatedRideShareSetting
   fork "Send Emergency Contact Added Message" $ do
     sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList
   QPersonDEN.replaceAll personId newPersonDENList
@@ -657,14 +662,27 @@ updateEmergencySettings personId req = do
     updateSafetySettings UpdateEmergencySettingsReq {..} = do
       let shareContacts = fromMaybe False shareEmergencyContacts
           setContactField field = bool (Just shareContacts) field (isJust field)
+          convertToSafetyRideShareOptions :: Person.RideShareOptions -> SafetyCommon.RideShareOptions
+          convertToSafetyRideShareOptions = \case
+            Person.ALWAYS_SHARE -> SafetyCommon.ALWAYS_SHARE
+            Person.SHARE_WITH_TIME_CONSTRAINTS -> SafetyCommon.SHARE_WITH_TIME_CONSTRAINTS
+            Person.NEVER_SHARE -> SafetyCommon.NEVER_SHARE
           emergencyInfo =
-            QSafety.UpdateEmergencyInfo
+            QSafetyExtra.UpdateEmergencyInfo
               { autoCallDefaultContact = setContactField autoCallDefaultContact,
                 notifySosWithEmergencyContacts = setContactField notifySosWithEmergencyContacts,
-                aggregatedRideShare = guard updateShareOptionForEmergencyContacts >> shareTripWithEmergencyContactOption,
-                ..
+                aggregatedRideShare = convertToSafetyRideShareOptions <$> (guard updateShareOptionForEmergencyContacts >> shareTripWithEmergencyContactOption),
+                enablePostRideSafetyCheck = convertToSafetyRideShareOptions <$> enablePostRideSafetyCheck,
+                enableUnexpectedEventsCheck = convertToSafetyRideShareOptions <$> enableUnexpectedEventsCheck,
+                hasCompletedMockSafetyDrill = hasCompletedMockSafetyDrill,
+                hasCompletedSafetySetup = hasCompletedSafetySetup,
+                informPoliceSos = informPoliceSos,
+                nightSafetyChecks = nightSafetyChecks,
+                notifySafetyTeamForSafetyCheckFailure = notifySafetyTeamForSafetyCheckFailure,
+                shakeToActivate = shakeToActivate,
+                enableOtpLessRide = enableOtpLessRide
               }
-      void $ QSafety.upsert personId emergencyInfo
+      void $ QSafetyExtra.upsert personId emergencyInfo
 
     updateShareOptionForEmergencyContacts = isJust req.shareTripWithEmergencyContactOption || isJust req.shareTripWithEmergencyContacts
 
@@ -696,10 +714,14 @@ getEmergencySettings :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person
 getEmergencySettings personId = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   personENList <- QPersonDEN.findpersonENListWithFallBack personId (Just person)
-  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
-  let SafetySettings {personId = _id, ..} = safetySettings
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId (Just person)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   decPersonENList <- decrypt `mapM` personENList
+  let convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> Person.RideShareOptions
+      convertToPersonRideShareOptions = \case
+        SafetyCommon.ALWAYS_SHARE -> Person.ALWAYS_SHARE
+        SafetyCommon.SHARE_WITH_TIME_CONSTRAINTS -> Person.SHARE_WITH_TIME_CONSTRAINTS
+        SafetyCommon.NEVER_SHARE -> Person.NEVER_SHARE
   return $
     EmergencySettingsRes
       { shareTripWithEmergencyContacts = any (\x -> (x.shareTripWithEmergencyContactOption /= Just Person.NEVER_SHARE) && isJust x.shareTripWithEmergencyContactOption) personENList,
@@ -711,7 +733,17 @@ getEmergencySettings personId = do
         shareEmergencyContacts = safetySettings.notifySosWithEmergencyContacts,
         safetyCheckEndTime = riderConfig.safetyCheckEndTime,
         safetyCheckStartTime = riderConfig.safetyCheckStartTime,
-        ..
+        enablePostRideSafetyCheck = convertToPersonRideShareOptions safetySettings.enablePostRideSafetyCheck,
+        enableUnexpectedEventsCheck = convertToPersonRideShareOptions safetySettings.enableUnexpectedEventsCheck,
+        nightSafetyChecks = safetySettings.nightSafetyChecks,
+        hasCompletedSafetySetup = safetySettings.hasCompletedSafetySetup,
+        autoCallDefaultContact = safetySettings.autoCallDefaultContact,
+        informPoliceSos = safetySettings.informPoliceSos,
+        notifySafetyTeamForSafetyCheckFailure = safetySettings.notifySafetyTeamForSafetyCheckFailure,
+        shakeToActivate = safetySettings.shakeToActivate,
+        safetyCenterDisabledOnDate = safetySettings.safetyCenterDisabledOnDate,
+        enableOtpLessRide = safetySettings.enableOtpLessRide,
+        notifySosWithEmergencyContacts = safetySettings.notifySosWithEmergencyContacts
       }
 
 data TriggerUpdateAuthOTPReq = TriggerUpdateAuthOTPReq
