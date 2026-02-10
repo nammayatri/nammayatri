@@ -176,6 +176,7 @@ library
       Domain.Action.Dashboard.Management.DriverReferral
       Domain.Action.Dashboard.Management.DriverRegistration
       Domain.Action.Dashboard.Management.EntityInfo
+      Domain.Action.Dashboard.Management.FeedbackForm
       Domain.Action.Dashboard.Management.Media
       Domain.Action.Dashboard.Management.MediaFileDocument
       Domain.Action.Dashboard.Management.Merchant
@@ -267,6 +268,7 @@ library
       Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.FareCalculator
+      Domain.Action.UI.FeedbackForm
       Domain.Action.UI.FleetDriverAssociation
       Domain.Action.UI.FleetOwnerList
       Domain.Action.UI.Insurance
@@ -676,6 +678,7 @@ library
       Storage.Queries.FareProductExtra
       Storage.Queries.FeedbackBadgeExtra
       Storage.Queries.FeedbackExtra
+      Storage.Queries.FeedbackFormExtra
       Storage.Queries.FleetBadgeAssociationExtra
       Storage.Queries.FleetBadgeExtra
       Storage.Queries.FleetBookingAssignmentsExtra
@@ -840,6 +843,7 @@ library
       API.Action.Dashboard.Management.DriverReferral
       API.Action.Dashboard.Management.DriverRegistration
       API.Action.Dashboard.Management.EntityInfo
+      API.Action.Dashboard.Management.FeedbackForm
       API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.MediaFileDocument
       API.Action.Dashboard.Management.Merchant
@@ -1036,6 +1040,7 @@ library
       Domain.Types.FareProduct
       Domain.Types.Feedback
       Domain.Types.FeedbackBadge
+      Domain.Types.FeedbackForm
       Domain.Types.FleetBadge
       Domain.Types.FleetBadgeAssociation
       Domain.Types.FleetBookingAssignments
@@ -1203,6 +1208,7 @@ library
       Storage.Beam.FareProduct
       Storage.Beam.Feedback
       Storage.Beam.FeedbackBadge
+      Storage.Beam.FeedbackForm
       Storage.Beam.FleetBadge
       Storage.Beam.FleetBadgeAssociation
       Storage.Beam.FleetBookingAssignments
@@ -1312,6 +1318,7 @@ library
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.CancellationFarePolicy
+      Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.FleetBadgeAssociation
       Storage.CachedQueries.Plan
       Storage.CachedQueries.SurgePricing
@@ -1374,6 +1381,7 @@ library
       Storage.Queries.FareProduct
       Storage.Queries.Feedback
       Storage.Queries.FeedbackBadge
+      Storage.Queries.FeedbackForm
       Storage.Queries.FleetBadge
       Storage.Queries.FleetBadgeAssociation
       Storage.Queries.FleetBookingAssignments
@@ -1458,6 +1466,7 @@ library
       Storage.Queries.OrphanInstances.FareProduct
       Storage.Queries.OrphanInstances.Feedback
       Storage.Queries.OrphanInstances.FeedbackBadge
+      Storage.Queries.OrphanInstances.FeedbackForm
       Storage.Queries.OrphanInstances.FleetBadge
       Storage.Queries.OrphanInstances.FleetBadgeAssociation
       Storage.Queries.OrphanInstances.FleetBookingAssignments

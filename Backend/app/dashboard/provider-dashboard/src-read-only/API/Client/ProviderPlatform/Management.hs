@@ -13,6 +13,7 @@ import qualified API.Types.ProviderPlatform.Management.DriverGoHome
 import qualified API.Types.ProviderPlatform.Management.DriverReferral
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified API.Types.ProviderPlatform.Management.EntityInfo
+import qualified API.Types.ProviderPlatform.Management.FeedbackForm
 import qualified API.Types.ProviderPlatform.Management.Media
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
 import qualified API.Types.ProviderPlatform.Management.Merchant
@@ -43,6 +44,7 @@ data ManagementAPIs = ManagementAPIs
     driverReferralDSL :: API.Types.ProviderPlatform.Management.DriverReferral.DriverReferralAPIs,
     driverRegistrationDSL :: API.Types.ProviderPlatform.Management.DriverRegistration.DriverRegistrationAPIs,
     entityInfoDSL :: API.Types.ProviderPlatform.Management.EntityInfo.EntityInfoAPIs,
+    feedbackFormDSL :: API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormAPIs,
     mediaDSL :: API.Types.ProviderPlatform.Management.Media.MediaAPIs,
     mediaFileDocumentDSL :: API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentAPIs,
     merchantDSL :: API.Types.ProviderPlatform.Management.Merchant.MerchantAPIs,
@@ -68,6 +70,7 @@ mkManagementAPIs merchantId city token = do
   let driverReferralDSL = API.Types.ProviderPlatform.Management.DriverReferral.mkDriverReferralAPIs driverReferralClientDSL
   let driverRegistrationDSL = API.Types.ProviderPlatform.Management.DriverRegistration.mkDriverRegistrationAPIs driverRegistrationClientDSL
   let entityInfoDSL = API.Types.ProviderPlatform.Management.EntityInfo.mkEntityInfoAPIs entityInfoClientDSL
+  let feedbackFormDSL = API.Types.ProviderPlatform.Management.FeedbackForm.mkFeedbackFormAPIs feedbackFormClientDSL
   let mediaDSL = API.Types.ProviderPlatform.Management.Media.mkMediaAPIs mediaClientDSL
   let mediaFileDocumentDSL = API.Types.ProviderPlatform.Management.MediaFileDocument.mkMediaFileDocumentAPIs mediaFileDocumentClientDSL
   let merchantDSL = API.Types.ProviderPlatform.Management.Merchant.mkMerchantAPIs merchantClientDSL
@@ -82,7 +85,7 @@ mkManagementAPIs merchantId city token = do
   let volunteerDSL = API.Types.ProviderPlatform.Management.Volunteer.mkVolunteerAPIs volunteerClientDSL
   (ManagementAPIs {..})
   where
-    accountClientDSL :<|> bookingClientDSL :<|> coinsConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> entityInfoClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> systemClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    accountClientDSL :<|> bookingClientDSL :<|> coinsConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> entityInfoClientDSL :<|> feedbackFormClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> systemClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.

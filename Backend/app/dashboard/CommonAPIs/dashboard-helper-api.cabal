@@ -78,6 +78,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.DriverReferral
       API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
       API.Types.ProviderPlatform.Management.Endpoints.EntityInfo
+      API.Types.ProviderPlatform.Management.Endpoints.FeedbackForm
       API.Types.ProviderPlatform.Management.Endpoints.Media
       API.Types.ProviderPlatform.Management.Endpoints.MediaFileDocument
       API.Types.ProviderPlatform.Management.Endpoints.Merchant
@@ -91,6 +92,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
       API.Types.ProviderPlatform.Management.Endpoints.Volunteer
       API.Types.ProviderPlatform.Management.EntityInfo
+      API.Types.ProviderPlatform.Management.FeedbackForm
       API.Types.ProviderPlatform.Management.Media
       API.Types.ProviderPlatform.Management.MediaFileDocument
       API.Types.ProviderPlatform.Management.Merchant

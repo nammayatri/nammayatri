@@ -1,0 +1,95 @@
+imports:
+  Translation: IssueManagement.Common
+  Merchant: Dashboard.Common
+  MerchantOperatingCity: Dashboard.Common
+  Value: Data.Aeson
+
+module: FeedbackForm
+
+apis:
+  - POST: # CreateFeedbackFormAPI
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateFeedbackFormReq
+      response:
+        type: CreateFeedbackFormRes
+
+  - PUT: # UpdateFeedbackFormAPI
+      endpoint: /{feedbackFormId}/update
+      auth: ApiAuthV2
+      params:
+        feedbackFormId: Text
+      request:
+        type: UpdateFeedbackFormReq
+      response:
+        type: APISuccess
+
+  - DELETE: # DeleteFeedbackFormAPI
+      endpoint: /{feedbackFormId}/delete
+      auth: ApiAuthV2
+      params:
+        feedbackFormId: Text
+      response:
+        type: APISuccess
+
+  - GET: # GetFeedbackFormAPI
+      endpoint: /{feedbackFormId}
+      auth: ApiAuthV2
+      params:
+        feedbackFormId: Text
+      response:
+        type: FeedbackFormRes
+
+types:
+  Category:
+    - enum: "RIDE,DRIVER,VEHICLE"
+    - derive: "Kernel.Prelude.ToParamSchema"
+
+  CreateFeedbackFormReq:
+    - categoryName: Category
+    - rating: Maybe Int
+    - question: Text
+    - questionTranslations: Maybe [Translation]
+    - answer: '[Text]'
+    - answerType: AnswerType
+    - badges: Maybe [BadgeDetail]
+    - merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    - merchantId: Maybe (Id Merchant)
+    - derive: "'HideSecrets"
+
+  CreateFeedbackFormRes:
+    - feedbackFormId: Text
+
+  UpdateFeedbackFormReq:
+    - categoryName: Maybe Category
+    - rating: Maybe Int
+    - question: Maybe Text
+    - questionTranslations: Maybe [Translation]
+    - answer: Maybe [Text]
+    - answerType: Maybe AnswerType
+    - badges: Maybe [BadgeDetail]
+    - merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    - merchantId: Maybe (Id Merchant)
+    - derive: "'HideSecrets"
+
+  FeedbackFormRes:
+    - id: Text
+    - categoryName: Category
+    - rating: Maybe Int
+    - question: Text
+    - questionTranslations: Maybe [Translation]
+    - answer: '[Text]'
+    - answerType: AnswerType
+    - badges: Maybe [BadgeDetail]
+    - merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    - merchantId: Maybe (Id Merchant)
+
+  AnswerType:
+    - enum: "Text,Checkbox,Radio"
+
+  BadgeDetail:
+    - sendPN: Bool
+    - key: Text
+    - priority: Maybe Int
+    - contentWithTranslations: Maybe [Translation]
