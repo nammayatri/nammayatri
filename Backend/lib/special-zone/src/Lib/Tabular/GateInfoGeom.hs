@@ -43,6 +43,7 @@ mkPersist
       createdAt UTCTime
       updatedAt UTCTime
       gateTags [Text] Maybe
+      walkDescription Text Maybe
       Primary id
       deriving Generic
     |]
