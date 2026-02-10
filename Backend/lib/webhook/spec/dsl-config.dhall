@@ -192,6 +192,7 @@ in  { _output = outputPath
       { _sqlTypeMapper = sqlMapper
       , _extraDefaultFields = extraDefaultFields
       , _defaultCachedQueryKeyPrefix = "webhook"
+      , _cacheFlowType = None
       }
     , _defaultImports = defaultImports
     , _defaultTypeImportMapper = defaultTypeImportMapper
