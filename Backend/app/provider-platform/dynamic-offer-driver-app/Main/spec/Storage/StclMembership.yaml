@@ -18,6 +18,9 @@ StclMembership:
     lastName: Text
     memberCategory: Text
     numberOfShares: Int
+    applicationCount: Maybe Int
+    shareStartCount: Maybe Int
+    shareEndCount: Maybe Int
     dateOfBirth: Day
     panNumber: EncryptedHashedField e Text
     mobileNumber: EncryptedHashedField e Text

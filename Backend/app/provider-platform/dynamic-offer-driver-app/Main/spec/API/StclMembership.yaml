@@ -79,6 +79,9 @@ types:
     nomineeInfo: NomineeInfo
     declaration: Declaration
     status: ApplicationStatus
+    applicationCount: Maybe Int
+    shareStartCount: Maybe Int
+    shareEndCount: Maybe Int
     createdAt: UTCTime
     updatedAt: UTCTime
 

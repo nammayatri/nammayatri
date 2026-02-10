@@ -21,6 +21,7 @@ import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Interface.Types as PaymentTypes
 import qualified Kernel.External.Payment.Types as PaymentService
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common (Money (..), toHighPrecMoney)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -171,6 +172,9 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             Domain.termsAccepted = req.declaration.termsAccepted,
             Domain.status = Domain.PENDING,
             Domain.paymentStatus = Nothing,
+            Domain.applicationCount = Nothing,
+            Domain.shareStartCount = Nothing,
+            Domain.shareEndCount = Nothing,
             Domain.merchantId = merchantId,
             Domain.merchantOperatingCityId = merchantOperatingCityId,
             Domain.createdAt = now,
@@ -252,6 +256,9 @@ getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
               APITypes.stateName = membership.addressState,
               APITypes.postalCode = membership.addressPostalCode
             },
+        APITypes.applicationCount = membership.applicationCount,
+        APITypes.shareStartCount = membership.shareStartCount,
+        APITypes.shareEndCount = membership.shareEndCount,
         APITypes.bankDetails =
           APITypes.BankDetails
             { APITypes.bankName = membership.bankName,
@@ -283,7 +290,8 @@ getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
 stclMemberShipOrderStatusHandler ::
   ( EsqDBFlow m r,
     MonadFlow m,
-    CacheFlow m r
+    CacheFlow m r,
+    Redis.HedisFlow m r
   ) =>
   LibPayment.PaymentStatusResp ->
   Id DOrder.PaymentOrder ->
@@ -331,6 +339,11 @@ stclMemberShipOrderStatusHandler paymentStatusResp paymentOrderId = do
               | otherwise -> Domain.PENDING
             _ -> Domain.PENDING
       logInfo $ "Updating membership to status: " <> show newStatus <> ", paymentStatus: " <> show paymentStatusText
+      -- When status becomes SUBMITTED, update application count and share range FIRST (before status update)
+      -- so findLatestSubmittedMembership doesn't return the current record
+      when (newStatus == Domain.SUBMITTED) $ do
+        QStclMembership.updateApplicationAndShareCounts membership.id membership.numberOfShares
+        logInfo $ "Updated application and share counts for SUBMITTED membership"
       -- Update membership with new status and payment status
       -- updateStatusAndPaymentStatus generates updatedAt internally
       QStclMembership.updateStatusAndPaymentStatus newStatus paymentStatusText membership.id
