@@ -53,3 +53,10 @@ ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN short_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN payment_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN share_start_count integer ;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN share_end_count integer ;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN application_count integer ;
