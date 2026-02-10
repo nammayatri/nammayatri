@@ -82,14 +82,13 @@ findIncidentToResolveByAlertName limit offset alertName resolvedTime = do
 
 updateToResolved ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.AlertIncident.IncidentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.AlertIncident.AlertIncident -> m ())
-updateToResolved status resolvedTime downtimeSeconds rca id = do
+  (Domain.Types.AlertIncident.IncidentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.AlertIncident.AlertIncident -> m ())
+updateToResolved status resolvedTime downtimeSeconds id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.status status,
       Se.Set Beam.resolvedTime resolvedTime,
       Se.Set Beam.downtimeSeconds downtimeSeconds,
-      Se.Set Beam.rca rca,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

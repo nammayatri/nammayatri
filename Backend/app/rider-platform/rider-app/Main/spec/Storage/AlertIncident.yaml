@@ -79,7 +79,6 @@ AlertIncident:
         - status
         - resolvedTime
         - downtimeSeconds
-        - rca
         - updatedAt
       where: id
 

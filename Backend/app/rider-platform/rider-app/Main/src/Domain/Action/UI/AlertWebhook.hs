@@ -8,6 +8,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime, diffUTCTime)
 import qualified Domain.Types.AlertIncident as Domain
+import qualified Domain.Types.AlertIncidentTimeline as DomainTimeline
 import qualified Environment
 import EulerHS.Prelude hiding (forM_, id, length)
 import Kernel.Prelude
@@ -15,40 +16,81 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.AlertIncident as QAlertIncident
+import qualified Storage.Queries.AlertIncidentTimeline as QAlertIncidentTimeline
 
 -- | Process VictoriaMetrics vmalert webhook
--- Handles both 'firing' and 'resolved' alert statuses
-postApiV1AlertsUpdate :: Maybe Bool -> Maybe Text -> Types.VmAlertWebhookReq -> Environment.Flow APISuccess.APISuccess
-postApiV1AlertsUpdate isManual mbRca req = do
+postApiV1AlertsUpdate ::
+  Maybe Bool ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Types.VmAlertWebhookReq ->
+  Environment.Flow APISuccess.APISuccess
+postApiV1AlertsUpdate isManual mbIncidentId mbUpdateType mbUpdateValue req = do
   logInfo $
     "Received alert webhook: status=" <> req.status
-      <> ", alerts_count="
-      <> show (length req.alerts)
-      <> ", receiver="
-      <> fromMaybe "unknown" req.receiver
+      <> ", updateType="
+      <> fromMaybe "N/A" mbUpdateType
+      <> ", incidentId="
+      <> fromMaybe "N/A" mbIncidentId
 
-  -- Serialize the entire request to JSON for rawPayload
+  -- Validation: if isManual is True, incidentId must be provided
+  let isManual' = fromMaybe False isManual
+  when (isManual' && isNothing mbIncidentId) $ do
+    logError "Manual update requested but no incidentId provided"
+    throwError $ InternalError "Manual update requested but no incidentId provided"
+
+  -- Serialize the entire request to JSON for rawPayload (used when creating new incident)
   let rawPayload = decodeUtf8 $ A.encode req
 
   forM_ req.alerts $ \alert -> do
-    case T.toLower req.status of
-      "firing" -> handleFiringAlert isManual req alert rawPayload
-      "resolved" -> handleResolvedAlert isManual mbRca req alert rawPayload
-      unknownStatus -> do
-        logError $ "Unknown alert status: " <> unknownStatus <> " for alert: " <> alert.labels.alertname
-        -- Don't throw error to avoid blocking other valid alerts
-        pure ()
+    -- 1. Find or Create Incident
+    mbIncident <- getIncident isManual' mbIncidentId alert
+
+    case mbIncident of
+      Nothing -> do
+        -- If no incident found and it's firing, create one
+        let statusStr = fromMaybe req.status mbUpdateType
+        if T.toLower statusStr == "firing"
+          then do
+            incidentId <- handleFiringAlert isManual req alert rawPayload
+            -- 2. Add to Timeline
+            addTimelineEntry incidentId (fromMaybe "firing" mbUpdateType) mbUpdateValue alert
+          else logWarning $ "No incident found to update for alert: " <> alert.labels.alertname
+      Just incident -> do
+        -- 2. Update AlertIncident Table if status-related
+        let statusStr = fromMaybe req.status mbUpdateType
+        case T.toLower statusStr of
+          "firing" -> do
+            logInfo $ "Incident " <> show incident.id <> " is already firing or being updated to firing"
+          "resolved" -> do
+            resolvedTime <- getCurrentTime
+            let actualResolvedTime = if mbUpdateType == Just "resolved" then resolvedTime else alert.endsAt
+            handleResolvedStatus incident actualResolvedTime
+          _ -> logInfo $ "Non-status update for incident " <> show incident.id
+
+        -- 3. Always add to Timeline
+        addTimelineEntry incident.id (fromMaybe req.status mbUpdateType) mbUpdateValue alert
 
   pure APISuccess.Success
 
--- | Helper to get service name from labels
-getServiceName :: Types.AlertLabels -> Text
-getServiceName labels = fromMaybe "unknown" (labels.alert)
+-- | Helper to find incident based on isManual and incidentId or description
+getIncident :: Bool -> Maybe Text -> Types.AlertDetail -> Environment.Flow (Maybe Domain.AlertIncident)
+getIncident True (Just incidentIdText) _ = do
+  let incidentId = Id incidentIdText
+  QAlertIncident.findById incidentId
+getIncident _ _ alert = do
+  let description' = alert.annotations.description
+  existingIncidents <-
+    QAlertIncident.findFiringIncident
+      (Just 1)
+      Nothing
+      description'
+      Domain.FIRING
+  pure $ listToMaybe existingIncidents
 
--- | Handle firing alert - create new incident if not already exists
--- For manual incidents (isManual == Just True), we look up existing FIRING incidents by alertName.
--- For non-manual incidents, we keep the existing description-based lookup.
-handleFiringAlert :: Maybe Bool -> Types.VmAlertWebhookReq -> Types.AlertDetail -> Text -> Environment.Flow ()
+-- | Handle firing alert - create new incident and return its ID
+handleFiringAlert :: Maybe Bool -> Types.VmAlertWebhookReq -> Types.AlertDetail -> Text -> Environment.Flow (Id Domain.AlertIncident)
 handleFiringAlert isManual req alert rawPayload = do
   let alertName = alert.labels.alertname
       serviceName = getServiceName alert.labels
@@ -59,132 +101,68 @@ handleFiringAlert isManual req alert rawPayload = do
       receiver' = req.receiver
       externalURL' = req.externalURL
 
-  -- Query: Check if FIRING incident already exists
-  let isManual' = fromMaybe False isManual
-  existingIncidents <-
-    if isManual'
-      then
-        QAlertIncident.findFiringIncidentByAlertName
-          (Just 1) -- limit
-          Nothing -- offset
-          alertName
-          Domain.FIRING
-      else
-        QAlertIncident.findFiringIncident
-          (Just 1) -- limit
-          Nothing -- offset
-          description'
-          Domain.FIRING
+  incidentId <- generateGUID
+  now <- getCurrentTime
 
-  case existingIncidents of
-    (existingIncident : _) -> do
-      -- Incident already exists, ignore duplicate
-      logInfo $
-        "Ignoring duplicate firing alert for incident: " <> show existingIncident.id
-          <> ", alertName: "
-          <> alertName
-          <> ", service: "
-          <> serviceName
-    [] -> do
-      -- No existing firing incident, create new one
-      logInfo $
-        "Creating new incident for alert: " <> alertName
-          <> ", service: "
-          <> serviceName
-          <> ", description: "
-          <> fromMaybe "N/A" description'
+  let incident =
+        Domain.AlertIncident
+          { id = incidentId,
+            alertName = alertName,
+            serviceName = serviceName,
+            alertGroup = alertGroup',
+            description = description',
+            severity = severity',
+            firingTime = firingTime,
+            resolvedTime = Nothing,
+            downtimeSeconds = Nothing,
+            status = Domain.FIRING,
+            receiver = receiver',
+            externalURL = externalURL',
+            rawPayload = Just rawPayload,
+            isManuallyEntered = isManual,
+            rca = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
 
-      incidentId <- generateGUID
-      now <- getCurrentTime
+  QAlertIncident.create incident
+  logInfo $ "Created incident with id: " <> show incidentId <> " for alert: " <> alertName
+  pure incidentId
 
-      let incident =
-            Domain.AlertIncident
-              { id = incidentId,
-                alertName = alertName,
-                serviceName = serviceName,
-                alertGroup = alertGroup',
-                description = description',
-                severity = severity',
-                firingTime = firingTime,
-                resolvedTime = Nothing,
-                downtimeSeconds = Nothing,
-                status = Domain.FIRING,
-                receiver = receiver',
-                externalURL = externalURL',
-                rawPayload = Just rawPayload,
-                isManuallyEntered = isManual,
-                rca = Nothing,
-                createdAt = now,
-                updatedAt = now
-              }
+-- | Handle resolved status update in AlertIncident table
+handleResolvedStatus :: Domain.AlertIncident -> UTCTime -> Environment.Flow ()
+handleResolvedStatus incident resolvedTime = do
+  let downtimeSeconds = floor $ diffUTCTime resolvedTime incident.firingTime
+  now <- getCurrentTime
+  QAlertIncident.updateToResolved
+    Domain.RESOLVED
+    (Just resolvedTime)
+    (Just downtimeSeconds)
+    now
+    incident.id
 
-      QAlertIncident.create incident
-      logInfo $
-        "Created incident with id: " <> show incidentId
-          <> " for alert: "
-          <> alertName
+-- | Add entry to AlertIncidentTimeline
+addTimelineEntry :: Id Domain.AlertIncident -> Text -> Maybe Text -> Types.AlertDetail -> Environment.Flow ()
+addTimelineEntry incidentId eventType mbContent alert = do
+  timelineId <- generateGUID
+  now <- getCurrentTime
+  let content' = mbContent <|> alert.annotations.description
 
--- | Handle resolved alert - find unresolved incident and update it
--- If isManual == Just True, we look up unresolved incidents by alertName.
--- Otherwise we keep the existing description-based lookup.
-handleResolvedAlert :: Maybe Bool -> Maybe Text -> Types.VmAlertWebhookReq -> Types.AlertDetail -> Text -> Environment.Flow ()
-handleResolvedAlert isManual mbRca _req alert _rawPayload = do
-  let alertName = alert.labels.alertname
-      serviceName = getServiceName alert.labels
-      description' = alert.annotations.description
-      resolvedTime = alert.endsAt
+  let timelineEntry =
+        DomainTimeline.AlertIncidentTimeline
+          { id = timelineId,
+            incidentId = incidentId,
+            eventTime = now,
+            eventType = eventType,
+            content = content',
+            attachments = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
 
-  -- Query: Find unresolved incident (resolvedTime is NULL)
-  let isManual' = fromMaybe False isManual
-  unresolvedIncidents <-
-    if isManual'
-      then
-        QAlertIncident.findIncidentToResolveByAlertName
-          (Just 1) -- limit
-          Nothing -- offset
-          alertName
-          Nothing -- resolvedTime IS NULL
-      else
-        QAlertIncident.findIncidentToResolve
-          (Just 1) -- limit
-          Nothing -- offset
-          description'
-          Nothing -- resolvedTime IS NULL
-  case unresolvedIncidents of
-    (incident : _) -> do
-      -- Update the incident with resolved time and downtime
-      let downtimeSeconds = calculateDowntime incident.firingTime resolvedTime
+  QAlertIncidentTimeline.create timelineEntry
+  logInfo $ "Added timeline entry for incident: " <> show incidentId <> ", type: " <> eventType
 
-      logInfo $
-        "Resolving incident " <> show incident.id
-          <> " for alert: "
-          <> alertName
-          <> ", service: "
-          <> serviceName
-          <> ", downtime: "
-          <> show downtimeSeconds
-          <> "s"
-
-      QAlertIncident.updateToResolved
-        Domain.RESOLVED
-        (Just resolvedTime)
-        (Just downtimeSeconds)
-        mbRca
-        incident.id
-
-      logInfo $ "Successfully resolved incident " <> show incident.id
-    [] -> do
-      -- No unresolved incident found
-      logWarning $
-        "No unresolved incident found for resolved alert: "
-          <> alertName
-          <> ", service: "
-          <> serviceName
-          <> ", description: "
-          <> fromMaybe "N/A" description'
-          <> ". This might happen if the firing alert never arrived or was already resolved."
-
--- | Calculate downtime in seconds between firing and resolved times
-calculateDowntime :: UTCTime -> UTCTime -> Int
-calculateDowntime firingTime resolvedTime =
-  floor $ diffUTCTime resolvedTime firingTime
+-- | Helper to get service name from labels
+getServiceName :: Types.AlertLabels -> Text
+getServiceName labels = fromMaybe "unknown" (labels.alert)

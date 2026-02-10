@@ -860,6 +860,7 @@ library
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AadhaarVerification
       Domain.Types.AlertIncident
+      Domain.Types.AlertIncidentTimeline
       Domain.Types.AppInstalls
       Domain.Types.BBPS
       Domain.Types.BBPSConfig
@@ -1015,6 +1016,7 @@ library
       Storage.Beam.AadhaarOtpVerify
       Storage.Beam.AadhaarVerification
       Storage.Beam.AlertIncident
+      Storage.Beam.AlertIncidentTimeline
       Storage.Beam.AmbulanceDetails
       Storage.Beam.AppInstalls
       Storage.Beam.BBPS
@@ -1175,6 +1177,7 @@ library
       Storage.Queries.AadhaarOtpVerify
       Storage.Queries.AadhaarVerification
       Storage.Queries.AlertIncident
+      Storage.Queries.AlertIncidentTimeline
       Storage.Queries.AppInstalls
       Storage.Queries.BBPS
       Storage.Queries.BBPSConfig

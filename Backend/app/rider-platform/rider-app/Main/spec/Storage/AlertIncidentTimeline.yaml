@@ -1,0 +1,40 @@
+imports:
+  Value: Data.Aeson
+  AlertIncident: Domain.Types.AlertIncident
+
+AlertIncidentTimeline:
+  tableName: alert_incident_timeline
+
+  fields:
+    id: Id AlertIncidentTimeline
+    incidentId: Id AlertIncident
+    eventTime: UTCTime
+    eventType: Text
+    content: Maybe Text
+    attachments: Maybe Value
+    createdAt: UTCTime
+
+  sqlType:
+    id: character(36)
+    incidentId: character(36)
+    eventTime: timestamp with time zone
+    eventType: character varying(50)
+    content: text
+    attachments: jsonb
+    createdAt: timestamp with time zone
+
+  constraints:
+    id: PrimaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  queries:
+    create:
+      kvFunction: createWithKV
+
+    findByIncidentId:
+      kvFunction: findAllWithOptionsKV
+      where: incidentId
+      orderBy:
+        field: eventTime
+        order: asc
