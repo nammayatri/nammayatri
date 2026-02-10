@@ -524,11 +524,15 @@ findAllRideItems ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Text ->
+  Maybe Text ->
   m [RideItem]
-findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbFrom mbTo mbVehicleNo = do
+findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbFrom mbTo mbVehicleNo mbFleetOwnerId = do
   case mbRideShortId of
     Just rideShortId -> do
       ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
+      case mbFleetOwnerId of
+        Just foid | ride.fleetOwnerId /= Just (Id foid) -> throwError $ InvalidRequest "Ride not found under fleet"
+        _ -> pure ()
       booking <- findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId ride.bookingId] >>= fromMaybeM (BookingNotFound $ "for ride id: " <> ride.id.getId)
       rideDetails <- findOneWithKV [Se.Is BeamRD.id $ Se.Eq $ getId ride.id] >>= fromMaybeM (RideNotFound $ "for ride id: " <> ride.id.getId)
       riderDetails <- findOneWithKV [Se.Is BeamRDR.id $ Se.Eq $ getId $ fromJust booking.riderId | isJust booking.riderId] >>= fromMaybeM (RiderDetailsNotFound $ "for booking id: " <> booking.id.getId)
@@ -549,10 +553,11 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                       )
                   ]
                   Nothing
-              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.Is BeamR.id $ Se.In $ getId . RideDetails.id <$> rideDetails] Nothing
+              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.And ([Se.Is BeamR.id $ Se.In $ getId . RideDetails.id <$> rideDetails] <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq $ Just foid]) mbFleetOwnerId)] Nothing
+              let rideDetails' = filter (\rd -> rd.id `elem` map (.id) rides) rideDetails
               bookings <- findAllFromKvRedis [Se.Is BeamB.id $ Se.In (getId . Ride.bookingId <$> rides)] Nothing
               riderDetails <- findAllWithKV [Se.Is BeamRDR.id $ Se.In $ mapMaybe (fmap getId . Booking.riderId) bookings]
-              pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
+              pure $ mkRideItemUsingMaps rides rideDetails' bookings riderDetails
             (_, Just vehicleNo, _) -> do
               rideDetails <-
                 findAllFromKvRedis
@@ -564,7 +569,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                       )
                   ]
                   Nothing
-              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.Is BeamR.id $ Se.In $ getId . RideDetails.id <$> rideDetails] Nothing
+              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.And ([Se.Is BeamR.id $ Se.In $ getId . RideDetails.id <$> rideDetails] <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq $ Just foid]) mbFleetOwnerId)] Nothing
+              let rideDetails' = filter (\rd -> rd.id `elem` map (.id) rides) rideDetails
               bookings <-
                 findAllFromKvRedis
                   [ Se.And
@@ -574,7 +580,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                   ]
                   Nothing
               riderDetails <- findAllWithKV [Se.Is BeamRDR.id $ Se.In $ mapMaybe (fmap getId . Booking.riderId) bookings]
-              pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
+              pure $ mkRideItemUsingMaps rides rideDetails' bookings riderDetails
             (_, _, Just customerPhoneDBHash) -> do
               riderDetails <- findAllWithKV [Se.Is BeamRDR.mobileNumberHash $ Se.Eq customerPhoneDBHash, Se.Is BeamRDR.merchantId $ Se.Eq $ getId merchant.id]
               bookings <-
@@ -587,7 +593,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                       )
                   ]
                   Nothing
-              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.Is BeamR.bookingId $ Se.In (getId . Booking.id <$> bookings)] Nothing
+              rides <- mkBookingStatusFilter <$> findAllFromKvRedis [Se.And ([Se.Is BeamR.bookingId $ Se.In (getId . Booking.id <$> bookings)] <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq $ Just foid]) mbFleetOwnerId)] Nothing
               rideDetails <- findAllFromKvRedis [Se.Is BeamRD.id $ Se.In $ getId . Ride.id <$> rides] Nothing
               pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
             _ -> pure []
@@ -608,6 +614,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehicleNo -> rideDetails.vehicleNumber B.==?. B.val_ vehicleNo) mbVehicleNo
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fleetOwnerId -> ride.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)) mbFleetOwnerId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus

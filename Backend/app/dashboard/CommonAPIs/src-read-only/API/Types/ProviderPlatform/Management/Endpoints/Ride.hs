@@ -429,7 +429,7 @@ data WaiverRideCancellationPenaltyReq = WaiverRideCancellationPenaltyReq {reason
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("ride" :> (GetRideList :<|> GetRideAgentList :<|> GetRideListV2 :<|> PostRideEndMultiple :<|> PostRideCancelMultiple :<|> GetRideInfo :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp :<|> PostRideWaiverRideCancellationPenalty))
+type API = ("ride" :> (GetRideListHelper :<|> GetRideAgentList :<|> GetRideListV2 :<|> PostRideEndMultiple :<|> PostRideCancelMultiple :<|> GetRideInfo :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp :<|> PostRideWaiverRideCancellationPenalty))
 
 type GetRideList =
   ( "list" :> QueryParam "bookingStatus" BookingStatus :> QueryParam "currency" Kernel.Types.Common.Currency
@@ -437,7 +437,40 @@ type GetRideList =
            "customerPhoneNo"
            Kernel.Prelude.Text
       :> QueryParam "driverPhoneNo" Kernel.Prelude.Text
-      :> QueryParam "from" Kernel.Prelude.UTCTime
+      :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> QueryParam
+           "from"
+           Kernel.Prelude.UTCTime
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "rideShortId"
+           (Kernel.Types.Id.ShortId Dashboard.Common.Ride)
+      :> QueryParam
+           "to"
+           Kernel.Prelude.UTCTime
+      :> Get
+           '[JSON]
+           RideListRes
+  )
+
+type GetRideListHelper =
+  ( Capture "requestorId" Kernel.Prelude.Text :> "list" :> QueryParam "bookingStatus" BookingStatus
+      :> QueryParam
+           "currency"
+           Kernel.Types.Common.Currency
+      :> QueryParam "customerPhoneNo" Kernel.Prelude.Text
+      :> QueryParam "driverPhoneNo" Kernel.Prelude.Text
+      :> QueryParam
+           "fleetOwnerId"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "from"
+           Kernel.Prelude.UTCTime
       :> QueryParam
            "limit"
            Kernel.Prelude.Int
@@ -538,7 +571,7 @@ type PostRideWaiverRideCancellationPenalty =
   )
 
 data RideAPIs = RideAPIs
-  { getRideList :: Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListRes,
+  { getRideList :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListRes,
     getRideAgentList :: Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RideListRes,
     getRideListV2 :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe RideStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListResV2,
     postRideEndMultiple :: MultipleRideEndReq -> EulerHS.Types.EulerClient MultipleRideEndResp,

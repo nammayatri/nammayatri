@@ -102,6 +102,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegV2
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
@@ -767,7 +768,7 @@ postDriverFleetRemoveVehicle ::
   Maybe Text ->
   Flow APISuccess
 postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequestorId = do
-  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId_
+  void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId_
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId_ merchant.fleetOwnerEnabledCheck
   vehicle <- QVehicle.findByRegistrationNo vehicleNo
@@ -1409,7 +1410,7 @@ getDriverFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Maybe 
 getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbHasRequestReason = do
   requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
   fleetOwnersInfo <- getFleetOwnersInfoMerchantBased mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner
-  when (hasFleetMemberHierarchy == Just False) $ mapM_ (checkRequestorAccessToFleet mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
+  when (hasFleetMemberHierarchy == Just False) $ mapM_ (FleetAccess.checkRequestorAccessToFleet False mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
   merchant <- findMerchantByShortId merchantShortId
   when (fromMaybe False merchant.fleetOwnerEnabledCheck) $ mapM_ (\info -> DCommon.checkFleetOwnerVerification info.fleetOwnerId merchant.fleetOwnerEnabledCheck) fleetOwnersInfo
   let fleetOwnerIds = map (.fleetOwnerId) fleetOwnersInfo
@@ -1543,7 +1544,7 @@ getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Maybe
 getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehicleNumber mbIncludeStats mbFrom mbTo mbStatus mbSearchString mbStatusAwareVehicleNo mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner = do
   requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
   fleetOwnersInfo <- getFleetOwnersInfoMerchantBased mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner
-  when (hasFleetMemberHierarchy == Just False) $ mapM_ (checkRequestorAccessToFleet mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
+  when (hasFleetMemberHierarchy == Just False) $ mapM_ (FleetAccess.checkRequestorAccessToFleet False mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
   merchant <- findMerchantByShortId merchantShortId
   when (fromMaybe False merchant.fleetOwnerEnabledCheck) $ mapM_ (\info -> DCommon.checkFleetOwnerVerification info.fleetOwnerId merchant.fleetOwnerEnabledCheck) fleetOwnersInfo
   let fleetOwnerIds = map (.fleetOwnerId) fleetOwnersInfo
@@ -1652,7 +1653,7 @@ getDriverFleetDriverListStats ::
   Flow Common.FleetDriverStatsListRes
 getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mbRequestorId mbSearch mbLimit mbOffset sortDesc sortOnField mbResponseType = do
   -- Ensure requestor has access to this fleet owner (similar to VerifyJoiningOtp flow)
-  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
+  void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -2092,40 +2093,6 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
           }
 
 ---------------------------------------------------------------------
-data FleetOwnerInfo = FleetOwnerInfo
-  { fleetOwner :: DP.Person,
-    mbOperator :: Maybe DP.Person
-  }
-
-checkRequestorAccessToFleet ::
-  Maybe Text ->
-  Text ->
-  Flow FleetOwnerInfo
-checkRequestorAccessToFleet mbRequestorId fleetOwnerId = do
-  fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
-  unless (fleetOwner.role == DP.FLEET_OWNER) $
-    throwError (InvalidRequest "Invalid fleet owner")
-  case mbRequestorId of
-    Nothing -> pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing} -- old flow
-    Just requestorId -> do
-      -- new flow
-      requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
-      case requestor.role of
-        DP.FLEET_OWNER -> do
-          unless (fleetOwner.id == requestor.id) $
-            throwError (InvalidRequest "Invalid fleet owner")
-          pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}
-        DP.OPERATOR -> do
-          association <-
-            QFleetOperatorAssociation.findByFleetIdAndOperatorId fleetOwner.id.getId requestor.id.getId True
-              >>= fromMaybeM (InvalidRequest "FleetOperatorAssociation does not exist") -- TODO add error codes
-          whenJust association.associatedTill $ \associatedTill -> do
-            now <- getCurrentTime
-            when (now > associatedTill) $
-              throwError (InvalidRequest "FleetOperatorAssociation expired")
-          pure $ FleetOwnerInfo {fleetOwner, mbOperator = Just requestor}
-        DP.ADMIN -> pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}
-        _ -> throwError AccessDenied
 
 postDriverFleetSendJoiningOtp ::
   ShortId DM.Merchant ->
@@ -2142,7 +2109,7 @@ postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwner
 
   merchant <- findMerchantByShortId merchantShortId
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
-    void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
+    void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
     DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   smsCfg <- asks (.smsCfg)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -2182,7 +2149,7 @@ postDriverFleetVerifyJoiningOtp ::
   Common.VerifyFleetJoiningOtpReq ->
   Flow APISuccess
 postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbRequestorId req = do
-  FleetOwnerInfo {fleetOwner, mbOperator} <- checkRequestorAccessToFleet mbRequestorId fleetOwnerId
+  FleetAccess.FleetOwnerInfo {fleetOwner, mbOperator} <- FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   mobileNumberHash <- getDbHash req.mobileNumber
@@ -2267,7 +2234,7 @@ postDriverFleetLinkRCWithDriver ::
   Common.LinkRCWithDriverForFleetReq ->
   Flow APISuccess
 postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId mbRequestorId req = do
-  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
+  void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -3538,7 +3505,7 @@ postDriverFleetGetNearbyDriversV2 merchantShortId _ fleetOwnerId req = do
 getDriverFleetDashboardAnalyticsAllTime :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Flow Common.AllTimeFleetAnalyticsRes
 getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId mbRequestorId = do
   -- Ensure requestor has access to this fleet owner (similar to VerifyJoiningOtp flow)
-  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
+  void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -3584,7 +3551,7 @@ getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId mbRe
 getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Common.FleetAnalyticsResponseType -> Data.Time.Day -> Data.Time.Day -> Flow Common.FleetAnalyticsRes
 getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbRequestorId mbResponseType fromDay toDay = do
   -- Ensure requestor has access to this fleet owner (similar to VerifyJoiningOtp flow)
-  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
+  void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -3869,7 +3836,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
 getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Day -> Day -> Flow Common.FleetVehicleStatsRes
 getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbRequestorId mbVehicleNo mbLimit mbOffset fromDay toDay = do
   -- Ensure requestor has access to this fleet owner (similar to VerifyJoiningOtp flow)
-  void $ checkRequestorAccessToFleet mbRequestorId fleetOwnerId
+  void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
