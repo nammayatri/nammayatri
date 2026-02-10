@@ -16,6 +16,8 @@ module Domain.Action.Internal.Rating where
 
 import Data.Foldable ()
 import Data.OpenApi
+import qualified Domain.Types.Feedback as DFeedback
+import qualified Domain.Types.FeedbackBadge as DFeedbackBadge
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -34,16 +36,26 @@ import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Feedback as QFeedback
+import qualified Storage.Queries.FeedbackBadge as QFeedbackBadge
+import qualified Storage.Queries.FeedbackBadgeExtra as QFeedbackBadgeExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error (RatingError (..))
 
+data FeedbackAnswer = FeedbackAnswer
+  { questionId :: Text,
+    answer :: [Text]
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
 data FeedbackReq = FeedbackReq
   { rideId :: Id DRide.BPPRide,
     ratingValue :: Int,
     feedbackDetails :: Maybe Text,
-    wasOfferedAssistance :: Maybe Bool
+    wasOfferedAssistance :: Maybe Bool,
+    feedbackAnswers :: Maybe [FeedbackAnswer]
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
@@ -84,6 +96,9 @@ rating apiKey FeedbackReq {..} = do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       QRating.updateRating ratingValue feedbackDetails wasOfferedAssistance Nothing rideRating.id booking.riderId
+  whenJust feedbackAnswers $ \answers ->
+    unless (null answers) $
+      addDriverFeedbackAnswers ride booking.riderId (Just booking.merchantId) booking.merchantOperatingCityId (Just ratingValue) answers
   calculateAverageRating booking.riderId merchant.minimumDriverRatesCount ratingValue person.totalRatings person.totalRatingScore
   pure Success
 
@@ -127,3 +142,85 @@ validateRequest :: (MonadFlow m) => Int -> RideStatus -> m ()
 validateRequest ratingValue rideStatus = do
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   unless (rideStatus == DRide.COMPLETED) $ throwError (RideInvalidStatus "Feedback available only for completed rides.")
+
+addDriverFeedbackAnswers ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DRide.Ride ->
+  Id DP.Person ->
+  Maybe (Id DM.Merchant) ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Int ->
+  [FeedbackAnswer] ->
+  m ()
+addDriverFeedbackAnswers ride riderId merchantId merchantOperatingCityId mbRating feedbackAnswers = do
+  let feedbackChipsList = concatMap (.answer) feedbackAnswers
+  unless (null feedbackChipsList) $ do
+    newFeedbacks <- mapM (buildFeedback ride riderId merchantId merchantOperatingCityId mbRating) feedbackChipsList
+    QFeedback.createMany newFeedbacks
+    traverse_ (insertOrUpdateFeedbackBadge riderId merchantId merchantOperatingCityId) feedbackChipsList
+
+buildFeedback ::
+  MonadFlow m =>
+  DRide.Ride ->
+  Id DP.Person ->
+  Maybe (Id DM.Merchant) ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Int ->
+  Text ->
+  m DFeedback.Feedback
+buildFeedback ride riderId merchantId merchantOperatingCityId mbRating badge = do
+  id <- Id <$> L.generateGUID
+  now <- getCurrentTime
+  pure $
+    DFeedback.Feedback
+      { id = id,
+        badge = badge,
+        badgeKey = Nothing,
+        createdAt = now,
+        rideId = ride.id,
+        riderId = riderId,
+        merchantId = merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
+        rating = mbRating
+      }
+
+insertOrUpdateFeedbackBadge ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DP.Person ->
+  Maybe (Id DM.Merchant) ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  m ()
+insertOrUpdateFeedbackBadge riderId merchantId merchantOperatingCityId badge = do
+  feedbackBadge <- QFeedbackBadgeExtra.findFeedbackBadgeForRider riderId badge
+  case feedbackBadge of
+    Just feedbackBadgeItem -> do
+      let badgeCount = feedbackBadgeItem.badgeCount + 1
+      QFeedbackBadgeExtra.updateFeedbackBadge feedbackBadgeItem badgeCount
+    Nothing -> do
+      newFeedbackBadge <- buildFeedbackBadge riderId badge merchantId merchantOperatingCityId
+      QFeedbackBadge.create newFeedbackBadge
+
+buildFeedbackBadge ::
+  MonadFlow m =>
+  Id DP.Person ->
+  Text ->
+  Maybe (Id DM.Merchant) ->
+  Id DMOC.MerchantOperatingCity ->
+  m DFeedbackBadge.FeedbackBadge
+buildFeedbackBadge riderId badge merchantId merchantOperatingCityId = do
+  let badgeCount = 1
+  id <- Id <$> L.generateGUID
+  now <- getCurrentTime
+  pure $
+    DFeedbackBadge.FeedbackBadge
+      { id = id,
+        badge = badge,
+        badgeKey = Nothing,
+        badgeCount = badgeCount,
+        riderId = riderId,
+        createdAt = now,
+        updatedAt = now,
+        merchantId = merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId
+      }

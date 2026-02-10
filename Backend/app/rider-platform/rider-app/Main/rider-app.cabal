@@ -593,6 +593,7 @@ library
       Storage.Queries.ExophoneExtra
       Storage.Queries.Extra.Transformers.Ride
       Storage.Queries.FareBreakupExtra
+      Storage.Queries.FeedbackBadgeExtra
       Storage.Queries.FeedbackFormExtra
       Storage.Queries.FRFSQuoteExtra
       Storage.Queries.FRFSSearchExtra
@@ -900,6 +901,8 @@ library
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareBreakup
+      Domain.Types.Feedback
+      Domain.Types.FeedbackBadge
       Domain.Types.FeedbackForm
       Domain.Types.FRFSConfig
       Domain.Types.FRFSFarePolicy
@@ -1060,6 +1063,8 @@ library
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.FareBreakup
+      Storage.Beam.Feedback
+      Storage.Beam.FeedbackBadge
       Storage.Beam.FeedbackForm
       Storage.Beam.FRFSConfig
       Storage.Beam.FRFSFarePolicy
@@ -1223,6 +1228,8 @@ library
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
+      Storage.Queries.Feedback
+      Storage.Queries.FeedbackBadge
       Storage.Queries.FeedbackForm
       Storage.Queries.FRFSConfig
       Storage.Queries.FRFSFarePolicy
@@ -1287,6 +1294,8 @@ library
       Storage.Queries.OrphanInstances.Estimate
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareBreakup
+      Storage.Queries.OrphanInstances.Feedback
+      Storage.Queries.OrphanInstances.FeedbackBadge
       Storage.Queries.OrphanInstances.FeedbackForm
       Storage.Queries.OrphanInstances.FRFSQuote
       Storage.Queries.OrphanInstances.FRFSSearch

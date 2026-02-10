@@ -1,0 +1,38 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+FeedbackBadge:
+  tableName: feedback_badge
+
+  fields:
+    id : Id FeedbackBadge
+    riderId : Id Person
+    badge : Text
+    badgeKey : Maybe Text
+    badgeCount : Int
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    badge: character varying (255)
+    badgeKey: character varying (255)
+    badgeCount: integer
+
+  excludedFields: [createdAt, updatedAt]
+
+  queries:
+    findByRiderId:
+      kvFunction: findAllWithKV
+      where: riderId
+
+
+
+

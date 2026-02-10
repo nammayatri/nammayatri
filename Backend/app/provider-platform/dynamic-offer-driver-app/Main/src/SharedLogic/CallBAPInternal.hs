@@ -30,10 +30,17 @@ import qualified Kernel.Utils.Servant.Client as EC
 import Servant hiding (throwError)
 import Tools.Metrics (CoreMetrics)
 
+data FeedbackAnswer = FeedbackAnswer
+  { questionId :: Text,
+    answer :: [Text]
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
 data FeedbackReq = FeedbackReq
   { rideId :: Id DRide.Ride,
     ratingValue :: Int,
-    feedbackDetails :: Maybe Text
+    feedbackDetails :: Maybe Text,
+    feedbackAnswers :: Maybe [FeedbackAnswer]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
