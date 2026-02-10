@@ -2718,6 +2718,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
           defaultDriverExtra = reqT.defaultDriverExtra <|> (mbGate >>= (.defaultDriverExtra))
           geom = reqT.geom <|> mbGeom
           gateTags = reqT.gateTags <|> (mbGate >>= (.gateTags))
+          walkDescription = reqT.walkDescription <|> (mbGate >>= (.walkDescription))
       return $
         D.GateInfo
           { name = reqT.name,

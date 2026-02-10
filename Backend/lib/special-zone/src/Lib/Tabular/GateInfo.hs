@@ -45,6 +45,7 @@ mkPersist
       updatedAt UTCTime
       gateType Domain.GateType
       gateTags [Text] Maybe
+      walkDescription Text Maybe
       Primary id
       deriving Generic
     |]
