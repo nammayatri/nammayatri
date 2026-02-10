@@ -37,7 +37,9 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.CityDetector as CityDetector
 import qualified SharedLogic.FarePolicy as SFP
+import Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Tools.Error
 import Utils.Common.Cac.KeyNameConstants (CacKey (..))
 
 -- | Data structure representing a journey segment between two points
@@ -64,7 +66,7 @@ data SegmentCalculationContext = SegmentCalculationContext
     transporterConfig :: DTConf.TransporterConfig,
     isDashboardRequest :: Bool,
     transactionId :: Text,
-    vehicleServiceTier :: Maybe DTC.ServiceTierType, -- Maybe because it could be Nothing in Search flow
+    vehicleServiceTier :: DTC.ServiceTierType,
     dynamicPricingLogicVersion :: Maybe Int,
     configInExperimentVersions :: [LYT.ConfigVersionMap],
     isScheduled :: Bool -- Whether the overall journey is scheduled (used for trip category determination)
@@ -227,9 +229,13 @@ processSegmentsForCharges ctx journeySegments flowName = do
     segmentSourceCityResult <- CityDetector.getNearestOperatingAndSourceCity ctx.merchant segment.segmentFrom
     segmentMerchantOpCity <- CQMOC.getMerchantOpCity ctx.merchant (Just segmentSourceCityResult.nearestOperatingCity.city)
 
-    -- Check if this segment crosses city/state boundaries
+    -- Get transporter config for THIS segment's source merchant operating city
+    -- This is important because intercity/crosscity detection depends on the source city's config
+    segmentTransporterConfig <- CCT.findByMerchantOpCityId segmentMerchantOpCity.id (Just (TransactionId (Id ctx.transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist segmentMerchantOpCity.id.getId)
+
+    -- Check if this segment crosses city/state boundaries using segment-specific config
     (segmentIsIntercity, segmentIsCrossCity, mbSegmentDestinationTravelCityName) <-
-      CityDetector.checkForIntercityOrCrossCity ctx.transporterConfig (Just segment.segmentTo) segmentSourceCityResult.sourceCity ctx.merchant
+      CityDetector.checkForIntercityOrCrossCity segmentTransporterConfig (Just segment.segmentTo) segmentSourceCityResult.sourceCity ctx.merchant
 
     logDebug $ "[STATE_ENTRY_PERMIT][" <> flowName <> "] segment classification isIntercity=" <> show segmentIsIntercity <> ", isCrossCity=" <> show segmentIsCrossCity <> ", destTravelCityName=" <> show mbSegmentDestinationTravelCityName
 
@@ -240,13 +246,6 @@ processSegmentsForCharges ctx journeySegments flowName = do
           let segmentTripCategory = constructSegmentTripCategory segmentIsIntercity segmentIsCrossCity mbSegmentDestinationTravelCityName ctx.isScheduled
 
           -- Use getFarePolicy directly to get the fare policy for this segment
-          -- Provide default service tier based on trip category if not specified
-          let defaultServiceTier = case segmentTripCategory of
-                DTC.CrossCity _ _ -> DTC.AUTO_RICKSHAW
-                DTC.InterCity _ _ -> DTC.AUTO_RICKSHAW
-                _ -> DTC.AUTO_RICKSHAW -- Default for intracity
-              serviceTier = fromMaybe defaultServiceTier ctx.vehicleServiceTier
-
           segmentFarePolicy <-
             SFP.getFarePolicy
               (Just segment.segmentFrom)
@@ -258,7 +257,7 @@ processSegmentsForCharges ctx journeySegments flowName = do
               segmentMerchantOpCity.id
               ctx.isDashboardRequest
               segmentTripCategory
-              serviceTier
+              ctx.vehicleServiceTier
               Nothing -- area (optional)
               Nothing -- booking start time (optional)
               ctx.dynamicPricingLogicVersion

@@ -259,6 +259,7 @@ import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Pricing
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
+import qualified SharedLogic.StateEntryPermitDetector as SEPD
 import qualified SharedLogic.Type as SLT
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
@@ -309,6 +310,7 @@ import qualified Storage.Queries.VendorFee as QVF
 import qualified Tools.Auth as Auth
 import Tools.Error
 import Tools.Event
+import Tools.Maps ()
 import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification hiding (ImageType, length)
@@ -1740,6 +1742,34 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       unlessM (validateSearchTryActive searchTry.id) $ do
         logError ("RideRequestAlreadyAcceptedOrCancelled " <> "in respond quote for searchTryId:" <> getId searchTry.id <> " estimateId:" <> estimateId <> " driverId:" <> getId driver.id <> " and srfdId:" <> getId sReqFD.id)
         throwError (RideRequestAlreadyAcceptedOrCancelled sReqFD.id.getId)
+
+      -- Calculate segment-based state entry permit charges (same logic as Search flow)
+      -- For single-segment journeys, this returns Nothing and calculateFareParametersV2 will use farePolicy value
+      let ctx =
+            SEPD.SegmentCalculationContext
+              { merchant = merchant,
+                transporterConfig = transporterConfig,
+                isDashboardRequest = False,
+                transactionId = searchReq.transactionId,
+                vehicleServiceTier = sReqFD.vehicleServiceTier,
+                dynamicPricingLogicVersion = searchReq.dynamicPricingLogicVersion,
+                configInExperimentVersions = searchReq.configInExperimentVersions,
+                isScheduled = searchReq.isScheduled
+              }
+      result <-
+        withTryCatch "calculateSegmentCharges:RespondQuote" $
+          SEPD.calculateStateEntryPermitChargesWithSegments
+            ctx
+            (Maps.getCoordinates searchReq.fromLocation)
+            (map Maps.getCoordinates searchReq.stops)
+            (Maps.getCoordinates <$> searchReq.toLocation)
+            [searchTry.tripCategory]
+            "RespondQuote"
+      mbStateEntryPermitCharges <- case result of
+        Right charges -> return charges -- Nothing for single segment, Just value for multi-segment
+        Left err -> do
+          logError $ "[STATE_ENTRY_PERMIT][RespondQuote] Segment calculation failed: " <> show err
+          return Nothing -- Let calculateFareParametersV2 use farePolicy value
       fareParams <- do
         FCV2.calculateFareParametersV2
           CalculateFareParametersParams
@@ -1759,7 +1789,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
               tollCharges = searchReq.tollCharges,
-              stateEntryPermitCharges = Nothing,
+              stateEntryPermitCharges = mbStateEntryPermitCharges,
               estimatedRideDuration = searchReq.estimatedDuration,
               nightShiftOverlapChecking = DTC.isFixedNightCharge searchTry.tripCategory,
               estimatedCongestionCharge = Nothing,

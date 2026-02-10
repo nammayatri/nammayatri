@@ -337,35 +337,35 @@ handler ValidatedDSearchReq {..} sReq = do
   let vehicleServiceTiers = nub $ map (.vehicleServiceTier) selectedFarePolicies
   statePermitChargesMap <-
     foldM
-      ( \acc vst -> do
+      ( \acc serviceTier -> do
           let ctx =
                 SEPD.SegmentCalculationContext
                   { merchant = merchant,
                     transporterConfig = transporterConfig,
                     isDashboardRequest = sReq.isDashboardRequest,
                     transactionId = sReq.transactionId,
-                    vehicleServiceTier = Just vst,
+                    vehicleServiceTier = serviceTier,
                     dynamicPricingLogicVersion = mbVersion,
                     configInExperimentVersions = configVersionMap,
                     isScheduled = possibleTripOption.isScheduled
                   }
           result <-
-            withTryCatch ("calculateSegmentCharges:Search:" <> show vst) $
+            withTryCatch ("calculateSegmentCharges:Search:" <> show serviceTier) $
               SEPD.calculateStateEntryPermitChargesWithSegments ctx (Maps.getCoordinates fromLocation) (map Maps.getCoordinates stops) (Maps.getCoordinates <$> sReq.dropLocation) possibleTripOption.tripCategories "Search"
           mbCharges <- case result of
             Right charges -> return charges
             Left err -> do
-              logError $ "[STATE_ENTRY_PERMIT][Search] Segment calculation failed for " <> show vst <> ": " <> show err
+              logError $ "[STATE_ENTRY_PERMIT][Search] Segment calculation failed for " <> show serviceTier <> ": " <> show err
               return Nothing
-          return $ M.insert vst mbCharges acc
+          return $ M.insert serviceTier mbCharges acc
       )
       M.empty
       vehicleServiceTiers
 
   -- Pass segment-based stateEntryPermitCharges to buildEstimate and buildQuote functions
   -- Charges are looked up per vehicle tier from the map
-  let buildEstimateHelper vst = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration (M.findWithDefault Nothing vst statePermitChargesMap)
-  let buildQuoteHelper vst = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (M.findWithDefault Nothing vst statePermitChargesMap)
+  let buildEstimateHelper serviceTier = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration (M.findWithDefault Nothing serviceTier statePermitChargesMap)
+  let buildQuoteHelper serviceTier = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (M.findWithDefault Nothing serviceTier statePermitChargesMap)
   (estimates', quotes) <- foldrM (\fp acc -> processPolicy (buildEstimateHelper fp.vehicleServiceTier) (buildQuoteHelper fp.vehicleServiceTier) fp configVersionMap acc) ([], []) selectedFarePolicies
 
   let mbAutoMaxFare = find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates' <&> (.maxFare)

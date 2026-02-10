@@ -711,8 +711,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
       -- Recalculate stateEntryPermitCharges based on actual stops taken
       -- Build segments from actual pickup, stops, and trip end point
-      let sortedStops = sortOn (.stopOrder) stopsInfo
-          actualStopLocations = map (.stopStartLatLng) sortedStops
+      let actualStopLocations = map (.stopStartLatLng) stopsInfo
           pickupLocation = getCoordinates booking.fromLocation
           journeySegments = SEPD.buildJourneySegmentsFromActualStops pickupLocation actualStopLocations tripEndPoint
       logDebug $
@@ -734,7 +733,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
                 transporterConfig = thresholdConfig,
                 isDashboardRequest = False,
                 transactionId = booking.transactionId,
-                vehicleServiceTier = Just booking.vehicleServiceTier,
+                vehicleServiceTier = booking.vehicleServiceTier,
                 dynamicPricingLogicVersion = booking.dynamicPricingLogicVersion,
                 configInExperimentVersions = booking.configInExperimentVersions,
                 isScheduled = booking.isScheduled
