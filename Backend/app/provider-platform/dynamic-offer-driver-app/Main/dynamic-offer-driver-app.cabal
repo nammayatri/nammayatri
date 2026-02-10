@@ -159,6 +159,7 @@ library
       Domain.Action.Dashboard.Common
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
+      Domain.Action.Dashboard.Fleet.Access
       Domain.Action.Dashboard.Fleet.Driver
       Domain.Action.Dashboard.Fleet.LiveMap
       Domain.Action.Dashboard.Fleet.Onboarding

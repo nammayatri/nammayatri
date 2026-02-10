@@ -56,8 +56,10 @@ import Tools.Error
 getRideList ::
   ShortId DM.Merchant ->
   Context.City ->
+  Text ->
   Maybe Common.BookingStatus ->
   Maybe Currency ->
+  Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Maybe UTCTime ->
@@ -66,7 +68,9 @@ getRideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
   Flow Common.RideListRes
-getRideList = DRide.getRideList
+getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbFleetOwnerId mbfrom mbLimit mbOffset mbReqShortRideId mbto = do
+  logInfo $ "Ride list requested by: " <> requestorId
+  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto mbFleetOwnerId requestorId
 
 getRideAgentList ::
   ShortId DM.Merchant ->

@@ -25,9 +25,29 @@ apis:
         currency: Currency
         from: UTCTime
         to: UTCTime
+        fleetOwnerId: Text
       auth: ApiAuthV2
       response:
         type: RideListRes
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/list
+            params:
+              requestorId: Text
+            query:
+              limit: Int
+              offset: Int
+              bookingStatus: BookingStatus
+              rideShortId: ShortId Ride
+              customerPhoneNo: Text
+              driverPhoneNo: Text
+              currency: Currency
+              from: UTCTime
+              to: UTCTime
+              fleetOwnerId: Text
+            auth: ApiAuthV2
+            response:
+              type: RideListRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_LIST
   - GET: # RideListAPI

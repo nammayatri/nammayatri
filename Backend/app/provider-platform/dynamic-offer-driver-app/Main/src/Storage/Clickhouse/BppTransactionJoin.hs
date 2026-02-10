@@ -94,6 +94,7 @@ data BppTransactionJoinT f = BppTransactionJoinT
     bookingEstimatedFare :: C f (Maybe HighPrecMoney),
     rideFare :: C f (Maybe HighPrecMoney),
     rideFareAmount :: C f HighPrecMoney,
+    rideFleetOwnerId :: C f (Maybe Text),
     rideStatus :: C f RideStatus,
     rideTripStartTime :: C f (Maybe UTCTime)
   }
@@ -160,6 +161,7 @@ bppTransactionJoinTTable =
       bookingEstimatedFare = "booking_estimated_fare",
       rideFare = "ride_fare",
       rideFareAmount = "ride_fare_amount",
+      rideFleetOwnerId = "ride_fleet_owner_id",
       rideTripStartTime = "ride_trip_start_time",
       rideStatus = "ride_status"
     }
@@ -193,8 +195,9 @@ findAllRideItems ::
   UTCTime ->
   UTCTime ->
   Maybe Text ->
+  Maybe Text ->
   m [QRE.RideItem]
-findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to mbVehicleNo = do
+findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to mbVehicleNo mbFleetOwnerId = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -211,6 +214,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                     CH.&&. CH.whenJust_ mbCustomerPhoneDBHash (\cpdh -> bppTransaction.riderDetailsMobileNumberHash CH.==. (Text.pack . show . unDbHash) cpdh)
                     CH.&&. CH.whenJust_ mbDriverPhoneDBHash (\dpdh -> bppTransaction.rideDetailsDriverNumberHash CH.==. Just ((Text.pack . show . unDbHash) dpdh))
                     CH.&&. CH.whenJust_ mbVehicleNo (\vehicleNo -> bppTransaction.rideDetailsVehicleNumber CH.==. vehicleNo)
+                    CH.&&. CH.whenJust_ mbFleetOwnerId (\foid -> bppTransaction.rideFleetOwnerId CH.==. Just foid)
                     CH.&&. CH.whenJust_ mbBookingStatus (`mkBookingStatusCond` bppTransaction)
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bppTransactionJoinTTable)
