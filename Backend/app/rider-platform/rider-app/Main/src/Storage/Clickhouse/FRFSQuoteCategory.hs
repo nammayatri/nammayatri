@@ -8,7 +8,8 @@ import Kernel.Types.Id
 
 data FRFSQuoteCategoryT f = FRFSQuoteCategoryT
   { quoteId :: C f (Id DQuote.Quote),
-    selectedQuantity :: C f (Maybe Int)
+    selectedQuantity :: C f (Maybe Int),
+    createdAt :: C f UTCTime
   }
   deriving (Generic)
 
@@ -18,7 +19,8 @@ fRFSQuoteCategoryTTable :: FRFSQuoteCategoryT (FieldModification FRFSQuoteCatego
 fRFSQuoteCategoryTTable =
   FRFSQuoteCategoryT
     { quoteId = "quote_id",
-      selectedQuantity = "selected_quantity"
+      selectedQuantity = "selected_quantity",
+      createdAt = "created_at"
     }
 
 type FRFSQuoteCategory = FRFSQuoteCategoryT Identity
@@ -28,10 +30,17 @@ $(TH.mkClickhouseInstances ''FRFSQuoteCategoryT 'NO_SELECT_MODIFIER)
 getQuoteCategoriesByQuoteIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DQuote.Quote] ->
-  m [FRFSQuoteCategory]
-getQuoteCategoriesByQuoteIds quoteIds = do
+  UTCTime ->
+  UTCTime ->
+  m [(Id DQuote.Quote, Maybe Int)]
+getQuoteCategoriesByQuoteIds quoteIds startTime endTime = do
   CH.findAll $
-    CH.select $
-      CH.filter_
-        (\qc -> qc.quoteId `CH.in_` quoteIds)
-        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fRFSQuoteCategoryTTable)
+    CH.select_ (\qc -> CH.notGrouped (qc.quoteId, qc.selectedQuantity)) $
+      CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
+        CH.filter_
+          ( \qc ->
+              qc.quoteId `CH.in_` quoteIds
+                CH.&&. qc.createdAt >=. startTime
+                CH.&&. qc.createdAt <. endTime
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fRFSQuoteCategoryTTable)

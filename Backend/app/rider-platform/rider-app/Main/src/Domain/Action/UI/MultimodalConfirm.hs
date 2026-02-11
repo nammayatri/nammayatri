@@ -1787,10 +1787,10 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       Environment.Flow (Text, Text)
     resolveSrcAndDestCode mSrc mDest routeCodes ctx
       | isJust mSrc && isJust mDest =
-          pure (fromJust mSrc, fromJust mDest)
+        pure (fromJust mSrc, fromJust mDest)
       | otherwise = do
-          (firstStop, lastStop) <- fetchRouteBoundaryStops routeCodes ctx
-          pure (fromMaybe firstStop mSrc, fromMaybe lastStop mDest)
+        (firstStop, lastStop) <- fetchRouteBoundaryStops routeCodes ctx
+        pure (fromMaybe firstStop mSrc, fromMaybe lastStop mDest)
 
     fetchRouteBoundaryStops ::
       Maybe [ApiTypes.RouteCodesWithLeg] ->

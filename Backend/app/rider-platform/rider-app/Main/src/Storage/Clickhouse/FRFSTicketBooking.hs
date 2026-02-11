@@ -1,6 +1,5 @@
 module Storage.Clickhouse.FRFSTicketBooking where
 
-import Control.Applicative ((<|>))
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -49,6 +48,16 @@ type FRFSTicketBooking = FRFSTicketBookingT Identity
 
 $(TH.mkClickhouseInstances ''FRFSTicketBookingT 'NO_SELECT_MODIFIER)
 
+chunkList :: Int -> [a] -> [[a]]
+chunkList chunkSize
+  | chunkSize <= 0 = (: [])
+  | otherwise = go
+  where
+    go [] = []
+    go xs =
+      let (h, t) = splitAt chunkSize xs
+       in h : go t
+
 -- Aggregated booking metrics result
 data BookingMetrics = BookingMetrics
   { metricsVehicleType :: Text,
@@ -83,23 +92,31 @@ getBookingMetricsByDateRange merchantOpCityId targetDate = do
 
   -- 2. Fetch Quote Categories
   let quoteIds = Set.toList $ Set.fromList [b.quoteId | b <- bookings]
-  quoteCategories <- QCategory.getQuoteCategoriesByQuoteIds quoteIds
+      quoteIdBatches = chunkList 500 quoteIds
+  quoteCategories <-
+    concat
+      <$> mapM
+        (\batch -> QCategory.getQuoteCategoriesByQuoteIds batch startOfDayUTC endOfDayUTC)
+        quoteIdBatches
 
   -- 3. Aggregate Quote Categories in Memory
   let quoteMap =
         Map.fromListWith
           (+)
-          [ (qc.quoteId, fromMaybe 0 qc.selectedQuantity)
-            | qc <- quoteCategories
+          [ (qid, fromMaybe 0 selQty)
+            | (qid, selQty) <- quoteCategories
           ]
 
   -- 4. Aggregate Bookings in Memory
   let initialMap = Map.empty -- Map VehicleType (SumPrice, Set BookingId, SumTickets)
       processBooking acc b =
-        let -- Price Logic: coalesce(finalPrice, price)
+        let -- Price Logic: coalesce(finalPrice, price), but treat 0 as missing
             finalP = b.finalPrice
             priceP = b.price
-            effectivePrice = finalP <|> priceP
+            effectivePrice =
+              case finalP of
+                Just v | v > 0 -> Just v
+                _ -> priceP
             priceVal = maybe 0 (realToFrac . toRational) effectivePrice
 
             -- Quantity Logic
