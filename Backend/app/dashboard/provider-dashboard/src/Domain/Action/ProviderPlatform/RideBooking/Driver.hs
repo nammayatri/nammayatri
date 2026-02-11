@@ -47,8 +47,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
+import "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error

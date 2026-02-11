@@ -16,8 +16,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
+import "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error

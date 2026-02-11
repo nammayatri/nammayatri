@@ -41,13 +41,13 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow
+import qualified Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QReg
-import qualified Storage.CachedQueries.Role as CQRole
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant

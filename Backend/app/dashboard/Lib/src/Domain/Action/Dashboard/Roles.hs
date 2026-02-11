@@ -14,6 +14,7 @@
 
 module Domain.Action.Dashboard.Roles where
 
+import Control.Applicative ((<|>))
 import Dashboard.Common
 import qualified Domain.Types.AccessMatrix as DMatrix
 import Domain.Types.Role
@@ -28,8 +29,8 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow (BeamFlow)
-import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.CachedQueries.Role as CQRole
+import qualified Storage.Queries.AccessMatrix as QMatrix
 import Tools.Auth
 import Tools.Error (RoleError (..))
 
@@ -42,7 +43,8 @@ data CreateRoleReq = CreateRoleReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data UpdateRoleReq = UpdateRoleReq
-  { name :: Maybe Text,
+  { roleId :: Id DRole.Role,
+    name :: Maybe Text,
     dashboardAccessType :: Maybe DashboardAccessType,
     parentRoleId :: Maybe (Id DRole.Role),
     description :: Maybe Text
@@ -73,6 +75,7 @@ createRole _ req = do
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
   role <- buildRole req
   CQRole.create role
+  void $ CQRole.cacheParentRolesRecursively role
   pure $ DRole.mkRoleAPIEntity role
 
 -- Validate input fields
@@ -106,12 +109,26 @@ updateRole ::
   TokenInfo ->
   UpdateRoleReq ->
   m DRole.RoleAPIEntity
-updateRole _ _req = do
+updateRole _ req = do
   -- runRequestValidation validateUpdateRoleReq req
-  -- mbExistingRole <- CQRole.findByName req.name
-  -- whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
-  -- Make sure parentRoleId does not make cycle!
-  -- assignAccessLevel for parentRoleId
+
+  whenJust req.name $ \reqName -> do
+    mbExistingRole <- CQRole.findByName reqName
+    whenJust mbExistingRole $ \existingRole -> do
+      unless (existingRole.id == req.roleId) $
+        throwError (RoleNameExists reqName)
+
+  role <- CQRole.findById req.roleId >>= fromMaybeM (RoleDoesNotExist req.roleId.getId)
+  let updRole = role{name = fromMaybe role.name req.name,
+                     dashboardAccessType = fromMaybe role.dashboardAccessType req.dashboardAccessType,
+                     parentRoleId = req.parentRoleId <|> role.parentRoleId,
+                     description = fromMaybe role.description req.description
+                    }
+  CQRole.updateById updRole
+  whenJust req.parentRoleId \_parentRoleId -> do
+    error "TODO"
+    -- Make sure parentRoleId does not make cycle!
+    -- assignAccessLevel for parentRoleId
   error "TODO"
 
 assignAccessLevel ::

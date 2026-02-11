@@ -42,12 +42,12 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow
+import qualified Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as MA
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import qualified Storage.CachedQueries.Role as CQRole
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant

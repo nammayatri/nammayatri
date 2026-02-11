@@ -8,8 +8,8 @@ import Kernel.Types.Error (GenericError (InvalidRequest), PersonError (PersonDoe
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common (fromMaybeM, throwError)
 import Storage.Beam.CommonInstances ()
-import qualified "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
+import qualified "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Error (RoleError (RoleNotFound))
 
 checkFleetOwnerVerification :: ID.Id DP.Person -> Environment.Flow ()

@@ -9,7 +9,9 @@ module Storage.CachedQueries.Role
     findAllByLimitOffset,
     findAllWithLimitOffset,
     findParentRolesRecursivelyCached,
+    updateById,
     -- clearCache,
+    cacheParentRolesRecursively,
     clearCacheById,
     makeParentRolesKey,
   )
@@ -24,17 +26,19 @@ import Kernel.Utils.Common
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Role as Queries
 
-findAllWithLimitOffset ::
-  BeamFlow m r =>
-  Maybe Integer ->
-  Maybe Integer ->
-  Maybe Text ->
-  m [DRole.Role]
-findAllWithLimitOffset = Queries.findAllWithLimitOffset
 
 -- TODO do we need prefix for rider and provider dashboard?
 makeParentRolesKey :: Id DRole.Role -> Text
 makeParentRolesKey roleId = "dashboard:parentRoles:" <> roleId.getId
+
+cacheParentRolesRecursively :: BeamFlow m r => DRole.Role -> m [DRole.Role]
+cacheParentRolesRecursively role = do
+  parents <- Queries.findParentRolesRecursively role
+  logDebug $ "Cache parent roles recursively: rodeId: " <> role.id.getId <> "; roleName: " <> show role.name <> "; parents: " <> show (parents <&> (.name))
+  -- cacheParentRoles role.id parents
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeParentRolesKey role.id) parents expTime
+  pure parents
 
 findParentRolesRecursivelyCached ::
   BeamFlow m r =>
@@ -43,15 +47,16 @@ findParentRolesRecursivelyCached ::
 findParentRolesRecursivelyCached role =
   Hedis.safeGet (makeParentRolesKey role.id) >>= \case
     Just parents -> pure parents
-    Nothing -> do
-      parents <- Queries.findParentRolesRecursively role
-      cacheParentRoles role.id parents
-      pure parents
+    Nothing -> cacheParentRolesRecursively role
 
-cacheParentRoles :: CacheFlow m r => Id DRole.Role -> [DRole.Role] -> m ()
-cacheParentRoles roleId parents = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeParentRolesKey roleId) parents expTime
+-- parents <- Queries.findParentRolesRecursively role
+-- cacheParentRoles role.id parents
+-- pure parents
+
+-- cacheParentRoles :: CacheFlow m r => Id DRole.Role -> [DRole.Role] -> m ()
+-- cacheParentRoles roleId parents = do
+--   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+--   Hedis.setExp (makeParentRolesKey roleId) parents expTime
 
 -- clearCache :: HedisFlow m r => DRole.Role -> m ()
 -- clearCache role = clearCacheById role.id
@@ -78,3 +83,14 @@ findAllInDashboardAccessType = Queries.findAllInDashboardAccessType
 
 findAllByLimitOffset :: BeamFlow m r => Maybe Integer -> Maybe Integer -> m [DRole.Role]
 findAllByLimitOffset = Queries.findAllByLimitOffset
+
+findAllWithLimitOffset ::
+  BeamFlow m r =>
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Text ->
+  m [DRole.Role]
+findAllWithLimitOffset = Queries.findAllWithLimitOffset
+
+updateById :: BeamFlow m r => DRole.Role -> m ()
+updateById = Queries.updateById
