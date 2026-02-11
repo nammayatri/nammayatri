@@ -312,7 +312,7 @@ let defaultConfigs =
       , _storageConfig =
         { _sqlTypeMapper = sqlMapper
         , _extraDefaultFields = extraDefaultFields
-        , _cacheFlowType = None
+        , _cacheFlowType = None Text
         }
       , _defaultTypeImportMapper = defaultTypeImportMapper
       , _generate =

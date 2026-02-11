@@ -20,7 +20,7 @@ PassType:
 
   types:
     PassEnum:
-      enum: "TouristPass, RegularPass"
+      enum: "TouristPass, RegularPass, StudentPass"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   constraints:
