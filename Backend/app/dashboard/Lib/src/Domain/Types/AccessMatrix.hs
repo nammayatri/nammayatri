@@ -440,6 +440,7 @@ data AccessMatrixItem = AccessMatrixItem
     apiEntity :: ApiEntity,
     userAccessType :: UserAccessType,
     userActionType :: UserActionTypeWrapper,
+    isDerived :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
