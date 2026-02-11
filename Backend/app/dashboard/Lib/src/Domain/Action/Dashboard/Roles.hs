@@ -29,7 +29,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.Queries.AccessMatrix as QMatrix
-import qualified Storage.Queries.Role as QRole
+import qualified Storage.CachedQueries.Role as CQRole
 import Tools.Auth
 import Tools.Error (RoleError (..))
 
@@ -69,10 +69,10 @@ createRole ::
   m DRole.RoleAPIEntity
 createRole _ req = do
   runRequestValidation validateCreateRoleReq req
-  mbExistingRole <- QRole.findByName req.name
+  mbExistingRole <- CQRole.findByName req.name
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
   role <- buildRole req
-  QRole.create role
+  CQRole.create role
   pure $ DRole.mkRoleAPIEntity role
 
 -- Validate input fields
@@ -108,7 +108,7 @@ updateRole ::
   m DRole.RoleAPIEntity
 updateRole _ _req = do
   -- runRequestValidation validateUpdateRoleReq req
-  -- mbExistingRole <- QRole.findByName req.name
+  -- mbExistingRole <- CQRole.findByName req.name
   -- whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
   -- Make sure parentRoleId does not make cycle!
   -- assignAccessLevel for parentRoleId
@@ -121,7 +121,7 @@ assignAccessLevel ::
   AssignAccessLevelReq ->
   m APISuccess
 assignAccessLevel _ roleId req = do
-  _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  _role <- CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   mbAccessMatrixItem <- QMatrix.findByRoleIdAndEntityAndActionType roleId req.apiEntity req.userActionType
   case mbAccessMatrixItem of
     Just accessMatrixItem -> QMatrix.updateUserAccessType accessMatrixItem.id req.userActionType req.userAccessType
@@ -159,7 +159,7 @@ listRoles ::
   Maybe Integer ->
   m ListRoleRes
 listRoles _ mbSearchString mbLimit mbOffset = do
-  personAndRoleList <- B.runInReplica $ QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
+  personAndRoleList <- B.runInReplica $ CQRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
   res <- forM personAndRoleList $ \role -> do
     pure $ mkRoleAPIEntity role
   let count = length res

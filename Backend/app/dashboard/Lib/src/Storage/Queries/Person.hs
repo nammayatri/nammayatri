@@ -40,7 +40,7 @@ import qualified Storage.Beam.MerchantAccess as BeamMA
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Role as BeamR
 import Storage.Queries.MerchantAccess ()
-import Storage.Queries.Role ()
+import Storage.Queries.OrphanInstances.Role ()
 
 create :: BeamFlow m r => Person -> m ()
 create = createWithKV

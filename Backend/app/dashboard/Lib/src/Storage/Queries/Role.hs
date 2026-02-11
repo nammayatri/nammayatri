@@ -11,9 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-orphans #-}
-
-module Storage.Queries.Role where
+module Storage.Queries.Role
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import qualified Database.Beam as B
 import Domain.Types.Role as Role
@@ -25,6 +28,9 @@ import Sequelize as Se
 import Storage.Beam.BeamFlow
 import Storage.Beam.Common as SBC
 import qualified Storage.Beam.Role as BeamR
+import Kernel.Utils.Common
+import Tools.Error
+import Storage.Queries.OrphanInstances.Role ()
 
 create :: BeamFlow m r => Role -> m ()
 create = createWithKV
@@ -77,20 +83,18 @@ findAllWithLimitOffset mbLimit mbOffset mbSearchString = do
       catMaybes <$> mapM fromTType' m'
     Left _ -> pure []
 
-instance FromTType' BeamR.Role Role.Role where
-  fromTType' BeamR.RoleT {..} = do
-    return $
-      Just
-        Role.Role
-          { id = Id id,
-            parentRoleId = Id <$> parentRoleId,
-            ..
-          }
-
-instance ToTType' BeamR.Role Role.Role where
-  toTType' Role.Role {..} =
-    BeamR.RoleT
-      { id = getId id,
-        parentRoleId = getId <$> parentRoleId,
-        ..
-      }
+-- Do not use directly. Use cached version!
+findParentRolesRecursively :: BeamFlow m r => Role.Role -> m [Role.Role]
+findParentRolesRecursively role = findNextParentRoleRecursively role.parentRoleId []
+  where
+    findNextParentRoleRecursively :: BeamFlow m r => Maybe (Id Role.Role) -> [Role.Role] -> m [Role.Role]
+    findNextParentRoleRecursively Nothing acc = pure $ reverse acc
+    findNextParentRoleRecursively (Just parentId) acc = do
+      -- detect cycle via already accumulated parents
+      when (any (\r -> r.id == parentId) acc) $ do
+        logError $ "Cyclic parentRoleId reference detected in roles: " <> show (parentId : map (\r -> r.id) acc)
+        throwError $ InternalError "Cyclic parentRoleId reference detected in roles"
+      mbParent <- findById parentId
+      case mbParent of
+        Nothing -> pure $ reverse acc  -- should we throw error?
+        Just parentRole -> findNextParentRoleRecursively parentRole.parentRoleId (parentRole : acc)

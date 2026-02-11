@@ -38,7 +38,7 @@ import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.MerchantAccess as QMerchantAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QRT
-import qualified Storage.Queries.Role as QRole
+import qualified Storage.CachedQueries.Role as CQRole
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Error
@@ -96,7 +96,7 @@ createMerchantWithAdmin tokenInfo req = do
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
     DPerson.validateStrongPassword req.adminPassword
-  role <- QRole.findByName "MERCHANT_ADMIN" >>= fromMaybeM (RoleDoesNotExist "MERCHANT_ADMIN")
+  role <- CQRole.findByName "MERCHANT_ADMIN" >>= fromMaybeM (RoleDoesNotExist "MERCHANT_ADMIN")
   person <- buildPersonCreateReq req role
   decPerson <- decrypt person
   QP.create person

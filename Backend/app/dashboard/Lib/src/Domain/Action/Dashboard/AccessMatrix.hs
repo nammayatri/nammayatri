@@ -24,7 +24,7 @@ import Kernel.Utils.Common (fromMaybeM, logInfo)
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Merchant as QMerchant
-import qualified Storage.Queries.Role as QRole
+import qualified Storage.CachedQueries.Role as CQRole
 import Tools.Auth
 import Tools.Error
 
@@ -46,7 +46,7 @@ getAccessMatrix ::
   m DMatrix.AccessMatrixAPIEntity
 getAccessMatrix _ mbLimit mbOffset = do
   logInfo $ "[AccessMatrix.getAccessMatrix] START | limit=" <> show mbLimit <> " offset=" <> show mbOffset
-  roles <- B.runInReplica $ QRole.findAllByLimitOffset mbLimit mbOffset
+  roles <- B.runInReplica $ CQRole.findAllByLimitOffset mbLimit mbOffset
   logInfo $ "[AccessMatrix.getAccessMatrix] findAllByLimitOffset done, roles count=" <> show (length roles)
   accessMatrixItems <- B.runInReplica $ QMatrix.findAllByRoles roles
   logInfo $ "[AccessMatrix.getAccessMatrix] findAllByRoles done, items count=" <> show (length accessMatrixItems)
@@ -59,7 +59,7 @@ getAccessMatrixByRole ::
   m DMatrix.AccessMatrixRowAPIEntity
 getAccessMatrixByRole _ roleId = do
   logInfo $ "[AccessMatrix.getAccessMatrixByRole] START | roleId=" <> roleId.getId
-  role <- B.runInReplica $ QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  role <- B.runInReplica $ CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   logInfo "[AccessMatrix.getAccessMatrixByRole] findById done"
   accessMatrixItems <- B.runInReplica $ QMatrix.findAllByRoleId roleId
   logInfo $ "[AccessMatrix.getAccessMatrixByRole] findAllByRoleId done, items count=" <> show (length accessMatrixItems)
