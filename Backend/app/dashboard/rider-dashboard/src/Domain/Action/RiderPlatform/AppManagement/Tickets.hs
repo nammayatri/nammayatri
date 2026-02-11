@@ -70,7 +70,7 @@ import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QAccess
 import "lib-dashboard" Storage.Queries.Person as QP
-import qualified "lib-dashboard" Storage.Queries.Role as QRole
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
@@ -135,7 +135,7 @@ postTicketsTicketdashboardRegister :: (Kernel.Types.Id.ShortId Domain.Types.Merc
 postTicketsTicketdashboardRegister merchantShortId opCity req = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   ticketDashboardRoleIds <-
-    ((.id) <$>) <$> QRole.findAllInDashboardAccessType [DRole.TICKET_DASHBOARD_USER, DRole.TICKET_DASHBOARD_MERCHANT, DRole.TICKET_DASHBOARD_ADMIN, DRole.TICKET_DASHBOARD_APPROVER]
+    ((.id) <$>) <$> CQRole.findAllInDashboardAccessType [DRole.TICKET_DASHBOARD_USER, DRole.TICKET_DASHBOARD_MERCHANT, DRole.TICKET_DASHBOARD_ADMIN, DRole.TICKET_DASHBOARD_APPROVER]
   when (null ticketDashboardRoleIds) $ throwError $ InternalError "No ticket dashboard roles found"
   unlessM (isNothing <$> QP.findByMobileNumberAndRoleIdsWithType @'PT.TicketDashboard req.mobileNumber req.mobileCountryCode ticketDashboardRoleIds) $
     throwError (InvalidRequest "Phone already registered")
@@ -193,7 +193,7 @@ registerTicketDashboard :: (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataSer
 registerTicketDashboard req mbPersonId = do
   runRequestValidation validateTicketDashboardRegister req
   ticketDashboardRole <-
-    QRole.findByDashboardAccessType DRole.TICKET_DASHBOARD_USER
+    CQRole.findByDashboardAccessType DRole.TICKET_DASHBOARD_USER
       >>= fromMaybeM (RoleDoesNotExist "TICKET_DASHBOARD_USER")
   ticketUser <- buildTicketDashboardUser req mbPersonId ticketDashboardRole.id ticketDashboardRole.dashboardAccessType
   merchant <-
@@ -215,7 +215,7 @@ postTicketsTicketdashboardLoginVerify :: (Kernel.Types.Id.ShortId Domain.Types.M
 postTicketsTicketdashboardLoginVerify merchantShortId opCity req = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   ticketDashboardRoleIds <-
-    ((.id) <$>) <$> QRole.findAllInDashboardAccessType [DRole.TICKET_DASHBOARD_USER, DRole.TICKET_DASHBOARD_MERCHANT, DRole.TICKET_DASHBOARD_ADMIN, DRole.TICKET_DASHBOARD_APPROVER]
+    ((.id) <$>) <$> CQRole.findAllInDashboardAccessType [DRole.TICKET_DASHBOARD_USER, DRole.TICKET_DASHBOARD_MERCHANT, DRole.TICKET_DASHBOARD_ADMIN, DRole.TICKET_DASHBOARD_APPROVER]
   when (null ticketDashboardRoleIds) $ throwError $ InternalError "No ticket dashboard roles found"
   person <- QP.findByMobileNumberAndRoleIdsWithType @'PT.TicketDashboard req.mobileNumber req.mobileCountryCode ticketDashboardRoleIds >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)

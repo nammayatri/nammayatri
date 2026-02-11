@@ -39,7 +39,7 @@ import Kernel.Utils.Common
 import "lib-dashboard" Storage.Beam.BeamFlow
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Person as QP
-import qualified "lib-dashboard" Storage.Queries.Role as QR
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQR
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
@@ -47,7 +47,7 @@ import "lib-dashboard" Tools.Error
 getDashboardAccessType :: (BeamFlow m r, EncFlow m r) => Kernel.Prelude.Text -> m Domain.Types.MerchantOnboarding.RequestorRole
 getDashboardAccessType personId = do
   person <- QP.findById (Kernel.Types.Id.Id personId) >>= fromMaybeM (InvalidRequest "Person not found")
-  role <- QR.findById person.roleId >>= fromMaybeM (InvalidRequest "Role is not assigned for this user")
+  role <- CQR.findById person.roleId >>= fromMaybeM (InvalidRequest "Role is not assigned for this user")
   let accessType = role.dashboardAccessType
   case accessType of
     Domain.Types.Role.TICKET_DASHBOARD_USER -> pure $ Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_USER
@@ -153,7 +153,7 @@ dashboardSideHandler handler = case handler.handlerName of
   DH.SET_ROLE_TICKET_DASHBOARD_MERCHANT -> do
     personId <- getMetadataValue "rid" & fromMaybeM (InternalError "Dashboard Handler failed")
     person <- QP.findById (Kernel.Types.Id.Id personId) >>= fromMaybeM (InvalidRequest "Person not found")
-    role <- QR.findByDashboardAccessType Domain.Types.Role.TICKET_DASHBOARD_MERCHANT >>= fromMaybeM (RoleDoesNotExist (show Domain.Types.Role.TICKET_DASHBOARD_MERCHANT))
+    role <- CQR.findByDashboardAccessType Domain.Types.Role.TICKET_DASHBOARD_MERCHANT >>= fromMaybeM (RoleDoesNotExist (show Domain.Types.Role.TICKET_DASHBOARD_MERCHANT))
     QP.updatePersonRole person.id role
   where
     getMetadataValue :: Text -> Maybe Text
