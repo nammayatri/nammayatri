@@ -22,12 +22,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QMerchantAccess
 import qualified Storage.Queries.Notification as SQN
 import "lib-dashboard" Storage.Queries.Person as QP
 import qualified Storage.Queries.PortalConfigs as PC
-import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.Suspect as SQ
 import Storage.Queries.SuspectExtra
 import qualified Storage.Queries.SuspectFlagRequest as SQF

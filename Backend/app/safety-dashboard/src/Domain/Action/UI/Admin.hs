@@ -22,12 +22,12 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.MerchantConfigs as SQMC
 import "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QReg
-import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.Suspect as SQ
 import qualified Storage.Queries.SuspectExtra as SE
 import Storage.Queries.SuspectFlagRequestExtra

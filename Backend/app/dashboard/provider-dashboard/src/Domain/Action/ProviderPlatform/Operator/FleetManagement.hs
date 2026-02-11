@@ -27,8 +27,8 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
+import "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error

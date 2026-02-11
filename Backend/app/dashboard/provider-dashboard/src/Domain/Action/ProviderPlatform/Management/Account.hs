@@ -27,6 +27,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import "lib-dashboard" Storage.Queries.Person
   ( findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset,
     findById,
@@ -37,7 +38,6 @@ import "lib-dashboard" Storage.Queries.Person
   )
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QR
-import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import Tools.Auth.Api
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant

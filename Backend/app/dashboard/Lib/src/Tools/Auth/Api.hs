@@ -131,7 +131,6 @@ checkUserAccess :: DMatrix.UserAccessType -> Bool
 checkUserAccess DMatrix.USER_FULL_ACCESS = True
 checkUserAccess DMatrix.USER_NO_ACCESS = False
 
-
 verifyServer ::
   BeamFlow m r =>
   DSN.ServerName ->

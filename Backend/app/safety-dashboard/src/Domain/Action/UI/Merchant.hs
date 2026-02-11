@@ -17,11 +17,11 @@ import Kernel.Utils.Common
 import Network.URI (isURI)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import "lib-dashboard" Storage.Queries.MerchantAccess as QMCA
 import Storage.Queries.MerchantConfigs as QMC
 import qualified "lib-dashboard" Storage.Queries.Person as QP
-import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import qualified "lib-dashboard" Tools.Auth as Auth
 import Tools.Error
 import "lib-dashboard" Tools.Error

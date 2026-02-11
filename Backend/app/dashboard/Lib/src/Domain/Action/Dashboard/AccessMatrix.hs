@@ -21,9 +21,9 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import Storage.Beam.BeamFlow
+import qualified Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Merchant as QMerchant
-import qualified Storage.CachedQueries.Role as CQRole
 import Tools.Auth
 import Tools.Error
 

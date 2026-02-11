@@ -32,10 +32,10 @@ type API =
            :> DashboardAuth 'DASHBOARD_ADMIN
            :> ReqBody '[JSON] DRoles.CreateRoleReq
            :> Post '[JSON] DRole.RoleAPIEntity
-            :<|> "update"
-              :> DashboardAuth 'DASHBOARD_ADMIN
-              :> ReqBody '[JSON] DRoles.UpdateRoleReq
-              :> Post '[JSON] DRole.RoleAPIEntity
+           :<|> "update"
+             :> DashboardAuth 'DASHBOARD_ADMIN
+             :> ReqBody '[JSON] DRoles.UpdateRoleReq
+             :> Post '[JSON] DRole.RoleAPIEntity
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "roleId" (Id DRole.Role)
              :> "assignAccessLevel"

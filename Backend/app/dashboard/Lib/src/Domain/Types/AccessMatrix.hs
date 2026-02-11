@@ -465,7 +465,8 @@ data AccessMatrixRowAPIEntity = AccessMatrixRowAPIEntity
 data AccessMatrixItemAPIEntity = AccessMatrixItemAPIEntity
   { apiEntity :: ApiEntity,
     userAccessType :: UserAccessType,
-    userActionType :: UserActionTypeWrapper
+    userActionType :: UserActionTypeWrapper,
+    isDerived :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

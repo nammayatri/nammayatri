@@ -38,8 +38,8 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import "lib-dashboard" Storage.Beam.BeamFlow
 import Storage.Beam.CommonInstances ()
-import qualified "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.CachedQueries.Role as CQR
+import qualified "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
