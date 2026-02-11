@@ -79,6 +79,7 @@ instance FromTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
         DMatrix.AccessMatrixItem
           { id = Id id,
             roleId = Id roleId,
+            isDerived = fromMaybe False isDerived,
             ..
           }
 
@@ -87,5 +88,6 @@ instance ToTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
     BeamAM.AccessMatrixT
       { id = getId id,
         roleId = getId roleId,
+        isDerived = Just isDerived,
         ..
       }
