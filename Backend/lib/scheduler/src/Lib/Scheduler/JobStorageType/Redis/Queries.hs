@@ -117,14 +117,16 @@ getReadyTasks ::
 getReadyTasks _ = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
-  -- let lastEntryId :: Text = "$"
+  let lastEntryId :: Text = "$"
   version <- asks (.version)
   let consumerName = version.getDeploymentVersion
   let nextId :: Text = ">"
-  -- isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key
-  -- unless isGroupExist $ do
-  --   Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
-  result' <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xReadGroup groupName consumerName [(key, nextId)]
+  -- For cluster Redis, use hash tag to ensure all stream operations go to same slot
+  let keyWithTag = key <> "{" <> groupName <> "}"
+  isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups keyWithTag
+  unless isGroupExist $ do
+    Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate keyWithTag groupName lastEntryId
+  result' <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xReadGroup groupName consumerName [(keyWithTag, nextId)]
   let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
   let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
   let textJob = map snd result
@@ -148,17 +150,19 @@ getReadyTask = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
   consumerId <- asks (.consumerId)
-  -- let lastEntryId :: Text = "$"
+  let lastEntryId :: Text = "$"
   version <- asks (.version)
   threadId <- L.runIO myThreadId
   let consumerName = version.getDeploymentVersion <> consumerId <> show threadId
   let nextId :: Text = ">"
   block <- asks (.block)
   readCount <- asks (.readCount)
-  -- isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key -- TODO: Enable after fixing these hedis stream operations for cluster redis.
-  -- unless isGroupExist $ do
-  --   Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
-  result' <- Hedis.withMasterRedis $ Hedis.xReadGroupOpts groupName consumerName [(key, nextId)] (Just block) (Just readCount)
+  -- For cluster Redis, use hash tag to ensure all stream operations go to same slot
+  let keyWithTag = key <> "{" <> groupName <> "}"
+  isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups keyWithTag
+  unless isGroupExist $ do
+    Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate keyWithTag groupName lastEntryId
+  result' <- Hedis.withMasterRedis $ Hedis.xReadGroupOpts groupName consumerName [(keyWithTag, nextId)] (Just block) (Just readCount)
   let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
   let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
   let textJob = map snd result
