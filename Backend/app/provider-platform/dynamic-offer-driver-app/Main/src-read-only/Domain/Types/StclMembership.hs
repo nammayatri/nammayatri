@@ -14,8 +14,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data StclMembershipE e = StclMembership
-  { aadharNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
-    accountNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+    { accountNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     addressCity :: Kernel.Prelude.Text,
     addressPostalCode :: Kernel.Prelude.Text,
     addressState :: Kernel.Prelude.Text,
@@ -41,7 +40,6 @@ data StclMembershipE e = StclMembership
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     mobileNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
-    nomineeAadhar :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     nomineeName :: Kernel.Prelude.Text,
     numberOfShares :: Kernel.Prelude.Int,
     panNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
@@ -61,15 +59,13 @@ type DecryptedStclMembership = StclMembershipE 'AsUnencrypted
 instance EncryptedItem StclMembership where
   type Unencrypted StclMembership = (DecryptedStclMembership, HashSalt)
   encryptItem (entity, salt) = do
-    aadharNumber_ <- encryptItem (aadharNumber entity, salt)
     accountNumber_ <- encryptItem (accountNumber entity, salt)
     ifscCode_ <- encryptItem (ifscCode entity, salt)
     mobileNumber_ <- encryptItem (mobileNumber entity, salt)
-    nomineeAadhar_ <- encryptItem (nomineeAadhar entity, salt)
     panNumber_ <- encryptItem (panNumber entity, salt)
     pure
       StclMembership
-        { aadharNumber = aadharNumber_,
+       {
           accountNumber = accountNumber_,
           addressCity = addressCity entity,
           addressPostalCode = addressPostalCode entity,
@@ -96,7 +92,6 @@ instance EncryptedItem StclMembership where
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
           mobileNumber = mobileNumber_,
-          nomineeAadhar = nomineeAadhar_,
           nomineeName = nomineeName entity,
           numberOfShares = numberOfShares entity,
           panNumber = panNumber_,
@@ -108,15 +103,13 @@ instance EncryptedItem StclMembership where
           vehicleType = vehicleType entity
         }
   decryptItem entity = do
-    aadharNumber_ <- fst <$> decryptItem (aadharNumber entity)
     accountNumber_ <- fst <$> decryptItem (accountNumber entity)
     ifscCode_ <- fst <$> decryptItem (ifscCode entity)
     mobileNumber_ <- fst <$> decryptItem (mobileNumber entity)
-    nomineeAadhar_ <- fst <$> decryptItem (nomineeAadhar entity)
     panNumber_ <- fst <$> decryptItem (panNumber entity)
     pure
       ( StclMembership
-          { aadharNumber = aadharNumber_,
+          {
             accountNumber = accountNumber_,
             addressCity = addressCity entity,
             addressPostalCode = addressPostalCode entity,
@@ -143,7 +136,6 @@ instance EncryptedItem StclMembership where
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
             mobileNumber = mobileNumber_,
-            nomineeAadhar = nomineeAadhar_,
             nomineeName = nomineeName entity,
             numberOfShares = numberOfShares entity,
             panNumber = panNumber_,
