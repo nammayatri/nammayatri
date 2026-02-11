@@ -252,7 +252,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
             ticketBooking <- QTB.findById (cast paymentOrder.id)
             return $ ticketBooking <&> (.ticketPlaceId)
           _ -> return Nothing
-      let orderStatusCall = Payment.orderStatus (cast paymentOrder.merchantId) (cast mocId) ticketPlaceId paymentServiceType (Just paymentOrder.personId.getId) person.clientSdkVersion Nothing
+      let orderStatusCall = Payment.orderStatus (cast paymentOrder.merchantId) (cast mocId) ticketPlaceId paymentServiceType (Just paymentOrder.personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
       void $ callWebhookHandlerWithOrderStatus paymentServiceType (ShortId orderShortId) orderStatusCall
   pure Ack
   where

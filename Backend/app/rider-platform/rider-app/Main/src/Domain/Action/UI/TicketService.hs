@@ -670,8 +670,9 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
       refundDetails <-
         if isAnyRefundPending
           then do
+            paymentOrder <- QOrder.findById (Kernel.Types.Id.Id id.getId) >>= fromMaybeM (PaymentOrderNotFound id.getId)
             let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
-                orderStatusCall = Payment.orderStatus merchantId' merchantOperatingCityId (Just ticketPlaceId) Payment.Normal (Just person.id.getId) person.clientSdkVersion Nothing
+                orderStatusCall = Payment.orderStatus merchantId' merchantOperatingCityId (Just ticketPlaceId) Payment.Normal (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
                 walletPostingCall = Wallet.walletPosting merchantId' merchantOperatingCityId
             paymentStatus <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.Id id.getId) orderStatusCall (Just walletPostingCall)
             mapM (mkRefundDetails shortId merchantId') paymentStatus.refunds
@@ -1215,9 +1216,9 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   ticketBooking' <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId)
-  let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId ticketBooking'.merchantOperatingCityId (Just ticketBooking'.ticketPlaceId) Payment.Normal (Just person.id.getId) person.clientSdkVersion Nothing -- api call
   order <- QOrder.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (PaymentOrderNotFound shortId)
+  let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
+      orderStatusCall = Payment.orderStatus merchantId ticketBooking'.merchantOperatingCityId (Just ticketBooking'.ticketPlaceId) Payment.Normal (Just person.id.getId) person.clientSdkVersion order.isMockPayment -- api call
   ticketBookingServices <- QTicketBookingService.findAllByBookingId ticketBooking'.id
   tBookingServiceCats <- mapM (\tBookingS -> QTBSC.findAllByTicketBookingServiceId tBookingS.id) ticketBookingServices
   let ticketBookingServiceCategories = concat tBookingServiceCats
