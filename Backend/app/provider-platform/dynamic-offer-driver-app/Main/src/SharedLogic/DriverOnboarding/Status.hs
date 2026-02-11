@@ -199,9 +199,12 @@ checkAllDriverVehicleDocsVerified person merchantOperatingCity transporterConfig
       then pure []
       else fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs
 
-  let possibleVehicleCategories = nub $ do
+  let possibleVehicleCategoriesRaw = nub $ do
         vehicleDocumentsUnverified <&> \vehicleDoc -> do
           fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
+      -- Ensure at least one category is provided to avoid empty list bug
+      -- If no vehicle categories found, use CAR as fallback (same as vehicleCategory fallback used later)
+      possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
   driverDocuments <- fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person.role language useHVSdkForDL onlyMandatoryDocs
   vehicleDoc <-
     find (\doc -> doc.registrationNo == reqRegistrationNo) vehicleDocumentsUnverified
@@ -257,9 +260,12 @@ checkAllDriverDocsVerifiedForDriver person merchantOperatingCity transporterConf
     if isFleetRole person.role
       then pure []
       else fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs
-  let possibleVehicleCategories = nub $ do
+  let possibleVehicleCategoriesRaw = nub $ do
         vehicleDocumentsUnverified <&> \vehicleDoc -> do
           fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
+      -- Ensure at least one category is provided to avoid empty list bug
+      -- If no vehicle categories found, use CAR as fallback (same as vehicleCategory fallback below)
+      possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
   driverDocuments <- fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person.role language useHVSdkForDL onlyMandatoryDocs
   let makeSelfieAadhaarPanMandatory = Nothing
       -- Use first vehicle doc category if available, otherwise use CAR as default (only needed for determining required driver docs)
@@ -304,10 +310,13 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
           if null mandatoryVehicleDocumentVerificationConfigs then Just vehicleCategory else Nothing
         Nothing -> Nothing
 
-  let possibleVehicleCategories = nub $
+  let possibleVehicleCategoriesRaw = nub $
         (maybeToList vehicleCategoryWithoutMandatoryConfigs <>) $ do
           vehicleDocumentsUnverified <&> \vehicleDoc -> do
             fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
+      -- Ensure at least one category is provided to avoid empty list bug
+      -- If no vehicle categories found, use CAR as fallback (same as fallback used later in vehicleCategory)
+      possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
 
   driverDocuments <- fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person.role language useHVSdkForDL onlyMandatoryDocs
 

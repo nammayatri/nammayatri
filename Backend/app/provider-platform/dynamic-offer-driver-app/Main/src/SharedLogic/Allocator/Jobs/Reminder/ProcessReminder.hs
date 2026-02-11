@@ -234,19 +234,30 @@ processInspectionReminder reminder driver config merchantId merchantOpCityId dis
       logInfo $ "Disabled driver " <> driver.id.getId <> " due to expired mandatory " <> displayName <> " reminder"
     -- Set approved flag to False (action depends on inspection type)
     setApprovedAction
-  sendInspectionOrTrainingNotification reminder driver merchantOpCityId notificationKey displayName config
-  -- Schedule next ProcessReminder job for 24 hours later to keep reminding until completion
-  let scheduleAfter = 24 * 60 * 60 -- 24 hours in seconds
-      inspectionJobData = Allocator.ProcessReminderJobData {reminderId = reminder.id, merchantId = merchantId, merchantOperatingCityId = merchantOpCityId}
-  void $ createJobIn @_ @'ProcessReminder (Just merchantId) (Just merchantOpCityId) scheduleAfter inspectionJobData
-  logInfo $ "Scheduled next " <> displayName <> " reminder job for driver " <> driver.id.getId <> " in 24 hours"
+  -- Before sending notification, check if reminder still exists and is still PENDING
+  -- (it may have been cancelled if inspection was approved)
+  mbCurrentReminder <- QReminder.findByPrimaryKey reminder.id
+  case mbCurrentReminder of
+    Just currentReminder | currentReminder.status == DR.PENDING -> do
+      -- Reminder is still PENDING, send notification
+      sendInspectionOrTrainingNotification currentReminder driver merchantOpCityId notificationKey displayName config
+      -- Schedule next ProcessReminder job for 24 hours later to keep reminding until completion
+      let scheduleAfter = 24 * 60 * 60 -- 24 hours in seconds
+          inspectionJobData = Allocator.ProcessReminderJobData {reminderId = reminder.id, merchantId = merchantId, merchantOperatingCityId = merchantOpCityId}
+      void $ createJobIn @_ @'ProcessReminder (Just merchantId) (Just merchantOpCityId) scheduleAfter inspectionJobData
+      logInfo $ "Scheduled next " <> displayName <> " reminder job for driver " <> driver.id.getId <> " in 24 hours"
+    _ -> do
+      logInfo $ "Reminder " <> reminder.id.getId <> " is no longer PENDING (status: " <> maybe "not found" (show . (.status)) mbCurrentReminder <> "), skipping notification and reschedule"
 
 processDocumentExpiryReminder ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
-    ServiceFlow m r
+    ServiceFlow m r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text],
+    HasSchemaName SchedulerJobT
   ) =>
   DR.Reminder ->
   DP.Person ->
@@ -254,7 +265,7 @@ processDocumentExpiryReminder ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   m ()
-processDocumentExpiryReminder reminder driver reminderConfig _merchantId merchantOpCityId = do
+processDocumentExpiryReminder reminder driver reminderConfig merchantId merchantOpCityId = do
   now <- getCurrentTime
   let intervals = reminderConfig.reminderIntervals
       mbCurrentIntervalMinutes = listToMaybe (drop reminder.currentIntervalIndex intervals)
@@ -289,6 +300,11 @@ processDocumentExpiryReminder reminder driver reminderConfig _merchantId merchan
               let nextReminderDate = Time.addUTCTime (24 * 60 * 60) now
               QReminder.updateByPrimaryKey reminder {DR.reminderDate = nextReminderDate}
               logInfo $ "Non-mandatory reminder expired for driver " <> driver.id.getId <> ", rescheduling reminder for daily notifications"
+              -- Schedule next ProcessReminder job for the computed nextReminderDate
+              let scheduleAfter = max 0 (Time.diffUTCTime nextReminderDate now)
+                  reminderJobData = Allocator.ProcessReminderJobData {reminderId = reminder.id, merchantId = merchantId, merchantOperatingCityId = merchantOpCityId}
+              void $ createJobIn @_ @'ProcessReminder (Just merchantId) (Just merchantOpCityId) scheduleAfter reminderJobData
+              logInfo $ "Scheduled next non-mandatory reminder job for driver " <> driver.id.getId <> " in " <> show scheduleAfter <> " seconds"
 
           -- Send expiry notification
           sendDocumentExpiryNotification reminder driver merchantOpCityId True Nothing

@@ -30,7 +30,8 @@ import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.Queries.EntityInfo (create, deleteAllByEntityIdAndType, findAllByEntityIdAndType)
+import Storage.Queries.EntityInfo (create, deleteAllByEntityIdAndType)
+import qualified Storage.Queries.EntityInfoExtra as QEI
 import Tools.Error (GenericError (InvalidRequest))
 
 getEntityInfoList ::
@@ -41,8 +42,8 @@ getEntityInfoList ::
   Environment.Flow Common.EntityExtraInformation
 getEntityInfoList merchantShortId opCity entityType entityId = do
   merchant <- findMerchantByShortId merchantShortId
-  _merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  entityInfo <- map convertEntityInfoToEntityInfoAPIEntity <$> findAllByEntityIdAndType entityId entityType merchant.id
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  entityInfo <- map convertEntityInfoToEntityInfoAPIEntity <$> QEI.findAllByEntityIdTypeAndOpCity entityId entityType merchant.id merchantOpCityId
   pure $ Common.EntityExtraInformation {entityType = entityType, entityId = entityId, entityInfo = entityInfo}
   where
     convertEntityInfoToEntityInfoAPIEntity DEI.EntityInfo {questionId, question, answer} =

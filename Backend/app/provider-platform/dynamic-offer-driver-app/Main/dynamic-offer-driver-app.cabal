@@ -642,6 +642,7 @@ library
       Storage.Queries.DriverSSNExtra
       Storage.Queries.DriverStatsExtra
       Storage.Queries.DriverWalletExtra
+      Storage.Queries.EntityInfoExtra
       Storage.Queries.ExophoneExtra
       Storage.Queries.FareParameters
       Storage.Queries.FareParameters.FareParametersAmbulanceDetails

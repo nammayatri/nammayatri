@@ -107,7 +107,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.FleetVehicleStats as FVS
-import SharedLogic.Reminder.Helper (checkAndCreateReminderIfNeeded)
+import SharedLogic.Reminder.Helper (checkAndCreateReminderIfNeeded, precomputeThresholdCheckData)
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.ScheduledNotifications as SN
 import SharedLogic.TollsDetector
@@ -200,21 +200,25 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     mbRCAssoc <- QDRCA.findActiveAssociationByDriver (cast ride.driverId) True
     whenJust mbRCAssoc $ \rcAssoc -> do
       void $ QRCStats.incrementTotalRides rcAssoc.rcId
-  -- Check if reminders should be created based on thresholds for all document types
+  -- Check if reminders should be created based on rides threshold for all document types
+  -- Note: daysThreshold is handled proactively by recordDocumentCompletion, so we only check ridesThreshold here
   fork "checkAndCreateReminderIfNeeded" $ do
-    -- Get all reminder configs that have auto-trigger enabled (daysThreshold or ridesThreshold configured)
+    -- Get all reminder configs that have ridesThreshold configured
     allReminderConfigs <- QReminderConfig.findAllByMerchantOpCityId booking.merchantOperatingCityId
-    let autoTriggerDocumentTypes =
+    let ridesThresholdDocumentTypes =
           DL.map (.documentType) $
             filter
               ( \config ->
                   config.enabled
-                    && (isJust config.daysThreshold || isJust config.ridesThreshold)
+                    && isJust config.ridesThreshold
               )
               allReminderConfigs
-    -- Check thresholds for all document types that support auto-trigger (configurable via ReminderConfig)
-    forM_ autoTriggerDocumentTypes $ \documentType -> do
-      checkAndCreateReminderIfNeeded documentType driverId merchant.id booking.merchantOperatingCityId
+    -- Precompute all data needed for threshold checks (ride counts, RC association, completion histories)
+    -- This avoids repeated DB queries in the loop
+    thresholdData <- precomputeThresholdCheckData driverId ridesThresholdDocumentTypes
+    -- Check rides threshold for all document types that have it configured
+    forM_ ridesThresholdDocumentTypes $ \documentType -> do
+      checkAndCreateReminderIfNeeded documentType driverId merchant.id booking.merchantOperatingCityId thresholdData
   when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
     fork "updateFleetVehicleDailyStats and updateOperatorAnalyticsTotalRideCount" $ do
       Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride booking
