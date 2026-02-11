@@ -310,7 +310,10 @@ let ApiKind = < UI | DASHBOARD >
 let defaultConfigs =
       { _output = outputPath
       , _storageConfig =
-        { _sqlTypeMapper = sqlMapper, _extraDefaultFields = extraDefaultFields }
+        { _sqlTypeMapper = sqlMapper
+        , _extraDefaultFields = extraDefaultFields
+        , _cacheFlowType = None
+        }
       , _defaultTypeImportMapper = defaultTypeImportMapper
       , _generate =
         [ GeneratorType.DOMAIN_HANDLER
