@@ -1,0 +1,24 @@
+imports: {}
+
+EntityInfo:
+  tableName: entity_info
+  fields:
+    entityId: Text
+    entityType: Text
+    questionId: Text
+    question: Text
+    answer: Text
+  constraints:
+    entityId: PrimaryKey
+    entityType: PrimaryKey
+    questionId: PrimaryKey
+  queries:
+    findAllByEntityIdAndType:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityId, entityType]
+    deleteAllByEntityIdAndType:
+      kvFunction: deleteWithKV
+      where:
+        and: [entityId, entityType]
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

@@ -27,6 +27,7 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     postDriverRegistrationRegisterAadhaar,
     postDriverRegistrationUnlinkDocument,
     getDriverRegistrationVerificationStatus,
+    postDriverRegistrationTriggerReminder,
     postDriverRegistrationVerifyBankAccount,
     getDriverRegistrationInfoBankAccount,
   )
@@ -196,3 +197,10 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity apiTokenInfo driver
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentsCommon) driverId req
+
+postDriverRegistrationTriggerReminder :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.TriggerReminderReq -> Flow APISuccess
+postDriverRegistrationTriggerReminder merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationTriggerReminder) driverId req

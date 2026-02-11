@@ -30,8 +30,11 @@ data DriverInformationE e = DriverInformation
     acRestrictionLiftCount :: Kernel.Prelude.Int,
     acUsageRestrictionType :: Domain.Types.DriverInformation.AirConditionedRestrictionType,
     active :: Kernel.Prelude.Bool,
+    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    addressDocumentType :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType,
     adminId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     airConditionScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoPayStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverAutoPayStatus,
     availableUpiApps :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -139,8 +142,11 @@ instance EncryptedItem DriverInformation where
           acRestrictionLiftCount = acRestrictionLiftCount entity,
           acUsageRestrictionType = acUsageRestrictionType entity,
           active = active entity,
+          address = address entity,
+          addressDocumentType = addressDocumentType entity,
           adminId = adminId entity,
           airConditionScore = airConditionScore entity,
+          approved = approved entity,
           autoPayStatus = autoPayStatus entity,
           availableUpiApps = availableUpiApps entity,
           blockExpiryTime = blockExpiryTime entity,
@@ -240,8 +246,11 @@ instance EncryptedItem DriverInformation where
             acRestrictionLiftCount = acRestrictionLiftCount entity,
             acUsageRestrictionType = acUsageRestrictionType entity,
             active = active entity,
+            address = address entity,
+            addressDocumentType = addressDocumentType entity,
             adminId = adminId entity,
             airConditionScore = airConditionScore entity,
+            approved = approved entity,
             autoPayStatus = autoPayStatus entity,
             availableUpiApps = availableUpiApps entity,
             blockExpiryTime = blockExpiryTime entity,
@@ -338,6 +347,8 @@ instance EncryptedItem' DriverInformation where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
+data AddressDocumentType = RationCard | UtilityBill | Passport deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data AirConditionedRestrictionType = NoRestriction | ToggleAllowed | ToggleNotAllowed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Badges = Badges {badgeCount :: Kernel.Prelude.Int, badgeName :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -377,6 +388,8 @@ data DriverSummary = DriverSummary
 data OnboardingAs = FLEET_DRIVER | INDIVIDUAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AddressDocumentType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
 

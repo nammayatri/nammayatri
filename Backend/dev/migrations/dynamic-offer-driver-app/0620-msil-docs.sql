@@ -3660,3 +3660,162 @@ select '{CAR}', false, false, 0, 'CAR', true, false, 'WHATSAPP', 21600, 60, true
 from atlas_driver_offer_bpp.merchant_operating_city as m where m.city = 'Delhi' and m.merchant_short_id = 'MSIL_PARTNER';
 
 update atlas_driver_offer_bpp.merchant set prepaid_subscription_and_wallet_enabled = true where short_id = 'MSIL_PARTNER';
+
+
+INSERT INTO atlas_driver_offer_bpp.document_verification_config (
+    check_expiry,
+    check_extraction,
+    dependency_document_type,
+    description,
+    disable_warning,
+    document_type,
+    is_disabled,
+    is_hidden,
+    is_mandatory,
+    max_retry_count,
+    merchant_id,
+    merchant_operating_city_id,
+    rc_number_prefix_list,
+    supported_vehicle_classes_json,
+    title,
+    vehicle_category,
+    vehicle_class_check_type,
+    created_at,
+    updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required,
+    "order"
+)
+SELECT
+    check_expiry,
+    check_extraction,
+    dependency_document_type,
+    description,
+    disable_warning,
+    'LocalResidenceProof',
+    is_disabled,
+    is_hidden,
+    true,
+    max_retry_count,
+    (select id from atlas_driver_offer_bpp.merchant where short_id = 'MSIL_PARTNER') as merchant_id,
+   (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Delhi' and merchant_short_id = 'MSIL_PARTNER') as merchant_operating_city_id,
+    '{DL}',
+    supported_vehicle_classes_json,
+    title,
+    vehicle_category,
+    vehicle_class_check_type,
+    CURRENT_TIMESTAMP as created_at,
+    CURRENT_TIMESTAMP as updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required,
+    11
+FROM
+    atlas_driver_offer_bpp.document_verification_config
+WHERE
+    vehicle_category = 'CAR' AND merchant_operating_city_id = (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Minneapolis' and merchant_short_id = 'BRIDGE_CABS_PARTNER') AND document_type = 'BackgroundVerification' ON CONFLICT DO NOTHING;
+
+INSERT INTO atlas_driver_offer_bpp.document_verification_config (
+    check_expiry,
+    check_extraction,
+    dependency_document_type,
+    description,
+    disable_warning,
+    document_type,
+    is_disabled,
+    is_hidden,
+    is_mandatory,
+    max_retry_count,
+    merchant_id,
+    merchant_operating_city_id,
+    rc_number_prefix_list,
+    supported_vehicle_classes_json,
+    title,
+    vehicle_category,
+    vehicle_class_check_type,
+    created_at,
+    updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required,
+    "order"
+)
+SELECT
+    check_expiry,
+    check_extraction,
+    dependency_document_type,
+    description,
+    disable_warning,
+    'PoliceVerificationCertificate',
+    is_disabled,
+    is_hidden,
+    true,
+    max_retry_count,
+    (select id from atlas_driver_offer_bpp.merchant where short_id = 'MSIL_PARTNER') as merchant_id,
+   (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Delhi' and merchant_short_id = 'MSIL_PARTNER') as merchant_operating_city_id,
+    '{DL}',
+    supported_vehicle_classes_json,
+    title,
+    vehicle_category,
+    vehicle_class_check_type,
+    CURRENT_TIMESTAMP as created_at,
+    CURRENT_TIMESTAMP as updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required,
+    11
+FROM
+    atlas_driver_offer_bpp.document_verification_config
+WHERE
+    vehicle_category = 'CAR' AND merchant_operating_city_id = (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Minneapolis' and merchant_short_id = 'BRIDGE_CABS_PARTNER') AND document_type = 'BackgroundVerification' ON CONFLICT DO NOTHING;
+
+INSERT INTO atlas_driver_offer_bpp.document_verification_config (
+    check_expiry,
+    check_extraction,
+    dependency_document_type,
+    description,
+    disable_warning,
+    document_type,
+    is_disabled,
+    is_hidden,
+    is_mandatory,
+    max_retry_count,
+    merchant_id,
+    merchant_operating_city_id,
+    rc_number_prefix_list,
+    supported_vehicle_classes_json,
+    title,
+    vehicle_category,
+    vehicle_class_check_type,
+    created_at,
+    updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required,
+    "order"
+)
+SELECT
+    check_expiry,
+    check_extraction,
+    dependency_document_type,
+    description,
+    disable_warning,
+    'DrivingSchoolCertificate',
+    is_disabled,
+    is_hidden,
+    true,
+    max_retry_count,
+    (select id from atlas_driver_offer_bpp.merchant where short_id = 'MSIL_PARTNER') as merchant_id,
+   (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Delhi' and merchant_short_id = 'MSIL_PARTNER') as merchant_operating_city_id,
+    '{DL}',
+    supported_vehicle_classes_json,
+    title,
+    vehicle_category,
+    vehicle_class_check_type,
+    CURRENT_TIMESTAMP as created_at,
+    CURRENT_TIMESTAMP as updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required,
+    11
+FROM
+    atlas_driver_offer_bpp.document_verification_config
+WHERE
+    vehicle_category = 'CAR' AND merchant_operating_city_id = (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Minneapolis' and merchant_short_id = 'BRIDGE_CABS_PARTNER') AND document_type = 'BackgroundVerification' ON CONFLICT DO NOTHING;
+
+update atlas_driver_offer_bpp.transporter_config set requiresDriverOnboardingInspection = true, separateDriverVehicleEnablement = true, reminderSystemEnabled = true where merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'MSIL_PARTNER');

@@ -29,17 +29,26 @@ getOperationGetAllHubs (_, _, opCityId) = QOH.findAllByCityId opCityId
 postOperationCreateRequest :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> DriverOperationHubRequest -> Flow APISuccess
 postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req = do
   runRequestValidation validateDriverOperationHubRequest req
+  -- At least one of registrationNo or driverId must be provided
+  unless (isJust req.registrationNo || isJust req.driverId) $
+    throwError $ InvalidRequest "Either registrationNo or driverId must be provided"
   let creatorId = fromMaybe (Id req.creatorId) mbPersonId
   Redis.whenWithLockRedis (opsHubDriverLockKey creatorId.getId) 60 $ do
     id <- generateGUID
     now <- getCurrentTime
-    opsHubReq <- QOHR.findByCreatorRCStatusAndType creatorId PENDING req.requestType req.registrationNo
-    unless (null opsHubReq) $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
+    -- Check for duplicate requests based on creator, status, type, and either registrationNo or driverId
+    opsHubReqs <- QOHR.findByCreatorStatusAndType creatorId PENDING req.requestType
+    let isDuplicate = case (req.registrationNo, req.driverId) of
+          (Just rcNo, _) -> any (\r -> r.registrationNo == Just rcNo) opsHubReqs
+          (_, Just driverId) -> any (\r -> r.driverId == Just driverId) opsHubReqs
+          _ -> False
+    when isDuplicate $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
     void $ QOH.findByPrimaryKey req.operationHubId >>= fromMaybeM (OperationHubDoesNotExist req.operationHubId.getId)
     let operationHubReq =
           OperationHubRequests
             { operationHubId = req.operationHubId,
               registrationNo = req.registrationNo,
+              driverId = req.driverId,
               requestType = req.requestType,
               requestStatus = PENDING,
               createdAt = now,
@@ -80,8 +89,10 @@ opsHubDriverLockKey driverId = "opsHub:driver:Id-" <> driverId
 validateDriverOperationHubRequest :: Validate DriverOperationHubRequest
 validateDriverOperationHubRequest DriverOperationHubRequest {..} =
   sequenceA_
-    [ validateField "registrationNo" registrationNo $
-        LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
+    [ -- Validate registrationNo if provided
+      whenJust registrationNo $ \rcNo ->
+        validateField "registrationNo" rcNo $
+          LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
     ]
 
 castHubRequests :: (OperationHubRequests, Person, OperationHub) -> Flow OperationHubDriverRequest

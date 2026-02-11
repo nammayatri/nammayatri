@@ -164,6 +164,13 @@ postDriverEnable merchantShortId opCity reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
+  -- Check driver inspection approval if required (similar to RC approval check in activateRC)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (InvalidRequest "TransporterConfig not found")
+  when (transporterConfig.requiresDriverOnboardingInspection == Just True) $ do
+    driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+    unless (fromMaybe False driverInfo.approved) $
+      throwError (InvalidRequest "Driver is not approved")
+
   mVehicle <- QVehicle.findById personId
   linkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
 

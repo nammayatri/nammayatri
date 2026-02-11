@@ -1,0 +1,53 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Value: Data.Aeson
+  DocumentType: Domain.Types.DocumentVerificationConfig
+
+Reminder:
+  tableName: reminder
+
+  types:
+
+    ReminderStatus:
+      enum: "PENDING, SENT, COMPLETED, CANCELLED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ReminderStatus>
+
+  fields:
+    id: Id Reminder
+    documentType: DocumentType
+    entityId: Text
+    driverId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    dueDate: UTCTime
+    reminderDate: UTCTime
+    currentIntervalIndex: Int
+    status: ReminderStatus
+    metadata: Maybe Value
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    documentType: SecondaryKey
+
+  queries:
+    findAllPendingByDriverId:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, status]
+    findAllPendingByDocumentTypeAndReminderDate:
+      kvFunction: findAllWithKV
+      where:
+        and: [documentType, reminderDate, status]
+    findAllByEntityIdAndDocumentType:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityId, documentType]

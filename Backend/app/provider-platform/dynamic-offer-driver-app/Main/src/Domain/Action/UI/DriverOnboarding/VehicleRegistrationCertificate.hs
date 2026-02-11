@@ -93,6 +93,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
+import SharedLogic.Reminder.Helper (createOrUpdateReminderForDocumentExpiry)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
@@ -628,6 +629,42 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           -- upsert vehicleRC
           RCQuery.upsert vehicleRC
           rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" rcVerificationResponse.registrationNumber))
+          -- Create reminders for all expiry dates stored in RC when it's created/updated
+          -- Fitness expiry (VEHICLE_REGISTRATION_CERTIFICATE) - always present
+          createOrUpdateReminderForDocumentExpiry
+            ODC.VehicleRegistrationCertificate
+            person.id
+            person.merchantId
+            person.merchantOperatingCityId
+            (rc.id.getId)
+            rc.fitnessExpiry
+          -- PUC expiry
+          whenJust rc.pucExpiry $ \pucExpiry -> do
+            createOrUpdateReminderForDocumentExpiry
+              ODC.VehiclePUC
+              person.id
+              person.merchantId
+              person.merchantOperatingCityId
+              (rc.id.getId)
+              pucExpiry
+          -- Permit expiry
+          whenJust rc.permitExpiry $ \permitExpiry -> do
+            createOrUpdateReminderForDocumentExpiry
+              ODC.VehiclePermit
+              person.id
+              person.merchantId
+              person.merchantOperatingCityId
+              (rc.id.getId)
+              permitExpiry
+          -- Insurance validity
+          whenJust rc.insuranceValidity $ \insuranceValidity -> do
+            createOrUpdateReminderForDocumentExpiry
+              ODC.VehicleInsurance
+              person.id
+              person.merchantId
+              person.merchantOperatingCityId
+              (rc.id.getId)
+              insuranceValidity
           case person.role of
             Person.FLEET_OWNER -> do
               mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId person.id rc.id now
