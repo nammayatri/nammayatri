@@ -57,9 +57,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.StclMembership.StclMembership {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.aadharNumberEncrypted (unEncrypted . (.encrypted) $ aadharNumber),
-      Se.Set Beam.aadharNumberHash ((.hash) aadharNumber),
-      Se.Set Beam.accountNumberEncrypted (unEncrypted . (.encrypted) $ accountNumber),
+    [ Se.Set Beam.accountNumberEncrypted (unEncrypted . (.encrypted) $ accountNumber),
       Se.Set Beam.accountNumberHash ((.hash) accountNumber),
       Se.Set Beam.addressCity addressCity,
       Se.Set Beam.addressPostalCode addressPostalCode,
@@ -87,8 +85,6 @@ updateByPrimaryKey (Domain.Types.StclMembership.StclMembership {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.mobileNumberEncrypted (unEncrypted . (.encrypted) $ mobileNumber),
       Se.Set Beam.mobileNumberHash ((.hash) mobileNumber),
-      Se.Set Beam.nomineeAadharEncrypted (nomineeAadhar & unEncrypted . encrypted),
-      Se.Set Beam.nomineeAadharHash (nomineeAadhar & hash),
       Se.Set Beam.nomineeName nomineeName,
       Se.Set Beam.numberOfShares numberOfShares,
       Se.Set Beam.panNumberEncrypted (unEncrypted . (.encrypted) $ panNumber),

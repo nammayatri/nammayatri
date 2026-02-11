@@ -14,8 +14,7 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data StclMembershipT f = StclMembershipT
-  { aadharNumberEncrypted :: B.C f Kernel.Prelude.Text,
-    aadharNumberHash :: B.C f Kernel.External.Encryption.DbHash,
+  {
     accountNumberEncrypted :: B.C f Kernel.Prelude.Text,
     accountNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     addressCity :: B.C f Kernel.Prelude.Text,
@@ -46,8 +45,6 @@ data StclMembershipT f = StclMembershipT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     mobileNumberEncrypted :: B.C f Kernel.Prelude.Text,
     mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,
-    nomineeAadharEncrypted :: B.C f Kernel.Prelude.Text,
-    nomineeAadharHash :: B.C f Kernel.External.Encryption.DbHash,
     nomineeName :: B.C f Kernel.Prelude.Text,
     numberOfShares :: B.C f Kernel.Prelude.Int,
     panNumberEncrypted :: B.C f Kernel.Prelude.Text,
@@ -69,6 +66,6 @@ instance B.Table StclMembershipT where
 
 type StclMembership = StclMembershipT Identity
 
-$(enableKVPG ''StclMembershipT ['id] [['aadharNumberHash], ['accountNumberHash], ['applicationId], ['driverId], ['mobileNumberHash], ['panNumberHash]])
+$(enableKVPG ''StclMembershipT ['id] [['accountNumberHash], ['applicationId], ['driverId], ['mobileNumberHash], ['panNumberHash]])
 
 $(mkTableInstances ''StclMembershipT "stcl_membership")
