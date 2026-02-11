@@ -77,12 +77,16 @@ buildSelectReqV2 subscriber req = do
   estimateIdText <- getEstimateId fulfillment item & fromMaybeM (InvalidRequest "Missing item_id")
   let customerPhoneNum = getCustomerPhoneNumber fulfillment
   paymentMethodInfo <- order.orderPayments >>= Kernel.Prelude.listToMaybe & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join
+  -- Use contextBapUri if present, otherwise fall back to subscriber.subscriber_url
+  bapUri <- case context.contextBapUri of
+    Just bapUriText -> parseBaseUrl bapUriText
+    Nothing -> pure subscriber.subscriber_url
   pure
     DSelect.DSelectReq
       { messageId = messageId,
         transactionId = transactionId,
         bapId = subscriber.subscriber_id,
-        bapUri = subscriber.subscriber_url,
+        bapUri = bapUri,
         pickupTime = now,
         autoAssignEnabled = autoAssignEnabled,
         customerExtraFee = customerExtraFee,
