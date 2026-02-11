@@ -104,7 +104,7 @@ getNearestDrivers NearestDriversReq {..} = do
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub (concatMap (.allowedVehicleVariant) allowedCityServiceTiers)
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant))
-  driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity minWalletAmountForCashRides paymentInstrument
+  driverInfos_ <- Int.getDriverInfosForPooling (driverLocs <&> (.driverId)) isRental isInterCity minWalletAmountForCashRides paymentInstrument
   driverInfos <- filterDriversBySufficientBalance prepaidSubscriptionAndWalletEnabled rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
@@ -178,7 +178,7 @@ getNearestDrivers NearestDriversReq {..} = do
               { driverId = cast person.id,
                 driverDeviceToken = person.deviceToken,
                 language = person.language,
-                onRide = info.onRide,
+                onRide = isJust location.rideDetails,
                 distanceToDriver = roundToIntegral dist,
                 variant = vehicle.variant,
                 serviceTier,
@@ -186,7 +186,7 @@ getNearestDrivers NearestDriversReq {..} = do
                 isAirConditioned = serviceTierInfo.isAirConditioned,
                 lat = location.lat,
                 lon = location.lon,
-                mode = info.mode,
+                mode = location.mode,
                 clientSdkVersion = person.clientSdkVersion,
                 clientBundleVersion = person.clientBundleVersion,
                 clientConfigVersion = person.clientConfigVersion,

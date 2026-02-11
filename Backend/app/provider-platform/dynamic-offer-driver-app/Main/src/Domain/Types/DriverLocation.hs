@@ -15,6 +15,7 @@
 module Domain.Types.DriverLocation where
 
 import Data.Time
+import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
@@ -40,6 +41,7 @@ data DriverLocation = DriverLocation
     updatedAt :: UTCTime,
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity), -- Need to check that location service send mocid
-    rideDetails :: Maybe RideDetails
+    rideDetails :: Maybe RideDetails,
+    mode :: Maybe DriverInfo.DriverMode
   }
   deriving (Generic, Show, Eq, HasCoordinates, FromJSON, ToJSON)

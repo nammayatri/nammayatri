@@ -103,7 +103,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       allowedVehicleVariant = DL.nub $ concatMap (.allowedVehicleVariant) allowedCityServiceTiers
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong onRideRadius (Just allowedVehicleVariant)
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
-  driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity minWalletAmountForCashRides paymentInstrument
+  driverInfos_ <- Int.getDriverInfosForPooling (driverLocs <&> (.driverId)) isRental isInterCity minWalletAmountForCashRides paymentInstrument
   driverInfos <- QGND.filterDriversBySufficientBalance prepaidSubscriptionAndWalletEnabled rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
   logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show (DIAPI.convertToDriverInfoAPIEntity <$> driverInfos)
   vehicles <- Int.getVehicles driverInfos
@@ -184,7 +184,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
               { driverId = cast person.id,
                 driverDeviceToken = person.deviceToken,
                 language = person.language,
-                onRide = info.onRide,
+                onRide = isJust location.rideDetails,
                 lat = location.lat,
                 lon = location.lon,
                 variant = vehicle.variant,
@@ -195,7 +195,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
                 previousRideDropLon = rideToLocation.lon,
                 distanceToDriver = roundToIntegral $ distanceFromDriverToDestination + distanceFromDestinationToPickup,
                 distanceFromDriverToDestination = roundToIntegral distanceFromDriverToDestination,
-                mode = info.mode,
+                mode = location.mode,
                 clientSdkVersion = person.clientSdkVersion,
                 clientBundleVersion = person.clientBundleVersion,
                 reactBundleVersion = person.reactBundleVersion,

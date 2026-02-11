@@ -122,7 +122,6 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Tuple.Extra as DTE
 import Domain.Action.Beckn.Search
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
-import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.Internal.ProcessingChangeOnline as DOnlineDuration
 import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
 import qualified Domain.Action.UI.DriverHomeLocation as DDHL
@@ -147,6 +146,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverHomeLocation as DDHL
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.DriverLocation as DriverLocation
 import qualified Domain.Types.DriverPlan as DPlan
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
@@ -250,6 +250,7 @@ import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
+import qualified SharedLogic.External.LocationTrackingService.Types as LTT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import SharedLogic.FarePolicy
@@ -787,7 +788,9 @@ getInformationV2 ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasField "s3Env" r (S3.S3Env m)
+    HasField "s3Env" r (S3.S3Env m),
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["ltsCfg" ::: LTT.LocationTrackingeServiceConfig]
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
@@ -816,7 +819,9 @@ getInformation ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasField "s3Env" r (S3.S3Env m)
+    HasField "s3Env" r (S3.S3Env m),
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["ltsCfg" ::: LTT.LocationTrackingeServiceConfig]
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
@@ -838,7 +843,8 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   operatorReferral <- case driverInfo.referredByOperatorId of
     Just opId -> QDR.findById (cast (Id opId))
     Nothing -> pure Nothing
-  driverEntity <- buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName
+  ltsDriverLocation <- listToMaybe <$> LTF.driversLocation [driverId]
+  driverEntity <- buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName ltsDriverLocation
   dues <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName driverId [DDF.RECURRING_INVOICE, DDF.RECURRING_EXECUTION_INVOICE] [DDF.PAYMENT_PENDING, DDF.PAYMENT_OVERDUE]
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
   let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
@@ -903,15 +909,6 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                     QDriverInformation.updateBlockedState driverId False (Just "AUTOMATICALLY_UNBLOCKED") merchantId merchantOpCityId DTDBT.Application
                   else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
               Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
-        when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
-          let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
-          -- Track offline timestamp when driver goes offline
-          if (mode == Just DriverInfo.OFFLINE && driverInfo.mode /= Just DriverInfo.OFFLINE)
-            then do
-              now <- getCurrentTime
-              logInfo $ "Driver going OFFLINE at: " <> show now <> " for driverId: " <> show driverId
-              DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing (Just now)
-            else DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing Nothing
         pure APISuccess.Success
     )
     ( do
@@ -1061,8 +1058,8 @@ deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   QDHL.deleteById driverHomeLocationId
   return APISuccess.Success
 
-buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity) -> Plan.ServiceNames -> m DriverEntityRes
-buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName = do
+buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity) -> Plan.ServiceNames -> Maybe DriverLocation.DriverLocation -> m DriverEntityRes
+buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName ltsDriverLocation = do
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   vehicleMB <- QVehicle.findById person.id
   DriverSpecificSubscriptionData {mbDriverPlan = driverPlan, ..} <- getDriverSpecificSubscriptionDataWithSubsConfig (person.id, transporterConfig.merchantId, merchantOpCityId) transporterConfig driverInfo vehicleMB serviceName
@@ -1111,16 +1108,12 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
                   (fromMaybe 0 driverInfo.airConditionScore) <= acThreshold
                     && maybe True (\lastCheckedAt -> fromInteger (diffDays (utctDay now) (utctDay lastCheckedAt)) >= transporterConfig.acStatusCheckGap) driverInfo.lastACStatusCheckedAt
         return (checIfACWorking', (.serviceTierType) <$> mbDefaultServiceTierItem, isVehicleSupported)
-  onRideFlag <-
-    if driverInfo.onRide && driverInfo.onboardingVehicleCategory /= Just DVC.BUS
-      then
-        Ride.notOnRide person.id >>= \veryMuchNotOnRide ->
-          if veryMuchNotOnRide
-            then do
-              fork "Update Wrongly Set OnRide" $ updateOnRideStatusWithAdvancedRideCheck person.id Nothing
-              return False
-            else return driverInfo.onRide
-      else return driverInfo.onRide
+  let ltsOnRideFlag = isJust (ltsDriverLocation >>= (.rideDetails))
+  when (ltsOnRideFlag && driverInfo.onboardingVehicleCategory /= Just DVC.BUS) $ do
+    veryMuchNotOnRide <- Ride.notOnRide person.id
+    when veryMuchNotOnRide $ do
+      fork "Fix OnRide DB Inconsistency" $ updateOnRideStatusWithAdvancedRideCheck person.id Nothing
+  let onRideFlag = ltsOnRideFlag
   let driverTags = Yudhishthira.convertTags $ fromMaybe [] person.driverTag
   let mbDriverSafetyTag = Yudhishthira.accessTagKey (LYT.TagName "SafetyCohort") driverTags
       mbDriverSafetyScore = Yudhishthira.accessTagKey (LYT.TagName "SafetyScore") driverTags
@@ -1171,7 +1164,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         canSwitchToRental = driverInfo.canSwitchToRental,
         canSwitchToInterCity = driverInfo.canSwitchToInterCity,
         canSwitchToIntraCity = driverInfo.canSwitchToIntraCity,
-        mode = driverInfo.mode,
+        mode = (ltsDriverLocation >>= (.mode)) <|> driverInfo.mode,
         payerVpa = driverPlan >>= (.payerVpa),
         blockStateModifier = driverInfo.blockStateModifier,
         autoPayStatus = driverPlan >>= (.autoPayStatus),
@@ -1236,7 +1229,9 @@ updateDriver ::
     EncFlow m r,
     CacheFlow m r,
     HasField "s3Env" r (S3.S3Env m),
-    HasField "version" r DeploymentVersion
+    HasField "version" r DeploymentVersion,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["ltsCfg" ::: LTT.LocationTrackingeServiceConfig]
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Version ->
@@ -1357,7 +1352,8 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
   QPerson.updatePersonRec personId updPerson
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  driverEntity <- buildDriverEntityRes (updPerson, updatedDriverInfo, driverStats, merchantOpCityId) Plan.YATRI_SUBSCRIPTION
+  ltsDriverLocation <- listToMaybe <$> LTF.driversLocation [personId]
+  driverEntity <- buildDriverEntityRes (updPerson, updatedDriverInfo, driverStats, merchantOpCityId) Plan.YATRI_SUBSCRIPTION ltsDriverLocation
   driverReferralCode <- QDR.findById personId
   allFdas <- QFDA.findAllByDriverIdWithStatus personId
   let activeFda = find (.isActive) allFdas

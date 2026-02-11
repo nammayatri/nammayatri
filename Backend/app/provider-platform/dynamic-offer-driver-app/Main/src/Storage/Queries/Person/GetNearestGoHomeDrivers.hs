@@ -101,7 +101,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius (Just allowedVehicleVariant)
   specialLocWarriorDriverInfos <- Int.getSpecialLocWarriorDriverInfoWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
-  driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity minWalletAmountForCashRides paymentInstrument
+  driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosForPooling (driverHomeLocs <&> (.driverId)) isRental isInterCity minWalletAmountForCashRides paymentInstrument
   let driverInfos_ = specialLocWarriorDriverInfos <> driverInfoWithoutSpecialLocWarrior
   driverInfos <- QGND.filterDriversBySufficientBalance prepaidSubscriptionAndWalletEnabled rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
   logDebug $ "MetroWarriorDebugging getNearestGoHomeDrivers" <> show (DIAPI.convertToDriverInfoAPIEntity <$> specialLocWarriorDriverInfos)
@@ -175,7 +175,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
               { driverId = cast person.id,
                 driverDeviceToken = person.deviceToken,
                 language = person.language,
-                onRide = info.onRide,
+                onRide = isJust location.rideDetails,
                 isSpecialLocWarrior = info.isSpecialLocWarrior,
                 distanceToDriver = roundToIntegral dist,
                 variant = vehicle.variant,
@@ -184,7 +184,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
                 isAirConditioned = serviceTierInfo.isAirConditioned,
                 lat = location.lat,
                 lon = location.lon,
-                mode = info.mode,
+                mode = location.mode,
                 clientSdkVersion = person.clientSdkVersion,
                 clientBundleVersion = person.clientBundleVersion,
                 reactBundleVersion = person.reactBundleVersion,
