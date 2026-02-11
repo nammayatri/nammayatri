@@ -41,10 +41,10 @@ import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Trip
 import Environment (Flow)
 import EulerHS.Prelude
-import Kernel.Prelude (roundToIntegral)
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics

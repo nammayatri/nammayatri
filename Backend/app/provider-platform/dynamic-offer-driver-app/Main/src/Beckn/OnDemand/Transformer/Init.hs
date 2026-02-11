@@ -25,7 +25,10 @@ import qualified Kernel.Utils.Common
 buildDInitReq :: (Kernel.Types.App.MonadFlow m) => Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.InitReq -> Bool -> m Domain.Action.Beckn.Init.InitReq
 buildDInitReq subscriber req isValueAddNP = do
   let bapId_ = subscriber.subscriber_id
-  let bapUri_ = subscriber.subscriber_url
+  -- Use contextBapUri if present, otherwise fall back to subscriber.subscriber_url
+  bapUri_ <- case req.initReqContext.contextBapUri of
+    Just bapUriText -> Kernel.Prelude.parseBaseUrl bapUriText
+    Nothing -> pure subscriber.subscriber_url
   bapCityText <- req.initReqContext.contextLocation >>= (.locationCity) >>= (.cityCode) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't find City")
   bapCity_ <- A.decode (A.encode bapCityText) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't parse City")
   bapCountryText <- req.initReqContext.contextLocation >>= (.locationCountry) >>= (.countryCode) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't find Country")
