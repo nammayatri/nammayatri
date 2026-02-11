@@ -19,7 +19,6 @@ StclMembership:
     memberCategory: Text
     numberOfShares: Int
     dateOfBirth: Day
-    aadharNumber: EncryptedHashedField e Text
     panNumber: EncryptedHashedField e Text
     mobileNumber: EncryptedHashedField e Text
     emailId: Text
@@ -36,7 +35,6 @@ StclMembership:
     vehicleType: Text
     fuelTypes: "[Text]"
     nomineeName: Text
-    nomineeAadhar: EncryptedHashedField e Text
     declarationPlace: Text
     declarationDate: Day
     declarationSignature: Text
@@ -56,14 +54,10 @@ StclMembership:
     id: PrimaryKey
     driverId: SecondaryKey
     applicationId: SecondaryKey
-    aadharNumberHash: "!SecondaryKey"
     panNumberHash: "!SecondaryKey"
     mobileNumberHash: "!SecondaryKey"
     accountNumberHash: "!SecondaryKey"
   beamFields:
-    aadharNumber:
-      aadharNumberEncrypted: Text
-      aadharNumberHash: DbHash
     panNumber:
       panNumberEncrypted: Text
       panNumberHash: DbHash
@@ -77,14 +71,11 @@ StclMembership:
       ifscCodeEncrypted: Text
       ifscCodeHash: DbHash
   fromTType:
-    aadharNumber: EncryptedHashed (Encrypted aadharNumberEncrypted) aadharNumberHash|E
     panNumber: EncryptedHashed (Encrypted panNumberEncrypted) panNumberHash|E
     mobileNumber: EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash|E
     accountNumber: EncryptedHashed (Encrypted accountNumberEncrypted) accountNumberHash|E
     ifscCode: EncryptedHashed (Encrypted ifscCodeEncrypted) ifscCodeHash|E
   toTType:
-    aadharNumberEncrypted: (unEncrypted . (.encrypted) $ aadharNumber)|E
-    aadharNumberHash: ((.hash) aadharNumber)|E
     panNumberEncrypted: (unEncrypted . (.encrypted) $ panNumber)|E
     panNumberHash: ((.hash) panNumber)|E
     mobileNumberEncrypted: (unEncrypted . (.encrypted) $ mobileNumber)|E
@@ -94,8 +85,6 @@ StclMembership:
     ifscCodeEncrypted: (unEncrypted . (.encrypted) $ ifscCode)|E
     ifscCodeHash: ((.hash) ifscCode)|E
   sqlType:
-    aadharNumberEncrypted: character varying(255)
-    aadharNumberHash: bytea
     panNumberEncrypted: character varying(255)
     panNumberHash: bytea
     mobileNumberEncrypted: character varying(255)

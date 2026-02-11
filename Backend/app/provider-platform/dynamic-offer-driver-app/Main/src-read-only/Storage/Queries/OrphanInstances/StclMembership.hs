@@ -17,8 +17,7 @@ instance FromTType' Beam.StclMembership Domain.Types.StclMembership.StclMembersh
     pure $
       Just
         Domain.Types.StclMembership.StclMembership
-          { aadharNumber = EncryptedHashed (Encrypted aadharNumberEncrypted) aadharNumberHash,
-            accountNumber = EncryptedHashed (Encrypted accountNumberEncrypted) accountNumberHash,
+          { accountNumber = EncryptedHashed (Encrypted accountNumberEncrypted) accountNumberHash,
             addressCity = addressCity,
             addressPostalCode = addressPostalCode,
             addressState = addressState,
@@ -44,7 +43,6 @@ instance FromTType' Beam.StclMembership Domain.Types.StclMembership.StclMembersh
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
-            nomineeAadhar = EncryptedHashed (Encrypted nomineeAadharEncrypted) nomineeAadharHash,
             nomineeName = nomineeName,
             numberOfShares = numberOfShares,
             panNumber = EncryptedHashed (Encrypted panNumberEncrypted) panNumberHash,
@@ -59,9 +57,7 @@ instance FromTType' Beam.StclMembership Domain.Types.StclMembership.StclMembersh
 instance ToTType' Beam.StclMembership Domain.Types.StclMembership.StclMembership where
   toTType' (Domain.Types.StclMembership.StclMembership {..}) = do
     Beam.StclMembershipT
-      { Beam.aadharNumberEncrypted = unEncrypted . (.encrypted) $ aadharNumber,
-        Beam.aadharNumberHash = (.hash) aadharNumber,
-        Beam.accountNumberEncrypted = unEncrypted . (.encrypted) $ accountNumber,
+      { Beam.accountNumberEncrypted = unEncrypted . (.encrypted) $ accountNumber,
         Beam.accountNumberHash = (.hash) accountNumber,
         Beam.addressCity = addressCity,
         Beam.addressPostalCode = addressPostalCode,
@@ -90,8 +86,6 @@ instance ToTType' Beam.StclMembership Domain.Types.StclMembership.StclMembership
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.mobileNumberEncrypted = unEncrypted . (.encrypted) $ mobileNumber,
         Beam.mobileNumberHash = (.hash) mobileNumber,
-        Beam.nomineeAadharEncrypted = nomineeAadhar & unEncrypted . encrypted,
-        Beam.nomineeAadharHash = nomineeAadhar & hash,
         Beam.nomineeName = nomineeName,
         Beam.numberOfShares = numberOfShares,
         Beam.panNumberEncrypted = unEncrypted . (.encrypted) $ panNumber,

@@ -30,7 +30,7 @@ types:
     enum: "EV,Petrol,Diesel,CNG,Other"
   NomineeInfo:
     nomineeName: Text
-    nomineeAadhar: Text
+    nomineeAadhar: Maybe Text
   Declaration:
     place: Text
     date: Day
@@ -69,7 +69,6 @@ types:
     memberCategory: Text
     numberOfShares: Int
     dateOfBirth: Day
-    aadharNumber: Text
     panNumber: Text
     mobileNumber: Text
     emailId: Text

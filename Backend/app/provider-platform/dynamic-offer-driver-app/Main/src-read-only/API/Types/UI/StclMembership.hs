@@ -67,8 +67,7 @@ data MembershipApplicationResp = MembershipApplicationResp {applicationId :: Ker
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MembershipDetailsResp = MembershipDetailsResp
-  { aadharNumber :: Kernel.Prelude.Text,
-    address :: Address,
+  { address :: Address,
     applicationId :: Kernel.Prelude.Text,
     bankDetails :: BankDetails,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -92,7 +91,7 @@ data MembershipDetailsResp = MembershipDetailsResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data NomineeInfo = NomineeInfo {nomineeAadhar :: Kernel.Prelude.Text, nomineeName :: Kernel.Prelude.Text}
+data NomineeInfo = NomineeInfo {nomineeAadhar :: Kernel.Prelude.Maybe Kernel.Prelude.Text, nomineeName :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -53,3 +53,10 @@ ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN short_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN payment_status text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN nominee_aadhar_encrypted;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN nominee_aadhar_hash;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN aadhar_number_encrypted;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN aadhar_number_hash;
