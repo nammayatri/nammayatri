@@ -25,4 +25,3 @@ instance ToTType' BeamR.Role Role.Role where
         parentRoleId = getId <$> parentRoleId,
         ..
       }
-

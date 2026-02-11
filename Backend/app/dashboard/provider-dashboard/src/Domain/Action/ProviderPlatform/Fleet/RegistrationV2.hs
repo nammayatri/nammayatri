@@ -30,9 +30,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import "lib-dashboard" Storage.Queries.Person as QP
-import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error

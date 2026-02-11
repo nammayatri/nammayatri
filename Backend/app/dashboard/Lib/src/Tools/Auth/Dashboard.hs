@@ -29,8 +29,8 @@ import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (throwError)
 import Storage.Beam.BeamFlow
-import qualified Storage.Queries.Person as QPerson
 import qualified Storage.CachedQueries.Role as CQRole
+import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Auth.Common as Common
 import Tools.Error
 import Tools.Servant.HeaderAuth

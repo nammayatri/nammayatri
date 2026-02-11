@@ -24,12 +24,11 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.BeamFlow
 import Storage.Beam.Common as SBC
 import qualified Storage.Beam.Role as BeamR
-import Kernel.Utils.Common
-import Tools.Error
 import Storage.Queries.OrphanInstances.Role ()
 
 create :: BeamFlow m r => Role -> m ()
@@ -90,11 +89,26 @@ findParentRolesRecursively role = findNextParentRoleRecursively role.parentRoleI
     findNextParentRoleRecursively :: BeamFlow m r => Maybe (Id Role.Role) -> [Role.Role] -> m [Role.Role]
     findNextParentRoleRecursively Nothing acc = pure $ reverse acc
     findNextParentRoleRecursively (Just parentId) acc = do
-      -- detect cycle via already accumulated parents
-      when (any (\r -> r.id == parentId) acc) $ do
-        logError $ "Cyclic parentRoleId reference detected in roles: " <> show (parentId : map (\r -> r.id) acc)
-        throwError $ InternalError "Cyclic parentRoleId reference detected in roles"
+      -- detect cycle via already accumulated parents, including current role.id
+      -- in current implementation role can't be parent of itself
+      when (any (\r -> r.id == parentId) (role : acc)) $ do
+        let cyclicParentIds = reverse $ parentId : (acc <&> (.id))
+        logError $ "Cyclic parentRoleId reference detected in roles: rodeId: " <> role.id.getId <> "; roleName: " <> show role.name <> "; parentIds: " <> show (cyclicParentIds <&> (.getId))
       mbParent <- findById parentId
       case mbParent of
-        Nothing -> pure $ reverse acc  -- should we throw error?
+        Nothing -> pure $ reverse acc -- should we throw error?
         Just parentRole -> findNextParentRoleRecursively parentRole.parentRoleId (parentRole : acc)
+
+-- by default parentRoleId can be DASHBOARD_ADMIN
+updateById :: BeamFlow m r => Role.Role -> m ()
+updateById role = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamR.name role.name,
+      Se.Set BeamR.dashboardAccessType role.dashboardAccessType,
+      Se.Set BeamR.parentRoleId $ getId <$> role.parentRoleId,
+      Se.Set BeamR.description role.description,
+      Se.Set BeamR.updatedAt now
+    ]
+    [ Se.Is BeamR.id $ Se.Eq $ getId role.id
+    ]
