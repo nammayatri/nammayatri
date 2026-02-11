@@ -38,10 +38,13 @@ postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req
     now <- getCurrentTime
     -- Check for duplicate requests based on creator, status, type, and either registrationNo or driverId
     opsHubReqs <- QOHR.findByCreatorStatusAndType creatorId PENDING req.requestType
-    let isDuplicate = case (req.registrationNo, req.driverId) of
-          (Just rcNo, _) -> any (\r -> r.registrationNo == Just rcNo) opsHubReqs
-          (_, Just driverId) -> any (\r -> r.driverId == Just driverId) opsHubReqs
-          _ -> False
+    let duplicateReg = case req.registrationNo of
+          Just rcNo -> any (\r -> r.registrationNo == Just rcNo) opsHubReqs
+          Nothing -> False
+    let duplicateDriver = case req.driverId of
+          Just driverId -> any (\r -> r.driverId == Just driverId) opsHubReqs
+          Nothing -> False
+    let isDuplicate = duplicateReg || duplicateDriver
     when isDuplicate $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
     void $ QOH.findByPrimaryKey req.operationHubId >>= fromMaybeM (OperationHubDoesNotExist req.operationHubId.getId)
     let operationHubReq =

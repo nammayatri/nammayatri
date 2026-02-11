@@ -12,3 +12,15 @@ ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN reminder_intervals
 ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN rides_threshold integer ;
 ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.reminder_config DROP CONSTRAINT reminder_config_pkey;
+ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD PRIMARY KEY ( document_type, id, merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.reminder_config ALTER COLUMN reminder_intervals TYPE integer[];

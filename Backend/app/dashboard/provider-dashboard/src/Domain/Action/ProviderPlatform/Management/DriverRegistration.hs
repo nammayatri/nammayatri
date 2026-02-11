@@ -202,5 +202,6 @@ postDriverRegistrationTriggerReminder :: ShortId DM.Merchant -> City.City -> Api
 postDriverRegistrationTriggerReminder merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  let mbRequestorId = determineRequestorId apiTokenInfo driverId
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationTriggerReminder) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationTriggerReminder) driverId mbRequestorId req

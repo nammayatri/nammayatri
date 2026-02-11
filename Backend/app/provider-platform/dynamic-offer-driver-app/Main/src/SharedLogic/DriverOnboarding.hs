@@ -733,6 +733,6 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.FinnishIDResidencePermit -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.FinnishIDResidencePermit
   Domain.Types.DocumentVerificationConfig.BusinessRegistrationExtract -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessRegistrationExtract
   Domain.Types.DocumentVerificationConfig.PersonalId -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PersonalId
-  Domain.Types.DocumentVerificationConfig.LocalResidenceProof -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInspectionImage -- Fallback: API type not available (TODO: Resolve)
-  Domain.Types.DocumentVerificationConfig.PoliceVerificationCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInspectionImage -- Fallback: API type not available (TODO: Resolve)
-  Domain.Types.DocumentVerificationConfig.DrivingSchoolCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInspectionImage -- Fallback: API type not available
+  Domain.Types.DocumentVerificationConfig.LocalResidenceProof -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LocalResidenceProof
+  Domain.Types.DocumentVerificationConfig.PoliceVerificationCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PoliceVerificationCertificate
+  Domain.Types.DocumentVerificationConfig.DrivingSchoolCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DrivingSchoolCertificate

@@ -643,3 +643,17 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN reminder_system
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN link_fleet_to_un_verified_existing_rc boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

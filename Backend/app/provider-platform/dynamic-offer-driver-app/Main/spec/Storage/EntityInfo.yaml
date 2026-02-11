@@ -1,4 +1,6 @@
-imports: {}
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
 
 EntityInfo:
   tableName: entity_info
@@ -8,17 +10,22 @@ EntityInfo:
     questionId: Text
     question: Text
     answer: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    createdAt: UTCTime
+    updatedAt: UTCTime
   constraints:
     entityId: PrimaryKey
     entityType: PrimaryKey
     questionId: PrimaryKey
+    merchantId: PrimaryKey
   queries:
     findAllByEntityIdAndType:
       kvFunction: findAllWithKV
       where:
-        and: [entityId, entityType]
+        and: [entityId, entityType, merchantId]
     deleteAllByEntityIdAndType:
       kvFunction: deleteWithKV
       where:
-        and: [entityId, entityType]
-  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
+        and: [entityId, entityType, merchantId]
+  excludedFields: []

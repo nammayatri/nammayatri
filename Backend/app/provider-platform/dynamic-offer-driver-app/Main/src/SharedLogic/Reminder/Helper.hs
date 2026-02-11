@@ -189,10 +189,15 @@ scheduleProcessReminderJob reminderId merchantId merchantOpCityId scheduleAfter 
 -- Creates separate Reminder entries for each interval (e.g., T-30, T-15, T-1)
 -- This should be called whenever a document with an expiry date is created or updated
 -- Only creates reminders for DRIVER role - returns early if person is not a driver
+-- Schedules ProcessReminder jobs directly instead of relying on ReminderMaster
 createOrUpdateReminderForDocumentExpiry ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    SchedulerFlow r,
+    ServiceFlow m r,
+    HasField "blackListedJobs" r [Text],
+    HasSchemaName SchedulerJobT
   ) =>
   DVC.DocumentType ->
   Id DP.Person ->
@@ -213,10 +218,13 @@ createOrUpdateReminderForDocumentExpiry documentType driverId merchantId merchan
       if null intervals
         then logInfo $ "No reminder intervals configured for documentType: " <> show documentType
         else do
-          -- Create a Reminder entry for each interval
+          now <- getCurrentTime
+          -- Create a Reminder entry for each interval and schedule ProcessReminder job
           forM_ (zip intervals [0 ..]) $ \(intervalMinutes, intervalIndex) -> do
             let reminderDate = Time.addUTCTime (fromIntegral (- intervalMinutes) * 60) expiryDate
-            void $ createReminderRecord documentType entityId driverId merchantId merchantOpCityId expiryDate reminderDate intervalIndex
+            reminderId <- createReminderRecord documentType entityId driverId merchantId merchantOpCityId expiryDate reminderDate intervalIndex
+            let scheduleAfter = max 0 (Time.diffUTCTime reminderDate now)
+            scheduleProcessReminderJob reminderId merchantId merchantOpCityId scheduleAfter
           logInfo $
             "Created "
               <> show (length intervals)
@@ -226,15 +234,7 @@ createOrUpdateReminderForDocumentExpiry documentType driverId merchantId merchan
               <> entityId
               <> ", expiryDate: "
               <> show expiryDate
-          logInfo $
-            "Created "
-              <> show (length intervals)
-              <> " reminders for documentType: "
-              <> show documentType
-              <> ", entityId: "
-              <> entityId
-              <> ", expiryDate: "
-              <> show expiryDate
+              <> " and scheduled ProcessReminder jobs"
     Nothing -> logInfo $ "Reminder system disabled or config not found for documentType: " <> show documentType <> " in city: " <> merchantOpCityId.getId
 
 -- | Cancel all pending reminders for a specific entity and document type
