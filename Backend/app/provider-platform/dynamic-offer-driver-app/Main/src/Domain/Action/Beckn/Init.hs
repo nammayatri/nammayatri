@@ -192,7 +192,7 @@ handler merchantId req validatedReq = do
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
       commission <- FCV2.calculateCommission driverQuote.fareParams mbFarePolicy
-      let bapUri = showBaseUrl req.bapUri
+      let bapUri = showBaseUrl searchRequest.bapUri
           displayBookingId = req.displayBookingId
       (initiatedAs, senderDetails, receiverDetails) <- do
         case tripCategory of
