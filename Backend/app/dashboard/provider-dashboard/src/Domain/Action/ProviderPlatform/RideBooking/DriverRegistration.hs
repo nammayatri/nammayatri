@@ -17,7 +17,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person as QP
-import "lib-dashboard" Storage.Queries.Role as QRole
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
@@ -31,6 +31,6 @@ postDriverRegistrationVerify :: ShortId DM.Merchant -> City.City -> ApiTokenInfo
 postDriverRegistrationVerify merchantShortId opCity apiTokenInfo authId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   encPerson <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
-  role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  role <- CQRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
   let mbFleet = role.dashboardAccessType == DRole.FLEET_OWNER || role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER
   Client.callRideBookingAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationVerify) authId mbFleet apiTokenInfo.personId.getId req
