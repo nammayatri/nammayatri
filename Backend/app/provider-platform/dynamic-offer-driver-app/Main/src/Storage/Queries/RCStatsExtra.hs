@@ -19,25 +19,28 @@ findTotalRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DRC.VehicleR
 findTotalRides rcId = maybe (pure 0) (pure . Domain.totalRides) =<< QRCStats.findById rcId
 
 incrementTotalRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DRC.VehicleRegistrationCertificate -> m Int
-incrementTotalRides (Id rcId') = do
-  now <- getCurrentTime
-  newTotalRides <-
-    findTotalRides (Id rcId') >>= \rides -> do
+incrementTotalRides rcId@(Id rcId') = do
+  mbStats <- findById rcId
+  case mbStats of
+    Nothing -> do
+      -- Create entry with totalRides = 1 directly
+      now <- getCurrentTime
+      let rcStats =
+            RCStats
+              { rcId = rcId,
+                totalRides = 1,
+                updatedAt = now
+              }
+      QRCStats.create rcStats
+      pure 1
+    Just stats -> do
+      -- Entry exists, increment it
+      let currentRides = stats.totalRides
+          newTotalRides = currentRides + 1
+      now <- getCurrentTime
       updateOneWithKV
-        [ Se.Set (\BeamRS.RCStatsT {..} -> totalRides) (rides + 1),
+        [ Se.Set (\BeamRS.RCStatsT {BeamRS.totalRides = tr} -> tr) newTotalRides,
           Se.Set BeamRS.updatedAt now
         ]
         [Se.Is BeamRS.rcId (Se.Eq rcId')]
-      pure (rides + 1)
-  pure newTotalRides
-
-createInitialRCStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DRC.VehicleRegistrationCertificate -> m ()
-createInitialRCStats rcId = do
-  now <- getCurrentTime
-  let rcStats =
-        RCStats
-          { rcId = rcId,
-            totalRides = 0,
-            updatedAt = now
-          }
-  QRCStats.create rcStats
+      pure newTotalRides
