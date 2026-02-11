@@ -35,6 +35,7 @@ import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QAccessMatrix
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Role as QRole
 import qualified Tools.Auth.Common as Common
 import Tools.Servant.HeaderAuth
 
@@ -129,6 +130,34 @@ verifyAccessLevel requiredApiAccessLevel personId = do
 checkUserAccess :: DMatrix.UserAccessType -> Bool
 checkUserAccess DMatrix.USER_FULL_ACCESS = True
 checkUserAccess DMatrix.USER_NO_ACCESS = False
+
+-- TODO do we need prefix for rider and provider dashboard?
+-- TODO move to CashedQueries
+makeParentRolesKey :: Id DRole.Role -> Text
+makeParentRolesKey roleId = "dashboard:parentRoles:" <> roleId.getId
+
+-- findParentRolesRecursivelyCached :: BeamFlow m r => DRole.Role -> m [DRole.Role]
+-- findParentRolesRecursivelyCached role = do
+--   -- check redis key parentRolesKey
+--   -- if key is empty, fall back to db
+--  Hedis.safeGet (makeShortIdKey role.id) >>= \case
+--    Nothing -> findAndCache
+
+-- TODO move to Queries
+findParentRolesRecursively :: BeamFlow m r => DRole.Role -> m [DRole.Role]
+findParentRolesRecursively role = findNextParentRoleRecursively role.parentRoleId []
+  where
+    findNextParentRoleRecursively :: BeamFlow m r => Maybe (Id DRole.Role) -> [DRole.Role] -> m [DRole.Role]
+    findNextParentRoleRecursively Nothing acc = pure $ reverse acc
+    findNextParentRoleRecursively (Just parentId) acc = do
+      -- detect cycle via already accumulated parents
+      when (any (\r -> r.id == parentId) acc) $ do
+        logError $ "Cyclic parentRoleId reference detected in roles: " <> show (parentId : map (\r -> r.id) acc)
+        throwError $ InternalError "Cyclic parentRoleId reference detected in roles"
+      mbParent <- QRole.findById parentId
+      case mbParent of
+        Nothing -> pure $ reverse acc  -- should we throw error?
+        Just parentRole -> findNextParentRoleRecursively parentRole.parentRoleId (parentRole : acc)
 
 verifyServer ::
   BeamFlow m r =>
