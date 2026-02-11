@@ -11,20 +11,24 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data EntityInfoT f = EntityInfoT
-  { answer :: (B.C f Kernel.Prelude.Text),
-    entityId :: (B.C f Kernel.Prelude.Text),
-    entityType :: (B.C f Kernel.Prelude.Text),
-    question :: (B.C f Kernel.Prelude.Text),
-    questionId :: (B.C f Kernel.Prelude.Text)
+  { answer :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    entityId :: B.C f Kernel.Prelude.Text,
+    entityType :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    question :: B.C f Kernel.Prelude.Text,
+    questionId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table EntityInfoT where
-  data PrimaryKey EntityInfoT f = EntityInfoId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = EntityInfoId <$> entityId <*> entityType <*> questionId
+  data PrimaryKey EntityInfoT f = EntityInfoId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = EntityInfoId <$> entityId <*> entityType <*> merchantId <*> questionId
 
 type EntityInfo = EntityInfoT Identity
 
-$(enableKVPG (''EntityInfoT) [('entityId), ('entityType), ('questionId)] [])
+$(enableKVPG ''EntityInfoT ['entityId, 'entityType, 'merchantId, 'questionId] [])
 
-$(mkTableInstances (''EntityInfoT) "entity_info")
+$(mkTableInstances ''EntityInfoT "entity_info")

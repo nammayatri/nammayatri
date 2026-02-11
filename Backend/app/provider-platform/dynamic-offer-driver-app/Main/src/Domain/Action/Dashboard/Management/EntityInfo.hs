@@ -42,7 +42,7 @@ getEntityInfoList ::
 getEntityInfoList merchantShortId opCity entityType entityId = do
   merchant <- findMerchantByShortId merchantShortId
   _merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  entityInfo <- map convertEntityInfoToEntityInfoAPIEntity <$> findAllByEntityIdAndType entityId entityType
+  entityInfo <- map convertEntityInfoToEntityInfoAPIEntity <$> findAllByEntityIdAndType entityId entityType merchant.id
   pure $ Common.EntityExtraInformation {entityType = entityType, entityId = entityId, entityInfo = entityInfo}
   where
     convertEntityInfoToEntityInfoAPIEntity DEI.EntityInfo {questionId, question, answer} =
@@ -57,21 +57,28 @@ postEntityInfoUpdate ::
   Kernel.Types.Beckn.Context.City ->
   Common.UpdateEntityInfoReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postEntityInfoUpdate _merchantShortId _opCity req = do
+postEntityInfoUpdate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  now <- getCurrentTime
   let questionIds = req.newInfo <&> (.questionId)
   unless (length (DL.nub questionIds) == length questionIds) $
     throwError (InvalidRequest "questionId should be unique")
   unless (null req.newInfo) $ do
-    deleteAllByEntityIdAndType req.entityId req.entityType
-    forM_ req.newInfo $ updatedEntityInfo req.entityId req.entityType
+    deleteAllByEntityIdAndType req.entityId req.entityType merchant.id
+    forM_ req.newInfo $ updatedEntityInfo req.entityId req.entityType merchant.id (Just merchantOpCityId) now
   pure Kernel.Types.APISuccess.Success
   where
-    updatedEntityInfo entityId entityType Common.EntityInfoAPIEntity {..} =
+    updatedEntityInfo entityId entityType merchantId mbMerchantOpCityId now Common.EntityInfoAPIEntity {..} =
       create $
         DEI.EntityInfo
           { entityId = entityId,
             entityType = entityType,
             questionId = questionId,
             question = question,
-            answer = answer
+            answer = answer,
+            merchantId = merchantId,
+            merchantOperatingCityId = mbMerchantOpCityId,
+            createdAt = now,
+            updatedAt = now
           }

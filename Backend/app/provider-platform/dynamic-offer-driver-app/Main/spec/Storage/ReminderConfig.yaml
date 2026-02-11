@@ -23,7 +23,11 @@ ReminderConfig:
     updatedAt: UTCTime
 
   constraints:
-    id: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
+    documentType: PrimaryKey
+
+  sqlType:
+    reminderIntervals: integer[]
 
   queries:
     findByMerchantOpCityIdAndDocumentType:
@@ -34,3 +38,7 @@ ReminderConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId]
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey

@@ -181,10 +181,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
           void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
 
     handleDriverInspectionApproval mShortId city request opHubReq now = do
-      creator <- runInReplica $ QPerson.findById opHubReq.creatorId >>= fromMaybeM (PersonNotFound opHubReq.creatorId.getId)
-      personId <- case creator.role of
-        DP.DRIVER -> pure creator.id
-        _ -> throwError (InvalidRequest "Driver inspection can only be requested for drivers")
+      personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
       (merchantOpCity, transporterConfig, person, language) <- getMerchantAndPersonInfo mShortId city personId
       fork "enable driver after driver inspection" $ do
         -- Only check driver docs, not vehicle docs (vehicle and driver enablement are segregated)

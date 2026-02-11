@@ -1235,13 +1235,28 @@ postDriverRegistrationTriggerReminder ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
+  Maybe Text ->
   Common.TriggerReminderReq ->
   Flow APISuccess
-postDriverRegistrationTriggerReminder merchantShortId opCity driverId_ Common.TriggerReminderReq {..} = do
+postDriverRegistrationTriggerReminder merchantShortId opCity driverId_ mbRequestorId Common.TriggerReminderReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  -- Load and validate driver ownership (merchant/op-city)
+  let driverPersonId = cast @Common.Driver @DP.Person driverId_
+  driver <- runInReplica $ QPerson.findById driverPersonId >>= fromMaybeM (PersonNotFound driverPersonId.getId)
+  unless (driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Driver does not belong to the specified merchant and operating city")
+
+  -- Validate authorization: only fleet owners, operators linked to driver, or admins can trigger reminders
+  requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "requestorId is required")
+  entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, driverPersonId] merchantOpCityId
+  requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
+  isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
+  unless isValid $ throwError (InvalidRequest "Only fleet owners, operators linked to the driver, or admins can trigger reminders")
+
   reminderDocumentType <- maybe (throwError $ InvalidRequest $ "Document type " <> show documentType <> " does not support reminder triggers") pure $ mapDocumentTypeToReminderType documentType
-  createReminderForDocumentType reminderDocumentType (cast driverId_) merchant.id merchantOpCityId dueDate intervals
+  createReminderForDocumentType reminderDocumentType driverPersonId merchant.id merchantOpCityId dueDate intervals
   pure Success
 
 postDriverRegistrationVerifyBankAccount :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.VerifyBankAccountReq -> Flow Kernel.External.Verification.Interface.Types.VerifyAsyncResp

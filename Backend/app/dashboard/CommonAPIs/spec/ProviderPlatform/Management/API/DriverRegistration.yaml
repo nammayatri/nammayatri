@@ -211,6 +211,18 @@ apis:
         type: TriggerReminderReq
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/trigger/reminder
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+            request:
+              type: TriggerReminderReq
+            response:
+              type: APISuccess
 
 types:
   ValidationStatus:

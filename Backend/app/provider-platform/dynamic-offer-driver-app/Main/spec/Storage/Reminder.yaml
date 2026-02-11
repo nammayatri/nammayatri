@@ -43,10 +43,6 @@ Reminder:
       kvFunction: findAllWithKV
       where:
         and: [driverId, status]
-    findAllPendingByDocumentTypeAndReminderDate:
-      kvFunction: findAllWithKV
-      where:
-        and: [documentType, reminderDate, status]
     findAllByEntityIdAndDocumentType:
       kvFunction: findAllWithKV
       where:

@@ -23,24 +23,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Reminder.Reminder] -> m ())
 createMany = traverse_ create
 
-findAllByEntityIdAndDocumentType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Domain.Types.DocumentVerificationConfig.DocumentType -> m ([Domain.Types.Reminder.Reminder]))
+findAllByEntityIdAndDocumentType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.Reminder.Reminder])
 findAllByEntityIdAndDocumentType entityId documentType = do findAllWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.documentType $ Se.Eq documentType]]
-
-findAllPendingByDocumentTypeAndReminderDate ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Prelude.UTCTime -> Domain.Types.Reminder.ReminderStatus -> m ([Domain.Types.Reminder.Reminder]))
-findAllPendingByDocumentTypeAndReminderDate documentType reminderDate status = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.documentType $ Se.Eq documentType,
-          Se.Is Beam.reminderDate $ Se.Eq reminderDate,
-          Se.Is Beam.status $ Se.Eq status
-        ]
-    ]
 
 findAllPendingByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Reminder.ReminderStatus -> m ([Domain.Types.Reminder.Reminder]))
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Reminder.ReminderStatus -> m [Domain.Types.Reminder.Reminder])
 findAllPendingByDriverId driverId status = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.status $ Se.Eq status]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Reminder.Reminder -> m (Maybe Domain.Types.Reminder.Reminder))
