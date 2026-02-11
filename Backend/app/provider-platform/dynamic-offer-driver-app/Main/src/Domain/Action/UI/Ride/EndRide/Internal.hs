@@ -107,6 +107,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.FleetVehicleStats as FVS
+import SharedLogic.Reminder.Helper (checkAndCreateReminderIfNeeded)
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.ScheduledNotifications as SN
 import SharedLogic.TollsDetector
@@ -128,6 +129,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformationExtra as QDIE
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDPlan
+import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.DriverWallet as QDW
 import qualified Storage.Queries.DriverWalletExtra as QDWE
@@ -136,6 +138,8 @@ import Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import Storage.Queries.FleetOwnerInformation as QFOI
 import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.RCStatsExtra as QRCStats
+import qualified Storage.Queries.ReminderConfig as QReminderConfig
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -191,6 +195,26 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   QRide.updateAll ride.id ride
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
   void $ QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  -- Increment RC stats for the driver's active RC
+  fork "incrementRCStats" $ do
+    mbRCAssoc <- QDRCA.findActiveAssociationByDriver (cast ride.driverId) True
+    whenJust mbRCAssoc $ \rcAssoc -> do
+      void $ QRCStats.incrementTotalRides rcAssoc.rcId
+  -- Check if reminders should be created based on thresholds for all document types
+  fork "checkAndCreateReminderIfNeeded" $ do
+    -- Get all reminder configs that have auto-trigger enabled (daysThreshold or ridesThreshold configured)
+    allReminderConfigs <- QReminderConfig.findAllByMerchantOpCityId booking.merchantOperatingCityId
+    let autoTriggerDocumentTypes =
+          DL.map (.documentType) $
+            filter
+              ( \config ->
+                  config.enabled
+                    && (isJust config.daysThreshold || isJust config.ridesThreshold)
+              )
+              allReminderConfigs
+    -- Check thresholds for all document types that support auto-trigger (configurable via ReminderConfig)
+    forM_ autoTriggerDocumentTypes $ \documentType -> do
+      checkAndCreateReminderIfNeeded documentType driverId merchant.id booking.merchantOperatingCityId
   when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
     fork "updateFleetVehicleDailyStats and updateOperatorAnalyticsTotalRideCount" $ do
       Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride booking

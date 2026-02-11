@@ -32,6 +32,7 @@ import Data.Tuple.Extra (both)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VC
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as Domain
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.HyperVergeVerification as Domain
@@ -60,6 +61,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
+import SharedLogic.Reminder.Helper (createOrUpdateReminderForDocumentExpiry)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
 import qualified Storage.Queries.DriverInformation as DriverInfo
@@ -364,6 +366,14 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
       case driverLicense.driverName of
         Just name_ -> void $ Person.updateName name_ person.id
         Nothing -> pure ()
+      -- Create reminders for DL when it's updated
+      createOrUpdateReminderForDocumentExpiry
+        DVC.DriverLicense
+        person.id
+        person.merchantId
+        person.merchantOperatingCityId
+        (driverLicense.id.getId)
+        driverLicense.licenseExpiry
       pure ()
     Nothing -> pure ()
 

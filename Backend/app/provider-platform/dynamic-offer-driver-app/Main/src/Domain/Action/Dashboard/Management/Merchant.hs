@@ -943,6 +943,8 @@ castDDocumentType = \case
   DVC.VehicleInsurance -> Common.VehicleInsurance
   DVC.VehicleFitnessCertificate -> Common.VehicleFitnessCertificate
   DVC.VehicleInspectionForm -> Common.VehicleInspectionForm
+  DVC.DriverInspectionForm -> Common.DriverInspectionForm
+  DVC.TrainingForm -> Common.TrainingForm
   DVC.InspectionHub -> Common.InspectionHub
   DVC.ProfilePhoto -> Common.ProfilePhoto
   DVC.PanCard -> Common.PanCard
@@ -977,6 +979,9 @@ castDDocumentType = \case
   DVC.FinnishIDResidencePermit -> Common.FinnishIDResidencePermit
   DVC.BusinessRegistrationExtract -> Common.BusinessRegistrationExtract
   DVC.PersonalId -> Common.PersonalId
+  DVC.LocalResidenceProof -> Common.LocalResidenceProof
+  DVC.PoliceVerificationCertificate -> Common.PoliceVerificationCertificate
+  DVC.DrivingSchoolCertificate -> Common.DrivingSchoolCertificate
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1034,6 +1039,8 @@ castDocumentType = \case
   Common.VehicleInsurance -> DVC.VehicleInsurance
   Common.VehicleFitnessCertificate -> DVC.VehicleFitnessCertificate
   Common.VehicleInspectionForm -> DVC.VehicleInspectionForm
+  Common.DriverInspectionForm -> DVC.DriverInspectionForm
+  Common.TrainingForm -> DVC.TrainingForm
   Common.ProfilePhoto -> DVC.ProfilePhoto
   Common.PanCard -> DVC.PanCard
   Common.VehicleNOC -> DVC.VehicleNOC
@@ -1068,6 +1075,9 @@ castDocumentType = \case
   Common.FinnishIDResidencePermit -> DVC.FinnishIDResidencePermit
   Common.BusinessRegistrationExtract -> DVC.BusinessRegistrationExtract
   Common.PersonalId -> DVC.PersonalId
+  Common.LocalResidenceProof -> DVC.LocalResidenceProof
+  Common.PoliceVerificationCertificate -> DVC.PoliceVerificationCertificate
+  Common.DrivingSchoolCertificate -> DVC.DrivingSchoolCertificate
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::

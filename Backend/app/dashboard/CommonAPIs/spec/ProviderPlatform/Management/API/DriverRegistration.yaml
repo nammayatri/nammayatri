@@ -202,6 +202,15 @@ apis:
               - requestorId: Text
             response:
               type: UnlinkDocumentResp
+  - POST: # TriggerReminderAPI
+      endpoint: /{driverId}/trigger/reminder
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: TriggerReminderReq
+      response:
+        type: APISuccess
 
 types:
   ValidationStatus:
@@ -268,7 +277,7 @@ types:
     - imageBase64: Text
     - status: Maybe VerificationStatus # TODO(Rupak): status of the document
   DocumentType:
-    - enum: "DriverLicense,VehicleRegistrationCertificate,PanCard,VehiclePermitImage,VehiclePUCImage,VehicleInsuranceImage,VehicleFitnessCertificateImage,VehicleInspectionImage,ProfilePhotoImage,VehicleNOC,Permissions,SubscriptionPlan,AadhaarCard,ProfileDetails,SocialSecurityNumber,GSTCertificate,BackgroundVerification,UploadProfileImage,BusinessLicense,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,Odometer,InspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,BankAccount"
+    - enum: "DriverLicense,VehicleRegistrationCertificate,PanCard,VehiclePermitImage,VehiclePUCImage,VehicleInsuranceImage,VehicleFitnessCertificateImage,VehicleInspectionImage,DriverInspectionFormImage,TrainingFormImage,ProfilePhotoImage,VehicleNOC,Permissions,SubscriptionPlan,AadhaarCard,ProfileDetails,SocialSecurityNumber,GSTCertificate,BackgroundVerification,UploadProfileImage,BusinessLicense,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,Odometer,InspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,BankAccount"
     - derive: "HttpInstance, 'HideSecrets"
   UploadDocumentReq:
     - imageBase64: Text
@@ -387,6 +396,11 @@ types:
     - documentType: DocumentType
     - documentData: Text
     - imageId: Maybe (Id Image)
+    - derive: "'HideSecrets"
+  TriggerReminderReq:
+    - documentType: DocumentType
+    - dueDate: Maybe UTCTime
+    - intervals: "Maybe [Int]"
     - derive: "'HideSecrets"
   FitnessApproveDetails:
     - applicationNumber: Text

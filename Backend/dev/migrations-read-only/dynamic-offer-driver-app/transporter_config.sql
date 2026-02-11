@@ -621,4 +621,25 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN missing_mapping
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN requires_driver_onboarding_inspection boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN separate_driver_vehicle_enablement boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN reminder_system_enabled boolean ;
+
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN link_fleet_to_un_verified_existing_rc boolean ;

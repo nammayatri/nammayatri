@@ -52,4 +52,4 @@ instance Text.Read.Read OperatorUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''OperatorUserActionType])
+$(Data.Singletons.TH.genSingletons [(''OperatorUserActionType)])

@@ -1,13 +1,15 @@
 module Domain.Action.UI.LmsModule where
 
 import API.Types.UI.LmsModule
+import qualified Domain.Types.DocumentReminderHistory as DRH
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverModuleCompletion as DTDMC
 import qualified Domain.Types.LmsCertificate as DTLC
 import Domain.Types.LmsModule
 import Domain.Types.LmsModule as LmsModule
 import Domain.Types.LmsModuleVideoInformation as LmsModuleVideoInformation
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ModuleCompletionInformation as DTMCI
 import qualified Domain.Types.Person
 import qualified Domain.Types.QuestionInformation as DTQI
@@ -27,6 +29,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import Lib.DriverCoins.Types as DCT
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.Reminder.Helper (cancelRemindersForDriverByDocumentType, recordDocumentCompletion)
 import qualified Storage.CachedQueries.CoinsConfig as CDCQ
 import qualified Storage.CachedQueries.Lms as SCQL
 import Storage.CachedQueries.Merchant.MerchantOperatingCity as SCQMM
@@ -43,7 +46,7 @@ import Tools.Error
 -- LMS - QuizQuestionCompleted
 -- LMSBonus - BonusQuizCoins
 
-getLmsListAllModules :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.LmsModule.ModuleSection) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.VehicleVariant.VehicleVariant) -> Environment.Flow API.Types.UI.LmsModule.LmsGetModuleRes
+getLmsListAllModules :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.LmsModule.ModuleSection) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.VehicleVariant.VehicleVariant) -> Environment.Flow API.Types.UI.LmsModule.LmsGetModuleRes
 getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbLimit mbModuleSection _mbOffset _mbVariant = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -119,7 +122,7 @@ getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbL
             ..
           }
 
-getLmsListAllVideos :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.Flow API.Types.UI.LmsModule.LmsGetVideosRes
+getLmsListAllVideos :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.Flow API.Types.UI.LmsModule.LmsGetVideosRes
 getLmsListAllVideos (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   let language = fromMaybe ENGLISH mbLanguage
@@ -192,7 +195,7 @@ getLmsListAllVideos (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage
     generateButtonConfigData :: [DTRD.ReelRowButtonConfig] -> [[DTRD.ReelButtonConfig]]
     generateButtonConfigData = foldl' (\acc eachRow -> acc <> [eachRow.row]) [[]]
 
-getLmsListAllQuiz :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.Flow API.Types.UI.LmsModule.LmsGetQuizRes
+getLmsListAllQuiz :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.Flow API.Types.UI.LmsModule.LmsGetQuizRes
 getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   moduleInfo <- fromMaybeM (LmsModuleNotFound modId.getId) . find ((== modId) . (.id)) =<< SCQL.getAllModules Nothing Nothing merchantOpCityId
@@ -266,13 +269,13 @@ getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage =
             coinsEarned = quizCoinsEarnedVal
           }
 
-postLmsMarkVideoAsStarted :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> API.Types.UI.LmsModule.VideoUpdateAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postLmsMarkVideoAsStarted :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) -> API.Types.UI.LmsModule.VideoUpdateAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postLmsMarkVideoAsStarted (mbPersonId, merchantId, merchantOpCityId) req = markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req DTMCI.ENTITY_ONGOING
 
-postLmsMarkVideoAsCompleted :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> API.Types.UI.LmsModule.VideoUpdateAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postLmsMarkVideoAsCompleted :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) -> API.Types.UI.LmsModule.VideoUpdateAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postLmsMarkVideoAsCompleted (mbPersonId, merchantId, merchantOpCityId) req = markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req DTMCI.ENTITY_PASSED
 
-markVideoByStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> API.Types.UI.LmsModule.VideoUpdateAPIReq -> DTMCI.EntityStatus -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+markVideoByStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) -> API.Types.UI.LmsModule.VideoUpdateAPIReq -> DTMCI.EntityStatus -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
@@ -307,7 +310,7 @@ markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
     DTMCI.ENTITY_ONGOING -> SQLVT.updateViewCount (currentVideo.viewCount + 1) currentVideo.videoId currentVideo.language
     DTMCI.ENTITY_PASSED -> do
       void $ SQLVT.updateCompletedWatchCount (currentVideo.completedWatchCount + 1) currentVideo.videoId currentVideo.language
-      updateModuleInformationIfVideosCompletedCriteriaIsPassed personId moduleInfo driverModuleCompletion driverStats videos
+      updateModuleInformationIfVideosCompletedCriteriaIsPassed personId moduleInfo driverModuleCompletion driverStats videos merchantId merchantOpCityId
     _ -> pure ()
 
   pure Kernel.Types.APISuccess.Success
@@ -326,7 +329,7 @@ markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
             updatedAt = now
           }
 
-    updateModuleInformationIfVideosCompletedCriteriaIsPassed personId moduleInfo dmc driver videos = do
+    updateModuleInformationIfVideosCompletedCriteriaIsPassed personId moduleInfo dmc driver videos merchantIdParam merchantOpCityIdParam = do
       when ((dmc.status /= DTDMC.MODULE_COMPLETED) && notElem DTDMC.VIDEO (dmc.entitiesCompleted)) $ do
         onlyVideosAsPassingCriteria <- case moduleInfo.moduleCompletionCriteria of
           LmsModule.ONLY_VIDEOS -> pure True
@@ -340,6 +343,10 @@ markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
             void $ SQDMC.updatedCompletedAt (Just now) (dmc.entitiesCompleted <> [DTDMC.VIDEO]) DTDMC.MODULE_COMPLETED driver.rating dmc.completionId
             expiryTime <- getExpiryTime moduleInfo.moduleExpiryConfig personId
             SQDMC.updateExpiryTime expiryTime dmc.completionId
+            -- Cancel pending training video reminders
+            cancelRemindersForDriverByDocumentType personId DVC.TrainingForm
+            -- Record training video completion for auto-trigger monitoring
+            recordDocumentCompletion DVC.TrainingForm personId.getId DRH.DRIVER (Just personId) merchantIdParam merchantOpCityIdParam
 
             case moduleInfo.certificationEnabled of
               Nothing -> pure ()
@@ -347,7 +354,7 @@ markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
                 void $ generateLmsCertificate personId moduleInfo.id dmc.completionId
           else when allVideosCompleted $ do SQDMC.updateEntitiesCompleted (Just now) (dmc.entitiesCompleted <> [DTDMC.VIDEO]) dmc.completionId
 
-postLmsQuestionConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> API.Types.UI.LmsModule.QuestionConfirmReq -> Environment.Flow API.Types.UI.LmsModule.QuestionConfirmRes
+postLmsQuestionConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) -> API.Types.UI.LmsModule.QuestionConfirmReq -> Environment.Flow API.Types.UI.LmsModule.QuestionConfirmRes
 postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -502,7 +509,7 @@ getExpiryTime mbExpiryConfig personId = do
         "Watchlist" -> return $ Just $ addUTCTime (intToNominalDiffTime configSeconds) now
         _ -> return Nothing
 
-buildDriverModuleCompletion :: (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow DTDMC.DriverModuleCompletion
+buildDriverModuleCompletion :: (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Types.Id.Id DM.Merchant -> Kernel.Types.Id.Id DMOC.MerchantOperatingCity -> Environment.Flow DTDMC.DriverModuleCompletion
 buildDriverModuleCompletion personId moduleId merchantId merchantOpCityId = do
   completionId <- Kernel.Types.Id.Id <$> generateGUID
   now <- getCurrentTime
@@ -546,7 +553,7 @@ generateModuleInfoRes moduleInfo@Domain.Types.LmsModule.LmsModule {..} language 
 ----------------------------------------------------------------- Certificate ---------------------------------------------------------------------------------
 
 getLmsGetCertificate ::
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) ->
   Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule ->
   Environment.Flow API.Types.UI.LmsModule.LmsCertificateRes
 getLmsGetCertificate (mbPersonId, _merchantId, merchantOpCityId) moduleId = do
@@ -578,7 +585,7 @@ getLmsGetCertificate (mbPersonId, _merchantId, merchantOpCityId) moduleId = do
               return $ API.Types.UI.LmsModule.LmsCertificateRes {..}
 
 getLmsGetAllCertificates ::
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) ->
   Environment.Flow [API.Types.UI.LmsModule.CertificateInfo]
 getLmsGetAllCertificates (mbPersonId, _merchantId, merchantOpCityId) = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
@@ -616,7 +623,7 @@ getLmsGetAllCertificates (mbPersonId, _merchantId, merchantOpCityId) = do
 ------------------------------------------------------------ getBonusInfo ---------------------------------------------------------------------------------------------
 
 getLmsGetBonusCoins ::
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id DM.Merchant, Kernel.Types.Id.Id DMOC.MerchantOperatingCity) ->
   Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule ->
   Environment.Flow API.Types.UI.LmsModule.BonusRes
 getLmsGetBonusCoins (mbPersonId, _merchantId, merchantOpCityId) moduleId = do

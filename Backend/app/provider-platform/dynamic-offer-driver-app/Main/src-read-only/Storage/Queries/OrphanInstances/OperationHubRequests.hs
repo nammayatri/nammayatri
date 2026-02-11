@@ -18,6 +18,7 @@ instance FromTType' Beam.OperationHubRequests Domain.Types.OperationHubRequests.
       Just
         Domain.Types.OperationHubRequests.OperationHubRequests
           { creatorId = Kernel.Types.Id.Id creatorId,
+            driverId = Kernel.Types.Id.Id <$> driverId,
             fulfilledAt = fulfilledAt,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -36,6 +37,7 @@ instance ToTType' Beam.OperationHubRequests Domain.Types.OperationHubRequests.Op
   toTType' (Domain.Types.OperationHubRequests.OperationHubRequests {..}) = do
     Beam.OperationHubRequestsT
       { Beam.creatorId = Kernel.Types.Id.getId creatorId,
+        Beam.driverId = Kernel.Types.Id.getId <$> driverId,
         Beam.fulfilledAt = fulfilledAt,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

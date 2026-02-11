@@ -1,0 +1,53 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Kernel.Prelude
+  Int: Kernel.Prelude
+  DocumentType: Domain.Types.DocumentVerificationConfig
+
+DocumentReminderHistory:
+  tableName: document_reminder_history
+
+  types:
+    EntityType:
+      enum: "DRIVER, RC"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <EntityType>
+
+  fields:
+    id: Id DocumentReminderHistory
+    documentType: DocumentType
+    entityId: Text
+    entityType: EntityType
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    completionDate: UTCTime
+    rideCountAtCompletion: Int
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    documentType: SecondaryKey
+    entityId: SecondaryKey
+    entityType: SecondaryKey
+
+  queries:
+    findByDocumentTypeAndEntity:
+      kvFunction: findOneWithKV
+      where:
+        and: [documentType, entityId, entityType]
+    findAllByDocumentTypeAndEntity:
+      kvFunction: findAllWithKV
+      where:
+        and: [documentType, entityId, entityType]
+    findAllByDocumentTypeAndEntityType:
+      kvFunction: findAllWithKV
+      where:
+        and: [documentType, entityType]
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId]

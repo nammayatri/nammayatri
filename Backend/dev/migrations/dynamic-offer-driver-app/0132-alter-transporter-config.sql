@@ -15,7 +15,9 @@ SET
     allow_duplicate_gst = false,
     allow_duplicate_aadhaar = false,
     valid_name_compare_percentage = 90,
-    enable_mobile_number_validation = true
+    enable_mobile_number_validation = true,
+    separate_driver_vehicle_enablement = true,
+    requires_driver_onboarding_inspection = true
 WHERE merchant_operating_city_id IN (
     SELECT id
     FROM atlas_driver_offer_bpp.merchant_operating_city

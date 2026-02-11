@@ -1078,6 +1078,9 @@ TransporterConfig:
     recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
     minThresholdForPassThroughDestination: Maybe Meters
     requiresOnboardingInspection: Maybe Bool
+    requiresDriverOnboardingInspection: Maybe Bool
+    separateDriverVehicleEnablement: Maybe Bool
+    reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"
     enableOverchargingBlocker: Bool
     normalRideBulkLocUpdateBatchSize: Integer

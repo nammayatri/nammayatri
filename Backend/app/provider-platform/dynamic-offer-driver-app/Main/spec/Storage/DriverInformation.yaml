@@ -52,6 +52,8 @@ DriverInformation:
     DriverBadges:
       recordType: NewType
       driverBadges: "[Badges]"
+    AddressDocumentType:
+      enum: "RationCard,UtilityBill,Passport"
 
   fields:
     driverId: Id Person
@@ -144,6 +146,9 @@ DriverInformation:
     dailyExtraKms: Maybe HighPrecMeters
     weeklyExtraKms: Maybe HighPrecMeters
     onboardingAs: Maybe OnboardingAs
+    approved: Maybe Bool
+    address: Maybe Text
+    addressDocumentType: Maybe AddressDocumentType
 
   default:
     active: "false"
@@ -308,6 +313,8 @@ DriverInformation:
           isHighAccuracyLocationEnabled,
           rideRequestVolumeEnabled,
           onboardingAs,
+          address,
+          addressDocumentType,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:

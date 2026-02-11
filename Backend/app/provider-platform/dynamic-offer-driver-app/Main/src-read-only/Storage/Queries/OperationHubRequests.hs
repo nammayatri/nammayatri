@@ -23,16 +23,15 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.OperationHubRequests.OperationHubRequests] -> m ())
 createMany = traverse_ create
 
-findByCreatorRCStatusAndType ::
+findByCreatorStatusAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.OperationHubRequests.RequestStatus -> Domain.Types.OperationHubRequests.RequestType -> Kernel.Prelude.Text -> m [Domain.Types.OperationHubRequests.OperationHubRequests])
-findByCreatorRCStatusAndType creatorId requestStatus requestType registrationNo = do
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.OperationHubRequests.RequestStatus -> Domain.Types.OperationHubRequests.RequestType -> m [Domain.Types.OperationHubRequests.OperationHubRequests])
+findByCreatorStatusAndType creatorId requestStatus requestType = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.creatorId $ Se.Eq (Kernel.Types.Id.getId creatorId),
           Se.Is Beam.requestStatus $ Se.Eq requestStatus,
-          Se.Is Beam.requestType $ Se.Eq requestType,
-          Se.Is Beam.registrationNo $ Se.Eq registrationNo
+          Se.Is Beam.requestType $ Se.Eq requestType
         ]
     ]
 
@@ -60,6 +59,7 @@ updateByPrimaryKey (Domain.Types.OperationHubRequests.OperationHubRequests {..})
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.creatorId (Kernel.Types.Id.getId creatorId),
+      Se.Set Beam.driverId (Kernel.Types.Id.getId <$> driverId),
       Se.Set Beam.fulfilledAt fulfilledAt,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),

@@ -50,7 +50,8 @@ testPostDriverOperatorCreateRequestWithRealExecution =
               Common.DriverOperationHubRequest
                 { Common.creatorId = "creator-123",
                   Common.operationHubId = Kernel.Types.Id.Id "hub-123",
-                  Common.registrationNo = "DL01AB1234",
+                  Common.registrationNo = Just "DL01AB1234",
+                  Common.driverId = Nothing,
                   Common.requestType = Common.ONBOARDING_INSPECTION
                 }
         executeFlowAction
@@ -59,11 +60,14 @@ testPostDriverOperatorCreateRequestWithRealExecution =
         let Common.DriverOperationHubRequest {Common.creatorId = creatorId, Common.operationHubId = operationHubId, Common.registrationNo = registrationNo, Common.requestType = requestType} = req
         creatorId @?= "creator-123"
         operationHubId @?= Kernel.Types.Id.Id "hub-123"
-        registrationNo @?= "DL01AB1234"
+        registrationNo @?= Just "DL01AB1234"
         requestType @?= Common.ONBOARDING_INSPECTION
         (T.length creatorId > 0) @? "Creator ID should not be empty"
-        (T.length registrationNo >= 10) @? "Registration number should be at least 10 characters"
-        T.isPrefixOf "DL" registrationNo @? "Registration number should start with DL"
+        case registrationNo of
+          Just regNo -> do
+            (T.length regNo >= 10) @? "Registration number should be at least 10 characters"
+            T.isPrefixOf "DL" regNo @? "Registration number should start with DL"
+          Nothing -> assertFailure "Registration number should not be Nothing"
         let expectedResponseType =
               DDriverOp.postDriverOperatorCreateRequest ::
                 Kernel.Types.Id.ShortId DM.Merchant ->
@@ -72,8 +76,8 @@ testPostDriverOperatorCreateRequestWithRealExecution =
                 Environment.Flow Kernel.Types.APISuccess.APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different request types and validates request handling" $ do
-        let req1 = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "hub-123") "DL01AB1234" Common.ONBOARDING_INSPECTION
-            req2 = Common.DriverOperationHubRequest "creator-456" (Kernel.Types.Id.Id "hub-456") "DL02CD5678" Common.REGULAR_INSPECTION
+        let req1 = Common.DriverOperationHubRequest {Common.creatorId = "creator-123", Common.operationHubId = Kernel.Types.Id.Id "hub-123", Common.registrationNo = Just "DL01AB1234", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
+            req2 = Common.DriverOperationHubRequest {Common.creatorId = "creator-456", Common.operationHubId = Kernel.Types.Id.Id "hub-456", Common.registrationNo = Just "DL02CD5678", Common.driverId = Nothing, Common.requestType = Common.REGULAR_INSPECTION}
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.City "Delhi"
         executeFlowAction
@@ -88,8 +92,8 @@ testPostDriverOperatorCreateRequestWithRealExecution =
         creatorId2 @?= "creator-456"
         operationHubId1 @?= Kernel.Types.Id.Id "hub-123"
         operationHubId2 @?= Kernel.Types.Id.Id "hub-456"
-        registrationNo1 @?= "DL01AB1234"
-        registrationNo2 @?= "DL02CD5678"
+        registrationNo1 @?= Just "DL01AB1234"
+        registrationNo2 @?= Just "DL02CD5678"
         requestType1 @?= Common.ONBOARDING_INSPECTION
         requestType2 @?= Common.REGULAR_INSPECTION
         creatorId1 /= creatorId2 @? "Different creator IDs should be distinct"
@@ -111,11 +115,11 @@ testDataTypeValidation =
             regularInspection = Common.REGULAR_INSPECTION
         onboardingInspection /= regularInspection @? "ONBOARDING_INSPECTION should not equal REGULAR_INSPECTION",
       testCase "DriverOperationHubRequest structure is correct" $ do
-        let req = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "hub-123") "DL01AB1234" Common.ONBOARDING_INSPECTION
+        let req = Common.DriverOperationHubRequest {Common.creatorId = "creator-123", Common.operationHubId = Kernel.Types.Id.Id "hub-123", Common.registrationNo = Just "DL01AB1234", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
         let Common.DriverOperationHubRequest {Common.creatorId = creatorId, Common.operationHubId = operationHubId, Common.registrationNo = registrationNo, Common.requestType = requestType} = req
         creatorId @?= "creator-123"
         operationHubId @?= Kernel.Types.Id.Id "hub-123"
-        registrationNo @?= "DL01AB1234"
+        registrationNo @?= Just "DL01AB1234"
         requestType @?= Common.ONBOARDING_INSPECTION,
       testCase "City enum values are correct" $ do
         let delhi = Context.City "Delhi"
@@ -139,28 +143,28 @@ testComplexScenariosWithRealFunctions =
   testGroup
     "Complex Scenarios with Real Functions"
     [ testCase "Different request types work correctly" $ do
-        let onboardingReq = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "hub-123") "DL01AB1234" Common.ONBOARDING_INSPECTION
-            regularReq = Common.DriverOperationHubRequest "creator-456" (Kernel.Types.Id.Id "hub-456") "DL02CD5678" Common.REGULAR_INSPECTION
+        let onboardingReq = Common.DriverOperationHubRequest {Common.creatorId = "creator-123", Common.operationHubId = Kernel.Types.Id.Id "hub-123", Common.registrationNo = Just "DL01AB1234", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
+            regularReq = Common.DriverOperationHubRequest {Common.creatorId = "creator-456", Common.operationHubId = Kernel.Types.Id.Id "hub-456", Common.registrationNo = Just "DL02CD5678", Common.driverId = Nothing, Common.requestType = Common.REGULAR_INSPECTION}
         let Common.DriverOperationHubRequest {Common.requestType = reqType1} = onboardingReq
             Common.DriverOperationHubRequest {Common.requestType = reqType2} = regularReq
         reqType1 @?= Common.ONBOARDING_INSPECTION
         reqType2 @?= Common.REGULAR_INSPECTION
         reqType1 /= reqType2 @? "Different request types should be distinct",
       testCase "Different operation hubs work correctly" $ do
-        let hub1Req = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "hub-123") "DL01AB1234" Common.ONBOARDING_INSPECTION
-            hub2Req = Common.DriverOperationHubRequest "creator-456" (Kernel.Types.Id.Id "hub-456") "DL02CD5678" Common.ONBOARDING_INSPECTION
+        let hub1Req = Common.DriverOperationHubRequest {Common.creatorId = "creator-123", Common.operationHubId = Kernel.Types.Id.Id "hub-123", Common.registrationNo = Just "DL01AB1234", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
+            hub2Req = Common.DriverOperationHubRequest {Common.creatorId = "creator-456", Common.operationHubId = Kernel.Types.Id.Id "hub-456", Common.registrationNo = Just "DL02CD5678", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
         let Common.DriverOperationHubRequest {Common.operationHubId = hubId1} = hub1Req
             Common.DriverOperationHubRequest {Common.operationHubId = hubId2} = hub2Req
         hubId1 @?= Kernel.Types.Id.Id "hub-123"
         hubId2 @?= Kernel.Types.Id.Id "hub-456"
         hubId1 /= hubId2 @? "Different operation hub IDs should be distinct",
       testCase "Different registration numbers work correctly" $ do
-        let reg1Req = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "hub-123") "DL01AB1234" Common.ONBOARDING_INSPECTION
-            reg2Req = Common.DriverOperationHubRequest "creator-456" (Kernel.Types.Id.Id "hub-456") "DL02CD5678" Common.ONBOARDING_INSPECTION
+        let reg1Req = Common.DriverOperationHubRequest {Common.creatorId = "creator-123", Common.operationHubId = Kernel.Types.Id.Id "hub-123", Common.registrationNo = Just "DL01AB1234", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
+            reg2Req = Common.DriverOperationHubRequest {Common.creatorId = "creator-456", Common.operationHubId = Kernel.Types.Id.Id "hub-456", Common.registrationNo = Just "DL02CD5678", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
         let Common.DriverOperationHubRequest {Common.registrationNo = regNo1} = reg1Req
             Common.DriverOperationHubRequest {Common.registrationNo = regNo2} = reg2Req
-        regNo1 @?= "DL01AB1234"
-        regNo2 @?= "DL02CD5678"
+        regNo1 @?= Just "DL01AB1234"
+        regNo2 @?= Just "DL02CD5678"
         regNo1 /= regNo2 @? "Different registration numbers should be distinct"
     ]
 
@@ -173,21 +177,21 @@ testErrorHandlingWithRealFunctions =
   testGroup
     "Error Handling with Real Functions"
     [ testCase "Invalid creator ID format" $ do
-        let invalidReq = Common.DriverOperationHubRequest "" (Kernel.Types.Id.Id "hub-123") "DL01AB1234" Common.ONBOARDING_INSPECTION
+        let invalidReq = Common.DriverOperationHubRequest {Common.creatorId = "", Common.operationHubId = Kernel.Types.Id.Id "hub-123", Common.registrationNo = Just "DL01AB1234", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
             Common.DriverOperationHubRequest {Common.creatorId = creatorId} = invalidReq
         creatorId @?= "",
       testCase "Invalid registration number format" $ do
-        let invalidReq = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "hub-123") "123" Common.ONBOARDING_INSPECTION
+        let invalidReq = Common.DriverOperationHubRequest {Common.creatorId = "creator-123", Common.operationHubId = Kernel.Types.Id.Id "hub-123", Common.registrationNo = Just "123", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
             Common.DriverOperationHubRequest {Common.registrationNo = registrationNo} = invalidReq
-        registrationNo @?= "123",
+        registrationNo @?= Just "123",
       testCase "Empty operation hub ID validation" $ do
-        let invalidReq = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "") "DL01AB1234" Common.ONBOARDING_INSPECTION
+        let invalidReq = Common.DriverOperationHubRequest {Common.creatorId = "creator-123", Common.operationHubId = Kernel.Types.Id.Id "", Common.registrationNo = Just "DL01AB1234", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
             Common.DriverOperationHubRequest {Common.operationHubId = operationHubId} = invalidReq
         operationHubId @?= Kernel.Types.Id.Id "",
       testCase "Function handles empty creator ID gracefully" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.City "Delhi"
-            invalidReq = Common.DriverOperationHubRequest "" (Kernel.Types.Id.Id "hub-123") "DL01AB1234" Common.ONBOARDING_INSPECTION
+            invalidReq = Common.DriverOperationHubRequest {Common.creatorId = "", Common.operationHubId = Kernel.Types.Id.Id "hub-123", Common.registrationNo = Just "DL01AB1234", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
         result <- try (evaluate $ DDriverOp.postDriverOperatorCreateRequest merchantShortId opCity invalidReq)
         case result of
           Left (e :: Kernel.Prelude.SomeException) -> do
@@ -199,7 +203,7 @@ testErrorHandlingWithRealFunctions =
       testCase "Function handles short registration number gracefully" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.City "Delhi"
-            invalidReq = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "hub-123") "123" Common.ONBOARDING_INSPECTION
+            invalidReq = Common.DriverOperationHubRequest {Common.creatorId = "creator-123", Common.operationHubId = Kernel.Types.Id.Id "hub-123", Common.registrationNo = Just "123", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
         result <- try (evaluate $ DDriverOp.postDriverOperatorCreateRequest merchantShortId opCity invalidReq)
         case result of
           Left (e :: Kernel.Prelude.SomeException) -> do
@@ -207,11 +211,11 @@ testErrorHandlingWithRealFunctions =
             True @? errorMsg
           Right _ -> do
             let Common.DriverOperationHubRequest {Common.registrationNo = registrationNo} = invalidReq
-            registrationNo @?= "123", -- Verify the short registration number was passed through
+            registrationNo @?= Just "123", -- Verify the short registration number was passed through
       testCase "Function handles empty operation hub ID gracefully" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.City "Delhi"
-            invalidReq = Common.DriverOperationHubRequest "creator-123" (Kernel.Types.Id.Id "") "DL01AB1234" Common.ONBOARDING_INSPECTION
+            invalidReq = Common.DriverOperationHubRequest {Common.creatorId = "creator-123", Common.operationHubId = Kernel.Types.Id.Id "", Common.registrationNo = Just "DL01AB1234", Common.driverId = Nothing, Common.requestType = Common.ONBOARDING_INSPECTION}
         result <- try (evaluate $ DDriverOp.postDriverOperatorCreateRequest merchantShortId opCity invalidReq)
         case result of
           Left (e :: Kernel.Prelude.SomeException) -> do

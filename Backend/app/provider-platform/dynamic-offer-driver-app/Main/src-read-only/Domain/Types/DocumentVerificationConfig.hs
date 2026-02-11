@@ -67,6 +67,8 @@ data DocumentType
   | ProfileDetails
   | SocialSecurityNumber
   | VehicleInspectionForm
+  | DriverInspectionForm
+  | TrainingForm
   | UploadProfile
   | GSTCertificate
   | BackgroundVerification
@@ -94,6 +96,9 @@ data DocumentType
   | FinnishIDResidencePermit
   | BusinessRegistrationExtract
   | PersonalId
+  | LocalResidenceProof
+  | PoliceVerificationCertificate
+  | DrivingSchoolCertificate
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data FieldInfo = FieldInfo {_type :: Domain.Types.DocumentVerificationConfig.FieldType, isMandatory :: Kernel.Prelude.Bool, name :: Kernel.Prelude.Text, regexValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Text}

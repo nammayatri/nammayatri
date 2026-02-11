@@ -57,7 +57,7 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReq
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\reqStatus -> operationHubRequests.requestStatus B.==?. B.val_ reqStatus) mbReqStatus
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberHash
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\operationHubId -> operationHubRequests.operationHubId B.==?. B.val_ operationHubId.getId) mbOperationHubId
-                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\registrationNo -> B.sqlBool_ (B.lower_ operationHubRequests.registrationNo `B.like_` (B.val_ ("%" <> T.toLower registrationNo <> "%")))) mbRegistrationNo
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\registrationNo -> B.sqlBool_ (B.lower_ (B.coalesce_ [operationHubRequests.registrationNo] (B.val_ "")) `B.like_` (B.val_ ("%" <> T.toLower registrationNo <> "%")))) mbRegistrationNo
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\operationHubName -> B.sqlBool_ (B.lower_ operationHub.name `B.like_` (B.val_ ("%" <> T.toLower operationHubName <> "%")))) mbOperationHubName
                 )
                 do

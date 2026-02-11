@@ -1,0 +1,28 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  VehicleRegistrationCertificate: Domain.Types.VehicleRegistrationCertificate
+  UTCTime: Kernel.Prelude
+  Text: Kernel.Prelude
+  Int: Kernel.Prelude
+
+RCStats:
+  tableName: rc_stats
+
+  fields:
+    rcId : Id VehicleRegistrationCertificate
+    totalRides : Int
+    updatedAt : UTCTime
+
+  constraints:
+    rcId: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: rcId
+
+  default:
+    totalRides: "0"
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt]
