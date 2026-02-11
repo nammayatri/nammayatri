@@ -183,6 +183,16 @@ getAllRoutesLoadedKey searchReqId = do
     Just allRoutesLoaded -> return allRoutesLoaded
     Nothing -> return False
 
+getDoMultimodalSearch :: DSearch.SearchReq -> Maybe Bool
+getDoMultimodalSearch = \case
+  DSearch.OneWaySearch DSearch.OneWaySearchReq {doMultimodalSearch} -> doMultimodalSearch
+  DSearch.RentalSearch DSearch.RentalSearchReq {doMultimodalSearch} -> doMultimodalSearch
+  DSearch.InterCitySearch DSearch.InterCitySearchReq {doMultimodalSearch} -> doMultimodalSearch
+  DSearch.AmbulanceSearch DSearch.OneWaySearchReq {doMultimodalSearch} -> doMultimodalSearch
+  DSearch.DeliverySearch DSearch.OneWaySearchReq {doMultimodalSearch} -> doMultimodalSearch
+  DSearch.PTSearch DSearch.PublicTransportSearchReq {doMultimodalSearch} -> doMultimodalSearch
+  DSearch.FixedRouteSearch DSearch.FixedRouteSearchReq {doMultimodalSearch} -> doMultimodalSearch
+
 search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> FlowHandler DSearch.SearchResp
 search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbFilterServiceAndJrnyType = withFlowHandlerAPI . search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbFilterServiceAndJrnyType
 
@@ -219,7 +229,8 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
   fork "Multimodal Search" $ do
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
-    if riderConfig.makeMultiModalSearch
+    let mbDoMultimodalSearch = getDoMultimodalSearch req
+    if riderConfig.makeMultiModalSearch && (isNothing mbDoMultimodalSearch || fromMaybe False mbDoMultimodalSearch)
       then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId Nothing mbFilterServiceAndJrnyType)
       else QSearchRequest.updateAllJourneysLoaded (Just True) dSearchRes.searchRequest.id
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo

@@ -100,6 +100,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 subscriptionId = Nothing,
                 verifyBeforeCancellingOldBooking = Just True,
                 numberOfLuggages = Nothing,
+                doMultimodalSearch = Just True,
                 ..
               }
   search _ = throwError (InternalError "Not Supported")

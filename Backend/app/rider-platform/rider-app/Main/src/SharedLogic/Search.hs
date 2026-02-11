@@ -115,7 +115,8 @@ data OneWaySearchReq = OneWaySearchReq
     isReserveRide :: Maybe Bool,
     subscriptionId :: Maybe (Id DNyRegularSubscription.NyRegularSubscription),
     verifyBeforeCancellingOldBooking :: Maybe Bool,
-    numberOfLuggages :: Maybe Int
+    numberOfLuggages :: Maybe Int,
+    doMultimodalSearch :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -132,7 +133,8 @@ data PublicTransportSearchReq = PublicTransportSearchReq
     platformType :: Maybe DIBPC.PlatformType,
     currentLocation :: Maybe LatLong,
     busLocationData :: Maybe [RL.BusLocation],
-    firstMileRemoved :: Maybe Bool
+    firstMileRemoved :: Maybe Bool,
+    doMultimodalSearch :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -149,7 +151,8 @@ data RentalSearchReq = RentalSearchReq
     fareParametersInRateCard :: Maybe Bool,
     placeNameSource :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
-    numberOfLuggages :: Maybe Int
+    numberOfLuggages :: Maybe Int,
+    doMultimodalSearch :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -169,7 +172,8 @@ data InterCitySearchReq = InterCitySearchReq
     placeNameSource :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     platformType :: Maybe DIBPC.PlatformType,
-    numberOfLuggages :: Maybe Int
+    numberOfLuggages :: Maybe Int,
+    doMultimodalSearch :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -179,7 +183,8 @@ data FixedRouteSearchReq = FixedRouteSearchReq
     startTime :: Maybe UTCTime,
     numberOfLuggages :: Maybe Int,
     origin :: SearchReqLocation,
-    destination :: SearchReqLocation
+    destination :: SearchReqLocation,
+    doMultimodalSearch :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
