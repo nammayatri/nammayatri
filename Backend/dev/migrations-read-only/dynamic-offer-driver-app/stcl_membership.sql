@@ -60,3 +60,10 @@ ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN payment_status tex
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN share_start_count integer ;
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN share_end_count integer ;
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN application_count integer ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN nominee_aadhar_encrypted;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN nominee_aadhar_hash;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN aadhar_number_encrypted;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN aadhar_number_hash;

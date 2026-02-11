@@ -117,13 +117,11 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
   -- Create payment order
   createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType)
 
-  -- Encrypt sensitive fields for storage
-  encryptedAadhar <- encrypt req.aadharNumber
+  -- Encrypt sensitive fields for storage (aadharNumber from frontend is ignored - not stored)
   encryptedPAN <- encrypt req.panNumber
   encryptedMobile <- encrypt req.mobileNumber
   encryptedAccountNumber <- encrypt req.bankDetails.accountNumber
   encryptedIFSC <- encrypt req.bankDetails.ifscCode
-  encryptedNomineeAadhar <- encrypt req.nomineeInfo.nomineeAadhar
 
   -- Generate application ID and record ID for membership record
   applicationId <- generateGUIDText
@@ -152,7 +150,6 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             Domain.memberCategory = req.memberCategory,
             Domain.numberOfShares = req.numberOfShares,
             Domain.dateOfBirth = req.dateOfBirth,
-            Domain.aadharNumber = encryptedAadhar,
             Domain.panNumber = encryptedPAN,
             Domain.mobileNumber = encryptedMobile,
             Domain.emailId = req.emailId,
@@ -169,7 +166,6 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             Domain.vehicleType = vehicleTypeText,
             Domain.fuelTypes = fuelTypesText,
             Domain.nomineeName = req.nomineeInfo.nomineeName,
-            Domain.nomineeAadhar = encryptedNomineeAadhar,
             Domain.declarationPlace = req.declaration.place,
             Domain.declarationDate = req.declaration.date,
             Domain.declarationSignature = req.declaration.signature,
@@ -203,7 +199,7 @@ getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
   driverId' <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
 
   -- Query database
-  memberships <- QStclMembership.findByDriverId driverId'
+  memberships <- QStclMembership.findByDriverIdAndStatus driverId' Domain.SUBMITTED
   membership@Domain.StclMembership {..} <- case memberships of
     [] -> throwError $ InvalidRequest "No membership application found for this driver"
     (m : _) -> pure m
@@ -217,19 +213,15 @@ getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
          in T.replicate xCount "X" <> last4
 
   -- Decrypt and mask sensitive fields
-  decryptedAadhar <- decrypt membership.aadharNumber
   decryptedPAN <- decrypt membership.panNumber
   decryptedMobile <- decrypt membership.mobileNumber
   decryptedAccountNumber <- decrypt membership.accountNumber
   decryptedIFSC <- decrypt membership.ifscCode
-  decryptedNomineeAadhar <- decrypt membership.nomineeAadhar
 
-  let maskedAadhar = maskSensitiveData decryptedAadhar
-      maskedPAN = maskSensitiveData decryptedPAN
+  let maskedPAN = maskSensitiveData decryptedPAN
       maskedMobile = maskSensitiveData decryptedMobile
       maskedAccountNumber = maskSensitiveData decryptedAccountNumber
       maskedIFSC = maskSensitiveData decryptedIFSC
-      maskedNomineeAadhar = maskSensitiveData decryptedNomineeAadhar
 
   -- Convert VehicleType Text back to enum
   vehicleTypeEnum <- case membership.vehicleType of
@@ -254,7 +246,6 @@ getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
     APITypes.MembershipDetailsResp
       { APITypes.id = Kernel.Types.Id.getId membership.id,
         APITypes.driverId = Kernel.Types.Id.getId membership.driverId,
-        APITypes.aadharNumber = maskedAadhar,
         APITypes.panNumber = maskedPAN,
         APITypes.mobileNumber = maskedMobile,
         APITypes.address =
@@ -283,7 +274,7 @@ getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
         APITypes.nomineeInfo =
           APITypes.NomineeInfo
             { APITypes.nomineeName = membership.nomineeName,
-              APITypes.nomineeAadhar = maskedNomineeAadhar
+              APITypes.nomineeAadhar = Nothing
             },
         APITypes.declaration =
           APITypes.Declaration
