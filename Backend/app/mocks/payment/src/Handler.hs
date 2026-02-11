@@ -318,7 +318,7 @@ buildJuspayWebhookPayload
 
 internalOrderStatusHandler ::
   Text ->
-  FlowHandler Payment.OrderStatusResp
+  FlowHandler Juspay.OrderData
 internalOrderStatusHandler orderShortId =
   withFlowHandlerAPI' $ do
     mOrder <- QOrder.findByShortId (ShortId orderShortId)
@@ -328,18 +328,18 @@ internalOrderStatusHandler orderShortId =
         mTxn <- QTxn.findNewTransactionByOrderId orderId
         refunds <- QRefunds.findAllByOrderId orderShortId'
         offers <- QOffer.findByPaymentOrder orderId
-        buildOrderStatusResp order mTxn refunds offers
+        buildJuspayOrderData order mTxn refunds offers
       Nothing ->
         throwError $ InternalError ("Order not found: " <> orderShortId)
 
-buildOrderStatusResp ::
+buildJuspayOrderData ::
   (MonadFlow m) =>
   DOrder.PaymentOrder ->
   Maybe DTxn.PaymentTransaction ->
   [DRefunds.Refunds] ->
   [DOffer.PaymentOrderOffer] ->
-  m Payment.OrderStatusResp
-buildOrderStatusResp order mTxn refunds offers = do
+  m Juspay.OrderData
+buildJuspayOrderData order mTxn refunds offers = do
   let txnId = mTxn >>= DTxn.txnId
       txnUUID = mTxn >>= DTxn.txnUUID
       respMessage = mTxn >>= DTxn.respMessage
@@ -350,60 +350,53 @@ buildOrderStatusResp order mTxn refunds offers = do
           shortId = orderShortIdVal,
           amount = orderAmount,
           createdAt = orderCreatedAt,
-          isRetried = orderIsRetried,
-          isRetargeted = orderIsRetargeted,
-          retargetLink = orderRetargetLink,
           bankErrorMessage = orderBankErrorMessage,
           bankErrorCode = orderBankErrorCode,
-          effectAmount = orderEffectAmount,
-          clientAuthTokenExpiry = orderClientAuthTokenExpiry
+          effectAmount = orderEffectAmount
         } = order
 
   pure $
-    Payment.OrderStatusResp
-      { eventName =
-          Just $
-            statusToEventName orderStatus,
-        orderShortId =
+    Juspay.OrderData
+      { order_id =
           getShortId orderShortIdVal,
-        transactionUUID = txnUUID,
-        txnId = txnId,
-        transactionStatusId =
-          statusToId orderStatus,
-        transactionStatus =
+        txn_uuid = txnUUID,
+        txn_id = txnId,
+        status_id =
+          Just $ statusToId orderStatus,
+        event_name =
+          Just $
+            statusToPaymentStatus orderStatus,
+        status =
           orderStatus,
-        paymentMethodType =
+        payment_method_type =
           mTxn >>= DTxn.paymentMethodType,
-        paymentMethod = mTxn >>= DTxn.paymentMethod,
-        paymentGatewayResponse = mTxn >>= DTxn.juspayResponse >>= (decode . LBS.fromStrict . TE.encodeUtf8),
-        respMessage = respMessage,
-        respCode = respCode,
-        gatewayReferenceId = gatewayRefId,
-        bankErrorMessage =
-          orderBankErrorMessage,
-        bankErrorCode =
-          orderBankErrorCode,
+        payment_method = mTxn >>= DTxn.paymentMethod,
+        payment_gateway_response = mTxn >>= DTxn.juspayResponse >>= (decode . LBS.fromStrict . TE.encodeUtf8),
+        resp_message = respMessage,
+        resp_code = respCode,
+        gateway_reference_id = gatewayRefId,
         amount =
-          orderAmount,
+          realToFrac $ getHighPrecMoney orderAmount,
         currency = INR,
-        dateCreated =
+        date_created =
           Just orderCreatedAt,
-        isRetriedOrder =
-          Just orderIsRetried,
-        isRetargetedOrder =
-          Just orderIsRetargeted,
-        retargetPaymentLink =
-          orderRetargetLink,
-        retargetPaymentLinkExpiry = orderClientAuthTokenExpiry,
-        amountRefunded = Just totalRefundedAmount,
-        refunds = map toPaymentRefundsData refunds,
-        payerVpa = mTxn >>= DTxn.paymentMethod,
+        mandate = Nothing,
+        payer_vpa = mTxn >>= DTxn.paymentMethod,
+        bank_error_code =
+          orderBankErrorCode,
+        bank_error_message =
+          orderBankErrorMessage,
         upi = Nothing,
         card = Nothing,
-        splitSettlementResponse = mTxn >>= DTxn.splitSettlementResponse,
-        effectiveAmount =
-          orderEffectAmount,
-        offers = Just $ map toPaymentOffer offers
+        metadata = Nothing,
+        additional_info = Nothing,
+        links = Nothing,
+        amount_refunded = Just $ realToFrac $ getHighPrecMoney totalRefundedAmount,
+        refunds = Just $ map domainRefundToJuspay refunds,
+        split_settlement_response = mTxn >>= DTxn.splitSettlementResponse >>= toJuspaySplitSettlementResponse,
+        effective_amount =
+          fmap (realToFrac . getHighPrecMoney) orderEffectAmount,
+        offers = Just $ map domainOfferToJuspay offers
       }
   where
     totalRefundedAmount =
@@ -416,24 +409,24 @@ buildOrderStatusResp order mTxn refunds offers = do
         0
         refunds
 
-    toPaymentOffer :: DOffer.PaymentOrderOffer -> Payment.Offer
-    toPaymentOffer offer =
-      Payment.Offer
-        { offerId = Just offer.offer_id,
-          offerCode = Just offer.offer_code,
+    domainOfferToJuspay :: DOffer.PaymentOrderOffer -> Juspay.Offer
+    domainOfferToJuspay offer =
+      Juspay.Offer
+        { offer_id = Just offer.offer_id,
+          offer_code = Just offer.offer_code,
           status = fromMaybe Payment.OFFER_INITIATED (readMaybe (T.unpack offer.status))
         }
 
-    toPaymentRefundsData :: DRefunds.Refunds -> Payment.RefundsData
-    toPaymentRefundsData refund =
-      Payment.RefundsData
-        { idAssignedByServiceProvider = refund.idAssignedByServiceProvider,
-          amount = refund.refundAmount,
-          status = refund.status,
-          errorMessage = refund.errorMessage,
-          errorCode = refund.errorCode,
-          initiatedBy = refund.initiatedBy,
-          requestId = getShortId refund.shortId,
+    domainRefundToJuspay :: DRefunds.Refunds -> Juspay.RefundsData
+    domainRefundToJuspay refund =
+      Juspay.RefundsData
+        { id = refund.idAssignedByServiceProvider,
+          amount = realToFrac refund.refundAmount,
+          status = toJuspayRefundStatus refund.status,
+          error_message = refund.errorMessage,
+          error_code = refund.errorCode,
+          initiated_by = refund.initiatedBy,
+          unique_request_id = getShortId refund.shortId,
           arn = refund.arn
         }
 

@@ -208,6 +208,7 @@ in  { _output = outputPath
       { _sqlTypeMapper = sqlMapper
       , _extraDefaultFields = extraDefaultFields
       , _defaultCachedQueryKeyPrefix = "driverOffer"
+      , _cacheFlowType = None
       }
     , _defaultImports = defaultImports
     , _defaultTypeImportMapper = defaultTypeImportMapper

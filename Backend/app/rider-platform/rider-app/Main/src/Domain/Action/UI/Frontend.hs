@@ -168,7 +168,7 @@ notifyEvent personId merchantId req = do
           markJourneysComplete activeJourneys
     SEARCH_CANCELLED -> do
       activeBooking <- B.runInReplica $ QB.findLatestSelfAndPartyBookingByRiderId personId
-      whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
+      whenJust activeBooking $ \booking -> processActiveBooking booking Nothing OnSearch
       QPFS.updateStatus personId DPFS.IDLE
   pure APISuccess.Success
   where

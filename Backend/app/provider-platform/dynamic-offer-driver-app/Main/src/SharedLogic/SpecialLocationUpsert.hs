@@ -71,6 +71,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoCanQueueUpOnGate :: Text,
     gateInfoType :: Text,
     gateInfoGateTags :: Text,
+    gateInfoWalkDescription :: Text,
     priority :: Text,
     pickupPriority :: Text,
     dropPriority :: Text,
@@ -97,6 +98,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "gate_info_can_queue_up_on_gate"
       <*> r .: "gate_info_type"
       <*> r .: "gate_info_tags"
+      <*> r .: "gate_info_walk_description"
       <*> r .: "priority"
       <*> r .: "pickup_priority"
       <*> r .: "drop_priority"
@@ -207,6 +209,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   let gateInfoDefaultDriverExtra :: Maybe Int = readMaybeCSVField idx row.gateInfoDefaultDriverExtra "Gate Info (default_driver_extra)"
       gateInfoAddress :: Maybe Text = cleanMaybeCSVField idx row.gateInfoAddress "Gate Info (address)"
       gateInfoGateTags :: Maybe [Text] = parseGateTags row.gateInfoGateTags
+      gateInfoWalkDescription :: Maybe Text = cleanMaybeCSVField idx row.gateInfoWalkDescription "Gate Info (walk_description)"
   gateInfoType :: DGI.GateType <- readCSVField idx row.gateInfoType "Gate Info (type)"
   gateInfoHasGeom :: Bool <- readCSVField idx row.gateInfoHasGeom "Gate Info (geom)"
   gateInfoCanQueueUpOnGate :: Bool <- readCSVField idx row.gateInfoCanQueueUpOnGate "Gate Info (can_queue_up_on_gate)"
@@ -249,7 +252,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             merchantOperatingCityId = Just (cast merchantOpCity.id),
             createdAt = now,
             updatedAt = now,
-            gateTags = gateInfoGateTags
+            gateTags = gateInfoGateTags,
+            walkDescription = gateInfoWalkDescription
           }
   return (city, locationName, (specialLocation, gateInfo), pickupPriority, dropPriority, mbSpecialLocationId)
 

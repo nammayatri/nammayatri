@@ -94,7 +94,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
               case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
                 Left err -> throwError (CRISError $ "Failed to decode getRouteFare Resp: " <> T.pack (show err))
                 Right fareResponse -> pure fareResponse
-        else throwError (CRISError $ "Non-zero response code in getRouteFare Resp: " <> encResp.responseCode <> " " <> encResp.responseData)
+        else throwError (CRISError $ "Non-zero response code in getRouteFare Resp: " <> encResp.responseCode <> " " <> encResp.responseData <> " [" <> request.sourceCode <> "-" <> request.destCode <> "] changeOver=" <> request.changeOver)
   let routeFareDetails = decryptedResponse.routeFareDetailsList
 
   frfsDetails <-
