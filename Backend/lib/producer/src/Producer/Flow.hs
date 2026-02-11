@@ -81,7 +81,8 @@ runReviver producerType = do
   reviverInterval <- asks (.reviverInterval)
   T.UTCTime _ todaysDiffTime <- getCurrentTime
   let secondsTillNow = T.diffTimeToPicoseconds todaysDiffTime `div` 1000000000000
-      shouldRunReviver = secondsTillNow `mod` (fromIntegral reviverInterval.getMinutes) == 0
+      minutesTillNow = secondsTillNow `div` 60
+      shouldRunReviver = minutesTillNow `mod` (fromIntegral reviverInterval.getMinutes) == 0
   when shouldRunReviver $ Hedis.whenWithLockRedis reviverLockKey 300 (runReviver' producerType)
   threadDelayMilliSec 60000
 
