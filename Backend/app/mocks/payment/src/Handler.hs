@@ -276,7 +276,7 @@ buildJuspayWebhookPayload
                     { order_id = getShortId orderShortId,
                       txn_uuid = txnUUID,
                       txn_id = txnId,
-                      status_id = Just 21,
+                      status_id = Just $ statusToId transactionStatus,
                       event_name =
                         Just $
                           statusToPaymentStatus transactionStatus,
