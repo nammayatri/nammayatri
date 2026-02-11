@@ -29,7 +29,7 @@ data PassType = PassType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data PassEnum = TouristPass | RegularPass deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PassEnum = TouristPass | RegularPass | StudentPass deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''PassEnum)
 
