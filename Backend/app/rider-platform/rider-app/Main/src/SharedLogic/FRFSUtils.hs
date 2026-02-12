@@ -24,7 +24,7 @@ import BecknV2.FRFS.Utils
 import Control.Monad.Extra (mapMaybeM)
 import Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
-import Data.List (groupBy, nub, sortBy)
+import Data.List (groupBy, nub, sortBy, sort)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -860,8 +860,9 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment
-  mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment) orderResp
+      groupId = listToMaybe $ sort (bookings <&> (.id.getId))
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment groupId
+  mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId) orderResp
   where
     getPaymentIds = do
       orderShortId <- generateShortId

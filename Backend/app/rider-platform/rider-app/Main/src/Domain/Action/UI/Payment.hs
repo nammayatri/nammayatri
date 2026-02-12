@@ -138,7 +138,7 @@ createOrder (personId, merchantId) rideId = do
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal (Just person.id.getId) person.clientSdkVersion (Just False)
       createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False >>= fromMaybeM (InternalError "Order expired please try again")
+  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.Normal isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
 
@@ -150,7 +150,32 @@ getStatus (personId, merchantId) orderId = do
   paymentOrder <- QOrder.findById orderId |<|>| QOrder.findByShortId (ShortId orderId.getId) >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   let paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
       fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
-  SPayment.syncOrderStatus fulfillmentHandler merchantId personId paymentOrder
+  currentOrderStatus <- SPayment.syncOrderStatus fulfillmentHandler merchantId personId paymentOrder
+  -- Check if current order is not successful and has a groupId
+  case (currentOrderStatus.paymentFulfillmentStatus, paymentOrder.groupId) of
+    (Just DPayment.FulfillmentSucceeded, _) -> pure currentOrderStatus
+    (_, Nothing) -> pure currentOrderStatus
+    (_, Just groupId) -> do
+      now <- getCurrentTime
+      otherOrders <- QOrder.findAllByGroupId groupId now
+      let otherOrdersInGroup = filter (\o -> o.id /= paymentOrder.id) otherOrders
+          successOtherOrder = find (\o -> o.paymentFulfillmentStatus == Just DPayment.FulfillmentSucceeded) otherOrdersInGroup
+      fork "syncRemainingOrdersInGroup" $ do
+        let remainingOrders = filter (\o -> maybe True (\successOrder -> o.id /= successOrder.id) successOtherOrder) otherOrdersInGroup
+        mapM_
+          (\order -> do
+              let orderPaymentServiceType = fromMaybe DOrder.Normal order.paymentServiceType
+                  orderFulfillmentHandler = mkFulfillmentHandler orderPaymentServiceType (cast order.merchantId) order.id
+              void $ SPayment.syncOrderStatus orderFulfillmentHandler merchantId personId order
+          ) remainingOrders
+      -- Check if any other order has FulfillmentSucceeded status
+      case successOtherOrder of
+        Just successfulOrder -> do
+          let successPaymentServiceType = fromMaybe DOrder.Normal successfulOrder.paymentServiceType
+              successFulfillmentHandler = mkFulfillmentHandler successPaymentServiceType (cast successfulOrder.merchantId) successfulOrder.id
+          logInfo $ "Found successful order in group: " <> successfulOrder.id.getId <> ", syncing instead of current order: " <> paymentOrder.id.getId
+          SPayment.syncOrderStatus successFulfillmentHandler merchantId personId successfulOrder
+        Nothing -> pure currentOrderStatus
 
 -- order status s2s -----------------------------------------------------
 getStatusS2S :: Id DOrder.PaymentOrder -> Id DP.Person -> Id DM.Merchant -> Maybe Data.Text.Text -> Flow DPayment.PaymentStatusResp
@@ -380,7 +405,7 @@ postWalletRecharge (personId, merchantId) req = do
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing DOrder.Wallet
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False
+  mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing
   _ <- mbOrderResp & fromMaybeM (InternalError "Failed to create payment order")
   return Success
 
