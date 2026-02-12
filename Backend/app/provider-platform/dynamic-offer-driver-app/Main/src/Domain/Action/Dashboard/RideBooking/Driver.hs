@@ -861,7 +861,7 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} mbFleetOwnerId =
     { registrationNumber = Just registrationNo,
       fitnessUpto = Nothing,
       fleetOwnerId = mbFleetOwnerId,
-      vehicleCategory = Nothing,
+      vehicleCategory = req.vehicleCategory,
       airConditioned,
       oxygen,
       ventilator,
