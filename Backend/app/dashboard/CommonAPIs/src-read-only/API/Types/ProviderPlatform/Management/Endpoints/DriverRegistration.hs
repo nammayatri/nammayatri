@@ -156,6 +156,10 @@ data DocumentType
   | FinnishIDResidencePermit
   | BusinessRegistrationExtract
   | PersonalId
+  | LDCCertificate
+  | TDSCertificate
+  | TANCertificate
+  | UDYAMCertificate
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
@@ -376,7 +380,13 @@ data UpdateDocumentRequest
 instance Kernel.Types.HideSecrets.HideSecrets UpdateDocumentRequest where
   hideSecrets = Kernel.Prelude.identity
 
-data UploadDocumentReq = UploadDocumentReq {imageBase64 :: Kernel.Prelude.Text, imageType :: DocumentType, rcNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text, requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data UploadDocumentReq = UploadDocumentReq
+  { imageBase64 :: Kernel.Prelude.Text,
+    imageType :: DocumentType,
+    rcNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fileExtension :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

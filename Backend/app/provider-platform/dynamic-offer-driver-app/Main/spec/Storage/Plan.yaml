@@ -63,6 +63,7 @@ Plan:
     isFleetOwnerPlan : Maybe Bool
     allowStrikeOff: Bool
     productOwnershipAmount : HighPrecMoney
+    originalRegistrationAmount : Maybe HighPrecMoney
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>

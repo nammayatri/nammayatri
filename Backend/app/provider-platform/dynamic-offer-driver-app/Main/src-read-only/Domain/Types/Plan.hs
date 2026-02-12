@@ -38,6 +38,7 @@ data Plan = Plan
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOpCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
+    originalRegistrationAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     paymentMode :: Domain.Types.Plan.PaymentMode,
     planBaseAmount :: Domain.Types.Extra.Plan.PlanBaseAmount,
     planType :: Domain.Types.Plan.PlanType,

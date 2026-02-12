@@ -86,3 +86,9 @@ ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN validity_in_days integer ;
 
 ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN is_fleet_owner_plan boolean ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN original_registration_amount double precision ;
