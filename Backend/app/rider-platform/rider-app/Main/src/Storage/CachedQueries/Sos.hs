@@ -13,17 +13,12 @@
 -}
 
 module Storage.CachedQueries.Sos
-  ( findByRideId,
-    clearCache,
-    cacheSosIdByRideId,
-    mockSosKey,
+  ( mockSosKey,
   )
 where
 
 import qualified Domain.Types.Person as Person
-import Domain.Types.Ride
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Safety.Domain.Types.Sos as SafetyDSos

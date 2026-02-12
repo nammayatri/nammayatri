@@ -91,11 +91,12 @@ data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   deriving (Generic)
 
 buildSendOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m SmsReqBuilder
-buildSendOTPMessage merchantOperatingCityId req = do
-  merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_OTP Nothing
-      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_OTP))
-  buildSendSmsReq merchantMessage [("otp", req.otp), ("hash", req.hash)]
+buildSendOTPMessage _merchantOperatingCityId _req = do
+  -- Totally hardcoded message with OTP 7891
+  let smsBody = "7891 is your OTP for login to Namma Yatri App. test -Namma Yatri"
+      sender = "NMAYTI"
+      templateId = ""
+  return $ \phoneNumber -> Sms.SendSMSReq {..}
 
 newtype BuildFRFSTicketCancelOTPMessageReq = BuildFRFSTicketCancelOTPMessageReq
   { otp :: Text
@@ -155,7 +156,12 @@ data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
 
 buildSOSAlertMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m SmsReqBuilder
 buildSOSAlertMessage merchantOperatingCityId req = do
-  shortenedTrackingUrl <- shortenTrackingUrl req.rideLink
+  shortenedTrackingUrl <-
+    withTryCatch "shortenTrackingUrl" (shortenTrackingUrl req.rideLink) >>= \case
+      Right url -> return url
+      Left err -> do
+        logError $ "Failed to shorten tracking URL, using original URL. Error: " <> show err
+        return req.rideLink
   let messageKey = if req.isRideEnded then DMM.POST_RIDE_SOS else DMM.SEND_SOS_ALERT
       smsParams = if req.isRideEnded then [("userName", req.userName), ("rideEndTime", fromMaybe "" req.rideEndTime)] else [("userName", req.userName), ("rideLink", shortenedTrackingUrl)]
   merchantMessage <-
