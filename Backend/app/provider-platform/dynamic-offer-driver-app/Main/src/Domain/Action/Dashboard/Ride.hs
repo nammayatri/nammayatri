@@ -33,6 +33,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ri
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
+import Data.Time.Clock (utctDay)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
@@ -158,7 +159,7 @@ getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurr
   let to = fromMaybe now mbto
   enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
   rideItems <-
-    if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
+    if utctDay (fromMaybe now mbto) < utctDay now && enableClickhouse == Just "True"
       then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to mbVehicleNo
       else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto mbVehicleNo
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
@@ -196,7 +197,7 @@ getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mb
   let to = fromMaybe now mbto
   enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
   rideItems <-
-    if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
+    if utctDay (fromMaybe now mbto) < utctDay now && enableClickhouse == Just "True"
       then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash from to
       else QRide.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverPhone now mbfrom mbto
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
