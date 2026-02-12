@@ -139,6 +139,7 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOpCityId (Kernel.Types.Id.getId merchantOpCityId),
       Se.Set Beam.name name,
+      Se.Set Beam.originalRegistrationAmount originalRegistrationAmount,
       Se.Set Beam.paymentMode paymentMode,
       Se.Set Beam.planBaseAmount planBaseAmount,
       Se.Set Beam.planType planType,

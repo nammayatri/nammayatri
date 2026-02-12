@@ -736,3 +736,8 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.LocalResidenceProof -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LocalResidenceProof
   Domain.Types.DocumentVerificationConfig.PoliceVerificationCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PoliceVerificationCertificate
   Domain.Types.DocumentVerificationConfig.DrivingSchoolCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DrivingSchoolCertificate
+  -- India Certificate Document Types
+  Domain.Types.DocumentVerificationConfig.LDCCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LDCCertificate
+  Domain.Types.DocumentVerificationConfig.TDSCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.TDSCertificate
+  Domain.Types.DocumentVerificationConfig.TANCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.TANCertificate
+  Domain.Types.DocumentVerificationConfig.UDYAMCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UDYAMCertificate

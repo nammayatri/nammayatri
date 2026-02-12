@@ -35,6 +35,7 @@ data PlanT f = PlanT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOpCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
+    originalRegistrationAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     paymentMode :: B.C f Domain.Types.Plan.PaymentMode,
     planBaseAmount :: B.C f Domain.Types.Extra.Plan.PlanBaseAmount,
     planType :: B.C f Domain.Types.Plan.PlanType,
