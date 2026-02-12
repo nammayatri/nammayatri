@@ -165,7 +165,6 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
       bapUri = searchRequest.bapUri
       bppSubscriberId = getShortId $ transporter.subscriberId
   bppUri <- buildBppUrl (transporter.id)
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
 
   msgId <- getMsgIdByTxnId searchRequest.transactionId
   let vehicleCategory = Utils.mapServiceTierToCategory srfd.vehicleServiceTier
@@ -174,10 +173,17 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
   logDebug $ "on_selectV2 request bpp: " <> show content
   let req = Spec.OnSelectReq context Nothing (Just content)
-  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    ApiCallLogger.pushInternalApiCallDataToKafka "onSelectV2" "BPP" (Just searchRequest.transactionId) (Just req) res
-  pure ()
+  mbDirectCallback <- asks (.directBAPCallback)
+  case mbDirectCallback of
+    Just cb -> do
+      fork "pushing ondc on_select logs" $ void $ pushLogs "on_select" (toJSON req) transporter.id.getId "MOBILITY"
+      liftIO $ cb.onSelectCallback req
+    Nothing -> do
+      internalEndPointHashMap <- asks (.internalEndPointHashMap)
+      res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap req
+      fork ("Logging Internal API Call") $ do
+        ApiCallLogger.pushInternalApiCallDataToKafka "onSelectV2" "BPP" (Just searchRequest.transactionId) (Just req) res
+      pure ()
   where
     getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
     getMsgIdByTxnId txnId = do
@@ -203,15 +209,21 @@ callOnUpdateV2 ::
   Id Merchant.Merchant ->
   m ()
 callOnUpdateV2 req retryConfig merchantId = do
-  bapUri' <- req.onUpdateReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
-  bapUri <- parseBaseUrl bapUri'
-  bppSubscriberId <- req.onUpdateReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    let transactionId = req.onUpdateReqContext.contextTransactionId <&> UUID.toText
-    ApiCallLogger.pushInternalApiCallDataToKafka "onUpdateV2" "BPP" transactionId (Just req) res
-  pure ()
+  mbDirectCallback <- asks (.directBAPCallback)
+  case mbDirectCallback of
+    Just cb -> do
+      fork "pushing ondc on_update logs" $ void $ pushLogs "on_update" (toJSON req) merchantId.getId "MOBILITY"
+      liftIO $ cb.onUpdateCallback req
+    Nothing -> do
+      bapUri' <- req.onUpdateReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
+      bapUri <- parseBaseUrl bapUri'
+      bppSubscriberId <- req.onUpdateReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
+      internalEndPointHashMap <- asks (.internalEndPointHashMap)
+      res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
+      fork ("Logging Internal API Call") $ do
+        let transactionId = req.onUpdateReqContext.contextTransactionId <&> UUID.toText
+        ApiCallLogger.pushInternalApiCallDataToKafka "onUpdateV2" "BPP" transactionId (Just req) res
+      pure ()
 
 callOnStatusV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -228,15 +240,21 @@ callOnStatusV2 ::
   Id Merchant.Merchant ->
   m ()
 callOnStatusV2 req retryConfig merchantId = do
-  bapUri' <- req.onStatusReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
-  bapUri <- parseBaseUrl bapUri'
-  bppSubscriberId <- req.onStatusReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    let transactionId = req.onStatusReqContext.contextTransactionId <&> UUID.toText
-    ApiCallLogger.pushInternalApiCallDataToKafka "onStatusV2" "BPP" (transactionId) (Just req) res
-  pure ()
+  mbDirectCallback <- asks (.directBAPCallback)
+  case mbDirectCallback of
+    Just cb -> do
+      fork "pushing ondc on_status logs" $ void $ pushLogs "on_status" (toJSON req) merchantId.getId "MOBILITY"
+      liftIO $ cb.onStatusCallback req
+    Nothing -> do
+      bapUri' <- req.onStatusReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
+      bapUri <- parseBaseUrl bapUri'
+      bppSubscriberId <- req.onStatusReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
+      internalEndPointHashMap <- asks (.internalEndPointHashMap)
+      res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
+      fork ("Logging Internal API Call") $ do
+        let transactionId = req.onStatusReqContext.contextTransactionId <&> UUID.toText
+        ApiCallLogger.pushInternalApiCallDataToKafka "onStatusV2" "BPP" (transactionId) (Just req) res
+      pure ()
 
 callOnCancelV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -253,15 +271,21 @@ callOnCancelV2 ::
   Id Merchant.Merchant ->
   m ()
 callOnCancelV2 req retryConfig merchantId = do
-  bapUri' <- req.onCancelReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
-  bapUri <- parseBaseUrl bapUri'
-  bppSubscriberId <- req.onCancelReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    let transactionId = req.onCancelReqContext.contextTransactionId <&> UUID.toText
-    ApiCallLogger.pushInternalApiCallDataToKafka "onCancelV2" "BPP" (transactionId) (Just req) res
-  pure ()
+  mbDirectCallback <- asks (.directBAPCallback)
+  case mbDirectCallback of
+    Just cb -> do
+      fork "pushing ondc on_cancel logs" $ void $ pushLogs "on_cancel" (toJSON req) merchantId.getId "MOBILITY"
+      liftIO $ cb.onCancelCallback req
+    Nothing -> do
+      bapUri' <- req.onCancelReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
+      bapUri <- parseBaseUrl bapUri'
+      bppSubscriberId <- req.onCancelReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
+      internalEndPointHashMap <- asks (.internalEndPointHashMap)
+      res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
+      fork ("Logging Internal API Call") $ do
+        let transactionId = req.onCancelReqContext.contextTransactionId <&> UUID.toText
+        ApiCallLogger.pushInternalApiCallDataToKafka "onCancelV2" "BPP" (transactionId) (Just req) res
+      pure ()
 
 callOnConfirmV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -287,15 +311,21 @@ callOnConfirmV2 transporter context content bppConfig = do
   city <- Utils.getContextCity context
   country <- Utils.getContextCountry context
   bppUri <- buildBppUrl transporter.id
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
   txnId <- Utils.getTransactionId context
   ttl <- bppConfig.onConfirmTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   let req = Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content}
-  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    ApiCallLogger.pushInternalApiCallDataToKafka "onConfirmV2" "BPP" (Just txnId) (Just req) res
-  pure ()
+  mbDirectCallback <- asks (.directBAPCallback)
+  case mbDirectCallback of
+    Just cb -> do
+      fork "pushing ondc on_confirm logs" $ void $ pushLogs "on_confirm" (toJSON req) transporter.id.getId "MOBILITY"
+      liftIO $ cb.onConfirmCallback req
+    Nothing -> do
+      internalEndPointHashMap <- asks (.internalEndPointHashMap)
+      res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap req
+      fork ("Logging Internal API Call") $ do
+        ApiCallLogger.pushInternalApiCallDataToKafka "onConfirmV2" "BPP" (Just txnId) (Just req) res
+      pure ()
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]

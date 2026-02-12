@@ -31,7 +31,9 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import qualified Tools.Metrics as Metrics
@@ -58,10 +60,12 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
             (onInitRes, booking) <- DOnInit.onInit onInitReq
             fork "on init received pushing ondc logs" do
               void $ pushLogs "on_init" (toJSON reqV2) onInitRes.merchant.id.getId "MOBILITY"
-            handle (errHandler booking) . void . withShortRetry $ do
+            handle (errHandler booking) $ do
               confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
               Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId
-              CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
+              withDirectBPP
+                (\rt -> DirectBPPCall.directConfirm rt confirmBecknReq onInitRes.merchant.id)
+                (void . withShortRetry $ CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id)
       else do
         let cancellationReason = "on_init API failure"
             cancelReq = buildCancelReq cancellationReason OnInit
@@ -82,7 +86,10 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
 
     errHandlerAction booking cancelReq = do
       dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
-      void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
+      cancelBecknReq <- CancelACL.buildCancelReqV2 dCancelRes Nothing
+      withDirectBPP
+        (\rt -> DirectBPPCall.directCancel rt booking.merchantId cancelBecknReq)
+        (void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl cancelBecknReq)
 
     buildCancelReq cancellationReason reasonStage =
       DCancel.CancelReq

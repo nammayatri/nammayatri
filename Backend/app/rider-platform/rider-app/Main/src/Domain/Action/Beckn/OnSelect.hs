@@ -39,7 +39,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import qualified SharedLogic.Confirm as SConfirm
 import SharedLogic.Type
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -130,7 +132,9 @@ onSelect OnSelectValidatedReq {..} = do
             becknInitReq <- ACL.buildInitReqV2 dConfirmRes
             handle (errHandler dConfirmRes.booking) $ do
               Metrics.startMetricsBap Metrics.INIT dConfirmRes.merchant.name searchRequest.id.getId dConfirmRes.booking.merchantOperatingCityId.getId
-              void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq searchRequest.merchantId
+              withDirectBPP
+                (\rt -> DirectBPPCall.directInit rt becknInitReq searchRequest.merchantId)
+                (void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq searchRequest.merchantId)
         _ -> do
           bppDetails <- forM ((.providerId) <$> quotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
           Notify.notifyOnDriverOfferIncoming estimate.id estimate.tripCategory quotes person bppDetails

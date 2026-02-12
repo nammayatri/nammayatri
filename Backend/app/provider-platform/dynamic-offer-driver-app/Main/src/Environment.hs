@@ -12,9 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Environment where
+module Environment
+  ( module Environment,
+    DirectBAPCallback (..),
+  )
+where
 
 import AWS.S3
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map.Strict as M
@@ -71,6 +76,18 @@ import System.Environment (lookupEnv, setEnv)
 import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
+
+-- | Callback interface for direct BAP communication when running in same process.
+-- Used for valueAddedNP scenarios to bypass Beckn HTTP protocol layer.
+-- Only uses beckn-spec types to avoid circular dependencies with rider-app.
+data DirectBAPCallback = DirectBAPCallback
+  { onSearchCallback :: Spec.OnSearchReq -> IO (),
+    onSelectCallback :: Spec.OnSelectReq -> IO (),
+    onConfirmCallback :: Spec.OnConfirmReq -> IO (),
+    onStatusCallback :: Spec.OnStatusReq -> IO (),
+    onUpdateCallback :: Spec.OnUpdateReq -> IO (),
+    onCancelCallback :: Spec.OnCancelReq -> IO ()
+  }
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -295,7 +312,8 @@ data AppEnv = AppEnv
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
-    ttenTokenCacheExpiry :: Seconds
+    ttenTokenCacheExpiry :: Seconds,
+    directBAPCallback :: Maybe DirectBAPCallback
   }
   deriving (Generic)
 
@@ -365,6 +383,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
       serviceClickhouseCfg = driverClickhouseCfg
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
+  let directBAPCallback = Nothing
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

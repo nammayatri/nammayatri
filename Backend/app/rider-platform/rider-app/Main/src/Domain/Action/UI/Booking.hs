@@ -64,7 +64,9 @@ import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.Booking as SB
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQMerchant
@@ -152,7 +154,9 @@ callOnStatus currBooking = do
   messageId <- Utils.getMessageId becknStatusReq.statusReqContext
   -- TODO: REMOVE ALL THE CHECKS WHICH ARE NOT FORWARD COMPATIBLE MEANING FOR BOOKING NEW CAN GO TO CONFIRMED BUT NOT OTHER STATUS CAN GOTO CONFIRM.
   Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
-  void $ withShortRetry $ CallBPP.callStatusV2 currBooking.providerUrl becknStatusReq merchant.id
+  withDirectBPP
+    (\rt -> DirectBPPCall.directStatus rt becknStatusReq merchant.id)
+    (void $ withShortRetry $ CallBPP.callStatusV2 currBooking.providerUrl becknStatusReq merchant.id)
 
 checkBookingsForStatus :: [SRB.Booking] -> Flow ()
 checkBookingsForStatus (currBooking : bookings) = do
@@ -578,7 +582,9 @@ processStop bookingId loc merchantId isEdit = do
             ..
           }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-  void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+  withDirectBPP
+    (\rt -> DirectBPPCall.directUpdate rt becknUpdateReq)
+    (void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq)
 
 validateStopReq :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> Bool -> StopReq -> Merchant.Merchant -> m ()
 validateStopReq booking isEdit loc merchant = do

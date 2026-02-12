@@ -28,7 +28,9 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.Common
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEstimate
 import Tools.Error
@@ -102,8 +104,11 @@ cancelSearchUtil (personId, merchantId) estimateId = do
       dCancelSearch <- DCancel.mkDomainCancelSearch personId estimateId
       result <-
         withTryCatch "cancelSearchBPP" $
-          when dCancelSearch.sendToBpp . void . withShortRetry $ do
-            CallBPP.cancelV2 merchantId dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
+          when dCancelSearch.sendToBpp $ do
+            cancelBecknReq <- CACL.buildCancelSearchReqV2 dCancelSearch
+            withDirectBPP
+              (\rt -> DirectBPPCall.directCancel rt merchantId cancelBecknReq)
+              (void . withShortRetry $ CallBPP.cancelV2 merchantId dCancelSearch.providerUrl cancelBecknReq)
       case result of
         Left err -> do
           logTagInfo "Failed to cancel" $ show err

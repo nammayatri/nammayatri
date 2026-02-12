@@ -35,7 +35,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Servant hiding (throwError)
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -96,7 +98,9 @@ confirm' (personId, _) quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentIns
     let ttlInInt = initTtl + confirmTtl + confirmBufferTtl
     handle (errHandler dConfirmRes.booking) $ do
       Metrics.startMetricsBap Metrics.INIT dConfirmRes.merchant.name dConfirmRes.searchRequestId.getId dConfirmRes.booking.merchantOperatingCityId.getId
-      void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq dConfirmRes.merchant.id
+      withDirectBPP
+        (\rt -> DirectBPPCall.directInit rt becknInitReq dConfirmRes.merchant.id)
+        (void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq dConfirmRes.merchant.id)
 
     return $
       ConfirmRes

@@ -29,6 +29,7 @@ where
 
 import AWS.S3
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified "dynamic-offer-driver-app" Environment as BPPEnv
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.HashMap.Strict as HM
@@ -40,6 +41,7 @@ import Domain.Types.FeedbackForm
 import qualified Domain.Types.Merchant as DM
 import Email.Types (EmailServiceConfig)
 import EulerHS.Prelude (newEmptyTMVarIO, (+||), (||+))
+import qualified EulerHS.Runtime as R
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig)
 import Kernel.External.Slack.Types (SlackConfig)
@@ -313,7 +315,9 @@ data AppEnv = AppEnv
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    bppEnv :: Maybe BPPEnv.AppEnv,
+    bppFlowRt :: Maybe R.FlowRuntime
   }
   deriving (Generic)
 
@@ -377,6 +381,8 @@ buildAppEnv cfg@AppCfg {..} = do
   ltsHedisEnv <- connectHedis ltsRedis identity
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
+  let bppEnv = Nothing -- Initialized externally for valueAddedNP co-located deployments
+  let bppFlowRt = Nothing -- Initialized externally for valueAddedNP co-located deployments
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, disableViaPointTimetableCheck = disableViaPointTimetableCheck, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

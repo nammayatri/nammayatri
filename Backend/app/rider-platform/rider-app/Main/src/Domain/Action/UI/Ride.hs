@@ -57,8 +57,10 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.Person as SLP
 import qualified SharedLogic.Serviceability as Serviceability
@@ -229,7 +231,9 @@ editLocation rideId (personId, merchantId) req = do
                 ..
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+      withDirectBPP
+        (\rt -> DirectBPPCall.directUpdate rt becknUpdateReq)
+        (void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq)
       QRB.updateIsBookingUpdated True booking.id
       QRide.updateEditPickupLocationAttempts ride.id (Just (attemptsLeft -1))
       pure $ EditLocationResp Nothing "Success"
@@ -277,7 +281,9 @@ editLocation rideId (personId, merchantId) req = do
                 ..
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+      withDirectBPP
+        (\rt -> DirectBPPCall.directUpdate rt becknUpdateReq)
+        (void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq)
       pure $ EditLocationResp (Just bookingUpdateReq.id) "Success"
     (_, _) -> throwError PickupOrDropLocationNotFound
 

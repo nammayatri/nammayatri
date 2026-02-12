@@ -17,7 +17,9 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Servant.Client
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
@@ -76,7 +78,9 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   QR.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
   QBUR.updateStatusById DBUR.CONFIRM bookingUpdateReqId
-  void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+  withDirectBPP
+    (\rt -> DirectBPPCall.directUpdate rt becknUpdateReq)
+    (void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq)
   return Success
 
 mkLocation :: QL.Location -> Common.Location

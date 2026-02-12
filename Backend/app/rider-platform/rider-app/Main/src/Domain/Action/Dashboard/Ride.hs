@@ -69,8 +69,10 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate (UniqueField (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -546,7 +548,9 @@ rideSync merchant reqRideId = withDynamicLogLevel "ride-sync-single" $ do
       logDebug $ "Sending status request to BPP with transactionId: " <> show booking.transactionId <> " and providerUrl: " <> show booking.providerUrl
       withLogTag ("messageId-" <> messageId) $ do
         Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
-        void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
+        withDirectBPP
+          (\rt -> DirectBPPCall.directStatus rt becknStatusReq booking.merchantId)
+          (void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId)
         logDebug $ "Completed ride sync for rideId: " <> rideId.getId
         pure Success
 

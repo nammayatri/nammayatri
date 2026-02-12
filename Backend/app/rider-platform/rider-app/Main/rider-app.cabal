@@ -417,6 +417,7 @@ library
       Lib.JourneyModule.Utils
       SharedLogic.BehaviourManagement.CustomerCancellationRate
       SharedLogic.Booking
+      SharedLogic.BPPFlowRunner
       SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
@@ -425,6 +426,8 @@ library
       SharedLogic.Cancel
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
+      SharedLogic.DirectBAPCallback
+      SharedLogic.DirectBPPCall
       SharedLogic.DisplayBookingId
       SharedLogic.EstimateTags
       SharedLogic.External.BbpsService.Flow
@@ -1452,6 +1455,7 @@ library
     , dashboard-helper-api
     , data-default-class
     , directory
+    , dynamic-offer-driver-app
     , euler-hs
     , external
     , extra
@@ -1594,6 +1598,7 @@ executable rider-app-exe
     , dashboard-helper-api
     , data-default-class
     , directory
+    , dynamic-offer-driver-app
     , euler-hs
     , extra
     , filepath
@@ -1730,6 +1735,7 @@ test-suite rider-app-test
     , dashboard-helper-api
     , data-default-class
     , directory
+    , dynamic-offer-driver-app
     , euler-hs
     , extra
     , filepath

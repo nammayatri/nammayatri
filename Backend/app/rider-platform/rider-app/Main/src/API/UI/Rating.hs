@@ -32,8 +32,10 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -77,7 +79,9 @@ processRating (personId, merchantId) request = do
   fork "call bpp feedback apis" $ do
     isValueAddNP <- CQVAN.isValueAddNP dFeedbackRes.providerId
     when isValueAddNP $ do
-      void . withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq merchantId
+      withDirectBPP
+        (\rt -> DirectBPPCall.directRating rt becknReq merchantId)
+        (void . withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq merchantId)
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       let badgeMetadataList = dFeedbackRes.badgeMetadata
       void . withLongRetry $ CallBPPInternal.feedbackForm merchant.driverOfferBaseUrl (mkFeedbackFormReq request badgeMetadataList dFeedbackRes)

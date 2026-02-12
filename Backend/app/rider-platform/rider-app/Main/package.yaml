@@ -141,6 +141,7 @@ dependencies:
   - xml-conduit
   - servant-xml
   - xmlbf
+  - dynamic-offer-driver-app
 
 ghc-options:
   - -fwrite-ide-info

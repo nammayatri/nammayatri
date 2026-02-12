@@ -94,7 +94,9 @@ import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JMU
 import Servant hiding (throwError)
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Search as DSearch
 import Storage.Beam.SystemConfigs ()
@@ -212,11 +214,13 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
   dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) False Nothing
-  fork "search cabs" . withShortRetry $ do
+  fork "search cabs" $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-    void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+    withDirectBPP
+      (\rt -> DirectBPPCall.directSearch rt becknTaxiReqV2 merchantId)
+      (withShortRetry $ void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId)
   fork "Multimodal Search" $ do
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     if riderConfig.makeMultiModalSearch
@@ -251,7 +255,10 @@ handleBookingCancellation merchantId _personId stuckRideAutoCancellationBuffer s
         isCancellingAllowed <- checkIfCancellingAllowed ride
         when (ride.status `elem` [DRide.NEW, DRide.UPCOMING] && isCancellingAllowed) $ do
           dCancelRes <- DCancel.cancel booking mRide cancelReq SBCR.ByUser
-          void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
+          cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
+          withDirectBPP
+            (\rt -> DirectBPPCall.directCancel rt merchantId cancelBecknReq)
+            (void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl cancelBecknReq)
     _ -> pure ()
   where
     checkIfCancellingAllowed ride =
@@ -948,11 +955,13 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
   dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) False Nothing
-  fork "search cabs" . withShortRetry $ do
+  fork "search cabs" $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-    void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+    withDirectBPP
+      (\rt -> DirectBPPCall.directSearch rt becknTaxiReqV2 merchantId)
+      (withShortRetry $ void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId)
   fork "Multimodal Search" $ do
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     when riderConfig.makeMultiModalSearch $ throwError $ InvalidRequest "Multimodal not supported currently for Ny Regular" -------- will support multimodal in future
@@ -1007,7 +1016,10 @@ handleBookingCancellation' merchantId _personId stuckRideAutoCancellationBuffer 
         isCancellingAllowed <- checkIfCancellingAllowed ride
         when (ride.status `elem` [DRide.NEW, DRide.UPCOMING] && isCancellingAllowed) $ do
           dCancelRes <- DCancel.cancel booking mRide cancelReq SBCR.ByUser
-          void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
+          cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
+          withDirectBPP
+            (\rt -> DirectBPPCall.directCancel rt merchantId cancelBecknReq)
+            (void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl cancelBecknReq)
     _ -> pure ()
   where
     checkIfCancellingAllowed ride =

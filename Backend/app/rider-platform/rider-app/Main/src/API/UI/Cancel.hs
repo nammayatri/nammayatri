@@ -35,7 +35,9 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QR
@@ -85,7 +87,9 @@ softCancel bookingId (personId, merchantId) =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dCancelRes <- DCancel.softCancel bookingId (personId, merchantId)
     cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes Nothing
-    void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl cancelBecknReq
+    withDirectBPP
+      (\rt -> DirectBPPCall.directCancel rt merchantId cancelBecknReq)
+      (void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl cancelBecknReq)
     return Success
 
 getCancellationDuesDetails ::
@@ -106,5 +110,8 @@ cancel bookingId (personId, merchantId) req =
     booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
     mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
     dCancelRes <- DCancel.cancel booking mRide req SBCR.ByUser
-    void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
+    cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes req.reallocate
+    withDirectBPP
+      (\rt -> DirectBPPCall.directCancel rt merchantId cancelBecknReq)
+      (void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl cancelBecknReq)
     return Success

@@ -37,7 +37,9 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -165,7 +167,9 @@ bookingSync merchant merchantOpCityId reqBookingId = do
           dStatusReq = DStatusReq {booking = updBooking, merchant, city}
       becknStatusReq <- buildStatusReqV2 dStatusReq
       logTagDebug ("bookingId:-" <> bookingId.getId) $ "bookingSync:-becknStatusReqV2:-" <> show becknStatusReq
-      void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
+      withDirectBPP
+        (\rt -> DirectBPPCall.directStatus rt becknStatusReq booking.merchantId)
+        (void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId)
     Nothing -> do
       cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing booking.distanceUnit bookingId booking.riderId
       QBooking.updateStatus bookingId DBooking.CANCELLED
@@ -174,4 +178,6 @@ bookingSync merchant merchantOpCityId reqBookingId = do
           dStatusReq = DStatusReq {booking = updBooking, merchant, city}
       becknStatusReq <- buildStatusReqV2 dStatusReq
       logTagDebug ("bookingId:-" <> bookingId.getId) $ "bookingSync:-becknStatusReqv2:-" <> show becknStatusReq
-      void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
+      withDirectBPP
+        (\rt -> DirectBPPCall.directStatus rt becknStatusReq booking.merchantId)
+        (void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId)

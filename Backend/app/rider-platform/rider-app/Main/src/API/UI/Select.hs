@@ -41,7 +41,9 @@ import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import SharedLogic.BPPFlowRunner (withDirectBPP)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.DirectBPPCall as DirectBPPCall
 import SharedLogic.Cancel
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
@@ -86,7 +88,9 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonId
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
-    void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
+    withDirectBPP
+      (\rt -> DirectBPPCall.directSelect rt becknReq merchantId)
+      (void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId)
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
@@ -114,7 +118,9 @@ select2' (personId, merchantId) estimateId req = withPersonIdLogTag personId $ d
     void $ cancelSearchUtil (personId, merchantId) estimateId
     dSelectReq <- DSelect.select2 personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
-    void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
+    withDirectBPP
+      (\rt -> DirectBPPCall.directSelect rt becknReq merchantId)
+      (void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId)
     let journeyId = dSelectReq.mbJourneyId
     pure journeyId
   case journeyID of
