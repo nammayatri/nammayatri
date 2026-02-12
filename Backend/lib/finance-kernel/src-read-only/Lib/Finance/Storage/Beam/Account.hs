@@ -15,13 +15,13 @@ data AccountT f = AccountT
   { accountCategory :: (B.C f Lib.Finance.Domain.Types.Account.AccountCategory),
     accountType :: (B.C f Lib.Finance.Domain.Types.Account.AccountType),
     balance :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    counterpartyId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    counterpartyType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     currency :: (B.C f Kernel.Types.Common.Currency),
     id :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    ownerId :: (B.C f Kernel.Prelude.Text),
-    ownerType :: (B.C f Kernel.Prelude.Text),
     status :: (B.C f Lib.Finance.Domain.Types.Account.AccountStatus),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
@@ -33,6 +33,6 @@ instance B.Table AccountT where
 
 type Account = AccountT Identity
 
-$(enableKVPG (''AccountT) [('id)] [[('ownerId)]])
+$(enableKVPG (''AccountT) [('id)] [[('counterpartyId)]])
 
 $(mkTableInstancesGenericSchema (''AccountT) "finance_account")

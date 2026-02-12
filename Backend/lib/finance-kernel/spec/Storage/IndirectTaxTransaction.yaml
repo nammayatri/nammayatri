@@ -1,0 +1,68 @@
+# Finance Kernel - Indirect Tax Transaction Table
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+
+IndirectTaxTransaction:
+  tableName: indirect_tax_transaction
+  derives: "Generic"
+
+  types:
+    TransactionType:
+      enum: "RideFare,Subscription,Incentive,Cancellation,BuyerCommission,CreditNote,DebitNote"
+      derive: "ToParamSchema"
+
+    GstCreditType:
+      enum: "Input,Output"
+      derive: "ToParamSchema"
+
+    SaleType:
+      enum: "B2B,B2C"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id IndirectTaxTransaction
+    transactionDate: UTCTime
+    transactionType: TransactionType
+    referenceId: Text
+    taxableValue: HighPrecMoney
+    gstRate: Double
+    cgstAmount: HighPrecMoney
+    sgstAmount: HighPrecMoney
+    igstAmount: HighPrecMoney
+    totalGstAmount: HighPrecMoney
+    gstCreditType: GstCreditType
+    counterpartyId: Text
+    gstinOfParty: Maybe Text
+    saleType: SaleType
+    invoiceNumber: Maybe Text
+    creditOrDebitNoteNumber: Maybe Text
+    sacCode: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByCounterparty:
+      kvFunction: findAllWithKV
+      where: counterpartyId
+
+    findByTransactionDate:
+      kvFunction: findAllWithKV
+      where: transactionDate
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TransactionType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <GstCreditType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SaleType>

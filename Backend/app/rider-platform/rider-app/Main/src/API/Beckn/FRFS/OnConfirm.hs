@@ -29,11 +29,11 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
-import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import TransactionLogs.PushLogs
 
 type API = Spec.OnConfirmAPIBS
