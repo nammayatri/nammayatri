@@ -1,6 +1,6 @@
 imports:
   Merchant: Domain.Types.Merchant
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   VehicleRegistrationCertificate: Domain.Types.VehicleRegistrationCertificate
   UTCTime: Kernel.Prelude
   Text: Kernel.Prelude
@@ -25,4 +25,5 @@ RCStats:
   default:
     totalRides: "0"
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt]
+extraOperations:
+  - EXTRA_QUERY_FILE

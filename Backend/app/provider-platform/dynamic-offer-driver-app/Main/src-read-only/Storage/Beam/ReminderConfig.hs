@@ -16,7 +16,6 @@ data ReminderConfigT f = ReminderConfigT
     daysThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     documentType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
     enabled :: B.C f Kernel.Prelude.Bool,
-    id :: B.C f Kernel.Prelude.Text,
     isMandatory :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
@@ -27,13 +26,11 @@ data ReminderConfigT f = ReminderConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table ReminderConfigT where
-  data PrimaryKey ReminderConfigT f
-    = ReminderConfigId (B.C f Domain.Types.DocumentVerificationConfig.DocumentType) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
-  primaryKey = ReminderConfigId <$> documentType <*> id <*> merchantOperatingCityId
+  data PrimaryKey ReminderConfigT f = ReminderConfigId (B.C f Domain.Types.DocumentVerificationConfig.DocumentType) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = ReminderConfigId <$> documentType <*> merchantOperatingCityId
 
 type ReminderConfig = ReminderConfigT Identity
 
-$(enableKVPG ''ReminderConfigT ['documentType, 'id, 'merchantOperatingCityId] [])
+$(enableKVPG ''ReminderConfigT ['documentType, 'merchantOperatingCityId] [])
 
 $(mkTableInstances ''ReminderConfigT "reminder_config")

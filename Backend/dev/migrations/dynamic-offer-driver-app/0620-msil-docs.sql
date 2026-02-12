@@ -3760,7 +3760,7 @@ SELECT
     CURRENT_TIMESTAMP as updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
-    11
+    12
 FROM
     atlas_driver_offer_bpp.document_verification_config
 WHERE
@@ -3798,7 +3798,7 @@ SELECT
     disable_warning,
     'DrivingSchoolCertificate',
     is_disabled,
-    true,
+    false,
     true,
     max_retry_count,
     (select id from atlas_driver_offer_bpp.merchant where short_id = 'MSIL_PARTNER') as merchant_id,
@@ -3812,10 +3812,10 @@ SELECT
     CURRENT_TIMESTAMP as updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
-    11
+    13
 FROM
     atlas_driver_offer_bpp.document_verification_config
 WHERE
     vehicle_category = 'CAR' AND merchant_operating_city_id = (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Minneapolis' and merchant_short_id = 'BRIDGE_CABS_PARTNER') AND document_type = 'BackgroundVerification' ON CONFLICT DO NOTHING;
 
-update atlas_driver_offer_bpp.transporter_config set requires_driver_onboarding_inspection = true, separate_driver_vehicle_enablement = true, reminder_system_enabled = true where merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'MSIL_PARTNER');
+update atlas_driver_offer_bpp.transporter_config set send_sms_on_enablement = true, requires_driver_onboarding_inspection = true, separate_driver_vehicle_enablement = true, reminder_system_enabled = true where merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'MSIL_PARTNER');

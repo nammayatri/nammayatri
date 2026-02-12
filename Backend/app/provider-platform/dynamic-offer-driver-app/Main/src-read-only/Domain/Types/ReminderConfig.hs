@@ -16,7 +16,6 @@ data ReminderConfig = ReminderConfig
     daysThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     enabled :: Kernel.Prelude.Bool,
-    id :: Kernel.Types.Id.Id Domain.Types.ReminderConfig.ReminderConfig,
     isMandatory :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

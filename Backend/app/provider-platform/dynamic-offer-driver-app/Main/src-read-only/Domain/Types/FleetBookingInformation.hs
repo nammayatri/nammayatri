@@ -40,9 +40,9 @@ data FleetBookingInformationE e = FleetBookingInformation
   }
   deriving (Generic)
 
-type FleetBookingInformation = FleetBookingInformationE ('AsEncrypted)
+type FleetBookingInformation = FleetBookingInformationE 'AsEncrypted
 
-type DecryptedFleetBookingInformation = FleetBookingInformationE ('AsUnencrypted)
+type DecryptedFleetBookingInformation = FleetBookingInformationE 'AsUnencrypted
 
 instance EncryptedItem FleetBookingInformation where
   type Unencrypted FleetBookingInformation = (DecryptedFleetBookingInformation, HashSalt)

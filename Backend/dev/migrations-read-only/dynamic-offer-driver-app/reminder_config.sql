@@ -4,23 +4,10 @@ ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN created_at timesta
 ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN days_threshold integer ;
 ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN document_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN enabled boolean NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN is_mandatory boolean NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN merchant_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN reminder_intervals integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN reminder_intervals integer[] NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN rides_threshold integer ;
 ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
-ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD PRIMARY KEY ( id);
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.reminder_config DROP CONSTRAINT reminder_config_pkey;
-ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD PRIMARY KEY ( document_type, id, merchant_operating_city_id);
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.reminder_config ALTER COLUMN reminder_intervals TYPE integer[];
+ALTER TABLE atlas_driver_offer_bpp.reminder_config ADD PRIMARY KEY ( document_type, merchant_operating_city_id);

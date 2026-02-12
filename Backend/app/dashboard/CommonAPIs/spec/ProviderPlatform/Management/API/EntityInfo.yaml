@@ -21,8 +21,10 @@ apis:
         type: APISuccess
 
 types:
+  EntityType:
+    - enum: "DRIVER, RC"
   UpdateEntityInfoReq:
-    - entityType: Text
+    - entityType: EntityType
     - entityId: Text
     - newInfo: "[EntityInfoAPIEntity]"
     - derive: "'HideSecrets"
@@ -31,6 +33,6 @@ types:
     - question: Text
     - answer: Text
   EntityExtraInformation:
-    - entityType: Text
+    - entityType: EntityType
     - entityId: Text
     - entityInfo: "[EntityInfoAPIEntity]"

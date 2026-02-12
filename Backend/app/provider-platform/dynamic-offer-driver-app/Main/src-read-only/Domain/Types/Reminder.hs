@@ -30,6 +30,6 @@ data Reminder = Reminder
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ReminderStatus = PENDING | SENT | COMPLETED | CANCELLED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data ReminderStatus = PENDING | SENT | COMPLETED | CANCELLED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''ReminderStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''ReminderStatus)

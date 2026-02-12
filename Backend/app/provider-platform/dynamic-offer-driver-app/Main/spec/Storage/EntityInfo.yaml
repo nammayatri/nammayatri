@@ -1,12 +1,13 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EntityType: Domain.Types.DocumentReminderHistory
 
 EntityInfo:
   tableName: entity_info
   fields:
     entityId: Text
-    entityType: Text
+    entityType: EntityType
     questionId: Text
     question: Text
     answer: Text
@@ -18,7 +19,6 @@ EntityInfo:
     entityId: PrimaryKey
     entityType: PrimaryKey
     questionId: PrimaryKey
-    merchantId: PrimaryKey
   queries:
     findAllByEntityIdAndType:
       kvFunction: findAllWithKV

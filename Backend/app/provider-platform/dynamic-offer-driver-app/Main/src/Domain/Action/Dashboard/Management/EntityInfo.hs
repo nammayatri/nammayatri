@@ -20,6 +20,8 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.EntityInfo as Common
 import qualified Data.List as DL
+import qualified Data.Text as Text
+import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.EntityInfo as DEI
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -34,17 +36,28 @@ import Storage.Queries.EntityInfo (create, deleteAllByEntityIdAndType)
 import qualified Storage.Queries.EntityInfoExtra as QEI
 import Tools.Error (GenericError (InvalidRequest))
 
+-- Conversion functions between API EntityType and Domain EntityType
+convertApiEntityTypeToDomain :: Common.EntityType -> DRH.EntityType
+convertApiEntityTypeToDomain Common.DRIVER = DRH.DRIVER
+convertApiEntityTypeToDomain Common.RC = DRH.RC
+
+convertDomainEntityTypeToApi :: DRH.EntityType -> Common.EntityType
+convertDomainEntityTypeToApi DRH.DRIVER = Common.DRIVER
+convertDomainEntityTypeToApi DRH.RC = Common.RC
+
 getEntityInfoList ::
   ID.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Text ->
   Text ->
   Environment.Flow Common.EntityExtraInformation
-getEntityInfoList merchantShortId opCity entityType entityId = do
+getEntityInfoList merchantShortId opCity entityTypeText entityId = do
+  domainEntityType <- readMaybe (Text.unpack entityTypeText) & fromMaybeM (InvalidRequest $ "Invalid entityType: " <> entityTypeText)
+  let apiEntityType = convertDomainEntityTypeToApi domainEntityType
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  entityInfo <- map convertEntityInfoToEntityInfoAPIEntity <$> QEI.findAllByEntityIdTypeAndOpCity entityId entityType merchant.id merchantOpCityId
-  pure $ Common.EntityExtraInformation {entityType = entityType, entityId = entityId, entityInfo = entityInfo}
+  entityInfo <- map convertEntityInfoToEntityInfoAPIEntity <$> QEI.findAllByEntityIdTypeAndOpCity entityId domainEntityType merchant.id merchantOpCityId
+  pure $ Common.EntityExtraInformation {entityType = apiEntityType, entityId = entityId, entityInfo = entityInfo}
   where
     convertEntityInfoToEntityInfoAPIEntity DEI.EntityInfo {questionId, question, answer} =
       Common.EntityInfoAPIEntity
@@ -59,6 +72,7 @@ postEntityInfoUpdate ::
   Common.UpdateEntityInfoReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postEntityInfoUpdate merchantShortId opCity req = do
+  let domainEntityType = convertApiEntityTypeToDomain req.entityType
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   now <- getCurrentTime
@@ -66,8 +80,8 @@ postEntityInfoUpdate merchantShortId opCity req = do
   unless (length (DL.nub questionIds) == length questionIds) $
     throwError (InvalidRequest "questionId should be unique")
   unless (null req.newInfo) $ do
-    deleteAllByEntityIdAndType req.entityId req.entityType merchant.id
-    forM_ req.newInfo $ updatedEntityInfo req.entityId req.entityType merchant.id (Just merchantOpCityId) now
+    deleteAllByEntityIdAndType req.entityId domainEntityType merchant.id
+    forM_ req.newInfo $ updatedEntityInfo req.entityId domainEntityType merchant.id (Just merchantOpCityId) now
   pure Kernel.Types.APISuccess.Success
   where
     updatedEntityInfo entityId entityType merchantId mbMerchantOpCityId now Common.EntityInfoAPIEntity {..} =

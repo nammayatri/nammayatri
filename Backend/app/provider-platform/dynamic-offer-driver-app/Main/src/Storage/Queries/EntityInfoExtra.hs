@@ -1,5 +1,6 @@
 module Storage.Queries.EntityInfoExtra where
 
+import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.EntityInfo as DEI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -14,7 +15,7 @@ import Storage.Queries.EntityInfo ()
 -- Extra code goes here --
 findAllByEntityIdTypeAndOpCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Text -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m [DEI.EntityInfo])
+  (Text -> DRH.EntityType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m [DEI.EntityInfo])
 findAllByEntityIdTypeAndOpCity entityId entityType merchantId merchantOpCityId = do
   findAllWithKV
     [ Se.And

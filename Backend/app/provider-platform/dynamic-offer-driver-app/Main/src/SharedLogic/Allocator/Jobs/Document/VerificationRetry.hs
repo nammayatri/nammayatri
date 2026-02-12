@@ -26,10 +26,9 @@ import qualified Domain.Types.IdfyVerification as DIdfyVerification
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions as B
+import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption
 import Kernel.External.Types (SchedulerFlow, ServiceFlow, VerificationFlow)
-import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
-import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -37,6 +36,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Scheduler
+import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
@@ -81,7 +81,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
       IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
-    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
+    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyRC documentNum person verificationReq = do
       verifyRes <-
         Verification.verifyRC person.merchantId person.merchantOperatingCityId Nothing (Verification.VerifyRCReq {rcNumber = documentNum, driverId = person.id.getId, token = Nothing, udinNo = Nothing})

@@ -29,7 +29,10 @@ incrementTotalRides rcId@(Id rcId') = do
             RCStats
               { rcId = rcId,
                 totalRides = 1,
-                updatedAt = now
+                updatedAt = now,
+                merchantId = Nothing,
+                merchantOperatingCityId = Nothing,
+                createdAt = now
               }
       QRCStats.create rcStats
       pure 1

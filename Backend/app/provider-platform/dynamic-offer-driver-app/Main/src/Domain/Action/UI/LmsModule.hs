@@ -22,10 +22,10 @@ import EulerHS.Prelude hiding (id, length)
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow)
 import Kernel.Prelude hiding (all, elem, find, foldl', map, notElem, null, whenJust)
-import qualified Kernel.Types.APISuccess
-import qualified Kernel.Types.Id
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
 import Lib.DriverCoins.Types as DCT
@@ -35,10 +35,7 @@ import SharedLogic.Reminder.Helper (cancelRemindersForDriverByDocumentType, reco
 import qualified Storage.CachedQueries.CoinsConfig as CDCQ
 import qualified Storage.CachedQueries.Lms as SCQL
 import Storage.CachedQueries.Merchant.MerchantOperatingCity as SCQMM
-import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.Queries.Coins.CoinHistory as SQCC
-import qualified Storage.Queries.DocumentReminderHistory as QDRH
-import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.LmsCertificate as SQLC
@@ -514,23 +511,7 @@ getExpiryTime mbExpiryConfig personId = do
         "Watchlist" -> return $ Just $ addUTCTime (intToNominalDiffTime configSeconds) now
         _ -> return Nothing
 
-shouldRestoreApprovedAfterTraining ::
-  (MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) =>
-  Kernel.Types.Id.Id Domain.Types.Person.Person ->
-  Kernel.Types.Id.Id DMOC.MerchantOperatingCity ->
-  m Bool
-shouldRestoreApprovedAfterTraining personId merchantOpCityId = do
-  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let reminderSystemEnabled = transporterConfig.reminderSystemEnabled == Just True
-      driverInspectionEnabled = transporterConfig.requiresDriverOnboardingInspection == Just True
-  if reminderSystemEnabled && driverInspectionEnabled
-    then do
-      -- Check if driver inspection was completed
-      inspectionHistories <- QDRH.findAllByDocumentTypeAndEntity DVC.DriverInspectionForm personId.getId DRH.DRIVER
-      return $ not (null inspectionHistories)
-    else return False
-
--- | Handle training completion: cancel reminders, record completion, and restore approved flag if needed
+-- | Handle training completion: cancel reminders and record completion
 handleTrainingCompletion ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -551,11 +532,6 @@ handleTrainingCompletion personId merchantId merchantOpCityId = do
   cancelRemindersForDriverByDocumentType personId DVC.TrainingForm
   -- Record training video completion for auto-trigger monitoring
   recordDocumentCompletion DVC.TrainingForm personId.getId DRH.DRIVER (Just personId) merchantId merchantOpCityId
-  -- Restore approved flag if inspection was already done (only when reminder system and inspection are enabled)
-  shouldRestore <- shouldRestoreApprovedAfterTraining personId merchantOpCityId
-  when shouldRestore $ do
-    QDIExtra.updateApproved (Just True) personId
-    logInfo $ "Restored approved=true for driver " <> personId.getId <> " after training completion since inspection was already done"
 
 buildDriverModuleCompletion :: (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Types.Id.Id DM.Merchant -> Kernel.Types.Id.Id DMOC.MerchantOperatingCity -> Environment.Flow DTDMC.DriverModuleCompletion
 buildDriverModuleCompletion personId moduleId merchantId merchantOpCityId = do

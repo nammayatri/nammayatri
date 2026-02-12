@@ -11,15 +11,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FeedbackBadgeT f = FeedbackBadgeT
-  { badge :: (B.C f Kernel.Prelude.Text),
-    badgeCount :: (B.C f Kernel.Prelude.Int),
-    badgeKey :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { badge :: B.C f Kernel.Prelude.Text,
+    badgeCount :: B.C f Kernel.Prelude.Int,
+    badgeKey :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    driverId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table FeedbackBadgeT where
 
 type FeedbackBadge = FeedbackBadgeT Identity
 
-$(enableKVPG (''FeedbackBadgeT) [('id)] [])
+$(enableKVPG ''FeedbackBadgeT ['id] [])
 
-$(mkTableInstances (''FeedbackBadgeT) "feedback_badge")
+$(mkTableInstances ''FeedbackBadgeT "feedback_badge")

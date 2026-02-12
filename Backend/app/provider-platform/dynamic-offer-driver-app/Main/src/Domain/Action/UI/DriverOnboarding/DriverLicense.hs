@@ -61,7 +61,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
-import SharedLogic.Reminder.Helper (createOrUpdateReminderForDocumentExpiry)
+import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
 import qualified Storage.Queries.DriverInformation as DriverInfo
@@ -367,13 +367,14 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
         Just name_ -> void $ Person.updateName name_ person.id
         Nothing -> pure ()
       -- Create reminders for DL when it's updated
-      createOrUpdateReminderForDocumentExpiry
+      createReminder
         DVC.DriverLicense
         person.id
         person.merchantId
         person.merchantOperatingCityId
-        (driverLicense.id.getId)
-        driverLicense.licenseExpiry
+        (Just $ driverLicense.id.getId)
+        (Just driverLicense.licenseExpiry)
+        Nothing
       pure ()
     Nothing -> pure ()
 

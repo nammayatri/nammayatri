@@ -13,16 +13,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DocumentReminderHistoryT f = DocumentReminderHistoryT
-  { completionDate :: (B.C f Kernel.Prelude.UTCTime),
-    documentType :: (B.C f Domain.Types.DocumentVerificationConfig.DocumentType),
-    entityId :: (B.C f Kernel.Prelude.Text),
-    entityType :: (B.C f Domain.Types.DocumentReminderHistory.EntityType),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    rideCountAtCompletion :: (B.C f Kernel.Prelude.Int),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime)
+  { completionDate :: B.C f Kernel.Prelude.UTCTime,
+    documentType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
+    entityId :: B.C f Kernel.Prelude.Text,
+    entityType :: B.C f Domain.Types.DocumentReminderHistory.EntityType,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    rideCountAtCompletion :: B.C f Kernel.Prelude.Int,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    createdAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table DocumentReminderHistoryT where
 
 type DocumentReminderHistory = DocumentReminderHistoryT Identity
 
-$(enableKVPG (''DocumentReminderHistoryT) [('id)] [[('documentType)], [('entityId)], [('entityType)]])
+$(enableKVPG ''DocumentReminderHistoryT ['id] [['documentType], ['entityId], ['entityType]])
 
-$(mkTableInstances (''DocumentReminderHistoryT) "document_reminder_history")
+$(mkTableInstances ''DocumentReminderHistoryT "document_reminder_history")

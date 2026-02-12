@@ -26,12 +26,12 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "operation" :> "getAllHubs" :> Get '[JSON] [Domain.Types.OperationHub.OperationHub] :<|> TokenAuth :> "operation" :> "createRequest"
+  ( TokenAuth :> "operation" :> "getAllHubs" :> Get ('[JSON]) [Domain.Types.OperationHub.OperationHub] :<|> TokenAuth :> "operation" :> "createRequest"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.OperationHub.DriverOperationHubRequest
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "operation"
@@ -54,11 +54,14 @@ type API =
       :> QueryParam
            "mbReqType"
            Domain.Types.OperationHubRequests.RequestType
-      :> MandatoryQueryParam
-           "rcNo"
+      :> QueryParam
+           "mbRcNo"
            Kernel.Prelude.Text
+      :> QueryParam
+           "mbDriverId"
+           (Kernel.Types.Id.Id Domain.Types.Person.Person)
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.OperationHub.OperationHubRequestsResp
   )
 
@@ -89,13 +92,14 @@ getOperationGetRequests ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
-    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Domain.Types.OperationHubRequests.RequestStatus ->
-    Kernel.Prelude.Maybe Domain.Types.OperationHubRequests.RequestType ->
-    Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Domain.Types.OperationHubRequests.RequestStatus) ->
+    Kernel.Prelude.Maybe (Domain.Types.OperationHubRequests.RequestType) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) ->
     Environment.FlowHandler API.Types.UI.OperationHub.OperationHubRequestsResp
   )
-getOperationGetRequests a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.OperationHub.getOperationGetRequests (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
+getOperationGetRequests a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.OperationHub.getOperationGetRequests (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a9) a8 a7 a6 a5 a4 a3 a2 a1
