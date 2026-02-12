@@ -54,7 +54,7 @@ getPrepaidAccountByOwner ::
   Text -> -- Owner ID
   m (Maybe Account)
 getPrepaidAccountByOwner ownerType ownerId = do
-  accounts <- findAccountsByOwner ownerType ownerId
+  accounts <- findAccountsByCounterparty (Just ownerType) (Just ownerId)
   pure $
     find
       (\acc -> acc.accountType == Asset && acc.accountCategory `elem` [Driver, Fleet])
@@ -101,8 +101,8 @@ getOrCreatePrepaidAccount ownerType ownerId category currency merchantId merchan
         AccountInput
           { accountType = Asset,
             accountCategory = category,
-            ownerType = ownerType,
-            ownerId = ownerId,
+            counterpartyType = Just ownerType,
+            counterpartyId = Just ownerId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -120,8 +120,8 @@ getOrCreatePlatformSuspenseAccount currency merchantId merchantOperatingCityId =
         AccountInput
           { accountType = Asset,
             accountCategory = Suspense,
-            ownerType = ownerTypePlatform,
-            ownerId = merchantId,
+            counterpartyType = Nothing,
+            counterpartyId = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -139,8 +139,8 @@ getOrCreatePlatformDeferredRevenueAccount currency merchantId merchantOperatingC
         AccountInput
           { accountType = DeferredRevenue,
             accountCategory = Platform,
-            ownerType = ownerTypePlatform,
-            ownerId = merchantId,
+            counterpartyType = Nothing,
+            counterpartyId = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -158,8 +158,8 @@ getOrCreatePlatformRevenueAccount currency merchantId merchantOperatingCityId = 
         AccountInput
           { accountType = Revenue,
             accountCategory = Platform,
-            ownerType = ownerTypePlatform,
-            ownerId = merchantId,
+            counterpartyType = Nothing,
+            counterpartyId = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -177,8 +177,8 @@ getOrCreatePlatformCreditIssuerAccount currency merchantId merchantOperatingCity
         AccountInput
           { accountType = Equity,
             accountCategory = Platform,
-            ownerType = ownerTypePlatform,
-            ownerId = merchantId,
+            counterpartyType = Nothing,
+            counterpartyId = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -198,8 +198,8 @@ getOrCreateExternalBankAccount ownerType ownerId currency merchantId merchantOpe
         AccountInput
           { accountType = External,
             accountCategory = Suspense,
-            ownerType = ownerType,
-            ownerId = ownerId,
+            counterpartyType = Just ownerType,
+            counterpartyId = Just ownerId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -217,8 +217,8 @@ getOrCreateSubscriptionGSTAccount currency merchantId merchantOperatingCityId = 
         AccountInput
           { accountType = Expense,
             accountCategory = Settlement,
-            ownerType = ownerTypeSubscriptionGST,
-            ownerId = merchantId,
+            counterpartyType = Nothing,
+            counterpartyId = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId

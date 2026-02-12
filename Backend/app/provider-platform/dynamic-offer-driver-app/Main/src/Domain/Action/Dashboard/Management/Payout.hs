@@ -18,7 +18,7 @@ import qualified Kernel.Types.Id as Id
 import qualified Lib.Payment.API.Payout as PayoutAPI
 import qualified Lib.Payment.API.Payout.Types as PayoutTypes
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PayoutRequest
-import Servant ((:<|>) (..), ServerT)
+import Servant (ServerT, (:<|>) (..))
 
 payoutServer ::
   Id.ShortId Domain.Types.Merchant.Merchant ->
