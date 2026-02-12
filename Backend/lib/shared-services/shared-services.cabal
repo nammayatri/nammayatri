@@ -97,6 +97,7 @@ library
       Safety.Domain.Action.UI.Sos
       Safety.Domain.Types.Common
       Safety.Storage.BeamFlow
+      Safety.Storage.CachedQueries.Sos
       Safety.Storage.Queries.SafetySettingsExtra
       UrlShortner.Common
       UrlShortner.Types
