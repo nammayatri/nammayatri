@@ -13,36 +13,15 @@
 -}
 
 module Storage.CachedQueries.Sos
-  ( findByRideId,
-    clearCache,
-    cacheSosIdByRideId,
-    mockSosKey,
+  ( mockSosKey,
   )
 where
 
 import qualified Domain.Types.Person as Person
-import Domain.Types.Ride
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common
-import qualified Safety.Domain.Types.Sos as SafetyDSos
 
-findByRideId :: (CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe SafetyDSos.Sos)
-findByRideId rideId = do
-  Hedis.safeGet $ makeIdKey rideId
-
-cacheSosIdByRideId :: (CacheFlow m r) => Id Ride -> SafetyDSos.Sos -> m ()
-cacheSosIdByRideId rideId sos = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeIdKey rideId
-  Hedis.setExp idKey sos expTime
-
-makeIdKey :: Id Ride -> Text
-makeIdKey rideId = "CachedQueries:Sos:RideId-" <> rideId.getId
-
-clearCache :: (CacheFlow m r) => Id Ride -> m ()
-clearCache rideId = Hedis.del $ makeIdKey rideId
-
+-- | Generate Redis key for mock SOS drill
+-- This is rider-app specific and uses Person.Person type
 mockSosKey :: Id Person.Person -> Text
 mockSosKey personId = "mock-sos-" <> getId personId
