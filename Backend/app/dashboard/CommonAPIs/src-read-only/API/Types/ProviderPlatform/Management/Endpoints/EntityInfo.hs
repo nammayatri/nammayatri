@@ -14,7 +14,7 @@ import qualified Kernel.Types.HideSecrets
 import Servant
 import Servant.Client
 
-data EntityExtraInformation = EntityExtraInformation {entityType :: Kernel.Prelude.Text, entityId :: Kernel.Prelude.Text, entityInfo :: [EntityInfoAPIEntity]}
+data EntityExtraInformation = EntityExtraInformation {entityType :: EntityType, entityId :: Kernel.Prelude.Text, entityInfo :: [EntityInfoAPIEntity]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -22,7 +22,13 @@ data EntityInfoAPIEntity = EntityInfoAPIEntity {questionId :: Kernel.Prelude.Tex
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UpdateEntityInfoReq = UpdateEntityInfoReq {entityType :: Kernel.Prelude.Text, entityId :: Kernel.Prelude.Text, newInfo :: [EntityInfoAPIEntity]}
+data EntityType
+  = DRIVER
+  | RC
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateEntityInfoReq = UpdateEntityInfoReq {entityType :: EntityType, entityId :: Kernel.Prelude.Text, newInfo :: [EntityInfoAPIEntity]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -31,13 +37,13 @@ instance Kernel.Types.HideSecrets.HideSecrets UpdateEntityInfoReq where
 
 type API = ("entityInfo" :> (GetEntityInfoList :<|> PostEntityInfoUpdate))
 
-type GetEntityInfoList = (Capture "entityType" Kernel.Prelude.Text :> Capture "entityId" Kernel.Prelude.Text :> "list" :> Get ('[JSON]) EntityExtraInformation)
+type GetEntityInfoList = (Capture "entityType" Kernel.Prelude.Text :> Capture "entityId" Kernel.Prelude.Text :> "list" :> Get '[JSON] EntityExtraInformation)
 
-type PostEntityInfoUpdate = ("update" :> ReqBody ('[JSON]) UpdateEntityInfoReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostEntityInfoUpdate = ("update" :> ReqBody '[JSON] UpdateEntityInfoReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data EntityInfoAPIs = EntityInfoAPIs
-  { getEntityInfoList :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient EntityExtraInformation),
-    postEntityInfoUpdate :: (UpdateEntityInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { getEntityInfoList :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient EntityExtraInformation,
+    postEntityInfoUpdate :: UpdateEntityInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkEntityInfoAPIs :: (Client EulerHS.Types.EulerClient API -> EntityInfoAPIs)
@@ -51,4 +57,4 @@ data EntityInfoUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''EntityInfoUserActionType)])
+$(Data.Singletons.TH.genSingletons [''EntityInfoUserActionType])

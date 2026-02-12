@@ -4,6 +4,7 @@
 
 module Storage.Queries.EntityInfo where
 
+import qualified Domain.Types.DocumentReminderHistory
 import qualified Domain.Types.EntityInfo
 import qualified Domain.Types.Merchant
 import Kernel.Beam.Functions
@@ -22,7 +23,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.EntityInfo.EntityInfo] -> m ())
 createMany = traverse_ create
 
-deleteAllByEntityIdAndType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ())
+deleteAllByEntityIdAndType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Domain.Types.DocumentReminderHistory.EntityType -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ())
 deleteAllByEntityIdAndType entityId entityType merchantId = do
   deleteWithKV
     [ Se.And
@@ -34,7 +37,7 @@ deleteAllByEntityIdAndType entityId entityType merchantId = do
 
 findAllByEntityIdAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.EntityInfo.EntityInfo])
+  (Kernel.Prelude.Text -> Domain.Types.DocumentReminderHistory.EntityType -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ([Domain.Types.EntityInfo.EntityInfo]))
 findAllByEntityIdAndType entityId entityType merchantId = do
   findAllWithKV
     [ Se.And
@@ -46,33 +49,20 @@ findAllByEntityIdAndType entityId entityType merchantId = do
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Prelude.Text -> m (Maybe Domain.Types.EntityInfo.EntityInfo))
-findByPrimaryKey entityId entityType merchantId questionId = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.entityId $ Se.Eq entityId,
-          Se.Is Beam.entityType $ Se.Eq entityType,
-          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
-          Se.Is Beam.questionId $ Se.Eq questionId
-        ]
-    ]
+  (Kernel.Prelude.Text -> Domain.Types.DocumentReminderHistory.EntityType -> Kernel.Prelude.Text -> m (Maybe Domain.Types.EntityInfo.EntityInfo))
+findByPrimaryKey entityId entityType questionId = do findOneWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.entityType $ Se.Eq entityType, Se.Is Beam.questionId $ Se.Eq questionId]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.EntityInfo.EntityInfo -> m ())
 updateByPrimaryKey (Domain.Types.EntityInfo.EntityInfo {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.answer answer,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.question question,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.entityId $ Se.Eq entityId,
-          Se.Is Beam.entityType $ Se.Eq entityType,
-          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
-          Se.Is Beam.questionId $ Se.Eq questionId
-        ]
-    ]
+    [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.entityType $ Se.Eq entityType, Se.Is Beam.questionId $ Se.Eq questionId]]
 
 instance FromTType' Beam.EntityInfo Domain.Types.EntityInfo.EntityInfo where
   fromTType' (Beam.EntityInfoT {..}) = do

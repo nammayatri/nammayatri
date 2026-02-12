@@ -27,7 +27,7 @@ data MerchantPaymentMethodD (s :: UsageSafety) = MerchantPaymentMethod
   }
   deriving (Generic)
 
-type MerchantPaymentMethod = MerchantPaymentMethodD ('Safe)
+type MerchantPaymentMethod = MerchantPaymentMethodD 'Safe
 
 instance FromJSON (MerchantPaymentMethodD 'Unsafe)
 

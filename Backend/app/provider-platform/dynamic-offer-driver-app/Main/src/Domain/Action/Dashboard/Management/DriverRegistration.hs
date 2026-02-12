@@ -86,7 +86,7 @@ import Kernel.Utils.Common
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
-import SharedLogic.Reminder.Helper (createOrUpdateReminderForDocumentExpiry, createReminderForDocumentType)
+import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
@@ -260,7 +260,7 @@ getDriverRegistrationGetDocument merchantShortId _ imageId = do
 
 mapDocumentType :: Common.DocumentType -> DVC.DocumentType
 mapDocumentType Common.DriverLicense = DVC.DriverLicense
-mapDocumentType Common.BankAccount = Domain.BankingDetails
+mapDocumentType Common.BankAccount = DVC.BankingDetails
 mapDocumentType Common.VehicleRegistrationCertificate = DVC.VehicleRegistrationCertificate
 mapDocumentType Common.VehiclePUCImage = DVC.VehiclePUC
 mapDocumentType Common.VehiclePermitImage = DVC.VehiclePermit
@@ -590,13 +590,14 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
               }
       QVI.updateByPrimaryKey updatedInsurance
       -- Create reminders for Insurance when it's updated
-      createOrUpdateReminderForDocumentExpiry
+      createReminder
         DVC.VehicleInsurance
         updatedInsurance.driverId
         mId
         mOpCityId
-        (updatedInsurance.id.getId)
-        updatedInsurance.policyExpiry
+        (Just $ updatedInsurance.id.getId)
+        (Just updatedInsurance.policyExpiry)
+        Nothing
     Nothing -> do
       case (req.policyNumber, req.policyExpiry, req.policyProvider, req.rcNumber) of
         (Just policyNum, Just policyExp, Just provider, Just rcNo) -> do
@@ -623,13 +624,14 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
                   }
           QVI.create insurance
           -- Create reminders for Insurance when it's created
-          createOrUpdateReminderForDocumentExpiry
+          createReminder
             DVC.VehicleInsurance
             insurance.driverId
             mId
             mOpCityId
-            (insurance.id.getId)
-            insurance.policyExpiry
+            (Just $ insurance.id.getId)
+            (Just insurance.policyExpiry)
+            Nothing
         _ -> do
           transporterConfig <- CCT.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
           case transporterConfig.createDocumentRequired of
@@ -657,13 +659,14 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
                }
       QVPUC.updateByPrimaryKey updatedpuc
       -- Create reminders for PUC when it's updated
-      createOrUpdateReminderForDocumentExpiry
+      createReminder
         DVC.VehiclePUC
         updatedpuc.driverId
         mId
         mOpCityId
-        (updatedpuc.id.getId)
-        updatedpuc.pucExpiry
+        (Just $ updatedpuc.id.getId)
+        (Just updatedpuc.pucExpiry)
+        Nothing
     Nothing -> do
       pucImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
       let puc =
@@ -683,13 +686,14 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
               }
       QVPUC.create puc
       -- Create reminders for PUC when it's created
-      createOrUpdateReminderForDocumentExpiry
+      createReminder
         DVC.VehiclePUC
         puc.driverId
         mId
         mOpCityId
-        (puc.id.getId)
-        puc.pucExpiry
+        (Just $ puc.id.getId)
+        (Just puc.pucExpiry)
+        Nothing
 
 approveAndUpdatePermit :: Common.VPermitApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
@@ -716,13 +720,14 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
               }
       QVPermit.updateByPrimaryKey updatedpermit
       -- Create reminders for Permit when it's updated
-      createOrUpdateReminderForDocumentExpiry
+      createReminder
         DVC.VehiclePermit
         updatedpermit.driverId
         mId
         mOpCityId
-        (updatedpermit.id.getId)
-        updatedpermit.permitExpiry
+        (Just $ updatedpermit.id.getId)
+        (Just updatedpermit.permitExpiry)
+        Nothing
     Nothing -> do
       permitImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
       let permit =
@@ -745,13 +750,14 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
               }
       QVPermit.create permit
       -- Create reminders for Permit when it's created
-      createOrUpdateReminderForDocumentExpiry
+      createReminder
         DVC.VehiclePermit
         permit.driverId
         mId
         mOpCityId
-        (permit.id.getId)
-        permit.permitExpiry
+        (Just $ permit.id.getId)
+        (Just permit.permitExpiry)
+        Nothing
 
 approveAndUpdateFitnessCertificate :: Common.FitnessApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOpCityId = do
@@ -776,13 +782,14 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
               }
       QFC.updateByPrimaryKey updatedFitnessCert
       -- Create reminders for Fitness Certificate when it's updated
-      createOrUpdateReminderForDocumentExpiry
+      createReminder
         DVC.VehicleFitnessCertificate
         updatedFitnessCert.driverId
         mId
         mOpCityId
-        (updatedFitnessCert.id.getId)
-        updatedFitnessCert.fitnessExpiry
+        (Just $ updatedFitnessCert.id.getId)
+        (Just updatedFitnessCert.fitnessExpiry)
+        Nothing
     Nothing -> do
       certificateImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
       rcNoEnc <- encrypt rcNumber
@@ -803,13 +810,14 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
               }
       QFC.create fitnessCert
       -- Create reminders for Fitness Certificate when it's created
-      createOrUpdateReminderForDocumentExpiry
+      createReminder
         DVC.VehicleFitnessCertificate
         fitnessCert.driverId
         mId
         mOpCityId
-        (fitnessCert.id.getId)
-        fitnessCert.fitnessExpiry
+        (Just $ fitnessCert.id.getId)
+        (Just fitnessCert.fitnessExpiry)
+        Nothing
 
 approveAndUpdateDL :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.DLApproveDetails -> Flow ()
 approveAndUpdateDL merchantId merchantOpCityId req = do
@@ -826,13 +834,14 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
   QDL.updateByPrimaryKey updatedDL
   void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (flip (QImage.updateVerificationStatusByIdAndType VALID) DVC.DriverLicense)) (Just dl.documentImageId1, dl.documentImageId2)
   -- Create reminders for DL when it's updated
-  createOrUpdateReminderForDocumentExpiry
+  createReminder
     DVC.DriverLicense
     updatedDL.driverId
     merchantId
     merchantOpCityId
-    (updatedDL.id.getId)
-    updatedDL.licenseExpiry
+    (Just $ updatedDL.id.getId)
+    (Just updatedDL.licenseExpiry)
+    Nothing
   fork "call status Handler" $
     void $ DStatus.statusHandler (dl.driverId, merchantId, merchantOpCityId) (Just True) Nothing Nothing (Just False) Nothing Nothing
 
@@ -890,13 +899,14 @@ approveAndUpdateBusinessLicense req mId mOpCityId = do
               }
       QBL.updateByPrimaryKey updatedBl
       -- Create reminders for Business License when it's updated
-      createOrUpdateReminderForDocumentExpiry
+      createReminder
         DVC.BusinessLicense
         updatedBl.driverId
         mId
         mOpCityId
-        (updatedBl.id.getId)
-        updatedBl.licenseExpiry
+        (Just $ updatedBl.id.getId)
+        (Just updatedBl.licenseExpiry)
+        Nothing
     Nothing -> do
       blImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
       let bl =
@@ -914,13 +924,14 @@ approveAndUpdateBusinessLicense req mId mOpCityId = do
               }
       QBL.create bl
       -- Create reminders for Business License when it's created
-      createOrUpdateReminderForDocumentExpiry
+      createReminder
         DVC.BusinessLicense
         bl.driverId
         mId
         mOpCityId
-        (bl.id.getId)
-        bl.licenseExpiry
+        (Just $ bl.id.getId)
+        (Just bl.licenseExpiry)
+        Nothing
 
 approveAndUpdatePan :: Common.PanApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdatePan req mId mOpCityId = do
@@ -1256,7 +1267,7 @@ postDriverRegistrationTriggerReminder merchantShortId opCity driverId_ mbRequest
   unless isValid $ throwError (InvalidRequest "Only fleet owners, operators linked to the driver, or admins can trigger reminders")
 
   reminderDocumentType <- maybe (throwError $ InvalidRequest $ "Document type " <> show documentType <> " does not support reminder triggers") pure $ mapDocumentTypeToReminderType documentType
-  createReminderForDocumentType reminderDocumentType driverPersonId merchant.id merchantOpCityId dueDate intervals
+  createReminder reminderDocumentType driverPersonId merchant.id merchantOpCityId Nothing dueDate intervals
   pure Success
 
 postDriverRegistrationVerifyBankAccount :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.VerifyBankAccountReq -> Flow Kernel.External.Verification.Interface.Types.VerifyAsyncResp

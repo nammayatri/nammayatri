@@ -76,13 +76,13 @@ import qualified Domain.Types.VehicleRegistrationCertificate as Domain
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions
+import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption
 import Kernel.External.Types (SchedulerFlow, ServiceFlow, VerificationFlow)
-import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
-import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Documents as Documents
@@ -93,9 +93,10 @@ import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
-import SharedLogic.Reminder.Helper (createOrUpdateReminderForDocumentExpiry)
+import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
@@ -445,7 +446,7 @@ mkHyperVergeVerificationEntity person requestId now imageExtractionValidation en
         ..
       }
 
-onVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT) => Person.Person -> Maybe VerificationReqRecord -> VT.RCVerificationResponse -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Id Image.Image -> Maybe Int -> Maybe Text -> Maybe VT.VerificationService -> m AckResponse
+onVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r) => Person.Person -> Maybe VerificationReqRecord -> VT.RCVerificationResponse -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Id Image.Image -> Maybe Int -> Maybe Text -> Maybe VT.VerificationService -> m AckResponse
 onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbImageExtractionValidation mbEncryptedRC imageId mbRetryCnt mbReqStatus mbServiceName = do
   if maybe False (\req -> req.imageExtractionValidation == Domain.Skipped && compareRegistrationDates rcVerificationResponse.registrationDate req.issueDateOnDoc) mbVerificationReq
     then do
@@ -465,7 +466,7 @@ onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbI
       void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (maybe "" (.documentImageId1) mbVerificationReq) Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation' mbEncryptedRC' imageId mbRetryCnt mbReqStatus
       return Ack
 
-onVerifyRCHandler :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT) => Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Id Image.Image -> Maybe Int -> Maybe Text -> m ()
+onVerifyRCHandler :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r) => Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Id Image.Image -> Maybe Int -> Maybe Text -> m ()
 onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation mbEncryptedRC imageId mbRetryCnt mbReqStatus' = do
   let mbGrossVehicleWeight = rcVerificationResponse.grossVehicleWeight
       mbUnladdenWeight = rcVerificationResponse.unladdenWeight
@@ -633,40 +634,44 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" rcVerificationResponse.registrationNumber))
           -- Create reminders for all expiry dates stored in RC when it's created/updated
           -- Fitness expiry (VEHICLE_REGISTRATION_CERTIFICATE) - always present
-          createOrUpdateReminderForDocumentExpiry
+          createReminder
             ODC.VehicleRegistrationCertificate
             person.id
             person.merchantId
             person.merchantOperatingCityId
-            (rc.id.getId)
-            rc.fitnessExpiry
+            (Just $ rc.id.getId)
+            (Just rc.fitnessExpiry)
+            Nothing
           -- PUC expiry
           whenJust rc.pucExpiry $ \pucExpiry -> do
-            createOrUpdateReminderForDocumentExpiry
+            createReminder
               ODC.VehiclePUC
               person.id
               person.merchantId
               person.merchantOperatingCityId
-              (rc.id.getId)
-              pucExpiry
+              (Just $ rc.id.getId)
+              (Just pucExpiry)
+              Nothing
           -- Permit expiry
           whenJust rc.permitExpiry $ \permitExpiry -> do
-            createOrUpdateReminderForDocumentExpiry
+            createReminder
               ODC.VehiclePermit
               person.id
               person.merchantId
               person.merchantOperatingCityId
-              (rc.id.getId)
-              permitExpiry
+              (Just $ rc.id.getId)
+              (Just permitExpiry)
+              Nothing
           -- Insurance validity
           whenJust rc.insuranceValidity $ \insuranceValidity -> do
-            createOrUpdateReminderForDocumentExpiry
+            createReminder
               ODC.VehicleInsurance
               person.id
               person.merchantId
               person.merchantOperatingCityId
-              (rc.id.getId)
-              insuranceValidity
+              (Just $ rc.id.getId)
+              (Just insuranceValidity)
+              Nothing
           case person.role of
             Person.FLEET_OWNER -> do
               mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId person.id rc.id now

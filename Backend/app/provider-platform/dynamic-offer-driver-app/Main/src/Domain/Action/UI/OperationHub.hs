@@ -72,9 +72,10 @@ getOperationGetRequests ::
   Maybe Int ->
   Maybe RequestStatus ->
   Maybe RequestType ->
-  Text ->
+  Maybe Text ->
+  Maybe (Id Person) ->
   Flow OperationHubRequestsResp
-getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus mbType rcNo = do
+getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus mbType mbRcNo mbDriverId = do
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   now <- getCurrentTime
   let limit = fromMaybe 10 mbLimit
@@ -82,7 +83,10 @@ getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus
       defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
-  requests <- QOHRE.findAllRequestsInRange from to limit offset Nothing mbStatus mbType (Just driverId.getId) Nothing Nothing (Just rcNo)
+  -- At least one of mbRcNo or mbDriverId must be provided
+  unless (isJust mbRcNo || isJust mbDriverId) $
+    throwError $ InvalidRequest "Either rcNo or driverId must be provided"
+  requests <- QOHRE.findAllRequestsInRange from to limit offset Nothing mbStatus mbType (Just driverId.getId) Nothing Nothing mbRcNo mbDriverId
   reqs <- mapM castHubRequests requests
   pure (OperationHubRequestsResp reqs)
 
@@ -106,8 +110,11 @@ castHubRequests (hubReq, person, hub) = do
       { id = hubReq.id.getId,
         operationHubId = hubReq.operationHubId,
         operationHubName = hub.name,
-        registrationNo = hubReq.registrationNo,
+        operationHubAddress = hub.address,
+        operationHubContact = hub.mobileNumber,
         driverPhoneNo,
+        driverId = hubReq.driverId,
+        registrationNo = hubReq.registrationNo,
         requestStatus = hubReq.requestStatus,
         requestTime = hubReq.createdAt,
         requestType = hubReq.requestType

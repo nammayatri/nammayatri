@@ -32,10 +32,34 @@ findByPrimaryKey rcId = do findOneWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq (Kerne
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RCStats.RCStats -> m ())
 updateByPrimaryKey (Domain.Types.RCStats.RCStats {..}) = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.totalRides totalRides, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]]
+  updateWithKV
+    [ Se.Set Beam.totalRides totalRides,
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+    ]
+    [Se.And [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]]
 
 instance FromTType' Beam.RCStats Domain.Types.RCStats.RCStats where
-  fromTType' (Beam.RCStatsT {..}) = do pure $ Just Domain.Types.RCStats.RCStats {rcId = Kernel.Types.Id.Id rcId, totalRides = totalRides, updatedAt = updatedAt}
+  fromTType' (Beam.RCStatsT {..}) = do
+    pure $
+      Just
+        Domain.Types.RCStats.RCStats
+          { rcId = Kernel.Types.Id.Id rcId,
+            totalRides = totalRides,
+            updatedAt = updatedAt,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            createdAt = createdAt
+          }
 
 instance ToTType' Beam.RCStats Domain.Types.RCStats.RCStats where
-  toTType' (Domain.Types.RCStats.RCStats {..}) = do Beam.RCStatsT {Beam.rcId = Kernel.Types.Id.getId rcId, Beam.totalRides = totalRides, Beam.updatedAt = updatedAt}
+  toTType' (Domain.Types.RCStats.RCStats {..}) = do
+    Beam.RCStatsT
+      { Beam.rcId = Kernel.Types.Id.getId rcId,
+        Beam.totalRides = totalRides,
+        Beam.updatedAt = updatedAt,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.createdAt = createdAt
+      }

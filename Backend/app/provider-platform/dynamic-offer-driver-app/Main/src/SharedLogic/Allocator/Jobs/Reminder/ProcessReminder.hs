@@ -196,9 +196,9 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
           "Training Video"
           "TRAINING_VIDEO"
           $ do
-            -- Set approved flag to False for DriverInformation
-            QDIExtra.updateApproved (Just False) reminder.driverId
-            logInfo $ "Set approved = false for driver " <> reminder.driverId.getId <> " due to expired mandatory training reminder"
+            -- Invalidate training images instead of setting approved = false
+            invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId
+            logInfo $ "Invalidated training images for driver " <> reminder.driverId.getId <> " due to expired mandatory training reminder"
       _ -> logError $ "Unknown documentType: " <> show reminder.documentType
 
 -- | Process inspection reminders (vehicle, driver inspection, or training)
@@ -226,8 +226,9 @@ processInspectionReminder reminder driver config merchantId merchantOpCityId dis
   now <- getCurrentTime
   let isOverdue = reminder.dueDate <= now
       isMandatory = config.isMandatory
+      shouldDisable = isOverdue && isMandatory
   -- Check if reminder is overdue and mandatory, then disable driver and set approved = false
-  when (isOverdue && isMandatory) $ do
+  when shouldDisable $ do
     driverInfo <- QDriverInfo.findById reminder.driverId >>= fromMaybeM (InternalError "DriverInformation not found")
     when driverInfo.enabled $ do
       QDIExtra.updateEnabledVerifiedState reminder.driverId False Nothing
@@ -241,11 +242,16 @@ processInspectionReminder reminder driver config merchantId merchantOpCityId dis
     Just currentReminder | currentReminder.status == DR.PENDING -> do
       -- Reminder is still PENDING, send notification
       sendInspectionOrTrainingNotification currentReminder driver merchantOpCityId notificationKey displayName config
-      -- Schedule next ProcessReminder job for 24 hours later to keep reminding until completion
-      let scheduleAfter = 24 * 60 * 60 -- 24 hours in seconds
-          inspectionJobData = Allocator.ProcessReminderJobData {reminderId = reminder.id, merchantId = merchantId, merchantOperatingCityId = merchantOpCityId}
-      void $ createJobIn @_ @'ProcessReminder (Just merchantId) (Just merchantOpCityId) scheduleAfter inspectionJobData
-      logInfo $ "Scheduled next " <> displayName <> " reminder job for driver " <> driver.id.getId <> " in 24 hours"
+      -- Only reschedule if driver was NOT disabled (i.e., not overdue and mandatory)
+      -- If driver was disabled, don't reschedule to avoid unnecessary job execution
+      unless shouldDisable $ do
+        -- Schedule next ProcessReminder job for 24 hours later to keep reminding until completion
+        let scheduleAfter = 24 * 60 * 60 -- 24 hours in seconds
+            inspectionJobData = Allocator.ProcessReminderJobData {reminderId = reminder.id, merchantId = merchantId, merchantOperatingCityId = merchantOpCityId}
+        void $ createJobIn @_ @'ProcessReminder (Just merchantId) (Just merchantOpCityId) scheduleAfter inspectionJobData
+        logInfo $ "Scheduled next " <> displayName <> " reminder job for driver " <> driver.id.getId <> " in 24 hours"
+      when shouldDisable $
+        logInfo $ "Driver disabled due to overdue mandatory " <> displayName <> " reminder, skipping reschedule"
     _ -> do
       logInfo $ "Reminder " <> reminder.id.getId <> " is no longer PENDING (status: " <> maybe "not found" (show . (.status)) mbCurrentReminder <> "), skipping notification and reschedule"
 
@@ -293,7 +299,7 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
                 QDIExtra.updateEnabledVerifiedState reminder.driverId False Nothing
                 logInfo $ "Disabled driver " <> driver.id.getId <> " due to expired mandatory reminder: " <> documentTypeName
               -- Invalidate the expired document
-              invalidateExpiredDocument reminder.documentType reminder.entityId
+              invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId
               logInfo $ "Invalidated document " <> reminder.entityId <> " (type: " <> documentTypeName <> ") due to expiry"
             else do
               -- For non-mandatory reminders, reschedule for daily (24 hours from now)
@@ -321,8 +327,10 @@ invalidateExpiredDocument ::
   ) =>
   DVC.DocumentType ->
   Text ->
+  Id DM.Merchant ->
+  Id DP.Person ->
   m ()
-invalidateExpiredDocument documentType entityId = do
+invalidateExpiredDocument documentType entityId merchantId driverId = do
   let expiryReason = "Document expired"
   case documentType of
     DVC.DriverLicense -> do
@@ -338,46 +346,83 @@ invalidateExpiredDocument documentType entityId = do
         QVRC.updateVerificationStatusAndRejectReason Documents.INVALID expiryReason rc.documentImageId
         QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) rc.documentImageId
     DVC.VehicleInsurance -> do
-      let docId = Id @DVI.VehicleInsurance entityId
-      mbInsurance <- QVI.findByPrimaryKey docId
-      Kernel.Prelude.whenJust mbInsurance $ \insurance -> do
-        QVI.updateVerificationStatusAndRejectReason Documents.INVALID expiryReason insurance.documentImageId
-        QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) insurance.documentImageId
+      -- VehicleInsurance reminders can have entityId as either insurance ID or RC ID
+      -- Try insurance ID first, then fall back to RC ID lookup
+      let insuranceId = Id @DVI.VehicleInsurance entityId
+      mbInsurance <- QVI.findByPrimaryKey insuranceId
+      case mbInsurance of
+        Just insurance -> do
+          QVI.updateVerificationStatusAndRejectReason Documents.INVALID expiryReason insurance.documentImageId
+          QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) insurance.documentImageId
+        Nothing -> do
+          -- If not found by insurance ID, try RC ID (entityId might be RC ID)
+          let rcId = Id @DVRC.VehicleRegistrationCertificate entityId
+          insurances <- QVI.findByRcIdAndDriverId rcId driverId
+          forM_ insurances $ \insurance -> do
+            QVI.updateVerificationStatusAndRejectReason Documents.INVALID expiryReason insurance.documentImageId
+            QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) insurance.documentImageId
     DVC.VehiclePermit -> do
-      let docId = Id @DVPermit.VehiclePermit entityId
-      mbPermit <- QVPermit.findByPrimaryKey docId
-      Kernel.Prelude.whenJust mbPermit $ \permit -> do
-        QVPermit.updateVerificationStatusByImageId Documents.INVALID permit.documentImageId
-        QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) permit.documentImageId
+      -- VehiclePermit reminders can have entityId as either permit ID or RC ID
+      -- Try permit ID first, then fall back to RC ID lookup
+      let permitId = Id @DVPermit.VehiclePermit entityId
+      mbPermit <- QVPermit.findByPrimaryKey permitId
+      case mbPermit of
+        Just permit -> do
+          QVPermit.updateVerificationStatusByImageId Documents.INVALID permit.documentImageId
+          QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) permit.documentImageId
+        Nothing -> do
+          -- If not found by permit ID, try RC ID (entityId might be RC ID)
+          let rcId = Id @DVRC.VehicleRegistrationCertificate entityId
+          permits <- QVPermit.findByRcIdAndDriverId rcId driverId
+          forM_ permits $ \permit -> do
+            QVPermit.updateVerificationStatusByImageId Documents.INVALID permit.documentImageId
+            QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) permit.documentImageId
     DVC.VehiclePUC -> do
-      let docId = Id @DPUC.VehiclePUC entityId
-      mbPUC <- QVPUC.findByPrimaryKey docId
-      Kernel.Prelude.whenJust mbPUC $ \puc -> do
-        QVPUC.updateVerificationStatusByImageId Documents.INVALID puc.documentImageId
-        QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) puc.documentImageId
+      -- VehiclePUC reminders can have entityId as either PUC ID or RC ID
+      -- Try PUC ID first, then fall back to RC ID lookup
+      let pucId = Id @DPUC.VehiclePUC entityId
+      mbPUC <- QVPUC.findByPrimaryKey pucId
+      case mbPUC of
+        Just puc -> do
+          QVPUC.updateVerificationStatusByImageId Documents.INVALID puc.documentImageId
+          QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) puc.documentImageId
+        Nothing -> do
+          -- If not found by PUC ID, try RC ID (entityId might be RC ID)
+          let rcId = Id @DVRC.VehicleRegistrationCertificate entityId
+          pucs <- QVPUC.findByRcIdAndDriverId rcId driverId
+          forM_ pucs $ \puc -> do
+            QVPUC.updateVerificationStatusByImageId Documents.INVALID puc.documentImageId
+            QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) puc.documentImageId
     DVC.VehicleFitnessCertificate -> do
-      let docId = Id @DFC.VehicleFitnessCertificate entityId
-      mbFitness <- QFC.findByPrimaryKey docId
-      Kernel.Prelude.whenJust mbFitness $ \fitness -> do
-        QFC.updateVerificationStatus Documents.INVALID fitness.documentImageId
-        QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) fitness.documentImageId
+      -- VehicleFitnessCertificate reminders can have entityId as either fitness ID or RC ID
+      -- Try fitness ID first, then fall back to RC ID lookup
+      let fitnessId = Id @DFC.VehicleFitnessCertificate entityId
+      mbFitness <- QFC.findByPrimaryKey fitnessId
+      case mbFitness of
+        Just fitness -> do
+          QFC.updateVerificationStatus Documents.INVALID fitness.documentImageId
+          QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) fitness.documentImageId
+        Nothing -> do
+          -- If not found by fitness ID, try RC ID (entityId might be RC ID)
+          let rcId = Id @DVRC.VehicleRegistrationCertificate entityId
+          fitnessCerts <- QFC.findByRcIdAndDriverId rcId driverId
+          forM_ fitnessCerts $ \fitness -> do
+            QFC.updateVerificationStatus Documents.INVALID fitness.documentImageId
+            QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) fitness.documentImageId
     DVC.BusinessLicense -> do
       let docId = Id @DBL.BusinessLicense entityId
       mbBL <- QBL.findByPrimaryKey docId
       Kernel.Prelude.whenJust mbBL $ \bl -> do
         QBL.updateVerificationStatusByImageId Documents.INVALID bl.documentImageId
         QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) bl.documentImageId
+    DVC.TrainingForm -> do
+      -- For training, use the driverId passed as parameter (from reminder.driverId)
+      -- Query Image table directly by personId and imageType
+      trainingImages <- QImage.findImagesByPersonAndType Nothing Nothing merchantId driverId DVC.TrainingForm
+      -- Mark all training images as INVALID
+      forM_ trainingImages $ \image ->
+        QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) image.id
     _ -> logError $ "Unknown document type for invalidation: " <> show documentType
-
--- | Map SMS key strings to MessageKey constructors
-mapSmsKeyToMessageKey :: Text -> Maybe DMM.MessageKey
-mapSmsKeyToMessageKey smsKey =
-  case smsKey of
-    "DOCUMENT_EXPIRY_REMINDER_SMS" -> Just DMM.DOCUMENT_EXPIRY_REMINDER_SMS
-    "VEHICLE_INSPECTION_SMS" -> Just DMM.VEHICLE_INSPECTION_SMS
-    "DRIVER_INSPECTION_SMS" -> Just DMM.DRIVER_INSPECTION_SMS
-    "TRAINING_VIDEO_SMS" -> Just DMM.TRAINING_VIDEO_SMS
-    _ -> readMaybe (Text.unpack smsKey) :: Maybe DMM.MessageKey
 
 -- Helper function to send FCM and SMS notifications to driver
 sendDriverNotifications ::
@@ -403,7 +448,7 @@ sendDriverNotifications reminder driver merchantOpCityId notificationKey smsKey 
     Nothing -> logInfo $ "MerchantPushNotification not found for " <> notificationKey <> ", skipping FCM notification"
 
   -- Send SMS to driver
-  let mbMessageKey = mapSmsKeyToMessageKey smsKey
+  let mbMessageKey = readMaybe (Text.unpack smsKey) :: Maybe DMM.MessageKey
   case mbMessageKey of
     Just messageKey -> do
       mbMerchantMessage <- CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing

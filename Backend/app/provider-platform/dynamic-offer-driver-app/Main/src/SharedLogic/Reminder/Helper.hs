@@ -13,21 +13,22 @@ the GNU Affero General Public License along with this program. If not, see <http
 -}
 
 module SharedLogic.Reminder.Helper
-  ( createOrUpdateReminderForDocumentExpiry,
+  ( createReminder,
     cancelRemindersForEntity,
     cancelRemindersForDriverByDocumentType,
     cancelRemindersForRCByDocumentType,
-    createReminderForDocumentType,
     recordDocumentCompletion,
     checkAndCreateReminderIfNeeded,
     precomputeThresholdCheckData,
     ThresholdCheckData (..),
+    isDocumentExpiryType,
+    documentExpiryTypes,
   )
 where
 
 import qualified Data.List as List
-import qualified Data.Map as M
 import Data.List.NonEmpty (nonEmpty)
+import qualified Data.Map as M
 import Data.Ord (comparing)
 import qualified Data.Time as Time
 import qualified Domain.Types.DocumentReminderHistory as DRH
@@ -65,6 +66,24 @@ import qualified Storage.Queries.ReminderConfig as QReminderConfig
 -- ============================================================================
 -- Helper functions for common patterns
 -- ============================================================================
+
+-- | Document types that have expiry dates and are processed by processDocumentExpiryReminder
+-- These types should NOT use ridesThreshold or daysThreshold
+documentExpiryTypes :: [DVC.DocumentType]
+documentExpiryTypes =
+  [ DVC.DriverLicense,
+    DVC.VehicleRegistrationCertificate,
+    DVC.VehicleInsurance,
+    DVC.VehiclePermit,
+    DVC.VehiclePUC,
+    DVC.VehicleFitnessCertificate,
+    DVC.BusinessLicense
+  ]
+
+-- | Check if a document type is a document expiry type
+-- Document expiry types are based on expiry dates, not rides/days thresholds
+isDocumentExpiryType :: DVC.DocumentType -> Bool
+isDocumentExpiryType documentType = documentType `elem` documentExpiryTypes
 
 -- | Check if reminder system is enabled and get config for a document type
 -- Returns Nothing if system is disabled, person is not a driver, or config not found/disabled
@@ -167,6 +186,7 @@ createReminderRecord documentType entityId driverId merchantId merchantOpCityId 
   pure reminderId
 
 -- | Schedule ProcessReminder job for a reminder
+-- Ensures scheduleAfter is never negative to prevent scheduling jobs in the past
 scheduleProcessReminderJob ::
   ( MonadFlow m,
     CacheFlow m r,
@@ -181,19 +201,25 @@ scheduleProcessReminderJob ::
   NominalDiffTime ->
   m ()
 scheduleProcessReminderJob reminderId merchantId merchantOpCityId scheduleAfter = do
+  -- Ensure we never schedule jobs in the past (negative scheduleAfter would cause 5xx errors)
+  let safeScheduleAfter = max 0 scheduleAfter
+  when (scheduleAfter < 0) $
+    logInfo $
+      "Warning: Attempted to schedule ProcessReminder job in the past for reminder "
+        <> reminderId.getId
+        <> ". Adjusted to schedule immediately (scheduleAfter was: "
+        <> show scheduleAfter
+        <> " seconds)"
   let jobData = Allocator.ProcessReminderJobData {reminderId = reminderId, merchantId = merchantId, merchantOperatingCityId = merchantOpCityId}
-  void $ createJobIn @_ @'ProcessReminder (Just merchantId) (Just merchantOpCityId) scheduleAfter jobData
+  void $ createJobIn @_ @'ProcessReminder (Just merchantId) (Just merchantOpCityId) safeScheduleAfter jobData
 
 -- ============================================================================
--- Public API functions
+-- Internal helper functions
 -- ============================================================================
 
--- | Create all reminder entries at once when a document expiry date is captured
--- Creates separate Reminder entries for each interval (e.g., T-30, T-15, T-1)
--- This should be called whenever a document with an expiry date is created or updated
--- Only creates reminders for DRIVER role - returns early if person is not a driver
--- Schedules ProcessReminder jobs directly instead of relying on ReminderMaster
-createOrUpdateReminderForDocumentExpiry ::
+-- | Internal helper to create reminders with intervals
+-- Handles the common logic of creating reminder records and scheduling jobs
+createRemindersWithIntervals ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
@@ -203,41 +229,99 @@ createOrUpdateReminderForDocumentExpiry ::
     HasSchemaName SchedulerJobT
   ) =>
   DVC.DocumentType ->
+  Text ->
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  Text ->
   UTCTime ->
+  [Int] ->
+  Bool ->
   m ()
-createOrUpdateReminderForDocumentExpiry documentType driverId merchantId merchantOpCityId entityId expiryDate = do
+createRemindersWithIntervals documentType entityId driverId merchantId merchantOpCityId dueDate intervals allowImmediateWhenEmpty = do
+  if null intervals
+    then
+      if allowImmediateWhenEmpty
+        then do
+          now <- getCurrentTime
+          reminderId <- createReminderRecord documentType entityId driverId merchantId merchantOpCityId dueDate now 0
+          scheduleProcessReminderJob reminderId merchantId merchantOpCityId 0
+          logInfo $ "Created immediate reminder for " <> show documentType <> " for driver " <> driverId.getId <> " and scheduled ProcessReminder job"
+        else logInfo $ "No reminder intervals configured for documentType: " <> show documentType
+    else do
+      now <- getCurrentTime
+      -- Create a Reminder entry for each interval and schedule ProcessReminder job
+      forM_ (zip intervals [0 ..]) $ \(intervalMinutes, intervalIndex) -> do
+        let reminderDate = Time.addUTCTime (fromIntegral (- intervalMinutes) * 60) dueDate
+        reminderId <- createReminderRecord documentType entityId driverId merchantId merchantOpCityId dueDate reminderDate intervalIndex
+        let scheduleAfter = max 0 (Time.diffUTCTime reminderDate now)
+        scheduleProcessReminderJob reminderId merchantId merchantOpCityId scheduleAfter
+      logInfo $
+        "Created "
+          <> show (length intervals)
+          <> " reminders for documentType: "
+          <> show documentType
+          <> ", entityId: "
+          <> entityId
+          <> ", dueDate: "
+          <> show dueDate
+          <> " and scheduled ProcessReminder jobs"
+
+-- ============================================================================
+-- Public API functions
+-- ============================================================================
+
+-- | Unified function to create reminders for document expiry or manual/auto triggers
+-- Creates separate Reminder entries for each interval (e.g., T-30, T-15, T-1)
+-- Schedules ProcessReminder jobs directly instead of relying on ReminderMaster
+--
+-- Parameters:
+--   - mbEntityId: If provided, used as entityId (for RC-level or explicit driver-level reminders).
+--                 If Nothing, uses driverId.getId (for driver-level reminders).
+--   - mbDueDate: If provided, used as due date. If Nothing, uses current time.
+--   - mbIntervals: If provided, overrides config intervals. If Nothing, uses config intervals.
+--
+-- Behavior:
+--   - If mbEntityId is provided: cancels by entity, doesn't allow immediate when intervals are empty (expiry case)
+--   - If mbEntityId is Nothing: cancels by driver, allows immediate when intervals are empty (manual/auto trigger case)
+createReminder ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    SchedulerFlow r,
+    ServiceFlow m r,
+    EncFlow m r,
+    CoreMetrics m,
+    HasField "blackListedJobs" r [Text],
+    HasSchemaName SchedulerJobT
+  ) =>
+  DVC.DocumentType ->
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe [Int] ->
+  m ()
+createReminder documentType driverId merchantId merchantOpCityId mbEntityId mbDueDate mbIntervals = do
   mbConfig <- getReminderConfigIfEnabled driverId merchantOpCityId documentType
   case mbConfig of
     Just config -> do
-      -- Cancel any existing reminders for this entity/document type
-      cancelRemindersForEntity entityId documentType
+      let entityId = fromMaybe driverId.getId mbEntityId
+          intervals = fromMaybe config.reminderIntervals mbIntervals
+          -- If entityId was explicitly provided, it's an expiry case
+          isExpiryCase = isJust mbEntityId
 
-      -- Create reminders for ALL intervals at once
-      let intervals = config.reminderIntervals
-      if null intervals
-        then logInfo $ "No reminder intervals configured for documentType: " <> show documentType
-        else do
-          now <- getCurrentTime
-          -- Create a Reminder entry for each interval and schedule ProcessReminder job
-          forM_ (zip intervals [0 ..]) $ \(intervalMinutes, intervalIndex) -> do
-            let reminderDate = Time.addUTCTime (fromIntegral (- intervalMinutes) * 60) expiryDate
-            reminderId <- createReminderRecord documentType entityId driverId merchantId merchantOpCityId expiryDate reminderDate intervalIndex
-            let scheduleAfter = max 0 (Time.diffUTCTime reminderDate now)
-            scheduleProcessReminderJob reminderId merchantId merchantOpCityId scheduleAfter
-          logInfo $
-            "Created "
-              <> show (length intervals)
-              <> " reminders for documentType: "
-              <> show documentType
-              <> ", entityId: "
-              <> entityId
-              <> ", expiryDate: "
-              <> show expiryDate
-              <> " and scheduled ProcessReminder jobs"
+      -- Cancel existing reminders: by entity for expiry case, by driver for manual/auto trigger
+      if isExpiryCase
+        then cancelRemindersForEntity entityId documentType
+        else cancelRemindersForDriverByDocumentType driverId documentType
+
+      -- Get due date: use provided date or current time
+      dueDate <- maybe getCurrentTime pure mbDueDate
+
+      -- For expiry case, don't allow immediate when empty. For manual/auto trigger, allow immediate.
+      createRemindersWithIntervals documentType entityId driverId merchantId merchantOpCityId dueDate intervals (not isExpiryCase)
     Nothing -> logInfo $ "Reminder system disabled or config not found for documentType: " <> show documentType <> " in city: " <> merchantOpCityId.getId
 
 -- | Cancel all pending reminders for a specific entity and document type
@@ -294,54 +378,6 @@ cancelRemindersForRCByDocumentType rcId documentType = do
 isRCDocumentType :: DVC.DocumentType -> Bool
 isRCDocumentType DVC.VehicleInspectionForm = True
 isRCDocumentType _ = False
-
--- | Create a reminder for any document type (for manual trigger or auto-trigger)
--- This creates a reminder that will be sent immediately or based on reminderIntervals
--- If intervals are provided, use them; otherwise fallback to config
--- Schedules ProcessReminder jobs directly instead of relying on ReminderMaster
-createReminderForDocumentType ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    SchedulerFlow r,
-    ServiceFlow m r,
-    EncFlow m r,
-    CoreMetrics m,
-    HasField "blackListedJobs" r [Text]
-  ) =>
-  DVC.DocumentType ->
-  Id DP.Person ->
-  Id DM.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Maybe UTCTime ->
-  Maybe [Int] ->
-  m ()
-createReminderForDocumentType documentType driverId merchantId merchantOpCityId mbDueDate mbIntervals = do
-  mbConfig <- getReminderConfigIfEnabled driverId merchantOpCityId documentType
-  case mbConfig of
-    Just config -> do
-      cancelRemindersForDriverByDocumentType driverId documentType
-
-      now <- getCurrentTime
-      let dueDate = fromMaybe now mbDueDate
-          -- Use provided intervals or fallback to config
-          intervals = fromMaybe config.reminderIntervals mbIntervals
-          entityId = driverId.getId
-
-      if null intervals
-        then do
-          reminderId <- createReminderRecord documentType entityId driverId merchantId merchantOpCityId dueDate now 0
-          scheduleProcessReminderJob reminderId merchantId merchantOpCityId 0
-          logInfo $ "Created immediate reminder for " <> show documentType <> " for driver " <> driverId.getId <> " and scheduled ProcessReminder job"
-        else do
-          forM_ (zip intervals [0 ..]) $ \(intervalMinutes, intervalIndex) -> do
-            let reminderDate = Time.addUTCTime (fromIntegral (- intervalMinutes) * 60) dueDate
-            reminderId <- createReminderRecord documentType entityId driverId merchantId merchantOpCityId dueDate reminderDate intervalIndex
-            let scheduleAfter = max 0 (Time.diffUTCTime reminderDate now)
-            scheduleProcessReminderJob reminderId merchantId merchantOpCityId scheduleAfter
-          logInfo $ "Created " <> show (length intervals) <> " reminders for " <> show documentType <> " for driver " <> driverId.getId <> " and scheduled ProcessReminder jobs"
-    Nothing -> logInfo $ "Reminder system disabled or config not found for " <> show documentType <> " in city: " <> merchantOpCityId.getId
 
 -- | Record document completion - stores completion date and ride count
 -- This should be called when a document/inspection/training is approved/completed
@@ -427,7 +463,7 @@ recordDocumentCompletion documentType entityIdText entityType mbDriverId merchan
                 <> ")"
             -- Create reminder scheduled for the threshold date
             -- This will automatically schedule ProcessReminder job for that date
-            createReminderForDocumentType documentType driverId merchantId merchantOpCityId (Just thresholdDate) Nothing
+            createReminder documentType driverId merchantId merchantOpCityId Nothing (Just thresholdDate) Nothing
           Nothing -> pure () -- No daysThreshold configured, skip proactive reminder
         Nothing -> pure () -- Reminder system disabled or config not found
     Nothing -> pure () -- Could not determine driverId, skip proactive reminder
@@ -464,19 +500,20 @@ precomputeThresholdCheckData driverId documentTypes = do
     Nothing -> pure Nothing
 
   -- Get completion histories for all document types and entities
+  -- Only process document types that have valid entities (skip RC types without RC association)
   completionHistoriesList <- forM documentTypes $ \documentType -> do
-    let (entityIdText, entityType) = case (isRCDocumentType documentType, mbRCAssocData) of
-          (True, Just (rcId, DRH.RC)) -> (rcId, DRH.RC)
-          (True, Nothing) -> ("", DRH.RC) -- No RC, will be filtered out
-          (True, Just (_, DRH.DRIVER)) -> ("", DRH.RC) -- Shouldn't happen, but handle for exhaustiveness
-          (False, _) -> (driverId.getId, DRH.DRIVER)
-    if entityIdText == ""
-      then pure ((documentType, entityIdText, entityType), Nothing)
-      else do
+    let mbEntityId = case (isRCDocumentType documentType, mbRCAssocData) of
+          (True, Just (rcId, DRH.RC)) -> Just (rcId, DRH.RC)
+          (True, Nothing) -> Nothing -- No RC association, skip
+          (True, Just (_, DRH.DRIVER)) -> Nothing -- Shouldn't happen, but skip for safety
+          (False, _) -> Just (driverId.getId, DRH.DRIVER)
+    case mbEntityId of
+      Just (entityIdText, entityType) -> do
         allHistories <- QDRH.findAllByDocumentTypeAndEntity documentType entityIdText entityType
         let mbHistory = List.maximumBy (comparing (.completionDate)) <$> nonEmpty allHistories
-        pure ((documentType, entityIdText, entityType), mbHistory)
-  let completionHistoriesMap = M.fromList completionHistoriesList
+        pure $ Just ((documentType, entityIdText, entityType), mbHistory)
+      Nothing -> pure Nothing
+  let completionHistoriesMap = M.fromList $ catMaybes completionHistoriesList
 
   pure $
     ThresholdCheckData
@@ -508,52 +545,57 @@ checkAndCreateReminderIfNeeded ::
   ThresholdCheckData ->
   m ()
 checkAndCreateReminderIfNeeded documentType driverId merchantId merchantOpCityId thresholdData = do
-  mbConfig <- getReminderConfigIfEnabled driverId merchantOpCityId documentType
-  case mbConfig of
-    Just config -> do
-      -- Only check ridesThreshold here - daysThreshold is handled proactively by recordDocumentCompletion
-      when (isJust config.ridesThreshold) $ do
-        -- Determine entity based on document type
-        let mbEntityId =
-              if isRCDocumentType documentType
-                then thresholdData.mbRCAssoc
-                else Just (driverId.getId, DRH.DRIVER)
+  -- Safety check: Skip document expiry types as they are based on expiry dates, not rides/days thresholds
+  when (isDocumentExpiryType documentType) $ do
+    logInfo $ "Skipping rides threshold check for document expiry type: " <> show documentType <> " (reminders are based on expiry dates, not ride counts)"
+    pure ()
+  unless (isDocumentExpiryType documentType) $ do
+    mbConfig <- getReminderConfigIfEnabled driverId merchantOpCityId documentType
+    case mbConfig of
+      Just config -> do
+        -- Only check ridesThreshold here - daysThreshold is handled proactively by recordDocumentCompletion
+        when (isJust config.ridesThreshold) $ do
+          -- Determine entity based on document type
+          let mbEntityId =
+                if isRCDocumentType documentType
+                  then thresholdData.mbRCAssoc
+                  else Just (driverId.getId, DRH.DRIVER)
 
-        case mbEntityId of
-          Just (entityIdText, entityType) -> do
-            -- Get precomputed completion history
-            let mbHistory = join $ M.lookup (documentType, entityIdText, entityType) thresholdData.completionHistories
-            case mbHistory of
-              Just history -> do
-                -- Get precomputed ride count
-                let currentRideCount = case (documentType, entityType) of
-                      (DVC.DriverInspectionForm, DRH.DRIVER) -> thresholdData.driverRideCount
-                      (DVC.TrainingForm, DRH.DRIVER) -> thresholdData.driverRideCount
-                      (DVC.VehicleInspectionForm, DRH.RC) -> fromMaybe 0 thresholdData.rcRideCount
-                      _ -> 0
+          case mbEntityId of
+            Just (entityIdText, entityType) -> do
+              -- Get precomputed completion history
+              let mbHistory = join $ M.lookup (documentType, entityIdText, entityType) thresholdData.completionHistories
+              case mbHistory of
+                Just history -> do
+                  -- Get precomputed ride count
+                  let currentRideCount = case (documentType, entityType) of
+                        (DVC.DriverInspectionForm, DRH.DRIVER) -> thresholdData.driverRideCount
+                        (DVC.TrainingForm, DRH.DRIVER) -> thresholdData.driverRideCount
+                        (DVC.VehicleInspectionForm, DRH.RC) -> fromMaybe 0 thresholdData.rcRideCount
+                        _ -> 0
 
-                -- Check rides threshold
-                let ridesSinceCompletion = currentRideCount - history.rideCountAtCompletion
-                    ridesThresholdMet = case config.ridesThreshold of
-                      Just threshold -> ridesSinceCompletion >= threshold
-                      Nothing -> False
+                  -- Check rides threshold
+                  let ridesSinceCompletion = currentRideCount - history.rideCountAtCompletion
+                      ridesThresholdMet = case config.ridesThreshold of
+                        Just threshold -> ridesSinceCompletion >= threshold
+                        Nothing -> False
 
-                -- Create reminder if rides threshold is met
-                when ridesThresholdMet $ do
-                  now <- getCurrentTime
-                  logInfo $
-                    "Rides threshold met for "
-                      <> show documentType
-                      <> " (entity: "
-                      <> entityIdText
-                      <> ", driver: "
-                      <> driverId.getId
-                      <> ", rides: "
-                      <> show ridesSinceCompletion
-                      <> ")"
-                  -- Create reminder with immediate due date (now)
-                  -- The reminder system will keep sending reminders every 24 hours until inspection is completed
-                  createReminderForDocumentType documentType driverId merchantId merchantOpCityId (Just now) Nothing
-              Nothing -> logInfo $ "No completion history found for " <> show documentType <> " (entity: " <> entityIdText <> "), skipping rides threshold check"
-          Nothing -> logInfo $ "No active entity found for driver " <> driverId.getId <> " and document type " <> show documentType <> ", skipping rides threshold check"
-    Nothing -> pure () -- Reminder system disabled or config not found
+                  -- Create reminder if rides threshold is met
+                  when ridesThresholdMet $ do
+                    now <- getCurrentTime
+                    logInfo $
+                      "Rides threshold met for "
+                        <> show documentType
+                        <> " (entity: "
+                        <> entityIdText
+                        <> ", driver: "
+                        <> driverId.getId
+                        <> ", rides: "
+                        <> show ridesSinceCompletion
+                        <> ")"
+                    -- Create reminder with immediate due date (now)
+                    -- The reminder system will keep sending reminders every 24 hours until inspection is completed
+                    createReminder documentType driverId merchantId merchantOpCityId Nothing (Just now) Nothing
+                Nothing -> logInfo $ "No completion history found for " <> show documentType <> " (entity: " <> entityIdText <> "), skipping rides threshold check"
+            Nothing -> logInfo $ "No active entity found for driver " <> driverId.getId <> " and document type " <> show documentType <> ", skipping rides threshold check"
+      Nothing -> pure () -- Reminder system disabled or config not found

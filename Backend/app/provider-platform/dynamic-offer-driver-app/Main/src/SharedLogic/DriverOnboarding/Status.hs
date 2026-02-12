@@ -53,6 +53,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -81,6 +82,7 @@ import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Tools.BackgroundVerification as BackgroundVerification
 import Tools.Error (DriverOnboardingError (ImageNotValid))
+import qualified Tools.SMS as Sms
 import qualified Tools.Verification as Verification
 
 -- PENDING means "pending verification"
@@ -334,26 +336,26 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
             driverInfo <- runInReplica $ DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
             let driverInspectionNotRequired = transporterConfig.requiresDriverOnboardingInspection /= Just True || driverInfo.approved == Just True
             when driverInspectionNotRequired $ do
-              enableDriver merchantOpCityId personId (mDL >>= (.driverName))
+              enableDriver merchantOpCityId personId (mDL >>= (.driverName)) transporterConfig merchantId
               whenJust onboardingVehicleCategory $ \category -> do
                 DIIQuery.updateOnboardingVehicleCategory (Just category) personId
         -- Check vehicle enablement separately (only vehicle docs + vehicle inspection)
-        getVehicleDocuments allDocumentVerificationConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification True driverDocuments merchantOpCityId mDL
+        getVehicleDocuments allDocumentVerificationConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification True driverDocuments merchantOpCityId
       else do
         -- Combined enablement: Check both driver and vehicle docs together (old behavior)
         whenJust vehicleCategoryWithoutMandatoryConfigs $ \vehicleCategory -> do
           let allDriverDocsVerified = all (\doc -> checkIfDocumentValid allDocumentVerificationConfigs doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
           when (allDriverDocsVerified && transporterConfig.requiresOnboardingInspection /= Just True && person.role == DP.DRIVER) $ do
-            enableDriver merchantOpCityId personId (mDL >>= (.driverName))
+            enableDriver merchantOpCityId personId (mDL >>= (.driverName)) transporterConfig merchantId
             whenJust onboardingVehicleCategory $ \category -> do
               DIIQuery.updateOnboardingVehicleCategory (Just category) personId
         -- Check vehicle enablement (old combined logic - checks both driver and vehicle docs)
-        getVehicleDocuments allDocumentVerificationConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification False driverDocuments merchantOpCityId mDL
+        getVehicleDocuments allDocumentVerificationConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification False driverDocuments merchantOpCityId
 
   (dlDetails, rcDetails) <-
     case prefillData of
       Just True -> do
-        let vehRegImgIds = map (.id) $ IQuery.filterImagesByPersonAndType driverImagesInfo merchantId DVC.VehicleRegistrationCertificate
+        let vehRegImgIds = map (.id) $ IQuery.filterImagesByPersonAndType driverImagesInfo merchantOperatingCity.merchantId DVC.VehicleRegistrationCertificate
         dl <- runInReplica $ DLQuery.findByDriverId personId <&> maybeToList
         allRCImgs <- runInReplica $ RCQuery.findAllByImageId vehRegImgIds
         allDLDetails <- mapM convertDLToDLDetails dl
@@ -388,7 +390,7 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
         digilockerAuthorizationUrl = digilockerAuthorizationUrl
       }
   where
-    getVehicleDocuments allDocumentVerificationConfigs role vehicleDocumentsUnverified requiresOnboardingInspection vehicleCategoryExcludedFromVerification separateEnablement driverDocuments merchantOpCityId mbDL = do
+    getVehicleDocuments allDocumentVerificationConfigs role vehicleDocumentsUnverified requiresOnboardingInspection vehicleCategoryExcludedFromVerification separateEnablement driverDocuments merchantOpCityId = do
       let personId = driverImagesInfo.driverId
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
         let allVehicleDocsVerified = checkAllVehicleDocsVerified allDocumentVerificationConfigs vehicleDoc makeSelfieAadhaarPanMandatory
@@ -400,7 +402,7 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
             checkToActivateRC =
               if separateEnablement
                 then (allVehicleDocsVerified && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification
-                else ((allVehicleDocsVerified && allDriverDocsVerified && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification)
+                else ((allVehicleDocsVerified && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification) && allDriverDocsVerified
 
         -- Activate RC if vehicle docs are verified and inspection is not required/approved
         mbVehicle <- QVehicle.findById personId
@@ -410,9 +412,9 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
           -- When separated, driver enablement is handled separately in the driver enablement section
           unless separateEnablement $ do
             when checkToActivateRC $ do
-              case (isVehicleCategoryExcludedFromVerification, mbDL) of
-                (True, _) -> enableDriver merchantOpCityId personId Nothing
-                (False, Just dl) -> enableDriver merchantOpCityId personId dl.driverName
+              case (isVehicleCategoryExcludedFromVerification, mDL) of
+                (True, _) -> enableDriver merchantOpCityId personId Nothing driverImagesInfo.transporterConfig driverImagesInfo.merchantOperatingCity.merchantId
+                (False, Just dl) -> enableDriver merchantOpCityId personId dl.driverName driverImagesInfo.transporterConfig driverImagesInfo.merchantOperatingCity.merchantId
                 (_, _) -> return ()
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
@@ -779,12 +781,25 @@ checkAllDriverDocsVerified ::
 checkAllDriverDocsVerified allDocumentVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory = do
   all (\doc -> checkIfDocumentValid allDocumentVerificationConfigs doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
 
-enableDriver :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Maybe Text -> Flow ()
-enableDriver merchantOpCityId personId driverName = do
+enableDriver :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Maybe Text -> DTC.TransporterConfig -> Id DM.Merchant -> Flow ()
+enableDriver merchantOpCityId personId driverName transporterConfig merchantId = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   unless driverInfo.enabled $ do
     SDO.enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId True
     whenJust driverName $ \name -> QPerson.updateName name personId
+    -- Send SMS on enablement if configured
+    when (transporterConfig.sendSmsOnEnablement == Just True) $ do
+      fork "sending sms - onboarding" $ do
+        driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+        smsCfg <- asks (.smsCfg)
+        mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+        let countryCode = fromMaybe "+91" driver.mobileCountryCode
+            phoneNumber = countryCode <> mobileNumber
+            sender = smsCfg.sender
+        (mbSender, message, templateId) <-
+          MessageBuilder.buildOnboardingMessage merchantOpCityId $
+            MessageBuilder.BuildOnboardingMessageReq {}
+        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= Sms.checkSmsResult
 
 activateRCAutomatically :: Id DP.Person -> DMOC.MerchantOperatingCity -> Text -> Flow ()
 activateRCAutomatically personId merchantOpCity rcNumber = do
@@ -889,7 +904,7 @@ getProcessedVehicleDocuments driverImagesInfo docType vehicleRC mbRcImagesInfo =
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, mbS3Path)
     DVC.VehicleNOC -> do
       mbDoc <- listToMaybe <$> VNOCQuery.findByRcIdAndDriverId vehicleRC.id driverId
-      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing)
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), mbS3Path)
     DVC.VehicleInspectionForm -> do
       let (status, reason, url) = checkImageValidity driverImagesInfo DVC.VehicleInspectionForm
       return (status, reason, url, Nothing, Nothing)

@@ -26,6 +26,6 @@ data DocumentReminderHistory = DocumentReminderHistory
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data EntityType = DRIVER | RC deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data EntityType = DRIVER | RC deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''EntityType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''EntityType)

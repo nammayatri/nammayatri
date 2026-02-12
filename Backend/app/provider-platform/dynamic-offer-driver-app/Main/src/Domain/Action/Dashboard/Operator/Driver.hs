@@ -109,8 +109,9 @@ getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus 
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
       mbOperationHubId = cast @CommonDriver.OperationHub @DOH.OperationHub <$> mbReqOperationHubId
+      mbDriverIdPerson = (Id :: Text -> Id DP.Person) <$> mbDriverId
   mbMobileNumberHash <- mapM getDbHash mbMobileNumber
-  reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) mbDriverId mbOperationHubId mbOperationHubName mbRegistrationNo
+  reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) Nothing mbOperationHubId mbOperationHubName mbRegistrationNo mbDriverIdPerson
   logInfo $ "Driver Operator Fetch Hub Requests' params - mbFrom: " <> show mbFrom <> " from: " <> show from <> " to: " <> show to
   let summary = Common.Summary {totalCount = 10000, count = length reqList}
   requests <- mapM castHubRequests reqList

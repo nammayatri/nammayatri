@@ -14,19 +14,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data ReminderT f = ReminderT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    currentIntervalIndex :: (B.C f Kernel.Prelude.Int),
-    documentType :: (B.C f Domain.Types.DocumentVerificationConfig.DocumentType),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    dueDate :: (B.C f Kernel.Prelude.UTCTime),
-    entityId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    metadata :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    reminderDate :: (B.C f Kernel.Prelude.UTCTime),
-    status :: (B.C f Domain.Types.Reminder.ReminderStatus),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currentIntervalIndex :: B.C f Kernel.Prelude.Int,
+    documentType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
+    driverId :: B.C f Kernel.Prelude.Text,
+    dueDate :: B.C f Kernel.Prelude.UTCTime,
+    entityId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    metadata :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    reminderDate :: B.C f Kernel.Prelude.UTCTime,
+    status :: B.C f Domain.Types.Reminder.ReminderStatus,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +36,6 @@ instance B.Table ReminderT where
 
 type Reminder = ReminderT Identity
 
-$(enableKVPG (''ReminderT) [('id)] [[('documentType)], [('driverId)]])
+$(enableKVPG ''ReminderT ['id] [['documentType], ['driverId]])
 
-$(mkTableInstances (''ReminderT) "reminder")
+$(mkTableInstances ''ReminderT "reminder")

@@ -1133,6 +1133,7 @@ TransporterConfig:
     allowedPaymentInstrumentForPayout: Maybe [PaymentInstrument]
     vehicleCategoryExcludedFromVerification: "Maybe [VehicleCategory]"
     linkFleetToUnVerifiedExistingRC: Maybe Bool
+    sendSmsOnEnablement: Maybe Bool # Controls whether SMS is sent to drivers/fleet owners when they are enabled
 
   beamType:
     currency: Maybe Currency

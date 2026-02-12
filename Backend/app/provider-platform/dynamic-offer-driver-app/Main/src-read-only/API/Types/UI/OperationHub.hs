@@ -23,8 +23,11 @@ data DriverOperationHubRequest = DriverOperationHubRequest
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data OperationHubDriverRequest = OperationHubDriverRequest
-  { driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Prelude.Text,
+    operationHubAddress :: Kernel.Prelude.Text,
+    operationHubContact :: Kernel.Prelude.Text,
     operationHubId :: Kernel.Types.Id.Id Domain.Types.OperationHub.OperationHub,
     operationHubName :: Kernel.Prelude.Text,
     registrationNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

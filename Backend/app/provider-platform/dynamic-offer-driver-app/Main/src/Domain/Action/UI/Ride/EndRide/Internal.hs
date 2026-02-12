@@ -107,7 +107,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.FleetVehicleStats as FVS
-import SharedLogic.Reminder.Helper (checkAndCreateReminderIfNeeded, precomputeThresholdCheckData)
+import SharedLogic.Reminder.Helper (checkAndCreateReminderIfNeeded, isDocumentExpiryType, precomputeThresholdCheckData)
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.ScheduledNotifications as SN
 import SharedLogic.TollsDetector
@@ -202,6 +202,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
       void $ QRCStats.incrementTotalRides rcAssoc.rcId
   -- Check if reminders should be created based on rides threshold for all document types
   -- Note: daysThreshold is handled proactively by recordDocumentCompletion, so we only check ridesThreshold here
+  -- Document expiry types (DriverLicense, VehicleRegistrationCertificate, etc.) are excluded
+  -- as they are based on expiry dates, not rides/days thresholds
   fork "checkAndCreateReminderIfNeeded" $ do
     -- Get all reminder configs that have ridesThreshold configured
     allReminderConfigs <- QReminderConfig.findAllByMerchantOpCityId booking.merchantOperatingCityId
@@ -211,6 +213,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
               ( \config ->
                   config.enabled
                     && isJust config.ridesThreshold
+                    && not (isDocumentExpiryType config.documentType) -- Exclude document expiry types
               )
               allReminderConfigs
     -- Precompute all data needed for threshold checks (ride counts, RC association, completion histories)

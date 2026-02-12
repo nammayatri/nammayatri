@@ -239,6 +239,7 @@ data TransporterConfigT f = TransporterConfigT
     scheduledRideJobRescheduleTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     scheduledRideSearchRepeatLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     searchRepeatLimit :: B.C f Kernel.Prelude.Int,
+    sendSmsOnEnablement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     separateDriverVehicleEnablement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     snapToRoadConfidenceThreshold :: B.C f Kernel.Prelude.Double,
     specialDrivers :: B.C f [Kernel.Prelude.Text],

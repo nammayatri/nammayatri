@@ -9,4 +9,4 @@ ALTER TABLE atlas_driver_offer_bpp.entity_info ADD COLUMN merchant_operating_cit
 ALTER TABLE atlas_driver_offer_bpp.entity_info ADD COLUMN question text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.entity_info ADD COLUMN question_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.entity_info ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
-ALTER TABLE atlas_driver_offer_bpp.entity_info ADD PRIMARY KEY ( entity_id, entity_type, merchant_id, question_id);
+ALTER TABLE atlas_driver_offer_bpp.entity_info ADD PRIMARY KEY ( entity_id, entity_type, question_id);
