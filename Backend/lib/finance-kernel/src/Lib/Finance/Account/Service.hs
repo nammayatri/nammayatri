@@ -13,8 +13,8 @@ module Lib.Finance.Account.Service
     getOrCreateAccount,
     getBalance,
     updateBalanceByDelta,
-    findAccountsByOwner,
-    findAccountByOwnerAndType,
+    findAccountsByCounterparty,
+    findAccountByCounterpartyAndType,
 
     -- * Input types (re-export from Interface)
     module Lib.Finance.Account.Interface,
@@ -42,8 +42,8 @@ createAccount input = do
   let account =
         Account
           { id = Id accountId,
-            ownerType = input.ownerType,
-            ownerId = input.ownerId,
+            counterpartyType = input.counterpartyType,
+            counterpartyId = input.counterpartyId,
             accountType = input.accountType,
             accountCategory = input.accountCategory,
             currency = input.currency,
@@ -72,9 +72,9 @@ getOrCreateAccount ::
   m (Either FinanceError Account)
 getOrCreateAccount input = do
   mbExisting <-
-    QAccount.findByOwnerAndType
-      input.ownerType
-      input.ownerId
+    QAccount.findByCounterpartyAndType
+      input.counterpartyType
+      input.counterpartyId
       input.accountType
       input.currency
 
@@ -110,20 +110,20 @@ updateBalanceByDelta accountId delta = do
       QAccount.updateBalance newBalance accountId
       pure $ Right newBalance
 
--- | Find all accounts for an owner
-findAccountsByOwner ::
+-- | Find all accounts for a counterparty
+findAccountsByCounterparty ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Owner type (e.g., "DRIVER", "FLEET_OWNER")
-  Text -> -- Owner ID
+  Maybe CounterpartyType -> -- Counterparty type (e.g., DRIVER, FLEET_OWNER)
+  Maybe Text -> -- Counterparty ID
   m [Account]
-findAccountsByOwner = QAccount.findByOwner
+findAccountsByCounterparty = QAccount.findByCounterparty
 
--- | Find specific account by owner and type
-findAccountByOwnerAndType ::
+-- | Find specific account by counterparty and type
+findAccountByCounterpartyAndType ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Owner type
-  Text -> -- Owner ID
+  Maybe CounterpartyType -> -- Counterparty type
+  Maybe Text -> -- Counterparty ID
   AccountType ->
   Currency ->
   m (Maybe Account)
-findAccountByOwnerAndType = QAccount.findByOwnerAndType
+findAccountByCounterpartyAndType = QAccount.findByCounterpartyAndType

@@ -15,6 +15,10 @@ Account:
       enum: "Asset,Liability,Revenue,DeferredRevenue,Expense,Equity,External"
       derive: "ToParamSchema"
 
+    CounterpartyType:
+      enum: "BUYER,SELLER,DRIVER_FLEET_OWNER,GOVERNMENT_DIRECT,GOVERNMENT_INDIRECT,GOVERNMENT"
+      derive: "ToParamSchema"
+
     AccountCategory:
       enum: "Driver,Fleet,Platform,Settlement,Suspense"
       derive: "ToParamSchema"
@@ -27,8 +31,8 @@ Account:
     id: Id Account
     accountType: AccountType
     accountCategory: AccountCategory
-    ownerType: Text
-    ownerId: Text
+    counterpartyType: Maybe CounterpartyType
+    counterpartyId: Maybe Text
     currency: Currency
     balance: HighPrecMoney
     status: AccountStatus
@@ -39,22 +43,22 @@ Account:
 
   constraints:
     id: PrimaryKey
-    ownerId: SecondaryKey
+    counterpartyId: "!SecondaryKey"
 
   queries:
     findById:
       kvFunction: findOneWithKV
       where: id
 
-    findByOwner:
+    findByCounterparty:
       kvFunction: findAllWithKV
       where:
-        and: [ownerType, ownerId]
+        and: [counterpartyType, counterpartyId]
 
-    findByOwnerAndType:
+    findByCounterpartyAndType:
       kvFunction: findOneWithKV
       where:
-        and: [ownerType, ownerId, accountType, currency]
+        and: [counterpartyType, counterpartyId, accountType, currency]
 
     updateBalance:
       kvFunction: updateWithKV
@@ -70,5 +74,6 @@ Account:
   beamInstance: MakeTableInstancesGenericSchema
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AccountType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CounterpartyType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AccountCategory>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AccountStatus>

@@ -58,7 +58,7 @@ getWalletAccountByOwner ::
   Text -> -- Owner ID
   m (Maybe Account)
 getWalletAccountByOwner ownerType ownerId = do
-  accounts <- findAccountsByOwner ownerType ownerId
+  accounts <- findAccountsByCounterparty (Just ownerType) (Just ownerId)
   pure $
     find
       (\acc -> acc.accountType == Asset && acc.accountCategory == Settlement)
@@ -86,8 +86,8 @@ getOrCreateWalletAccount ownerType ownerId currency merchantId merchantOperating
         AccountInput
           { accountType = Asset,
             accountCategory = Settlement,
-            ownerType = ownerType,
-            ownerId = ownerId,
+            counterpartyType = Just ownerType,
+            counterpartyId = Just ownerId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -105,8 +105,8 @@ getOrCreatePlatformAccount currency merchantId merchantOperatingCityId = do
         AccountInput
           { accountType = Liability,
             accountCategory = Settlement,
-            ownerType = ownerTypePlatform,
-            ownerId = merchantId,
+            counterpartyType = Nothing,
+            counterpartyId = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -124,8 +124,8 @@ getOrCreatePlatformSuspenseAccount currency merchantId merchantOperatingCityId =
         AccountInput
           { accountType = Asset,
             accountCategory = Suspense,
-            ownerType = ownerTypePlatform,
-            ownerId = merchantId,
+            counterpartyType = Nothing,
+            counterpartyId = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -143,8 +143,8 @@ getOrCreatePlatformRevenueAccount currency merchantId merchantOperatingCityId = 
         AccountInput
           { accountType = Revenue,
             accountCategory = Platform,
-            ownerType = ownerTypePlatform,
-            ownerId = merchantId,
+            counterpartyType = Nothing,
+            counterpartyId = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -162,8 +162,8 @@ getOrCreateRideGSTExpenseAccount currency merchantId merchantOperatingCityId = d
         AccountInput
           { accountType = Expense,
             accountCategory = Settlement,
-            ownerType = "RideGST",
-            ownerId = merchantId,
+            counterpartyType = Nothing,
+            counterpartyId = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -181,8 +181,8 @@ getOrCreateExternalCustomerBankAccount currency merchantId merchantOperatingCity
         AccountInput
           { accountType = External,
             accountCategory = Suspense,
-            ownerType = "CUSTOMER",
-            ownerId = merchantId,
+            counterpartyType = Nothing,
+            counterpartyId = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -201,8 +201,8 @@ getOrCreateExternalDriverBankAccount currency merchantId merchantOperatingCityId
         AccountInput
           { accountType = External,
             accountCategory = Suspense,
-            ownerType = "DRIVER",
-            ownerId = driverId,
+            counterpartyType = Nothing,
+            counterpartyId = Just driverId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
