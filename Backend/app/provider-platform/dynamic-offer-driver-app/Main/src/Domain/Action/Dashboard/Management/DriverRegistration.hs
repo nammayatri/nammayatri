@@ -861,7 +861,8 @@ approveAndUpdatePan req mId mOpCityId = do
                 driverName = Just person.firstName,
                 driverNameOnGovtDB = req.driverNameOnGovtDB,
                 failedRules = [],
-                verifiedBy = Just DPan.DASHBOARD
+                verifiedBy = Just DPan.DASHBOARD,
+                isStrictlyVerified = Nothing
               }
       QPan.create pan
 

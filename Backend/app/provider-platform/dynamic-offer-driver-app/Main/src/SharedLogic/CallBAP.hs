@@ -403,6 +403,13 @@ rideAssignedCommon booking ride driver veh = do
       else pure Nothing
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   where
+    extractRCManufacturerModel :: Idfy.VerificationResponse -> Maybe Text
+    extractRCManufacturerModel (Idfy.VerificationResponse idfyResp) = do
+      res <- Idfy.result idfyResp
+      case res of
+        Idfy.RCResult (Idfy.ExtractionOutput rcOut) -> Idfy.manufacturer_model rcOut
+        _ -> Nothing
+
     refillKey = "REFILLED_" <> ride.driverId.getId
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
     refillVehicleModel = withTryCatch "refillVehicleModel" do
@@ -414,20 +421,30 @@ rideAssignedCommon booking ride driver veh = do
           driverVehicleIdfyResponse <-
             find
               ( \a ->
-                  maybe False ((==) veh.registrationNo) $
-                    (.registration_number)
-                      =<< (.extraction_output)
-                      =<< (.result)
-                      =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (a.idfyResponse)) :: Maybe Idfy.VerificationResponse)
+                  let mbRegNo =
+                        do
+                          Idfy.VerificationResponse idfyResp <-
+                            (A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< a.idfyResponse
+                          res <- Idfy.result idfyResp
+                          case res of
+                            Idfy.RCResult (Idfy.ExtractionOutput Idfy.RCVerificationOutput {Idfy.registration_number = mbReg}) -> mbReg
+                            _ -> Nothing
+                   in maybe False (== veh.registrationNo) mbRegNo
               )
               <$> QIV.findAllByDriverIdAndDocType ride.driverId DIT.VehicleRegistrationCertificate
+
           newVehicle <-
-            (flip $ maybe (pure veh)) ((.manufacturer_model) =<< (.extraction_output) =<< (.result) =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (.idfyResponse) =<< driverVehicleIdfyResponse) :: Maybe Idfy.VerificationResponse)) $ \newModel -> do
-              modelNamesHashMap <- asks (.modelNamesHashMap)
-              let modelValueToUpdate = fromMaybe "" $ HMS.lookup newModel modelNamesHashMap
-              if modelValueToUpdate == veh.model
-                then pure veh
-                else QVeh.updateVehicleModel modelValueToUpdate ride.driverId $> updateVehicle veh modelValueToUpdate
+            (flip $ maybe (pure veh))
+              ( do
+                  resp <- (A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (.idfyResponse) =<< driverVehicleIdfyResponse
+                  extractRCManufacturerModel resp
+              )
+              $ \newModel -> do
+                modelNamesHashMap <- asks (.modelNamesHashMap)
+                let modelValueToUpdate = fromMaybe "" $ HMS.lookup newModel modelNamesHashMap
+                if modelValueToUpdate == veh.model
+                  then pure veh
+                  else QVeh.updateVehicleModel modelValueToUpdate ride.driverId $> updateVehicle veh modelValueToUpdate
           Hedis.setExp refillKey True 86400
           pure newVehicle
 
