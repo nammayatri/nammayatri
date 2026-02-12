@@ -120,7 +120,6 @@ mergeQuotesForFulfillment quotes = do
   let allCategories = concatMap (.categories) quotes
   return $ quote {Domain.categories = allCategories}
 
-
 mergeQuotesByQuoteType :: [Domain.DQuote] -> [Domain.DQuote]
 mergeQuotesByQuoteType quotes =
   let sjtQuotes = filter (\q -> q._type == DQuote.SingleJourney || q._type == DQuote.SpecialFareSingleJourney) quotes

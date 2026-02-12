@@ -124,7 +124,9 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
                 merchantOperatingCityId = Just person.merchantOperatingCityId,
                 paymentMode = Just paymentMode,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                ifscCode = Nothing,
+                nameAtBank = Nothing
               }
       QDBA.create driverBankAccount
       return $

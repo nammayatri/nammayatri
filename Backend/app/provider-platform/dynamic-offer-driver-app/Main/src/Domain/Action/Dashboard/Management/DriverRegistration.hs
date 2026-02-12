@@ -27,6 +27,8 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationRegisterAadhaar,
     postDriverRegistrationUnlinkDocument,
     getDriverRegistrationVerificationStatus,
+    postDriverRegistrationVerifyBankAccount,
+    getDriverRegistrationInfoBankAccount,
   )
 where
 
@@ -39,6 +41,7 @@ import qualified Data.Tuple.Extra as TE
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
+import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as BankAccountVerification
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import qualified Domain.Action.UI.DriverOnboarding.Status as DStatus
@@ -68,6 +71,8 @@ import Kernel.External.Encryption (decrypt, encrypt, hash)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Types as Lang
+import Kernel.External.Verification.Interface.Types
+import qualified Kernel.External.Verification.Types as VerificationTypes
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -253,6 +258,7 @@ getDriverRegistrationGetDocument merchantShortId _ imageId = do
 
 mapDocumentType :: Common.DocumentType -> Domain.DocumentType
 mapDocumentType Common.DriverLicense = Domain.DriverLicense
+mapDocumentType Common.BankAccount = Domain.BankingDetails
 mapDocumentType Common.VehicleRegistrationCertificate = Domain.VehicleRegistrationCertificate
 mapDocumentType Common.VehiclePUCImage = Domain.VehiclePUC
 mapDocumentType Common.VehiclePermitImage = Domain.VehiclePermit
@@ -1113,3 +1119,22 @@ getDriverRegistrationVerificationStatus _merchantShortId _opCity driverId fromDa
           requestId = Just requestId,
           createdAt = createdAt
         }
+
+postDriverRegistrationVerifyBankAccount :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.VerifyBankAccountReq -> Flow Kernel.External.Verification.Interface.Types.VerifyAsyncResp
+postDriverRegistrationVerifyBankAccount merchantShortId opCity driverId_ req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId_
+  BankAccountVerification.verifyBankAccount (personId, merchant.id, merchantOpCityId) $
+    BankAccountVerification.DriverBankAccountVerifyReq
+      { bankAccountNo = req.bankAccountNo,
+        bankIfscCode = req.bankIfscCode,
+        nfVerification = False
+      }
+
+getDriverRegistrationInfoBankAccount :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow VerificationTypes.BankAccountVerificationResponse
+getDriverRegistrationInfoBankAccount merchantShortId opCity driverId requestId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  BankAccountVerification.getInfoBankAccount (personId, merchant.id, merchantOpCityId) requestId
