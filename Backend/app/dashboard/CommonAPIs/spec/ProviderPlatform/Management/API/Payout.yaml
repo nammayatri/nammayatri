@@ -1,206 +1,78 @@
 imports:
-  HighPrecMoney: Kernel.Types.Common
-  Driver: Dashboard.Common
-  Ride: Dashboard.Common
-  LocalTime: Data.Time
-  PayoutOrderStatus: Kernel.External.Payout.Juspay.Types.Payout
-  Summary: Dashboard.Common
+  PayoutRequest: Lib.Payment.Domain.Types.PayoutRequest
+  PayoutRequestResp: Lib.Payment.API.Payout.Types
+  PayoutCancelReq: Lib.Payment.API.Payout.Types
+  PayoutCashUpdateReq: Lib.Payment.API.Payout.Types
+  DeleteVpaReq: Lib.Payment.API.Payout.Types
+  UpdateVpaReq: Lib.Payment.API.Payout.Types
+  RefundRegAmountReq: Lib.Payment.API.Payout.Types
+  PayoutSuccess: Lib.Payment.API.Payout.Types
+
+importPackageOverrides:
+  Lib.Payment.Domain.Types.PayoutRequest: payment
+  Lib.Payment.API.Payout.Types: payment
 
 module: Payout
 
 apis:
   - GET:
-      endpoint: /payout/referral/history
+      endpoint: /payout/{payoutRequestId}
       auth: ApiAuthV2
-      query:
-        limit: Int
-        offset: Int
-        areActivatedRidesOnly: Bool
-        customerPhoneNo: Text
-        driverPhoneNo: Text
-        driverId: (Id Driver)
-        from: UTCTime
-        to: UTCTime
+      params:
+        payoutRequestId: Id PayoutRequest
       response:
-        type: PayoutReferralHistoryRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+        type: PayoutRequestResp
 
-  - GET:
-      endpoint: /payout/history
+  - POST:
+      endpoint: /payout/{payoutRequestId}/retry
       auth: ApiAuthV2
-      query:
-        limit: Int
-        offset: Int
-        driverId: (Id Driver)
-        driverPhoneNo: Text
-        isFailedOnly: Bool
-        from: UTCTime
-        to: UTCTime
+      params:
+        payoutRequestId: Id PayoutRequest
       response:
-        type: PayoutHistoryRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+        type: PayoutSuccess
 
-  - POST: # to unmark as fraud and pay
-      endpoint: payout/verifyFraudStatus
+  - POST:
+      endpoint: /payout/{payoutRequestId}/cancel
       auth: ApiAuthV2
+      params:
+        payoutRequestId: Id PayoutRequest
       request:
-        type: UpdateFraudStatusReq
+        type: PayoutCancelReq
       response:
-        type: APISuccess
-      migrate:
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+        type: PayoutSuccess
 
-  - POST: # to pay the failed ones
-      endpoint: payout/retryFailed
+  - POST:
+      endpoint: /payout/{payoutRequestId}/cash
       auth: ApiAuthV2
+      params:
+        payoutRequestId: Id PayoutRequest
       request:
-        type: FailedRetryPayoutReq
+        type: PayoutCashUpdateReq
       response:
-        type: APISuccess
-      migrate:
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+        type: PayoutSuccess
 
-  - POST: # retry all for given status
-      endpoint: payout/retryAllWithStatus
-      auth: ApiAuthV2
-      request:
-        type: RetryPayoutsReq
-      response:
-        type: APISuccess
-      migrate:
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
-
-  - POST: # payout For Pending Vpa status.
-      endpoint: payout/pendingPayout
-      auth: ApiAuthV2
-      request:
-        type: PendingPayoutReq
-      response:
-        type: APISuccess
-      migrate:
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
-
-  - POST: # delete incorrect vpa's
-      endpoint: payout/deleteVPA
+  - POST:
+      endpoint: /payout/vpa/delete
       auth: ApiAuthV2
       request:
         type: DeleteVpaReq
       response:
-        type: APISuccess
-      migrate:
-        endpointV2:
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+        type: PayoutSuccess
 
-  - POST: # block/unlblock fraud drivers for payout
-      endpoint: payout/drivers/setBlockState
-      auth: ApiAuthV2
-      request:
-        type: SetDriversBlockStateReq
-      response:
-        type: APISuccess
-      migrate:
-        endpointV2:
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
-
-  - POST: # update vpa's
-      endpoint: payout/updateVPA
+  - POST:
+      endpoint: /payout/vpa/update
       auth: ApiAuthV2
       request:
         type: UpdateVpaReq
       response:
-        type: APISuccess
-      migrate:
-        endpointV2:
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+        type: PayoutSuccess
 
-  - POST: # payout for D2R registration amount
-      endpoint: payout/refundRegistrationAmount
+  - POST:
+      endpoint: /payout/vpa/refundRegistration
       auth: ApiAuthV2
       request:
         type: RefundRegAmountReq
       response:
-        type: APISuccess
-      migrate:
-        endpointV2:
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+        type: PayoutSuccess
 
-types:
-
-  PayoutReferralHistoryRes:
-    - history: [ReferralHistoryItem]
-    - summary: Summary
-  ReferralHistoryItem:
-    - referralDate: UTCTime
-    - customerPhone: Maybe Text
-    - riderDetailsId: Text
-    - hasTakenValidActivatedRide: Bool
-    - dateOfActivation: Maybe LocalTime
-    - fraudFlaggedReason: Maybe PayoutFlagReason
-    - rideId : Maybe (Id Ride)
-    - driverId: Maybe (Id Driver)
-    - isReviewed: Bool
-
-  PayoutHistoryRes:
-    - history: [PayoutHistoryItem]
-    - summary: Summary
-  PayoutFlagReason:
-    - enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists,RideConstraintInvalid"
-  EntityName:
-    - enum: "MANUAL,DRIVER_DAILY_STATS,BACKLOG,DAILY_STATS_VIA_DASHBOARD,RETRY_VIA_DASHBOARD,DRIVER_FEE,INVALID,DRIVER_WALLET_TRANSACTION,DRIVER_WALLET_TOPUP,SPECIAL_ZONE_PAYOUT"
-  PayoutHistoryItem:
-    - driverName: Text
-    - driverPhoneNo: Text
-    - driverId: Id Driver
-    - payoutAmount: HighPrecMoney
-    - payoutStatus: Text
-    - payoutTime: LocalTime
-    - payoutEntity: Maybe EntityName
-    - payoutOrderId: Text
-    - responseMessage: Maybe Text
-    - responseCode: Maybe Text
-    - payoutRetriedOrderId: Maybe Text
-  UpdateFraudStatusReq:
-    - isFlagConfirmed: Bool # false means pay
-    - firstRideId: Id Ride
-    - riderDetailsId: Text
-    - driverId: Id Driver
-    - derive: "'HideSecrets"
-  FailedRetryPayoutReq:
-    - payoutOrderId: Text
-    - derive: "'HideSecrets"
-  RetryPayoutsReq:
-    - limit: Int
-    - offset: Int
-    - status: PayoutOrderStatus
-    - entityNames: [EntityName]
-    - derive: "'HideSecrets"
-  PendingPayoutReq:
-   - personId : Id Driver
-   - derive: "'HideSecrets"
-  DeleteVpaReq:
-   - driverIds: [Id Driver]
-   - derive: "'HideSecrets"
-  SetDriversBlockStateReq:
-   - driverIds: [Id Driver]
-   - blockState: Bool
-   - derive: "'HideSecrets"
-  PayoutVpaStatus:
-    - enum: "VIA_WEBHOOK,MANUALLY_ADDED,VERIFIED_BY_USER"
-  UpdateVpaReq:
-   - driverId: Id Driver
-   - vpa: Text
-   - vpaStatus: PayoutVpaStatus
-   - derive: "'HideSecrets"
-  RefundRegAmountReq:
-   - driverId: Id Driver
-   - derive: "'HideSecrets"
+types: {}

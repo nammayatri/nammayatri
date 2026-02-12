@@ -23,7 +23,11 @@ import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
-data AllTimeOperatorAnalyticsRes = AllTimeOperatorAnalyticsRes {rating :: Kernel.Prelude.Maybe Kernel.Prelude.Double, cancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double, acceptanceRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+data AllTimeOperatorAnalyticsRes = AllTimeOperatorAnalyticsRes
+  { rating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    cancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    acceptanceRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

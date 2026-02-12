@@ -33,13 +33,13 @@ import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
-import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import Lib.Scheduler
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Tools.Notifications as Notify
@@ -455,7 +455,7 @@ instance JobInfoProcessor 'SendFeedbackPN
 type instance JobContent 'SendFeedbackPN = SendFeedbackPNJobData
 
 newtype SpecialZonePayoutJobData = SpecialZonePayoutJobData
-  { scheduledPayoutId :: Id DSP.ScheduledPayout
+  { payoutRequestId :: Id DPR.PayoutRequest
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

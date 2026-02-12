@@ -148,6 +148,7 @@ library
       Domain.Action.Beckn.Status
       Domain.Action.Beckn.Track
       Domain.Action.Beckn.Update
+      Domain.Action.Common.PayoutRequest
       Domain.Action.Dashboard.AppManagement.Driver
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.Overlay
@@ -186,12 +187,12 @@ library
       Domain.Action.Dashboard.Operator.Driver
       Domain.Action.Dashboard.Operator.FleetManagement
       Domain.Action.Dashboard.Operator.Registration
+      Domain.Action.Dashboard.PayoutRequest
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
       Domain.Action.Dashboard.RideBooking.DriverRegistration
       Domain.Action.Dashboard.RideBooking.Maps
       Domain.Action.Dashboard.RideBooking.MeterRide
-      Domain.Action.Dashboard.RideBooking.Payout
       Domain.Action.Dashboard.RideBooking.Ride
       Domain.Action.Dashboard.RideBooking.SearchRequest
       Domain.Action.Dashboard.RideBooking.Volunteer
@@ -279,7 +280,6 @@ library
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Payout
-      Domain.Action.UI.PayoutDriverStatus
       Domain.Action.UI.Penalty
       Domain.Action.UI.Performance
       Domain.Action.UI.Person
@@ -713,7 +713,6 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
       Storage.Queries.RouteExtra
-      Storage.Queries.ScheduledPayoutExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
@@ -843,7 +842,6 @@ library
       API.Action.Dashboard.RideBooking.DriverRegistration
       API.Action.Dashboard.RideBooking.Maps
       API.Action.Dashboard.RideBooking.MeterRide
-      API.Action.Dashboard.RideBooking.Payout
       API.Action.Dashboard.RideBooking.Ride
       API.Action.Dashboard.RideBooking.SearchRequest
       API.Action.Dashboard.RideBooking.Volunteer
@@ -908,13 +906,11 @@ library
       API.Types.Dashboard.RideBooking.Endpoints.DriverRegistration
       API.Types.Dashboard.RideBooking.Endpoints.Maps
       API.Types.Dashboard.RideBooking.Endpoints.MeterRide
-      API.Types.Dashboard.RideBooking.Endpoints.Payout
       API.Types.Dashboard.RideBooking.Endpoints.Ride
       API.Types.Dashboard.RideBooking.Endpoints.SearchRequest
       API.Types.Dashboard.RideBooking.Endpoints.Volunteer
       API.Types.Dashboard.RideBooking.Maps
       API.Types.Dashboard.RideBooking.MeterRide
-      API.Types.Dashboard.RideBooking.Payout
       API.Types.Dashboard.RideBooking.Ride
       API.Types.Dashboard.RideBooking.SearchRequest
       API.Types.Dashboard.RideBooking.Volunteer
@@ -933,7 +929,6 @@ library
       API.Types.UI.Merchant
       API.Types.UI.MeterRide
       API.Types.UI.OperationHub
-      API.Types.UI.PayoutDriverStatus
       API.Types.UI.Penalty
       API.Types.UI.PickupInstructions
       API.Types.UI.PriceBreakup
@@ -1070,7 +1065,6 @@ library
       Domain.Types.OperationHubRequests
       Domain.Types.Overlay
       Domain.Types.PayoutConfig
-      Domain.Types.PayoutStatusHistory
       Domain.Types.Person
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
@@ -1090,7 +1084,6 @@ library
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.Route
       Domain.Types.RouteTripStopMapping
-      Domain.Types.ScheduledPayout
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
@@ -1231,7 +1224,6 @@ library
       Storage.Beam.OperationHubRequests
       Storage.Beam.Overlay
       Storage.Beam.PayoutConfig
-      Storage.Beam.PayoutStatusHistory
       Storage.Beam.Person
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
@@ -1251,7 +1243,6 @@ library
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.Route
       Storage.Beam.RouteTripStopMapping
-      Storage.Beam.ScheduledPayout
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
@@ -1484,7 +1475,6 @@ library
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
-      Storage.Queries.PayoutStatusHistory
       Storage.Queries.Person
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan
@@ -1504,7 +1494,6 @@ library
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.Route
       Storage.Queries.RouteTripStopMapping
-      Storage.Queries.ScheduledPayout
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver

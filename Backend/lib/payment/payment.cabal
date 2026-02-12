@@ -27,10 +27,16 @@ flag Local
 library
   exposed-modules:
       Lib.Payment.API
+      Lib.Payment.API.Payout
+      Lib.Payment.API.Payout.Types
       Lib.Payment.Domain.Action
       Lib.Payment.Domain.Types.Common
       Lib.Payment.Domain.Types.PaymentOrder
       Lib.Payment.Domain.Types.PaymentTransaction
+      Lib.Payment.Payout.History
+      Lib.Payment.Payout.Order
+      Lib.Payment.Payout.Request
+      Lib.Payment.Payout.Status
       Lib.Payment.Storage.Beam.BeamFlow
       Lib.Payment.Storage.Beam.PaymentOrder
       Lib.Payment.Storage.Beam.PaymentTransaction
@@ -41,6 +47,7 @@ library
       Lib.Payment.Domain.Types.PaymentOrderOffer
       Lib.Payment.Domain.Types.PaymentOrderSplit
       Lib.Payment.Domain.Types.PayoutOrder
+      Lib.Payment.Domain.Types.PayoutRequest
       Lib.Payment.Domain.Types.PayoutTransaction
       Lib.Payment.Domain.Types.PersonWallet
       Lib.Payment.Domain.Types.Refunds
@@ -48,6 +55,7 @@ library
       Lib.Payment.Storage.Beam.PaymentOrderOffer
       Lib.Payment.Storage.Beam.PaymentOrderSplit
       Lib.Payment.Storage.Beam.PayoutOrder
+      Lib.Payment.Storage.Beam.PayoutRequest
       Lib.Payment.Storage.Beam.PayoutTransaction
       Lib.Payment.Storage.Beam.PersonWallet
       Lib.Payment.Storage.Beam.Refunds
@@ -57,6 +65,7 @@ library
       Lib.Payment.Storage.Queries.PaymentOrderOffer
       Lib.Payment.Storage.Queries.PaymentOrderSplit
       Lib.Payment.Storage.Queries.PayoutOrder
+      Lib.Payment.Storage.Queries.PayoutRequest
       Lib.Payment.Storage.Queries.PayoutTransaction
       Lib.Payment.Storage.Queries.PersonWallet
       Lib.Payment.Storage.Queries.Refunds
@@ -117,9 +126,12 @@ library
     , cryptohash
     , euler-hs
     , exceptions
+    , finance-kernel
     , http-client
     , http-types
     , mobility-core
+    , mtl
+    , openapi3
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield

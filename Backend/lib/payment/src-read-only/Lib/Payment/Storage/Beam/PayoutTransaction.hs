@@ -11,18 +11,18 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 
 data PayoutTransactionT f = PayoutTransactionT
-  { currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
-    price :: B.C f Kernel.Types.Common.HighPrecMoney,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    fulfillmentMethod :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    gateWayRefId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    payoutOrderId :: B.C f Kernel.Prelude.Text,
-    status :: B.C f Kernel.Prelude.Text,
-    transactionRef :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
+    price :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    fulfillmentMethod :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    gateWayRefId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    id :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    payoutOrderId :: (B.C f Kernel.Prelude.Text),
+    status :: (B.C f Kernel.Prelude.Text),
+    transactionRef :: (B.C f Kernel.Prelude.Text),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table PayoutTransactionT where
 
 type PayoutTransaction = PayoutTransactionT Identity
 
-$(enableKVPG ''PayoutTransactionT ['id, 'transactionRef] [])
+$(enableKVPG (''PayoutTransactionT) [('id), ('transactionRef)] [])
 
-$(mkTableInstancesGenericSchema ''PayoutTransactionT "payout_transaction")
+$(mkTableInstancesGenericSchema (''PayoutTransactionT) "payout_transaction")

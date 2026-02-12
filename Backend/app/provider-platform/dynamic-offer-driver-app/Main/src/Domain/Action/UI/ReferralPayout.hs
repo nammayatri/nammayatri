@@ -28,6 +28,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
+import qualified Lib.Payment.Payout.Status as PayoutStatus
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -154,12 +155,18 @@ getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
   let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId, mbExpand = payoutConfig.expand}
-  statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId payoutServiceName (Just $ getId personId) payoutOrderStatusReq
-  Payout.payoutStatusUpdates statusResp.status orderId (Just statusResp)
-  when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG]) payoutOrder.entityName) do
-    whenJust payoutOrder.entityIds $ \dStatsIds -> do
-      forM_ dStatsIds $ \dStatsId -> do
-        Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey personId.getId) 3 3 $ do
-          let dPayoutStatus = DAP.castPayoutOrderStatus statusResp.status
-          QDS.updatePayoutStatusById dPayoutStatus dStatsId
-  pure statusResp
+      shouldUpdate current new = current /= new
+      onUpdate newStatus _statusResp = do
+        when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG]) payoutOrder.entityName) do
+          whenJust payoutOrder.entityIds $ \dStatsIds -> do
+            forM_ dStatsIds $ \dStatsId -> do
+              Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey personId.getId) 3 3 $ do
+                QDS.updatePayoutStatusById newStatus dStatsId
+  PayoutStatus.refreshPayoutStatusWithResponse
+    orderId
+    payoutOrderStatusReq
+    (TP.payoutOrderStatus merchantId merchantOpCityId payoutServiceName (Just $ getId personId))
+    (DAP.castPayoutOrderStatus payoutOrder.status)
+    DAP.castPayoutOrderStatus
+    shouldUpdate
+    onUpdate

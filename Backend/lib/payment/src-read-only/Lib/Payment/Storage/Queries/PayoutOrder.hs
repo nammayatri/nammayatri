@@ -24,10 +24,10 @@ create = createWithKV
 createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder] -> m ())
 createMany = traverse_ create
 
-findAllByCustomerId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder])
+findAllByCustomerId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder]))
 findAllByCustomerId customerId = do findAllWithKV [Se.Is Beam.customerId $ Se.Eq customerId]
 
-findAllWithStatus :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus -> m [Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder])
+findAllWithStatus :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus -> m ([Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder]))
 findAllWithStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder))
@@ -59,19 +59,19 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.accountDetailsType accountDetailsType,
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
+      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) amount),
       Se.Set Beam.price ((.amount) amount),
       Se.Set Beam.city city,
-      Se.Set Beam.customerEmailEncrypted (customerEmail & unEncrypted . encrypted),
-      Se.Set Beam.customerEmailHash (customerEmail & hash),
+      Se.Set Beam.customerEmailEncrypted (((customerEmail & unEncrypted . encrypted))),
+      Se.Set Beam.customerEmailHash ((customerEmail & hash)),
       Se.Set Beam.customerId customerId,
       Se.Set Beam.entityIds entityIds,
       Se.Set Beam.entityName entityName,
       Se.Set Beam.lastStatusCheckedAt lastStatusCheckedAt,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
-      Se.Set Beam.mobileNoEncrypted (mobileNo & unEncrypted . encrypted),
-      Se.Set Beam.mobileNoHash (mobileNo & hash),
+      Se.Set Beam.mobileNoEncrypted (((mobileNo & unEncrypted . encrypted))),
+      Se.Set Beam.mobileNoHash ((mobileNo & hash)),
       Se.Set Beam.responseCode responseCode,
       Se.Set Beam.responseMessage responseMessage,
       Se.Set Beam.retriedOrderId retriedOrderId,

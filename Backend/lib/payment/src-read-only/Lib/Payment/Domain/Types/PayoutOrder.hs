@@ -16,7 +16,7 @@ data PayoutOrderE e = PayoutOrder
     amount :: Kernel.Types.Common.Price,
     city :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
-    customerEmail :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+    customerEmail :: (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     customerId :: Kernel.Prelude.Text,
     entityIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     entityName :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName,
@@ -24,7 +24,7 @@ data PayoutOrderE e = PayoutOrder
     lastStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    mobileNo :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+    mobileNo :: (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     orderId :: Kernel.Prelude.Text,
     responseCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     responseMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -36,9 +36,9 @@ data PayoutOrderE e = PayoutOrder
   }
   deriving (Generic)
 
-type PayoutOrder = PayoutOrderE 'AsEncrypted
+type PayoutOrder = PayoutOrderE ('AsEncrypted)
 
-type DecryptedPayoutOrder = PayoutOrderE 'AsUnencrypted
+type DecryptedPayoutOrder = PayoutOrderE ('AsUnencrypted)
 
 instance EncryptedItem PayoutOrder where
   type Unencrypted PayoutOrder = (DecryptedPayoutOrder, HashSalt)
