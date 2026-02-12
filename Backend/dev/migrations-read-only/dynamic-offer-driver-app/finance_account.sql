@@ -13,3 +13,15 @@ ALTER TABLE atlas_driver_offer_bpp.finance_account ADD COLUMN owner_type text NO
 ALTER TABLE atlas_driver_offer_bpp.finance_account ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.finance_account ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.finance_account ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_account ADD COLUMN counterparty_type text ;
+ALTER TABLE atlas_driver_offer_bpp.finance_account ADD COLUMN counterparty_id text ;
+
+--- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
+ALTER TABLE atlas_driver_offer_bpp.finance_account ALTER COLUMN owner_type DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.finance_account ALTER COLUMN owner_id DROP NOT NULL;
+--- Drop section ends. Please check before running ---
