@@ -977,6 +977,9 @@ DriverBankAccount:
     currentAccountLink: Maybe BaseUrl
     currentAccountLinkExpiry: Maybe UTCTime
     paymentMode: Maybe PaymentMode
+    ifscCode: Maybe Text
+    nameAtBank: Maybe Text
+
   constraints:
     driverId: PrimaryKey
     accountId: "!SecondaryKey" # forcing to be a secondary key

@@ -16,3 +16,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD PRIMARY KEY ( driver_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN payment_mode text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN name_at_bank text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN ifsc_code text ;

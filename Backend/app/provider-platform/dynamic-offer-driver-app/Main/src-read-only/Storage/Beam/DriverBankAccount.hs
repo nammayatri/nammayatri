@@ -19,6 +19,8 @@ data DriverBankAccountT f = DriverBankAccountT
     currentAccountLinkExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     detailsSubmitted :: B.C f Kernel.Prelude.Bool,
     driverId :: B.C f Kernel.Prelude.Text,
+    ifscCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    nameAtBank :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

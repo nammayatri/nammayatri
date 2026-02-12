@@ -29,6 +29,8 @@ imports:
   FarePolicy: Domain.Types.FarePolicy
   FareParameters: Domain.Types.FareParameters
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+  BankAccountVerificationResponse: Kernel.External.Verification.Types
+  VerifyAsyncResp : Kernel.External.Verification.Interface.Types
 
 module: DriverOnboardingV2
 types:
@@ -186,6 +188,9 @@ types:
   PullDocumentReq:
     docType: DocumentType
     drivingLicenseNumber: Text
+  VerifyBankAccReq:
+      - bankAccountNo : Text
+      - bankIfscCode : Text
 
 apis:
   - GET:
@@ -255,6 +260,22 @@ apis:
         type: SSNReq
       response:
         type: APISuccess
+  - POST:
+      endpoint: /driver/verify/bankAccount
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: VerifyBankAccReq
+      response:
+        type: VerifyAsyncResp
+  - GET:
+      endpoint: /{requestId}/info/bankAccount
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        requestId: Text
+      mandatoryQuery:
+        driverId: Id Driver
+      response:
+        type: BankAccountVerificationResponse
   - POST:
       endpoint: /driver/backgroundVerification
       auth: TokenAuth PROVIDER_TYPE

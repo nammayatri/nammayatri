@@ -90,18 +90,19 @@ buildSuccessRC IdfyRequest {..} request_id now = do
             wheelbase = Just "wheelbase"
           }
 
-  pure
-    IdfyResponse
-      { action = "verify_with_source",
-        completed_at = now,
-        created_at = now,
-        group_id = group_id,
-        request_id = request_id,
-        status = "completed",
-        task_id = task_id,
-        _type = "ind_rc",
-        result = Just Output {source_output = Nothing, extraction_output = Just result}
-      }
+  pure $
+    VerificationResponse $
+      IdfyResponse
+        { action = "verify_with_source",
+          completed_at = now,
+          created_at = now,
+          group_id = group_id,
+          request_id = request_id,
+          status = "completed",
+          task_id = task_id,
+          _type = "ind_rc",
+          result = Just (RCResult (ExtractionOutput result))
+        }
 
 buildSuccessDL :: MonadIO m => DLVerificationRequest -> Text -> UTCTime -> m VerificationResponse
 buildSuccessDL IdfyRequest {..} request_id now = do
@@ -146,15 +147,16 @@ buildSuccessDL IdfyRequest {..} request_id now = do
             t_validity_to = Nothing
           }
 
-  pure
-    IdfyResponse
-      { action = "verify_with_source",
-        completed_at = now,
-        created_at = now,
-        group_id = group_id,
-        request_id = request_id,
-        status = "completed",
-        task_id = task_id,
-        _type = "ind_driving_license",
-        result = Just Output {source_output = Just result, extraction_output = Nothing}
-      }
+  pure $
+    VerificationResponse $
+      IdfyResponse
+        { action = "verify_with_source",
+          completed_at = now,
+          created_at = now,
+          group_id = group_id,
+          request_id = request_id,
+          status = "completed",
+          task_id = task_id,
+          _type = "ind_driving_license",
+          result = Just (DLResult (SourceOutput result))
+        }

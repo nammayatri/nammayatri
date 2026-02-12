@@ -239,6 +239,7 @@ library
       Domain.Action.UI.DriverGoHomeRequest
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
+      Domain.Action.UI.DriverOnboarding.BankAccountVerification
       Domain.Action.UI.DriverOnboarding.DigiLockerCallback
       Domain.Action.UI.DriverOnboarding.DocumentRegistration
       Domain.Action.UI.DriverOnboarding.DriverLicense

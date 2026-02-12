@@ -18,6 +18,8 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
+import qualified Kernel.External.Verification.Interface.Types
+import qualified Kernel.External.Verification.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Common
@@ -126,6 +128,28 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "driver"
+      :> "verify"
+      :> "bankAccount"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.VerifyBankAccReq
+      :> Post
+           '[JSON]
+           Kernel.External.Verification.Interface.Types.VerifyAsyncResp
+      :<|> TokenAuth
+      :> Capture
+           "requestId"
+           Kernel.Prelude.Text
+      :> "info"
+      :> "bankAccount"
+      :> MandatoryQueryParam
+           "driverId"
+           (Kernel.Types.Id.Id Domain.Types.Person.Driver)
+      :> Get
+           '[JSON]
+           Kernel.External.Verification.Types.BankAccountVerificationResponse
       :<|> TokenAuth
       :> "driver"
       :> "backgroundVerification"
@@ -246,7 +270,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverVerifyBankAccount :<|> getInfoBankAccount :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -338,6 +362,27 @@ postDriverRegisterSsn ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postDriverRegisterSsn a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterSsn (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postDriverVerifyBankAccount ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.VerifyBankAccReq ->
+    Environment.FlowHandler Kernel.External.Verification.Interface.Types.VerifyAsyncResp
+  )
+postDriverVerifyBankAccount a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverVerifyBankAccount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getInfoBankAccount ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Text ->
+    Kernel.Types.Id.Id Domain.Types.Person.Driver ->
+    Environment.FlowHandler Kernel.External.Verification.Types.BankAccountVerificationResponse
+  )
+getInfoBankAccount a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getInfoBankAccount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postDriverBackgroundVerification ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

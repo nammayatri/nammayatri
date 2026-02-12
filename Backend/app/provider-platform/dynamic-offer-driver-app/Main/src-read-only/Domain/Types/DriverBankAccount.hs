@@ -21,6 +21,8 @@ data DriverBankAccount = DriverBankAccount
     currentAccountLinkExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     detailsSubmitted :: Kernel.Prelude.Bool,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    ifscCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    nameAtBank :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

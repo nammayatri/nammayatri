@@ -56,6 +56,8 @@ updateByPrimaryKey (Domain.Types.DriverBankAccount.DriverBankAccount {..}) = do
       Se.Set Beam.currentAccountLink (Kernel.Prelude.fmap showBaseUrl currentAccountLink),
       Se.Set Beam.currentAccountLinkExpiry currentAccountLinkExpiry,
       Se.Set Beam.detailsSubmitted detailsSubmitted,
+      Se.Set Beam.ifscCode ifscCode,
+      Se.Set Beam.nameAtBank nameAtBank,
       Se.Set Beam.paymentMode paymentMode,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
