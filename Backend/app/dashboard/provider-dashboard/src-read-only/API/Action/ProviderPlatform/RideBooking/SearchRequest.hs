@@ -45,9 +45,9 @@ type GetSearchRequestList =
 
 type GetSearchRequestInfo =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SEARCH_REQUEST) / ('API.Types.Dashboard.RideBooking.SearchRequest.GET_SEARCH_REQUEST_INFO))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SEARCH_REQUEST / 'API.Types.Dashboard.RideBooking.SearchRequest.GET_SEARCH_REQUEST_INFO)
       :> API.Types.Dashboard.RideBooking.SearchRequest.GetSearchRequestInfo
   )
 

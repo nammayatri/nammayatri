@@ -30,7 +30,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Plan as DP
-import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
@@ -50,7 +49,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Finance.Wallet
@@ -66,8 +68,6 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.ScheduledPayout as QSPE
-import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -113,15 +113,15 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
       case payoutOrder.entityName of
         Just DPayment.SPECIAL_ZONE_PAYOUT -> do
-          let mbScheduledPayoutId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
-          case mbScheduledPayoutId of
-            Nothing -> throwError $ InternalError "Scheduled Payout ID not found"
-            Just scheduledPayoutId -> do
-              scheduledPayout <- QSPE.findById (Id scheduledPayoutId) >>= fromMaybeM (InternalError $ "Scheduled Payout Not Found: " <> show scheduledPayoutId)
-              let newStatus = QSPE.castPayoutOrderStatusToScheduledPayoutStatus payoutStatus
-              when (scheduledPayout.status /= newStatus && scheduledPayout.status `notElem` [DSP.CREDITED, DSP.CASH_PAID, DSP.CASH_PENDING]) do
+          let mbPayoutRequestId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
+          case mbPayoutRequestId of
+            Nothing -> throwError $ InternalError "PayoutRequest ID not found"
+            Just payoutRequestId -> do
+              payoutRequest <- QPR.findById (Id payoutRequestId) >>= fromMaybeM (InternalError $ "PayoutRequest Not Found: " <> show payoutRequestId)
+              let newStatus = castPayoutOrderStatusToPayoutRequestStatus payoutStatus
+              when (payoutRequest.status /= newStatus && payoutRequest.status `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]) do
                 let statusMsg = "Bank Webhook: " <> show payoutStatus
-                QSPE.updateStatusWithHistoryById newStatus (Just statusMsg) scheduledPayout
+                PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutRequest
         _ -> do
           unless (isSuccessStatus payoutOrder.status) do
             mbVehicle <- QV.findById (Id payoutOrder.customerId)
@@ -238,6 +238,19 @@ castPayoutOrderStatus payoutOrderStatus =
     Payout.FULFILLMENTS_CANCELLED -> DS.ManualReview
     Payout.FULFILLMENTS_MANUAL_REVIEW -> DS.ManualReview
     _ -> DS.Processing
+
+castPayoutOrderStatusToPayoutRequestStatus :: Payout.PayoutOrderStatus -> DPR.PayoutRequestStatus
+castPayoutOrderStatusToPayoutRequestStatus payoutOrderStatus =
+  case payoutOrderStatus of
+    Payout.SUCCESS -> DPR.CREDITED
+    Payout.FULFILLMENTS_SUCCESSFUL -> DPR.CREDITED
+    Payout.ERROR -> DPR.AUTO_PAY_FAILED
+    Payout.FAILURE -> DPR.AUTO_PAY_FAILED
+    Payout.FULFILLMENTS_FAILURE -> DPR.AUTO_PAY_FAILED
+    Payout.CANCELLED -> DPR.CANCELLED
+    Payout.FULFILLMENTS_CANCELLED -> DPR.CANCELLED
+    Payout.FULFILLMENTS_MANUAL_REVIEW -> DPR.PROCESSING
+    _ -> DPR.PROCESSING
 
 casPayoutOrderStatusToDFeeStatus :: Payout.PayoutOrderStatus -> DDF.DriverFeeStatus
 casPayoutOrderStatusToDFeeStatus payoutOrderStatus =

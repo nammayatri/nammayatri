@@ -14,7 +14,7 @@ LedgerEntry:
 
   types:
     EntryType:
-      enum: "Transfer,LiabilityCreated,LiabilitySettled,Reversal,Adjustment"
+      enum: "Expense,Revenue,LiabilityCreated,LiabilitySettled,Reversal"
       derive: "ToParamSchema"
 
     EntryStatus:

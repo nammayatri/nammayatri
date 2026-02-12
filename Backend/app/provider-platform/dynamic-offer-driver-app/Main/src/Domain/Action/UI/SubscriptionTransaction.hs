@@ -18,9 +18,9 @@ module Domain.Action.UI.SubscriptionTransaction
 where
 
 import API.Types.UI.SubscriptionTransaction
-import Domain.Types.DriverWallet
 import Data.List (lookup)
 import Data.Time hiding (getCurrentTime)
+import Domain.Types.DriverWallet
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person

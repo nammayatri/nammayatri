@@ -70,6 +70,7 @@ dependencies:
   - text
   - time
   - aeson
+  - openapi3
   - servant-client
   - servant
   - servant-server
@@ -80,11 +81,13 @@ dependencies:
   - containers
   - unordered-containers
   - cereal
+  - mtl
   - beam-core
   - beam-mysql
   - beam-postgres
   - postgresql-simple
   - sequelize
+  - finance-kernel
 
 
 ghc-options:

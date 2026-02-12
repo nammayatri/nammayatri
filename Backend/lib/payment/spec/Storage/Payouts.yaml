@@ -131,4 +131,66 @@ PayoutTransaction:
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
 
+PayoutRequest:
+  tableName: payout_request
+  derives: "Generic"
 
+  types:
+    PayoutRequestStatus:
+      enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED,CANCELLED,CASH_PAID,CASH_PENDING"
+  fields:
+    id: Id PayoutRequest
+    entityName: Maybe EntityName
+    entityId: Text
+    entityRefId: Maybe Text
+    beneficiaryId: Text
+    amount: Maybe HighPrecMoney
+    status: PayoutRequestStatus
+    retryCount: Maybe Int
+    failureReason: Maybe Text
+    payoutTransactionId: Maybe Text
+    expectedCreditTime: Maybe UTCTime
+    scheduledAt: Maybe UTCTime
+    cashMarkedById: Maybe Text
+    cashMarkedByName: Maybe Text
+    cashMarkedAt: Maybe UTCTime
+    merchantId: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  sqlType:
+    id: character varying(36)
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+  constraints:
+    id: PrimaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByEntity:
+      kvFunction: findOneWithKV
+      where:
+        and: [entityId, entityName]
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateStatusWithReasonById:
+      kvFunction: updateOneWithKV
+      params: [status, failureReason]
+      where: id
+    updateRetryCountById:
+      kvFunction: updateOneWithKV
+      params: [retryCount]
+      where: id
+    updatePayoutTransactionIdById:
+      kvFunction: updateOneWithKV
+      params: [payoutTransactionId]
+      where: id
+    updateCashDetailsById:
+      kvFunction: updateOneWithKV
+      params: [cashMarkedById, cashMarkedByName, cashMarkedAt]
+      where: id
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

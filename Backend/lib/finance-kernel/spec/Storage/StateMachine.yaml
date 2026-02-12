@@ -9,14 +9,14 @@ imports:
 StateTransition:
   tableName: finance_state_transition
   derives: "Generic"
-  
+
   types:
     PaymentState:
-      enum: "Pending,Authorized,Captured,Settled,Failed,Refunded,Cancelled"
+      enum: "Pending,Authorized,Captured,Settled,Failed,Refunded,Cancelled,INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED,CANCELLED,CASH_PAID,CASH_PENDING"
       derive: "ToParamSchema"
-    
+
     PaymentEvent:
-      enum: "Initiate,Authorize,Capture,Settle,Fail,Refund,Cancel"
+      enum: "Initiate,Authorize,Capture,Settle,Fail,Refund,Cancel,PAYOUT_STATUS_CHANGED"
       derive: "ToParamSchema"
 
   fields:

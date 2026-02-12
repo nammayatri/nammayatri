@@ -192,6 +192,7 @@ library
     , hashable
     , mobility-core
     , openapi3
+    , payment
     , persistent
     , persistent-postgresql
     , record-dot-preprocessor

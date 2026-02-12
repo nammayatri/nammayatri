@@ -19,10 +19,10 @@ import qualified Data.Aeson as A
 import Data.List (lookup)
 import qualified Data.Text as T
 import qualified Data.Time
-import qualified Domain.Types.DriverWallet as DriverWallet
 import Domain.Action.UI.Plan hiding (mkDriverFee)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DriverFee as DF
+import qualified Domain.Types.DriverWallet as DriverWallet
 import Domain.Types.Extra.Plan
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant

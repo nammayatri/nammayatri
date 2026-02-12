@@ -25,9 +25,26 @@ data StateTransition = StateTransition
   }
   deriving (Generic)
 
-data PaymentEvent = Initiate | Authorize | Capture | Settle | Fail | Refund | Cancel deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PaymentEvent = Initiate | Authorize | Capture | Settle | Fail | Refund | Cancel | PAYOUT_STATUS_CHANGED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data PaymentState = Pending | Authorized | Captured | Settled | Failed | Refunded | Cancelled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PaymentState
+  = Pending
+  | Authorized
+  | Captured
+  | Settled
+  | Failed
+  | Refunded
+  | Cancelled
+  | INITIATED
+  | PROCESSING
+  | CREDITED
+  | AUTO_PAY_FAILED
+  | RETRYING
+  | FAILED
+  | CANCELLED
+  | CASH_PAID
+  | CASH_PENDING
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentState))
 
