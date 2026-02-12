@@ -20,6 +20,7 @@ data MerchantMessageT f = MerchantMessageT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     message :: B.C f Kernel.Prelude.Text,
     messageKey :: B.C f Domain.Types.MerchantMessage.MessageKey,
+    messageType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     senderHeader :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     templateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime

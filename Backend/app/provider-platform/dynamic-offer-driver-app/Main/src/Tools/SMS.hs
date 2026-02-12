@@ -95,34 +95,34 @@ sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooki
       case messageType of
         BOOKING -> whenJust mbRide \ride ->
           whenJust mbBooking \booking -> do
-            (mbSender, message, templateId) <-
+            (mbSender, message, templateId, msgType) <-
               MessageBuilder.buildBookingMessage merchantOpCityId $
                 MessageBuilder.BuildBookingMessageReq
                   { otp = ride.otp,
                     amount = show booking.estimatedFare
                   }
-            sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= Sms.checkSmsResult
+            sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
         ENDRIDE -> whenJust mbRide \ride -> do
-          (mbSender, message, templateId) <-
+          (mbSender, message, templateId, msgType) <-
             MessageBuilder.buildEndRideMessage merchantOpCityId $
               MessageBuilder.BuildEndRideMessageReq
                 { rideAmount = show amount,
                   rideShortId = ride.shortId.getShortId
                 }
-          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
         ONBOARDING -> do
-          (mbSender, message, templateId) <-
+          (mbSender, message, templateId, msgType) <-
             MessageBuilder.buildOnboardingMessage merchantOpCityId $
               MessageBuilder.BuildOnboardingMessageReq
                 {
                 }
-          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
         CASH_COLLECTED -> do
-          (mbSender, message, templateId) <-
+          (mbSender, message, templateId, msgType) <-
             MessageBuilder.buildCollectCashMessage merchantOpCityId $
               MessageBuilder.BuildCollectCashMessageReq
                 { amount = show amount
                 }
-          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId msgType) >>= Sms.checkSmsResult
     else do
       logInfo "Merchant not configured to send dashboard sms"

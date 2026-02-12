@@ -70,14 +70,14 @@ sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mb
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for SMS OTP channel")
       let phoneNumber = countryCode <> mobileNumber
       withLogTag ("personId_" <> getId personId) $ do
-        (mbSender, message, templateId) <-
+        (mbSender, message, templateId, messageType) <-
           MessageBuilder.buildSendOTPMessage merchantOpCityId $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash
               }
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
+        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType)
           >>= Sms.checkSmsResult
     WHATSAPP -> do
       countryCode <- mbCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for WHATSAPP OTP channel")

@@ -389,14 +389,14 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
         otpCode <- maybe generateOTPCode return useFakeOtpM
         whenNothing_ useFakeOtpM $ do
           let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
-          (mbSender, message, templateId) <-
+          (mbSender, message, templateId, messageType) <-
             MessageBuilder.buildOperatorJoiningMessage merchantOpCityId $
               MessageBuilder.BuildOperatorJoiningMessageReq
                 { otp = otpCode,
                   operatorName = operatorName
                 }
           let sender = fromMaybe smsCfg.sender mbSender
-          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
+          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
         let key = makeOperatorDriverOtpKey phoneNumber
         Redis.setExp key otpCode 3600
       pure $ Common.AuthRes {authId = "ALREADY_USING_APPLICATION", attempts = 0}
@@ -442,13 +442,13 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
-        (mbSender, message, templateId) <-
+        (mbSender, message, templateId, messageType) <-
           MessageBuilder.buildOperatorJoinAndDownloadAppMessage merchantOpCityId $
             MessageBuilder.BuildOperatorJoinAndDownloadAppMessageReq
               { operatorName = operator.firstName
               }
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
+        Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType)
           >>= Sms.checkSmsResult
     Nothing -> do
       let key = makeOperatorDriverOtpKey (req.mobileCountryCode <> req.mobileNumber)

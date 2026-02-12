@@ -796,10 +796,10 @@ enableDriver merchantOpCityId personId driverName transporterConfig merchantId =
         let countryCode = fromMaybe "+91" driver.mobileCountryCode
             phoneNumber = countryCode <> mobileNumber
             sender = smsCfg.sender
-        (mbSender, message, templateId) <-
+        (mbSender, message, templateId, messageType) <-
           MessageBuilder.buildOnboardingMessage merchantOpCityId $
             MessageBuilder.BuildOnboardingMessageReq {}
-        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= Sms.checkSmsResult
+        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
 
 activateRCAutomatically :: Id DP.Person -> DMOC.MerchantOperatingCity -> Text -> Flow ()
 activateRCAutomatically personId merchantOpCity rcNumber = do

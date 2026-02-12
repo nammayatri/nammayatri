@@ -94,3 +94,7 @@ ALTER TABLE atlas_app.merchant ADD COLUMN stuck_ride_auto_cancellation_buffer in
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant ADD COLUMN signing_private_key text ;
+
+
+------- SQL updates -------
+

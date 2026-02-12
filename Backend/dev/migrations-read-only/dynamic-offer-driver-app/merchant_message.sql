@@ -20,3 +20,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN sender_header tex
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN vehicle_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN message_type character varying(255) ;

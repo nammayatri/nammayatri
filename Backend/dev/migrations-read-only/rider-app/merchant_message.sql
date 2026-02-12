@@ -15,3 +15,8 @@ ALTER TABLE atlas_app.merchant_message ADD PRIMARY KEY ( merchant_operating_city
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_message ADD COLUMN sender_header text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_message ADD COLUMN message_type character varying(255) ;

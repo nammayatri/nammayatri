@@ -158,7 +158,7 @@ sendCommunicationToCustomer SendCommunicationToCustomerReq {..} = do
       merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyInRideFlow merchantOperatingCityId messageKey configInExperimentVersions >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId notificationKey)
       let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
       let (_, smsReqBody) = messageTransformer ("", merchantMessage.message)
-      Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq smsReqBody phoneNumber sender merchantMessage.templateId) -- TODO: append SMS heading
+      Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq smsReqBody phoneNumber sender merchantMessage.templateId merchantMessage.messageType) -- TODO: append SMS heading
         >>= Sms.checkSmsResult
     _ -> pure ()
   where

@@ -127,9 +127,9 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
   withLogTag ("personId_" <> personId.getId) $ do
     case channel of
       SMS -> do
-        (mbSender, message, templateId) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey Nothing MessageBuilder.BuildGenericMessageReq {}
+        (mbSender, message, templateId, messageType) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey Nothing MessageBuilder.BuildGenericMessageReq {}
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
+        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType)
           >>= Sms.checkSmsResult
       WHATSAPP -> do
         merchantMessage <-

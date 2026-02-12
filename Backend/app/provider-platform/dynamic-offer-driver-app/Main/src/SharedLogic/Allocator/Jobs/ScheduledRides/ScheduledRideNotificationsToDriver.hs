@@ -166,7 +166,7 @@ sendCommunicationToDriver SendCommunicationToDriverReq {..} = do
       merchantMessage <- CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
       let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
           (_, messageBody) = messageTransformer ("", merchantMessage.message)
-      Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq messageBody phoneNumber sender merchantMessage.templateId) >>= Sms.checkSmsResult
+      Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq messageBody phoneNumber sender merchantMessage.templateId merchantMessage.messageType) >>= Sms.checkSmsResult
     _ -> pure () -- WHATSAPP or Other Notifications can be implemented here
   where
     generateReq notifTitle notifBody = do

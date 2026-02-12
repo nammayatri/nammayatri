@@ -2126,14 +2126,14 @@ postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwner
 
         otpCode <- maybe generateOTPCode return useFakeOtpM
         whenNothing_ useFakeOtpM $ do
-          (mbSender, message, templateId) <-
+          (mbSender, message, templateId, messageType) <-
             MessageBuilder.buildFleetJoiningMessage merchantOpCityId $
               MessageBuilder.BuildFleetJoiningMessageReq
                 { otp = otpCode,
                   fleetOwnerName = fleetOwnerName
                 }
           let sender = fromMaybe smsCfg.sender mbSender
-          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
+          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
         let key = makeFleetDriverOtpKey phoneNumber
         Redis.setExp key otpCode 3600
       pure $ Common.AuthRes {authId = "ALREADY_USING_APPLICATION", attempts = 0}
@@ -2174,13 +2174,13 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
         whenNothing_ useFakeOtpM $
           do
-            (mbSender, message, templateId) <-
+            (mbSender, message, templateId, messageType) <-
               MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId $
                 MessageBuilder.BuildDownloadAppMessageReq
                   { fleetOwnerName = fleetOwner.firstName
                   }
             let sender = fromMaybe smsCfg.sender mbSender
-            Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
+            Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType)
             >>= Sms.checkSmsResult
     Nothing -> do
       let key = makeFleetDriverOtpKey (req.mobileCountryCode <> req.mobileNumber)
@@ -2974,13 +2974,13 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           phoneNumber = countryCode <> mobileNumber
       smsCfg <- asks (.smsCfg)
       withLogTag ("sending Deeplink Auth SMS" <> getId person.id) $ do
-        (mbSender, message, templateId) <-
+        (mbSender, message, templateId, messageType) <-
           MessageBuilder.buildFleetDeepLinkAuthMessage merchantOpCityId $
             MessageBuilder.BuildFleetDeepLinkAuthMessage
               { fleetOwnerName = fleetOwner.firstName
               }
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
+        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
 
     sendOperatorDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.Country -> DP.Person -> Flow ()
     sendOperatorDeepLinkForAuth person mobileNumber merchantId merchantOpCityId country operator = do
@@ -2988,13 +2988,13 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           phoneNumber = countryCode <> mobileNumber
       smsCfg <- asks (.smsCfg)
       withLogTag ("sending Operator Deeplink Auth SMS" <> getId person.id) $ do
-        (mbSender, message, templateId) <-
+        (mbSender, message, templateId, messageType) <-
           MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId $
             MessageBuilder.BuildOperatorDeepLinkAuthMessage
               { operatorName = operator.firstName
               }
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
+        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
 
 validateDriverName :: Text -> Flow ()
 validateDriverName driverName = do

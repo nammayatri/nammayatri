@@ -1160,7 +1160,7 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
               phoneNumber = countryCode <> mobileNumber
               sender = smsCfg.sender
               templateId = "" -- no dedicated template; send plain text
-          Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq smsBody phoneNumber sender templateId) >>= Sms.checkSmsResult
+          Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq smsBody phoneNumber sender templateId Nothing) >>= Sms.checkSmsResult
 
     isDashboardSmsEnabled :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m Bool
     isDashboardSmsEnabled merchantOpCityId =

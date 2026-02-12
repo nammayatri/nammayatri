@@ -93,9 +93,9 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
     case channel of
       SMS -> do
         mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : SMS") messageKey --whenJust messageKey $ \mkey -> do
-        (mbSender, message, templateId) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey mbVehicleCategory MessageBuilder.BuildGenericMessageReq {}
+        (mbSender, message, templateId, messageType) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey mbVehicleCategory MessageBuilder.BuildGenericMessageReq {}
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
+        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType)
           >>= Sms.checkSmsResult
       WHATSAPP -> do
         mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : WHATSAPP") messageKey -- whenJust messageKey $ \mkey -> do

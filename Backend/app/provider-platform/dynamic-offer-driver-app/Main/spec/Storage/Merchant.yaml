@@ -198,6 +198,7 @@ MerchantMessage:
     messageKey: MessageKey
     message: Text
     templateId: Text
+    messageType: Maybe Text
     jsonData: MerchantMessageDefaultDataJSON
     containsUrlButton: Bool
     senderHeader: Maybe Text
@@ -209,10 +210,12 @@ MerchantMessage:
     jsonData: json
     messageKey: character varying(255)
     templateId: character varying(255)
+    messageType: character varying(255)
   default:
     containsUrlButton: "false"
   beamType:
     templateId: Maybe Text
+    messageType: Maybe Text
     jsonData: Maybe Data.Aeson.Value
 
   toTType:
