@@ -88,7 +88,7 @@ defaultFleetDocumentTypes :: [DVC.DocumentType]
 defaultFleetDocumentTypes = [DVC.AadhaarCard, DVC.PanCard, DVC.GSTCertificate, DVC.BusinessLicense]
 
 defaultVehicleDocumentTypes :: [DVC.DocumentType]
-defaultVehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer]
+defaultVehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer , DVC.VehicleNOC , DVC.InspectionHub]
 
 notifyErrorToSupport ::
   Person ->

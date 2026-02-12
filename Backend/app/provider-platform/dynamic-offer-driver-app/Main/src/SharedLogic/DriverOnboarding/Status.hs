@@ -73,6 +73,7 @@ import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleFitnessCertificate as VFCQuery
 import qualified Storage.Queries.VehicleInsurance as VIQuery
+import qualified Storage.Queries.VehicleNOC as VNOCQuery
 import qualified Storage.Queries.VehiclePUC as VPUCQuery
 import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
@@ -750,6 +751,9 @@ getProcessedVehicleDocuments driverImagesInfo docType vehicleRC = do
     DVC.VehiclePUC -> do
       mbDoc <- listToMaybe <$> VPUCQuery.findByRcIdAndDriverId vehicleRC.id driverId
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing)
+    DVC.VehicleNOC -> do
+      mbDoc <- listToMaybe <$> VNOCQuery.findByRcIdAndDriverId vehicleRC.id driverId
+      return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing)
     DVC.VehicleInspectionForm -> return $ checkImageValidity driverImagesInfo DVC.VehicleInspectionForm
     DVC.SubscriptionPlan -> do
       mbPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION driverId -- fix later on basis of vehicle category
@@ -837,7 +841,8 @@ vehicleDocsByRcIdList =
     DVC.VehicleBackInterior,
     DVC.VehicleFront,
     DVC.VehicleBack,
-    DVC.Odometer
+    DVC.Odometer,
+    DVC.InspectionHub
   ]
 
 getInProgressVehicleDocuments :: IQuery.DriverImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
@@ -850,6 +855,7 @@ getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType =
     DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleInsurance
     DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehiclePUC
     DVC.VehicleInspectionForm -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleInspectionForm
+    DVC.VehicleNOC -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleNOC
     _ | docType `elem` vehicleDocsByRcIdList -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
 
