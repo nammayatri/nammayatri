@@ -1,0 +1,126 @@
+imports: {}
+
+module: PlanManagement
+
+apis:
+  - POST: # CreatePlan
+      endpoint: /create
+      name: PostPlanManagementCreate
+      auth: ApiAuthV2
+      request:
+        type: CreatePlanReq
+      response:
+        type: CreatePlanResp
+
+  - GET: # GetPlan
+      endpoint: /{planId}
+      name: GetPlanManagementPlan
+      auth: ApiAuthV2
+      params:
+        planId: Text
+      response:
+        type: PlanAPIEntity
+
+  - POST: # DeletePlan
+      endpoint: /{planId}/delete
+      name: PostPlanManagementDeletePlan
+      auth: ApiAuthV2
+      params:
+        planId: Text
+      response:
+        type: APISuccess
+
+  - GET: # ListPlans
+      endpoint: /list
+      name: GetPlanManagementListPlans
+      auth: ApiAuthV2
+      query:
+        - serviceName: Text
+      response:
+        type: ListPlansResp
+
+types:
+  PlanPaymentMode:
+    - enum: MANUAL, AUTOPAY
+    - derive: "HttpInstance"
+  PlanFrequency:
+    - enum: DAILY, WEEKLY, MONTHLY, FLEXIBLE
+    - derive: "HttpInstance"
+  PlanType:
+    - enum: DEFAULT, SUBSCRIPTION
+    - derive: "HttpInstance"
+  PlanBillingType:
+    - enum: PREPAID, POSTPAID
+    - derive: "HttpInstance"
+  PlanBasedOnEntity:
+    - enum: RIDE, NONE, VEHICLE, VEHICLE_AND_RIDE
+    - derive: "HttpInstance"
+  CreatePlanReq:
+    - name: Text
+    - description: Text
+    - paymentMode: PlanPaymentMode
+    - planType: PlanType
+    - billingType: Maybe PlanBillingType
+    - frequency: PlanFrequency
+    - planBaseAmount: Text
+    - maxAmount: HighPrecMoney
+    - registrationAmount: HighPrecMoney
+    - originalRegistrationAmount: Maybe HighPrecMoney
+    - maxCreditLimit: HighPrecMoney
+    - maxMandateAmount: HighPrecMoney
+    - productOwnershipAmount: HighPrecMoney
+    - cgstPercentage: HighPrecMoney
+    - sgstPercentage: HighPrecMoney
+    - freeRideCount: Int
+    - isOfferApplicable: Bool
+    - eligibleForCoinDiscount: Bool
+    - subscribedFlagToggleAllowed: Bool
+    - isDeprecated: Bool
+    - allowStrikeOff: Bool
+    - basedOnEntity: PlanBasedOnEntity
+    - serviceName: Text
+    - merchantId: Text
+    - merchantOpCityId: Text
+    - vehicleVariant: Maybe Text
+    - vehicleCategory: Text
+    - listingPriority: Maybe Int
+    - validityInDays: Maybe Int
+    - isFleetOwnerPlan: Maybe Bool
+    - derive: "'HideSecrets"
+  CreatePlanResp:
+    - recordType: NewType
+    - planId: Text
+  PlanAPIEntity:
+    - id: Text
+    - name: Text
+    - description: Text
+    - paymentMode: PlanPaymentMode
+    - planType: PlanType
+    - billingType: Maybe PlanBillingType
+    - frequency: PlanFrequency
+    - planBaseAmount: Text
+    - maxAmount: HighPrecMoney
+    - registrationAmount: HighPrecMoney
+    - originalRegistrationAmount: Maybe HighPrecMoney
+    - maxCreditLimit: HighPrecMoney
+    - maxMandateAmount: HighPrecMoney
+    - productOwnershipAmount: HighPrecMoney
+    - cgstPercentage: HighPrecMoney
+    - sgstPercentage: HighPrecMoney
+    - freeRideCount: Int
+    - isOfferApplicable: Bool
+    - eligibleForCoinDiscount: Bool
+    - subscribedFlagToggleAllowed: Bool
+    - isDeprecated: Bool
+    - allowStrikeOff: Bool
+    - basedOnEntity: PlanBasedOnEntity
+    - serviceName: Text
+    - merchantId: Text
+    - merchantOpCityId: Text
+    - vehicleVariant: Maybe Text
+    - vehicleCategory: Text
+    - listingPriority: Maybe Int
+    - validityInDays: Maybe Int
+    - isFleetOwnerPlan: Maybe Bool
+  ListPlansResp:
+    - plans: "[PlanAPIEntity]"

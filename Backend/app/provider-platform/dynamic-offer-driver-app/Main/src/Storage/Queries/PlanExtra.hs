@@ -88,6 +88,7 @@ updateByPrimaryKeyP (Domain.Types.Plan.Plan {..}) = do
       Se.Set BeamP.merchantId (getId merchantId),
       Se.Set BeamP.merchantOpCityId (getId merchantOpCityId),
       Se.Set BeamP.name name,
+      Se.Set BeamP.originalRegistrationAmount originalRegistrationAmount,
       Se.Set BeamP.paymentMode paymentMode,
       Se.Set BeamP.planBaseAmount planBaseAmount,
       Se.Set BeamP.planType planType,
@@ -100,3 +101,7 @@ updateByPrimaryKeyP (Domain.Types.Plan.Plan {..}) = do
       Se.Set BeamP.vehicleVariant vehicleVariant
     ]
     [Se.And [Se.Is BeamP.id $ Se.Eq (getId id), Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
+
+markAsDeprecated :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Plan -> m ()
+markAsDeprecated (Id planId) =
+  updateWithKV [Se.Set BeamP.isDeprecated True] [Se.Is BeamP.id $ Se.Eq planId]

@@ -83,6 +83,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Message
       API.Types.ProviderPlatform.Management.Endpoints.NammaTag
       API.Types.ProviderPlatform.Management.Endpoints.Payout
+      API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
       API.Types.ProviderPlatform.Management.Endpoints.System
@@ -94,6 +95,7 @@ library
       API.Types.ProviderPlatform.Management.Message
       API.Types.ProviderPlatform.Management.NammaTag
       API.Types.ProviderPlatform.Management.Payout
+      API.Types.ProviderPlatform.Management.PlanManagement
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.System

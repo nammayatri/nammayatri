@@ -295,6 +295,11 @@ mapDocumentType Common.TaxiTransportLicense = Domain.TaxiTransportLicense
 mapDocumentType Common.FinnishIDResidencePermit = Domain.FinnishIDResidencePermit
 mapDocumentType Common.BusinessRegistrationExtract = Domain.BusinessRegistrationExtract
 mapDocumentType Common.PersonalId = Domain.PersonalId
+-- India Certificate Document Types
+mapDocumentType Common.LDCCertificate = Domain.LDCCertificate
+mapDocumentType Common.TDSCertificate = Domain.TDSCertificate
+mapDocumentType Common.TANCertificate = Domain.TANCertificate
+mapDocumentType Common.UDYAMCertificate = Domain.UDYAMCertificate
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
@@ -318,7 +323,7 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
           workflowTransactionId = Nothing,
           vehicleCategory = Nothing,
           sdkFailureReason = Nothing,
-          fileExtension = Nothing
+          fileExtension = req.fileExtension
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 
