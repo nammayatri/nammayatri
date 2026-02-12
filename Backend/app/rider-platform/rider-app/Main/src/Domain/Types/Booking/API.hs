@@ -54,11 +54,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import qualified Safety.Domain.Types.Sos as SafetyDSos
+import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
-import qualified Storage.CachedQueries.Sos as CQSos
+import qualified Storage.CachedQueries.Sos as CQSos -- Keep for mockSosKey only
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -457,7 +458,7 @@ getActiveSos mbRide personId = do
   case mbRide of
     Nothing -> return Nothing
     Just ride -> do
-      sosDetails <- CQSos.findByRideId ride.id
+      sosDetails <- SafetyCQSos.findByRideId (cast ride.id)
       case sosDetails of
         Nothing -> do
           mockSos :: Maybe SafetyDSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
@@ -469,7 +470,7 @@ getActiveSos' mbRide personId = do
   case mbRide of
     Nothing -> return Nothing
     Just ride -> do
-      sosDetails <- CQSos.findByRideId ride.id
+      sosDetails <- SafetyCQSos.findByRideId (cast ride.id)
       case sosDetails of
         Nothing -> do
           mockSos :: Maybe SafetyDSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
