@@ -244,6 +244,22 @@ types:
     ibc: Id IntegratedBPPConfig
     derive': "Generic, ToSchema"
 
+  IncompleteTransportRoute:
+    cd: Maybe Text
+    sN: Maybe Text
+    lN: Maybe Text
+    dTC: Maybe Int
+    stC: Maybe Int
+    vt: Text
+    st: Maybe ServiceTierType
+    stn: Maybe Text
+    sst: Maybe [ServiceSubType]
+    clr: Maybe Text
+    ibc: Id IntegratedBPPConfig
+    ec: Maybe Text
+    en: Maybe Text
+    derive': "Generic, ToSchema"
+
   TransportStation:
     cd: Text
     nm: Text
@@ -266,8 +282,20 @@ types:
     ibc: Id IntegratedBPPConfig
     derive': "Generic, ToSchema"
 
+  RouteStopsData:
+    enum: "Rs [TransportRoute] | RsV2 [IncompleteTransportRoute]"
+    derive': "Generic, ToSchema"
+
   PublicTransportData:
     rs: [TransportRoute]
+    ss: [TransportStation]
+    rsm: [TransportRouteStopMapping]
+    ptcv: Text
+    eligiblePassIds: Maybe [Text]
+    derive': "Generic, ToSchema"
+
+  PublicTransportDataV2:
+    rs: RouteStopsData
     ss: [TransportStation]
     rsm: [TransportRouteStopMapping]
     ptcv: Text
@@ -621,6 +649,14 @@ apis:
         vehicleNumber: Text
       response:
         type: PublicTransportData
+
+  - GET:
+      endpoint: /publicTransport/vehicleData/v2/{vehicleType}/{vehicleNumber}
+      params:
+        vehicleType: VehicleCategory
+        vehicleNumber: Text
+      response:
+        type: PublicTransportDataV2
 
   - GET:
       endpoint: /multimodal/{journeyId}/order/{legOrder}/getLegTierOptions
