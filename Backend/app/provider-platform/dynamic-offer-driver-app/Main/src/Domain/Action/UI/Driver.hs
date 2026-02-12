@@ -2125,14 +2125,14 @@ validate (personId, _, merchantOpCityId) phoneNumber = do
     let otpHash = smsCfg.credConfig.otpHash
     let altPhoneNumber = phoneNumber.mobileCountryCode <> phoneNumber.alternateNumber
     withLogTag ("personId_" <> getId person.id) $ do
-      (mbSender, message, templateId) <-
+      (mbSender, message, templateId, messageType) <-
         MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
           MessageBuilder.BuildSendOTPMessageReq
             { otp = otpCode,
               hash = otpHash
             }
       let sender = fromMaybe smsCfg.sender mbSender
-      Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message altPhoneNumber sender templateId)
+      Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message altPhoneNumber sender templateId messageType)
         >>= Sms.checkSmsResult
   let verified = False
   cacheAlternateNumberInfo personId phoneNumber.alternateNumber otpCode altNoAttempt verified
@@ -2213,14 +2213,14 @@ resendOtp (personId, merchantId, merchantOpCityId) req = do
   let otpHash = smsCfg.credConfig.otpHash
       altphoneNumber = counCode <> altNumber
   withLogTag ("personId_" <> getId personId) $ do
-    (mbSender, message, templateId) <-
+    (mbSender, message, templateId, messageType) <-
       MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otpCode,
             hash = otpHash
           }
     let sender = fromMaybe smsCfg.sender mbSender
-    Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message altphoneNumber sender templateId)
+    Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message altphoneNumber sender templateId messageType)
       >>= Sms.checkSmsResult
   updAttempts <- Redis.decrby (makeAlternateNumberAttemptsKey personId) 1
   let updAttempt = fromIntegral updAttempts

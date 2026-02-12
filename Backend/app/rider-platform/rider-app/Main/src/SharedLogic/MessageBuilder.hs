@@ -81,6 +81,7 @@ buildSendSmsReq merchantMessage vars = do
   let smsBody = foldl' (\msg (findKey, replaceVal) -> T.replace (templateText findKey) replaceVal msg) merchantMessage.message vars
       sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
       templateId = merchantMessage.templateId
+      messageType = merchantMessage.messageType
   return $ \phoneNumber -> Sms.SendSMSReq {..}
 
 data BuildSendOTPMessageReq = BuildSendOTPMessageReq

@@ -117,14 +117,14 @@ postUserLoginSendOtp merchantShortId opCity req = do
   whenNothing_ useFakeOtpM $ do
     let phoneNumber = req.mobileCountryCode <> req.mobileNumber
         otpHash = smsCfg.credConfig.otpHash
-    (mbSender, message, templateId) <-
+    (mbSender, message, templateId, messageType) <-
       MessageBuilder.buildSendOTPMessage merchantOpCity.id $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otp,
             hash = otpHash
           }
     let sender = fromMaybe smsCfg.sender mbSender
-    Sms.sendSMS merchant.id merchantOpCity.id (Sms.SendSMSReq message phoneNumber sender templateId)
+    Sms.sendSMS merchant.id merchantOpCity.id (Sms.SendSMSReq message phoneNumber sender templateId messageType)
       >>= Sms.checkSmsResult
 
   -- Return OTP to Dashboard so it can store in cache

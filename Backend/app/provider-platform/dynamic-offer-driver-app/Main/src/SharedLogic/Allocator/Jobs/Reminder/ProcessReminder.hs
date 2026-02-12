@@ -459,7 +459,7 @@ sendDriverNotifications reminder driver merchantOpCityId notificationKey smsKey 
           mbPhoneNumber <- mapM decrypt driver.mobileNumber
           case mbPhoneNumber of
             Just phoneNumber -> do
-              Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq merchantMsg.message phoneNumber sender merchantMsg.templateId) >>= Sms.checkSmsResult
+              Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq merchantMsg.message phoneNumber sender merchantMsg.templateId merchantMsg.messageType) >>= Sms.checkSmsResult
             Nothing -> logInfo $ "Driver mobile number not available, skipping SMS"
         Nothing -> logInfo $ "MerchantMessage not found for " <> smsKey <> ", skipping SMS"
     Nothing -> logInfo $ "Invalid MessageKey: " <> smsKey <> ", skipping SMS"

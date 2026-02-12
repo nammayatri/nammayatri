@@ -480,10 +480,12 @@ MerchantMessage:
     senderHeader: Maybe Text
     updatedAt: UTCTime
     createdAt: UTCTime
+    messageType: Maybe Text
 
   beamType:
     templateId: Maybe Text
     jsonData: Maybe Data.Aeson.Value
+    messageType: Maybe Text
 
   default:
     containsUrlButton: "False"
@@ -491,6 +493,7 @@ MerchantMessage:
     templateId: character varying(255)
     jsonData: json
     messageKey: character varying(255)
+    messageType: character varying(255)
 
   fromTType:
     templateId: fromMaybe "" templateId|E

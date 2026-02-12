@@ -28,7 +28,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.MerchantMessage.MerchantMessage]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.MerchantMessage.MerchantMessage])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOpCityIdAndMessageKey ::
@@ -62,6 +62,7 @@ updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
       Se.Set Beam.jsonData (Just $ Data.Aeson.toJSON jsonData),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.message message,
+      Se.Set Beam.messageType messageType,
       Se.Set Beam.senderHeader senderHeader,
       Se.Set Beam.templateId (Just templateId),
       Se.Set Beam.updatedAt _now,
@@ -81,6 +82,7 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             message = message,
             messageKey = messageKey,
+            messageType = messageType,
             senderHeader = senderHeader,
             templateId = fromMaybe "" templateId,
             updatedAt = updatedAt,
@@ -97,6 +99,7 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.message = message,
         Beam.messageKey = messageKey,
+        Beam.messageType = messageType,
         Beam.senderHeader = senderHeader,
         Beam.templateId = Just templateId,
         Beam.updatedAt = updatedAt,

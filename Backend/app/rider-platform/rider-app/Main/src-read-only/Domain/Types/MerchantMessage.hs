@@ -22,6 +22,7 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     message :: Kernel.Prelude.Text,
     messageKey :: Domain.Types.MerchantMessage.MessageKey,
+    messageType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     senderHeader :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     templateId :: Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime

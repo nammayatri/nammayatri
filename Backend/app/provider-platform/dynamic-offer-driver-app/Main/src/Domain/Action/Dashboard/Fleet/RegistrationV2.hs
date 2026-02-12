@@ -187,10 +187,10 @@ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId = do
       let countryCode = fromMaybe "+91" fleetOwner.mobileCountryCode
           phoneNumber = countryCode <> mobileNumber
           sender = smsCfg.sender
-      (mbSender, message, templateId) <-
+      (mbSender, message, templateId, messageType) <-
         MessageBuilder.buildOnboardingMessage merchantOperatingCityId $
           MessageBuilder.BuildOnboardingMessageReq {}
-      Sms.sendSMS merchant.id merchantOperatingCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= Sms.checkSmsResult
+      Sms.sendSMS merchant.id merchantOperatingCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
 
 enableFleetIfPossible :: Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Id DMOC.MerchantOperatingCity -> Flow Bool
 enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOperatingCityId = do
@@ -366,14 +366,14 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
         phoneNumber = countryCode <> mobileNumber
     withLogTag ("mobileNumber" <> req.mobileNumber) $
       do
-        (mbSender, message, templateId) <-
+        (mbSender, message, templateId, messageType) <-
           MessageBuilder.buildSendOTPMessage merchantOpCityId $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash
               }
         let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
+        Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType)
           >>= Sms.checkSmsResult
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
