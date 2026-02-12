@@ -180,6 +180,7 @@ library
       Domain.Action.Dashboard.Management.Message
       Domain.Action.Dashboard.Management.NammaTag
       Domain.Action.Dashboard.Management.Payout
+      Domain.Action.Dashboard.Management.PlanManagement
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.System
@@ -836,6 +837,7 @@ library
       API.Action.Dashboard.Management.Message
       API.Action.Dashboard.Management.NammaTag
       API.Action.Dashboard.Management.Payout
+      API.Action.Dashboard.Management.PlanManagement
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
