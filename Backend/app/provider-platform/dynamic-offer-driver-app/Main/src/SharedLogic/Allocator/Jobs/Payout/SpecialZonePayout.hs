@@ -17,7 +17,6 @@ module SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout where
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Ride as Ride
-import qualified Domain.Types.ScheduledPayout as DSP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Payout.Types as PT
@@ -27,25 +26,28 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.LocationUpdates
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import qualified Lib.Payment.Payout.Request as PayoutRequest
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Lib.Scheduler
 import SharedLogic.Allocator
+import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.ScheduledPayout as QSP
-import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import qualified Tools.Payout as TP
 
 sendSpecialZonePayout ::
   ( EncFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
-    CacheFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
@@ -55,81 +57,80 @@ sendSpecialZonePayout ::
   Job 'SpecialZonePayout ->
   m ExecutionResult
 sendSpecialZonePayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
-  let SpecialZonePayoutJobData {scheduledPayoutId} = jobInfo.jobData
-  let lockKey = "payout:lock:" <> scheduledPayoutId.getId
+  let SpecialZonePayoutJobData {payoutRequestId} = jobInfo.jobData
+  let lockKey = "payout:lock:" <> payoutRequestId.getId
 
   -- 1. Try to acquire Redis lock (5 min TTL)
   acquired <- Redis.tryLockRedis lockKey 300
   if not acquired
     then do
-      logWarning $ "Could not acquire lock for payout: " <> show scheduledPayoutId
+      logWarning $ "Could not acquire lock for payout: " <> show payoutRequestId
       pure Complete
     else do
       -- Process with lock, release on exit
       flip finally (Redis.unlockRedis lockKey) $ do
-        -- 2. Fetch ScheduledPayout record
-        mbScheduledPayout <- QSP.findById scheduledPayoutId
+        -- 2. Fetch PayoutRequest record
+        mbPayoutRequest <- QPR.findById payoutRequestId
 
-        case mbScheduledPayout of
+        case mbPayoutRequest of
           Nothing -> do
-            logInfo $ "ScheduledPayout record not found for id: " <> show scheduledPayoutId
+            logInfo $ "PayoutRequest record not found for id: " <> show payoutRequestId
             pure Complete
-          Just scheduledPayout -> do
+          Just payoutRequest -> do
             -- 3. Check status (idempotency + cancellation check)
-            case scheduledPayout.status of
-              DSP.FAILED -> do
-                logInfo $ "Payout was cancelled/failed, skipping: " <> show scheduledPayoutId
+            case payoutRequest.status of
+              DPR.FAILED -> do
+                logInfo $ "Payout was cancelled/failed, skipping: " <> show payoutRequestId
                 pure Complete
-              DSP.CREDITED -> do
-                logInfo $ "Payout already processed: " <> show scheduledPayoutId
+              DPR.CREDITED -> do
+                logInfo $ "Payout already processed: " <> show payoutRequestId
                 pure Complete
-              DSP.CASH_PAID -> do
-                logInfo $ "Payout already marked as cash paid: " <> show scheduledPayoutId
+              DPR.CASH_PAID -> do
+                logInfo $ "Payout already marked as cash paid: " <> show payoutRequestId
                 pure Complete
-              DSP.CASH_PENDING -> do
-                logInfo $ "Payout already marked as cash pending: " <> show scheduledPayoutId
+              DPR.CASH_PENDING -> do
+                logInfo $ "Payout already marked as cash pending: " <> show payoutRequestId
                 pure Complete
-              DSP.PROCESSING -> do
-                logInfo $ "Payout already being processed: " <> show scheduledPayoutId
+              DPR.PROCESSING -> do
+                logInfo $ "Payout already being processed: " <> show payoutRequestId
                 pure Complete
-              DSP.AUTO_PAY_FAILED -> do
-                logInfo $ "Payout auto-pay failed, needs admin retry: " <> show scheduledPayoutId
+              DPR.AUTO_PAY_FAILED -> do
+                logInfo $ "Payout auto-pay failed, needs admin retry: " <> show payoutRequestId
                 pure Complete
-              DSP.RETRYING -> do
-                logInfo $ "Payout is being retried: " <> show scheduledPayoutId
+              DPR.RETRYING -> do
+                logInfo $ "Payout is being retried: " <> show payoutRequestId
                 pure Complete
-              DSP.CANCELLED -> do
-                logInfo $ "Payout was cancelled, skipping: " <> show scheduledPayoutId
+              DPR.CANCELLED -> do
+                logInfo $ "Payout was cancelled, skipping: " <> show payoutRequestId
                 pure Complete
-              DSP.INITIATED -> do
+              DPR.INITIATED -> do
                 -- 4. Execute payout logic
-                executeSpecialZonePayout scheduledPayout
+                executeSpecialZonePayout payoutRequest
 
 executeSpecialZonePayout ::
   ( EncFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
-    CacheFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c
   ) =>
-  DSP.ScheduledPayout ->
+  DPR.PayoutRequest ->
   m ExecutionResult
-executeSpecialZonePayout scheduledPayout = do
-  let driverId = Id scheduledPayout.driverId
-  let merchantId = scheduledPayout.merchantId
-  let merchantOpCityId = scheduledPayout.merchantOperatingCityId
+executeSpecialZonePayout payoutRequest = do
+  let driverId = Id payoutRequest.beneficiaryId
+  let merchantId = Id <$> payoutRequest.merchantId
+  let merchantOpCityId = Id <$> payoutRequest.merchantOperatingCityId
 
   -- 1. Mark as PROCESSING
-  QSPE.updateStatusWithHistoryById DSP.PROCESSING (Just "Payment in progress") scheduledPayout
+  PayoutRequest.updateStatusWithHistoryById DPR.PROCESSING (Just "Payment in progress") payoutRequest
 
   -- 2. Fetch driver info
   driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  mbRide <- QRide.findById (Id scheduledPayout.rideId)
+  mbRide <- QRide.findById (Id payoutRequest.entityId)
 
   case (mbRide, merchantId, merchantOpCityId) of
     (Just ride, Just mId, Just mocId) -> do
@@ -153,21 +154,21 @@ executeSpecialZonePayout scheduledPayout = do
     Nothing -> do
       -- No VPA configured, mark as failed
       logWarning $ "Driver " <> driverId.getId <> " has no payout VPA configured"
-      QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Driver has no payout VPA configured") scheduledPayout
+      PayoutRequest.updateStatusWithHistoryById DPR.AUTO_PAY_FAILED (Just "Driver has no payout VPA configured") payoutRequest
       pure Complete
     Just vpa -> do
       case merchantOpCityId of
         Nothing -> do
-          logWarning $ "No merchant operating city for payout: " <> show scheduledPayout.id
-          QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Missing merchant operating city") scheduledPayout
+          logWarning $ "No merchant operating city for payout: " <> show payoutRequest.id
+          PayoutRequest.updateStatusWithHistoryById DPR.AUTO_PAY_FAILED (Just "Missing merchant operating city") payoutRequest
           pure Complete
         Just opCityId -> do
           -- 6. Get amount and create payout order
-          let amount = fromMaybe 0 scheduledPayout.amount
+          let amount = fromMaybe 0 payoutRequest.amount
           if amount <= 0
             then do
               logWarning $ "Invalid payout amount: " <> show amount
-              QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Invalid payout amount") scheduledPayout
+              PayoutRequest.updateStatusWithHistoryById DPR.AUTO_PAY_FAILED (Just "Invalid payout amount") payoutRequest
               pure Complete
             else do
               -- 7. Create payout order
@@ -178,8 +179,8 @@ executeSpecialZonePayout scheduledPayout = do
                   createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) vpa "FULFILL_ONLY" False
               case merchantId of
                 Nothing -> do
-                  logWarning $ "No merchant ID for payout: " <> show scheduledPayout.id
-                  QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Missing merchant ID") scheduledPayout
+                  logWarning $ "No merchant ID for payout: " <> show payoutRequest.id
+                  PayoutRequest.updateStatusWithHistoryById DPR.AUTO_PAY_FAILED (Just "Missing merchant ID") payoutRequest
                   pure Complete
                 Just mId -> do
                   -- 8. Call payout service
@@ -187,13 +188,13 @@ executeSpecialZonePayout scheduledPayout = do
                   payoutServiceName <- TP.decidePayoutService (DEMSC.RidePayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
                   let createPayoutOrderCall = TP.createPayoutOrder mId opCityId payoutServiceName (Just person.id.getId)
 
-                  result <- try $ Payout.createPayoutService (cast mId) (Just $ cast opCityId) (cast driverId) (Just [scheduledPayout.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+                  result <- try $ Payout.createPayoutService (cast mId) (Just $ cast opCityId) (cast driverId) (Just [payoutRequest.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
 
                   case result of
                     Left (err :: SomeException) -> do
                       -- 9. Handle failure
                       logError $ "Payout service call failed: " <> show err
-                      QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) scheduledPayout
+                      PayoutRequest.updateStatusWithHistoryById DPR.AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) payoutRequest
                       pure Complete
                     Right (mbPayoutResp, mbPayoutOrder) -> do
                       let payoutOrderId = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
@@ -206,9 +207,9 @@ executeSpecialZonePayout scheduledPayout = do
                           transactionRef = fromMaybe payoutOrderId mbTransactionRef
 
                       -- Update scheduled payout with payout order ID -- we can do this when webhook arrive uske liye lookup
-                      QSPE.updatePayoutTransactionId (Just payoutOrderId) scheduledPayout.id
+                      QPR.updatePayoutTransactionIdById (Just payoutOrderId) payoutRequest.id
 
                       -- Keep as PROCESSING - actual status will be updated by Juspay webhook
-                      QSPE.updateStatusWithHistoryById DSP.PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderId <> ", TxnRef: " <> transactionRef) scheduledPayout
-                      logInfo $ "Special Zone Payout request submitted for id: " <> show scheduledPayout.id <> " | orderId: " <> payoutOrderId
+                      PayoutRequest.updateStatusWithHistoryById DPR.PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderId <> ", TxnRef: " <> transactionRef) payoutRequest
+                      logInfo $ "Special Zone Payout request submitted for id: " <> show payoutRequest.id <> " | orderId: " <> payoutOrderId
                       pure Complete

@@ -36,7 +36,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
-import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Trip
 import Environment (Flow)
@@ -55,6 +54,10 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
+import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import qualified Lib.Payment.Payout.Request as PayoutRequest
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (..))
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
@@ -64,13 +67,12 @@ import qualified SharedLogic.FareCalculatorV2 as FCV2
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Ride (calculateEstimatedEndTimeRange)
 import qualified SharedLogic.ScheduledNotifications as SN
+import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.ScheduledPayout as QSP
-import qualified Storage.Queries.ScheduledPayoutExtra as QSPE
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
@@ -226,7 +228,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
         $ do
           -- Checking iff duplicate is there.
           whenJust transporterConfig.payoutRideScheduleTimeBuffer $ \buffer -> do
-            existingPayout <- QSP.findByRideId ride.id.getId
+            existingPayout <- QPR.findByEntity ride.id.getId (Just DPayment.SPECIAL_ZONE_PAYOUT)
             when (isNothing existingPayout) $ do
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
               commission <- FCV2.calculateCommission booking.fareParams mbFarePolicy
@@ -234,36 +236,39 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                   payoutAmount =
                     toHighPrecMoney
                       (roundToIntegral (getHighPrecMoney payoutAmountBase) :: Integer)
-              scheduledPayoutId <- Id <$> generateGUID
+              payoutRequestId <- Id <$> generateGUID
               let scheduledTime = addUTCTime (secondsToNominalDiffTime buffer) now
               let payoutStatus =
                     if ( paymentInstrument `elem` (fromMaybe [] transporterConfig.allowedPaymentInstrumentForPayout)
                            && isJust driverInfo.payoutVpa
                        )
-                      then DSP.INITIATED
-                      else DSP.CASH_PENDING
-              let scheduledPayout =
-                    DSP.ScheduledPayout
-                      { id = scheduledPayoutId,
-                        rideId = ride.id.getId,
-                        bookingId = booking.id.getId,
-                        driverId = driverId.getId,
+                      then DPR.INITIATED
+                      else DPR.CASH_PENDING
+              let payoutRequest =
+                    DPR.PayoutRequest
+                      { id = payoutRequestId,
+                        entityName = Just DPayment.SPECIAL_ZONE_PAYOUT,
+                        entityId = ride.id.getId,
+                        entityRefId = Just booking.id.getId,
+                        beneficiaryId = driverId.getId,
                         amount = Just payoutAmount,
                         status = payoutStatus,
                         retryCount = Nothing,
                         failureReason = Nothing,
                         payoutTransactionId = Nothing,
-                        markCashPaidBy = Nothing,
-                        expectedCreditTime = if payoutStatus == DSP.INITIATED then Just scheduledTime else Nothing,
+                        cashMarkedById = Nothing,
+                        cashMarkedByName = Nothing,
+                        cashMarkedAt = Nothing,
+                        expectedCreditTime = if payoutStatus == DPR.INITIATED then Just scheduledTime else Nothing,
+                        scheduledAt = if payoutStatus == DPR.INITIATED then Just scheduledTime else Nothing,
                         createdAt = now,
                         updatedAt = now,
-                        merchantId = Just booking.providerId,
-                        merchantOperatingCityId = Just ride.merchantOperatingCityId
+                        merchantId = Just booking.providerId.getId,
+                        merchantOperatingCityId = Just ride.merchantOperatingCityId.getId
                       }
-              QSP.create scheduledPayout
-              QSPE.createInitialHistory scheduledPayout
-              when (payoutStatus == DSP.INITIATED) $ do
-                let jobData = SpecialZonePayoutJobData {scheduledPayoutId = scheduledPayoutId}
+              PayoutRequest.createPayoutRequest payoutRequest
+              when (payoutStatus == DPR.INITIATED) $ do
+                let jobData = SpecialZonePayoutJobData {payoutRequestId = payoutRequestId}
                 QAllJ.createJobByTime @_ @'SpecialZonePayout (Just booking.providerId) (Just ride.merchantOperatingCityId) scheduledTime jobData
 
       pure APISuccess.Success

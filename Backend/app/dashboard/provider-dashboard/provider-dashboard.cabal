@@ -74,7 +74,6 @@ library
       Domain.Action.ProviderPlatform.RideBooking.DriverRegistration
       Domain.Action.ProviderPlatform.RideBooking.Maps
       Domain.Action.ProviderPlatform.RideBooking.MeterRide
-      Domain.Action.ProviderPlatform.RideBooking.Payout
       Domain.Action.ProviderPlatform.RideBooking.Ride
       Domain.Action.ProviderPlatform.RideBooking.SearchRequest
       Domain.Action.ProviderPlatform.RideBooking.Volunteer
@@ -128,7 +127,6 @@ library
       API.Action.ProviderPlatform.RideBooking.DriverRegistration
       API.Action.ProviderPlatform.RideBooking.Maps
       API.Action.ProviderPlatform.RideBooking.MeterRide
-      API.Action.ProviderPlatform.RideBooking.Payout
       API.Action.ProviderPlatform.RideBooking.Ride
       API.Action.ProviderPlatform.RideBooking.SearchRequest
       API.Action.ProviderPlatform.RideBooking.Volunteer
@@ -198,6 +196,7 @@ library
     , lib-dashboard
     , mobility-core
     , openapi3
+    , payment
     , persistent
     , persistent-postgresql
     , record-dot-preprocessor
