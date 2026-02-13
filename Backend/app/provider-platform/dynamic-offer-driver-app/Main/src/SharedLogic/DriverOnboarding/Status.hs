@@ -869,6 +869,18 @@ getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL = do
       if (mbBackgroundVerification <&> (.reportStatus)) == Just Documents.VALID
         then return (Just VALID, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path)
         else return (Nothing, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path)
+    DVC.DrivingSchoolCertificate -> do
+      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.DrivingSchoolCertificate
+      return (status, reason, url, Nothing, mbS3Path)
+    DVC.PoliceVerificationCertificate -> do
+      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.PoliceVerificationCertificate
+      return (status, reason, url, Nothing, mbS3Path)
+    DVC.LocalResidenceProof -> do
+      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.LocalResidenceProof
+      return (status, reason, url, Nothing, mbS3Path)
+    DVC.TrainingForm -> do
+      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.TrainingForm
+      return (status, reason, url, Nothing, mbS3Path)
     _ -> return (Nothing, Nothing, Nothing, Nothing, mbS3Path)
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
@@ -1003,6 +1015,10 @@ getInProgressDriverDocuments driverImagesInfo docType = do
       let mbImages = IQuery.filterRecentLatestByPersonIdAndImageType driverImagesInfo DDVC.ProfilePhoto
       return (fromMaybe NO_DOC_AVAILABLE (mapStatus <$> (mbImages >>= (.verificationStatus))), Nothing, Nothing)
     DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.UploadProfile
+    DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.DrivingSchoolCertificate
+    DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.PoliceVerificationCertificate
+    DDVC.LocalResidenceProof -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.LocalResidenceProof
+    DDVC.TrainingForm -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.TrainingForm
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
   return (status, mbReason, mbUrl, Nothing, mbS3Path)
 
