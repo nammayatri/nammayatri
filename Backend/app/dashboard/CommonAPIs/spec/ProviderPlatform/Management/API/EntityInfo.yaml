@@ -1,0 +1,38 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+
+module: EntityInfo
+
+apis:
+  - GET:
+      endpoint: /{entityType}/{entityId}/list
+      params:
+        entityType: Text
+        entityId: Text
+      auth: ApiAuthV2
+      response:
+        type: EntityExtraInformation
+  - POST:
+      endpoint: /update
+      auth: ApiAuthV2
+      request:
+        type: UpdateEntityInfoReq
+      response:
+        type: APISuccess
+
+types:
+  EntityType:
+    - enum: "DRIVER, RC"
+  UpdateEntityInfoReq:
+    - entityType: EntityType
+    - entityId: Text
+    - newInfo: "[EntityInfoAPIEntity]"
+    - derive: "'HideSecrets"
+  EntityInfoAPIEntity:
+    - questionId: Text
+    - question: Text
+    - answer: Text
+  EntityExtraInformation:
+    - entityType: EntityType
+    - entityId: Text
+    - entityInfo: "[EntityInfoAPIEntity]"

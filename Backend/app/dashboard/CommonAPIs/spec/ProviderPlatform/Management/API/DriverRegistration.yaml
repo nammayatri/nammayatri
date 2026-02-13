@@ -9,6 +9,8 @@ imports:
   VehicleCategory: Dashboard.Common
   DriverVehicleDetails: Dashboard.Common
   CommonDriverOnboardingDocuments: Dashboard.Common
+  BankAccountVerificationResponse : Kernel.External.Verification.Types
+  VerifyAsyncResp : Kernel.External.Verification.Interface.Types
 
 module: DriverRegistration
 apiPrefix: driver
@@ -61,6 +63,23 @@ apis:
         endpoint: DriverRegistrationAPI RegisterDLEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_DL
+  - POST:
+      endpoint: /{driverId}/verify/bankAccount
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: VerifyBankAccountReq
+      response:
+        type: VerifyAsyncResp
+  - GET: # BankAccountVerificationAPI
+      endpoint: /{driverId}/info/{requestId}/bankAccount
+      auth: ApiAuthV2
+      params:
+        requestId: Text
+        driverId: Id Driver
+      response:
+        type: BankAccountVerificationResponse
   - POST: # RegisterRCAPI
       endpoint: /{driverId}/register/rc
       auth: ApiAuthV2
@@ -183,6 +202,27 @@ apis:
               - requestorId: Text
             response:
               type: UnlinkDocumentResp
+  - POST: # TriggerReminderAPI
+      endpoint: /{driverId}/trigger/reminder
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: TriggerReminderReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/trigger/reminder
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - requestorId: Text
+            request:
+              type: TriggerReminderReq
+            response:
+              type: APISuccess
 
 types:
   ValidationStatus:
@@ -249,7 +289,7 @@ types:
     - imageBase64: Text
     - status: Maybe VerificationStatus # TODO(Rupak): status of the document
   DocumentType:
-    - enum: "DriverLicense,VehicleRegistrationCertificate,PanCard,VehiclePermitImage,VehiclePUCImage,VehicleInsuranceImage,VehicleFitnessCertificateImage,VehicleInspectionImage,ProfilePhotoImage,VehicleNOC,Permissions,SubscriptionPlan,AadhaarCard,ProfileDetails,SocialSecurityNumber,GSTCertificate,BackgroundVerification,UploadProfileImage,BusinessLicense,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,Odometer,InspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId"
+    - enum: "DriverLicense,VehicleRegistrationCertificate,PanCard,VehiclePermitImage,VehiclePUCImage,VehicleInsuranceImage,VehicleFitnessCertificateImage,VehicleInspectionImage,DriverInspectionFormImage,TrainingFormImage,ProfilePhotoImage,VehicleNOC,Permissions,SubscriptionPlan,AadhaarCard,ProfileDetails,SocialSecurityNumber,GSTCertificate,BackgroundVerification,UploadProfileImage,BusinessLicense,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,Odometer,InspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,BankAccount"
     - derive: "HttpInstance, 'HideSecrets"
   UploadDocumentReq:
     - imageBase64: Text
@@ -273,6 +313,9 @@ types:
     - dateOfIssue: Maybe UTCTime
     - accessType: Maybe DashboardAccessType
     - derive: "'HideSecrets"
+  VerifyBankAccountReq:
+    - bankAccountNo : Text
+    - bankIfscCode : Text
   AadhaarCardReq:
     aadhaarFrontImageId: Maybe (Id Image)
     aadhaarBackImageId: Maybe (Id Image)
@@ -365,6 +408,11 @@ types:
     - documentType: DocumentType
     - documentData: Text
     - imageId: Maybe (Id Image)
+    - derive: "'HideSecrets"
+  TriggerReminderReq:
+    - documentType: DocumentType
+    - dueDate: Maybe UTCTime
+    - intervals: "Maybe [Int]"
     - derive: "'HideSecrets"
   FitnessApproveDetails:
     - applicationNumber: Text

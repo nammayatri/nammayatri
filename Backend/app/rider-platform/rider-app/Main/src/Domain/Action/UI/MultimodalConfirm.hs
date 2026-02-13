@@ -394,7 +394,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
       createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
-  DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (fromMaybe False paymentOrder.isMockPayment)
+  DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (fromMaybe False paymentOrder.isMockPayment) Nothing
 
 -- TODO :: To be deprecated @Kavyashree
 postMultimodalPaymentUpdateOrder ::

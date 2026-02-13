@@ -120,8 +120,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
 
 $(deriveJSON defaultOptions {omitNothingFields = True} ''SearchRequestForDriverAPIEntity)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge safetyCharges congestionCharges petCharges priorityCharges = do
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge safetyCharges congestionCharges petCharges priorityCharges tollCharges = do
   let isTollApplicable = DTC.isTollApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
       specialZoneExtraTip = (\a -> if a == 0 then Nothing else Just a) =<< min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
       driverDefaultStepFee = specialZoneExtraTip <|> nearbyReq.driverDefaultStepFee
@@ -181,8 +181,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           vehicleServiceTier = nearbyReq.vehicleServiceTierName,
           airConditioned = nearbyReq.airConditioned,
           requestedVehicleVariant = DV.castServiceTierToVariant requestedVehicleServiceTier,
-          tollCharges = if isTollApplicable then searchRequest.tollCharges else Nothing,
-          tollChargesWithCurrency = flip PriceAPIEntity searchRequest.currency <$> if isTollApplicable then searchRequest.tollCharges else Nothing,
+          tollChargesWithCurrency = flip PriceAPIEntity searchRequest.currency <$> tollCharges,
           tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,
           useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
           isOnRide = nearbyReq.isForwardRequest,

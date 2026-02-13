@@ -69,7 +69,8 @@ data PaymentOrderT f = PaymentOrderT
     paymentFulfillmentStatus :: B.C f (Maybe PaymentFulfillmentStatus),
     domainEntityId :: B.C f (Maybe Text),
     domainTransactionId :: B.C f (Maybe Text),
-    isMockPayment :: B.C f (Maybe Bool)
+    isMockPayment :: B.C f (Maybe Bool),
+    groupId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -81,6 +82,6 @@ instance B.Table PaymentOrderT where
 
 type PaymentOrder = PaymentOrderT Identity
 
-$(enableKVPG ''PaymentOrderT ['id] [['shortId], ['personId]])
+$(enableKVPG ''PaymentOrderT ['id] [['shortId], ['personId], ['groupId]])
 
 $(mkTableInstancesGenericSchema ''PaymentOrderT "payment_order")

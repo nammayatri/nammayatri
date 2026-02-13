@@ -39,8 +39,9 @@ findAllRequestsInRange ::
   Maybe (Id DOH.OperationHub) ->
   Maybe Text ->
   Maybe Text ->
+  Maybe (Id Person) ->
   m [(OperationHubRequests, Person, DOH.OperationHub)]
-findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReqType mbCreatorId mbOperationHubId mbOperationHubName mbRegistrationNo = do
+findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReqType mbCreatorId mbOperationHubId mbOperationHubName mbRegistrationNo mbDriverId = do
   dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
@@ -57,8 +58,9 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReq
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\reqStatus -> operationHubRequests.requestStatus B.==?. B.val_ reqStatus) mbReqStatus
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) mbMobileNumberHash
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\operationHubId -> operationHubRequests.operationHubId B.==?. B.val_ operationHubId.getId) mbOperationHubId
-                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\registrationNo -> B.sqlBool_ (B.lower_ operationHubRequests.registrationNo `B.like_` (B.val_ ("%" <> T.toLower registrationNo <> "%")))) mbRegistrationNo
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\registrationNo -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\rcNo -> B.sqlBool_ (B.lower_ rcNo `B.like_` (B.val_ ("%" <> T.toLower registrationNo <> "%")))) operationHubRequests.registrationNo) mbRegistrationNo
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\operationHubName -> B.sqlBool_ (B.lower_ operationHub.name `B.like_` (B.val_ ("%" <> T.toLower operationHubName <> "%")))) mbOperationHubName
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> operationHubRequests.driverId B.==?. B.val_ (Just driverId.getId)) mbDriverId
                 )
                 do
                   operationHubRequests <- B.all_ (BeamCommon.operationHubRequests BeamCommon.atlasDB)

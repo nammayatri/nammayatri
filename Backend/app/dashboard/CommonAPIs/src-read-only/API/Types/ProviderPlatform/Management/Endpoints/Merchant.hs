@@ -113,6 +113,8 @@ data DocumentType
   | ProfileDetails
   | SocialSecurityNumber
   | VehicleInspectionForm
+  | DriverInspectionForm
+  | TrainingForm
   | UploadProfile
   | GSTCertificate
   | BackgroundVerification
@@ -140,6 +142,9 @@ data DocumentType
   | FinnishIDResidencePermit
   | BusinessRegistrationExtract
   | PersonalId
+  | LocalResidenceProof
+  | PoliceVerificationCertificate
+  | DrivingSchoolCertificate
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

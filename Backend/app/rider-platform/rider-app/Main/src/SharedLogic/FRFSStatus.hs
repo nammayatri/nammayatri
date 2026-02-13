@@ -388,7 +388,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       isMetroTestTransaction <- asks (.isMetroTestTransaction)
       let createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
           isMockPayment = fromMaybe False booking.isMockPayment
-      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) isMetroTestTransaction createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion isMockPayment) (Just createWalletCall) isMockPayment
+      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) isMetroTestTransaction createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion isMockPayment) (Just createWalletCall) isMockPayment (Just booking.id.getId)
 
     createOrderCall merchantOperatingCityId booking mRoutingId sdkVersion isMockPayment = Payment.createOrder merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) mRoutingId sdkVersion (Just isMockPayment)
 

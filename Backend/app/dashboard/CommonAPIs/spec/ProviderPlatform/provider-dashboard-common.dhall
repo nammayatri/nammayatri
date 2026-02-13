@@ -359,7 +359,7 @@ let defaultConfigs =
         { _sqlTypeMapper = sqlMapper
         , _extraDefaultFields = extraDefaultFields
         , _defaultCachedQueryKeyPrefix = "providerDashboard"
-        , _cacheFlowType = None
+        , _cacheFlowType = None Text
         }
       , _defaultImports = defaultImports
       , _defaultTypeImportMapper = defaultTypeImportMapper

@@ -27,6 +27,9 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     postDriverRegistrationRegisterAadhaar,
     postDriverRegistrationUnlinkDocument,
     getDriverRegistrationVerificationStatus,
+    postDriverRegistrationTriggerReminder,
+    postDriverRegistrationVerifyBankAccount,
+    getDriverRegistrationInfoBankAccount,
   )
 where
 
@@ -37,6 +40,8 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import Kernel.External.Verification.Interface.Types
+import qualified Kernel.External.Verification.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.City as City
@@ -89,6 +94,18 @@ getDriverRegistrationGetDocument :: ShortId DM.Merchant -> City.City -> ApiToken
 getDriverRegistrationGetDocument merchantShortId opCity apiTokenInfo imageId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationGetDocument) imageId
+
+postDriverRegistrationVerifyBankAccount :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.VerifyBankAccountReq -> Flow Kernel.External.Verification.Interface.Types.VerifyAsyncResp
+postDriverRegistrationVerifyBankAccount merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationVerifyBankAccount) driverId req
+
+getDriverRegistrationInfoBankAccount :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Kernel.Prelude.Text -> Flow Kernel.External.Verification.Types.BankAccountVerificationResponse
+getDriverRegistrationInfoBankAccount merchantShortId opCity apiTokenInfo driverId requestId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationInfoBankAccount) driverId requestId
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity apiTokenInfo driverId req = do
@@ -180,3 +197,11 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity apiTokenInfo driver
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentsCommon) driverId req
+
+postDriverRegistrationTriggerReminder :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.TriggerReminderReq -> Flow APISuccess
+postDriverRegistrationTriggerReminder merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  let mbRequestorId = determineRequestorId apiTokenInfo driverId
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationTriggerReminder) driverId mbRequestorId req

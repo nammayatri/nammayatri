@@ -575,6 +575,7 @@ convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap (a
             isActive = (Just association.isRcActive),
             fleetOwnerId = foId,
             fleetOwnerName = fromMaybe "" (Map.lookup foId fleetNameMap),
+            driverName = driverDetails.driverName,
             driverMobileNumber = driverDetails.mobileNumber,
             driverMobileCountryCode = driverDetails.mobileCountryCode,
             driverAccountNumber = driverDetails.accountNumber,
@@ -598,6 +599,7 @@ convertToVehicleAPIEntityT sendDriverMobileNumber fleetNameMap DVRC.VehicleRegis
             isActive = (Just isActive),
             fleetOwnerId = foId,
             fleetOwnerName = fromMaybe "" (Map.lookup foId fleetNameMap),
+            driverName = driverDetails.driverName,
             driverMobileNumber = driverDetails.mobileNumber,
             driverMobileCountryCode = driverDetails.mobileCountryCode,
             driverAccountNumber = driverDetails.accountNumber,
@@ -605,7 +607,8 @@ convertToVehicleAPIEntityT sendDriverMobileNumber fleetNameMap DVRC.VehicleRegis
           }
 
 data DriverAccountDetails = DriverAccountDetails
-  { mobileNumber :: Maybe Text,
+  { driverName :: Maybe Text,
+    mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,
     accountNumber :: Maybe Text,
     ifscCode :: Maybe Text
@@ -624,7 +627,8 @@ getDriverDetailsFromRC sendDriverMobileNumber rcId = do
           driverMobileNumber <- decrypt `mapM` person.mobileNumber
           pure
             DriverAccountDetails
-              { mobileNumber = driverMobileNumber,
+              { driverName = Just $ T.intercalate " " $ catMaybes [Just person.firstName, person.middleName, person.lastName],
+                mobileNumber = driverMobileNumber,
                 mobileCountryCode = person.mobileCountryCode,
                 accountNumber = accountNumber,
                 ifscCode = ifscCode
@@ -632,7 +636,8 @@ getDriverDetailsFromRC sendDriverMobileNumber rcId = do
         Nothing ->
           pure
             DriverAccountDetails
-              { mobileNumber = Nothing,
+              { driverName = Nothing,
+                mobileNumber = Nothing,
                 mobileCountryCode = Nothing,
                 accountNumber = Nothing,
                 ifscCode = Nothing
@@ -640,7 +645,8 @@ getDriverDetailsFromRC sendDriverMobileNumber rcId = do
     else
       pure
         DriverAccountDetails
-          { mobileNumber = Nothing,
+          { driverName = Nothing,
+            mobileNumber = Nothing,
             mobileCountryCode = Nothing,
             accountNumber = Nothing,
             ifscCode = Nothing

@@ -1,0 +1,43 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  DocumentType: Domain.Types.DocumentVerificationConfig
+
+ReminderConfig:
+  tableName: reminder_config
+
+  types:
+
+  fields:
+    documentType: DocumentType
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity #rerun
+    reminderIntervals: "[Int]"
+    enabled: Bool
+    isMandatory: Bool
+    daysThreshold: Maybe Int
+    ridesThreshold: Maybe Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    documentType: PrimaryKey
+
+  sqlType:
+    reminderIntervals: integer[]
+
+  queries:
+    findByMerchantOpCityIdAndDocumentType:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, documentType]
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId]
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey

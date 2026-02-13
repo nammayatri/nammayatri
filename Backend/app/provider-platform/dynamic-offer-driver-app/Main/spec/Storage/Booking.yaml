@@ -74,6 +74,7 @@ Booking:
     fareParams: FareParameters
     riderName: Maybe Text
     paymentMethodId: Maybe (Id MerchantPaymentMethod)
+    tollCharges: Maybe HighPrecMoney
     tollNames: Maybe [Text]
     tollIds: Maybe [Text]
     createdAt: UTCTime

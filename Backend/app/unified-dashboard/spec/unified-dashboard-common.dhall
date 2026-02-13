@@ -331,7 +331,7 @@ let defaultConfigs =
         { _sqlTypeMapper = sqlMapper
         , _extraDefaultFields = extraDefaultFields
         , _defaultCachedQueryKeyPrefix = "unifiedDashboard"
-        , _cacheFlowType = None
+        , _cacheFlowType = None Text
         }
       , _defaultTypeImportMapper = defaultTypeImportMapper
       , _generate =

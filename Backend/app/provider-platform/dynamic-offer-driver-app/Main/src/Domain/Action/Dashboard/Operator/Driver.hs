@@ -27,6 +27,8 @@ import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.OperationHub as Domain
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Types.DocumentReminderHistory as DRH
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OperationHub as DOH
@@ -51,10 +53,12 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import SharedLogic.Reminder.Helper (cancelRemindersForDriverByDocumentType, cancelRemindersForRCByDocumentType, recordDocumentCompletion)
 import Storage.Beam.SystemConfigs ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
@@ -105,8 +109,9 @@ getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus 
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
       mbOperationHubId = cast @CommonDriver.OperationHub @DOH.OperationHub <$> mbReqOperationHubId
+      mbDriverIdPerson = (Id :: Text -> Id DP.Person) <$> mbDriverId
   mbMobileNumberHash <- mapM getDbHash mbMobileNumber
-  reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) mbDriverId mbOperationHubId mbOperationHubName mbRegistrationNo
+  reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) Nothing mbOperationHubId mbOperationHubName mbRegistrationNo mbDriverIdPerson
   logInfo $ "Driver Operator Fetch Hub Requests' params - mbFrom: " <> show mbFrom <> " from: " <> show from <> " to: " <> show to
   let summary = Common.Summary {totalCount = 10000, count = length reqList}
   requests <- mapM castHubRequests reqList
@@ -120,7 +125,14 @@ postDriverOperatorCreateRequest merchantShortId opCity req = do
   Domain.postOperationCreateRequest (Nothing, merchant.id, merchantOpCity.id) domainReq
   where
     castOpsHubReq :: API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest -> DomainT.DriverOperationHubRequest
-    castOpsHubReq API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest {..} = DomainT.DriverOperationHubRequest {operationHubId = cast operationHubId, requestType = castReqTypeToDomain requestType, ..}
+    castOpsHubReq API.Types.ProviderPlatform.Operator.Driver.DriverOperationHubRequest {..} =
+      DomainT.DriverOperationHubRequest
+        { operationHubId = cast operationHubId,
+          requestType = castReqTypeToDomain requestType,
+          registrationNo = registrationNo,
+          driverId = cast <$> driverId,
+          creatorId = creatorId
+        }
 
 postDriverOperatorRespondHubRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Operator.Driver.RespondHubRequest -> Environment.Flow APISuccess)
 postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("operationHubRequestId_" <> req.operationHubRequestId) $ do
@@ -128,11 +140,24 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
   Redis.whenWithLockRedis (opsHubRequestLockKey req.operationHubRequestId) 60 $ do
     opHubReq <- SQOHR.findByPrimaryKey (Kernel.Types.Id.Id req.operationHubRequestId) >>= fromMaybeM (InvalidRequest "Invalid operation hub request id")
     when (opHubReq.requestStatus == APPROVED) $ Kernel.Utils.Common.throwError (InvalidRequest "Request already approved")
-    when (req.status == API.Types.ProviderPlatform.Operator.Driver.REJECTED && opHubReq.requestType == ONBOARDING_INSPECTION) $ do
+
+    -- Handle rejection for any request type
+    when (req.status == API.Types.ProviderPlatform.Operator.Driver.REJECTED) $ do
       void $ SQOHR.updateStatusWithDetails (castReqStatusToDomain req.status) (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
-    when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED && opHubReq.requestType == ONBOARDING_INSPECTION) $ do
+
+    -- Handle approval based on request type
+    when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED) $ do
+      case opHubReq.requestType of
+        ONBOARDING_INSPECTION -> handleVehicleInspectionApproval merchantShortId opCity req opHubReq now
+        REGULAR_INSPECTION -> handleVehicleInspectionApproval merchantShortId opCity req opHubReq now
+        DRIVER_ONBOARDING_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req opHubReq now
+        DRIVER_REGULAR_INSPECTION -> handleDriverInspectionApproval merchantShortId opCity req opHubReq now
+  pure Success
+  where
+    handleVehicleInspectionApproval mShortId city request opHubReq now = do
       creator <- runInReplica $ QPerson.findById opHubReq.creatorId >>= fromMaybeM (PersonNotFound opHubReq.creatorId.getId)
-      rc <- QVRCE.findLastVehicleRCWrapper opHubReq.registrationNo >>= fromMaybeM (RCNotFound opHubReq.registrationNo)
+      registrationNo <- opHubReq.registrationNo & fromMaybeM (InvalidRequest "registrationNo is required for vehicle inspection")
+      rc <- QVRCE.findLastVehicleRCWrapper registrationNo >>= fromMaybeM (RCNotFound registrationNo)
       personId <- case creator.role of
         DP.DRIVER -> pure creator.id
         _ -> do
@@ -140,22 +165,45 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
           case drc of
             [] -> throwError (InvalidRequest "No driver exist with this RC")
             (assoc : _) -> pure assoc.driverId
-      merchant <- findMerchantByShortId merchantShortId
-      merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-      transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
+      (merchantOpCity, transporterConfig, person, language) <- getMerchantAndPersonInfo mShortId city personId
+      fork "enable driver after vehicle inspection" $ do
+        -- Only check vehicle docs, not driver docs (vehicle and driver enablement are segregated)
+        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC person merchantOpCity transporterConfig language registrationNo
+        when allVehicleDocsVerified $ do
+          QVRC.updateApproved (Just True) rc.id
+          -- Cancel pending vehicle inspection reminders for all drivers using this RC
+          cancelRemindersForRCByDocumentType rc.id DVC.VehicleInspectionForm
+          -- Record inspection completion for auto-trigger monitoring (per RC, not per driver)
+          recordDocumentCompletion DVC.VehicleInspectionForm rc.id.getId DRH.RC Nothing merchantOpCity.merchantId merchantOpCity.id
+        let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
+        void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
+        mbVehicle <- QVehicle.findById personId
+        when (isNothing mbVehicle && allVehicleDocsVerified) $
+          void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
+
+    handleDriverInspectionApproval mShortId city request opHubReq now = do
+      personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
+      (merchantOpCity, transporterConfig, person, language) <- getMerchantAndPersonInfo mShortId city personId
+      fork "enable driver after driver inspection" $ do
+        -- Only check driver docs, not vehicle docs (vehicle and driver enablement are segregated)
+        allDriverDocsVerified <- SStatus.checkAllDriverDocsVerifiedForDriver person merchantOpCity transporterConfig language
+        when allDriverDocsVerified $ do
+          QDIExtra.updateApproved (Just True) personId
+          -- Cancel pending driver inspection reminders
+          cancelRemindersForDriverByDocumentType personId DVC.DriverInspectionForm
+          -- Record driver inspection completion for auto-trigger monitoring
+          recordDocumentCompletion DVC.DriverInspectionForm personId.getId DRH.DRIVER (Just personId) merchantOpCity.merchantId merchantOpCity.id
+          void $ postDriverEnable mShortId city $ cast @DP.Person @Common.Driver personId
+        let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
+        void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
+
+    getMerchantAndPersonInfo mShortId city personId = do
+      merchant <- findMerchantByShortId mShortId
+      merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> mShortId.getShortId <> " ,city: " <> show city)
+      transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       let language = fromMaybe merchantOpCity.language person.language
-      fork "enable driver after inspection" $ do
-        allDriverVehicleDocsVerified <- SStatus.checkAllDriverVehicleDocsVerified person merchantOpCity transporterConfig language opHubReq.registrationNo
-        when allDriverVehicleDocsVerified $ do
-          QVRC.updateApproved (Just True) rc.id
-          void $ postDriverEnable merchantShortId opCity $ cast @DP.Person @Common.Driver personId
-        let reqUpdatedStatus = if allDriverVehicleDocsVerified then castReqStatusToDomain req.status else PENDING
-        void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
-        mbVehicle <- QVehicle.findById personId
-        when (isNothing mbVehicle && allDriverVehicleDocsVerified) $
-          void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity opHubReq.registrationNo)
-  pure Success
+      pure (merchantOpCity, transporterConfig, person, language)
 
 opsHubRequestLockKey :: Text -> Text
 opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
@@ -163,7 +211,7 @@ opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
 castHubRequests :: (OperationHubRequests, DP.Person, DOH.OperationHub) -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
 castHubRequests (hubReq, creator, hub) = do
   creatorPhoneNo <- mapM decrypt creator.mobileNumber
-  mbRc <- QVRCE.findLastVehicleRCWrapper hubReq.registrationNo
+  mbRc <- maybe (pure Nothing) QVRCE.findLastVehicleRCWrapper hubReq.registrationNo
   (driverPhoneNo, rcId) <- case mbRc of
     Just rc -> do
       drc <- SQDRA.findAllActiveAssociationByRCId rc.id
@@ -200,6 +248,8 @@ castReqTypeToDomain :: API.Types.ProviderPlatform.Operator.Driver.RequestType ->
 castReqTypeToDomain = \case
   API.Types.ProviderPlatform.Operator.Driver.ONBOARDING_INSPECTION -> ONBOARDING_INSPECTION
   API.Types.ProviderPlatform.Operator.Driver.REGULAR_INSPECTION -> REGULAR_INSPECTION
+  API.Types.ProviderPlatform.Operator.Driver.DRIVER_ONBOARDING_INSPECTION -> DRIVER_ONBOARDING_INSPECTION
+  API.Types.ProviderPlatform.Operator.Driver.DRIVER_REGULAR_INSPECTION -> DRIVER_REGULAR_INSPECTION
 
 castReqStatus :: RequestStatus -> API.Types.ProviderPlatform.Operator.Driver.RequestStatus
 castReqStatus = \case
@@ -211,6 +261,8 @@ castReqType :: RequestType -> API.Types.ProviderPlatform.Operator.Driver.Request
 castReqType = \case
   ONBOARDING_INSPECTION -> API.Types.ProviderPlatform.Operator.Driver.ONBOARDING_INSPECTION
   REGULAR_INSPECTION -> API.Types.ProviderPlatform.Operator.Driver.REGULAR_INSPECTION
+  DRIVER_ONBOARDING_INSPECTION -> API.Types.ProviderPlatform.Operator.Driver.DRIVER_ONBOARDING_INSPECTION
+  DRIVER_REGULAR_INSPECTION -> API.Types.ProviderPlatform.Operator.Driver.DRIVER_REGULAR_INSPECTION
 
 getDriverOperatorList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

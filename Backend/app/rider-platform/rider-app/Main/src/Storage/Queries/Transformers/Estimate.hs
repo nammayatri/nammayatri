@@ -68,8 +68,3 @@ mkMaxTotalFare = (.maxFare.amount)
 
 mkMinTotalFare :: FareRange -> HighPrecMoney
 mkMinTotalFare = (.minFare.amount)
-
-mkWaitingCharges :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Kernel.Types.Common.Currency -> DE.WaitingCharges
-mkWaitingCharges waitingChargePerMin waitingChargePerMinAmount currency =
-  DE.WaitingCharges $
-    waitingChargePerMin <&> \wc -> mkPriceWithDefault waitingChargePerMinAmount currency (round wc :: Money)

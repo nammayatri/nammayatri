@@ -172,6 +172,7 @@ library
       Domain.Action.Dashboard.Management.DriverGoHome
       Domain.Action.Dashboard.Management.DriverReferral
       Domain.Action.Dashboard.Management.DriverRegistration
+      Domain.Action.Dashboard.Management.EntityInfo
       Domain.Action.Dashboard.Management.Media
       Domain.Action.Dashboard.Management.MediaFileDocument
       Domain.Action.Dashboard.Management.Merchant
@@ -239,6 +240,7 @@ library
       Domain.Action.UI.DriverGoHomeRequest
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
+      Domain.Action.UI.DriverOnboarding.BankAccountVerification
       Domain.Action.UI.DriverOnboarding.DigiLockerCallback
       Domain.Action.UI.DriverOnboarding.DocumentRegistration
       Domain.Action.UI.DriverOnboarding.DriverLicense
@@ -397,6 +399,7 @@ library
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
       SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout
+      SharedLogic.Allocator.Jobs.Reminder.ProcessReminder
       SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver
@@ -470,6 +473,7 @@ library
       SharedLogic.Person
       SharedLogic.PersonBankAccount
       SharedLogic.Pricing
+      SharedLogic.Reminder.Helper
       SharedLogic.Ride
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
@@ -638,6 +642,7 @@ library
       Storage.Queries.DriverSSNExtra
       Storage.Queries.DriverStatsExtra
       Storage.Queries.DriverWalletExtra
+      Storage.Queries.EntityInfoExtra
       Storage.Queries.ExophoneExtra
       Storage.Queries.FareParameters
       Storage.Queries.FareParameters.FareParametersAmbulanceDetails
@@ -705,6 +710,7 @@ library
       Storage.Queries.QueriesExtra.RideLite
       Storage.Queries.Quote
       Storage.Queries.RatingExtra
+      Storage.Queries.RCStatsExtra
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RideDetailsExtra
       Storage.Queries.RideExtra
@@ -821,6 +827,7 @@ library
       API.Action.Dashboard.Management.DriverGoHome
       API.Action.Dashboard.Management.DriverReferral
       API.Action.Dashboard.Management.DriverRegistration
+      API.Action.Dashboard.Management.EntityInfo
       API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.MediaFileDocument
       API.Action.Dashboard.Management.Merchant
@@ -985,6 +992,7 @@ library
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
       Domain.Types.DigilockerVerification
+      Domain.Types.DocumentReminderHistory
       Domain.Types.DocumentVerificationConfig
       Domain.Types.DriverBankAccount
       Domain.Types.DriverBlockReason
@@ -1010,6 +1018,7 @@ library
       Domain.Types.DriverSSN
       Domain.Types.DriverStats
       Domain.Types.DriverWallet
+      Domain.Types.EntityInfo
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareProduct
@@ -1078,10 +1087,13 @@ library
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
       Domain.Types.Rating
+      Domain.Types.RCStats
       Domain.Types.RCValidationRules
       Domain.Types.ReelsData
       Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
+      Domain.Types.Reminder
+      Domain.Types.ReminderConfig
       Domain.Types.Ride
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
@@ -1148,6 +1160,7 @@ library
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
       Storage.Beam.DigilockerVerification
+      Storage.Beam.DocumentReminderHistory
       Storage.Beam.DocumentVerificationConfig
       Storage.Beam.DriverBankAccount
       Storage.Beam.DriverBlockReason
@@ -1173,6 +1186,7 @@ library
       Storage.Beam.DriverSSN
       Storage.Beam.DriverStats
       Storage.Beam.DriverWallet
+      Storage.Beam.EntityInfo
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.FareProduct
@@ -1241,10 +1255,13 @@ library
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
       Storage.Beam.Rating
+      Storage.Beam.RCStats
       Storage.Beam.RCValidationRules
       Storage.Beam.ReelsData
       Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
+      Storage.Beam.Reminder
+      Storage.Beam.ReminderConfig
       Storage.Beam.Ride
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
@@ -1315,6 +1332,7 @@ library
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
       Storage.Queries.DigilockerVerification
+      Storage.Queries.DocumentReminderHistory
       Storage.Queries.DocumentVerificationConfig
       Storage.Queries.DriverBankAccount
       Storage.Queries.DriverBlockReason
@@ -1340,6 +1358,7 @@ library
       Storage.Queries.DriverSSN
       Storage.Queries.DriverStats
       Storage.Queries.DriverWallet
+      Storage.Queries.EntityInfo
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareProduct
@@ -1498,10 +1517,13 @@ library
       Storage.Queries.QuestionInformation
       Storage.Queries.QuestionModuleMapping
       Storage.Queries.Rating
+      Storage.Queries.RCStats
       Storage.Queries.RCValidationRules
       Storage.Queries.ReelsData
       Storage.Queries.RegistrationToken
       Storage.Queries.RegistryMapFallback
+      Storage.Queries.Reminder
+      Storage.Queries.ReminderConfig
       Storage.Queries.Ride
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails

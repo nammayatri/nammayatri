@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, formatTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as BankAccountVerification
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.PullDocument as PullDocument
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VRC
@@ -46,6 +47,7 @@ import Kernel.External.Maps (LatLong (..))
 import Kernel.External.Types (Language (..), ServiceFlow)
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Interface.Types as Verification
+import qualified Kernel.External.Verification.Types as VerificationTypes
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -1319,3 +1321,36 @@ postDriverDigilockerPullDocuments ::
 postDriverDigilockerPullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   logInfo $ "PullDocuments - Starting pull operation for DocType: " <> show req.docType
   PullDocument.pullDocuments (mbDriverId, merchantId, merchantOpCityId) req
+
+postDriverVerifyBankAccount ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.VerifyBankAccReq ->
+    Environment.Flow Verification.VerifyAsyncResp
+  )
+postDriverVerifyBankAccount (mbPersonId, merchantId, merchantOpCityId) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  bankAccountVerificationResponse <-
+    BankAccountVerification.verifyBankAccount (personId, merchantId, merchantOpCityId) $
+      BankAccountVerification.DriverBankAccountVerifyReq
+        { bankAccountNo = req.bankAccountNo,
+          bankIfscCode = req.bankIfscCode,
+          nfVerification = False
+        }
+  return bankAccountVerificationResponse
+
+getInfoBankAccount ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  Kernel.Prelude.Text ->
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Environment.Flow VerificationTypes.BankAccountVerificationResponse
+getInfoBankAccount (mbPersonId, merchantId, merchantOpCityId) requestId _driverId = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  bankAccountVerificationResponse <-
+    BankAccountVerification.getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId
+  return bankAccountVerificationResponse

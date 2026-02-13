@@ -23,7 +23,11 @@ import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
-data AllTimeOperatorAnalyticsRes = AllTimeOperatorAnalyticsRes {rating :: Kernel.Prelude.Maybe Kernel.Prelude.Double, cancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double, acceptanceRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
+data AllTimeOperatorAnalyticsRes = AllTimeOperatorAnalyticsRes
+  { rating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    cancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    acceptanceRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -48,7 +52,13 @@ data DriverInfoResp = DriverInfoResp {listItem :: [DriverInfo], summary :: Dashb
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data DriverOperationHubRequest = DriverOperationHubRequest {creatorId :: Kernel.Prelude.Text, operationHubId :: Kernel.Types.Id.Id OperationHub, registrationNo :: Kernel.Prelude.Text, requestType :: RequestType}
+data DriverOperationHubRequest = DriverOperationHubRequest
+  { creatorId :: Kernel.Prelude.Text,
+    driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver),
+    operationHubId :: Kernel.Types.Id.Id OperationHub,
+    registrationNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestType :: RequestType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -86,7 +96,7 @@ data OperationHubDriverRequest = OperationHubDriverRequest
     operationHubId :: Kernel.Types.Id.Id OperationHub,
     operationHubName :: Kernel.Prelude.Text,
     rcId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    registrationNo :: Kernel.Prelude.Text,
+    registrationNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     requestStatus :: RequestStatus,
     requestTime :: Kernel.Prelude.UTCTime,
     requestType :: RequestType
@@ -108,6 +118,8 @@ data RequestStatus
 data RequestType
   = ONBOARDING_INSPECTION
   | REGULAR_INSPECTION
+  | DRIVER_ONBOARDING_INSPECTION
+  | DRIVER_REGULAR_INSPECTION
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

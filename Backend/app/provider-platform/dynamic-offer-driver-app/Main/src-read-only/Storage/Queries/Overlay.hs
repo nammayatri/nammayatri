@@ -53,7 +53,7 @@ deleteByOverlayKeyMerchantOpCityIdUdfMbVehicleCategory merchantOperatingCityId o
 
 findAllByLanguage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> m [Domain.Types.Overlay.Overlay])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> m ([Domain.Types.Overlay.Overlay]))
 findAllByLanguage merchantOperatingCityId language = do
   findAllWithKV
     [ Se.And
@@ -64,7 +64,7 @@ findAllByLanguage merchantOperatingCityId language = do
 
 findAllByLanguageVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m [Domain.Types.Overlay.Overlay])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m ([Domain.Types.Overlay.Overlay]))
 findAllByLanguageVehicleCategory merchantOperatingCityId language vehicleCategory = do
   findAllWithKV
     [ Se.And
@@ -74,12 +74,12 @@ findAllByLanguageVehicleCategory merchantOperatingCityId language vehicleCategor
         ]
     ]
 
-findAllByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.Overlay.Overlay])
+findAllByMerchantOpCityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.Overlay.Overlay]))
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByOverlayKeyUdf ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.Overlay.Overlay])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.Overlay.Overlay]))
 findAllByOverlayKeyUdf merchantOperatingCityId overlayKey udf1 = do
   findAllWithKV
     [ Se.And
@@ -91,7 +91,7 @@ findAllByOverlayKeyUdf merchantOperatingCityId overlayKey udf1 = do
 
 findAllByOverlayKeyUdfVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m [Domain.Types.Overlay.Overlay])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m ([Domain.Types.Overlay.Overlay]))
 findAllByOverlayKeyUdfVehicleCategory merchantOperatingCityId overlayKey udf1 vehicleCategory = do
   findAllWithKV
     [ Se.And

@@ -36,9 +36,9 @@ data DriverPanCardE e = DriverPanCard
   }
   deriving (Generic)
 
-type DriverPanCard = DriverPanCardE ('AsEncrypted)
+type DriverPanCard = DriverPanCardE 'AsEncrypted
 
-type DecryptedDriverPanCard = DriverPanCardE ('AsUnencrypted)
+type DecryptedDriverPanCard = DriverPanCardE 'AsUnencrypted
 
 instance EncryptedItem DriverPanCard where
   type Unencrypted DriverPanCard = (DecryptedDriverPanCard, HashSalt)
@@ -100,6 +100,6 @@ data PanType = INDIVIDUAL | BUSINESS deriving (Eq, Ord, Show, Read, Generic, ToJ
 
 data VerifiedBy = FRONTEND_SDK | DASHBOARD | DASHBOARD_ADMIN | DASHBOARD_USER | DIGILOCKER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PanType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PanType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VerifiedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VerifiedBy)

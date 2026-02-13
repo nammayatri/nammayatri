@@ -60,8 +60,6 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
-import qualified Data.Aeson.Key as AKey
-import qualified Data.Aeson.KeyMap as AKM
 import Data.Default.Class
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.List as DL
@@ -71,7 +69,6 @@ import qualified Data.Text as Text
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import Data.Time hiding (getCurrentTime)
-import qualified Data.UUID as UUID
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
@@ -112,7 +109,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
-import Kernel.Utils.InternalAPICallLogging as ApiCallLogger
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Network.URI (parseURI, uriQuery)
@@ -129,7 +125,6 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RideDetails as QRideDetails
@@ -173,11 +168,7 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
   ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
   logDebug $ "on_selectV2 request bpp: " <> show content
-  let req = Spec.OnSelectReq context Nothing (Just content)
-  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    ApiCallLogger.pushInternalApiCallDataToKafka "onSelectV2" "BPP" (Just searchRequest.transactionId) (Just req) res
-  pure ()
+  void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
   where
     getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
     getMsgIdByTxnId txnId = do
@@ -207,11 +198,7 @@ callOnUpdateV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onUpdateReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    let transactionId = req.onUpdateReqContext.contextTransactionId <&> UUID.toText
-    ApiCallLogger.pushInternalApiCallDataToKafka "onUpdateV2" "BPP" transactionId (Just req) res
-  pure ()
+  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
 
 callOnStatusV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -232,11 +219,7 @@ callOnStatusV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onStatusReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    let transactionId = req.onStatusReqContext.contextTransactionId <&> UUID.toText
-    ApiCallLogger.pushInternalApiCallDataToKafka "onStatusV2" "BPP" (transactionId) (Just req) res
-  pure ()
+  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
 
 callOnCancelV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -257,11 +240,7 @@ callOnCancelV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onCancelReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    let transactionId = req.onCancelReqContext.contextTransactionId <&> UUID.toText
-    ApiCallLogger.pushInternalApiCallDataToKafka "onCancelV2" "BPP" (transactionId) (Just req) res
-  pure ()
+  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
 
 callOnConfirmV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -291,11 +270,7 @@ callOnConfirmV2 transporter context content bppConfig = do
   txnId <- Utils.getTransactionId context
   ttl <- bppConfig.onConfirmTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
-  let req = Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content}
-  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    ApiCallLogger.pushInternalApiCallDataToKafka "onConfirmV2" "BPP" (Just txnId) (Just req) res
-  pure ()
+  void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
@@ -377,6 +352,7 @@ rideAssignedCommon booking ride driver veh = do
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
   rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
   let bookingDetails = ACL.BookingDetails {..}
+  -- resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
   image <- forM driver.faceImageId $ \mediaId -> do
     mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist ("Driver image does not exist for ride:" <> driver.id.getId))
     imagePath <- fromMaybeM (FileDoNotExist ("Driver image does not exist for ride:" <> driver.id.getId)) (getQueryParam "filePath" (Text.unpack mediaEntry.url))
@@ -395,17 +371,21 @@ rideAssignedCommon booking ride driver veh = do
   driverAccountId <-
     if ride.onlinePayment && isValueAddNP
       then do
-        mDriverBankAccount <-
-          QFDA.findByDriverId ride.driverId True >>= \case
-            Just fleetDriverAssociation -> runInReplica $ QDBA.findByPrimaryKey (Id @DP.Person fleetDriverAssociation.fleetOwnerId)
-            Nothing -> runInReplica $ QDBA.findByPrimaryKey ride.driverId
+        mDriverBankAccount <- runInReplica $ QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   where
+    extractRCManufacturerModel :: Idfy.VerificationResponse -> Maybe Text
+    extractRCManufacturerModel (Idfy.VerificationResponse idfyResp) = do
+      res <- Idfy.result idfyResp
+      case res of
+        Idfy.RCResult (Idfy.ExtractionOutput rcOut) -> Idfy.manufacturer_model rcOut
+        _ -> Nothing
+
     refillKey = "REFILLED_" <> ride.driverId.getId
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
-    refillVehicleModel = withTryCatch "refillVehicleModel" do
+    refillVehicleModel = try @_ @SomeException do
       -- TODO: remove later
       mbIsRefilledToday :: Maybe Bool <- Hedis.get refillKey
       case mbIsRefilledToday of
@@ -414,20 +394,30 @@ rideAssignedCommon booking ride driver veh = do
           driverVehicleIdfyResponse <-
             find
               ( \a ->
-                  maybe False ((==) veh.registrationNo) $
-                    (.registration_number)
-                      =<< (.extraction_output)
-                      =<< (.result)
-                      =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (a.idfyResponse)) :: Maybe Idfy.VerificationResponse)
+                  let mbRegNo =
+                        do
+                          Idfy.VerificationResponse idfyResp <-
+                            (A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< a.idfyResponse
+                          res <- Idfy.result idfyResp
+                          case res of
+                            Idfy.RCResult (Idfy.ExtractionOutput Idfy.RCVerificationOutput {Idfy.registration_number = mbReg}) -> mbReg
+                            _ -> Nothing
+                   in maybe False (== veh.registrationNo) mbRegNo
               )
               <$> QIV.findAllByDriverIdAndDocType ride.driverId DIT.VehicleRegistrationCertificate
+
           newVehicle <-
-            (flip $ maybe (pure veh)) ((.manufacturer_model) =<< (.extraction_output) =<< (.result) =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (.idfyResponse) =<< driverVehicleIdfyResponse) :: Maybe Idfy.VerificationResponse)) $ \newModel -> do
-              modelNamesHashMap <- asks (.modelNamesHashMap)
-              let modelValueToUpdate = fromMaybe "" $ HMS.lookup newModel modelNamesHashMap
-              if modelValueToUpdate == veh.model
-                then pure veh
-                else QVeh.updateVehicleModel modelValueToUpdate ride.driverId $> updateVehicle veh modelValueToUpdate
+            (flip $ maybe (pure veh))
+              ( do
+                  resp <- (A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (.idfyResponse) =<< driverVehicleIdfyResponse
+                  extractRCManufacturerModel resp
+              )
+              $ \newModel -> do
+                modelNamesHashMap <- asks (.modelNamesHashMap)
+                let modelValueToUpdate = fromMaybe "" $ HMS.lookup newModel modelNamesHashMap
+                if modelValueToUpdate == veh.model
+                  then pure veh
+                  else QVeh.updateVehicleModel modelValueToUpdate ride.driverId $> updateVehicle veh modelValueToUpdate
           Hedis.setExp refillKey True 86400
           pure newVehicle
 
@@ -749,8 +739,7 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
       def{Tags.itemTags =
             [ (Tags.DISTANCE_TO_NEAREST_DRIVER_METER, Just $ show driverQuote.distanceToPickup.getMeters),
               (Tags.ETA_TO_NEAREST_DRIVER_MIN, Just . show $ driverQuote.durationToPickup.getSeconds `div` 60),
-              (Tags.UPGRADE_TO_CAB, show <$> srfd.upgradeCabRequest),
-              (Tags.BILLING_CATEGORY, Just $ show searchTry.billingCategory)
+              (Tags.UPGRADE_TO_CAB, show <$> srfd.upgradeCabRequest)
             ]
               <> if (isJust driverQuote.specialLocationTag && isValueAddNP)
                 then [(Tags.SPECIAL_LOCATION_TAG, driverQuote.specialLocationTag)]
@@ -1260,16 +1249,5 @@ callBecknAPIWithSignature' ::
   m res
 callBecknAPIWithSignature' merchantId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") do
-    let reqJson = toJSON req'
-        updatedReqJson = case reqJson of
-          A.Object obj ->
-            case AKM.lookup (AKey.fromText "context") obj of
-              Just (A.Object ctxObj) ->
-                case AKM.lookup (AKey.fromText "action") ctxObj of
-                  Just (A.String actionStr) ->
-                    A.Object $ AKM.insert (AKey.fromText "context") (A.Object $ AKM.insert (AKey.fromText "action") (A.String $ T.toLower actionStr) ctxObj) obj
-                  _ -> reqJson
-              _ -> reqJson
-          _ -> reqJson
-    void $ pushLogs (T.toLower b) updatedReqJson merchantId.getId "MOBILITY"
+    void $ pushLogs b (toJSON req') merchantId.getId "MOBILITY"
   Beckn.callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'

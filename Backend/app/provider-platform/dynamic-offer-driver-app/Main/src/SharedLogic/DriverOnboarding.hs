@@ -82,13 +82,13 @@ import qualified Tools.Whatsapp as Whatsapp
 import Utils.Common.Cac.KeyNameConstants
 
 defaultDriverDocumentTypes :: [DVC.DocumentType]
-defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense]
+defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense, DVC.LocalResidenceProof, DVC.PoliceVerificationCertificate, DVC.DrivingSchoolCertificate]
 
 defaultFleetDocumentTypes :: [DVC.DocumentType]
 defaultFleetDocumentTypes = [DVC.AadhaarCard, DVC.PanCard, DVC.GSTCertificate, DVC.BusinessLicense]
 
 defaultVehicleDocumentTypes :: [DVC.DocumentType]
-defaultVehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer]
+defaultVehicleDocumentTypes = [DVC.VehicleRegistrationCertificate, DVC.VehiclePermit, DVC.VehicleFitnessCertificate, DVC.VehicleInsurance, DVC.VehiclePUC, DVC.VehicleInspectionForm, DVC.SubscriptionPlan, DVC.VehicleLeft, DVC.VehicleRight, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleBack, DVC.Odometer, DVC.VehicleNOC, DVC.InspectionHub]
 
 notifyErrorToSupport ::
   Person ->
@@ -702,6 +702,8 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.ProfileDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.ProfileDetails
   Domain.Types.DocumentVerificationConfig.SocialSecurityNumber -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.SocialSecurityNumber
   Domain.Types.DocumentVerificationConfig.VehicleInspectionForm -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleInspectionImage
+  Domain.Types.DocumentVerificationConfig.DriverInspectionForm -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DriverInspectionFormImage
+  Domain.Types.DocumentVerificationConfig.TrainingForm -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.TrainingFormImage
   Domain.Types.DocumentVerificationConfig.GSTCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.GSTCertificate
   Domain.Types.DocumentVerificationConfig.BackgroundVerification -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BackgroundVerification
   Domain.Types.DocumentVerificationConfig.UploadProfile -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UploadProfileImage
@@ -731,3 +733,6 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.FinnishIDResidencePermit -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.FinnishIDResidencePermit
   Domain.Types.DocumentVerificationConfig.BusinessRegistrationExtract -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessRegistrationExtract
   Domain.Types.DocumentVerificationConfig.PersonalId -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PersonalId
+  Domain.Types.DocumentVerificationConfig.LocalResidenceProof -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LocalResidenceProof
+  Domain.Types.DocumentVerificationConfig.PoliceVerificationCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PoliceVerificationCertificate
+  Domain.Types.DocumentVerificationConfig.DrivingSchoolCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DrivingSchoolCertificate

@@ -20,14 +20,14 @@ import Storage.Queries.Transformers.Estimate
 
 instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   fromTType' (Beam.EstimateT {..}) = do
-    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     estimateBreakupList' <- Storage.Queries.EstimateBreakup.findAllByEstimateIdT (Kernel.Types.Id.Id id)
     providerUrl' <- Kernel.Prelude.parseBaseUrl providerUrl
     tripTerms' <- mKTripTerms tripTermsId
-    vehicleIconUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) vehicleIconUrl
+    vehicleIconUrl' <- ((Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))) vehicleIconUrl
     pure $
       Just
         Domain.Types.Estimate.Estimate
@@ -38,7 +38,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             businessDiscountInfo = mkBusinessDiscountInfo businessDiscount businessDiscountPercentage currency,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
+            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
             device = device,
@@ -91,7 +91,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant,
-            waitingCharges = mkWaitingCharges waitingChargePerMin waitingChargePerMinAmount currency
+            waitingCharges = Domain.Types.Estimate.WaitingCharges $ Kernel.Types.Common.mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin
           }
 
 instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
@@ -101,28 +101,28 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.boostSearchPreSelectionServiceTierConfig = boostSearchPreSelectionServiceTierConfig,
         Beam.bppEstimateId = Kernel.Types.Id.getId bppEstimateId,
-        Beam.businessDiscount = businessDiscountInfo <&> ((.amount) . (.businessDiscount)),
-        Beam.businessDiscountPercentage = businessDiscountInfo <&> (.businessDiscountPercentage),
-        Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
+        Beam.businessDiscount = ((businessDiscountInfo <&> ((.amount) . (.businessDiscount)))),
+        Beam.businessDiscountPercentage = (businessDiscountInfo <&> (.businessDiscountPercentage)),
+        Beam.clientBundleVersion = (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
+        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
+        Beam.clientOsType = (clientDevice <&> (.deviceType)),
+        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
         Beam.device = device,
-        Beam.discount = discount <&> (.amount),
+        Beam.discount = (discount <&> (.amount)),
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driversLocation = driversLocation,
         Beam.estimateTags = estimateTags,
-        Beam.estimatedDistance = Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance,
-        Beam.estimatedDistanceValue = Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance,
+        Beam.estimatedDistance = (Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance),
+        Beam.estimatedDistanceValue = (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance),
         Beam.estimatedDuration = estimatedDuration,
-        Beam.estimatedFare = (.amount) estimatedFare,
+        Beam.estimatedFare = ((.amount) estimatedFare),
         Beam.estimatedPickupDuration = estimatedPickupDuration,
         Beam.estimatedStaticDuration = estimatedStaticDuration,
-        Beam.estimatedTotalFare = (.amount) estimatedTotalFare,
+        Beam.estimatedTotalFare = ((.amount) estimatedTotalFare),
         Beam.id = Kernel.Types.Id.getId id,
         Beam.insuredAmount = insuredAmount,
         Beam.isAirConditioned = isAirConditioned,
@@ -133,13 +133,13 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.itemId = itemId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.nightShiftCharge = mknightShiftCharge nightShiftInfo,
-        Beam.nightShiftChargeAmount = mknightShiftChargeAmount nightShiftInfo,
-        Beam.nightShiftEnd = nightShiftInfo <&> (.nightShiftEnd),
-        Beam.nightShiftStart = nightShiftInfo <&> (.nightShiftStart),
-        Beam.oldNightShiftCharge = (.oldNightShiftCharge) =<< nightShiftInfo,
-        Beam.personalDiscount = personalDiscountInfo <&> ((.amount) . (.personalDiscount)),
-        Beam.personalDiscountPercentage = personalDiscountInfo <&> (.personalDiscountPercentage),
+        Beam.nightShiftCharge = (mknightShiftCharge nightShiftInfo),
+        Beam.nightShiftChargeAmount = (mknightShiftChargeAmount nightShiftInfo),
+        Beam.nightShiftEnd = (nightShiftInfo <&> (.nightShiftEnd)),
+        Beam.nightShiftStart = (nightShiftInfo <&> (.nightShiftStart)),
+        Beam.oldNightShiftCharge = ((.oldNightShiftCharge) =<< nightShiftInfo),
+        Beam.personalDiscount = ((personalDiscountInfo <&> ((.amount) . (.personalDiscount)))),
+        Beam.personalDiscountPercentage = (personalDiscountInfo <&> (.personalDiscountPercentage)),
         Beam.providerCompletedRidesCount = providerCompletedRidesCount,
         Beam.providerId = providerId,
         Beam.providerMobileNumber = providerMobileNumber,
@@ -155,20 +155,20 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.specialLocationTag = specialLocationTag,
         Beam.status = status,
         Beam.tipOptions = tipOptions,
-        Beam.tollCharges = tollChargesInfo <&> ((.amount) . (.tollCharges)),
-        Beam.tollNames = tollChargesInfo <&> (.tollNames),
-        Beam.currency = Kernel.Prelude.Just $ (.currency) estimatedFare,
-        Beam.maxTotalFare = mkMaxTotalFare totalFareRange,
-        Beam.minTotalFare = mkMinTotalFare totalFareRange,
+        Beam.tollCharges = ((tollChargesInfo <&> ((.amount) . (.tollCharges)))),
+        Beam.tollNames = (tollChargesInfo <&> (.tollNames)),
+        Beam.currency = (Kernel.Prelude.Just $ (.currency) estimatedFare),
+        Beam.maxTotalFare = (mkMaxTotalFare totalFareRange),
+        Beam.minTotalFare = (mkMinTotalFare totalFareRange),
         Beam.tripCategory = tripCategory,
-        Beam.tripTermsId = Kernel.Types.Id.getId <$> (tripTerms <&> (.id)),
+        Beam.tripTermsId = (Kernel.Types.Id.getId <$> (tripTerms <&> (.id))),
         Beam.updatedAt = updatedAt,
         Beam.validTill = validTill,
         Beam.vehicleCategory = vehicleCategory,
-        Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
+        Beam.vehicleIconUrl = (Kernel.Prelude.fmap showBaseUrl) vehicleIconUrl,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType,
-        Beam.waitingChargePerMin = (.waitingChargePerMin) waitingCharges <&> (.amount),
-        Beam.waitingChargePerMinAmount = (.waitingChargePerMin) waitingCharges <&> (.amount)
+        Beam.waitingChargePerMin = ((.waitingChargePerMin) waitingCharges <&> (.amountInt)),
+        Beam.waitingChargePerMinAmount = ((.waitingChargePerMin) waitingCharges <&> (.amount))
       }

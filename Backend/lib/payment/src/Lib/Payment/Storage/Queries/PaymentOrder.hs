@@ -130,6 +130,16 @@ findAllNonTerminalOrders duration = do
       Se.Is BeamPO.paymentFulfillmentStatus $ Se.In [Just DPayment.FulfillmentPending, Just DPayment.FulfillmentFailed, Just DPayment.FulfillmentRefundPending, Just DPayment.FulfillmentRefundInitiated, Nothing]
     ]
 
+findAllByGroupId :: BeamFlow m r => Text -> UTCTime -> m [DOrder.PaymentOrder]
+findAllByGroupId groupId now = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamPO.groupId $ Se.Eq (Just groupId),
+          Se.Is BeamPO.validTill $ Se.GreaterThan (Just now),
+          Se.Is BeamPO.validTill $ Se.Not $ Se.Eq Nothing
+        ]
+    ]
+
 instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
   fromTType' orderT@BeamPO.PaymentOrderT {..} = do
     paymentLinks <- parsePaymentLinks orderT
@@ -146,6 +156,7 @@ instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
               (Just encryptedToken, Just hash) -> Just $ EncryptedHashed (Encrypted encryptedToken) hash
               (_, _) -> Nothing,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
+            groupId = groupId,
             ..
           }
     where
@@ -174,6 +185,7 @@ instance ToTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
         serviceProvider = Just serviceProvider,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
         effectAmount = Nothing,
+        groupId = groupId,
         ..
       }
 

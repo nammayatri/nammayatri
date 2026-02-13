@@ -29,17 +29,29 @@ getOperationGetAllHubs (_, _, opCityId) = QOH.findAllByCityId opCityId
 postOperationCreateRequest :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> DriverOperationHubRequest -> Flow APISuccess
 postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req = do
   runRequestValidation validateDriverOperationHubRequest req
+  -- At least one of registrationNo or driverId must be provided
+  unless (isJust req.registrationNo || isJust req.driverId) $
+    throwError $ InvalidRequest "Either registrationNo or driverId must be provided"
   let creatorId = fromMaybe (Id req.creatorId) mbPersonId
   Redis.whenWithLockRedis (opsHubDriverLockKey creatorId.getId) 60 $ do
     id <- generateGUID
     now <- getCurrentTime
-    opsHubReq <- QOHR.findByCreatorRCStatusAndType creatorId PENDING req.requestType req.registrationNo
-    unless (null opsHubReq) $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
+    -- Check for duplicate requests based on creator, status, type, and either registrationNo or driverId
+    opsHubReqs <- QOHR.findByCreatorStatusAndType creatorId PENDING req.requestType
+    let duplicateReg = case req.registrationNo of
+          Just rcNo -> any (\r -> r.registrationNo == Just rcNo) opsHubReqs
+          Nothing -> False
+    let duplicateDriver = case req.driverId of
+          Just driverId -> any (\r -> r.driverId == Just driverId) opsHubReqs
+          Nothing -> False
+    let isDuplicate = duplicateReg || duplicateDriver
+    when isDuplicate $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
     void $ QOH.findByPrimaryKey req.operationHubId >>= fromMaybeM (OperationHubDoesNotExist req.operationHubId.getId)
     let operationHubReq =
           OperationHubRequests
             { operationHubId = req.operationHubId,
               registrationNo = req.registrationNo,
+              driverId = req.driverId,
               requestType = req.requestType,
               requestStatus = PENDING,
               createdAt = now,
@@ -60,9 +72,10 @@ getOperationGetRequests ::
   Maybe Int ->
   Maybe RequestStatus ->
   Maybe RequestType ->
-  Text ->
+  Maybe Text ->
+  Maybe (Id Person) ->
   Flow OperationHubRequestsResp
-getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus mbType rcNo = do
+getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus mbType mbRcNo mbDriverId = do
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   now <- getCurrentTime
   let limit = fromMaybe 10 mbLimit
@@ -70,7 +83,10 @@ getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus
       defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
-  requests <- QOHRE.findAllRequestsInRange from to limit offset Nothing mbStatus mbType (Just driverId.getId) Nothing Nothing (Just rcNo)
+  -- At least one of mbRcNo or mbDriverId must be provided
+  unless (isJust mbRcNo || isJust mbDriverId) $
+    throwError $ InvalidRequest "Either rcNo or driverId must be provided"
+  requests <- QOHRE.findAllRequestsInRange from to limit offset Nothing mbStatus mbType (Just driverId.getId) Nothing Nothing mbRcNo mbDriverId
   reqs <- mapM castHubRequests requests
   pure (OperationHubRequestsResp reqs)
 
@@ -80,8 +96,10 @@ opsHubDriverLockKey driverId = "opsHub:driver:Id-" <> driverId
 validateDriverOperationHubRequest :: Validate DriverOperationHubRequest
 validateDriverOperationHubRequest DriverOperationHubRequest {..} =
   sequenceA_
-    [ validateField "registrationNo" registrationNo $
-        LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
+    [ -- Validate registrationNo if provided
+      whenJust registrationNo $ \rcNo ->
+        validateField "registrationNo" rcNo $
+          LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
     ]
 
 castHubRequests :: (OperationHubRequests, Person, OperationHub) -> Flow OperationHubDriverRequest
@@ -92,8 +110,11 @@ castHubRequests (hubReq, person, hub) = do
       { id = hubReq.id.getId,
         operationHubId = hubReq.operationHubId,
         operationHubName = hub.name,
-        registrationNo = hubReq.registrationNo,
+        operationHubAddress = hub.address,
+        operationHubContact = hub.mobileNumber,
         driverPhoneNo,
+        driverId = hubReq.driverId,
+        registrationNo = hubReq.registrationNo,
         requestStatus = hubReq.requestStatus,
         requestTime = hubReq.createdAt,
         requestType = hubReq.requestType

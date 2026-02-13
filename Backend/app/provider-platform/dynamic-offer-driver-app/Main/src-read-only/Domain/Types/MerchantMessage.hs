@@ -75,6 +75,10 @@ data MessageKey
   | FLEET_UNLINK_SUCCESS_MESSAGE
   | DOCUMENT_INVALID
   | DRIVER_PAYOUT
+  | DOCUMENT_EXPIRY_REMINDER_SMS
+  | VEHICLE_INSPECTION_SMS
+  | DRIVER_INSPECTION_SMS
+  | TRAINING_VIDEO_SMS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

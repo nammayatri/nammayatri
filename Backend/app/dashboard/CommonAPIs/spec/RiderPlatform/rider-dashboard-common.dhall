@@ -351,7 +351,7 @@ let defaultConfigs =
         { _sqlTypeMapper = sqlMapper
         , _extraDefaultFields = extraDefaultFields
         , _defaultCachedQueryKeyPrefix = "riderDashboard"
-        , _cacheFlowType = None
+        , _cacheFlowType = None Text
         }
       , _defaultImports = defaultImports
       , _defaultTypeImportMapper = defaultTypeImportMapper

@@ -434,7 +434,9 @@ data DriverInformationRes = DriverInformationRes
     profilePhotoUploadedAt :: Maybe UTCTime,
     activeFleet :: Maybe FleetInfo,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
-    vehicleImageUploadedAt :: Maybe UTCTime
+    vehicleImageUploadedAt :: Maybe UTCTime,
+    prepaidSubscriptionBalance :: Maybe HighPrecMoney,
+    planExpiryDate :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -549,7 +551,9 @@ data UpdateDriverReq = UpdateDriverReq
     isTTSEnabled :: Maybe Bool,
     isHighAccuracyLocationEnabled :: Maybe Bool,
     rideRequestVolumeEnabled :: Maybe Bool,
-    onboardingAs :: Maybe DriverInfo.OnboardingAs
+    onboardingAs :: Maybe DriverInfo.OnboardingAs,
+    address :: Maybe Text,
+    addressDocumentType :: Maybe DriverInfo.AddressDocumentType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -1285,18 +1289,27 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
       isHighAccuracyLocationEnabled = req.isHighAccuracyLocationEnabled <|> driverInfo.isHighAccuracyLocationEnabled
       rideRequestVolumeEnabled = req.rideRequestVolumeEnabled <|> driverInfo.rideRequestVolumeEnabled
       onboardingAs = req.onboardingAs <|> driverInfo.onboardingAs
+      address = req.address <|> driverInfo.address
+      addressDocumentType = req.addressDocumentType <|> driverInfo.addressDocumentType
+  -- Compute vehicle-related fields (use existing values if no vehicle or no request)
+  (canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity, availableUpiApps) <-
+    case mVehicle of
+      Just vehicle | isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity -> do
+        -- deprecated logic, moved to driver service tier options
+        checkIfCanDowngrade vehicle
+        pure
+          ( fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan,
+            fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback,
+            fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi,
+            fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental,
+            fromMaybe driverInfo.canSwitchToInterCity req.canSwitchToInterCity,
+            fromMaybe driverInfo.canSwitchToIntraCity req.canSwitchToIntraCity,
+            req.availableUpiApps <|> driverInfo.availableUpiApps
+          )
+      _ -> pure (driverInfo.canDowngradeToSedan, driverInfo.canDowngradeToHatchback, driverInfo.canDowngradeToTaxi, driverInfo.canSwitchToRental, driverInfo.canSwitchToInterCity, driverInfo.canSwitchToIntraCity, driverInfo.availableUpiApps)
   whenJust mVehicle $ \vehicle -> do
-    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled) $ do
-      -- deprecated logic, moved to driver service tier options
-      checkIfCanDowngrade vehicle
-      let canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan
-          canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback
-          canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
-          canSwitchToRental = fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental
-          canSwitchToInterCity = fromMaybe driverInfo.canSwitchToInterCity req.canSwitchToInterCity
-          canSwitchToIntraCity = fromMaybe driverInfo.canSwitchToIntraCity req.canSwitchToIntraCity
-          availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
-          selectedServiceTiers =
+    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity) $ do
+      let selectedServiceTiers =
             case vehicle.variant of
               DV.AUTO_RICKSHAW -> [DVST.AUTO_RICKSHAW]
               DV.TAXI -> [DVST.TAXI]
@@ -1334,24 +1347,24 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.E_RICKSHAW -> [DVST.E_RICKSHAW]
               DV.AUTO_LITE -> [DVST.AUTO_LITE]
               DV.PINK_AUTO -> [DVST.PINK_AUTO]
+      QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
+  -- Update driver information (works for both cases: with or without vehicle)
+  when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.availableUpiApps || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled || isJust req.onboardingAs || isJust req.address || isJust req.addressDocumentType) $ do
+    QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs address addressDocumentType person.id
 
-      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs person.id
-      when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
-        QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
-
-    let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""
-    when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
-      logInfo "Tag already exists, update expiry"
-    tag <-
-      if isPetModeEnabled
-        then do
-          mbNammTag <- YudhishthiraFlow.verifyTag (cast merchantOpCityId) petTag
-          now <- getCurrentTime
-          let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
-          return $ Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
-        else return $ Yudhishthira.removeTagName person.driverTag petTag
-    unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
-      QPerson.updateDriverTag (Just tag) personId
+  let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""
+  when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
+    logInfo "Tag already exists, update expiry"
+  tag <-
+    if isPetModeEnabled
+      then do
+        mbNammTag <- YudhishthiraFlow.verifyTag (cast merchantOpCityId) petTag
+        now <- getCurrentTime
+        let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
+        return $ Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
+      else return $ Yudhishthira.removeTagName person.driverTag petTag
+  unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
+    QPerson.updateDriverTag (Just tag) personId
 
   updatedDriverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
@@ -1504,6 +1517,8 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           fleetRequest = fleetRequest,
           fleetOwnerId = (.fleetOwnerId) <$> mbActiveFda,
           onboardingAs = driverInfo.onboardingAs,
+          prepaidSubscriptionBalance = driverInfo.prepaidSubscriptionBalance,
+          planExpiryDate = driverInfo.planExpiryDate,
           ..
         }
 
@@ -1542,7 +1557,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) (estimate >>= (.fareParams) >>= (.tollCharges)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 

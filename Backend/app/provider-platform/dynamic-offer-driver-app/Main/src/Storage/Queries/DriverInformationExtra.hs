@@ -458,6 +458,15 @@ updatePanNumber panNumber driverId = do
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
 
+updateApproved :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Bool -> Id Person.Driver -> m ()
+updateApproved approved driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.approved approved,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+
 updateDlNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe (EncryptedHashed Text) -> Id Person.Driver -> m ()
 updateDlNumber dlNumber driverId = do
   now <- getCurrentTime

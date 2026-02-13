@@ -12,6 +12,7 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     postRegistrationV2RegisterBankAccountLink,
     getRegistrationV2RegisterBankAccountStatus,
     castFleetType,
+    sendFleetOnboardingSms,
   )
 where
 
@@ -33,7 +34,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (encrypt, getDbHash)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -173,6 +174,24 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
       _ -> enableFleetIfPossible fleetOwnerId req.adminApprovalRequired (castFleetType <$> req.fleetType) person.merchantOperatingCityId
   return $ Common.FleetOwnerRegisterResV2 enabled
 
+sendFleetOnboardingSms :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
+sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  when (transporterConfig.sendSmsOnEnablement == Just True) $ do
+    merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+    merchant <- QMerchant.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
+    fork "sending sms - fleet onboarding" $ do
+      fleetOwner <- B.runInReplica $ QP.findById fleetOwnerId >>= fromMaybeM (PersonNotFound fleetOwnerId.getId)
+      smsCfg <- asks (.smsCfg)
+      mobileNumber <- mapM decrypt fleetOwner.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      let countryCode = fromMaybe "+91" fleetOwner.mobileCountryCode
+          phoneNumber = countryCode <> mobileNumber
+          sender = smsCfg.sender
+      (mbSender, message, templateId) <-
+        MessageBuilder.buildOnboardingMessage merchantOperatingCityId $
+          MessageBuilder.BuildOnboardingMessageReq {}
+      Sms.sendSMS merchant.id merchantOperatingCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= Sms.checkSmsResult
+
 enableFleetIfPossible :: Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Id DMOC.MerchantOperatingCity -> Flow Bool
 enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOperatingCityId = do
   if adminApprovalRequired /= Just True
@@ -214,12 +233,18 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
       case mbfleetType of
         Just FOI.NORMAL_FLEET
           | panValid && aadhaarValid -> do
+            mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
+            let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
             void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
+            when wasDisabled $ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId
             pure True
           | otherwise -> pure False
         Just FOI.BUSINESS_FLEET
           | panValid && aadhaarValid && gstValid -> do
+            mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
+            let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
             void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
+            when wasDisabled $ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId
             pure True
           | otherwise -> pure False
         _ -> pure False

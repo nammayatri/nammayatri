@@ -7,6 +7,7 @@ imports:
   RequestStatus: Domain.Types.OperationHubRequests
   OperationHubRequests: Domain.Types.OperationHubRequests
   UTCTime: Kernel.Prelude
+  Person: Domain.Types.Person
   Summary: Dashboard.Common
 
 module: OperationHub
@@ -15,7 +16,8 @@ types:
   DriverOperationHubRequest:
     requestType: RequestType
     operationHubId: Id OperationHub
-    registrationNo: Text
+    registrationNo: Maybe Text
+    driverId: Maybe (Id Person)
     creatorId: Text
   OperationHubRequestsResp:
     - recordType: NewType
@@ -24,8 +26,11 @@ types:
     id: Text
     operationHubId: Id OperationHub
     operationHubName: Text
+    operationHubAddress: Text
+    operationHubContact: Text
     driverPhoneNo: Maybe Text
-    registrationNo: Text
+    driverId: Maybe (Id Person)
+    registrationNo: Maybe Text
     requestType: RequestType
     requestStatus: RequestStatus
     requestTime: UTCTime
@@ -44,8 +49,6 @@ apis:
         type: APISuccess
   - GET:
       endpoint: /operation/getRequests
-      mandatoryQuery:
-        - rcNo: Text
       query:
         - mbFrom: UTCTime
         - mbTo: UTCTime
@@ -53,6 +56,8 @@ apis:
         - mbOffset: Int
         - mbStatus: RequestStatus
         - mbReqType: RequestType
+        - mbRcNo: Text
+        - mbDriverId: Id Person
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: OperationHubRequestsResp

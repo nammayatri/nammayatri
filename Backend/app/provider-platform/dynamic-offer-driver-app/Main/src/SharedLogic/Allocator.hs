@@ -30,6 +30,7 @@ import qualified Domain.Types.Message as DMessage
 import Domain.Types.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as Plan
+import qualified Domain.Types.Reminder as DR
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
@@ -79,6 +80,7 @@ data AllocatorJobType
   | MediaFileDocumentComplete
   | SendFeedbackPN
   | SpecialZonePayout
+  | ProcessReminder
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -122,6 +124,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SMediaFileDocumentComplete jobData = AnyJobInfo <$> restoreJobInfo SMediaFileDocumentComplete jobData
   restoreAnyJobInfo SSendFeedbackPN jobData = AnyJobInfo <$> restoreJobInfo SSendFeedbackPN jobData
   restoreAnyJobInfo SSpecialZonePayout jobData = AnyJobInfo <$> restoreJobInfo SSpecialZonePayout jobData
+  restoreAnyJobInfo SProcessReminder jobData = AnyJobInfo <$> restoreJobInfo SProcessReminder jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -462,3 +465,14 @@ newtype SpecialZonePayoutJobData = SpecialZonePayoutJobData
 instance JobInfoProcessor 'SpecialZonePayout
 
 type instance JobContent 'SpecialZonePayout = SpecialZonePayoutJobData
+
+data ProcessReminderJobData = ProcessReminderJobData
+  { reminderId :: Id DR.Reminder,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ProcessReminder
+
+type instance JobContent 'ProcessReminder = ProcessReminderJobData

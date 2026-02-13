@@ -13,24 +13,24 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FleetBookingAssignmentsT f = FleetBookingAssignmentsT
-  { amount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    assignmentEndTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    assignmentStartTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    bookingId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    fleetOwnerId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    mainAssignmentId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    paymentMethod :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    placeName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    serviceId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    serviceName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    skuDurationMins :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleNo :: (B.C f Kernel.Prelude.Text),
-    visitDate :: (B.C f (Kernel.Prelude.Maybe Data.Time.Day))
+  { amount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    assignmentEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    assignmentStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    bookingId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    fleetOwnerId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    mainAssignmentId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    paymentMethod :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    placeName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    serviceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    serviceName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    skuDurationMins :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleNo :: B.C f Kernel.Prelude.Text,
+    visitDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day)
   }
   deriving (Generic, B.Beamable)
 
@@ -40,6 +40,6 @@ instance B.Table FleetBookingAssignmentsT where
 
 type FleetBookingAssignments = FleetBookingAssignmentsT Identity
 
-$(enableKVPG (''FleetBookingAssignmentsT) [('id)] [[('mainAssignmentId)]])
+$(enableKVPG ''FleetBookingAssignmentsT ['id] [['mainAssignmentId]])
 
-$(mkTableInstances (''FleetBookingAssignmentsT) "fleet_booking_assignments")
+$(mkTableInstances ''FleetBookingAssignmentsT "fleet_booking_assignments")

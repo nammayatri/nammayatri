@@ -171,14 +171,15 @@ types:
   DriverOperationHubRequest:
     requestType: RequestType
     operationHubId: Id OperationHub
-    registrationNo: Text
+    registrationNo: Maybe Text
+    driverId: Maybe (Id Driver)
     creatorId: Text
     derive: "'HideSecrets"
   RequestStatus:
     enum: "PENDING,APPROVED,REJECTED"
     derive: "HttpInstance"
   RequestType:
-    enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION"
+    enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION, DRIVER_ONBOARDING_INSPECTION, DRIVER_REGULAR_INSPECTION"
     derive: "HttpInstance"
   OperationHubReqResp:
     - requests: [OperationHubDriverRequest]
@@ -190,7 +191,7 @@ types:
     driverPhoneNo: Maybe Text
     creatorPhoneNo: Maybe Text
     rcId: Maybe Text
-    registrationNo: Text
+    registrationNo: Maybe Text
     requestType: RequestType
     requestStatus: RequestStatus
     requestTime: UTCTime

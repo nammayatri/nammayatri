@@ -45,7 +45,13 @@ postAccountVerifyAccount _merchantShortId _opCity Common.VerifyAccountReq {..} =
   let enabled = case status of
         Common.Approved -> True
         _ -> False
-  QFOI.updateFleetOwnerEnabledStatus enabled $ Kernel.Types.Id.cast fleetOwnerId
+  let fleetOwnerId' = Kernel.Types.Id.cast fleetOwnerId
+  mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId'
+  let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
+  QFOI.updateFleetOwnerEnabledStatus enabled fleetOwnerId'
+  when (enabled && wasDisabled) $ do
+    person <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
+    DRegistrationV2.sendFleetOnboardingSms fleetOwnerId' person.merchantOperatingCityId
   pure Kernel.Types.APISuccess.Success
 
 putAccountUpdateRole ::

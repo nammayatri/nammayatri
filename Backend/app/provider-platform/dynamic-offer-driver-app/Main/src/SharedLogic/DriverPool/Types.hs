@@ -265,6 +265,7 @@ data TripQuoteDetail = TripQuoteDetail
     vehicleServiceTier :: DVST.ServiceTierType,
     vehicleServiceTierName :: Text,
     baseFare :: HighPrecMoney,
+    tollCharges :: Maybe HighPrecMoney,
     driverMinFee :: Maybe HighPrecMoney,
     driverMaxFee :: Maybe HighPrecMoney,
     driverStepFee :: Maybe HighPrecMoney,

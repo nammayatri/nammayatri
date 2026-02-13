@@ -251,3 +251,7 @@ data VehiclePhotosResp = VehiclePhotosResp
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VerifyBankAccReq = VerifyBankAccReq {bankAccountNo :: Kernel.Prelude.Text, bankIfscCode :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
