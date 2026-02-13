@@ -123,7 +123,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.vehicleServiceTierAirConditioned vehicleServiceTierAirConditioned,
       Se.Set Beam.vehicleServiceTierSeatingCapacity vehicleServiceTierSeatingCapacity,
       Se.Set Beam.vehicleVariant vehicleServiceTierType,
-      Se.Set Beam.waitingChargePerMin ((.waitingChargePerMin) waitingCharges <&> (.amount)),
+      Se.Set Beam.waitingChargePerMin ((.waitingChargePerMin) waitingCharges <&> (.amountInt)),
       Se.Set Beam.waitingChargePerMinAmount ((.waitingChargePerMin) waitingCharges <&> (.amount))
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

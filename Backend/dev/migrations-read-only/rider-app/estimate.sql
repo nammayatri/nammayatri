@@ -600,12 +600,6 @@ ALTER TABLE atlas_app.estimate ADD COLUMN business_discount_percentage double pr
 ALTER TABLE atlas_app.estimate ADD COLUMN business_discount double precision ;
 
 
-
-------- SQL updates -------
-
--- ALTER TABLE atlas_app.estimate ALTER COLUMN boost_search_pre_selection_service_tier_config TYPE text;
-
-
 ------- SQL updates -------
 
 
@@ -619,3 +613,9 @@ ALTER TABLE atlas_app.estimate ADD COLUMN personal_discount double precision ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ALTER COLUMN boost_search_pre_selection_service_tier_config TYPE text;

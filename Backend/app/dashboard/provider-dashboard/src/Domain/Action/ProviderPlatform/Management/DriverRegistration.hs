@@ -28,7 +28,7 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     postDriverRegistrationUnlinkDocument,
     getDriverRegistrationVerificationStatus,
     postDriverRegistrationVerifyBankAccount,
-    getDriverRegistrationInfoBankAccount
+    getDriverRegistrationInfoBankAccount,
   )
 where
 
@@ -95,7 +95,7 @@ getDriverRegistrationGetDocument merchantShortId opCity apiTokenInfo imageId = d
   Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationGetDocument) imageId
 
 postDriverRegistrationVerifyBankAccount :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.VerifyBankAccountReq -> Flow Kernel.External.Verification.Interface.Types.VerifyAsyncResp
-postDriverRegistrationVerifyBankAccount  merchantShortId opCity apiTokenInfo driverId req = do
+postDriverRegistrationVerifyBankAccount merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $

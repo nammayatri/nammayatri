@@ -183,7 +183,7 @@ Estimate:
       tollNames : Maybe [Text]
 
     waitingCharges:
-      waitingChargePerMin: Maybe HighPrecMoney
+      waitingChargePerMin: Maybe Money
       waitingChargePerMinAmount: Maybe HighPrecMoney
     estimateBreakupList: {}
 
@@ -209,7 +209,7 @@ Estimate:
     personalDiscountInfo: mkPersonalDiscountInfo personalDiscount personalDiscountPercentage currency|E
     tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
     estimateBreakupList: Storage.Queries.EstimateBreakup.findAllByEstimateIdT (Kernel.Types.Id.Id id)|EM
-    waitingCharges: mkWaitingCharges waitingChargePerMin waitingChargePerMinAmount currency|E
+    waitingCharges: Domain.Types.Estimate.WaitingCharges $ Kernel.Types.Common.mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin|E
     tripTerms: mKTripTerms|M
     providerUrl: parseBaseUrl|MI
     discount: Kernel.Types.Common.mkPrice currency <$> discount|E
@@ -228,7 +228,7 @@ Estimate:
   toTType:
     maxTotalFare: (mkMaxTotalFare totalFareRange)|E
     minTotalFare:  (mkMinTotalFare totalFareRange)|E
-    waitingChargePerMin: ((.waitingChargePerMin) waitingCharges <&> (.amount))|E
+    waitingChargePerMin: ((.waitingChargePerMin) waitingCharges <&> (.amountInt))|E
     waitingChargePerMinAmount: ((.waitingChargePerMin) waitingCharges <&> (.amount))|E
     estimatedFare: ((.amount) estimatedFare)|E
     estimatedTotalFare: ((.amount) estimatedTotalFare)|E

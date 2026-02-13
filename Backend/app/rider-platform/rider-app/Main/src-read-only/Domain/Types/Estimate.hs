@@ -88,7 +88,7 @@ data Estimate = Estimate
 
 data BPPEstimate = BPPEstimate {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BusinessDiscountInfo = BusinessDiscountInfo {businessDiscount :: Kernel.Types.Common.Price, businessDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, Show)
+data BusinessDiscountInfo = BusinessDiscountInfo {businessDiscount :: Kernel.Types.Common.Price, businessDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, (Show))
 
 data EstimateBreakup = EstimateBreakup
   { estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
@@ -96,11 +96,11 @@ data EstimateBreakup = EstimateBreakup
     price :: Domain.Types.Estimate.EstimateBreakupPrice,
     title :: Kernel.Prelude.Text
   }
-  deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
+  deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
 
-newtype EstimateBreakupPrice = EstimateBreakupPrice {value :: Kernel.Types.Common.Price} deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
+newtype EstimateBreakupPrice = EstimateBreakupPrice {value :: Kernel.Types.Common.Price} deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
 
-data FareRange = FareRange {maxFare :: Kernel.Types.Common.Price, minFare :: Kernel.Types.Common.Price} deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
+data FareRange = FareRange {maxFare :: Kernel.Types.Common.Price, minFare :: Kernel.Types.Common.Price} deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
 
 data NightShiftInfo = NightShiftInfo
   { nightShiftCharge :: Kernel.Types.Common.Price,
@@ -108,10 +108,10 @@ data NightShiftInfo = NightShiftInfo
     nightShiftStart :: Kernel.Prelude.TimeOfDay,
     oldNightShiftCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
-data PersonalDiscountInfo = PersonalDiscountInfo {personalDiscount :: Kernel.Types.Common.Price, personalDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, Show)
+data PersonalDiscountInfo = PersonalDiscountInfo {personalDiscount :: Kernel.Types.Common.Price, personalDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, (Show))
 
-data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
+data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))
 
-data WaitingCharges = WaitingCharges {waitingChargePerMin :: Kernel.Prelude.Maybe Kernel.Types.Common.Price} deriving (Generic, Show)
+data WaitingCharges = WaitingCharges {waitingChargePerMin :: Kernel.Prelude.Maybe Kernel.Types.Common.Price} deriving (Generic, (Show))
