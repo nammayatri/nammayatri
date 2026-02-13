@@ -8,6 +8,7 @@ import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Safety.Domain.Types.Common
+import qualified Tools.Beam.UtilsTH
 
 data SafetySettings = SafetySettings
   { aggregatedRideShareSetting :: Kernel.Prelude.Maybe Safety.Domain.Types.Common.RideShareOptions,

@@ -1,0 +1,60 @@
+imports:
+  Text: Data.Text
+  Ride: Domain.Types.Ride
+  SosType : Safety.Domain.Types.Sos
+  Sos : Safety.Domain.Types.Sos
+  LatLong : Kernel.External.Maps.Types
+
+module: Sos
+types:
+  SosRes:
+    sosId: Id Sos
+
+  SosDetailsRes:
+    sos: Maybe Sos
+
+  SosReq:
+    flow: SosType
+    rideId: Maybe (Id Ride)
+    isRideEnded: Maybe Bool
+    sendPNOnPostRideSOS: Maybe Bool
+    notifyAllContacts: Maybe Bool
+    customerLocation: Maybe LatLong
+
+  MarkAsSafeReq:
+    isRideEnded: Maybe Bool
+    isEndLiveTracking: Maybe Bool
+    contacts: Maybe [Text]
+
+apis:
+  # GET /sos/getDetails
+  - GET:
+      endpoint: /sos/getDetails/{rideId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        rideId: Id Ride
+      response:
+        type: API.Types.UI.Sos.SosDetailsRes
+
+  # POST /sos/create
+  - POST:
+      endpoint: /sos/create
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.Sos.SosReq
+      response:
+        type: API.Types.UI.Sos.SosRes
+
+  # POST /sos/markRideAsSafe/{sosId}
+  - POST:
+      endpoint: /sos/markRideAsSafe/{sosId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.UI.Sos.MarkAsSafeReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+
+

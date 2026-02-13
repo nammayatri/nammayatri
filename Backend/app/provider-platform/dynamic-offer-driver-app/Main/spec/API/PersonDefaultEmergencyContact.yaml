@@ -1,0 +1,36 @@
+imports:
+  Person: Domain.Types.Person
+  RideShareOptions: Safety.Domain.Types.Common
+  Merchant: Domain.Types.Merchant
+
+module: PersonDefaultEmergencyContact
+
+types:
+  PersonDefaultEmergencyContact:
+    name: Text
+    mobileCountryCode: Text
+    mobileNumber: Text                    # plain Text for API, not EncryptedHashedField
+    priority: Int
+    contactPersonId: Maybe (Id Person)
+    merchantId: Maybe (Id Merchant)
+    enableForFollowing: Bool
+    enableForShareRide: Bool
+    shareTripWithEmergencyContactOption: Maybe RideShareOptions
+
+  UpdatePersonDefaultEmergencyContactsReq:
+    emergencyContacts: [PersonDefaultEmergencyContact]
+
+apis:
+  - GET:
+      endpoint: /driver/personDefaultEmergencyContacts
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[API.Types.UI.PersonDefaultEmergencyContact.PersonDefaultEmergencyContact]"
+
+  - PUT:
+      endpoint: /driver/personDefaultEmergencyContacts
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.PersonDefaultEmergencyContact.UpdatePersonDefaultEmergencyContactsReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
