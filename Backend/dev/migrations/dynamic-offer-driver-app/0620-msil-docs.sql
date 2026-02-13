@@ -22,6 +22,7 @@ INSERT INTO atlas_driver_offer_bpp.document_verification_config (
     updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    do_strict_verifcation,
     "order"
 )
 SELECT
@@ -46,6 +47,7 @@ SELECT
     CURRENT_TIMESTAMP as updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    COALESCE(do_strict_verifcation, true) as do_strict_verifcation,
     "order"
 FROM
     atlas_driver_offer_bpp.document_verification_config
@@ -74,6 +76,7 @@ INSERT INTO atlas_driver_offer_bpp.document_verification_config (
     updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    do_strict_verifcation,
     "order"
 )
 SELECT
@@ -98,6 +101,7 @@ SELECT
     CURRENT_TIMESTAMP as updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    COALESCE(do_strict_verifcation, true) as do_strict_verifcation,
     "order"
 FROM
     atlas_driver_offer_bpp.document_verification_config
@@ -126,6 +130,7 @@ INSERT INTO atlas_driver_offer_bpp.document_verification_config (
     updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    do_strict_verifcation,
     "order"
 )
 SELECT
@@ -150,6 +155,7 @@ SELECT
     CURRENT_TIMESTAMP as updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    COALESCE(do_strict_verifcation, true) as do_strict_verifcation,
     11
 FROM
     atlas_driver_offer_bpp.document_verification_config
@@ -3684,6 +3690,7 @@ INSERT INTO atlas_driver_offer_bpp.document_verification_config (
     updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    do_strict_verifcation,
     "order"
 )
 SELECT
@@ -3708,6 +3715,7 @@ SELECT
     CURRENT_TIMESTAMP as updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    COALESCE(do_strict_verifcation, true) as do_strict_verifcation,
     11
 FROM
     atlas_driver_offer_bpp.document_verification_config
@@ -3736,6 +3744,7 @@ INSERT INTO atlas_driver_offer_bpp.document_verification_config (
     updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    do_strict_verifcation,
     "order"
 )
 SELECT
@@ -3760,6 +3769,7 @@ SELECT
     CURRENT_TIMESTAMP as updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    COALESCE(do_strict_verifcation, true) as do_strict_verifcation,
     12
 FROM
     atlas_driver_offer_bpp.document_verification_config
@@ -3788,6 +3798,7 @@ INSERT INTO atlas_driver_offer_bpp.document_verification_config (
     updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    do_strict_verifcation,
     "order"
 )
 SELECT
@@ -3812,6 +3823,7 @@ SELECT
     CURRENT_TIMESTAMP as updated_at,
     is_default_enabled_on_manual_verification,
     is_image_validation_required,
+    COALESCE(do_strict_verifcation, true) as do_strict_verifcation,
     13
 FROM
     atlas_driver_offer_bpp.document_verification_config
