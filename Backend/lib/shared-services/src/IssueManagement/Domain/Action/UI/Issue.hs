@@ -542,7 +542,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
     buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg uploadedMediaFiles now iHandle = do
       info <- buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
-      let dashboardMediaFileUrls = mapMaybe (generateDashboardFileUrl merchantCfg moCity) uploadedMediaFiles
+      let dashboardMediaFileUrls = mapMaybe (generateDashboardFileUrl merchantCfg info person.id.getId) uploadedMediaFiles
       return $
         TIT.CreateTicketReq
           { category = category.category,
@@ -687,13 +687,15 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       DRIVER -> TIT.DRIVER
       CUSTOMER -> TIT.CUSTOMER
 
-    generateDashboardFileUrl :: MerchantConfig -> MerchantOperatingCity -> D.MediaFile -> Maybe Text
-    generateDashboardFileUrl merchantConfig _moCity mediaFile =
+    generateDashboardFileUrl :: MerchantConfig -> TIT.RideInfo -> Text -> D.MediaFile -> Maybe Text
+    generateDashboardFileUrl merchantConfig rideInfo customerId mediaFile =
       case (merchantConfig.dashboardMediaFileUrlPattern, mediaFile.s3FilePath) of
         (Just filePattern, Just s3FilePath) ->
           Just $
             filePattern
               & T.replace "<FILE_PATH>" s3FilePath
+              & T.replace "<RIDE_SHORT_ID>" rideInfo.rideShortId
+              & T.replace "<CUSTOMER_ID>" customerId
         _ -> Nothing
 
 issueInfo ::
