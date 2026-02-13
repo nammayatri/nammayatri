@@ -1,0 +1,64 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Plan: Domain.Types.Plan
+  Frequency: Domain.Types.Plan
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+
+SubscriptionPurchase:
+  tableName: subscription_purchase
+  derives: "Generic, Show, Eq"
+
+  types:
+    SubscriptionPurchaseStatus:
+      enum: "PENDING,ACTIVE,EXPIRED,FAILED"
+      derive': "Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read, ToParamSchema"
+    SubscriptionOwnerType:
+      enum: "DRIVER, FLEET_OWNER"
+      derive': "Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read, ToParamSchema"
+
+  fields:
+    id: Id SubscriptionPurchase
+    ownerId: Text
+    ownerType: SubscriptionOwnerType
+    planId: Id Plan
+    planFrequency: Frequency
+    planRideCredit: HighPrecMoney
+    planFee: HighPrecMoney
+    purchaseTimestamp: UTCTime
+    paymentOrderId: Id PaymentOrder
+    status: SubscriptionPurchaseStatus
+    expiryDate: Maybe UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SubscriptionPurchaseStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SubscriptionOwnerType>
+
+  constraints:
+    id: PrimaryKey
+    paymentOrderId: "!SecondaryKey"
+    ownerId: "!SecondaryKey"
+
+  queries:
+    findByPaymentOrderId:
+      kvFunction: findOneWithKV
+      where: paymentOrderId
+
+    findAllByOwnerAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [ownerId, ownerType, status]
+
+    findActiveByOwner:
+      kvFunction: findOneWithKV
+      where:
+        and: [ownerId, ownerType, status]
+
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id

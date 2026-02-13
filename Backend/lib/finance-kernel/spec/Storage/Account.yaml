@@ -12,15 +12,11 @@ Account:
 
   types:
     AccountType:
-      enum: "Asset,Liability,Revenue,DeferredRevenue,Expense,Equity,External"
+      enum: "Asset,Liability,Revenue,Expense,External,RideCredit"
       derive: "ToParamSchema"
 
     CounterpartyType:
-      enum: "BUYER,SELLER,DRIVER_FLEET_OWNER,GOVERNMENT_DIRECT,GOVERNMENT_INDIRECT,GOVERNMENT"
-      derive: "ToParamSchema"
-
-    AccountCategory:
-      enum: "Driver,Fleet,Platform,Settlement,Suspense"
+      enum: "BUYER,SELLER,DRIVER,FLEET_OWNER,GOVERNMENT_DIRECT,GOVERNMENT_INDIRECT,GOVERNMENT"
       derive: "ToParamSchema"
 
     AccountStatus:
@@ -30,12 +26,12 @@ Account:
   fields:
     id: Id Account
     accountType: AccountType
-    accountCategory: AccountCategory
     counterpartyType: Maybe CounterpartyType
     counterpartyId: Maybe Text
     currency: Currency
     balance: HighPrecMoney
     status: AccountStatus
+    description: Maybe Text
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
@@ -75,5 +71,4 @@ Account:
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AccountType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CounterpartyType>
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AccountCategory>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AccountStatus>

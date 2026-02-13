@@ -10,8 +10,6 @@ ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN id character 
 ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN merchant_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN merchant_operating_city_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN metadata text ;
-ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN owner_id text NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN owner_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN reference_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN reference_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN reversal_of character varying(36) ;
