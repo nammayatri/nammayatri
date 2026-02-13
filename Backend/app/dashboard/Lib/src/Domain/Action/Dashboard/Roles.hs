@@ -119,16 +119,20 @@ updateRole _ req = do
         throwError (RoleNameExists reqName)
 
   role <- CQRole.findById req.roleId >>= fromMaybeM (RoleDoesNotExist req.roleId.getId)
-  let updRole = role{name = fromMaybe role.name req.name,
-                     dashboardAccessType = fromMaybe role.dashboardAccessType req.dashboardAccessType,
-                     parentRoleId = req.parentRoleId <|> role.parentRoleId,
-                     description = fromMaybe role.description req.description
-                    }
-  CQRole.updateById updRole
+  let updRole =
+        role{name = fromMaybe role.name req.name,
+             dashboardAccessType = fromMaybe role.dashboardAccessType req.dashboardAccessType,
+             parentRoleId = req.parentRoleId <|> role.parentRoleId,
+             description = fromMaybe role.description req.description
+            }
+
   whenJust req.parentRoleId \_parentRoleId -> do
+    -- Error will thrown in case of cyclic parent
+    _roleParents <- CQRole.cacheParentRolesRecursively role
     error "TODO"
-    -- Make sure parentRoleId does not make cycle!
-    -- assignAccessLevel for parentRoleId
+    -- TODO recalculate cache
+
+  CQRole.updateById updRole
   error "TODO"
 
 assignAccessLevel ::
