@@ -198,3 +198,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN display_booking_id charact
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN special_location_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN toll_charges double precision ;
