@@ -627,7 +627,7 @@ getDriverDetailsFromRC sendDriverMobileNumber rcId = do
           driverMobileNumber <- decrypt `mapM` person.mobileNumber
           pure
             DriverAccountDetails
-              { driverName = Just $ unwords $ catMaybes [Just person.firstName, person.middleName, person.lastName],
+              { driverName = Just $ T.intercalate " " $ catMaybes [Just person.firstName, person.middleName, person.lastName],
                 mobileNumber = driverMobileNumber,
                 mobileCountryCode = person.mobileCountryCode,
                 accountNumber = accountNumber,
