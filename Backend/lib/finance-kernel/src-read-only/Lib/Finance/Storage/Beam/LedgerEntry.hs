@@ -19,6 +19,8 @@ data LedgerEntryT f = LedgerEntryT
     entryNumber :: (B.C f Kernel.Prelude.Int),
     entryType :: (B.C f Lib.Finance.Domain.Types.LedgerEntry.EntryType),
     fromAccountId :: (B.C f Kernel.Prelude.Text),
+    fromEndingBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    fromStartingBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     id :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
@@ -30,6 +32,8 @@ data LedgerEntryT f = LedgerEntryT
     status :: (B.C f Lib.Finance.Domain.Types.LedgerEntry.EntryStatus),
     timestamp :: (B.C f Kernel.Prelude.UTCTime),
     toAccountId :: (B.C f Kernel.Prelude.Text),
+    toEndingBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    toStartingBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     voidReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }

@@ -31,14 +31,16 @@ LedgerEntry:
     currency: Currency
     entryType: EntryType
     status: EntryStatus
-    ownerType: Text  # "DRIVER", "FLEET_OWNER", "PLATFORM"
-    ownerId: Text    # ID of the owner entity
     referenceType: Text
     referenceId: Text
     reversalOf: Maybe (Id LedgerEntry)
     voidReason: Maybe Text
     settledAt: Maybe UTCTime
     metadata: Maybe Value
+    fromStartingBalance: Maybe HighPrecMoney
+    toStartingBalance: Maybe HighPrecMoney
+    fromEndingBalance: Maybe HighPrecMoney
+    toEndingBalance: Maybe HighPrecMoney
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
@@ -71,16 +73,6 @@ LedgerEntry:
     findReversalOf:
       kvFunction: findOneWithKV
       where: reversalOf
-
-    findByOwner:
-      kvFunction: findAllWithKV
-      where:
-        and: [ownerType, ownerId]
-
-    findByOwnerAndStatus:
-      kvFunction: findAllWithKV
-      where:
-        and: [ownerType, ownerId, status]
 
     findByStatus:
       kvFunction: findAllWithKV

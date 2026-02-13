@@ -105,3 +105,7 @@ updateByPrimaryKeyP (Domain.Types.Plan.Plan {..}) = do
 markAsDeprecated :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Plan -> m ()
 markAsDeprecated (Id planId) =
   updateWithKV [Se.Set BeamP.isDeprecated True] [Se.Is BeamP.id $ Se.Eq planId]
+
+markAsActive :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Plan -> m ()
+markAsActive (Id planId) =
+  updateWithKV [Se.Set BeamP.isDeprecated False] [Se.Is BeamP.id $ Se.Eq planId]

@@ -131,28 +131,32 @@ data PlanType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-type API = ("planManagement" :> (PostPlanManagementCreate :<|> PostPlanManagementDeletePlan :<|> GetPlanManagementListPlans))
+type API = ("planManagement" :> (PostPlanManagementCreate :<|> PostPlanManagementDeletePlan :<|> PostPlanManagementActivatePlan :<|> GetPlanManagementListPlans))
 
 type PostPlanManagementCreate = ("create" :> ReqBody ('[JSON]) CreatePlanReq :> Post ('[JSON]) CreatePlanResp)
 
 type PostPlanManagementDeletePlan = (Capture "planId" Kernel.Prelude.Text :> "delete" :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+
+type PostPlanManagementActivatePlan = (Capture "planId" Kernel.Prelude.Text :> "activate" :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type GetPlanManagementListPlans = ("list" :> QueryParam "serviceName" Kernel.Prelude.Text :> Get ('[JSON]) ListPlansResp)
 
 data PlanManagementAPIs = PlanManagementAPIs
   { postPlanManagementCreate :: (CreatePlanReq -> EulerHS.Types.EulerClient CreatePlanResp),
     postPlanManagementDeletePlan :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postPlanManagementActivatePlan :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     getPlanManagementListPlans :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient ListPlansResp)
   }
 
 mkPlanManagementAPIs :: (Client EulerHS.Types.EulerClient API -> PlanManagementAPIs)
 mkPlanManagementAPIs planManagementClient = (PlanManagementAPIs {..})
   where
-    postPlanManagementCreate :<|> postPlanManagementDeletePlan :<|> getPlanManagementListPlans = planManagementClient
+    postPlanManagementCreate :<|> postPlanManagementDeletePlan :<|> postPlanManagementActivatePlan :<|> getPlanManagementListPlans = planManagementClient
 
 data PlanManagementUserActionType
   = POST_PLAN_MANAGEMENT_CREATE
   | POST_PLAN_MANAGEMENT_DELETE_PLAN
+  | POST_PLAN_MANAGEMENT_ACTIVATE_PLAN
   | GET_PLAN_MANAGEMENT_LIST_PLANS
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

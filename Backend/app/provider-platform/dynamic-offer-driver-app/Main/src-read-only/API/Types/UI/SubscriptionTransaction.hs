@@ -19,11 +19,20 @@ data SubscriptionTransactionEntity = SubscriptionTransactionEntity
     driverId :: Kernel.Prelude.Text,
     entityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
-    runningBalance :: Kernel.Types.Common.HighPrecMoney,
     status :: Lib.Finance.Domain.Types.LedgerEntry.EntryStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     transactionType :: Domain.Types.DriverWallet.RideTransactionType,
     updatedAt :: Data.Time.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SubscriptionTransactionResponse = SubscriptionTransactionResponse
+  { entities :: [SubscriptionTransactionEntity],
+    finalBalance :: Kernel.Types.Common.HighPrecMoney,
+    planPurchased :: Kernel.Types.Common.HighPrecMoney,
+    rideEarning :: Kernel.Types.Common.HighPrecMoney,
+    startingBalance :: Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

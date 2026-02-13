@@ -4,6 +4,7 @@
 module Domain.Action.Dashboard.Management.PlanManagement
   ( postPlanManagementCreate,
     postPlanManagementDeletePlan,
+    postPlanManagementActivatePlan,
     getPlanManagementListPlans,
   )
 where
@@ -83,6 +84,17 @@ postPlanManagementDeletePlan _merchantShortId _opCity planIdText = do
   let planId = Id planIdText
   _ <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
   QPlanExtra.markAsDeprecated planId
+  pure Success
+
+postPlanManagementActivatePlan ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Flow APISuccess
+postPlanManagementActivatePlan _merchantShortId _opCity planIdText = do
+  let planId = Id planIdText
+  _ <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
+  QPlanExtra.markAsActive planId
   pure Success
 
 getPlanManagementListPlans ::

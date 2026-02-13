@@ -18,7 +18,6 @@ module Domain.Action.UI.SubscriptionTransaction
 where
 
 import API.Types.UI.SubscriptionTransaction
-import Data.List (lookup)
 import qualified Data.Map as M
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -49,7 +48,7 @@ getSubscriptionTransactions ::
   Maybe Int ->
   Maybe EntryStatus ->
   Maybe UTCTime ->
-  m [SubscriptionTransactionEntity]
+  m SubscriptionTransactionResponse
 getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinAmount mbOffset mbStatus mbTo = do
   driverId' <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   driver <- QP.findById driverId' >>= fromMaybeM (PersonNotFound driverId'.getId)
@@ -61,13 +60,10 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
       counterpartyType = if DCommon.checkFleetOwnerRole driver.role then counterpartyFleetOwner else counterpartyDriver
   mbAccount <- getPrepaidAccountByOwner counterpartyType driverId'.getId
   case mbAccount of
-    Nothing -> pure []
+    Nothing -> pure emptyResponse
     Just account -> do
-      let referenceTypes = [prepaidHoldReferenceType, subscriptionCreditReferenceType]
-      allEntries <- findByAccountWithFilters account.id Nothing Nothing Nothing Nothing Nothing (Just referenceTypes)
-      let relevantEntries = allEntries
-      let balanceByEntryId = buildRunningBalances account.id (sortOn (.timestamp) relevantEntries)
-      filteredEntries <-
+      let referenceTypes = [prepaidRideDebitReferenceType, subscriptionCreditReferenceType]
+      entries <-
         findByAccountWithFilters
           account.id
           (Just fromDate)
@@ -76,44 +72,70 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
           mbMaxAmount
           mbStatus
           (Just referenceTypes)
-      let sortedFilteredEntries = sortOn (.timestamp) filteredEntries
-      let pagedEntries = take limit . drop offset $ sortOn (Down . (.timestamp)) sortedFilteredEntries
-      let bookingIds = mapMaybe (\e -> if e.referenceType == prepaidHoldReferenceType then Just (Id e.referenceId) else Nothing) pagedEntries
+      let downSorted = sortOn (Down . (.timestamp)) entries
+          upSorted = sortOn (.timestamp) entries
+          rideEntries = filter (\e -> e.referenceType == prepaidRideDebitReferenceType) downSorted
+          planEntries = filter (\e -> e.referenceType == subscriptionCreditReferenceType) downSorted
+          pagedRides = take limit . drop offset $ rideEntries
+          pagedPlans = take limit . drop offset $ planEntries
+          paged = sortOn (Down . (.timestamp)) (pagedRides <> pagedPlans)
+          rideEarning = sum $ map (.amount) rideEntries
+          planPurchased = sum $ map (.amount) planEntries
+          startingBalance = computeStartingBalance account.id upSorted
+          finalBalance = computeFinalBalance account.id upSorted
+      -- Enrich ride entries with booking locations
+      let bookingIds = mapMaybe (\e -> if e.referenceType == prepaidRideDebitReferenceType then Just (Id e.referenceId) else Nothing) paged
       bookings <- if null bookingIds then pure [] else QBookingE.findByIds bookingIds
-      let bookingMapById = M.fromList $ map (\b -> (b.id, (b.fromLocation, b.toLocation))) bookings
-      forM pagedEntries $ \entry -> do
-        let transactionType = if entry.referenceType == prepaidHoldReferenceType then RIDE else PLAN_PURCHASE
-        (fromLocation, toLocation) <- case entry.referenceType of
-          ref | ref == prepaidHoldReferenceType -> do
-            case M.lookup (Id entry.referenceId) bookingMapById of
-              Just (fromLoc, toLoc) -> pure (Just fromLoc, toLoc)
-              Nothing -> pure (Nothing, Nothing)
-          _ -> pure (Nothing, Nothing)
-        let runningBalance = fromMaybe 0 (lookup entry.id balanceByEntryId)
-        return
+      let bookingMap = M.fromList $ map (\b -> (b.id, (b.fromLocation, b.toLocation))) bookings
+      entities <- forM paged $ \entry -> do
+        let transactionType = if entry.referenceType == prepaidRideDebitReferenceType then RIDE else PLAN_PURCHASE
+            (fromLocation, toLocation) =
+              if entry.referenceType == prepaidRideDebitReferenceType
+                then case M.lookup (Id entry.referenceId) bookingMap of
+                  Just (fromLoc, toLoc) -> (Just fromLoc, toLoc)
+                  Nothing -> (Nothing, Nothing)
+                else (Nothing, Nothing)
+        pure
           SubscriptionTransactionEntity
             { driverId = driverId'.getId,
               entityId = Just entry.referenceId,
               transactionType,
               amount = entry.amount,
               status = entry.status,
-              runningBalance,
               fromLocation,
               toLocation,
               createdAt = entry.timestamp,
               updatedAt = entry.updatedAt
             }
+      pure
+        SubscriptionTransactionResponse
+          { startingBalance,
+            finalBalance,
+            rideEarning,
+            planPurchased,
+            entities
+          }
   where
     maxLimit = 10
-    buildRunningBalances accountId entries =
-      let step (accBal, accMap) entry =
-            let delta =
-                  if entry.fromAccountId == accountId
-                    then (-1) * entry.amount
-                    else
-                      if entry.toAccountId == accountId
-                        then entry.amount
-                        else 0
-                newBal = accBal + delta
-             in (newBal, accMap <> [(entry.id, newBal)])
-       in snd $ foldl step (0, []) entries
+    emptyResponse =
+      SubscriptionTransactionResponse
+        { startingBalance = 0,
+          finalBalance = 0,
+          rideEarning = 0,
+          planPurchased = 0,
+          entities = []
+        }
+    computeStartingBalance accountId entries =
+      case entries of
+        [] -> 0
+        (firstEntry : _) ->
+          if firstEntry.fromAccountId == accountId
+            then fromMaybe 0 firstEntry.fromStartingBalance
+            else fromMaybe 0 firstEntry.toStartingBalance
+    computeFinalBalance accountId entries =
+      case reverse entries of
+        [] -> 0
+        (lastEntry : _) ->
+          if lastEntry.fromAccountId == accountId
+            then fromMaybe 0 lastEntry.fromEndingBalance
+            else fromMaybe 0 lastEntry.toEndingBalance
