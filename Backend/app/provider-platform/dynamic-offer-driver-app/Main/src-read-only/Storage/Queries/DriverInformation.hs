@@ -112,10 +112,30 @@ updateDailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldow
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.dailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateDriverAddress ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDriverAddress address addressDocumentType driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.address address, Se.Set Beam.addressDocumentType addressDocumentType, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateDriverDob :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDriverDob driverDob driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.driverDob driverDob, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateDriverDobAndAddress ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDriverDobAndAddress driverDob address addressDocumentType driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.driverDob driverDob,
+      Se.Set Beam.address address,
+      Se.Set Beam.addressDocumentType addressDocumentType,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateDriverDowngradeForSuv :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDriverDowngradeForSuv canDowngradeToHatchback canDowngradeToTaxi driverId = do

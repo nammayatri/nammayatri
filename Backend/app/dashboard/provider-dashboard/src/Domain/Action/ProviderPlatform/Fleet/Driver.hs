@@ -623,8 +623,9 @@ postDriverFleetDriverUpdate merchantShortId opCity apiTokenInfo driverId req = d
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $ do
-    fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
-    Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetDriverUpdate) driverId fleetOwnerId req
+    let requestorId = apiTokenInfo.personId.getId
+    -- Pass requestorId to BPP - role-based checks and associations are validated on BPP side
+    Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetDriverUpdate) driverId requestorId req
 
 getDriverFleetVehicleListStats :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Data.Time.Day -> Data.Time.Day -> Environment.Flow Common.FleetVehicleStatsRes)
 getDriverFleetVehicleListStats merchantShortId opCity apiTokenInfo vehicleNo limit offset from to = do

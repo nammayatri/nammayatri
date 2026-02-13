@@ -329,6 +329,14 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [acUsageRestrictionType, airConditionScore]
       where: driverId
+    updateDriverAddress:
+      kvFunction: updateOneWithKV
+      params: [address, addressDocumentType]
+      where: driverId
+    updateDriverDobAndAddress:
+      kvFunction: updateOneWithKV
+      params: [driverDob, address, addressDocumentType]
+      where: driverId
     removeAcUsageRestriction:
       kvFunction: updateOneWithKV
       params:

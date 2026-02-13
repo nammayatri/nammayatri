@@ -1278,11 +1278,11 @@ apis:
         type: APISuccess
       helperApi:
         - POST:
-            endpoint: /fleet/driver/{driverId}/update/{fleetOwnerId}
+            endpoint: /fleet/driver/{driverId}/update/{requestorId}
             auth: ApiAuthV2
             params:
               driverId: Id Driver
-              fleetOwnerId: Text
+              requestorId: Text
             request:
               type: UpdateDriverReq
             response:
@@ -1461,7 +1461,12 @@ types:
     - lastName: Maybe Text
     - dob: Maybe Day
     - email: Maybe Text
+    - address: Maybe Text
+    - addressDocumentType: Maybe AddressDocumentType
     - derive: "'HideSecrets"
+  AddressDocumentType:
+    enum: RationCard | UtilityBill | Passport
+    derive: "HttpInstance"
   DriverDetailsRes:
     - driverId: Id Driver
     - firstName: Text

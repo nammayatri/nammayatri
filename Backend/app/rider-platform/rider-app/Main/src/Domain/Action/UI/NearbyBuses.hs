@@ -115,7 +115,7 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
         map
           ( \(bus, (route_id, routeInfo)) ->
               let maybeServiceType = bus.vehicle_number >>= (`HashMap.lookup` serviceTypeMap)
-              in API.Types.UI.NearbyBuses.NearbyBus
+               in API.Types.UI.NearbyBuses.NearbyBus
                     { currentLocation = Maps.LatLong bus.latitude bus.longitude,
                       distance = Nothing,
                       routeCode = route_id,
