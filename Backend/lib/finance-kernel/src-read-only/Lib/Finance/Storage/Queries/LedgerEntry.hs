@@ -30,41 +30,6 @@ findByFromAccount fromAccountId = do findAllWithKV [Se.Is Beam.fromAccountId $ S
 findById :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m (Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByOwner :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
-findByOwner ownerType ownerId = do findAllWithKV [Se.And [Se.Is Beam.ownerType $ Se.Eq ownerType, Se.Is Beam.ownerId $ Se.Eq ownerId]]
-
-findByOwnerAndStatus ::
-  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
-findByOwnerAndStatus ownerType ownerId status = do findAllWithKV [Se.And [Se.Is Beam.ownerType $ Se.Eq ownerType, Se.Is Beam.ownerId $ Se.Eq ownerId, Se.Is Beam.status $ Se.Eq status]]
-
-findByOwnerWithFilters ::
-  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  ( Kernel.Prelude.Text ->
-    Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
-    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
-    Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney ->
-    Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney ->
-    Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus ->
-    Kernel.Prelude.Maybe [Kernel.Prelude.Text] ->
-    m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]
-  )
-findByOwnerWithFilters ownerType ownerId mbFrom mbTo mbMin mbMax mbStatus mbReferenceTypes = do
-  findAllWithKV
-    [ Se.And
-        ( [ Se.Is Beam.ownerType $ Se.Eq ownerType,
-            Se.Is Beam.ownerId $ Se.Eq ownerId
-          ]
-            <> [Se.Is Beam.timestamp $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
-            <> [Se.Is Beam.timestamp $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
-            <> [Se.Is Beam.amount $ Se.GreaterThanOrEq (fromJust mbMin) | isJust mbMin]
-            <> [Se.Is Beam.amount $ Se.LessThanOrEq (fromJust mbMax) | isJust mbMax]
-            <> [Se.Is Beam.status $ Se.Eq (fromJust mbStatus) | isJust mbStatus]
-            <> [Se.Is Beam.referenceType $ Se.In (fromJust mbReferenceTypes) | isJust mbReferenceTypes]
-        )
-    ]
-
 findByReference :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
 findByReference referenceType referenceId = do findAllWithKV [Se.And [Se.Is Beam.referenceType $ Se.Eq referenceType, Se.Is Beam.referenceId $ Se.Eq referenceId]]
 
@@ -113,8 +78,6 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.metadata metadata,
-      Se.Set Beam.ownerId ownerId,
-      Se.Set Beam.ownerType ownerType,
       Se.Set Beam.referenceId referenceId,
       Se.Set Beam.referenceType referenceType,
       Se.Set Beam.reversalOf (Kernel.Types.Id.getId <$> reversalOf),
@@ -142,8 +105,6 @@ instance FromTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.Ledger
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
             metadata = metadata,
-            ownerId = ownerId,
-            ownerType = ownerType,
             referenceId = referenceId,
             referenceType = referenceType,
             reversalOf = Kernel.Types.Id.Id <$> reversalOf,
@@ -168,8 +129,6 @@ instance ToTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.LedgerEn
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.metadata = metadata,
-        Beam.ownerId = ownerId,
-        Beam.ownerType = ownerType,
         Beam.referenceId = referenceId,
         Beam.referenceType = referenceType,
         Beam.reversalOf = Kernel.Types.Id.getId <$> reversalOf,

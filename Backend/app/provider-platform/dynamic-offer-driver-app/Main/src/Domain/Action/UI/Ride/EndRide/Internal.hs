@@ -92,7 +92,6 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
@@ -292,23 +291,18 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
               revenueAmount <- getPrepaidRevenueAmount fare
               _ <-
                 debitPrepaidBalance
-                  ownerTypeFleetOwner
+                  counterpartyFleetOwner
                   fleetOwnerId.getId
-                  FAccount.Fleet
                   fare
                   revenueAmount
                   ride.currency
                   booking.providerId.getId
                   booking.merchantOperatingCityId.getId
                   ride.id.getId
+                  booking.id.getId
                   Nothing
                   >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
-              voidPrepaidHold
-                ownerTypeFleetOwner
-                fleetOwnerId.getId
-                "RIDE_HOLD"
-                booking.id.getId
-                "Ride completed"
+              pure ()
         Nothing -> do
           when (isJust subscriptionConfig.prepaidSubscriptionThreshold) $ do
             Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
@@ -316,15 +310,15 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
               revenueAmount <- getPrepaidRevenueAmount fare
               newBalance <-
                 debitPrepaidBalance
-                  ownerTypeDriver
+                  counterpartyDriver
                   ride.driverId.getId
-                  FAccount.Driver
                   fare
                   revenueAmount
                   ride.currency
                   booking.providerId.getId
                   booking.merchantOperatingCityId.getId
                   ride.id.getId
+                  booking.id.getId
                   Nothing
                   >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
               driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -387,7 +381,7 @@ createDriverWalletTransaction ride booking transporterConfig = do
 
     let merchantId = fromMaybe booking.providerId ride.merchantId
     let merchantOpCityId = ride.merchantOperatingCityId
-    driverAccount <- getOrCreateWalletAccount ownerTypeDriver ride.driverId.getId ride.currency merchantId.getId merchantOpCityId.getId >>= fromEitherM (\err -> InternalError ("Driver settlement account not found: " <> show err))
+    driverAccount <- getOrCreateWalletAccount counterpartyDriver ride.driverId.getId ride.currency merchantId.getId merchantOpCityId.getId >>= fromEitherM (\err -> InternalError ("Driver settlement account not found: " <> show err))
     platformSuspense <- getOrCreatePlatformSuspenseAccount ride.currency merchantId.getId merchantOpCityId.getId >>= fromEitherM (\err -> InternalError ("Platform suspense account not found: " <> show err))
     gstExpense <- getOrCreateRideGSTExpenseAccount ride.currency merchantId.getId merchantOpCityId.getId >>= fromEitherM (\err -> InternalError ("Ride GST expense account not found: " <> show err))
     platformRevenueAcc <- getOrCreatePlatformRevenueAccount ride.currency merchantId.getId merchantOpCityId.getId >>= fromEitherM (\err -> InternalError ("Platform revenue account not found: " <> show err))
@@ -396,16 +390,16 @@ createDriverWalletTransaction ride booking transporterConfig = do
 
     if isOnline
       then do
-        _ <- createLedgerTransfer customerBank platformSuspense collectionAmount ownerTypePlatform merchantId.getId walletReferenceRidePaymentOnline ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create online payment transfer: " <> show err))
-        _ <- createLedgerTransfer platformSuspense driverAccount merchantPayable ownerTypeDriver ride.driverId.getId walletReferenceRideEarning ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create driver settlement entry: " <> show err))
-        _ <- createLedgerTransfer platformSuspense gstExpense gstDeduction ownerTypePlatform merchantId.getId walletReferenceRideGstDeduction ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GST expense entry: " <> show err))
-        _ <- createLedgerTransfer platformSuspense platformRevenueAcc platformRevenue ownerTypePlatform merchantId.getId walletReferenceRidePlatformRevenue ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create platform revenue entry: " <> show err))
+        _ <- createLedgerTransfer customerBank platformSuspense collectionAmount walletReferenceRidePaymentOnline ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create online payment transfer: " <> show err))
+        _ <- createLedgerTransfer platformSuspense driverAccount merchantPayable walletReferenceRideEarning ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create driver settlement entry: " <> show err))
+        _ <- createLedgerTransfer platformSuspense gstExpense gstDeduction walletReferenceRideGstDeduction ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GST expense entry: " <> show err))
+        _ <- createLedgerTransfer platformSuspense platformRevenueAcc platformRevenue walletReferenceRidePlatformRevenue ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create platform revenue entry: " <> show err))
         pure ()
       else do
-        _ <- createLedgerTransfer customerBank driverBank collectionAmount ownerTypePlatform merchantId.getId walletReferenceRidePaymentCash ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create cash payment transfer: " <> show err))
-        _ <- createLedgerTransfer driverBank driverAccount collectionAmount ownerTypeDriver ride.driverId.getId walletReferenceRideEarning ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create driver settlement credit: " <> show err))
-        _ <- createLedgerTransfer driverAccount gstExpense gstDeduction ownerTypeDriver ride.driverId.getId walletReferenceRideGstDeduction ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GST expense entry: " <> show err))
-        _ <- createLedgerTransfer driverAccount platformRevenueAcc platformRevenue ownerTypeDriver ride.driverId.getId walletReferenceRidePlatformRevenue ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create platform revenue entry: " <> show err))
+        _ <- createLedgerTransfer customerBank driverBank collectionAmount walletReferenceRidePaymentCash ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create cash payment transfer: " <> show err))
+        _ <- createLedgerTransfer driverBank driverAccount collectionAmount walletReferenceRideEarning ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create driver settlement credit: " <> show err))
+        _ <- createLedgerTransfer driverAccount gstExpense gstDeduction walletReferenceRideGstDeduction ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GST expense entry: " <> show err))
+        _ <- createLedgerTransfer driverAccount platformRevenueAcc platformRevenue walletReferenceRidePlatformRevenue ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create platform revenue entry: " <> show err))
         pure ()
     pure ()
 

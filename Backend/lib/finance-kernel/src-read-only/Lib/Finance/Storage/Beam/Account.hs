@@ -12,13 +12,13 @@ import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.Account
 
 data AccountT f = AccountT
-  { accountCategory :: (B.C f Lib.Finance.Domain.Types.Account.AccountCategory),
-    accountType :: (B.C f Lib.Finance.Domain.Types.Account.AccountType),
+  { accountType :: (B.C f Lib.Finance.Domain.Types.Account.AccountType),
     balance :: (B.C f Kernel.Types.Common.HighPrecMoney),
     counterpartyId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     counterpartyType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     currency :: (B.C f Kernel.Types.Common.Currency),
+    description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     id :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),

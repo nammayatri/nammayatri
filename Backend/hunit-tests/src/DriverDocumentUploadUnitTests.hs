@@ -58,7 +58,8 @@ testPostDriverRegistrationDocumentUploadWithRealExecution =
                 { Common.imageBase64 = "base64string==",
                   Common.imageType = Common.DriverLicense,
                   Common.rcNumber = Just "RC1234",
-                  Common.requestorId = Just "requestor-123"
+                  Common.requestorId = Just "requestor-123",
+                  Common.fileExtension = Nothing
                 }
 
         -- Actually execute the Flow action and handle any exceptions
@@ -91,9 +92,30 @@ testPostDriverRegistrationDocumentUploadWithRealExecution =
                 Environment.Flow Common.UploadDocumentResp
         True @? "Function should return UploadDocumentResp",
       testCase "Executes with different document types and validates request handling" $ do
-        let req1 = Common.UploadDocumentReq "base64string1==" Common.DriverLicense (Just "RC1234") (Just "requestor-1")
-            req2 = Common.UploadDocumentReq "base64string2==" Common.PanCard (Just "PAN1234") (Just "requestor-2")
-            req3 = Common.UploadDocumentReq "base64string3==" Common.AadhaarCard (Just "AADHAAR1234") (Just "requestor-3")
+        let req1 =
+              Common.UploadDocumentReq
+                { Common.imageBase64 = "base64string1==",
+                  Common.imageType = Common.DriverLicense,
+                  Common.rcNumber = Just "RC1234",
+                  Common.requestorId = Just "requestor-1",
+                  Common.fileExtension = Nothing
+                }
+            req2 =
+              Common.UploadDocumentReq
+                { Common.imageBase64 = "base64string2==",
+                  Common.imageType = Common.PanCard,
+                  Common.rcNumber = Just "PAN1234",
+                  Common.requestorId = Just "requestor-2",
+                  Common.fileExtension = Nothing
+                }
+            req3 =
+              Common.UploadDocumentReq
+                { Common.imageBase64 = "base64string3==",
+                  Common.imageType = Common.AadhaarCard,
+                  Common.rcNumber = Just "AADHAAR1234",
+                  Common.requestorId = Just "requestor-3",
+                  Common.fileExtension = Nothing
+                }
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.City "Delhi"
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver

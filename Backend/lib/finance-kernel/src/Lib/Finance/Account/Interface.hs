@@ -13,12 +13,11 @@ where
 
 import Kernel.Prelude
 import Kernel.Types.Common (Currency)
-import Lib.Finance.Domain.Types.Account (AccountCategory, AccountType, CounterpartyType)
+import Lib.Finance.Domain.Types.Account (AccountType, CounterpartyType)
 
 -- | Input for creating an account
 data AccountInput = AccountInput
   { accountType :: AccountType,
-    accountCategory :: AccountCategory,
     counterpartyType :: Maybe CounterpartyType,
     counterpartyId :: Maybe Text,
     currency :: Currency,

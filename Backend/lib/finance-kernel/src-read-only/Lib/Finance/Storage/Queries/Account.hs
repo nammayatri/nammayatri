@@ -57,12 +57,12 @@ updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.F
 updateByPrimaryKey (Lib.Finance.Domain.Types.Account.Account {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.accountCategory accountCategory,
-      Se.Set Beam.accountType accountType,
+    [ Se.Set Beam.accountType accountType,
       Se.Set Beam.balance balance,
       Se.Set Beam.counterpartyId counterpartyId,
       Se.Set Beam.counterpartyType counterpartyType,
       Se.Set Beam.currency currency,
+      Se.Set Beam.description description,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.status status,
@@ -75,13 +75,13 @@ instance FromTType' Beam.Account Lib.Finance.Domain.Types.Account.Account where
     pure $
       Just
         Lib.Finance.Domain.Types.Account.Account
-          { accountCategory = accountCategory,
-            accountType = accountType,
+          { accountType = accountType,
             balance = balance,
             counterpartyId = counterpartyId,
             counterpartyType = counterpartyType,
             createdAt = createdAt,
             currency = currency,
+            description = description,
             id = Kernel.Types.Id.Id id,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
@@ -92,13 +92,13 @@ instance FromTType' Beam.Account Lib.Finance.Domain.Types.Account.Account where
 instance ToTType' Beam.Account Lib.Finance.Domain.Types.Account.Account where
   toTType' (Lib.Finance.Domain.Types.Account.Account {..}) = do
     Beam.AccountT
-      { Beam.accountCategory = accountCategory,
-        Beam.accountType = accountType,
+      { Beam.accountType = accountType,
         Beam.balance = balance,
         Beam.counterpartyId = counterpartyId,
         Beam.counterpartyType = counterpartyType,
         Beam.createdAt = createdAt,
         Beam.currency = currency,
+        Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
