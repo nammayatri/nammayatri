@@ -298,7 +298,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         tollCharges = Nothing,
         tollNames = Nothing,
         tollConfidence = Nothing,
-        estimatedTollCharges = booking.fareParams.tollCharges,
+        estimatedTollCharges = booking.tollCharges,
         estimatedTollNames = booking.tollNames,
         estimatedTollIds = booking.tollIds,
         tollIds = Nothing,

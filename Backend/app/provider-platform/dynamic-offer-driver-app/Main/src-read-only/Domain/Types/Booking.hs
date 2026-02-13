@@ -92,6 +92,7 @@ data Booking = Booking
     stops :: [Domain.Types.Location.Location],
     toLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
+    tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     tollIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     transactionId :: Kernel.Prelude.Text,
@@ -108,8 +109,8 @@ data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED d
 
 data BookingType = SpecialZoneBooking | NormalBooking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingStatus))
 
-$(mkHttpInstancesForEnum ''BookingStatus)
+$(mkHttpInstancesForEnum (''BookingStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingType))
