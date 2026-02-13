@@ -310,7 +310,7 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
     entity <- find (\e -> e.id == cast driverId_) entities & fromMaybeM (PersonDoesNotExist driverId_.getId)
     requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
     isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
-    unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
+    unless (isValid || entity.id == requestor.id) $ throwError (InvalidRequest "Driver is not associated with the entity")
   res <-
     validateImage
       True
