@@ -26,3 +26,16 @@ ALTER TABLE atlas_app.safety_settings ALTER COLUMN enable_unexpected_events_chec
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.safety_settings ADD COLUMN aggregated_ride_share_setting text ;
+
+
+------- SQL updates -------
+
+
+--- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
+ALTER TABLE atlas_app.safety_settings ALTER COLUMN updated_at DROP NOT NULL;
+--- Drop section ends. Please check before running ---
+
+
+
+------- SQL updates -------
+

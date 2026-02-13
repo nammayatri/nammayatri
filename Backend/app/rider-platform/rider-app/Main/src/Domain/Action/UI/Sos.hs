@@ -2,6 +2,11 @@ module Domain.Action.UI.Sos where
 
 import API.Types.UI.Sos
 import AWS.S3 as S3
+-- Domain.Types.Sos removed - using Safety.Domain.Types.Sos everywhere
+
+-- Keep for mockSosKey only
+
+import Control.Applicative
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -23,7 +28,6 @@ import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderConfig as DRC
--- Domain.Types.Sos removed - using Safety.Domain.Types.Sos everywhere
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -70,7 +74,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
-import qualified Storage.CachedQueries.Sos as CQSos -- Keep for mockSosKey only
+import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QP
@@ -132,7 +136,10 @@ data ExternalStatusEntry = ExternalStatusEntry
 getSosGetDetails :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DRide.Ride -> Flow SosDetailsRes
 getSosGetDetails (mbPersonId, _) rideId_ = do
   personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  mbSosDetails <- SafetyCQSos.findByRideId (cast rideId_)
+  cached <- SafetyCQSos.findByRideId (cast rideId_)
+  mbSosDetails <- case cached of
+    Just x -> return (Just x)
+    Nothing -> SafetySos.findSosByRideId (cast rideId_)
   case mbSosDetails of
     Nothing -> do
       mockSos :: Maybe SafetyDSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId_
@@ -184,10 +191,10 @@ postSosCreate (mbPersonId, _merchantId) req = do
     Just rideId -> do
       ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
       booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-      riderConfig' <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-      let trackLink' = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig'.trackingShortUrlPattern
-      let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig'.timeDiffFromUtc) <$> ride.rideEndTime
-      sosId' <- createTicketForNewSos person ride riderConfig' trackLink' req mbExternalReferenceId
+      riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      let trackLink' = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
+      let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig.timeDiffFromUtc) <$> ride.rideEndTime
+      sosId' <- createTicketForNewSos person ride riderConfig person.merchantId person.merchantOperatingCityId trackLink' req
       return (sosId', trackLink', localRideEndTime)
     Nothing -> do
       riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
@@ -243,15 +250,15 @@ enableFollowRideInSos emergencyContacts = do
     )
     emergencyContacts
 
-createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> SosReq -> Flow (Id SafetyDSos.Sos)
-createTicketForNewSos person ride riderConfig trackLink req = do
+createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> SosReq -> Flow (Id SafetyDSos.Sos)
+createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId trackLink req = do
   -- Check if SOS exists using shared-services cached query
   mbExistingSos <- SafetyCQSos.findByRideId (cast ride.id)
 
   case mbExistingSos of
     Just existingSos -> do
       -- Reactivate existing SOS using shared-services function
-      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) req.flow existingSos.ticketId
+      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast merchantOperatingCityId) (cast merchantId) req.flow (Just existingSos) existingSos.ticketId
       void $ callUpdateTicket person result.sosDetails $ Just "SOS Re-Activated"
       return (cast result.sosId)
     Nothing -> do
@@ -269,7 +276,7 @@ createTicketForNewSos person ride riderConfig trackLink req = do
           else return Nothing
 
       -- Create new SOS using shared-services function
-      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) req.flow ticketId
+      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast merchantOperatingCityId) (cast merchantId) req.flow Nothing ticketId
       return (cast result.sosId)
 
 postSosStatus :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id SafetyDSos.Sos -> SosUpdateReq -> Flow APISuccess.APISuccess
