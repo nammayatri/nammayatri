@@ -145,6 +145,10 @@ data DocumentType
   | LocalResidenceProof
   | PoliceVerificationCertificate
   | DrivingSchoolCertificate
+  | LDCCertificate
+  | TDSCertificate
+  | TANCertificate
+  | UDYAMCertificate
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

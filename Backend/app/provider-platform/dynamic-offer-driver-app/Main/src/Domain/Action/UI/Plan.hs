@@ -29,7 +29,6 @@ import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
 import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Invoice as INV
-import Domain.Types.Mandate (MandateStatus)
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as MessageKey
@@ -38,18 +37,22 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as P
 import Domain.Types.SubscriptionConfig
 import qualified Domain.Types.SubscriptionConfig as SubsConfig
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, getStartTimeAndEndTimeRange, mkCachedKeyTotalRidesByDriverId, roundToHalf)
@@ -69,6 +72,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VendorFee as QVF
 import Tools.Error
@@ -168,7 +172,7 @@ data PlanSubscribeRes = PlanSubscribeRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data MandateDetailsEntity = MandateDetails
-  { status :: MandateStatus,
+  { status :: DM.MandateStatus,
     startDate :: UTCTime,
     endDate :: UTCTime,
     mandateId :: Text,
@@ -445,15 +449,21 @@ currentPlan ::
 currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   driverStats <- QDS.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  person <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
   subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
   (autoPayStatus, mDriverPlan) <- getSubcriptionStatusWithPlan serviceName driverId
   mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentModeWithServiceName p.planId (maybe AUTOPAY (.planType) mDriverPlan) serviceName) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
   let isEligibleForCharge = mDriverPlan <&> (.enableServiceUsageCharge)
-  latestManualPayment <- case serviceName of
-    PREPAID_SUBSCRIPTION -> QDF.findLatestByFeeTypeAndStatusWithServiceName DF.PREPAID_RECHARGE [DF.CLEARED, DF.COLLECTED_CASH] driverId serviceName
-    _ -> QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId serviceName
+  let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
+  latestManualPaymentDate <- case serviceName of
+    PREPAID_SUBSCRIPTION -> do
+      purchases <- QSP.findAllByOwnerAndStatus ownerId ownerType DSP.ACTIVE
+      pure $ listToMaybe (sortOn (Down . (.updatedAt)) purchases) <&> (.updatedAt)
+    _ -> do
+      latestManualPayment <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId serviceName
+      pure $ latestManualPayment <&> (.updatedAt)
   latestAutopayPayment <- case serviceName of
     PREPAID_SUBSCRIPTION -> pure Nothing
     _ -> QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_EXECUTION_INVOICE [DF.CLEARED] driverId serviceName
@@ -462,13 +472,23 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   let mbMandateSetupDate = mDriverPlan >>= (.mandateSetupDate)
   let mandateSetupDate = maybe now (\date -> if checkIFActiveStatus autoPayStatus then date else now) mbMandateSetupDate
   currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate True mDriverPlan (Just subscriptionConfig) serviceName >=> (pure . Just)) mPlan
-  mbInvoice <- listToMaybe <$> QINV.findLatestNonAutopayActiveByDriverId driverId serviceName
   (orderId, lastPaymentType) <-
-    case mbInvoice of
-      Just invoice -> do
-        mbOrder <- if invoice.invoiceStatus == INV.ACTIVE_INVOICE then SOrder.findById (cast invoice.id) else return Nothing
-        maybe (pure (Nothing, Nothing)) orderBasedCheck mbOrder
-      Nothing -> return (Nothing, Nothing)
+    case serviceName of
+      PREPAID_SUBSCRIPTION -> do
+        pendingPurchases <- QSP.findAllByOwnerAndStatus ownerId ownerType DSP.PENDING
+        let mbPendingPurchase = listToMaybe $ sortOn (Down . (.purchaseTimestamp)) pendingPurchases
+        case mbPendingPurchase of
+          Just purchase -> do
+            mbOrder <- SOrder.findById (cast purchase.paymentOrderId)
+            maybe (pure (Nothing, Nothing)) orderBasedCheck mbOrder
+          Nothing -> return (Nothing, Nothing)
+      _ -> do
+        mbInvoice <- listToMaybe <$> QINV.findLatestNonAutopayActiveByDriverId driverId serviceName
+        case mbInvoice of
+          Just invoice -> do
+            mbOrder <- if invoice.invoiceStatus == INV.ACTIVE_INVOICE then SOrder.findById (cast invoice.id) else return Nothing
+            maybe (pure (Nothing, Nothing)) orderBasedCheck mbOrder
+          Nothing -> return (Nothing, Nothing)
   let askForPlanSwitchByCity = maybe False (merchantOperatingCityId /=) (mDriverPlan <&> (.merchantOpCityId))
   let askForPlanSwitchByVehicle = (vehicleCategory >>= (.category)) /= (mDriverPlan >>= (.vehicleCategory)) && isJust mDriverPlan
   safetyPlusData <- do
@@ -490,7 +510,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
         subscribed = driverInfo.subscribed,
         orderId,
         lastPaymentType,
-        latestManualPaymentDate = latestManualPayment <&> (.updatedAt),
+        latestManualPaymentDate = latestManualPaymentDate,
         latestAutopayPaymentDate = latestAutopayPayment <&> (.updatedAt),
         planRegistrationDate = mDriverPlan <&> (.createdAt),
         isLocalized = Just True,
@@ -519,7 +539,7 @@ prepaidPlanSubscribe serviceName planId (isDashboard, channel) (driverId, mercha
   driverPlan <- QDPlan.findByDriverIdWithServiceName driverId serviceName
   when (isNothing driverPlan) $ createDriverPlan serviceName (driverId, merchantId, merchantOpCityId) plan subscriptionServiceRelatedData subscriptionConfig
   when (isJust driverPlan) $ QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName (Just plan.vehicleCategory) plan.merchantOpCityId
-  (createOrderResp, orderId) <- createPrepaidInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData
+  (createOrderResp, orderId) <- createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData
   when isDashboard $ sendSubscriptionLink createOrderResp driverId channel (isJust mbDeepLinkData)
   return $
     PlanSubscribeRes
@@ -852,7 +872,7 @@ validateInActiveMandateExists driverId driverPlan = do
       unless (mandate.status == DM.INACTIVE) $ throwError (InActiveMandateDoNotExist driverId.getId)
       return mandate
 
-createPrepaidInvoiceAndOrder ::
+createPrepaidSubscriptionOrder ::
   ServiceNames ->
   Id SP.Person ->
   Id DM.Merchant ->
@@ -860,20 +880,83 @@ createPrepaidInvoiceAndOrder ::
   Plan ->
   Maybe SPayment.DeepLinkData ->
   Flow (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
-createPrepaidInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData = do
-  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData = do
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
-  let paymentServiceName = subscriptionConfig.paymentServiceName
+  driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  orderId <- generateGUIDText
+  orderShortId <- generateShortId
+  let driverEmail = fromMaybe "test@juspay.in" driver.email
+      amount = plan.registrationAmount
+      createOrderReq =
+        Payment.CreateOrderReq
+          { orderId = orderId,
+            orderShortId = orderShortId.getShortId,
+            amount = amount,
+            customerId = driver.id.getId,
+            customerEmail = driverEmail,
+            customerPhone = driverPhone,
+            customerFirstName = Just driver.firstName,
+            customerLastName = driver.lastName,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateFrequency = Nothing,
+            mandateStartDate = Nothing,
+            mandateEndDate = Nothing,
+            metadataGatewayReferenceId = Nothing,
+            optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
+            metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
+            splitSettlementDetails = Nothing,
+            basket = Nothing
+          }
+  paymentServiceName <- Payment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
+  (createOrderCall, pseudoClientId) <- Payment.createOrder merchantId merchantOpCityId paymentServiceName (Just driver.id.getId)
+  let commonMerchantId = (cast merchantId :: Id DPayment.Merchant)
+      commonPersonId = (cast driver.id :: Id DPayment.Person)
+  mbCreateOrderResp <-
+    DPayment.createOrderService
+      commonMerchantId
+      (Just $ cast merchantOpCityId)
+      commonPersonId
+      Nothing
+      Nothing
+      DOrder.Normal
+      False
+      createOrderReq
+      createOrderCall
+      Nothing
+      False
+      Nothing
+  createOrderResp <- mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")
+  let createOrderResp' = SPayment.applyPseudoClientId pseudoClientId createOrderResp
   now <- getCurrentTime
-  prepaidRegistrationFee <- getLatestPrepaidRegistrationFee driverId serviceName now
-  case prepaidRegistrationFee of
-    Just fee -> SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([fee], []) Nothing INV.PREPAID_INVOICE Nothing [] mbDeepLinkData False Nothing
-    Nothing -> do
-      driverFee <- mkDriverFee driverId merchantId merchantOpCityId serviceName plan currency Nothing
-      QDF.create driverFee
-      SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) Nothing INV.PREPAID_INVOICE Nothing [] mbDeepLinkData False Nothing
+  purchaseId <- generateGUID
+  let paymentOrderId = Id orderId
+      planRideCredit = getPlanAmount plan.planBaseAmount
+      expiryDate = Nothing
+      (ownerType, ownerId) = if DCommon.checkFleetOwnerRole driver.role then (DSP.FLEET_OWNER, driver.id.getId) else (DSP.DRIVER, driver.id.getId)
+      subscriptionPurchase =
+        DSP.SubscriptionPurchase
+          { id = Id purchaseId,
+            ownerId = ownerId,
+            ownerType = ownerType,
+            planId = plan.id,
+            planFrequency = plan.frequency,
+            planRideCredit = planRideCredit,
+            planFee = plan.registrationAmount,
+            purchaseTimestamp = now,
+            paymentOrderId = paymentOrderId,
+            status = DSP.PENDING,
+            expiryDate = expiryDate,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+  QSP.create subscriptionPurchase
+  pure (createOrderResp', paymentOrderId)
 
 createMandateInvoiceAndOrder ::
   ServiceNames ->
@@ -943,8 +1026,7 @@ convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Bool -> Maybe DriverPlan -
 convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan subscriptionConfig serviceNameParam plan@Plan {..} = do
   (dueDriverFees, pendingRegistrationDfee) <- case serviceNameParam of
     PREPAID_SUBSCRIPTION -> do
-      pendingRegistrationDfee' <- B.runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceNameParam driverId [DF.PREPAID_RECHARGE] [DF.PAYMENT_PENDING]
-      pure ([], pendingRegistrationDfee')
+      pure ([], [])
     _ -> do
       dueDriverFees' <- B.runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceNameParam driverId [DF.RECURRING_INVOICE, DF.RECURRING_EXECUTION_INVOICE] [DF.PAYMENT_PENDING, DF.PAYMENT_OVERDUE]
       pendingRegistrationDfee' <- B.runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceNameParam driverId [DF.MANDATE_REGISTRATION] [DF.PAYMENT_PENDING]

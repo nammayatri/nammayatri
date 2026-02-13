@@ -26,8 +26,6 @@ data LedgerEntryInput = LedgerEntryInput
     currency :: Currency,
     entryType :: EntryType,
     status :: EntryStatus,
-    ownerType :: Text, -- "DRIVER", "FLEET_OWNER", "PLATFORM"
-    ownerId :: Text,
     referenceType :: Text,
     referenceId :: Text,
     metadata :: Maybe Value,

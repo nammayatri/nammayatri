@@ -982,6 +982,10 @@ castDDocumentType = \case
   DVC.LocalResidenceProof -> Common.LocalResidenceProof
   DVC.PoliceVerificationCertificate -> Common.PoliceVerificationCertificate
   DVC.DrivingSchoolCertificate -> Common.DrivingSchoolCertificate
+  DVC.LDCCertificate -> Common.LDCCertificate
+  DVC.TDSCertificate -> Common.TDSCertificate
+  DVC.TANCertificate -> Common.TANCertificate
+  DVC.UDYAMCertificate -> Common.UDYAMCertificate
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1078,6 +1082,10 @@ castDocumentType = \case
   Common.LocalResidenceProof -> DVC.LocalResidenceProof
   Common.PoliceVerificationCertificate -> DVC.PoliceVerificationCertificate
   Common.DrivingSchoolCertificate -> DVC.DrivingSchoolCertificate
+  Common.LDCCertificate -> DVC.LDCCertificate
+  Common.TDSCertificate -> DVC.TDSCertificate
+  Common.TANCertificate -> DVC.TANCertificate
+  Common.UDYAMCertificate -> DVC.UDYAMCertificate
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::

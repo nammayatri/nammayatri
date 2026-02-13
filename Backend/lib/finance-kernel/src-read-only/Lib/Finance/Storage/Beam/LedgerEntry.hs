@@ -23,8 +23,6 @@ data LedgerEntryT f = LedgerEntryT
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     metadata :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    ownerId :: (B.C f Kernel.Prelude.Text),
-    ownerType :: (B.C f Kernel.Prelude.Text),
     referenceId :: (B.C f Kernel.Prelude.Text),
     referenceType :: (B.C f Kernel.Prelude.Text),
     reversalOf :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
@@ -43,6 +41,6 @@ instance B.Table LedgerEntryT where
 
 type LedgerEntry = LedgerEntryT Identity
 
-$(enableKVPG (''LedgerEntryT) [('id)] [[('fromAccountId)], [('ownerId)], [('referenceId)], [('toAccountId)]])
+$(enableKVPG (''LedgerEntryT) [('id)] [[('fromAccountId)], [('referenceId)], [('toAccountId)]])
 
 $(mkTableInstancesGenericSchema (''LedgerEntryT) "finance_ledger_entry")

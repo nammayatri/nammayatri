@@ -31,6 +31,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payment.Interface.Types
+import Kernel.External.Payment.Juspay.Types.CreateOrder (payload, clientId)
 import qualified Kernel.External.Payment.Types as PaymentTypes
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -57,6 +58,18 @@ import Tools.Metrics
 import qualified Tools.Payment as TPayment
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
+
+applyPseudoClientId :: Maybe Text -> CreateOrderResp -> CreateOrderResp
+applyPseudoClientId pseudoClientId createOrderRes =
+  createOrderRes
+    { sdk_payload =
+        createOrderRes.sdk_payload
+          { payload =
+              createOrderRes.sdk_payload.payload
+                { clientId = pseudoClientId <|> createOrderRes.sdk_payload.payload.clientId
+                }
+          }
+    }
 
 data MandateOrder = MandateOrder
   { maxAmount :: HighPrecMoney,

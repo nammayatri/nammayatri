@@ -45,7 +45,7 @@ import Kernel.Utils.Common
 import Lib.Finance
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
-import SharedLogic.Finance.Prepaid (ownerTypeDriver)
+import SharedLogic.Finance.Prepaid (counterpartyDriver)
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Payment as SPayment
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
@@ -79,7 +79,7 @@ getWalletTransactions (mbPersonId, _, _) mbFromDate mbToDate mbTransactionType m
       toDate = fromMaybe now mbToDate
       limit = min maxLimit . fromMaybe 10 $ mbLimit
       offset = fromMaybe 0 mbOffset
-  mbAccount <- getWalletAccountByOwner ownerTypeDriver driverId.getId
+  mbAccount <- getWalletAccountByOwner counterpartyDriver driverId.getId
   case mbAccount of
     Nothing -> pure $ DriverWallet.TransactionResponse {transactions = [], currentBalance = Nothing}
     Just account -> do
@@ -92,7 +92,7 @@ getWalletTransactions (mbPersonId, _, _) mbFromDate mbToDate mbTransactionType m
               ]
               transactionTypeToRefs
               mbTransactionType
-      entries <- findByOwnerWithFilters ownerTypeDriver driverId.getId (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just referenceTypes)
+      entries <- findByAccountWithFilters account.id (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just referenceTypes)
       let balanceByEntryId = buildRunningBalances account.id (sortOn (.timestamp) entries)
       let pagedEntries = take limit . drop offset $ sortOn (Down . (.timestamp)) entries
       let rideIds = mapMaybe (\e -> if e.referenceType `elem` rideReferenceTypes then Just (Kernel.Types.Id.Id e.referenceId) else Nothing) pagedEntries
@@ -124,7 +124,7 @@ getWalletTransactions (mbPersonId, _, _) mbFromDate mbToDate mbTransactionType m
                 toLocation = toLocation,
                 createdAt = entry.timestamp
               }
-      mbBalance <- getWalletBalanceByOwner ownerTypeDriver driverId.getId
+      mbBalance <- getWalletBalanceByOwner counterpartyDriver driverId.getId
       pure $ DriverWallet.TransactionResponse {transactions = transactionsAPIEntity, currentBalance = mbBalance}
   where
     maxLimit = 10
@@ -165,7 +165,8 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
   subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId "PREPAID_SUBSCRIPTION") -- Driver wallet is not required for postpaid
   unless transporterConfig.driverWalletConfig.enableWalletPayout $ throwError $ InvalidRequest "Payouts are disabled"
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
-    walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner ownerTypeDriver driverId.getId
+    mbAccount <- getWalletAccountByOwner counterpartyDriver driverId.getId
+    walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterpartyDriver driverId.getId
     let minPayoutAmount = transporterConfig.driverWalletConfig.minimumWalletPayoutAmount
     utcTimeNow <- getCurrentTime
     let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
@@ -176,7 +177,9 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
         utcStartOfDay = addUTCTime (negate timeDiff) startOfLocalDay
         utcEndOfDay = addUTCTime (negate timeDiff) endOfLocalDay
     whenJust transporterConfig.driverWalletConfig.maxWalletPayoutsPerDay $ \maxPayoutsPerDay -> do
-      payoutsToday <- findByOwnerWithFilters ownerTypeDriver driverId.getId (Just utcStartOfDay) (Just utcEndOfDay) Nothing Nothing Nothing (Just [walletReferencePayout])
+      payoutsToday <- case mbAccount of
+        Nothing -> pure []
+        Just account -> findByAccountWithFilters account.id (Just utcStartOfDay) (Just utcEndOfDay) Nothing Nothing Nothing (Just [walletReferencePayout])
       when (length payoutsToday >= maxPayoutsPerDay) $ throwError $ InvalidRequest "Maximum payouts per day reached"
     let mbVpa = driverInfo.payoutVpa
     vpa <- fromMaybeM (InternalError $ "Payout vpa not present for " <> driverId.getId) mbVpa
@@ -185,7 +188,9 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
     payoutServiceName <- Payout.decidePayoutService (fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName) person.clientSdkVersion person.merchantOperatingCityId
     let cutOffDate = Data.Time.addDays (negate (fromIntegral transporterConfig.driverWalletConfig.payoutCutOffDays)) localDay
         utcCutOffTime = addUTCTime (negate timeDiff) (Data.Time.UTCTime cutOffDate 0)
-    entriesAfterCutoff <- findByOwnerWithFilters ownerTypeDriver driverId.getId (Just utcCutOffTime) (Just utcTimeNow) Nothing Nothing Nothing (Just [walletReferenceRideEarning])
+    entriesAfterCutoff <- case mbAccount of
+      Nothing -> pure []
+      Just account -> findByAccountWithFilters account.id (Just utcCutOffTime) (Just utcTimeNow) Nothing Nothing Nothing (Just [walletReferenceRideEarning])
     let unsettledReceivables = sum $ map (.amount) entriesAfterCutoff
     let payoutableBalance = walletBalance - unsettledReceivables
     when (payoutableBalance < minPayoutAmount) $ throwError $ InvalidRequest ("Minimum payout amount is " <> show minPayoutAmount)
@@ -204,7 +209,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
                 ]
         _ <-
           createWalletEntryDelta
-            ownerTypeDriver
+            counterpartyDriver
             driverId.getId
             (negate payoutableBalance)
             transporterConfig.currency
