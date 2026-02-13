@@ -49,6 +49,7 @@ library
       Domain.Types.ServerName
       Domain.Types.Transaction
       Environment
+      SharedLogic.Roles
       SharedLogic.Transaction
       Storage.Beam.AccessMatrix
       Storage.Beam.BeamFlow
