@@ -1,9 +1,12 @@
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Prepaid
-  ( ownerTypeDriver,
-    ownerTypeFleetOwner,
-    ownerTypePlatform,
+  ( counterpartyDriver,
+    counterpartyFleetOwner,
+    prepaidHoldReferenceType,
+    subscriptionCreditReferenceType,
+    subscriptionPurchaseReferenceType,
+    subscriptionRideReferenceType,
     getPrepaidAccountByOwner,
     getPrepaidBalanceByOwner,
     getPrepaidPendingHoldByOwner,
@@ -20,88 +23,80 @@ import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Lib.Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import Kernel.Types.Id
 
-ownerTypeDriver :: Text
-ownerTypeDriver = "DRIVER"
+counterpartyDriver :: CounterpartyType
+counterpartyDriver = DRIVER
 
-ownerTypeFleetOwner :: Text
-ownerTypeFleetOwner = "FLEET_OWNER"
+counterpartyFleetOwner :: CounterpartyType
+counterpartyFleetOwner = FLEET_OWNER
 
-ownerTypePlatform :: Text
-ownerTypePlatform = "PLATFORM"
+subscriptionPurchaseReferenceType :: Text
+subscriptionPurchaseReferenceType = "SubscriptionPurchase"
 
-prepaidDeferredRevenueReferenceType :: Text
-prepaidDeferredRevenueReferenceType = "PREPAID_DEFERRED_REVENUE"
+subscriptionCreditReferenceType :: Text
+subscriptionCreditReferenceType = "SubscriptionCredit"
 
-prepaidRevenueRecognitionReferenceType :: Text
-prepaidRevenueRecognitionReferenceType = "PREPAID_REVENUE_RECOGNITION"
+subscriptionRideReferenceType :: Text
+subscriptionRideReferenceType = "SubsctiptionRide"
 
-prepaidPaymentReferenceType :: Text
-prepaidPaymentReferenceType = "PREPAID_PAYMENT"
-
-prepaidCreditIssuedReferenceType :: Text
-prepaidCreditIssuedReferenceType = "PREPAID_CREDIT_ISSUED"
-
-prepaidRideConsumeReferenceType :: Text
-prepaidRideConsumeReferenceType = "PREPAID_RIDE_CONSUME"
-
-ownerTypeSubscriptionGST :: Text
-ownerTypeSubscriptionGST = "SubscriptionGST"
+prepaidHoldReferenceType :: Text
+prepaidHoldReferenceType = "RideHold"
 
 getPrepaidAccountByOwner ::
   (BeamFlow m r) =>
-  Text -> -- Owner type
+  CounterpartyType ->
   Text -> -- Owner ID
   m (Maybe Account)
-getPrepaidAccountByOwner ownerType ownerId = do
-  accounts <- findAccountsByCounterparty (Just ownerType) (Just ownerId)
-  pure $
-    find
-      (\acc -> acc.accountType == Asset && acc.accountCategory `elem` [Driver, Fleet])
-      accounts
+getPrepaidAccountByOwner counterpartyType ownerId = do
+  accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
+  pure $ find (\acc -> acc.accountType == RideCredit) accounts
 
 getPrepaidBalanceByOwner ::
   (BeamFlow m r) =>
-  Text ->
+  CounterpartyType ->
   Text ->
   m (Maybe HighPrecMoney)
-getPrepaidBalanceByOwner ownerType ownerId = do
-  mbAcc <- getPrepaidAccountByOwner ownerType ownerId
+getPrepaidBalanceByOwner counterpartyType ownerId = do
+  mbAcc <- getPrepaidAccountByOwner counterpartyType ownerId
   pure $ mbAcc <&> (.balance)
 
 getPrepaidPendingHoldByOwner ::
   (BeamFlow m r) =>
-  Text ->
+  CounterpartyType ->
   Text ->
   m HighPrecMoney
-getPrepaidPendingHoldByOwner ownerType ownerId =
-  sumByOwnerAndStatus ownerType ownerId PENDING
+getPrepaidPendingHoldByOwner counterpartyType ownerId = do
+  mbAcc <- getPrepaidAccountByOwner counterpartyType ownerId
+  case mbAcc of
+    Nothing -> pure 0
+    Just acc -> do
+      entries <- getEntriesByAccount acc.id
+      pure $ sum $ map (.amount) $ filter (\e -> e.fromAccountId == acc.id && e.status == PENDING && e.referenceType == prepaidHoldReferenceType) entries
 
 getPrepaidAvailableBalanceByOwner ::
   (BeamFlow m r) =>
-  Text ->
+  CounterpartyType ->
   Text ->
   m (Maybe HighPrecMoney)
-getPrepaidAvailableBalanceByOwner ownerType ownerId = do
-  mbBalance <- getPrepaidBalanceByOwner ownerType ownerId
-  pendingHold <- getPrepaidPendingHoldByOwner ownerType ownerId
+getPrepaidAvailableBalanceByOwner counterpartyType ownerId = do
+  mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId
+  pendingHold <- getPrepaidPendingHoldByOwner counterpartyType ownerId
   pure $ (\balance -> balance - pendingHold) <$> mbBalance
 
 getOrCreatePrepaidAccount ::
   (BeamFlow m r) =>
-  Text -> -- Owner type
+  CounterpartyType ->
   Text -> -- Owner ID
-  AccountCategory ->
   Currency ->
   Text -> -- Merchant ID
   Text -> -- Merchant operating city ID
   m (Either FinanceError Account)
-getOrCreatePrepaidAccount ownerType ownerId category currency merchantId merchantOperatingCityId = do
+getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId = do
   let input =
         AccountInput
-          { accountType = Asset,
-            accountCategory = category,
-            counterpartyType = Just ownerType,
+          { accountType = RideCredit,
+            counterpartyType = Just counterpartyType,
             counterpartyId = Just ownerId,
             currency = currency,
             merchantId = merchantId,
@@ -109,116 +104,90 @@ getOrCreatePrepaidAccount ownerType ownerId category currency merchantId merchan
           }
   getOrCreateAccount input
 
-getOrCreatePlatformSuspenseAccount ::
+getOrCreateSellerAssetAccount ::
   (BeamFlow m r) =>
   Currency ->
   Text ->
   Text ->
   m (Either FinanceError Account)
-getOrCreatePlatformSuspenseAccount currency merchantId merchantOperatingCityId = do
+getOrCreateSellerAssetAccount currency merchantId merchantOperatingCityId = do
   let input =
         AccountInput
           { accountType = Asset,
-            accountCategory = Suspense,
-            counterpartyType = Nothing,
-            counterpartyId = Nothing,
+            counterpartyType = Just SELLER,
+            counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
           }
   getOrCreateAccount input
 
-getOrCreatePlatformDeferredRevenueAccount ::
+getOrCreateSellerLiabilityAccount ::
   (BeamFlow m r) =>
   Currency ->
   Text ->
   Text ->
   m (Either FinanceError Account)
-getOrCreatePlatformDeferredRevenueAccount currency merchantId merchantOperatingCityId = do
+getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId = do
   let input =
         AccountInput
-          { accountType = DeferredRevenue,
-            accountCategory = Platform,
-            counterpartyType = Nothing,
-            counterpartyId = Nothing,
+          { accountType = Liability,
+            counterpartyType = Just SELLER,
+            counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
           }
   getOrCreateAccount input
 
-getOrCreatePlatformRevenueAccount ::
+getOrCreateGovernmentLiabilityAccount ::
   (BeamFlow m r) =>
   Currency ->
   Text ->
   Text ->
   m (Either FinanceError Account)
-getOrCreatePlatformRevenueAccount currency merchantId merchantOperatingCityId = do
+getOrCreateGovernmentLiabilityAccount currency merchantId merchantOperatingCityId = do
+  let input =
+        AccountInput
+          { accountType = Liability,
+            counterpartyType = Just GOVERNMENT,
+            counterpartyId = Just merchantId,
+            currency = currency,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId
+          }
+  getOrCreateAccount input
+
+getOrCreateSellerRideCreditAccount ::
+  (BeamFlow m r) =>
+  Currency ->
+  Text ->
+  Text ->
+  m (Either FinanceError Account)
+getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId = do
+  let input =
+        AccountInput
+          { accountType = RideCredit,
+            counterpartyType = Just SELLER,
+            counterpartyId = Just merchantId,
+            currency = currency,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId
+          }
+  getOrCreateAccount input
+
+getOrCreateSellerRevenueAccount ::
+  (BeamFlow m r) =>
+  Currency ->
+  Text ->
+  Text ->
+  m (Either FinanceError Account)
+getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId = do
   let input =
         AccountInput
           { accountType = Revenue,
-            accountCategory = Platform,
-            counterpartyType = Nothing,
-            counterpartyId = Nothing,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  getOrCreateAccount input
-
-getOrCreatePlatformCreditIssuerAccount ::
-  (BeamFlow m r) =>
-  Currency ->
-  Text ->
-  Text ->
-  m (Either FinanceError Account)
-getOrCreatePlatformCreditIssuerAccount currency merchantId merchantOperatingCityId = do
-  let input =
-        AccountInput
-          { accountType = Equity,
-            accountCategory = Platform,
-            counterpartyType = Nothing,
-            counterpartyId = Nothing,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  getOrCreateAccount input
-
-getOrCreateExternalBankAccount ::
-  (BeamFlow m r) =>
-  Text ->
-  Text ->
-  Currency ->
-  Text ->
-  Text ->
-  m (Either FinanceError Account)
-getOrCreateExternalBankAccount ownerType ownerId currency merchantId merchantOperatingCityId = do
-  let input =
-        AccountInput
-          { accountType = External,
-            accountCategory = Suspense,
-            counterpartyType = Just ownerType,
-            counterpartyId = Just ownerId,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  getOrCreateAccount input
-
-getOrCreateSubscriptionGSTAccount ::
-  (BeamFlow m r) =>
-  Currency ->
-  Text ->
-  Text ->
-  m (Either FinanceError Account)
-getOrCreateSubscriptionGSTAccount currency merchantId merchantOperatingCityId = do
-  let input =
-        AccountInput
-          { accountType = Expense,
-            accountCategory = Settlement,
-            counterpartyType = Nothing,
-            counterpartyId = Nothing,
+            counterpartyType = Just SELLER,
+            counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -227,37 +196,33 @@ getOrCreateSubscriptionGSTAccount currency merchantId merchantOperatingCityId = 
 
 createPrepaidHold ::
   (BeamFlow m r) =>
-  Text -> -- Owner type
+  CounterpartyType ->
   Text -> -- Owner ID
-  AccountCategory ->
   HighPrecMoney ->
   Currency ->
   Text -> -- Merchant ID
   Text -> -- Merchant operating city ID
-  Text -> -- Reference type
   Text -> -- Reference ID
   Maybe Value ->
   m (Either FinanceError ())
-createPrepaidHold ownerType ownerId category amount currency merchantId merchantOperatingCityId referenceType referenceId metadata = do
-  mbExistingHold <- findPendingPrepaidHoldByReference ownerType ownerId referenceType referenceId
-  case mbExistingHold of
-    Just _ -> pure $ Right ()
-    Nothing -> do
-      mbOwnerAccount <- getOrCreatePrepaidAccount ownerType ownerId category currency merchantId merchantOperatingCityId
-      mbDeferredRevenueAccount <- getOrCreatePlatformDeferredRevenueAccount currency merchantId merchantOperatingCityId
-      case (mbOwnerAccount, mbDeferredRevenueAccount) of
-        (Right ownerAccount, Right deferredRevenueAccount) -> do
+createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOperatingCityId referenceId metadata = do
+  mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
+  mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
+  case (mbOwnerAccount, mbSellerRideCredit) of
+    (Right ownerAccount, Right sellerRideCredit) -> do
+      mbExistingHold <- findPendingPrepaidHoldByReference ownerAccount.id prepaidHoldReferenceType referenceId
+      case mbExistingHold of
+        Just _ -> pure $ Right ()
+        Nothing -> do
           let entryInput =
                 LedgerEntryInput
                   { fromAccountId = ownerAccount.id,
-                    toAccountId = deferredRevenueAccount.id,
+                    toAccountId = sellerRideCredit.id,
                     amount = amount,
                     currency = currency,
-                    entryType = LiabilityCreated,
+                    entryType = Transfer,
                     status = PENDING,
-                    ownerType = ownerType,
-                    ownerId = ownerId,
-                    referenceType = referenceType,
+                    referenceType = prepaidHoldReferenceType,
                     referenceId = referenceId,
                     metadata = metadata,
                     merchantId = merchantId,
@@ -267,41 +232,74 @@ createPrepaidHold ownerType ownerId category amount currency merchantId merchant
           case entryRes of
             Left err -> pure $ Left err
             Right _ -> pure $ Right ()
-        (Left err, _) -> pure $ Left err
-        (_, Left err) -> pure $ Left err
+    (Left err, _) -> pure $ Left err
+    (_, Left err) -> pure $ Left err
 
 findPendingPrepaidHoldByReference ::
   (BeamFlow m r) =>
-  Text ->
-  Text ->
+  Id Account ->
   Text ->
   Text ->
   m (Maybe LedgerEntry)
-findPendingPrepaidHoldByReference ownerType ownerId referenceType referenceId = do
+findPendingPrepaidHoldByReference ownerAccountId referenceType referenceId = do
   entries <- getEntriesByReference referenceType referenceId
-  pure $ find (\entry -> entry.ownerType == ownerType && entry.ownerId == ownerId && entry.status == PENDING) entries
+  pure $ find (\entry -> entry.fromAccountId == ownerAccountId && entry.status == PENDING) entries
 
 voidPrepaidHold ::
   (BeamFlow m r) =>
-  Text -> -- Owner type
+  CounterpartyType ->
   Text -> -- Owner ID
-  Text -> -- Reference type
   Text -> -- Reference ID
   Text -> -- Reason
   m ()
-voidPrepaidHold ownerType ownerId referenceType referenceId reason = do
-  entries <- getEntriesByReference referenceType referenceId
-  let pendingEntries =
-        filter
-          (\entry -> entry.ownerType == ownerType && entry.ownerId == ownerId && entry.status == PENDING)
-          entries
-  forM_ pendingEntries $ \entry -> voidEntry entry.id reason
+voidPrepaidHold counterpartyType ownerId referenceId reason = do
+  mbOwnerAccount <- getPrepaidAccountByOwner counterpartyType ownerId
+  case mbOwnerAccount of
+    Nothing -> pure ()
+    Just ownerAccount -> do
+      entries <- getEntriesByReference prepaidHoldReferenceType referenceId
+      let pendingEntries =
+            filter
+              (\entry -> entry.fromAccountId == ownerAccount.id && entry.status == PENDING)
+              entries
+      forM_ pendingEntries $ \entry -> voidEntry entry.id reason
+
+settlePrepaidHoldByReference ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  Text ->
+  Text ->
+  m (Either FinanceError ())
+settlePrepaidHoldByReference counterpartyType ownerId referenceId = do
+  mbOwnerAccount <- getPrepaidAccountByOwner counterpartyType ownerId
+  case mbOwnerAccount of
+    Nothing -> pure $ Right ()
+    Just ownerAccount -> do
+      entries <- getEntriesByReference prepaidHoldReferenceType referenceId
+      let pendingEntries =
+            filter
+              (\entry -> entry.fromAccountId == ownerAccount.id && entry.status == PENDING)
+              entries
+      foldM
+        ( \_ entry -> do
+            resFrom <- updateBalanceByDelta entry.fromAccountId (-1 * entry.amount)
+            case resFrom of
+              Left err -> pure $ Left err
+              Right _ -> do
+                resTo <- updateBalanceByDelta entry.toAccountId entry.amount
+                case resTo of
+                  Left err -> pure $ Left err
+                  Right _ -> do
+                    settleEntry entry.id
+                    pure $ Right ()
+        )
+        (Right ())
+        pendingEntries
 
 creditPrepaidBalance ::
   (BeamFlow m r) =>
-  Text -> -- Owner type
+  CounterpartyType ->
   Text -> -- Owner ID
-  AccountCategory ->
   HighPrecMoney -> -- Ride credit amount
   HighPrecMoney -> -- Paid amount
   HighPrecMoney -> -- GST amount
@@ -311,91 +309,61 @@ creditPrepaidBalance ::
   Text -> -- Reference ID
   Maybe Value ->
   m (Either FinanceError HighPrecMoney)
-creditPrepaidBalance ownerType ownerId category creditAmount paidAmount gstAmount currency merchantId merchantOperatingCityId referenceId metadata = do
-  mbOwnerAccount <- getOrCreatePrepaidAccount ownerType ownerId category currency merchantId merchantOperatingCityId
-  mbPlatformSuspense <- getOrCreatePlatformSuspenseAccount currency merchantId merchantOperatingCityId
-  mbDeferredRevenueAccount <- getOrCreatePlatformDeferredRevenueAccount currency merchantId merchantOperatingCityId
-  mbCreditIssuer <- getOrCreatePlatformCreditIssuerAccount currency merchantId merchantOperatingCityId
-  mbSubscriptionGST <- getOrCreateSubscriptionGSTAccount currency merchantId merchantOperatingCityId
-  mbExternalBank <- getOrCreateExternalBankAccount ownerType ownerId currency merchantId merchantOperatingCityId
-  case (mbOwnerAccount, mbPlatformSuspense, mbDeferredRevenueAccount, mbCreditIssuer) of
-    (Right ownerAccount, Right platformSuspense, Right deferredRevenueAccount, Right creditIssuerAccount) -> do
+creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount currency merchantId merchantOperatingCityId referenceId metadata = do
+  mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
+  mbSellerAsset <- getOrCreateSellerAssetAccount currency merchantId merchantOperatingCityId
+  mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
+  mbGovernmentLiability <- getOrCreateGovernmentLiabilityAccount currency merchantId merchantOperatingCityId
+  mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
+  case (mbOwnerAccount, mbSellerAsset, mbSellerLiability, mbGovernmentLiability, mbSellerRideCredit) of
+    (Right ownerAccount, Right sellerAsset, Right sellerLiability, Right governmentLiability, Right sellerRideCredit) -> do
       when (paidAmount > 0) $ do
-        case mbExternalBank of
-          Right externalBank -> do
-            let paymentEntry =
-                  LedgerEntryInput
-                    { fromAccountId = externalBank.id,
-                      toAccountId = platformSuspense.id,
-                      amount = paidAmount,
-                      currency = currency,
-                      entryType = Transfer,
-                      status = SETTLED,
-                      ownerType = ownerType,
-                      ownerId = ownerId,
-                      referenceType = prepaidPaymentReferenceType,
-                      referenceId = referenceId,
-                      metadata = Nothing,
-                      merchantId = merchantId,
-                      merchantOperatingCityId = merchantOperatingCityId
-                    }
-            _ <- createEntryWithBalanceUpdate paymentEntry
-            pure ()
-          _ -> pure ()
-        when (gstAmount > 0) $ do
-          case mbSubscriptionGST of
-            Right subscriptionGST -> do
-              let gstEntry =
-                    LedgerEntryInput
-                      { fromAccountId = platformSuspense.id,
-                        toAccountId = subscriptionGST.id,
-                        amount = gstAmount,
-                        currency = currency,
-                        entryType = Transfer,
-                        status = SETTLED,
-                        ownerType = ownerTypePlatform,
-                        ownerId = merchantId,
-                        referenceType = "SUBSCRIPTION_GST",
-                        referenceId = referenceId,
-                        metadata = Nothing,
-                        merchantId = merchantId,
-                        merchantOperatingCityId = merchantOperatingCityId
-                      }
-              _ <- createEntryWithBalanceUpdate gstEntry
-              pure ()
-            _ -> pure ()
-        let deferredAmount = max 0 (paidAmount - gstAmount)
-        when (deferredAmount > 0) $ do
-          let deferredRevenueEntry =
+        let gstAmount' = max 0 gstAmount
+        when (gstAmount' > 0) $ do
+          let gstEntry =
                 LedgerEntryInput
-                  { fromAccountId = platformSuspense.id,
-                    toAccountId = deferredRevenueAccount.id,
-                    amount = deferredAmount,
+                  { fromAccountId = sellerAsset.id,
+                    toAccountId = governmentLiability.id,
+                    amount = gstAmount',
                     currency = currency,
                     entryType = Transfer,
                     status = SETTLED,
-                    ownerType = ownerTypePlatform,
-                    ownerId = merchantId,
-                    referenceType = prepaidDeferredRevenueReferenceType,
+                    referenceType = subscriptionPurchaseReferenceType,
                     referenceId = referenceId,
                     metadata = Nothing,
                     merchantId = merchantId,
                     merchantOperatingCityId = merchantOperatingCityId
                   }
-          _ <- createEntryWithBalanceUpdate deferredRevenueEntry
+          _ <- createEntryWithBalanceUpdate gstEntry
+          pure ()
+        let netAmount = max 0 (paidAmount - gstAmount')
+        when (netAmount > 0) $ do
+          let liabilityEntry =
+                LedgerEntryInput
+                  { fromAccountId = sellerAsset.id,
+                    toAccountId = sellerLiability.id,
+                    amount = netAmount,
+                    currency = currency,
+                    entryType = Transfer,
+                    status = SETTLED,
+                    referenceType = subscriptionPurchaseReferenceType,
+                    referenceId = referenceId,
+                    metadata = Nothing,
+                    merchantId = merchantId,
+                    merchantOperatingCityId = merchantOperatingCityId
+                  }
+          _ <- createEntryWithBalanceUpdate liabilityEntry
           pure ()
       when (creditAmount > 0) $ do
         let creditEntry =
               LedgerEntryInput
-                { fromAccountId = creditIssuerAccount.id,
+                { fromAccountId = sellerRideCredit.id,
                   toAccountId = ownerAccount.id,
                   amount = creditAmount,
                   currency = currency,
                   entryType = Transfer,
                   status = SETTLED,
-                  ownerType = ownerType,
-                  ownerId = ownerId,
-                  referenceType = prepaidCreditIssuedReferenceType,
+                  referenceType = subscriptionCreditReferenceType,
                   referenceId = referenceId,
                   metadata = metadata,
                   merchantId = merchantId,
@@ -405,73 +373,54 @@ creditPrepaidBalance ownerType ownerId category creditAmount paidAmount gstAmoun
         pure ()
       mbBal <- getBalance ownerAccount.id
       pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
-    (Left err, _, _, _) -> pure $ Left err
-    (_, Left err, _, _) -> pure $ Left err
-    (_, _, Left err, _) -> pure $ Left err
-    (_, _, _, Left err) -> pure $ Left err
+    (Left err, _, _, _, _) -> pure $ Left err
+    (_, Left err, _, _, _) -> pure $ Left err
+    (_, _, Left err, _, _) -> pure $ Left err
+    (_, _, _, Left err, _) -> pure $ Left err
+    (_, _, _, _, Left err) -> pure $ Left err
 
 debitPrepaidBalance ::
   (BeamFlow m r) =>
-  Text -> -- Owner type
+  CounterpartyType ->
   Text -> -- Owner ID
-  AccountCategory ->
   HighPrecMoney -> -- Ride amount
   HighPrecMoney -> -- Revenue recognition amount
   Currency ->
   Text -> -- Merchant ID
   Text -> -- Merchant operating city ID
-  Text -> -- Reference ID
+  Text -> -- Ride reference ID
+  Text -> -- Hold reference ID
   Maybe Value ->
   m (Either FinanceError HighPrecMoney)
-debitPrepaidBalance ownerType ownerId category rideAmount revenueAmount currency merchantId merchantOperatingCityId referenceId metadata = do
-  mbOwnerAccount <- getOrCreatePrepaidAccount ownerType ownerId category currency merchantId merchantOperatingCityId
-  mbCreditIssuer <- getOrCreatePlatformCreditIssuerAccount currency merchantId merchantOperatingCityId
-  mbDeferredRevenueAccount <- getOrCreatePlatformDeferredRevenueAccount currency merchantId merchantOperatingCityId
-  mbRevenueAccount <- getOrCreatePlatformRevenueAccount currency merchantId merchantOperatingCityId
-  case (mbOwnerAccount, mbCreditIssuer) of
-    (Right ownerAccount, Right creditIssuerAccount) -> do
-      when (rideAmount > 0) $ do
-        let consumeEntry =
-              LedgerEntryInput
-                { fromAccountId = ownerAccount.id,
-                  toAccountId = creditIssuerAccount.id,
-                  amount = rideAmount,
-                  currency = currency,
-                  entryType = Transfer,
-                  status = SETTLED,
-                  ownerType = ownerType,
-                  ownerId = ownerId,
-                  referenceType = prepaidRideConsumeReferenceType,
-                  referenceId = referenceId,
-                  metadata = metadata,
-                  merchantId = merchantId,
-                  merchantOperatingCityId = merchantOperatingCityId
-                }
-        _ <- createEntryWithBalanceUpdate consumeEntry
-        pure ()
-      when (revenueAmount > 0) $ do
-        case (mbDeferredRevenueAccount, mbRevenueAccount) of
-          (Right deferredRevenueAccount, Right revenueAccount) -> do
+debitPrepaidBalance counterpartyType ownerId _rideAmount revenueAmount currency merchantId merchantOperatingCityId rideReferenceId holdReferenceId _metadata = do
+  mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
+  mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
+  mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
+  case (mbOwnerAccount, mbSellerLiability, mbSellerRevenue) of
+    (Right ownerAccount, Right sellerLiability, Right sellerRevenue) -> do
+      holdRes <- settlePrepaidHoldByReference counterpartyType ownerId holdReferenceId
+      case holdRes of
+        Left err -> pure $ Left err
+        Right _ -> do
+          when (revenueAmount > 0) $ do
             let revenueEntry =
                   LedgerEntryInput
-                    { fromAccountId = deferredRevenueAccount.id,
-                      toAccountId = revenueAccount.id,
+                    { fromAccountId = sellerLiability.id,
+                      toAccountId = sellerRevenue.id,
                       amount = revenueAmount,
                       currency = currency,
                       entryType = Transfer,
                       status = SETTLED,
-                      ownerType = ownerTypePlatform,
-                      ownerId = merchantId,
-                      referenceType = prepaidRevenueRecognitionReferenceType,
-                      referenceId = referenceId,
+                      referenceType = subscriptionRideReferenceType,
+                      referenceId = rideReferenceId,
                       metadata = Nothing,
                       merchantId = merchantId,
                       merchantOperatingCityId = merchantOperatingCityId
                     }
             _ <- createEntryWithBalanceUpdate revenueEntry
             pure ()
-          _ -> pure ()
-      mbBal <- getBalance ownerAccount.id
-      pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
-    (Left err, _) -> pure $ Left err
-    (_, Left err) -> pure $ Left err
+          mbBal <- getBalance ownerAccount.id
+          pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
+    (Left err, _, _) -> pure $ Left err
+    (_, Left err, _) -> pure $ Left err
+    (_, _, Left err) -> pure $ Left err

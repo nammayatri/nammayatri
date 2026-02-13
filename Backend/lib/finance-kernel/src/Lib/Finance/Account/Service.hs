@@ -45,12 +45,12 @@ createAccount input = do
             counterpartyType = input.counterpartyType,
             counterpartyId = input.counterpartyId,
             accountType = input.accountType,
-            accountCategory = input.accountCategory,
             currency = input.currency,
             balance = 0, -- Accounts always start at 0
             status = Active,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
+            description = Nothing,
             createdAt = now,
             updatedAt = now
           }

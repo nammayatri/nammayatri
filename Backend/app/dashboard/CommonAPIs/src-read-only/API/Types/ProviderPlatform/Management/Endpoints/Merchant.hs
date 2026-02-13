@@ -140,6 +140,10 @@ data DocumentType
   | FinnishIDResidencePermit
   | BusinessRegistrationExtract
   | PersonalId
+  | LDCCertificate
+  | TDSCertificate
+  | TANCertificate
+  | UDYAMCertificate
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

@@ -47,6 +47,8 @@ import qualified Domain.Types.Notification as DNTF
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
+import qualified Domain.Types.SubscriptionPurchase as DSP
+import Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.WebhookExtra as WT
 import Environment
 import Kernel.Beam.Functions (runInMasterDb)
@@ -70,7 +72,6 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -102,6 +103,8 @@ import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Plan as QPlan
+import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VendorFeeExtra as QVF
 import Tools.Error
@@ -164,8 +167,13 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
   order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
   now <- getCurrentTime
   invoices <- QIN.findById (cast paymentOrderId)
+  mbSubscriptionPurchase <- QSP.findByPaymentOrderId (cast paymentOrderId)
   let firstInvoice = listToMaybe invoices
   let mbServiceName = firstInvoice <&> (.serviceName)
+  let serviceName =
+        fromMaybe
+          (if isJust mbSubscriptionPurchase then DP.PREPAID_SUBSCRIPTION else DP.YATRI_SUBSCRIPTION)
+          mbServiceName
   if order.status == Juspay.CHARGED -- Consider CHARGED status as terminal status
     then do
       return $
@@ -196,7 +204,6 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
     else do
       -- Check if this is a STCL membership payment order
       let isStclOrder = order.paymentServiceType == Just DOrder.STCL || order.entityName == Just DPayment.DRIVER_STCL
-      let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
       serviceConfig <-
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
@@ -221,10 +228,14 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
             whenJust payerVpa $ \vpa -> QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
             logDebug $ "Updating Payout (Via getStatus) And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show payerVpa
             when (isJust payerVpa && isPayoutRegistrationInvoice) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
-          unless (status /= Payment.CHARGED) $ do
-            processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
-          QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
-          notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing Nothing False (serviceName, serviceConfig)
+          case mbSubscriptionPurchase of
+            Just subscriptionPurchase -> do
+              unless (status /= Payment.CHARGED) $ processSubscriptionPurchasePayment merchantId driver subscriptionPurchase
+            Nothing -> do
+              unless (status /= Payment.CHARGED) $ do
+                processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
+              QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
+              notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing Nothing False (serviceName, serviceConfig)
         DPayment.PDNNotificationStatusResp {..} -> do
           notification <- QNTF.findByShortId notificationId >>= fromMaybeM (InternalError "notification not found")
           let driverFeeId = notification.driverFeeId
@@ -312,47 +323,55 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
   case osr of
     Payment.OrderStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
-      (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
-      logDebug $ "Webhook Response Status: " <> show transactionStatus <> " Payer Vpa: " <> show payerVpa <> " OrderId: " <> show orderShortId
-      logDebug $ "Invoices: " <> show invoices
-      when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && transactionStatus == Payment.CHARGED) do
-        let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
-        whenJust mbVpa $ \vpa -> QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
-        logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
-        when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchanOperatingCityId
-      when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
-        when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP && transactionStatus == Payment.CHARGED) $ do
-          let driverFeeIds = (.driverFeeId) <$> invoices
-          driverFees <- QDF.findAllByDriverFeeIds driverFeeIds
-          let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
-          forM_ nonClearedDriverFees $ \driverFee -> do
-            Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driver.id.getId) 10 10 $ do
-              let metadata =
-                    A.object
-                      [ "driverPayable" A..= driverFee.totalEarnings,
-                        "driverFeeId" A..= driverFee.id.getId
-                      ]
-              _ <-
-                createWalletEntryDelta
-                  ownerTypeDriver
-                  driver.id.getId
-                  driverFee.totalEarnings
-                  driverFee.currency
-                  merchantId.getId
-                  driver.merchantOperatingCityId.getId
-                  walletReferenceTopup
-                  driverFee.id.getId
-                  (Just metadata)
-                  >>= fromEitherM (\err -> InternalError ("Failed to create wallet topup entry: " <> show err))
-              pure ()
-              QDF.updateStatusByIds CLEARED [driverFee.id] now
-              let notificationTitle = "Wallet Top-up Successful"
-                  notificationMessage = "Your wallet has been topped up with Rs." <> show driverFee.totalEarnings
-              sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
-        unless (transactionStatus /= Payment.CHARGED) $ do
-          processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
-        notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
-        QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
+      mbSubscriptionPurchase <- QSP.findByPaymentOrderId (cast order.id)
+      case mbSubscriptionPurchase of
+        Just subscriptionPurchase -> do
+          driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
+          logDebug $ "Webhook Response Status: " <> show transactionStatus <> " Payer Vpa: " <> show payerVpa <> " OrderId: " <> show orderShortId
+          when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
+            unless (transactionStatus /= Payment.CHARGED) $ processSubscriptionPurchasePayment merchantId driver subscriptionPurchase
+        Nothing -> do
+          (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
+          logDebug $ "Webhook Response Status: " <> show transactionStatus <> " Payer Vpa: " <> show payerVpa <> " OrderId: " <> show orderShortId
+          logDebug $ "Invoices: " <> show invoices
+          when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && transactionStatus == Payment.CHARGED) do
+            let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
+            whenJust mbVpa $ \vpa -> QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
+            logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
+            when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchanOperatingCityId
+          when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
+            when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP && transactionStatus == Payment.CHARGED) $ do
+              let driverFeeIds = (.driverFeeId) <$> invoices
+              driverFees <- QDF.findAllByDriverFeeIds driverFeeIds
+              let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
+              forM_ nonClearedDriverFees $ \driverFee -> do
+                Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driver.id.getId) 10 10 $ do
+                  let metadata =
+                        A.object
+                          [ "driverPayable" A..= driverFee.totalEarnings,
+                            "driverFeeId" A..= driverFee.id.getId
+                          ]
+                  _ <-
+                    createWalletEntryDelta
+                      counterpartyDriver
+                      driver.id.getId
+                      driverFee.totalEarnings
+                      driverFee.currency
+                      merchantId.getId
+                      driver.merchantOperatingCityId.getId
+                      walletReferenceTopup
+                      driverFee.id.getId
+                      (Just metadata)
+                      >>= fromEitherM (\err -> InternalError ("Failed to create wallet topup entry: " <> show err))
+                  pure ()
+                  QDF.updateStatusByIds CLEARED [driverFee.id] now
+                  let notificationTitle = "Wallet Top-up Successful"
+                      notificationMessage = "Your wallet has been topped up with Rs." <> show driverFee.totalEarnings
+                  sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
+            unless (transactionStatus /= Payment.CHARGED) $ do
+              processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
+            notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
+            QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
     Payment.MandateOrderStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
@@ -437,6 +456,58 @@ processNonClearedDriverFees merchantId person driverFee = do
       _ <- updatePrepaidBalanceAndExpiry merchantId person driverFee
       pure ()
 
+processSubscriptionPurchasePayment ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DM.Merchant ->
+  DP.Person ->
+  DSP.SubscriptionPurchase ->
+  m ()
+processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
+  when (subscriptionPurchase.status == DSP.PENDING) $
+    Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey person.id.getId) 10 10 $ do
+      now <- getCurrentTime
+      currency <- SMerchant.getCurrencyByMerchantOpCity subscriptionPurchase.merchantOperatingCityId
+      plan <- QPlan.findByPrimaryKey subscriptionPurchase.planId >>= fromMaybeM (PlanNotFound subscriptionPurchase.planId.getId)
+      let (_platformFee, cgst, sgst) = SLDriverFee.calculatePlatformFeeAttr subscriptionPurchase.planFee plan
+          gstAmount = cgst + sgst
+          creditAmount = subscriptionPurchase.planRideCredit
+          paidAmount = subscriptionPurchase.planFee
+          referenceId = subscriptionPurchase.id.getId
+          isFleetOwner = DCommon.checkFleetOwnerRole person.role
+          counterpartyType = if isFleetOwner then counterpartyFleetOwner else counterpartyDriver
+          expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
+      _ <-
+        creditPrepaidBalance
+          counterpartyType
+          person.id.getId
+          creditAmount
+          paidAmount
+          gstAmount
+          currency
+          merchantId.getId
+          subscriptionPurchase.merchantOperatingCityId.getId
+          referenceId
+          Nothing
+          >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
+      let updatedPurchase =
+            subscriptionPurchase
+              { status = DSP.ACTIVE,
+                purchaseTimestamp = now,
+                expiryDate = expiryDate
+              }
+      QSP.updateByPrimaryKey updatedPurchase
+      unless isFleetOwner $ do
+        let prepaidRechargeMessage =
+              "Your recharge worth Rs."
+                <> show (SPayment.roundToTwoDecimalPlaces creditAmount)
+                <> " is successful"
+            prepaidRechargeTitle = "Recharge Successful!"
+        sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+
 updatePrepaidBalanceAndExpiry ::
   ( MonadFlow m,
     CacheFlow m r,
@@ -456,9 +527,8 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
     then do
       newBalance <-
         creditPrepaidBalance
-          ownerTypeFleetOwner
+          counterpartyFleetOwner
           person.id.getId
-          FAccount.Fleet
           creditAmount
           paidAmount
           gstAmount
@@ -472,9 +542,8 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
     else do
       newBalance <-
         creditPrepaidBalance
-          ownerTypeDriver
+          counterpartyDriver
           person.id.getId
-          FAccount.Driver
           creditAmount
           paidAmount
           gstAmount

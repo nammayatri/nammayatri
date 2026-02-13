@@ -224,7 +224,7 @@ hasSufficientBalance fare fleetThreshold driverThreshold fleetAssociationMap fle
       case HashMap.lookup (Id fleetAssociation.fleetOwnerId) fleetOwnerMap of
         Just fleetOwner ->
           do
-            mbBalance <- getPrepaidAvailableBalanceByOwner ownerTypeFleetOwner fleetOwner.fleetOwnerPersonId.getId
+            mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyFleetOwner fleetOwner.fleetOwnerPersonId.getId
             pure $ case mbBalance of
               Just balance -> balance >= (fare + fromMaybe 0 fleetThreshold)
               _ -> False
@@ -233,7 +233,7 @@ hasSufficientBalance fare fleetThreshold driverThreshold fleetAssociationMap fle
           pure False
     Nothing ->
       do
-        mbBalance <- getPrepaidAvailableBalanceByOwner ownerTypeDriver driver.driverId.getId
+        mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyDriver driver.driverId.getId
         pure $ case mbBalance of
           Just balance -> balance >= (fare + fromMaybe 0 driverThreshold)
           _ -> False
@@ -270,5 +270,5 @@ filterDriversByMinWalletBalance minWalletAmountForCashRides paymentInstrument dr
     _ -> pure driverInfos_
   where
     hasMinWalletBalance minAmt driver = do
-      mbBalance <- getWalletBalanceByOwner ownerTypeDriver driver.driverId.getId
+      mbBalance <- getWalletBalanceByOwner counterpartyDriver driver.driverId.getId
       pure $ maybe False (>= minAmt) mbBalance

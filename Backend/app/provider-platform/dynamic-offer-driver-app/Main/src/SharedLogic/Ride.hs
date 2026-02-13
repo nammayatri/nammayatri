@@ -45,7 +45,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -89,21 +88,19 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   when (isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ do
     whenJust mFleetOwnerId $ \fleetOwnerId -> do
       Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
-        mbAvailableBalance <- getPrepaidAvailableBalanceByOwner ownerTypeFleetOwner fleetOwnerId.getId
+        mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyFleetOwner fleetOwnerId.getId
         let rideFare = booking.estimatedFare
             threshold = fromMaybe 0 transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
             balance = fromMaybe 0 mbAvailableBalance
         when (balance < rideFare + threshold) $ throwError (InvalidRequest "Low fleet balance.")
         _ <-
           createPrepaidHold
-            ownerTypeFleetOwner
+            counterpartyFleetOwner
             fleetOwnerId.getId
-            FAccount.Fleet
             rideFare
             booking.currency
             booking.providerId.getId
             booking.merchantOperatingCityId.getId
-            "RIDE_HOLD"
             booking.id.getId
             Nothing
             >>= fromEitherM (\err -> InternalError ("Failed to create prepaid hold: " <> show err))
@@ -196,9 +193,8 @@ releaseLien booking ride = do
     whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
       Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
         voidPrepaidHold
-          ownerTypeFleetOwner
+          counterpartyFleetOwner
           fleetOwnerId.getId
-          "RIDE_HOLD"
           booking.id.getId
           "Ride cancelled"
   case result of

@@ -29,7 +29,6 @@ import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Lib.Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
-import SharedLogic.Finance.Prepaid (ownerTypePlatform)
 
 walletReferenceRideEarning :: Text
 walletReferenceRideEarning = "WALLET_RIDE_EARNING"
@@ -54,39 +53,35 @@ walletReferencePayout = "WALLET_PAYOUT"
 
 getWalletAccountByOwner ::
   (BeamFlow m r) =>
-  Text -> -- Owner type
+  CounterpartyType ->
   Text -> -- Owner ID
   m (Maybe Account)
-getWalletAccountByOwner ownerType ownerId = do
-  accounts <- findAccountsByCounterparty (Just ownerType) (Just ownerId)
-  pure $
-    find
-      (\acc -> acc.accountType == Asset && acc.accountCategory == Settlement)
-      accounts
+getWalletAccountByOwner counterpartyType ownerId = do
+  accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
+  pure $ find (\acc -> acc.accountType == Asset) accounts
 
 getWalletBalanceByOwner ::
   (BeamFlow m r) =>
-  Text ->
+  CounterpartyType ->
   Text ->
   m (Maybe HighPrecMoney)
-getWalletBalanceByOwner ownerType ownerId = do
-  mbAcc <- getWalletAccountByOwner ownerType ownerId
+getWalletBalanceByOwner counterpartyType ownerId = do
+  mbAcc <- getWalletAccountByOwner counterpartyType ownerId
   pure $ mbAcc <&> (.balance)
 
 getOrCreateWalletAccount ::
   (BeamFlow m r) =>
-  Text -> -- Owner type
+  CounterpartyType ->
   Text -> -- Owner ID
   Currency ->
   Text -> -- Merchant ID
   Text -> -- Merchant operating city ID
   m (Either FinanceError Account)
-getOrCreateWalletAccount ownerType ownerId currency merchantId merchantOperatingCityId = do
+getOrCreateWalletAccount counterpartyType ownerId currency merchantId merchantOperatingCityId = do
   let input =
         AccountInput
           { accountType = Asset,
-            accountCategory = Settlement,
-            counterpartyType = Just ownerType,
+            counterpartyType = Just counterpartyType,
             counterpartyId = Just ownerId,
             currency = currency,
             merchantId = merchantId,
@@ -104,9 +99,8 @@ getOrCreatePlatformAccount currency merchantId merchantOperatingCityId = do
   let input =
         AccountInput
           { accountType = Liability,
-            accountCategory = Settlement,
-            counterpartyType = Nothing,
-            counterpartyId = Nothing,
+            counterpartyType = Just SELLER,
+            counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -123,9 +117,8 @@ getOrCreatePlatformSuspenseAccount currency merchantId merchantOperatingCityId =
   let input =
         AccountInput
           { accountType = Asset,
-            accountCategory = Suspense,
-            counterpartyType = Nothing,
-            counterpartyId = Nothing,
+            counterpartyType = Just SELLER,
+            counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -142,9 +135,8 @@ getOrCreatePlatformRevenueAccount currency merchantId merchantOperatingCityId = 
   let input =
         AccountInput
           { accountType = Revenue,
-            accountCategory = Platform,
-            counterpartyType = Nothing,
-            counterpartyId = Nothing,
+            counterpartyType = Just SELLER,
+            counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -161,9 +153,8 @@ getOrCreateRideGSTExpenseAccount currency merchantId merchantOperatingCityId = d
   let input =
         AccountInput
           { accountType = Expense,
-            accountCategory = Settlement,
-            counterpartyType = Nothing,
-            counterpartyId = Nothing,
+            counterpartyType = Just SELLER,
+            counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -180,9 +171,8 @@ getOrCreateExternalCustomerBankAccount currency merchantId merchantOperatingCity
   let input =
         AccountInput
           { accountType = External,
-            accountCategory = Suspense,
-            counterpartyType = Nothing,
-            counterpartyId = Nothing,
+            counterpartyType = Just SELLER,
+            counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -200,8 +190,7 @@ getOrCreateExternalDriverBankAccount currency merchantId merchantOperatingCityId
   let input =
         AccountInput
           { accountType = External,
-            accountCategory = Suspense,
-            counterpartyType = Nothing,
+            counterpartyType = Just DRIVER,
             counterpartyId = Just driverId,
             currency = currency,
             merchantId = merchantId,
@@ -216,10 +205,8 @@ createLedgerTransfer ::
   HighPrecMoney ->
   Text ->
   Text ->
-  Text ->
-  Text ->
   m (Either FinanceError ())
-createLedgerTransfer fromAccount toAccount amount ownerType ownerId referenceType referenceId = do
+createLedgerTransfer fromAccount toAccount amount referenceType referenceId = do
   if amount <= 0
     then pure $ Right ()
     else do
@@ -231,8 +218,6 @@ createLedgerTransfer fromAccount toAccount amount ownerType ownerId referenceTyp
                 currency = fromAccount.currency,
                 entryType = Transfer,
                 status = SETTLED,
-                ownerType = ownerType,
-                ownerId = ownerId,
                 referenceType = referenceType,
                 referenceId = referenceId,
                 metadata = Nothing,
@@ -246,7 +231,7 @@ createLedgerTransfer fromAccount toAccount amount ownerType ownerId referenceTyp
 
 createWalletEntryDelta ::
   (BeamFlow m r) =>
-  Text -> -- Owner type
+  CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Delta (positive credit, negative debit)
   Currency ->
@@ -256,13 +241,13 @@ createWalletEntryDelta ::
   Text -> -- Reference ID
   Maybe Value ->
   m (Either FinanceError HighPrecMoney)
-createWalletEntryDelta ownerType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata = do
+createWalletEntryDelta counterpartyType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata = do
   if delta == 0
     then do
-      mbBalance <- getWalletBalanceByOwner ownerType ownerId
+      mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
       pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBalance
     else do
-      mbOwnerAccount <- getOrCreateWalletAccount ownerType ownerId currency merchantId merchantOperatingCityId
+      mbOwnerAccount <- getOrCreateWalletAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
       mbPlatformAccount <- getOrCreatePlatformAccount currency merchantId merchantOperatingCityId
       case (mbOwnerAccount, mbPlatformAccount) of
         (Right ownerAccount, Right platformAccount) -> do
@@ -278,8 +263,6 @@ createWalletEntryDelta ownerType ownerId delta currency merchantId merchantOpera
                     currency = currency,
                     entryType = Transfer,
                     status = SETTLED,
-                    ownerType = ownerType,
-                    ownerId = ownerId,
                     referenceType = referenceType,
                     referenceId = referenceId,
                     metadata = metadata,

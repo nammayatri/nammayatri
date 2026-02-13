@@ -31,14 +31,13 @@ module Lib.Finance.Ledger.Service
     getEntriesByAccount,
     getEntriesBetween,
 
-    -- * Query by owner (the main way domain queries)
-    findByOwner,
-    findByOwnerAndStatus,
-    findByOwnerWithFilters,
+    -- * Query by account (the main way domain queries)
+    findByAccountAndStatus,
+    findByAccountWithFilters,
 
     -- * Aggregations (common for domain use)
-    sumByOwnerAndStatus,
-    countByOwnerAndStatus,
+    sumByAccountAndStatus,
+    countByAccountAndStatus,
 
     -- * Input types (re-export from Interface)
     module Lib.Finance.Ledger.Interface,
@@ -84,8 +83,6 @@ createEntry input = do
             entryType = input.entryType,
             entryNumber = entryNum,
             status = input.status, -- NEW: Use input status
-            ownerType = input.ownerType, -- NEW
-            ownerId = input.ownerId, -- NEW
             referenceType = input.referenceType,
             referenceId = input.referenceId,
             reversalOf = Nothing,
@@ -153,8 +150,6 @@ createReversal originalId reason = do
                 entryType = Reversal,
                 entryNumber = entryNum,
                 status = SETTLED, -- Reversals are immediately settled
-                ownerType = original.ownerType,
-                ownerId = original.ownerId,
                 referenceType = original.referenceType,
                 referenceId = original.referenceId,
                 reversalOf = Just originalId,
@@ -255,31 +250,22 @@ getEntriesBetween accountId timeRange = do
       allEntries
 
 --------------------------------------------------------------------------------
--- QUERY BY OWNER (Main way domain code queries)
+-- QUERY BY ACCOUNT (Main way domain code queries)
 --------------------------------------------------------------------------------
 
--- | Find all entries for an owner
-findByOwner ::
+-- | Find entries for an account with specific status
+findByAccountAndStatus ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Owner type (e.g., "DRIVER")
-  Text -> -- Owner ID
+  Id Account ->
+  EntryStatus ->
   m [LedgerEntry]
-findByOwner = QLedger.findByOwner
+findByAccountAndStatus accountId status = do
+  entries <- getEntriesByAccount accountId
+  pure $ filter (\e -> e.status == status) entries
 
--- | Find entries for an owner with specific status
--- This is THE main query for domain code
-findByOwnerAndStatus ::
+findByAccountWithFilters ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Owner type
-  Text -> -- Owner ID
-  EntryStatus -> -- Status to filter
-  m [LedgerEntry]
-findByOwnerAndStatus = QLedger.findByOwnerAndStatus
-
-findByOwnerWithFilters ::
-  (BeamFlow.BeamFlow m r) =>
-  Text ->
-  Text ->
+  Id Account ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
@@ -287,31 +273,42 @@ findByOwnerWithFilters ::
   Maybe EntryStatus ->
   Maybe [Text] ->
   m [LedgerEntry]
-findByOwnerWithFilters = QLedger.findByOwnerWithFilters
+findByAccountWithFilters accountId mbFrom mbTo mbMin mbMax mbStatus mbReferenceTypes = do
+  entries <- getEntriesByAccount accountId
+  pure $
+    filter
+      ( \e ->
+          and
+            [ maybe True (\from -> e.timestamp >= from) mbFrom,
+              maybe True (\to -> e.timestamp <= to) mbTo,
+              maybe True (\minAmt -> e.amount >= minAmt) mbMin,
+              maybe True (\maxAmt -> e.amount <= maxAmt) mbMax,
+              maybe True (\status -> e.status == status) mbStatus,
+              maybe True (\refs -> e.referenceType `elem` refs) mbReferenceTypes
+            ]
+      )
+      entries
 
 --------------------------------------------------------------------------------
 -- AGGREGATIONS (Common operations domain needs)
 --------------------------------------------------------------------------------
 
--- | Sum amounts for an owner by status
--- Example: sumByOwnerAndStatus "DRIVER" driverId PENDING
-sumByOwnerAndStatus ::
+-- | Sum amounts for an account by status
+sumByAccountAndStatus ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Owner type
-  Text -> -- Owner ID
+  Id Account ->
   EntryStatus ->
   m HighPrecMoney
-sumByOwnerAndStatus ownerType ownerId status = do
-  entries <- findByOwnerAndStatus ownerType ownerId status
+sumByAccountAndStatus accountId status = do
+  entries <- findByAccountAndStatus accountId status
   pure $ sum $ map (.amount) entries
 
--- | Count entries for an owner by status
-countByOwnerAndStatus ::
+-- | Count entries for an account by status
+countByAccountAndStatus ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Owner type
-  Text -> -- Owner ID
+  Id Account ->
   EntryStatus ->
   m Int
-countByOwnerAndStatus ownerType ownerId status = do
-  entries <- findByOwnerAndStatus ownerType ownerId status
+countByAccountAndStatus accountId status = do
+  entries <- findByAccountAndStatus accountId status
   pure $ length entries

@@ -19,7 +19,9 @@ where
 
 import API.Types.UI.SubscriptionTransaction
 import Data.List (lookup)
+import qualified Data.Map as M
 import Data.Time hiding (getCurrentTime)
+import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Types.DriverWallet
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -31,7 +33,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
 import SharedLogic.Finance.Prepaid
-import qualified Tools.Utils as Utils
+import qualified Storage.Queries.BookingExtra as QBookingE
+import qualified Storage.Queries.Person as QP
 
 getSubscriptionTransactions ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -49,23 +52,24 @@ getSubscriptionTransactions ::
   m [SubscriptionTransactionEntity]
 getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinAmount mbOffset mbStatus mbTo = do
   driverId' <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
+  driver <- QP.findById driverId' >>= fromMaybeM (PersonNotFound driverId'.getId)
   now <- getCurrentTime
   let fromDate = fromMaybe (UTCTime (utctDay now) 0) mbFrom
       toDate = fromMaybe now mbTo
       limit = min maxLimit . fromMaybe 10 $ mbLimit
       offset = fromMaybe 0 mbOffset
-  mbAccount <- getPrepaidAccountByOwner ownerTypeDriver driverId'.getId
+      counterpartyType = if DCommon.checkFleetOwnerRole driver.role then counterpartyFleetOwner else counterpartyDriver
+  mbAccount <- getPrepaidAccountByOwner counterpartyType driverId'.getId
   case mbAccount of
     Nothing -> pure []
     Just account -> do
-      let referenceTypes = ["RIDE", "PLAN_PURCHASE"]
-      allEntries <- findByOwnerWithFilters ownerTypeDriver driverId'.getId Nothing Nothing Nothing Nothing Nothing (Just referenceTypes)
+      let referenceTypes = [prepaidHoldReferenceType, subscriptionCreditReferenceType]
+      allEntries <- findByAccountWithFilters account.id Nothing Nothing Nothing Nothing Nothing (Just referenceTypes)
       let relevantEntries = allEntries
       let balanceByEntryId = buildRunningBalances account.id (sortOn (.timestamp) relevantEntries)
       filteredEntries <-
-        findByOwnerWithFilters
-          ownerTypeDriver
-          driverId'.getId
+        findByAccountWithFilters
+          account.id
           (Just fromDate)
           (Just toDate)
           mbMinAmount
@@ -74,13 +78,17 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
           (Just referenceTypes)
       let sortedFilteredEntries = sortOn (.timestamp) filteredEntries
       let pagedEntries = take limit . drop offset $ sortOn (Down . (.timestamp)) sortedFilteredEntries
-      let rideIds = mapMaybe (\e -> if e.referenceType == "RIDE" then Just e.referenceId else Nothing) pagedEntries
-      (rideMap, bookingMap) <- Utils.fetchRideLocationData (map Id rideIds)
+      let bookingIds = mapMaybe (\e -> if e.referenceType == prepaidHoldReferenceType then Just (Id e.referenceId) else Nothing) pagedEntries
+      bookings <- if null bookingIds then pure [] else QBookingE.findByIds bookingIds
+      let bookingMapById = M.fromList $ map (\b -> (b.id, (b.fromLocation, b.toLocation))) bookings
       forM pagedEntries $ \entry -> do
-        let transactionType = if entry.referenceType == "RIDE" then RIDE else PLAN_PURCHASE
-        (fromLocation, toLocation) <- case transactionType of
-          RIDE -> Utils.extractLocationFromMaps (Just (Id entry.referenceId)) rideMap bookingMap
-          _ -> return (Nothing, Nothing)
+        let transactionType = if entry.referenceType == prepaidHoldReferenceType then RIDE else PLAN_PURCHASE
+        (fromLocation, toLocation) <- case entry.referenceType of
+          ref | ref == prepaidHoldReferenceType -> do
+            case M.lookup (Id entry.referenceId) bookingMapById of
+              Just (fromLoc, toLoc) -> pure (Just fromLoc, toLoc)
+              Nothing -> pure (Nothing, Nothing)
+          _ -> pure (Nothing, Nothing)
         let runningBalance = fromMaybe 0 (lookup entry.id balanceByEntryId)
         return
           SubscriptionTransactionEntity

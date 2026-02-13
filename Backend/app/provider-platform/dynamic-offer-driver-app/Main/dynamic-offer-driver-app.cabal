@@ -1094,6 +1094,7 @@ library
       Domain.Types.StclMembership
       Domain.Types.StopInformation
       Domain.Types.SubscriptionConfig
+      Domain.Types.SubscriptionPurchase
       Domain.Types.SurgePricing
       Domain.Types.Toll
       Domain.Types.Translations
@@ -1253,6 +1254,7 @@ library
       Storage.Beam.StclMembership
       Storage.Beam.StopInformation
       Storage.Beam.SubscriptionConfig
+      Storage.Beam.SubscriptionPurchase
       Storage.Beam.SurgePricing
       Storage.Beam.Toll
       Storage.Beam.Translations
@@ -1504,6 +1506,7 @@ library
       Storage.Queries.StclMembership
       Storage.Queries.StopInformation
       Storage.Queries.SubscriptionConfig
+      Storage.Queries.SubscriptionPurchase
       Storage.Queries.SurgePricing
       Storage.Queries.Toll
       Storage.Queries.Translations
