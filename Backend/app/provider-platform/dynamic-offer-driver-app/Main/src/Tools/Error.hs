@@ -17,7 +17,7 @@ module Tools.Error (module Tools.Error) where
 import Data.Aeson (Value (Null), object, (.=))
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Kernel.Types.Error as Tools.Error hiding (PersonError)
+import Kernel.Types.Error as Tools.Error hiding (PersonError , SosError , SosIdDoesNotExist)
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Utils.Common (Meters)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
@@ -550,6 +550,21 @@ instance IsBaseError MediaFileError where
     FileDoNotExist fileId -> Just $ "MediaFile with fileId \"" <> show fileId <> "\" do not exist."
     FileFormatNotSupported fileFormat -> Just $ "MediaFile with fileFormat \"" <> show fileFormat <> "\" not supported."
     MismatchDataError dataMismatch -> Just $ "Data mismatch: " <> dataMismatch
+
+newtype SosError
+  = SosIdDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SosError
+
+instance IsBaseError SosError where
+  toMessage (SosIdDoesNotExist sosId) = Just $ "SOS with id \"" <> sosId <> "\" does not exist."
+
+instance IsHTTPError SosError where
+  toErrorCode (SosIdDoesNotExist _) = "SOS_ID_DOES_NOT_EXIST"
+  toHttpCode (SosIdDoesNotExist _) = E404
+
+instance IsAPIError SosError
 
 newtype DriverIntelligentPoolConfigError
   = DriverIntelligentPoolConfigNotFound Text

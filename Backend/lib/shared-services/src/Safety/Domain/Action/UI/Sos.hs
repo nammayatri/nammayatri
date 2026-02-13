@@ -11,13 +11,13 @@
 module Safety.Domain.Action.UI.Sos where
 
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Kernel.Beam.Functions as B
 import qualified Safety.Domain.Types.Common as Common
 import qualified Safety.Domain.Types.SafetySettings as DSafetySettings
 import qualified Safety.Domain.Types.Sos as DSos
@@ -48,6 +48,7 @@ updateSosFromNonRideToRide sosId newRideId = do
            }
 
   QSos.updateByPrimaryKey updatedSos
+  CQSos.cacheSosIdByRideId newRideId updatedSos
 
 -- | Create a new SOS record
 createSos ::
@@ -129,6 +130,15 @@ findSosByPersonId ::
   Id Common.Person ->
   m [DSos.Sos]
 findSosByPersonId personId = QSos.findByPersonId personId
+
+findSosByRideId ::
+  ( BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  Id Common.Ride ->
+  m (Maybe DSos.Sos)
+findSosByRideId rideId = QSos.findByRideId (Just rideId)
 
 -- | Update mock safety drill status
 updateMockSafetyDrillStatus ::
@@ -250,13 +260,13 @@ createRideBasedSos ::
   ) =>
   Id Common.Person ->
   Id Common.Ride ->
+  Id Common.MerchantOperatingCity ->
+  Id Common.Merchant ->
   DSos.SosType ->
+  Maybe DSos.Sos->
   Maybe Text -> -- ticketId
   m CreateSosResult
-createRideBasedSos personId rideId flow ticketId = do
-  -- Check if SOS exists for rideId (using cached query)
-  mbExistingSos <- CQSos.findByRideId rideId
-
+createRideBasedSos personId rideId merchantOperatingCityId merchantId flow mbExistingSos ticketId = do
   case mbExistingSos of
     Just existingSos -> do
       -- Update existing SOS status to Pending
@@ -278,6 +288,8 @@ createRideBasedSos personId rideId flow ticketId = do
       -- Create new SOS
       now <- getCurrentTime
       pid <- generateGUID
+      let eightHoursInSeconds :: Int = 8 * 60 * 60
+      let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
       let newSos =
             DSos.Sos
               { id = pid,
@@ -287,9 +299,9 @@ createRideBasedSos personId rideId flow ticketId = do
                 rideId = Just rideId,
                 ticketId = ticketId,
                 mediaFiles = [],
-                merchantId = Nothing,
-                merchantOperatingCityId = Nothing,
-                trackingExpiresAt = Nothing,
+                merchantId = Just merchantId,
+                merchantOperatingCityId = Just merchantOperatingCityId,
+                trackingExpiresAt = Just trackingExpiresAt,
                 entityType = Just DSos.Ride,
                 sosState = Just DSos.SosActive,
                 createdAt = now,

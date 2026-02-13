@@ -191,6 +191,7 @@ in  { _output = outputPath
       { _sqlTypeMapper = sqlMapper
       , _extraDefaultFields = extraDefaultFields
       , _defaultCachedQueryKeyPrefix = ""
+      , _cacheFlowType = None Text
       }
     , _defaultImports = defaultImports
     , _defaultTypeImportMapper = defaultTypeImportMapper

@@ -1,0 +1,56 @@
+imports:
+  RideShareOptions: Safety.Domain.Types.Common
+  UTCTime: Kernel.Prelude
+  Id: Kernel.Types.Id
+  Person: Domain.Types.Person
+
+module: DriverSafetySettings
+
+types:
+  GetDriverSafetySettingsRes:
+    personId: Id Person
+    nightSafetyChecks: Bool
+    hasCompletedMockSafetyDrill: Maybe Bool
+    hasCompletedSafetySetup: Bool
+    falseSafetyAlarmCount: Int
+    safetyCenterDisabledOnDate: Maybe UTCTime
+    informPoliceSos: Bool
+    autoCallDefaultContact: Bool
+    notifySosWithEmergencyContacts: Bool
+    enableUnexpectedEventsCheck: RideShareOptions
+    enablePostRideSafetyCheck: RideShareOptions
+    notifySafetyTeamForSafetyCheckFailure: Bool
+    shakeToActivate: Bool
+    enableOtpLessRide: Maybe Bool
+    aggregatedRideShareSetting: Maybe RideShareOptions
+
+  UpdateDriverSafetySettingsReq:
+    nightSafetyChecks: Maybe Bool
+    hasCompletedMockSafetyDrill: Maybe Bool
+    hasCompletedSafetySetup: Maybe Bool
+    informPoliceSos: Maybe Bool
+    autoCallDefaultContact: Maybe Bool
+    notifySosWithEmergencyContacts: Maybe Bool
+    enableUnexpectedEventsCheck: Maybe RideShareOptions
+    enablePostRideSafetyCheck: Maybe RideShareOptions
+    notifySafetyTeamForSafetyCheckFailure: Maybe Bool
+    shakeToActivate: Maybe Bool
+    enableOtpLessRide: Maybe Bool
+    aggregatedRideShareSetting: Maybe RideShareOptions
+
+apis:
+  - GET:
+      endpoint: /driver/getSafetySettings/{personId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        personId: Id Person
+      response:
+        type: API.Types.UI.DriverSafetySettings.GetDriverSafetySettingsRes
+
+  - PUT:
+      endpoint: /driver/updateSafetySettings
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.DriverSafetySettings.UpdateDriverSafetySettingsReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

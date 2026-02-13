@@ -24,6 +24,7 @@ import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfile as DriverProfile
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
+import qualified API.Action.UI.DriverSafetySettings as DriverSafetySettings
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
@@ -76,6 +77,7 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.RideRoute as RideRoute
 import qualified API.UI.RideSummary as RideSummary
 import qualified API.UI.Route as Route
+import qualified API.UI.Sos as Sos
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Whatsapp as Whatsapp
 import Environment
@@ -116,6 +118,7 @@ type API =
            :<|> OnMessage.API
            :<|> RideRoute.API
            :<|> CallEvent.API
+           :<|> Sos.API
            :<|> Plan.API
            :<|> KioskLocation.API
            :<|> DriverCoins.API
@@ -148,6 +151,8 @@ type API =
            :<|> FleetOwnerList.API
            :<|> PayoutDriverStatus.API
            :<|> StclMembership.API
+           :<|> DriverSafetySettings.API
+           :<|> CancellationReasonLookup.API
        )
 
 handler :: FlowServer API
@@ -181,6 +186,7 @@ handler =
     :<|> OnMessage.handler
     :<|> RideRoute.handler
     :<|> CallEvent.handler
+    :<|> Sos.handler
     :<|> Plan.handler
     :<|> KioskLocation.handler
     :<|> DriverCoins.handler
@@ -213,3 +219,4 @@ handler =
     :<|> FleetOwnerList.handler
     :<|> PayoutDriverStatus.handler
     :<|> StclMembership.handler
+    :<|> DriverSafetySettings.handler    :<|> CancellationReasonLookup.handler
