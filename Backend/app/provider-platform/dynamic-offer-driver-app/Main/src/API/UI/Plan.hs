@@ -22,6 +22,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -66,6 +67,12 @@ type API =
            :<|> "services"
              :> TokenAuth
              :> Get '[JSON] DPlan.ServicesEntity
+           :<|> "subscriptionPurchases"
+             :> TokenAuth
+             :> QueryParam "limit" Int
+             :> QueryParam "offset" Int
+             :> QueryParam "status" DSP.SubscriptionPurchaseStatus
+             :> Get '[JSON] DPlan.SubscriptionPurchaseListRes
        )
 
 handler :: FlowServer API
@@ -77,6 +84,7 @@ handler =
     :<|> planSubscribe
     :<|> planSelect
     :<|> planServiceLists
+    :<|> subscriptionPurchases
 
 planList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe Vehicle.VehicleVariant -> Maybe DPlan.ServiceNames -> FlowHandler DPlan.PlanListAPIRes
 planList (driverId, merchantId, merchantOpCityId) mbLimit mbOffset vehicleVariant mbServiceName = withFlowHandlerAPI $ DPlan.planList (driverId, merchantId, merchantOpCityId) (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) mbLimit mbOffset vehicleVariant
@@ -108,3 +116,7 @@ planSelect planId mbServiceName (personId, merchantId, merchantOpCityId) = withF
 
 planServiceLists :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.ServicesEntity
 planServiceLists = withFlowHandlerAPI . DPlan.planServiceLists
+
+subscriptionPurchases :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe DSP.SubscriptionPurchaseStatus -> FlowHandler DPlan.SubscriptionPurchaseListRes
+subscriptionPurchases (driverId, merchantId, merchantOpCityId) mbLimit mbOffset mbStatus =
+  withFlowHandlerAPI $ DPlan.subscriptionPurchaseList (driverId, merchantId, merchantOpCityId) mbLimit mbOffset mbStatus

@@ -21,9 +21,9 @@ where
 import Data.Aeson (Value)
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
+import Kernel.Types.Id
 import Lib.Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
-import Kernel.Types.Id
 
 counterpartyDriver :: CounterpartyType
 counterpartyDriver = DRIVER

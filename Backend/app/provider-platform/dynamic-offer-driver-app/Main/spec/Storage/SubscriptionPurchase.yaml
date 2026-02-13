@@ -6,6 +6,9 @@ imports:
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
+  WaiveOffMode: Domain.Types.DriverPlan
+  ServiceNames: Domain.Types.Extra.Plan
 
 SubscriptionPurchase:
   tableName: subscription_purchase
@@ -31,17 +34,31 @@ SubscriptionPurchase:
     paymentOrderId: Id PaymentOrder
     status: SubscriptionPurchaseStatus
     expiryDate: Maybe UTCTime
+    vehicleCategory: Maybe VehicleCategory
+    enableServiceUsageCharge: Bool
+    waiverOffPercentage: HighPrecMoney
+    waiveOfMode: WaiveOffMode
+    waiveOffEnabledOn: Maybe UTCTime
+    waiveOffValidTill: Maybe UTCTime
+    serviceName: ServiceNames
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SubscriptionPurchaseStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SubscriptionPurchaseStatus>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SubscriptionOwnerType>
 
   constraints:
     id: PrimaryKey
     paymentOrderId: "!SecondaryKey"
     ownerId: "!SecondaryKey"
+
+  default:
+    enableServiceUsageCharge: "true"
+    waiverOffPercentage: "0"
+    waiveOfMode: "'NO_WAIVE_OFF'"
+    serviceName: "'PREPAID_SUBSCRIPTION'"
 
   queries:
     findByPaymentOrderId:
@@ -62,3 +79,6 @@ SubscriptionPurchase:
       kvFunction: updateOneWithKV
       params: [status, updatedAt]
       where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

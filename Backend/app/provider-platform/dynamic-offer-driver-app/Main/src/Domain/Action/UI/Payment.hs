@@ -47,8 +47,8 @@ import qualified Domain.Types.Notification as DNTF
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
-import qualified Domain.Types.SubscriptionPurchase as DSP
 import Domain.Types.SubscriptionPurchase
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.WebhookExtra as WT
 import Environment
 import Kernel.Beam.Functions (runInMasterDb)
@@ -105,6 +105,7 @@ import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchase as QSP
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.VendorFeeExtra as QVF
 import Tools.Error
@@ -572,7 +573,13 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
   dueInvoices <- runInMasterDb $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName (cast driverId) [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE]
   let totalDue = sum $ calcDueAmount dueInvoices
   when (totalDue <= 0) $ QDI.updatePendingPayment False (cast driverId)
-  mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
+  mbDriverPlan <- case serviceName of
+    DP.PREPAID_SUBSCRIPTION -> do
+      person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
+      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName ownerId ownerType serviceName
+      pure $ ADPlan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
+    _ -> findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))
   case plan of
     Nothing -> QDI.updateSubscription True (cast driverId)

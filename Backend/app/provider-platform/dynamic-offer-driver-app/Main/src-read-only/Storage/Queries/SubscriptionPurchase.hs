@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.SubscriptionPurchase where
+module Storage.Queries.SubscriptionPurchase (module Storage.Queries.SubscriptionPurchase, module ReExport) where
 
 import qualified Domain.Types.SubscriptionPurchase
 import Kernel.Beam.Functions
@@ -15,6 +15,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.SubscriptionPurchase as Beam
+import Storage.Queries.SubscriptionPurchaseExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SubscriptionPurchase.SubscriptionPurchase -> m ())
 create = createWithKV
@@ -51,7 +52,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.SubscriptionPurchase.SubscriptionPurchase {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.expiryDate expiryDate,
+    [ Se.Set Beam.enableServiceUsageCharge enableServiceUsageCharge,
+      Se.Set Beam.expiryDate expiryDate,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.ownerId ownerId,
@@ -62,49 +64,13 @@ updateByPrimaryKey (Domain.Types.SubscriptionPurchase.SubscriptionPurchase {..})
       Se.Set Beam.planId (Kernel.Types.Id.getId planId),
       Se.Set Beam.planRideCredit planRideCredit,
       Se.Set Beam.purchaseTimestamp purchaseTimestamp,
+      Se.Set Beam.serviceName serviceName,
       Se.Set Beam.status status,
+      Se.Set Beam.vehicleCategory vehicleCategory,
+      Se.Set Beam.waiveOfMode waiveOfMode,
+      Se.Set Beam.waiveOffEnabledOn waiveOffEnabledOn,
+      Se.Set Beam.waiveOffValidTill waiveOffValidTill,
+      Se.Set Beam.waiverOffPercentage waiverOffPercentage,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.SubscriptionPurchase Domain.Types.SubscriptionPurchase.SubscriptionPurchase where
-  fromTType' (Beam.SubscriptionPurchaseT {..}) = do
-    pure $
-      Just
-        Domain.Types.SubscriptionPurchase.SubscriptionPurchase
-          { expiryDate = expiryDate,
-            id = Kernel.Types.Id.Id id,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            ownerId = ownerId,
-            ownerType = ownerType,
-            paymentOrderId = Kernel.Types.Id.Id paymentOrderId,
-            planFee = planFee,
-            planFrequency = planFrequency,
-            planId = Kernel.Types.Id.Id planId,
-            planRideCredit = planRideCredit,
-            purchaseTimestamp = purchaseTimestamp,
-            status = status,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.SubscriptionPurchase Domain.Types.SubscriptionPurchase.SubscriptionPurchase where
-  toTType' (Domain.Types.SubscriptionPurchase.SubscriptionPurchase {..}) = do
-    Beam.SubscriptionPurchaseT
-      { Beam.expiryDate = expiryDate,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.ownerId = ownerId,
-        Beam.ownerType = ownerType,
-        Beam.paymentOrderId = Kernel.Types.Id.getId paymentOrderId,
-        Beam.planFee = planFee,
-        Beam.planFrequency = planFrequency,
-        Beam.planId = Kernel.Types.Id.getId planId,
-        Beam.planRideCredit = planRideCredit,
-        Beam.purchaseTimestamp = purchaseTimestamp,
-        Beam.status = status,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }
