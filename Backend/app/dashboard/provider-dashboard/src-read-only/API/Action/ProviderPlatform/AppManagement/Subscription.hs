@@ -17,6 +17,7 @@ import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan
 import qualified Domain.Types.Invoice
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Plan
+import qualified "dynamic-offer-driver-app" Domain.Types.SubscriptionPurchase
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
 import qualified Kernel.Prelude
@@ -28,10 +29,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("plan" :> (GetSubscriptionListPlan :<|> PutSubscriptionSelectPlan :<|> PutSubscriptionSuspendPlan :<|> PostSubscriptionSubscribePlan :<|> GetSubscriptionCurrentPlan :<|> GetSubscriptionListPlanV2 :<|> PutSubscriptionSelectPlanV2 :<|> PutSubscriptionSuspendPlanV2 :<|> PostSubscriptionSubscribePlanV2 :<|> GetSubscriptionCurrentPlanV2 :<|> GetSubscriptionOrderStatus :<|> GetSubscriptionDriverPaymentHistoryAPIV2 :<|> GetSubscriptionDriverPaymentHistoryEntityDetailsV2 :<|> PostSubscriptionCollectManualPayments :<|> PostSubscriptionFeeWaiveOff))
+type API = ("plan" :> (GetSubscriptionListPlan :<|> PutSubscriptionSelectPlan :<|> PutSubscriptionSuspendPlan :<|> PostSubscriptionSubscribePlan :<|> GetSubscriptionCurrentPlan :<|> GetSubscriptionListPlanV2 :<|> PutSubscriptionSelectPlanV2 :<|> PutSubscriptionSuspendPlanV2 :<|> PostSubscriptionSubscribePlanV2 :<|> GetSubscriptionCurrentPlanV2 :<|> GetSubscriptionOrderStatus :<|> GetSubscriptionDriverPaymentHistoryAPIV2 :<|> GetSubscriptionDriverPaymentHistoryEntityDetailsV2 :<|> PostSubscriptionCollectManualPayments :<|> PostSubscriptionFeeWaiveOff :<|> GetSubscriptionPurchaseList))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getSubscriptionListPlan merchantId city :<|> putSubscriptionSelectPlan merchantId city :<|> putSubscriptionSuspendPlan merchantId city :<|> postSubscriptionSubscribePlan merchantId city :<|> getSubscriptionCurrentPlan merchantId city :<|> getSubscriptionListPlanV2 merchantId city :<|> putSubscriptionSelectPlanV2 merchantId city :<|> putSubscriptionSuspendPlanV2 merchantId city :<|> postSubscriptionSubscribePlanV2 merchantId city :<|> getSubscriptionCurrentPlanV2 merchantId city :<|> getSubscriptionOrderStatus merchantId city :<|> getSubscriptionDriverPaymentHistoryAPIV2 merchantId city :<|> getSubscriptionDriverPaymentHistoryEntityDetailsV2 merchantId city :<|> postSubscriptionCollectManualPayments merchantId city :<|> postSubscriptionFeeWaiveOff merchantId city
+handler merchantId city = getSubscriptionListPlan merchantId city :<|> putSubscriptionSelectPlan merchantId city :<|> putSubscriptionSuspendPlan merchantId city :<|> postSubscriptionSubscribePlan merchantId city :<|> getSubscriptionCurrentPlan merchantId city :<|> getSubscriptionListPlanV2 merchantId city :<|> putSubscriptionSelectPlanV2 merchantId city :<|> putSubscriptionSuspendPlanV2 merchantId city :<|> postSubscriptionSubscribePlanV2 merchantId city :<|> getSubscriptionCurrentPlanV2 merchantId city :<|> getSubscriptionOrderStatus merchantId city :<|> getSubscriptionDriverPaymentHistoryAPIV2 merchantId city :<|> getSubscriptionDriverPaymentHistoryEntityDetailsV2 merchantId city :<|> postSubscriptionCollectManualPayments merchantId city :<|> postSubscriptionFeeWaiveOff merchantId city :<|> getSubscriptionPurchaseList merchantId city
 
 type GetSubscriptionListPlan =
   ( ApiAuth
@@ -153,6 +154,14 @@ type PostSubscriptionFeeWaiveOff =
       :> API.Types.Dashboard.AppManagement.Subscription.PostSubscriptionFeeWaiveOff
   )
 
+type GetSubscriptionPurchaseList =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_PURCHASE_LIST)
+      :> API.Types.Dashboard.AppManagement.Subscription.GetSubscriptionPurchaseList
+  )
+
 getSubscriptionListPlan :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Environment.FlowHandler Domain.Action.UI.Plan.PlanListAPIRes)
 getSubscriptionListPlan merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Subscription.getSubscriptionListPlan merchantShortId opCity apiTokenInfo driverId
 
@@ -197,3 +206,6 @@ postSubscriptionCollectManualPayments merchantShortId opCity apiTokenInfo driver
 
 postSubscriptionFeeWaiveOff :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.Subscription.WaiveOffReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postSubscriptionFeeWaiveOff merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Subscription.postSubscriptionFeeWaiveOff merchantShortId opCity apiTokenInfo req
+
+getSubscriptionPurchaseList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus -> Environment.FlowHandler Domain.Action.UI.Plan.SubscriptionPurchaseListRes)
+getSubscriptionPurchaseList merchantShortId opCity apiTokenInfo driverId limit offset status = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Subscription.getSubscriptionPurchaseList merchantShortId opCity apiTokenInfo driverId limit offset status

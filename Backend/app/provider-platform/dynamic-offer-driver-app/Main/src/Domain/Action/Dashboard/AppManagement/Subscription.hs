@@ -14,6 +14,7 @@ module Domain.Action.Dashboard.AppManagement.Subscription
     getSubscriptionDriverPaymentHistoryEntityDetailsV2,
     postSubscriptionCollectManualPayments,
     postSubscriptionFeeWaiveOff,
+    getSubscriptionPurchaseList,
   )
 where
 
@@ -30,6 +31,7 @@ import qualified Domain.Types.Merchant
 import Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
@@ -233,3 +235,16 @@ postSubscriptionFeeWaiveOff merchantShortId opCity req = do
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   void $ Domain.Action.UI.Plan.updateWaiveOffByDriver mOCityId req.waiveOffEntities
   return Kernel.Types.APISuccess.Success
+
+getSubscriptionPurchaseList ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe DSP.SubscriptionPurchaseStatus ->
+  Environment.Flow Domain.Action.UI.Plan.SubscriptionPurchaseListRes
+getSubscriptionPurchaseList merchantShortId opCity driverId limit offset status = do
+  m <- findMerchantByShortId merchantShortId
+  mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  Domain.Action.UI.Plan.subscriptionPurchaseList (Kernel.Types.Id.cast driverId, m.id, mOCityId) limit offset status
