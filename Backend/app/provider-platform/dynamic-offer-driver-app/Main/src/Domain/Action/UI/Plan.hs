@@ -73,6 +73,7 @@ import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchase as QSP
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VendorFee as QVF
 import Tools.Error
@@ -218,6 +219,11 @@ data ServicesEntity = ServicesEntity
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
+data SubscriptionPurchaseListRes = SubscriptionPurchaseListRes
+  { list :: [CurrentPlanRes]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data SafetyPlusData = SafetyPlusData
   { safetyPlusTrips :: Int,
     safetyPlusEarnings :: PriceAPIEntity
@@ -247,6 +253,75 @@ planServiceLists (driverId, _, merchantOpCityId) = do
   let commonServices = DL.intersect driverEnabledForServices (map (.serviceName) subscriptionConfigs)
   return $ ServicesEntity {services = commonServices}
 
+subscriptionPurchaseList ::
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe DSP.SubscriptionPurchaseStatus ->
+  Flow SubscriptionPurchaseListRes
+subscriptionPurchaseList (driverId, _merchantId, merchantOperatingCityId) mbLimit mbOffset mbStatus = do
+  person <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
+  let limit = Just $ fromMaybe 10 mbLimit
+      offset = Just $ fromMaybe 0 mbOffset
+  purchases <-
+    B.runInReplica $
+      QSPE.findAllByOwnerAndServiceNameWithPagination ownerId ownerType PREPAID_SUBSCRIPTION mbStatus limit offset
+  currentPlanResList <- mapM (buildCurrentPlanResFromPurchase driverId merchantOperatingCityId driverInfo) purchases
+  return $ SubscriptionPurchaseListRes {list = currentPlanResList}
+
+buildCurrentPlanResFromPurchase ::
+  Id SP.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  DI.DriverInformation ->
+  DSP.SubscriptionPurchase ->
+  Flow CurrentPlanRes
+buildCurrentPlanResFromPurchase driverId merchantOperatingCityId driverInfo purchase = do
+  let syntheticDriverPlan = mkSyntheticDriverPlanFromPurchase purchase
+  mPlan <- QPD.findByIdAndPaymentModeWithServiceName purchase.planId MANUAL PREPAID_SUBSCRIPTION
+  subscriptionConfig <-
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName
+      merchantOperatingCityId
+      Nothing
+      PREPAID_SUBSCRIPTION
+      >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show PREPAID_SUBSCRIPTION)
+  now <- getCurrentTime
+  currentPlanEntity <-
+    maybe
+      (pure Nothing)
+      (convertPlanToPlanEntity driverId now True (Just syntheticDriverPlan) (Just subscriptionConfig) PREPAID_SUBSCRIPTION >=> (pure . Just))
+      mPlan
+  (orderId, lastPaymentType) <-
+    if purchase.status == DSP.PENDING
+      then do
+        mbOrder <- SOrder.findById (cast purchase.paymentOrderId)
+        maybe (pure (Nothing, Nothing)) orderBasedCheck mbOrder
+      else return (Nothing, Nothing)
+  return $
+    CurrentPlanRes
+      { currentPlanDetails = currentPlanEntity,
+        mandateDetails = Nothing,
+        autoPayStatus = Nothing,
+        subscribed = driverInfo.subscribed,
+        orderId,
+        lastPaymentType,
+        latestManualPaymentDate = Just purchase.updatedAt,
+        latestAutopayPaymentDate = Nothing,
+        planRegistrationDate = Just purchase.createdAt,
+        isLocalized = Just True,
+        isEligibleForCharge = Just syntheticDriverPlan.enableServiceUsageCharge,
+        payoutVpa = driverInfo.payoutVpa,
+        askForPlanSwitchByCity = False,
+        askForPlanSwitchByVehicle = False,
+        safetyPlusData = Nothing
+      }
+  where
+    orderBasedCheck order = do
+      if order.status `elem` [Payment.NEW, Payment.PENDING_VBV, Payment.AUTHORIZING, Payment.STARTED]
+        then return (Just order.id, Just CLEAR_DUE)
+        else return (Nothing, Nothing)
+
 class Subscription a where
   getSubcriptionStatusWithPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> Id SP.Person -> m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
   updateSubscriptionStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DI.DriverAutoPayStatus -> Maybe Text -> m ()
@@ -263,13 +338,13 @@ instance Subscription ServiceNames where
       YATRI_SUBSCRIPTION -> getSubcriptionStatusWithPlanGeneric YATRI_SUBSCRIPTION driverId
       YATRI_RENTAL -> getSubcriptionStatusWithPlanGeneric YATRI_RENTAL driverId
       DASHCAM_RENTAL _ -> getSubcriptionStatusWithPlanGeneric serviceName driverId
-      PREPAID_SUBSCRIPTION -> getSubcriptionStatusWithPlanGeneric PREPAID_SUBSCRIPTION driverId
+      PREPAID_SUBSCRIPTION -> getSubcriptionStatusWithPlanPrepaid driverId
   createDriverPlan serviceName (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig = do
     case serviceName of
       YATRI_SUBSCRIPTION -> createDriverPlanGeneric YATRI_SUBSCRIPTION (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig
       YATRI_RENTAL -> createDriverPlanGeneric YATRI_RENTAL (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig
       DASHCAM_RENTAL _ -> createDriverPlanGeneric serviceName (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig
-      PREPAID_SUBSCRIPTION -> createDriverPlanGeneric PREPAID_SUBSCRIPTION (driverId, merchantId, opCity) plan subscriptionServiceRelatedData subscriptionConfig
+      PREPAID_SUBSCRIPTION -> pure () -- No need to create driver plan for prepaid subscription
   planSubscribe serviceName = do
     case serviceName of
       YATRI_SUBSCRIPTION -> planSubscribeGeneric YATRI_SUBSCRIPTION
@@ -326,6 +401,16 @@ getSubcriptionStatusWithPlanGeneric serviceName driverId = do
         return $ driverInfo >>= (.autoPayStatus)
       (_, _, _) -> return autoPayStatusFromDPlan
   return (autoPayStatus, driverPlan)
+
+getSubcriptionStatusWithPlanPrepaid ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id SP.Person ->
+  m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
+getSubcriptionStatusWithPlanPrepaid driverId = do
+  person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
+  mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+  pure (Nothing, mkSyntheticDriverPlanFromPurchase <$> mbPurchase)
 
 updateSubscriptionStatusGeneric ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -421,7 +506,12 @@ planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
           DI.findById (cast personId)
             >>= fromMaybeM (PersonNotFound personId.getId)
         pure (driverInfo.autoPayStatus == Just DI.ACTIVE)
-  mDriverPlan <- B.runInReplica $ QDPlan.findByDriverIdWithServiceName personId serviceName
+  mDriverPlan <- case serviceName of
+    PREPAID_SUBSCRIPTION -> do
+      let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
+      mbPurchase <- B.runInReplica $ QSPE.findLatestActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+      pure $ mkSyntheticDriverPlanFromPurchase <$> mbPurchase
+    _ -> B.runInReplica $ QDPlan.findByDriverIdWithServiceName personId serviceName
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   (_, plans) <- getSubscriptionConfigAndPlan serviceName (personId, merchantId, merchantOpCityId) mDriverPlan
   now <- getCurrentTime
@@ -534,11 +624,8 @@ prepaidPlanSubscribe ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   SubscriptionServiceRelatedData ->
   Flow PlanSubscribeRes
-prepaidPlanSubscribe serviceName planId (isDashboard, channel) (driverId, merchantId, merchantOpCityId) subscriptionServiceRelatedData = do
-  (subscriptionConfig, plan, mbDeepLinkData) <- prepareSubscriptionData merchantOpCityId serviceName planId isDashboard
-  driverPlan <- QDPlan.findByDriverIdWithServiceName driverId serviceName
-  when (isNothing driverPlan) $ createDriverPlan serviceName (driverId, merchantId, merchantOpCityId) plan subscriptionServiceRelatedData subscriptionConfig
-  when (isJust driverPlan) $ QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName (Just plan.vehicleCategory) plan.merchantOpCityId
+prepaidPlanSubscribe serviceName planId (isDashboard, channel) (driverId, merchantId, merchantOpCityId) _subscriptionServiceRelatedData = do
+  (_subscriptionConfig, plan, mbDeepLinkData) <- prepareSubscriptionData merchantOpCityId serviceName planId isDashboard
   (createOrderResp, orderId) <- createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData
   when isDashboard $ sendSubscriptionLink createOrderResp driverId channel (isJust mbDeepLinkData)
   return $
@@ -615,6 +702,37 @@ mkDriverPlan plan (driverId, merchantId, merchantOpCityId) = do
         waiveOffValidTill = Nothing,
         ..
       }
+
+mkSyntheticDriverPlanFromPurchase :: DSP.SubscriptionPurchase -> DriverPlan
+mkSyntheticDriverPlanFromPurchase purchase =
+  DriverPlan
+    { driverId = Id purchase.ownerId,
+      planId = purchase.planId,
+      planType = MANUAL,
+      mandateId = Nothing,
+      mandateSetupDate = Nothing,
+      createdAt = purchase.createdAt,
+      updatedAt = purchase.updatedAt,
+      coinCovertedToCashLeft = 0.0,
+      totalCoinsConvertedCash = 0.0,
+      serviceName = purchase.serviceName,
+      autoPayStatus = Nothing,
+      enableServiceUsageCharge = purchase.enableServiceUsageCharge,
+      subscriptionServiceRelatedData = NoData,
+      payerVpa = Nothing,
+      lastPaymentLinkSentAtIstDate = Nothing,
+      vehicleCategory = purchase.vehicleCategory,
+      isOnFreeTrial = False,
+      isCategoryLevelSubscriptionEnabled = Nothing,
+      lastBillGeneratedAt = Nothing,
+      totalAmountChargedForService = 0,
+      merchantOpCityId = purchase.merchantOperatingCityId,
+      merchantId = purchase.merchantId,
+      waiveOfMode = purchase.waiveOfMode,
+      waiverOffPercentage = purchase.waiverOffPercentage,
+      waiveOffEnabledOn = purchase.waiveOffEnabledOn,
+      waiveOffValidTill = purchase.waiveOffValidTill
+    }
 
 -- This API is to switch between plans of current Payment Method Preference.
 planSwitchGeneric :: ServiceNames -> Id Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
@@ -950,6 +1068,13 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             paymentOrderId = paymentOrderId,
             status = DSP.PENDING,
             expiryDate = expiryDate,
+            vehicleCategory = Just plan.vehicleCategory,
+            enableServiceUsageCharge = True,
+            waiverOffPercentage = 0.0,
+            waiveOfMode = NO_WAIVE_OFF,
+            waiveOffEnabledOn = Nothing,
+            waiveOffValidTill = Nothing,
+            serviceName = PREPAID_SUBSCRIPTION,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOpCityId,
             createdAt = now,

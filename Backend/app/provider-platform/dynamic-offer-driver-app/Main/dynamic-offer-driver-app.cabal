@@ -720,6 +720,7 @@ library
       Storage.Queries.StationExtra
       Storage.Queries.Status
       Storage.Queries.StclMembershipExtra
+      Storage.Queries.SubscriptionPurchaseExtra
       Storage.Queries.Transformers.Booking
       Storage.Queries.Transformers.BookingLocation
       Storage.Queries.Transformers.CancellationReason
@@ -1464,6 +1465,7 @@ library
       Storage.Queries.OrphanInstances.SearchTry
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.StclMembership
+      Storage.Queries.OrphanInstances.SubscriptionPurchase
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.TransporterConfig
       Storage.Queries.OrphanInstances.TripAlertRequest

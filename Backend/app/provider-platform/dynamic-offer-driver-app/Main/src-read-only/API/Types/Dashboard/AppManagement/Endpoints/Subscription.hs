@@ -13,6 +13,7 @@ import qualified Domain.Types.DriverFee
 import qualified Domain.Types.DriverPlan
 import qualified Domain.Types.Invoice
 import qualified Domain.Types.Plan
+import qualified "this" Domain.Types.SubscriptionPurchase
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -44,7 +45,7 @@ newtype WaiveOffReq = WaiveOffReq {waiveOffEntities :: [Domain.Types.DriverPlan.
 instance Kernel.Types.HideSecrets.HideSecrets WaiveOffReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("plan" :> (GetSubscriptionListPlan :<|> PutSubscriptionSelectPlan :<|> PutSubscriptionSuspendPlan :<|> PostSubscriptionSubscribePlan :<|> GetSubscriptionCurrentPlan :<|> GetSubscriptionListPlanV2 :<|> PutSubscriptionSelectPlanV2 :<|> PutSubscriptionSuspendPlanV2 :<|> PostSubscriptionSubscribePlanV2 :<|> GetSubscriptionCurrentPlanV2 :<|> GetSubscriptionOrderStatus :<|> GetSubscriptionDriverPaymentHistoryAPIV2 :<|> GetSubscriptionDriverPaymentHistoryEntityDetailsV2 :<|> PostSubscriptionCollectManualPayments :<|> PostSubscriptionFeeWaiveOff))
+type API = ("plan" :> (GetSubscriptionListPlan :<|> PutSubscriptionSelectPlan :<|> PutSubscriptionSuspendPlan :<|> PostSubscriptionSubscribePlan :<|> GetSubscriptionCurrentPlan :<|> GetSubscriptionListPlanV2 :<|> PutSubscriptionSelectPlanV2 :<|> PutSubscriptionSuspendPlanV2 :<|> PostSubscriptionSubscribePlanV2 :<|> GetSubscriptionCurrentPlanV2 :<|> GetSubscriptionOrderStatus :<|> GetSubscriptionDriverPaymentHistoryAPIV2 :<|> GetSubscriptionDriverPaymentHistoryEntityDetailsV2 :<|> PostSubscriptionCollectManualPayments :<|> PostSubscriptionFeeWaiveOff :<|> GetSubscriptionPurchaseList))
 
 type GetSubscriptionListPlan = (Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> "list" :> Get '[JSON] Domain.Action.UI.Plan.PlanListAPIRes)
 
@@ -183,6 +184,20 @@ type PostSubscriptionCollectManualPayments =
 
 type PostSubscriptionFeeWaiveOff = ("waiveOff" :> "fee" :> ReqBody '[JSON] WaiveOffReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type GetSubscriptionPurchaseList =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> "subscriptionPurchases"
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "status"
+           Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus
+      :> Get
+           '[JSON]
+           Domain.Action.UI.Plan.SubscriptionPurchaseListRes
+  )
+
 data SubscriptionAPIs = SubscriptionAPIs
   { getSubscriptionListPlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.PlanListAPIRes,
     putSubscriptionSelectPlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -198,13 +213,14 @@ data SubscriptionAPIs = SubscriptionAPIs
     getSubscriptionDriverPaymentHistoryAPIV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoicePaymentMode -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient Domain.Action.UI.Driver.HistoryEntityV2,
     getSubscriptionDriverPaymentHistoryEntityDetailsV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> EulerHS.Types.EulerClient Domain.Action.UI.Driver.HistoryEntryDetailsEntityV2,
     postSubscriptionCollectManualPayments :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> CollectManualPaymentsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postSubscriptionFeeWaiveOff :: WaiveOffReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postSubscriptionFeeWaiveOff :: WaiveOffReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getSubscriptionPurchaseList :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.SubscriptionPurchaseListRes
   }
 
 mkSubscriptionAPIs :: (Client EulerHS.Types.EulerClient API -> SubscriptionAPIs)
 mkSubscriptionAPIs subscriptionClient = (SubscriptionAPIs {..})
   where
-    getSubscriptionListPlan :<|> putSubscriptionSelectPlan :<|> putSubscriptionSuspendPlan :<|> postSubscriptionSubscribePlan :<|> getSubscriptionCurrentPlan :<|> getSubscriptionListPlanV2 :<|> putSubscriptionSelectPlanV2 :<|> putSubscriptionSuspendPlanV2 :<|> postSubscriptionSubscribePlanV2 :<|> getSubscriptionCurrentPlanV2 :<|> getSubscriptionOrderStatus :<|> getSubscriptionDriverPaymentHistoryAPIV2 :<|> getSubscriptionDriverPaymentHistoryEntityDetailsV2 :<|> postSubscriptionCollectManualPayments :<|> postSubscriptionFeeWaiveOff = subscriptionClient
+    getSubscriptionListPlan :<|> putSubscriptionSelectPlan :<|> putSubscriptionSuspendPlan :<|> postSubscriptionSubscribePlan :<|> getSubscriptionCurrentPlan :<|> getSubscriptionListPlanV2 :<|> putSubscriptionSelectPlanV2 :<|> putSubscriptionSuspendPlanV2 :<|> postSubscriptionSubscribePlanV2 :<|> getSubscriptionCurrentPlanV2 :<|> getSubscriptionOrderStatus :<|> getSubscriptionDriverPaymentHistoryAPIV2 :<|> getSubscriptionDriverPaymentHistoryEntityDetailsV2 :<|> postSubscriptionCollectManualPayments :<|> postSubscriptionFeeWaiveOff :<|> getSubscriptionPurchaseList = subscriptionClient
 
 data SubscriptionUserActionType
   = GET_SUBSCRIPTION_LIST_PLAN
@@ -222,6 +238,7 @@ data SubscriptionUserActionType
   | GET_SUBSCRIPTION_DRIVER_PAYMENT_HISTORY_ENTITY_DETAILS_V2
   | POST_SUBSCRIPTION_COLLECT_MANUAL_PAYMENTS
   | POST_SUBSCRIPTION_FEE_WAIVE_OFF
+  | GET_SUBSCRIPTION_PURCHASE_LIST
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

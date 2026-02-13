@@ -14,6 +14,7 @@ module Domain.Action.ProviderPlatform.AppManagement.Subscription
     getSubscriptionDriverPaymentHistoryEntityDetailsV2,
     postSubscriptionCollectManualPayments,
     postSubscriptionFeeWaiveOff,
+    getSubscriptionPurchaseList,
   )
 where
 
@@ -26,6 +27,7 @@ import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan
 import qualified Domain.Types.Invoice
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Plan
+import qualified "dynamic-offer-driver-app" Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -340,3 +342,23 @@ postSubscriptionFeeWaiveOff merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.postSubscriptionFeeWaiveOff) req
+
+getSubscriptionPurchaseList ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus ->
+  Environment.Flow Domain.Action.UI.Plan.SubscriptionPurchaseListRes
+getSubscriptionPurchaseList merchantShortId opCity apiTokenInfo driverId limit offset status = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI
+    checkedMerchantId
+    opCity
+    (.subscriptionDSL.getSubscriptionPurchaseList)
+    driverId
+    limit
+    offset
+    status
