@@ -289,6 +289,7 @@ let AllocatorJobType =
       | MediaFileDocumentComplete
       | SendFeedbackPN
       | SpecialZonePayout
+      | ProcessReminder
       >
 
 let jobInfoMapx =
@@ -342,6 +343,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.MediaFileDocumentComplete, mapValue = True }
       , { mapKey = AllocatorJobType.SendFeedbackPN, mapValue = True }
       , { mapKey = AllocatorJobType.SpecialZonePayout, mapValue = True }
+      , { mapKey = AllocatorJobType.ProcessReminder, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =
