@@ -794,7 +794,43 @@ getPublicTransportVehicleDataV2 ::
   )
 getPublicTransportVehicleDataV2 (mbPersonId, merchantId) vehicleType vehicleNumber = do
   case vehicleType of
-    BUS -> getPublicTransportDataImplV2 (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True
+    BUS -> do
+      catch
+        ( do
+            publicTransportData <- getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True
+            return $ ApiTypes.PublicTransportDataV2 {rs = ApiTypes.CompleteRouteStops (publicTransportData.rs), ss = publicTransportData.ss, rsm = publicTransportData.rsm, ptcv = publicTransportData.ptcv, eligiblePassIds = publicTransportData.eligiblePassIds}
+        )
+        ( \ex -> case fromException ex of
+            Just (FleetRouteMapMissing _) -> do
+              -- Handle FleetRouteMapMissing by creating incomplete route with error details
+              personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+              person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+              let merchantOperatingCityId = person.merchantOperatingCityId
+              integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+              case (integratedBPPConfigs, vehicleNumber) of
+                (bppConfig : _, vehicleNumber') -> do
+                  -- Get vehicle info to extract service type
+                  mbVehicleLiveRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber' Nothing
+                  case mbVehicleLiveRouteInfo of
+                    Just (_, vehicleLiveInfo) -> do
+                      gtfsVersion <-
+                        withTryCatch "getGtfsVersion:V2" (OTPRest.getGtfsVersion bppConfig) >>= \case
+                          Left _ -> return bppConfig.feedKey
+                          Right version -> return version
+                      let incompleteRoute =
+                            ApiTypes.IncompleteTransportRoute
+                              { vt = show bppConfig.vehicleCategory,
+                                st = Just vehicleLiveInfo.serviceType,
+                                sst = vehicleLiveInfo.serviceSubTypes,
+                                ibc = bppConfig.id,
+                                ec = Just "FLEET_ROUTE_MAP_MISSING",
+                                en = Just "Vehicle is not found on any route"
+                              }
+                      return $ ApiTypes.PublicTransportDataV2 {rs = ApiTypes.IncompleteRouteStops [incompleteRoute], ss = [], rsm = [], ptcv = gtfsVersion, eligiblePassIds = vehicleLiveInfo.eligiblePassIds}
+                    Nothing -> throwM ex -- Re-throw if we can't get vehicle info
+                _ -> throwM ex -- Re-throw if missing required data
+            _ -> throwM ex -- Re-throw all other exceptions
+        )
     _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
 type CacheKey = (Text, Maybe Text, Maybe Bool, Maybe Text, Maybe Text, Bool)
@@ -1133,88 +1169,6 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           fork "incrementFleetRouteMapMissingCounter" $
             Metrics.incrementFleetRouteMapMissingCounter merchant.shortId.getShortId merchantOperatingCityId.getId vehicleNumber
           throwError (FleetRouteMapMissing $ "Route code not found for fleetId: " <> show vehicleNumber)
-
-getPublicTransportDataImplV2 ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe VehicleCategory ->
-    Kernel.Prelude.Bool ->
-    Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportDataV2
-  )
-getPublicTransportDataImplV2 (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData = do
-  -- First try to get standard PublicTransportData
-  catch
-    ( do
-        publicTransportData <- getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData
-        return $
-          ApiTypes.PublicTransportDataV2
-            { rs = ApiTypes.Rs (publicTransportData.rs),
-              ss = publicTransportData.ss,
-              rsm = publicTransportData.rsm,
-              ptcv = publicTransportData.ptcv,
-              eligiblePassIds = publicTransportData.eligiblePassIds
-            }
-    )
-    ( \ex -> case fromException ex of
-        Just (FleetRouteMapMissing _) -> do
-          -- Handle FleetRouteMapMissing by creating incomplete route with error details
-          personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-          person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-          mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
-          let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
-          let vehicleTypes = case mbVehicleType of
-                Just BUS -> [Enums.BUS]
-                Just METRO -> [Enums.METRO]
-                Just SUBWAY -> [Enums.SUBWAY]
-                _ -> [Enums.BUS, Enums.METRO, Enums.SUBWAY]
-          integratedBPPConfigs <- concatMapM (\vType -> SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vType DIBC.MULTIMODAL) vehicleTypes
-
-          case (mbVehicleNumber, integratedBPPConfigs) of
-            (Just vehicleNumber, bppConfig : _) -> do
-              -- Get vehicle info to extract service type
-              mbVehicleLiveRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
-              case mbVehicleLiveRouteInfo of
-                Just (_, vehicleLiveInfo) -> do
-                  frfsServiceTier <- maybe (pure Nothing) (\serviceType -> CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceType person.merchantOperatingCityId bppConfig.id) (Just vehicleLiveInfo.serviceType)
-                  gtfsVersion <-
-                    withTryCatch "getGtfsVersion:V2" (OTPRest.getGtfsVersion bppConfig) >>= \case
-                      Left _ -> return bppConfig.feedKey
-                      Right version -> return version
-
-                  let incompleteRoute =
-                        ApiTypes.IncompleteTransportRoute
-                          { cd = Nothing,
-                            sN = Nothing,
-                            lN = Nothing,
-                            dTC = Nothing,
-                            stC = Nothing,
-                            vt = show bppConfig.vehicleCategory,
-                            st = Just vehicleLiveInfo.serviceType,
-                            stn = frfsServiceTier <&> (.shortName),
-                            sst = vehicleLiveInfo.serviceSubTypes,
-                            clr = Nothing,
-                            ibc = bppConfig.id,
-                            ec = Just "FLEET_ROUTE_MAP_MISSING",
-                            en = Just "Vehicle is not found on any route"
-                          }
-
-                  return $
-                    ApiTypes.PublicTransportDataV2
-                      { rs = ApiTypes.RsV2 [incompleteRoute],
-                        ss = [],
-                        rsm = [],
-                        ptcv = gtfsVersion,
-                        eligiblePassIds = vehicleLiveInfo.eligiblePassIds
-                      }
-                Nothing -> throwM ex -- Re-throw if we can't get vehicle info
-            _ -> throwM ex -- Re-throw if missing required data
-        _ -> throwM ex -- Re-throw all other exceptions
-    )
 
 getMultimodalOrderGetLegTierOptions ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -106,18 +106,11 @@ data ExtendLegReq = ExtendLegReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data IncompleteTransportRoute = IncompleteTransportRoute
-  { cd :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    clr :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    dTC :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    ec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { ec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     en :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
-    lN :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    sN :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sst :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     st :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
-    stC :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    stn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vt :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
@@ -361,8 +354,8 @@ data RouteStopMapping = RouteStopMapping {code :: Kernel.Prelude.Text, lat :: Ke
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteStopsData
-  = Rs [TransportRoute]
-  | RsV2 [IncompleteTransportRoute]
+  = CompleteRouteStops [TransportRoute]
+  | IncompleteRouteStops [IncompleteTransportRoute]
   deriving stock (Generic)
   deriving anyclass (ToSchema)
 
