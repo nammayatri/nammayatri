@@ -47,6 +47,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.Plan as Plan
 import qualified Domain.Types.Booking as SRB
@@ -69,6 +70,7 @@ import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SubscriptionConfig as DSC
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
@@ -140,6 +142,7 @@ import qualified Storage.Queries.ReminderConfig as QReminderConfig
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.RiderDetails as QRiderDetails
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VendorFee as QVF
 import Tools.Error
@@ -333,8 +336,11 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
                 sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
 
     getPrepaidRevenueAmount fare = do
-      mbDriverPlan <- findByDriverIdWithServiceName (cast ride.driverId) PREPAID_SUBSCRIPTION
-      plan <- getPlan mbDriverPlan PREPAID_SUBSCRIPTION booking.merchantOperatingCityId Nothing Nothing
+      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
+      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+      let mbSyntheticPlan = Plan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
+      plan <- getPlan mbSyntheticPlan PREPAID_SUBSCRIPTION booking.merchantOperatingCityId Nothing Nothing
       case plan of
         Nothing -> pure 0
         Just plan_ -> do
