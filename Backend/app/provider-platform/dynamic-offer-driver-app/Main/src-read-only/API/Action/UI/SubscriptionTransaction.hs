@@ -42,7 +42,7 @@ type API =
            Data.Time.UTCTime
       :> Get
            '[JSON]
-           [API.Types.UI.SubscriptionTransaction.SubscriptionTransactionEntity]
+           API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse
   )
 
 handler :: Environment.FlowServer API
@@ -60,6 +60,6 @@ getSubscriptionTransactions ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus ->
     Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Environment.FlowHandler [API.Types.UI.SubscriptionTransaction.SubscriptionTransactionEntity]
+    Environment.FlowHandler API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse
   )
 getSubscriptionTransactions a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SubscriptionTransaction.getSubscriptionTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1

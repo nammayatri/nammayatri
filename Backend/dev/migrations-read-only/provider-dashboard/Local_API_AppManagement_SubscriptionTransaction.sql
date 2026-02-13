@@ -1,2 +1,4 @@
 -- {"api":"GetSubscriptionTransactionSubscriptionTransactions","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bpp_dashboard.uuid_generate_v4(), '37947162-3b5d-4ed6-bcac-08841be1534d', 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION_TRANSACTION/GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS' ) ON CONFLICT DO NOTHING;
+
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) VALUES ( atlas_bpp_dashboard.uuid_generate_v4(), 'e5a69a26-d165-455a-a711-33a41e0d4812', 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION_TRANSACTION/GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS' ) ON CONFLICT DO NOTHING;
