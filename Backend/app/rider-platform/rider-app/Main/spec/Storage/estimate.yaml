@@ -280,6 +280,7 @@ Estimate:
     currency: character varying(255)
     estimatedPickupDuration: integer
     tipOptions: integer[]
+    boostSearchPreSelectionServiceTierConfig: text[]
 
   queries:
     findById:
