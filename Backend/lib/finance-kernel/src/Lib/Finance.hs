@@ -66,7 +66,7 @@ import Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.AuditEntry
 import Lib.Finance.Domain.Types.CurrentState
 import Lib.Finance.Domain.Types.Invoice
-import Lib.Finance.Domain.Types.LedgerEntry
+import Lib.Finance.Domain.Types.LedgerEntry hiding (Expense, Revenue)
 import Lib.Finance.Error.Types
 import Lib.Finance.Invoice.Interface
 import Lib.Finance.Invoice.Service

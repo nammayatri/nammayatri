@@ -3,7 +3,7 @@
 module SharedLogic.Finance.Prepaid
   ( counterpartyDriver,
     counterpartyFleetOwner,
-    prepaidHoldReferenceType,
+    prepaidRideDebitReferenceType,
     subscriptionCreditReferenceType,
     subscriptionPurchaseReferenceType,
     subscriptionRideReferenceType,
@@ -23,6 +23,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id
 import Lib.Finance
+import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 
 counterpartyDriver :: CounterpartyType
@@ -40,8 +41,8 @@ subscriptionCreditReferenceType = "SubscriptionCredit"
 subscriptionRideReferenceType :: Text
 subscriptionRideReferenceType = "SubsctiptionRide"
 
-prepaidHoldReferenceType :: Text
-prepaidHoldReferenceType = "RideHold"
+prepaidRideDebitReferenceType :: Text
+prepaidRideDebitReferenceType = "RideDebit"
 
 getPrepaidAccountByOwner ::
   (BeamFlow m r) =>
@@ -72,7 +73,7 @@ getPrepaidPendingHoldByOwner counterpartyType ownerId = do
     Nothing -> pure 0
     Just acc -> do
       entries <- getEntriesByAccount acc.id
-      pure $ sum $ map (.amount) $ filter (\e -> e.fromAccountId == acc.id && e.status == PENDING && e.referenceType == prepaidHoldReferenceType) entries
+      pure $ sum $ map (.amount) $ filter (\e -> e.fromAccountId == acc.id && e.status == PENDING && e.referenceType == prepaidRideDebitReferenceType) entries
 
 getPrepaidAvailableBalanceByOwner ::
   (BeamFlow m r) =>
@@ -210,7 +211,7 @@ createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOp
   mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
   case (mbOwnerAccount, mbSellerRideCredit) of
     (Right ownerAccount, Right sellerRideCredit) -> do
-      mbExistingHold <- findPendingPrepaidHoldByReference ownerAccount.id prepaidHoldReferenceType referenceId
+      mbExistingHold <- findPendingPrepaidHoldByReference ownerAccount.id prepaidRideDebitReferenceType referenceId
       case mbExistingHold of
         Just _ -> pure $ Right ()
         Nothing -> do
@@ -220,9 +221,9 @@ createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOp
                     toAccountId = sellerRideCredit.id,
                     amount = amount,
                     currency = currency,
-                    entryType = Transfer,
+                    entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
                     status = PENDING,
-                    referenceType = prepaidHoldReferenceType,
+                    referenceType = prepaidRideDebitReferenceType,
                     referenceId = referenceId,
                     metadata = metadata,
                     merchantId = merchantId,
@@ -257,7 +258,7 @@ voidPrepaidHold counterpartyType ownerId referenceId reason = do
   case mbOwnerAccount of
     Nothing -> pure ()
     Just ownerAccount -> do
-      entries <- getEntriesByReference prepaidHoldReferenceType referenceId
+      entries <- getEntriesByReference prepaidRideDebitReferenceType referenceId
       let pendingEntries =
             filter
               (\entry -> entry.fromAccountId == ownerAccount.id && entry.status == PENDING)
@@ -275,7 +276,7 @@ settlePrepaidHoldByReference counterpartyType ownerId referenceId = do
   case mbOwnerAccount of
     Nothing -> pure $ Right ()
     Just ownerAccount -> do
-      entries <- getEntriesByReference prepaidHoldReferenceType referenceId
+      entries <- getEntriesByReference prepaidRideDebitReferenceType referenceId
       let pendingEntries =
             filter
               (\entry -> entry.fromAccountId == ownerAccount.id && entry.status == PENDING)
@@ -326,7 +327,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                     toAccountId = governmentLiability.id,
                     amount = gstAmount',
                     currency = currency,
-                    entryType = Transfer,
+                    entryType = LiabilityCreated,
                     status = SETTLED,
                     referenceType = subscriptionPurchaseReferenceType,
                     referenceId = referenceId,
@@ -344,7 +345,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                     toAccountId = sellerLiability.id,
                     amount = netAmount,
                     currency = currency,
-                    entryType = Transfer,
+                    entryType = LiabilityCreated,
                     status = SETTLED,
                     referenceType = subscriptionPurchaseReferenceType,
                     referenceId = referenceId,
@@ -361,7 +362,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                   toAccountId = ownerAccount.id,
                   amount = creditAmount,
                   currency = currency,
-                  entryType = Transfer,
+                  entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
                   status = SETTLED,
                   referenceType = subscriptionCreditReferenceType,
                   referenceId = referenceId,
@@ -409,7 +410,7 @@ debitPrepaidBalance counterpartyType ownerId _rideAmount revenueAmount currency 
                       toAccountId = sellerRevenue.id,
                       amount = revenueAmount,
                       currency = currency,
-                      entryType = Transfer,
+                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
                       status = SETTLED,
                       referenceType = subscriptionRideReferenceType,
                       referenceId = rideReferenceId,

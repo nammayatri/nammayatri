@@ -82,13 +82,17 @@ createEntry input = do
             currency = input.currency,
             entryType = input.entryType,
             entryNumber = entryNum,
-            status = input.status, -- NEW: Use input status
+            status = input.status,
             referenceType = input.referenceType,
             referenceId = input.referenceId,
             reversalOf = Nothing,
             voidReason = Nothing,
             settledAt = Nothing,
             metadata = input.metadata,
+            fromStartingBalance = Nothing,
+            fromEndingBalance = Nothing,
+            toStartingBalance = Nothing,
+            toEndingBalance = Nothing,
             timestamp = now,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
@@ -113,15 +117,44 @@ createEntryWithBalanceUpdate input = do
     (Nothing, _) -> pure $ Left $ AccountError AccountNotFound (show input.fromAccountId)
     (_, Nothing) -> pure $ Left $ AccountError AccountNotFound (show input.toAccountId)
     (Just fromAccount, Just toAccount) -> do
-      entryResult <- createEntry input
-
-      case entryResult of
-        Left err -> pure $ Left err
-        Right entry -> do
-          let amount = input.amount
-          _ <- QAccount.updateBalance (fromAccount.balance - amount) input.fromAccountId
-          _ <- QAccount.updateBalance (toAccount.balance + amount) input.toAccountId
-          pure $ Right entry
+      now <- getCurrentTime
+      entryId <- generateGUID
+      let entryNum = truncate (utcTimeToPOSIXSeconds now * 1000)
+      let amount = input.amount
+          fromStartBal = fromAccount.balance
+          toStartBal = toAccount.balance
+          fromEndBal = fromStartBal - amount
+          toEndBal = toStartBal + amount
+      let entry =
+            LedgerEntry
+              { id = Id entryId,
+                fromAccountId = input.fromAccountId,
+                toAccountId = input.toAccountId,
+                amount = amount,
+                currency = input.currency,
+                entryType = input.entryType,
+                entryNumber = entryNum,
+                status = input.status,
+                referenceType = input.referenceType,
+                referenceId = input.referenceId,
+                reversalOf = Nothing,
+                voidReason = Nothing,
+                settledAt = Nothing,
+                metadata = input.metadata,
+                fromStartingBalance = Just fromStartBal,
+                fromEndingBalance = Just fromEndBal,
+                toStartingBalance = Just toStartBal,
+                toEndingBalance = Just toEndBal,
+                timestamp = now,
+                merchantId = input.merchantId,
+                merchantOperatingCityId = input.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QLedger.create entry
+      _ <- QAccount.updateBalance fromEndBal input.fromAccountId
+      _ <- QAccount.updateBalance toEndBal input.toAccountId
+      pure $ Right entry
 
 -- | Create a reversal entry for an existing entry
 -- LAW 2: History is immutable - we create a new entry, not modify the old one
@@ -156,6 +189,10 @@ createReversal originalId reason = do
                 voidReason = Nothing,
                 settledAt = Just now,
                 metadata = Just $ Aeson.String reason,
+                fromStartingBalance = Nothing,
+                fromEndingBalance = Nothing,
+                toStartingBalance = Nothing,
+                toEndingBalance = Nothing,
                 timestamp = now,
                 merchantId = original.merchantId,
                 merchantOperatingCityId = original.merchantOperatingCityId,

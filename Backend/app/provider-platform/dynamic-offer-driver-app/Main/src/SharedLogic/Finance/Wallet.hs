@@ -28,6 +28,7 @@ import Data.Ord (Down (..))
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Lib.Finance
+import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 
 walletReferenceRideEarning :: Text
@@ -216,7 +217,7 @@ createLedgerTransfer fromAccount toAccount amount referenceType referenceId = do
                 toAccountId = toAccount.id,
                 amount = amount,
                 currency = fromAccount.currency,
-                entryType = Transfer,
+                entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
                 status = SETTLED,
                 referenceType = referenceType,
                 referenceId = referenceId,
@@ -251,17 +252,17 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
       mbPlatformAccount <- getOrCreatePlatformAccount currency merchantId merchantOperatingCityId
       case (mbOwnerAccount, mbPlatformAccount) of
         (Right ownerAccount, Right platformAccount) -> do
-          let (fromAcc, toAcc, amount) =
+          let (fromAcc, toAcc, amount, eType) =
                 if delta > 0
-                  then (platformAccount.id, ownerAccount.id, delta)
-                  else (ownerAccount.id, platformAccount.id, abs delta)
+                  then (platformAccount.id, ownerAccount.id, delta, Lib.Finance.Domain.Types.LedgerEntry.Expense)
+                  else (ownerAccount.id, platformAccount.id, abs delta, Lib.Finance.Domain.Types.LedgerEntry.Revenue)
           let entryInput =
                 LedgerEntryInput
                   { fromAccountId = fromAcc,
                     toAccountId = toAcc,
                     amount = amount,
                     currency = currency,
-                    entryType = Transfer,
+                    entryType = eType,
                     status = SETTLED,
                     referenceType = referenceType,
                     referenceId = referenceId,

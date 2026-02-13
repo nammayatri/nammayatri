@@ -41,7 +41,7 @@ type GetSubscriptionTransactionSubscriptionTransactions =
            Data.Time.UTCTime
       :> Get
            '[JSON]
-           [API.Types.UI.SubscriptionTransaction.SubscriptionTransactionEntity]
+           API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse
   )
 
 type GetSubscriptionTransactionSubscriptionTransactionsHelper =
@@ -71,10 +71,10 @@ type GetSubscriptionTransactionSubscriptionTransactionsHelper =
            Data.Time.UTCTime
       :> Get
            '[JSON]
-           [API.Types.UI.SubscriptionTransaction.SubscriptionTransactionEntity]
+           API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse
   )
 
-newtype SubscriptionTransactionAPIs = SubscriptionTransactionAPIs {getSubscriptionTransactionSubscriptionTransactions :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Data.Time.UTCTime -> EulerHS.Types.EulerClient [API.Types.UI.SubscriptionTransaction.SubscriptionTransactionEntity]}
+newtype SubscriptionTransactionAPIs = SubscriptionTransactionAPIs {getSubscriptionTransactionSubscriptionTransactions :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Data.Time.UTCTime -> EulerHS.Types.EulerClient API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse}
 
 mkSubscriptionTransactionAPIs :: (Client EulerHS.Types.EulerClient API -> SubscriptionTransactionAPIs)
 mkSubscriptionTransactionAPIs subscriptionTransactionClient = (SubscriptionTransactionAPIs {..})

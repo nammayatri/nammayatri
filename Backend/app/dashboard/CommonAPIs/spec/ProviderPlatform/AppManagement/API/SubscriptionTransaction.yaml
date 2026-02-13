@@ -4,6 +4,7 @@ imports:
   Driver: API.Types.ProviderPlatform.Fleet.Driver
   SubscriptionTransaction: Domain.Types.SubscriptionTransaction
   SubscriptionTransactionEntity: API.Types.UI.SubscriptionTransaction
+  SubscriptionTransactionResponse: API.Types.UI.SubscriptionTransaction
   Location: Domain.Types.Location
   HighPrecMoney: Kernel.Types.Common
   EntryStatus: Lib.Finance.Domain.Types.LedgerEntry
@@ -23,7 +24,7 @@ apis:
         limit: Int
         offset: Int
       response:
-        type: "[SubscriptionTransactionEntity]"
+        type: SubscriptionTransactionResponse
       helperApi:
         - GET:
             endpoint: /{driverId}/subscription/transactions
@@ -39,6 +40,4 @@ apis:
               limit: Int
               offset: Int
             response:
-              type: "[SubscriptionTransactionEntity]"
-
-
+              type: SubscriptionTransactionResponse

@@ -21,6 +21,15 @@ apis:
       response:
         type: APISuccess
 
+  - POST: # ActivatePlan
+      endpoint: /{planId}/activate
+      name: PostPlanManagementActivatePlan
+      auth: ApiAuthV2
+      params:
+        planId: Text
+      response:
+        type: APISuccess
+
   - GET: # ListPlans
       endpoint: /list
       name: GetPlanManagementListPlans

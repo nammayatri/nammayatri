@@ -14,11 +14,16 @@ types:
     transactionType: RideTransactionType
     amount: HighPrecMoney
     status: EntryStatus
-    runningBalance: HighPrecMoney
     fromLocation: Maybe Location
     toLocation: Maybe Location
     createdAt: UTCTime
     updatedAt: UTCTime
+  SubscriptionTransactionResponse:
+    startingBalance: HighPrecMoney
+    finalBalance: HighPrecMoney
+    rideEarning: HighPrecMoney
+    planPurchased: HighPrecMoney
+    entities: "[SubscriptionTransactionEntity]"
 apis:
   - GET:
       endpoint: /subscription/transactions
@@ -32,4 +37,4 @@ apis:
         offset: Int
       auth: TokenAuth PROVIDER_TYPE
       response:
-        type: "[SubscriptionTransactionEntity]"
+        type: SubscriptionTransactionResponse

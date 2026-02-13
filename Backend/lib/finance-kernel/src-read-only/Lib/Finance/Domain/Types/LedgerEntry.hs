@@ -18,6 +18,8 @@ data LedgerEntry = LedgerEntry
     entryNumber :: Kernel.Prelude.Int,
     entryType :: Lib.Finance.Domain.Types.LedgerEntry.EntryType,
     fromAccountId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account,
+    fromEndingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    fromStartingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
@@ -29,6 +31,8 @@ data LedgerEntry = LedgerEntry
     status :: Lib.Finance.Domain.Types.LedgerEntry.EntryStatus,
     timestamp :: Kernel.Prelude.UTCTime,
     toAccountId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account,
+    toEndingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    toStartingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     voidReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -36,7 +40,7 @@ data LedgerEntry = LedgerEntry
 
 data EntryStatus = PENDING | DUE | SETTLED | VOIDED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data EntryType = Transfer | LiabilityCreated | LiabilitySettled | Reversal | Adjustment deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data EntryType = Expense | Revenue | LiabilityCreated | LiabilitySettled | Reversal deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EntryType))
 

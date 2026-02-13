@@ -8,7 +8,6 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -75,6 +74,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
       Se.Set Beam.entryNumber entryNumber,
       Se.Set Beam.entryType entryType,
       Se.Set Beam.fromAccountId (Kernel.Types.Id.getId fromAccountId),
+      Se.Set Beam.fromEndingBalance fromEndingBalance,
+      Se.Set Beam.fromStartingBalance fromStartingBalance,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.metadata metadata,
@@ -85,6 +86,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
       Se.Set Beam.status status,
       Se.Set Beam.timestamp timestamp,
       Se.Set Beam.toAccountId (Kernel.Types.Id.getId toAccountId),
+      Se.Set Beam.toEndingBalance toEndingBalance,
+      Se.Set Beam.toStartingBalance toStartingBalance,
       Se.Set Beam.voidReason voidReason,
       Se.Set Beam.updatedAt _now
     ]
@@ -101,6 +104,8 @@ instance FromTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.Ledger
             entryNumber = entryNumber,
             entryType = entryType,
             fromAccountId = Kernel.Types.Id.Id fromAccountId,
+            fromEndingBalance = fromEndingBalance,
+            fromStartingBalance = fromStartingBalance,
             id = Kernel.Types.Id.Id id,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
@@ -112,6 +117,8 @@ instance FromTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.Ledger
             status = status,
             timestamp = timestamp,
             toAccountId = Kernel.Types.Id.Id toAccountId,
+            toEndingBalance = toEndingBalance,
+            toStartingBalance = toStartingBalance,
             voidReason = voidReason,
             updatedAt = updatedAt
           }
@@ -125,6 +132,8 @@ instance ToTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.LedgerEn
         Beam.entryNumber = entryNumber,
         Beam.entryType = entryType,
         Beam.fromAccountId = Kernel.Types.Id.getId fromAccountId,
+        Beam.fromEndingBalance = fromEndingBalance,
+        Beam.fromStartingBalance = fromStartingBalance,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
@@ -136,6 +145,8 @@ instance ToTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.LedgerEn
         Beam.status = status,
         Beam.timestamp = timestamp,
         Beam.toAccountId = Kernel.Types.Id.getId toAccountId,
+        Beam.toEndingBalance = toEndingBalance,
+        Beam.toStartingBalance = toStartingBalance,
         Beam.voidReason = voidReason,
         Beam.updatedAt = updatedAt
       }

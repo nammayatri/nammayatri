@@ -3,6 +3,7 @@
 module Domain.Action.ProviderPlatform.Management.PlanManagement
   ( postPlanManagementCreate,
     postPlanManagementDeletePlan,
+    postPlanManagementActivatePlan,
     getPlanManagementListPlans,
   )
 where
@@ -39,3 +40,9 @@ getPlanManagementListPlans :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mer
 getPlanManagementListPlans merchantShortId opCity apiTokenInfo serviceName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.planManagementDSL.getPlanManagementListPlans) serviceName
+
+postPlanManagementActivatePlan :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPlanManagementActivatePlan merchantShortId opCity apiTokenInfo planId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.planManagementDSL.postPlanManagementActivatePlan) planId)
