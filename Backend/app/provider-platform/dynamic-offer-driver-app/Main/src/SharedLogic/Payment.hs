@@ -31,7 +31,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payment.Interface.Types
-import Kernel.External.Payment.Juspay.Types.CreateOrder (payload, clientId)
+import Kernel.External.Payment.Juspay.Types.CreateOrder (clientId, payload)
 import qualified Kernel.External.Payment.Types as PaymentTypes
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
