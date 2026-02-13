@@ -266,7 +266,11 @@ validateRequest subscriber transporterId req now = do
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  when (not isValueAddNP && booking.tripCategory /= OneWay OneWayOnDemandDynamicOffer) $
+  let isAllowedForNonValueAddNP = case booking.tripCategory of
+        OneWay OneWayOnDemandDynamicOffer -> True
+        CrossCity OneWayOnDemandDynamicOffer _ -> True
+        _ -> False
+  when (not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of
     OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
