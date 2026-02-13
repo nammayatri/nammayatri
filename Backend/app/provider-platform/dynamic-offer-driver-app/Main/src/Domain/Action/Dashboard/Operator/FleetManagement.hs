@@ -306,17 +306,19 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
 
   let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber
   smsCfg <- asks (.smsCfg)
-  res <- withTryCatch "sendSMS:postFleetManagementFleetLinkVerifyOtp" $ do
-    (mbSender, message, templateId) <-
-      buildFleetLinkSuccessMessage merchantOpCityId $
-        BuildFleetLinkUnlinkSuccessMessageReq
-          { operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
-          }
-    let sender = fromMaybe smsCfg.sender mbSender
-    SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
-  case res of
-    Left err -> logError $ "Failed to send sms about fleet link. Please check templates: " <> show err
-    Right () -> pure ()
+  let mbUseFakeOtp = (show <$> useFakeSms smsCfg) <|> fleetOwner.useFakeOtp
+  whenNothing_ mbUseFakeOtp $ do
+    res <- withTryCatch "sendSMS:postFleetManagementFleetLinkVerifyOtp" $ do
+      (mbSender, message, templateId) <-
+        buildFleetLinkSuccessMessage merchantOpCityId $
+          BuildFleetLinkUnlinkSuccessMessageReq
+            { operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
+            }
+      let sender = fromMaybe smsCfg.sender mbSender
+      SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
+    case res of
+      Left err -> logError $ "Failed to send sms about fleet link. Please check templates: " <> show err
+      Right () -> pure ()
 
   Redis.del key
   pure Kernel.Types.APISuccess.Success
