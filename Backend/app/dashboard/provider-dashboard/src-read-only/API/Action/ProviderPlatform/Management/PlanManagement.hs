@@ -22,51 +22,40 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("planManagement" :> (PostPlanManagementCreate :<|> GetPlanManagementPlan :<|> PostPlanManagementDeletePlan :<|> GetPlanManagementListPlans))
+type API = ("planManagement" :> (PostPlanManagementCreate :<|> PostPlanManagementDeletePlan :<|> GetPlanManagementListPlans))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postPlanManagementCreate merchantId city :<|> getPlanManagementPlan merchantId city :<|> postPlanManagementDeletePlan merchantId city :<|> getPlanManagementListPlans merchantId city
+handler merchantId city = postPlanManagementCreate merchantId city :<|> postPlanManagementDeletePlan merchantId city :<|> getPlanManagementListPlans merchantId city
 
 type PostPlanManagementCreate =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PLAN_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PlanManagement.POST_PLAN_MANAGEMENT_CREATE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PLAN_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PlanManagement.POST_PLAN_MANAGEMENT_CREATE))
       :> API.Types.ProviderPlatform.Management.PlanManagement.PostPlanManagementCreate
-  )
-
-type GetPlanManagementPlan =
-  ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PLAN_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PlanManagement.GET_PLAN_MANAGEMENT_PLAN)
-      :> API.Types.ProviderPlatform.Management.PlanManagement.GetPlanManagementPlan
   )
 
 type PostPlanManagementDeletePlan =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PLAN_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PlanManagement.POST_PLAN_MANAGEMENT_DELETE_PLAN)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PLAN_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PlanManagement.POST_PLAN_MANAGEMENT_DELETE_PLAN))
       :> API.Types.ProviderPlatform.Management.PlanManagement.PostPlanManagementDeletePlan
   )
 
 type GetPlanManagementListPlans =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PLAN_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PlanManagement.GET_PLAN_MANAGEMENT_LIST_PLANS)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PLAN_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PlanManagement.GET_PLAN_MANAGEMENT_LIST_PLANS))
       :> API.Types.ProviderPlatform.Management.PlanManagement.GetPlanManagementListPlans
   )
 
 postPlanManagementCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.PlanManagement.CreatePlanReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.PlanManagement.CreatePlanResp)
 postPlanManagementCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.PlanManagement.postPlanManagementCreate merchantShortId opCity apiTokenInfo req
 
-getPlanManagementPlan :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.PlanManagement.PlanAPIEntity)
-getPlanManagementPlan merchantShortId opCity apiTokenInfo planId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.PlanManagement.getPlanManagementPlan merchantShortId opCity apiTokenInfo planId
-
 postPlanManagementDeletePlan :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPlanManagementDeletePlan merchantShortId opCity apiTokenInfo planId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.PlanManagement.postPlanManagementDeletePlan merchantShortId opCity apiTokenInfo planId
 
-getPlanManagementListPlans :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.PlanManagement.ListPlansResp)
+getPlanManagementListPlans :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.PlanManagement.ListPlansResp)
 getPlanManagementListPlans merchantShortId opCity apiTokenInfo serviceName = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.PlanManagement.getPlanManagementListPlans merchantShortId opCity apiTokenInfo serviceName

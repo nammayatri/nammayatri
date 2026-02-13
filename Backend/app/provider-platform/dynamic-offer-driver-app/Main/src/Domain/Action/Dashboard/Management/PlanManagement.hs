@@ -3,7 +3,6 @@
 
 module Domain.Action.Dashboard.Management.PlanManagement
   ( postPlanManagementCreate,
-    getPlanManagementPlan,
     postPlanManagementDeletePlan,
     getPlanManagementListPlans,
   )
@@ -34,7 +33,9 @@ postPlanManagementCreate ::
   Context.City ->
   Common.CreatePlanReq ->
   Flow Common.CreatePlanResp
-postPlanManagementCreate _merchantShortId _opCity req = do
+postPlanManagementCreate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   planId <- generateGUID
   let plan =
         DPlan.Plan
@@ -62,8 +63,8 @@ postPlanManagementCreate _merchantShortId _opCity req = do
             allowStrikeOff = req.allowStrikeOff,
             basedOnEntity = castBasedOnEntity req.basedOnEntity,
             serviceName = read (toString req.serviceName),
-            merchantId = Id req.merchantId,
-            merchantOpCityId = Id req.merchantOpCityId,
+            merchantId = merchant.id,
+            merchantOpCityId = merchantOpCityId,
             vehicleVariant = read . toString <$> req.vehicleVariant,
             vehicleCategory = read (toString req.vehicleCategory),
             listingPriority = req.listingPriority,
@@ -72,16 +73,6 @@ postPlanManagementCreate _merchantShortId _opCity req = do
           }
   QPlan.create plan
   pure $ Common.CreatePlanResp {planId = planId.getId}
-
-getPlanManagementPlan ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Text ->
-  Flow Common.PlanAPIEntity
-getPlanManagementPlan _merchantShortId _opCity planIdText = do
-  let planId = Id planIdText
-  plan <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
-  pure $ toPlanAPIEntity plan
 
 postPlanManagementDeletePlan ::
   ShortId DM.Merchant ->
@@ -104,8 +95,7 @@ getPlanManagementListPlans merchantShortId opCity mbServiceNameText = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let mbServiceName = read . toString <$> mbServiceNameText
   allPlans <- QPlanExtra.fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCityId mbServiceName
-  let activePlans = filter (not . (.isDeprecated)) allPlans
-  pure $ Common.ListPlansResp {plans = map toPlanAPIEntity activePlans}
+  pure $ Common.ListPlansResp {plans = map toPlanAPIEntity allPlans}
 
 -- Conversion helpers
 

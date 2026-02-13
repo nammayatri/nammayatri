@@ -47,8 +47,8 @@ import qualified Domain.Types.Notification as DNTF
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
-import qualified Domain.Types.SubscriptionPurchase as DSP
 import Domain.Types.SubscriptionPurchase
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.WebhookExtra as WT
 import Environment
 import Kernel.Beam.Functions (runInMasterDb)
