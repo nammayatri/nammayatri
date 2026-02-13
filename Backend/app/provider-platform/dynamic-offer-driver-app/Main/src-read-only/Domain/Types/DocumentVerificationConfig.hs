@@ -99,6 +99,7 @@ data DocumentType
   | LocalResidenceProof
   | PoliceVerificationCertificate
   | DrivingSchoolCertificate
+  | UDYAMCertificate
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data FieldInfo = FieldInfo {_type :: Domain.Types.DocumentVerificationConfig.FieldType, isMandatory :: Kernel.Prelude.Bool, name :: Kernel.Prelude.Text, regexValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
