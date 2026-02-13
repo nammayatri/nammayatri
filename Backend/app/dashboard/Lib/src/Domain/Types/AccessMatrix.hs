@@ -440,6 +440,7 @@ data AccessMatrixItem = AccessMatrixItem
     apiEntity :: ApiEntity,
     userAccessType :: UserAccessType,
     userActionType :: UserActionTypeWrapper,
+    additionalUserActions :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -464,7 +465,8 @@ data AccessMatrixRowAPIEntity = AccessMatrixRowAPIEntity
 data AccessMatrixItemAPIEntity = AccessMatrixItemAPIEntity
   { apiEntity :: ApiEntity,
     userAccessType :: UserAccessType,
-    userActionType :: UserActionTypeWrapper
+    userActionType :: UserActionTypeWrapper,
+    additionalUserActions :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

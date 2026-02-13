@@ -28,6 +28,23 @@ import Storage.Beam.BeamFlow
 create :: BeamFlow m r => DMatrix.AccessMatrixItem -> m ()
 create = createWithKV
 
+findByRoleIdAndEntityAndActionTypeAndAdditionalActions ::
+  BeamFlow m r =>
+  Id DRole.Role ->
+  DMatrix.ApiEntity ->
+  DMatrix.UserActionTypeWrapper ->
+  Maybe Text ->
+  m (Maybe DMatrix.AccessMatrixItem)
+findByRoleIdAndEntityAndActionTypeAndAdditionalActions roleId apiEntity userActionType additionalUserActions =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamAM.roleId $ Se.Eq $ getId roleId,
+          Se.Is BeamAM.apiEntity $ Se.Eq apiEntity,
+          Se.Is BeamAM.userActionType $ Se.Eq userActionType,
+          Se.Is BeamAM.additionalUserActions $ Se.Eq additionalUserActions
+        ]
+    ]
+
 findByRoleIdAndEntityAndActionType ::
   BeamFlow m r =>
   Id DRole.Role ->
@@ -57,17 +74,19 @@ findAllByRoleId ::
   m [DMatrix.AccessMatrixItem]
 findAllByRoleId roleId = findAllWithKV [Se.Is BeamAM.roleId $ Se.Eq $ getId roleId]
 
-updateUserAccessType ::
+updateUserAccessTypeAndAdditionalActions ::
   BeamFlow m r =>
   Id DMatrix.AccessMatrixItem ->
   DMatrix.UserActionTypeWrapper ->
   DMatrix.UserAccessType ->
+  Maybe Text ->
   m ()
-updateUserAccessType accessMatrixItemId userActionType userAccessType = do
+updateUserAccessTypeAndAdditionalActions accessMatrixItemId userActionType userAccessType additionalUserActions = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamAM.userActionType userActionType,
       Se.Set BeamAM.userAccessType userAccessType,
+      Se.Set BeamAM.additionalUserActions additionalUserActions,
       Se.Set BeamAM.updatedAt now
     ]
     [Se.Is BeamAM.id $ Se.Eq $ getId accessMatrixItemId]

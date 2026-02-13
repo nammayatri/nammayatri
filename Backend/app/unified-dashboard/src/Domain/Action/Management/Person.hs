@@ -415,5 +415,6 @@ mkAccessMatrixItemAPIEntity :: DMatrix.AccessMatrix -> API.Types.Management.Pers
 mkAccessMatrixItemAPIEntity accessMatrix =
   API.Types.Management.Person.AccessMatrixItemAPIEntity
     { serverName = accessMatrix.serverName,
-      userActionType = accessMatrix.userActionType
+      userActionType = accessMatrix.userActionType,
+      additionalUserActions = accessMatrix.additionalUserActions
     }

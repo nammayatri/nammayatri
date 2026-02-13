@@ -43,7 +43,8 @@ data CreateRoleReq = CreateRoleReq
 data AssignAccessLevelReq = AssignAccessLevelReq
   { apiEntity :: DMatrix.ApiEntity,
     userActionType :: DMatrix.UserActionTypeWrapper,
-    userAccessType :: DMatrix.UserAccessType
+    userAccessType :: DMatrix.UserAccessType,
+    additionalUserActions :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -99,9 +100,9 @@ assignAccessLevel ::
   m APISuccess
 assignAccessLevel _ roleId req = do
   _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  mbAccessMatrixItem <- QMatrix.findByRoleIdAndEntityAndActionType roleId req.apiEntity req.userActionType
+  mbAccessMatrixItem <- QMatrix.findByRoleIdAndEntityAndActionTypeAndAdditionalActions roleId req.apiEntity req.userActionType req.additionalUserActions
   case mbAccessMatrixItem of
-    Just accessMatrixItem -> QMatrix.updateUserAccessType accessMatrixItem.id req.userActionType req.userAccessType
+    Just accessMatrixItem -> QMatrix.updateUserAccessTypeAndAdditionalActions accessMatrixItem.id req.userActionType req.userAccessType req.additionalUserActions
     Nothing -> do
       accessMatrixItem <- buildAccessMatrixItem roleId req
       void $ QMatrix.create accessMatrixItem
@@ -122,6 +123,7 @@ buildAccessMatrixItem roleId req = do
         apiEntity = req.apiEntity,
         userActionType = req.userActionType,
         userAccessType = req.userAccessType,
+        additionalUserActions = req.additionalUserActions,
         createdAt = now,
         updatedAt = now
       }

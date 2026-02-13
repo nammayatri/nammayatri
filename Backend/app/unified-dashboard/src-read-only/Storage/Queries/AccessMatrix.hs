@@ -22,10 +22,10 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.AccessMatrix.AccessMatrix] -> m ())
 createMany = traverse_ create
 
-findAllByRoleId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Role.Role -> m ([Domain.Types.AccessMatrix.AccessMatrix]))
+findAllByRoleId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Role.Role -> m [Domain.Types.AccessMatrix.AccessMatrix])
 findAllByRoleId roleId = do findAllWithKV [Se.Is Beam.roleId $ Se.Eq (Kernel.Types.Id.getId roleId)]
 
-findAllByRoles :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Role.Role -> m ([Domain.Types.AccessMatrix.AccessMatrix]))
+findAllByRoles :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Role.Role -> m [Domain.Types.AccessMatrix.AccessMatrix])
 findAllByRoles roleId = do findAllWithKV [Se.Is Beam.roleId $ Se.Eq (Kernel.Types.Id.getId roleId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.AccessMatrix.AccessMatrix -> m (Maybe Domain.Types.AccessMatrix.AccessMatrix))
@@ -43,6 +43,19 @@ findByRoleIdAndServerAndActionType roleId serverName userActionType = do
         ]
     ]
 
+findByRoleIdAndServerAndActionTypeAndAdditionalActions ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Role.Role -> Kernel.Prelude.Maybe Domain.Types.AccessMatrix.ServerName -> Domain.Types.AccessMatrix.UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.AccessMatrix.AccessMatrix))
+findByRoleIdAndServerAndActionTypeAndAdditionalActions roleId serverName userActionType additionalUserActions = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.roleId $ Se.Eq (Kernel.Types.Id.getId roleId),
+          Se.Is Beam.serverName $ Se.Eq serverName,
+          Se.Is Beam.userActionType $ Se.Eq userActionType,
+          Se.Is Beam.additionalUserActions $ Se.Eq additionalUserActions
+        ]
+    ]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.AccessMatrix.AccessMatrix -> m (Maybe Domain.Types.AccessMatrix.AccessMatrix))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -50,7 +63,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.AccessMatrix.AccessMatrix {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.roleId (Kernel.Types.Id.getId roleId),
+    [ Se.Set Beam.additionalUserActions additionalUserActions,
+      Se.Set Beam.roleId (Kernel.Types.Id.getId roleId),
       Se.Set Beam.serverName serverName,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.userActionType userActionType
@@ -62,7 +76,8 @@ instance FromTType' Beam.AccessMatrix Domain.Types.AccessMatrix.AccessMatrix whe
     pure $
       Just
         Domain.Types.AccessMatrix.AccessMatrix
-          { createdAt = createdAt,
+          { additionalUserActions = additionalUserActions,
+            createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
             roleId = Kernel.Types.Id.Id roleId,
             serverName = serverName,
@@ -73,7 +88,8 @@ instance FromTType' Beam.AccessMatrix Domain.Types.AccessMatrix.AccessMatrix whe
 instance ToTType' Beam.AccessMatrix Domain.Types.AccessMatrix.AccessMatrix where
   toTType' (Domain.Types.AccessMatrix.AccessMatrix {..}) = do
     Beam.AccessMatrixT
-      { Beam.createdAt = createdAt,
+      { Beam.additionalUserActions = additionalUserActions,
+        Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.roleId = Kernel.Types.Id.getId roleId,
         Beam.serverName = serverName,

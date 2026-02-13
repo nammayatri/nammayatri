@@ -163,11 +163,12 @@ getStatus (personId, merchantId) orderId = do
       fork "syncRemainingOrdersInGroup" $ do
         let remainingOrders = filter (\o -> maybe True (\successOrder -> o.id /= successOrder.id) successOtherOrder) otherOrdersInGroup
         mapM_
-          (\order -> do
+          ( \order -> do
               let orderPaymentServiceType = fromMaybe DOrder.Normal order.paymentServiceType
                   orderFulfillmentHandler = mkFulfillmentHandler orderPaymentServiceType (cast order.merchantId) order.id
               void $ SPayment.syncOrderStatus orderFulfillmentHandler merchantId personId order
-          ) remainingOrders
+          )
+          remainingOrders
       -- Check if any other order has FulfillmentSucceeded status
       case successOtherOrder of
         Just successfulOrder -> do

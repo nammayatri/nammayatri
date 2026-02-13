@@ -18,7 +18,7 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-data AssignAccessLevelReq = AssignAccessLevelReq {serverName :: Domain.Types.AccessMatrix.ServerName, userActionType :: Domain.Types.AccessMatrix.UserActionType}
+data AssignAccessLevelReq = AssignAccessLevelReq {additionalUserActions :: Kernel.Prelude.Maybe Data.Text.Text, serverName :: Domain.Types.AccessMatrix.ServerName, userActionType :: Domain.Types.AccessMatrix.UserActionType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -32,21 +32,21 @@ data ListRoleResp = ListRoleResp {list :: [Domain.Types.Role.RoleAPIEntity], sum
 
 type API = ("/role" :> (PostRoleCreate :<|> PostRoleAssignAccessLevel :<|> GetRoleList))
 
-type PostRoleCreate = ("create" :> ReqBody ('[JSON]) CreateRoleReq :> Post ('[JSON]) Domain.Types.Role.RoleAPIEntity)
+type PostRoleCreate = ("create" :> ReqBody '[JSON] CreateRoleReq :> Post '[JSON] Domain.Types.Role.RoleAPIEntity)
 
 type PostRoleAssignAccessLevel =
-  ( Capture "roleId" (Kernel.Types.Id.Id Domain.Types.Role.Role) :> "assignAccessLevel" :> ReqBody ('[JSON]) AssignAccessLevelReq
+  ( Capture "roleId" (Kernel.Types.Id.Id Domain.Types.Role.Role) :> "assignAccessLevel" :> ReqBody '[JSON] AssignAccessLevelReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetRoleList = ("list" :> QueryParam "searchString" Data.Text.Text :> QueryParam "limit" Kernel.Prelude.Integer :> QueryParam "offset" Kernel.Prelude.Integer :> Get ('[JSON]) ListRoleResp)
+type GetRoleList = ("list" :> QueryParam "searchString" Data.Text.Text :> QueryParam "limit" Kernel.Prelude.Integer :> QueryParam "offset" Kernel.Prelude.Integer :> Get '[JSON] ListRoleResp)
 
 data RoleAPIs = RoleAPIs
-  { postRoleCreate :: (CreateRoleReq -> EulerHS.Types.EulerClient Domain.Types.Role.RoleAPIEntity),
-    postRoleAssignAccessLevel :: (Kernel.Types.Id.Id Domain.Types.Role.Role -> AssignAccessLevelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getRoleList :: (Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> EulerHS.Types.EulerClient ListRoleResp)
+  { postRoleCreate :: CreateRoleReq -> EulerHS.Types.EulerClient Domain.Types.Role.RoleAPIEntity,
+    postRoleAssignAccessLevel :: Kernel.Types.Id.Id Domain.Types.Role.Role -> AssignAccessLevelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getRoleList :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> EulerHS.Types.EulerClient ListRoleResp
   }
 
 mkRoleAPIs :: (Client EulerHS.Types.EulerClient API -> RoleAPIs)
@@ -61,4 +61,4 @@ data RoleUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''RoleUserActionType)])
+$(Data.Singletons.TH.genSingletons [''RoleUserActionType])

@@ -69,7 +69,7 @@ postRoleAssignAccessLevel ::
 postRoleAssignAccessLevel _ _ _ roleId req = do
   _role <- B.runInReplica $ QRole.findById roleId >>= fromMaybeM (InvalidRequest $ "Role with id " <> show roleId.getId <> " does not exist")
 
-  mbAccessMatrixItem <- B.runInReplica $ QMatrix.findByRoleIdAndServerAndActionType roleId (Just req.serverName) req.userActionType
+  mbAccessMatrixItem <- B.runInReplica $ QMatrix.findByRoleIdAndServerAndActionTypeAndAdditionalActions roleId (Just req.serverName) req.userActionType req.additionalUserActions
   case mbAccessMatrixItem of
     Just _accessMatrixItem -> pure Kernel.Types.APISuccess.Success -- Already exists, no update needed in new structure
     Nothing -> do
@@ -90,6 +90,7 @@ buildAccessMatrixItem roleId req = do
         roleId = roleId,
         serverName = Just req.serverName,
         userActionType = req.userActionType,
+        additionalUserActions = req.additionalUserActions,
         createdAt = now,
         updatedAt = now
       }

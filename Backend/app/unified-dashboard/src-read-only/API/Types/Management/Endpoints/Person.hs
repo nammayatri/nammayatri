@@ -21,7 +21,11 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-data AccessMatrixItemAPIEntity = AccessMatrixItemAPIEntity {serverName :: Kernel.Prelude.Maybe Domain.Types.AccessMatrix.ServerName, userActionType :: Domain.Types.AccessMatrix.UserActionType}
+data AccessMatrixItemAPIEntity = AccessMatrixItemAPIEntity
+  { additionalUserActions :: Kernel.Prelude.Maybe Data.Text.Text,
+    serverName :: Kernel.Prelude.Maybe Domain.Types.AccessMatrix.ServerName,
+    userActionType :: Domain.Types.AccessMatrix.UserActionType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -87,7 +91,7 @@ type GetPersonList =
       :> QueryParam
            "personId"
            (Kernel.Types.Id.Id Domain.Types.Person.Person)
-      :> Get ('[JSON]) ListPersonResp
+      :> Get '[JSON] ListPersonResp
   )
 
 type PostPersonAssignRole =
@@ -95,92 +99,92 @@ type PostPersonAssignRole =
       :> Capture
            "roleId"
            (Kernel.Types.Id.Id Domain.Types.Role.Role)
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostPersonAssignMerchantCityAccess =
   ( "person" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "assignMerchantCityAccess"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            MerchantCityAccessReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostPersonResetMerchantAccess =
   ( "person" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "resetMerchantAccess"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            MerchantCityAccessReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostPersonResetMerchantCityAccess =
   ( "person" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "resetMerchantCityAccess"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            MerchantCityAccessReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
-type DeletePerson = ("person" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> Delete ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type DeletePerson = ("person" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostPersonChangeEnabledStatus =
   ( "person" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "changeEnabledStatus"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            ChangeEnabledStatusReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostPersonChangeEmailByAdmin =
-  ( "person" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "change" :> "email" :> ReqBody ('[JSON]) ChangeEmailByAdminReq
+  ( "person" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "change" :> "email" :> ReqBody '[JSON] ChangeEmailByAdminReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 type PostPersonChangePasswordByAdmin =
   ( "person" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "change" :> "password"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            ChangePasswordByAdminReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostPersonChangeMobileByAdmin =
   ( "person" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "change" :> "mobile"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            ChangeMobileNumberByAdminReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
-type GetUserProfile = ("user" :> "profile" :> Get ('[JSON]) PersonAPIEntity)
+type GetUserProfile = ("user" :> "profile" :> Get '[JSON] PersonAPIEntity)
 
-type GetUserCurrentMerchant = ("user" :> "getCurrentMerchant" :> Get ('[JSON]) MerchantAccessResp)
+type GetUserCurrentMerchant = ("user" :> "getCurrentMerchant" :> Get '[JSON] MerchantAccessResp)
 
-type PostUserChangePassword = ("user" :> "changePassword" :> ReqBody ('[JSON]) ChangePasswordReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostUserChangePassword = ("user" :> "changePassword" :> ReqBody '[JSON] ChangePasswordReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type GetUserAccessMatrix = ("user" :> "getAccessMatrix" :> Get ('[JSON]) AccessMatrixRowAPIEntity)
+type GetUserAccessMatrix = ("user" :> "getAccessMatrix" :> Get '[JSON] AccessMatrixRowAPIEntity)
 
-type PostUserChangePasswordAfterExpiry = ("user" :> "changePasswordAfterExpiry" :> ReqBody ('[JSON]) ChangePasswordAfterExpiryReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostUserChangePasswordAfterExpiry = ("user" :> "changePasswordAfterExpiry" :> ReqBody '[JSON] ChangePasswordAfterExpiryReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data PersonAPIs = PersonAPIs
-  { getPersonList :: (Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> EulerHS.Types.EulerClient ListPersonResp),
-    postPersonAssignRole :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Role.Role -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postPersonAssignMerchantCityAccess :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> MerchantCityAccessReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postPersonResetMerchantAccess :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> MerchantCityAccessReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postPersonResetMerchantCityAccess :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> MerchantCityAccessReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    deletePerson :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postPersonChangeEnabledStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> ChangeEnabledStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postPersonChangeEmailByAdmin :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> ChangeEmailByAdminReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postPersonChangePasswordByAdmin :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> ChangePasswordByAdminReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postPersonChangeMobileByAdmin :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> ChangeMobileNumberByAdminReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getUserProfile :: (EulerHS.Types.EulerClient PersonAPIEntity),
-    getUserCurrentMerchant :: (EulerHS.Types.EulerClient MerchantAccessResp),
-    postUserChangePassword :: (ChangePasswordReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getUserAccessMatrix :: (EulerHS.Types.EulerClient AccessMatrixRowAPIEntity),
-    postUserChangePasswordAfterExpiry :: (ChangePasswordAfterExpiryReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { getPersonList :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> EulerHS.Types.EulerClient ListPersonResp,
+    postPersonAssignRole :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Role.Role -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPersonAssignMerchantCityAccess :: Kernel.Types.Id.Id Domain.Types.Person.Person -> MerchantCityAccessReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPersonResetMerchantAccess :: Kernel.Types.Id.Id Domain.Types.Person.Person -> MerchantCityAccessReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPersonResetMerchantCityAccess :: Kernel.Types.Id.Id Domain.Types.Person.Person -> MerchantCityAccessReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    deletePerson :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPersonChangeEnabledStatus :: Kernel.Types.Id.Id Domain.Types.Person.Person -> ChangeEnabledStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPersonChangeEmailByAdmin :: Kernel.Types.Id.Id Domain.Types.Person.Person -> ChangeEmailByAdminReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPersonChangePasswordByAdmin :: Kernel.Types.Id.Id Domain.Types.Person.Person -> ChangePasswordByAdminReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPersonChangeMobileByAdmin :: Kernel.Types.Id.Id Domain.Types.Person.Person -> ChangeMobileNumberByAdminReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getUserProfile :: EulerHS.Types.EulerClient PersonAPIEntity,
+    getUserCurrentMerchant :: EulerHS.Types.EulerClient MerchantAccessResp,
+    postUserChangePassword :: ChangePasswordReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getUserAccessMatrix :: EulerHS.Types.EulerClient AccessMatrixRowAPIEntity,
+    postUserChangePasswordAfterExpiry :: ChangePasswordAfterExpiryReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPersonAPIs :: (Client EulerHS.Types.EulerClient API -> PersonAPIs)
@@ -207,4 +211,4 @@ data PersonUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''PersonUserActionType)])
+$(Data.Singletons.TH.genSingletons [''PersonUserActionType])
