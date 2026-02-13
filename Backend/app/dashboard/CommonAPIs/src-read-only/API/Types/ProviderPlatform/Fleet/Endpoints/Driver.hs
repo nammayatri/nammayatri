@@ -89,6 +89,13 @@ data Address = Address {point :: Kernel.External.Maps.Types.LatLong, address :: 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data AddressDocumentType
+  = RationCard
+  | UtilityBill
+  | Passport
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
 data AllTimeFleetAnalyticsRes = AllTimeFleetAnalyticsRes
   { activeVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     completedRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -1071,7 +1078,9 @@ data UpdateDriverReq = UpdateDriverReq
   { firstName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dob :: Kernel.Prelude.Maybe Data.Time.Day,
-    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    addressDocumentType :: Kernel.Prelude.Maybe AddressDocumentType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -2178,7 +2187,7 @@ type PostDriverFleetDriverUpdate =
 type PostDriverFleetDriverUpdateHelper =
   ( "fleet" :> "driver" :> Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "update"
       :> Capture
-           "fleetOwnerId"
+           "requestorId"
            Kernel.Prelude.Text
       :> ReqBody '[JSON] UpdateDriverReq
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
@@ -2471,6 +2480,8 @@ data DriverUserActionType
   | POST_DRIVER_FLEET_SCHEDULED_BOOKING_CANCEL
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''AddressDocumentType)
 
 $(mkHttpInstancesForEnum ''DriverMode)
 

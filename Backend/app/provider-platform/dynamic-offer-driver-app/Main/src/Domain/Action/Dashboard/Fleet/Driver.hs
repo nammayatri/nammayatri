@@ -3790,12 +3790,16 @@ postDriverFleetDriverUpdate ::
   Text ->
   Common.UpdateDriverReq ->
   Flow APISuccess
-postDriverFleetDriverUpdate merchantShortId opCity driverId fleetOwnerId req = do
+postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
   merchant <- findMerchantByShortId merchantShortId
   _ <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  validateFleetDriverAssociation fleetOwnerId driver.id
+  requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+
+  isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
+  unless isValid $ throwError AccessDenied
+
   when (isJust req.firstName || isJust req.lastName || isJust req.email) $ do
     let updDriver =
           driver
@@ -3804,9 +3808,21 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId fleetOwnerId req = d
               DP.email = req.email
             }
     QPerson.updatePersonDetails updDriver
-  for_ req.dob $ \dob ->
-    QDriverInfo.updateDob personId (Just (UTCTime dob 0))
+
+  when (isJust req.dob || isJust req.address || isJust req.addressDocumentType) $ do
+    driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+    let dob = fmap (\d -> UTCTime d 0) req.dob <|> driverInfo.driverDob
+        address = req.address <|> driverInfo.address
+        addressDocumentType = castAddressDocumentType <$> req.addressDocumentType <|> driverInfo.addressDocumentType
+    QDriverInfo.updateDriverDobAndAddress dob address addressDocumentType personId
+
   pure Success
+  where
+    castAddressDocumentType :: Common.AddressDocumentType -> DI.AddressDocumentType
+    castAddressDocumentType = \case
+      Common.RationCard -> DI.RationCard
+      Common.UtilityBill -> DI.UtilityBill
+      Common.Passport -> DI.Passport
 
 getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Int -> Maybe Int -> Day -> Day -> Flow Common.FleetVehicleStatsRes
 getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbVehicleNo mbLimit mbOffset fromDay toDay = do
