@@ -26,7 +26,6 @@ import Kernel.Utils.Common
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Role as Queries
 
-
 -- TODO do we need prefix for rider and provider dashboard?
 makeParentRolesKey :: Id DRole.Role -> Text
 makeParentRolesKey roleId = "dashboard:parentRoles:" <> roleId.getId
@@ -40,6 +39,8 @@ cacheParentRolesRecursively role = do
   Hedis.setExp (makeParentRolesKey role.id) parents expTime
   pure parents
 
+
+-- TODO remove if we will use calculateRoleHierarchy, because cache will be calculated for all roles at once
 findParentRolesRecursivelyCached ::
   BeamFlow m r =>
   DRole.Role ->
