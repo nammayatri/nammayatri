@@ -15,7 +15,7 @@ data Invoice = Invoice
     dueAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice,
     invoiceNumber :: Kernel.Prelude.Text,
-    invoiceType :: Kernel.Prelude.Text,
+    invoiceType :: Lib.Finance.Domain.Types.Invoice.InvoiceType,
     issuedAt :: Kernel.Prelude.UTCTime,
     issuedByAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedById :: Kernel.Prelude.Text,
@@ -39,4 +39,8 @@ data Invoice = Invoice
 
 data InvoiceStatus = Draft | Issued | Paid | PartiallyPaid | Cancelled | Voided deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data InvoiceType = SubscriptionPurchase | Ride | RideCancellation deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''InvoiceStatus))
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''InvoiceType))

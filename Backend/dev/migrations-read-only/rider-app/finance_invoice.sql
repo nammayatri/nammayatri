@@ -13,7 +13,7 @@ ALTER TABLE atlas_app.finance_invoice ADD COLUMN issued_by_type text NOT NULL;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN issued_to_id text NOT NULL;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN issued_to_name text ;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN issued_to_type text NOT NULL;
-ALTER TABLE atlas_app.finance_invoice ADD COLUMN line_items text NOT NULL;
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN line_items jsonb NOT NULL;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN merchant_id text NOT NULL;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN merchant_operating_city_id text NOT NULL;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN status text NOT NULL;

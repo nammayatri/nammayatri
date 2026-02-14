@@ -71,7 +71,6 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
   updateWithKV
     [ Se.Set Beam.amount amount,
       Se.Set Beam.currency currency,
-      Se.Set Beam.entryNumber entryNumber,
       Se.Set Beam.entryType entryType,
       Se.Set Beam.fromAccountId (Kernel.Types.Id.getId fromAccountId),
       Se.Set Beam.fromEndingBalance fromEndingBalance,
@@ -101,7 +100,6 @@ instance FromTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.Ledger
           { amount = amount,
             createdAt = createdAt,
             currency = currency,
-            entryNumber = entryNumber,
             entryType = entryType,
             fromAccountId = Kernel.Types.Id.Id fromAccountId,
             fromEndingBalance = fromEndingBalance,
@@ -129,7 +127,6 @@ instance ToTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.LedgerEn
       { Beam.amount = amount,
         Beam.createdAt = createdAt,
         Beam.currency = currency,
-        Beam.entryNumber = entryNumber,
         Beam.entryType = entryType,
         Beam.fromAccountId = Kernel.Types.Id.getId fromAccountId,
         Beam.fromEndingBalance = fromEndingBalance,

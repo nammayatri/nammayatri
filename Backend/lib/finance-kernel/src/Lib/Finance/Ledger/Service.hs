@@ -45,7 +45,6 @@ module Lib.Finance.Ledger.Service
 where
 
 import qualified Data.Aeson as Aeson
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Kernel.Prelude
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
@@ -73,7 +72,6 @@ createEntry ::
 createEntry input = do
   now <- getCurrentTime
   entryId <- generateGUID
-  let entryNum = truncate (utcTimeToPOSIXSeconds now * 1000) -- Unique timestamp-based entry number
   let entry =
         LedgerEntry
           { id = Id entryId,
@@ -82,7 +80,6 @@ createEntry input = do
             amount = input.amount,
             currency = input.currency,
             entryType = input.entryType,
-            entryNumber = entryNum,
             status = input.status,
             referenceType = input.referenceType,
             referenceId = input.referenceId,
@@ -120,7 +117,6 @@ createEntryWithBalanceUpdate input = do
     (Just fromAccount, Just toAccount) -> do
       now <- getCurrentTime
       entryId <- generateGUID
-      let entryNum = truncate (utcTimeToPOSIXSeconds now * 1000)
       let amount = input.amount
           fromStartBal = fromAccount.balance
           toStartBal = toAccount.balance
@@ -141,7 +137,6 @@ createEntryWithBalanceUpdate input = do
                 amount = amount,
                 currency = input.currency,
                 entryType = input.entryType,
-                entryNumber = entryNum,
                 status = input.status,
                 referenceType = input.referenceType,
                 referenceId = input.referenceId,
@@ -179,7 +174,6 @@ createReversal originalId reason = do
     Just original -> do
       now <- getCurrentTime
       reversalId <- generateGUID
-      let entryNum = truncate (utcTimeToPOSIXSeconds now * 1000)
 
       let reversal =
             LedgerEntry
@@ -189,7 +183,6 @@ createReversal originalId reason = do
                 amount = original.amount,
                 currency = original.currency,
                 entryType = Reversal,
-                entryNumber = entryNum,
                 status = SETTLED, -- Reversals are immediately settled
                 referenceType = original.referenceType,
                 referenceId = original.referenceId,

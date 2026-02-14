@@ -23,7 +23,6 @@ LedgerEntry:
 
   fields:
     id: Id LedgerEntry
-    entryNumber: Int
     timestamp: UTCTime
     fromAccountId: Id Account
     toAccountId: Id Account

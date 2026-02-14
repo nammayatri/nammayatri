@@ -205,17 +205,11 @@ findByIssuedTo ::
 findByIssuedTo = QInvoice.findByIssuedTo
 
 -- | Map invoiceType text to TransactionType
-invoiceTypeToTransactionType :: Text -> TransactionType
+invoiceTypeToTransactionType :: InvoiceType -> TransactionType
 invoiceTypeToTransactionType invoiceType = case invoiceType of
-  "SubscriptionPurchase" -> Subscription
-  "Subscription" -> Subscription
-  "RideFare" -> RideFare
-  "Incentive" -> Incentive
-  "Cancellation" -> Cancellation
-  "BuyerCommission" -> BuyerCommission
-  "CreditNote" -> CreditNote
-  "DebitNote" -> DebitNote
-  _ -> Subscription -- default fallback
+  SubscriptionPurchase -> Subscription
+  Ride -> RideFare
+  RideCancellation -> Cancellation
 
 -- | SAC code mapping per transaction type
 sacCodeForTransactionType :: TransactionType -> Text

@@ -15,7 +15,6 @@ data LedgerEntry = LedgerEntry
   { amount :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
-    entryNumber :: Kernel.Prelude.Int,
     entryType :: Lib.Finance.Domain.Types.LedgerEntry.EntryType,
     fromAccountId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account,
     fromEndingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

@@ -3,7 +3,6 @@ CREATE TABLE atlas_app.finance_ledger_entry ();
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN amount double precision NOT NULL;
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN currency text NOT NULL;
-ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN entry_number integer NOT NULL;
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN entry_type text NOT NULL;
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN from_account_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN from_ending_balance double precision ;

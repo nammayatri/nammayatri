@@ -14,6 +14,7 @@ where
 
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
+import Lib.Finance.Domain.Types.Invoice (InvoiceType)
 
 -- | Single line item in an invoice
 data InvoiceLineItem = InvoiceLineItem
@@ -26,7 +27,7 @@ data InvoiceLineItem = InvoiceLineItem
 
 -- | Input for creating an invoice
 data InvoiceInput = InvoiceInput
-  { invoiceType :: Text,
+  { invoiceType :: InvoiceType,
     paymentOrderId :: Maybe Text,
     issuedToType :: Text,
     issuedToId :: Text,

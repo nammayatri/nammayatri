@@ -18,7 +18,7 @@ data InvoiceT f = InvoiceT
     dueAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     id :: (B.C f Kernel.Prelude.Text),
     invoiceNumber :: (B.C f Kernel.Prelude.Text),
-    invoiceType :: (B.C f Kernel.Prelude.Text),
+    invoiceType :: (B.C f Lib.Finance.Domain.Types.Invoice.InvoiceType),
     issuedAt :: (B.C f Kernel.Prelude.UTCTime),
     issuedByAddress :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     issuedById :: (B.C f Kernel.Prelude.Text),

@@ -16,7 +16,6 @@ data LedgerEntryT f = LedgerEntryT
   { amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     currency :: (B.C f Kernel.Types.Common.Currency),
-    entryNumber :: (B.C f Kernel.Prelude.Int),
     entryType :: (B.C f Lib.Finance.Domain.Types.LedgerEntry.EntryType),
     fromAccountId :: (B.C f Kernel.Prelude.Text),
     fromEndingBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),

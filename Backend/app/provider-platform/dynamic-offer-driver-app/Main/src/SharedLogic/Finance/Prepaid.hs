@@ -412,7 +412,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
         Just invoiceParams -> do
           let invoiceInput =
                 InvoiceInput
-                  { invoiceType = "SubscriptionPurchase",
+                  { invoiceType = SubscriptionPurchase,
                     paymentOrderId = Just invoiceParams.paymentOrderId,
                     issuedToType = invoiceParams.issuedToType,
                     issuedToId = ownerId,

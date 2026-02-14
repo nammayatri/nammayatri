@@ -16,11 +16,14 @@ Invoice:
     InvoiceStatus:
       enum: "Draft,Issued,Paid,PartiallyPaid,Cancelled,Voided"
       derive: "ToParamSchema"
+    InvoiceType:
+      enum: "SubscriptionPurchase,Ride,RideCancellation"
+      derive: "ToParamSchema"
 
   fields:
     id: Id Invoice
     invoiceNumber: Text
-    invoiceType: Text
+    invoiceType: InvoiceType
     paymentOrderId: Maybe Text
     issuedToType: Text
     issuedToId: Text
@@ -74,7 +77,7 @@ Invoice:
   beamInstance: MakeTableInstancesGenericSchema
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <InvoiceStatus>
-
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <InvoiceType>
 
 InvoiceLedgerLink:
   tableName: finance_invoice_ledger_link
