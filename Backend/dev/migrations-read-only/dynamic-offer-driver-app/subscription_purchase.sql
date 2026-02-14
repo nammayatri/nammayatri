@@ -23,3 +23,9 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD COLUMN waiver_off_p
 ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD COLUMN finance_invoice_id character varying(36) ;

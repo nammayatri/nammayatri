@@ -54,6 +54,7 @@ updateByPrimaryKey (Domain.Types.SubscriptionPurchase.SubscriptionPurchase {..})
   updateWithKV
     [ Se.Set Beam.enableServiceUsageCharge enableServiceUsageCharge,
       Se.Set Beam.expiryDate expiryDate,
+      Se.Set Beam.financeInvoiceId (Kernel.Types.Id.getId <$> financeInvoiceId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.ownerId ownerId,

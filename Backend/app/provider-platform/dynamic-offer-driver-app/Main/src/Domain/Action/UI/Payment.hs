@@ -481,7 +481,15 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
           isFleetOwner = DCommon.checkFleetOwnerRole person.role
           counterpartyType = if isFleetOwner then counterpartyFleetOwner else counterpartyDriver
           expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
-      _ <-
+          invoiceParams =
+            InvoiceCreationParams
+              { paymentOrderId = subscriptionPurchase.paymentOrderId.getId,
+                issuedToType = if isFleetOwner then "FLEET_OWNER" else "DRIVER",
+                issuedToName = Just person.firstName,
+                issuedByType = "SELLER",
+                issuedById = merchantId.getId
+              }
+      (_newBalance, mbInvoiceId) <-
         creditPrepaidBalance
           counterpartyType
           person.id.getId
@@ -493,12 +501,14 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
           subscriptionPurchase.merchantOperatingCityId.getId
           referenceId
           Nothing
+          (Just invoiceParams)
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       let updatedPurchase =
             subscriptionPurchase
               { status = DSP.ACTIVE,
                 purchaseTimestamp = now,
-                expiryDate = expiryDate
+                expiryDate = expiryDate,
+                financeInvoiceId = mbInvoiceId
               }
       QSP.updateByPrimaryKey updatedPurchase
       unless isFleetOwner $ do
@@ -538,8 +548,9 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           person.merchantOperatingCityId.getId
           referenceId
           Nothing
+          Nothing
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
-      pure (newBalance, Just person.id)
+      pure (fst newBalance, Just person.id)
     else do
       newBalance <-
         creditPrepaidBalance
@@ -553,6 +564,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           person.merchantOperatingCityId.getId
           referenceId
           Nothing
+          Nothing
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       logInfo $ "Prepaid recharge completed " <> show person.id.getId
       let prepaidRechargeMessage =
@@ -561,7 +573,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
               <> " is successful"
           prepaidRechargeTitle = "Recharge Successful!"
       sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
-      pure (newBalance, Nothing)
+      pure (fst newBalance, Nothing)
 
 updatePaymentStatus ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>

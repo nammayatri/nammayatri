@@ -19,6 +19,7 @@ import Tools.Beam.UtilsTH
 data SubscriptionPurchaseT f = SubscriptionPurchaseT
   { enableServiceUsageCharge :: B.C f Kernel.Prelude.Bool,
     expiryDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    financeInvoiceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

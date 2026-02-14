@@ -4,9 +4,9 @@ import Domain.Types.Extra.Plan (ServiceNames)
 import Domain.Types.SubscriptionPurchase
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import qualified Sequelize as Se
-import Kernel.Types.CacheFlow
 import qualified Storage.Beam.SubscriptionPurchase as Beam
 import Storage.Queries.OrphanInstances.SubscriptionPurchase ()
 

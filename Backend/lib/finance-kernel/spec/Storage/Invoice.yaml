@@ -11,7 +11,7 @@ imports:
 Invoice:
   tableName: finance_invoice
   derives: "Generic"
-  
+
   types:
     InvoiceStatus:
       enum: "Draft,Issued,Paid,PartiallyPaid,Cancelled,Voided"
@@ -21,6 +21,7 @@ Invoice:
     id: Id Invoice
     invoiceNumber: Text
     invoiceType: Text
+    paymentOrderId: Maybe Text
     issuedToType: Text
     issuedToId: Text
     issuedToName: Maybe Text
@@ -43,6 +44,7 @@ Invoice:
     id: PrimaryKey
     invoiceNumber: "!SecondaryKey"
     issuedToId: "!SecondaryKey"
+    paymentOrderId: "!SecondaryKey"
 
   queries:
     findById:

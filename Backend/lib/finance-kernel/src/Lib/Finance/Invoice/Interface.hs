@@ -27,6 +27,7 @@ data InvoiceLineItem = InvoiceLineItem
 -- | Input for creating an invoice
 data InvoiceInput = InvoiceInput
   { invoiceType :: Text,
+    paymentOrderId :: Maybe Text,
     issuedToType :: Text,
     issuedToId :: Text,
     issuedToName :: Maybe Text,

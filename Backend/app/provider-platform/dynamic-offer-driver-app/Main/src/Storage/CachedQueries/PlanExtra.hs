@@ -152,6 +152,23 @@ cacheAllPlan plans = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp makeAllPlanKey plans expTime
 
+clearPlanCacheByCity :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> ServiceNames -> m ()
+clearPlanCacheByCity merchantOpCityId serviceName = do
+  Hedis.withCrossAppRedis $ do
+    -- clear global allPlan cache
+    Hedis.del makeAllPlanKey
+    -- clear merchantOpCityId + serviceName cache
+    Hedis.del (makeMerchantIdKey merchantOpCityId serviceName)
+    -- clear merchantOpCityId + paymentMode + serviceName caches (all permutations of isDeprecated and isFleetOwnerPlan)
+    forM_ [MANUAL, AUTOPAY] $ \paymentMode ->
+      forM_ [Nothing, Just True, Just False] $ \mbIsDeprecated ->
+        forM_ [Nothing, Just True, Just False] $ \mbIsFleetOwnerPlan -> do
+          Hedis.del (makeMerchantIdAndPaymentModeKey merchantOpCityId paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan)
+    -- clear merchantOpCityId + serviceName + isDeprecated + isFleetOwnerPlan caches
+    forM_ [Nothing, Just True, Just False] $ \mbIsDeprecated ->
+      forM_ [Nothing, Just True, Just False] $ \mbIsFleetOwnerPlan ->
+        Hedis.del (makeMerchantIdAndServiceNameKey merchantOpCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan)
+
 makeAllPlanKey :: Text
 makeAllPlanKey = "driver-offer:CachedQueries:Plan:PlanId-ALL"
 

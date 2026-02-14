@@ -9,6 +9,7 @@ imports:
   VehicleCategory: Domain.Types.VehicleCategory
   WaiveOffMode: Domain.Types.DriverPlan
   ServiceNames: Domain.Types.Extra.Plan
+  Invoice: Lib.Finance.Domain.Types.Invoice
 
 SubscriptionPurchase:
   tableName: subscription_purchase
@@ -32,6 +33,7 @@ SubscriptionPurchase:
     planFee: HighPrecMoney
     purchaseTimestamp: UTCTime
     paymentOrderId: Id PaymentOrder
+    financeInvoiceId: Maybe (Id Invoice)
     status: SubscriptionPurchaseStatus
     expiryDate: Maybe UTCTime
     vehicleCategory: Maybe VehicleCategory

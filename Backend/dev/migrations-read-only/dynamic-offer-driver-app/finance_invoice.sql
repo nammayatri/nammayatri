@@ -22,3 +22,9 @@ ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN tax_breakdown text
 ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN total_amount double precision NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN payment_order_id text ;
