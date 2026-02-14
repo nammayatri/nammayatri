@@ -920,6 +920,9 @@ getProcessedVehicleDocuments driverImagesInfo docType vehicleRC mbRcImagesInfo =
     DVC.VehicleInspectionForm -> do
       let (status, reason, url) = checkImageValidity driverImagesInfo DVC.VehicleInspectionForm
       return (status, reason, url, Nothing, Nothing)
+    DVC.InspectionHub -> do
+      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.InspectionHub
+      return (status, reason, url, Nothing, Nothing)
     DVC.SubscriptionPlan -> do
       mbPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION driverId -- fix later on basis of vehicle category
       return (Just $ boolToStatus (isJust mbPlan), Nothing, Nothing, Nothing, Nothing)
