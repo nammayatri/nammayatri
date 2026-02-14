@@ -8,7 +8,7 @@ imports:
 AuditEntry:
   tableName: finance_audit_entry
   derives: "Generic"
-  
+
   types:
     AuditAction:
       enum: "Created,Updated,Reversed,StatusChanged"
