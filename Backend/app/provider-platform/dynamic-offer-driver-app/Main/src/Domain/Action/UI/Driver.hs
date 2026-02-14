@@ -434,9 +434,7 @@ data DriverInformationRes = DriverInformationRes
     profilePhotoUploadedAt :: Maybe UTCTime,
     activeFleet :: Maybe FleetInfo,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
-    vehicleImageUploadedAt :: Maybe UTCTime,
-    prepaidSubscriptionBalance :: Maybe HighPrecMoney,
-    planExpiryDate :: Maybe UTCTime
+    vehicleImageUploadedAt :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1517,8 +1515,6 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           fleetRequest = fleetRequest,
           fleetOwnerId = (.fleetOwnerId) <$> mbActiveFda,
           onboardingAs = driverInfo.onboardingAs,
-          prepaidSubscriptionBalance = driverInfo.prepaidSubscriptionBalance,
-          planExpiryDate = driverInfo.planExpiryDate,
           ..
         }
 

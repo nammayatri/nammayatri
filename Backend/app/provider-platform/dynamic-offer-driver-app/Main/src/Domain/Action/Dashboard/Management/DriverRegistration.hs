@@ -300,6 +300,7 @@ mapDocumentType Common.SchipolAirportAgreement = DVC.SchipolAirportAgreement
 mapDocumentType Common.SchipolSmartcardProof = DVC.SchipolSmartcardProof
 mapDocumentType Common.TXQualityMark = DVC.TXQualityMark
 -- Finland Document Types
+mapDocumentType Common.PersonalId = DVC.PersonalId
 mapDocumentType Common.TaxiDriverPermit = DVC.TaxiDriverPermit
 mapDocumentType Common.TaxiTransportLicense = DVC.TaxiTransportLicense
 mapDocumentType Common.FinnishIDResidencePermit = DVC.FinnishIDResidencePermit
