@@ -732,11 +732,11 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
       journeyId = listToMaybe $ catMaybes journeyIds
   return $
     ( evaluateConditions
-        [ (Just DFRFSTicketBooking.CONFIRMED, Nothing, DPayment.FulfillmentSucceeded, all), -- Ticket Generated
-          (Nothing, Just FRFSTicketService.REFUND_PENDING, DPayment.FulfillmentRefundPending, all), -- Paid But Refund Pending (Could be due to Booking Cancellation/Failure/Async Ticket Generation Failure)
+        [ (Nothing, Just FRFSTicketService.REFUND_PENDING, DPayment.FulfillmentRefundPending, all), -- Paid But Refund Pending (Could be due to Booking Cancellation/Failure/Async Ticket Generation Failure)
           (Nothing, Just FRFSTicketService.REFUND_INITIATED, DPayment.FulfillmentRefundInitiated, all), -- Paid But Refund Initiated (Could be due to Booking Cancellation/Failure/Async Ticket Generation Failure)
           (Nothing, Just FRFSTicketService.REFUND_FAILED, DPayment.FulfillmentRefundFailed, all), -- Paid But Refund Failed (Could be due to Booking Cancellation/Failure/Async Ticket Generation Failure)
           (Nothing, Just FRFSTicketService.REFUNDED, DPayment.FulfillmentRefunded, all), -- Paid But Refunded (Could be due to Booking Cancellation/Failure/Async Ticket Generation Failure/Auto Refund)
+          (Just DFRFSTicketBooking.CONFIRMED, Nothing, DPayment.FulfillmentSucceeded, all), -- Ticket Generated
           (Just DFRFSTicketBooking.FAILED, Nothing, DPayment.FulfillmentFailed, any) -- If Any Booking Failed, fulfillment cannot happen and should be marked as Failed
         ]
         bookingsStatus,
