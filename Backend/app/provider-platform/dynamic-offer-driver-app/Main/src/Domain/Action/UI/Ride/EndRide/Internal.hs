@@ -219,7 +219,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     thresholdData <- precomputeThresholdCheckData driverId ridesThresholdDocumentTypes
     -- Check rides threshold for all document types that have it configured
     forM_ ridesThresholdDocumentTypes $ \documentType -> do
-      checkAndCreateReminderIfNeeded documentType driverId merchant.id booking.merchantOperatingCityId thresholdData
+      checkAndCreateReminderIfNeeded documentType driverId booking.providerId booking.merchantOperatingCityId thresholdData
   when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
     fork "updateFleetVehicleDailyStats and updateOperatorAnalyticsTotalRideCount" $ do
       Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride booking

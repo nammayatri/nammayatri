@@ -646,7 +646,6 @@ library
       Storage.Queries.DriverReferralExtra
       Storage.Queries.DriverSSNExtra
       Storage.Queries.DriverStatsExtra
-      Storage.Queries.DriverWalletExtra
       Storage.Queries.EntityInfoExtra
       Storage.Queries.ExophoneExtra
       Storage.Queries.FareParameters
@@ -1018,7 +1017,6 @@ library
       Domain.Types.DriverRidePayoutBankAccount
       Domain.Types.DriverSSN
       Domain.Types.DriverStats
-      Domain.Types.DriverWallet
       Domain.Types.EntityInfo
       Domain.Types.Estimate
       Domain.Types.Exophone
@@ -1184,7 +1182,6 @@ library
       Storage.Beam.DriverRidePayoutBankAccount
       Storage.Beam.DriverSSN
       Storage.Beam.DriverStats
-      Storage.Beam.DriverWallet
       Storage.Beam.EntityInfo
       Storage.Beam.Estimate
       Storage.Beam.Exophone
@@ -1354,7 +1351,6 @@ library
       Storage.Queries.DriverRidePayoutBankAccount
       Storage.Queries.DriverSSN
       Storage.Queries.DriverStats
-      Storage.Queries.DriverWallet
       Storage.Queries.EntityInfo
       Storage.Queries.Estimate
       Storage.Queries.Exophone

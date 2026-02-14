@@ -113,37 +113,37 @@ createInvoice input entryIds = do
     case mbToAccount of
       Just toAccount
         | toAccount.counterpartyType == Just GOVERNMENT_INDIRECT -> do
-            taxTxnId <- generateGUID
-            let gstAmount = entry.amount
-                halfGst = gstAmount / 2.0
-                taxableValue = subtotal - gstAmount
-                gstRate = if taxableValue > 0 then realToFrac (gstAmount / taxableValue) * 100.0 else 0.0
-                txnType = invoiceTypeToTransactionType input.invoiceType
-            let taxTxn =
-                  IndirectTaxTransaction
-                    { id = Id taxTxnId,
-                      transactionDate = now,
-                      transactionType = txnType,
-                      referenceId = entry.referenceId,
-                      taxableValue = taxableValue,
-                      gstRate = gstRate,
-                      cgstAmount = halfGst,
-                      sgstAmount = halfGst,
-                      igstAmount = 0,
-                      totalGstAmount = gstAmount,
-                      gstCreditType = Output,
-                      counterpartyId = input.issuedToId,
-                      gstinOfParty = Nothing,
-                      saleType = B2C,
-                      invoiceNumber = Just invoiceNum,
-                      creditOrDebitNoteNumber = Nothing,
-                      sacCode = Just (sacCodeForTransactionType txnType),
-                      merchantId = input.merchantId,
-                      merchantOperatingCityId = input.merchantOperatingCityId,
-                      createdAt = now,
-                      updatedAt = now
-                    }
-            QIndirectTax.create taxTxn
+          taxTxnId <- generateGUID
+          let gstAmount = entry.amount
+              halfGst = gstAmount / 2.0
+              taxableValue = subtotal - gstAmount
+              gstRate = if taxableValue > 0 then realToFrac (gstAmount / taxableValue) * 100.0 else 0.0
+              txnType = invoiceTypeToTransactionType input.invoiceType
+          let taxTxn =
+                IndirectTaxTransaction
+                  { id = Id taxTxnId,
+                    transactionDate = now,
+                    transactionType = txnType,
+                    referenceId = entry.referenceId,
+                    taxableValue = taxableValue,
+                    gstRate = gstRate,
+                    cgstAmount = halfGst,
+                    sgstAmount = halfGst,
+                    igstAmount = 0,
+                    totalGstAmount = gstAmount,
+                    gstCreditType = Output,
+                    counterpartyId = input.issuedToId,
+                    gstinOfParty = Nothing,
+                    saleType = B2C,
+                    invoiceNumber = Just invoiceNum,
+                    creditOrDebitNoteNumber = Nothing,
+                    sacCode = Just (sacCodeForTransactionType txnType),
+                    merchantId = input.merchantId,
+                    merchantOperatingCityId = input.merchantOperatingCityId,
+                    createdAt = now,
+                    updatedAt = now
+                  }
+          QIndirectTax.create taxTxn
       _ -> pure ()
 
   pure $ Right invoice
