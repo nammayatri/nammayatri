@@ -52,6 +52,7 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Finance.Core.Types (TimeRange (..))
 import Lib.Finance.Domain.Types.Account (Account)
+import qualified Lib.Finance.Domain.Types.Account as Account
 import Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Error.Types
 import Lib.Finance.Ledger.Interface
@@ -123,8 +124,15 @@ createEntryWithBalanceUpdate input = do
       let amount = input.amount
           fromStartBal = fromAccount.balance
           toStartBal = toAccount.balance
-          fromEndBal = fromStartBal - amount
-          toEndBal = toStartBal + amount
+          isAssetAccount acc = acc.accountType == Account.Asset
+          fromEndBal =
+            if isAssetAccount fromAccount
+              then fromStartBal + amount
+              else fromStartBal - amount
+          toEndBal =
+            if isAssetAccount toAccount
+              then toStartBal - amount
+              else toStartBal + amount
       let entry =
             LedgerEntry
               { id = Id entryId,

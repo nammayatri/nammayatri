@@ -35,11 +35,13 @@ library
       Lib.Finance.Core.Types
       Lib.Finance.Error.Types
       Lib.Finance.Invoice.Interface
+      Lib.Finance.Invoice.InvoiceNumber
       Lib.Finance.Invoice.Service
       Lib.Finance.Ledger.Interface
       Lib.Finance.Ledger.Service
       Lib.Finance.StateMachine.Interface
       Lib.Finance.StateMachine.Service
+      Lib.Finance.Storage.Queries.InvoiceExtra
       Lib.Finance.Tax.Interface
       Lib.Finance.Tax.Types
       Lib.Finance.Domain.Types.Account
@@ -66,6 +68,7 @@ library
       Lib.Finance.Storage.Queries.Invoice
       Lib.Finance.Storage.Queries.InvoiceLedgerLink
       Lib.Finance.Storage.Queries.LedgerEntry
+      Lib.Finance.Storage.Queries.OrphanInstances.Invoice
       Lib.Finance.Storage.Queries.StateTransition
   other-modules:
       Paths_finance_kernel

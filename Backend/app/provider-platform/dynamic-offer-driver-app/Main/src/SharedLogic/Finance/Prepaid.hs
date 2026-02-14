@@ -33,8 +33,13 @@ data InvoiceCreationParams = InvoiceCreationParams
   { paymentOrderId :: Text,
     issuedToType :: Text,
     issuedToName :: Maybe Text,
+    issuedToAddress :: Maybe Text,
     issuedByType :: Text,
-    issuedById :: Text
+    issuedById :: Text,
+    issuedByName :: Maybe Text,
+    issuedByAddress :: Maybe Text,
+    gstinOfParty :: Maybe Text,
+    merchantShortId :: Text
   }
   deriving (Show)
 
@@ -412,9 +417,12 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                     issuedToType = invoiceParams.issuedToType,
                     issuedToId = ownerId,
                     issuedToName = invoiceParams.issuedToName,
+                    issuedToAddress = invoiceParams.issuedToAddress,
                     issuedByType = invoiceParams.issuedByType,
                     issuedById = invoiceParams.issuedById,
-                    issuedByName = Nothing,
+                    issuedByName = invoiceParams.issuedByName,
+                    issuedByAddress = invoiceParams.issuedByAddress,
+                    gstinOfParty = invoiceParams.gstinOfParty,
                     lineItems =
                       let gstAmount' = max 0 gstAmount
                           netAmount = max 0 (paidAmount - gstAmount')
@@ -443,7 +451,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                     currency = currency,
                     dueAt = Nothing,
                     merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId
+                    merchantOperatingCityId = merchantOperatingCityId,
+                    merchantShortId = invoiceParams.merchantShortId
                   }
           invoiceResult <- createInvoice invoiceInput entryIds
           case invoiceResult of

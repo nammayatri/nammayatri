@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Finance.Storage.Queries.Invoice where
+module Lib.Finance.Storage.Queries.Invoice (module Lib.Finance.Storage.Queries.Invoice, module ReExport) where
 
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -14,6 +14,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Lib.Finance.Domain.Types.Invoice
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.Invoice as Beam
+import Lib.Finance.Storage.Queries.InvoiceExtra as ReExport
 import qualified Sequelize as Se
 
 create :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
@@ -46,9 +47,11 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.invoiceNumber invoiceNumber,
       Se.Set Beam.invoiceType invoiceType,
       Se.Set Beam.issuedAt issuedAt,
+      Se.Set Beam.issuedByAddress issuedByAddress,
       Se.Set Beam.issuedById issuedById,
       Se.Set Beam.issuedByName issuedByName,
       Se.Set Beam.issuedByType issuedByType,
+      Se.Set Beam.issuedToAddress issuedToAddress,
       Se.Set Beam.issuedToId issuedToId,
       Se.Set Beam.issuedToName issuedToName,
       Se.Set Beam.issuedToType issuedToType,
@@ -63,59 +66,3 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.Invoice Lib.Finance.Domain.Types.Invoice.Invoice where
-  fromTType' (Beam.InvoiceT {..}) = do
-    pure $
-      Just
-        Lib.Finance.Domain.Types.Invoice.Invoice
-          { createdAt = createdAt,
-            currency = currency,
-            dueAt = dueAt,
-            id = Kernel.Types.Id.Id id,
-            invoiceNumber = invoiceNumber,
-            invoiceType = invoiceType,
-            issuedAt = issuedAt,
-            issuedById = issuedById,
-            issuedByName = issuedByName,
-            issuedByType = issuedByType,
-            issuedToId = issuedToId,
-            issuedToName = issuedToName,
-            issuedToType = issuedToType,
-            lineItems = lineItems,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId,
-            paymentOrderId = paymentOrderId,
-            status = status,
-            subtotal = subtotal,
-            taxBreakdown = taxBreakdown,
-            totalAmount = totalAmount,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.Invoice Lib.Finance.Domain.Types.Invoice.Invoice where
-  toTType' (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
-    Beam.InvoiceT
-      { Beam.createdAt = createdAt,
-        Beam.currency = currency,
-        Beam.dueAt = dueAt,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.invoiceNumber = invoiceNumber,
-        Beam.invoiceType = invoiceType,
-        Beam.issuedAt = issuedAt,
-        Beam.issuedById = issuedById,
-        Beam.issuedByName = issuedByName,
-        Beam.issuedByType = issuedByType,
-        Beam.issuedToId = issuedToId,
-        Beam.issuedToName = issuedToName,
-        Beam.issuedToType = issuedToType,
-        Beam.lineItems = lineItems,
-        Beam.merchantId = merchantId,
-        Beam.merchantOperatingCityId = merchantOperatingCityId,
-        Beam.paymentOrderId = paymentOrderId,
-        Beam.status = status,
-        Beam.subtotal = subtotal,
-        Beam.taxBreakdown = taxBreakdown,
-        Beam.totalAmount = totalAmount,
-        Beam.updatedAt = updatedAt
-      }

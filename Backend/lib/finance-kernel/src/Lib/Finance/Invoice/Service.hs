@@ -22,14 +22,15 @@ module Lib.Finance.Invoice.Service
 
     -- * Input types (re-export from Interface)
     module Lib.Finance.Invoice.Interface,
+
+    -- * Invoice number generation (re-export from InvoiceNumber)
+    module Lib.Finance.Invoice.InvoiceNumber,
   )
 where
 
 import qualified Data.Aeson as Aeson
-import Data.Text (pack)
-import qualified Data.Text
-import Data.Time (defaultTimeLocale, formatTime)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
@@ -39,6 +40,7 @@ import Lib.Finance.Domain.Types.InvoiceLedgerLink
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntry)
 import Lib.Finance.Error.Types
 import Lib.Finance.Invoice.Interface
+import Lib.Finance.Invoice.InvoiceNumber
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Account as QAccount
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
@@ -50,14 +52,15 @@ import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
 --   If any linked entry targets a GOVERNMENT_INDIRECT account (GST),
 --   an IndirectTaxTransaction record is also created.
 createInvoice ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, Redis.HedisFlow m r) =>
   InvoiceInput ->
   [Id LedgerEntry] -> -- Ledger entries to link
   m (Either FinanceError Invoice)
 createInvoice input entryIds = do
   now <- getCurrentTime
   invoiceId <- generateGUID
-  invoiceNum <- generateInvoiceNumber now
+  let dbFallback = fmap (.invoiceNumber) <$> QInvoice.findLatestByCreatedAt now
+  invoiceNum <- generateInvoiceNumber input.merchantShortId purposeSubscription typePayment now dbFallback
 
   -- Calculate totals from line items
   let lineItemsJson = Aeson.toJSON input.lineItems
@@ -72,9 +75,11 @@ createInvoice input entryIds = do
             issuedToType = input.issuedToType,
             issuedToId = input.issuedToId,
             issuedToName = input.issuedToName,
+            issuedToAddress = input.issuedToAddress,
             issuedByType = input.issuedByType,
             issuedById = input.issuedById,
             issuedByName = input.issuedByName,
+            issuedByAddress = input.issuedByAddress,
             lineItems = lineItemsJson,
             subtotal = subtotal,
             taxBreakdown = Nothing,
@@ -133,8 +138,8 @@ createInvoice input entryIds = do
                     totalGstAmount = gstAmount,
                     gstCreditType = Output,
                     counterpartyId = input.issuedToId,
-                    gstinOfParty = Nothing,
-                    saleType = B2C,
+                    gstinOfParty = input.gstinOfParty,
+                    saleType = if isJust input.gstinOfParty then B2B else B2C,
                     invoiceNumber = Just invoiceNum,
                     creditOrDebitNoteNumber = Nothing,
                     sacCode = Just (sacCodeForTransactionType txnType),
@@ -198,13 +203,6 @@ findByIssuedTo ::
   Text -> -- Issued to ID
   m [Invoice]
 findByIssuedTo = QInvoice.findByIssuedTo
-
--- | Generate invoice number (format: INV-YYYYMMDD-XXXXXX)
-generateInvoiceNumber :: (MonadFlow m) => UTCTime -> m Text
-generateInvoiceNumber now = do
-  suffix <- generateGUID
-  let dateStr = formatTime defaultTimeLocale "%Y%m%d" now
-  pure $ "INV-" <> pack dateStr <> "-" <> Data.Text.take 6 suffix
 
 -- | Map invoiceType text to TransactionType
 invoiceTypeToTransactionType :: Text -> TransactionType

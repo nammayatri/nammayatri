@@ -226,6 +226,8 @@ import Kernel.Utils.Version
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import qualified Lib.Finance.Account.Service as FAccount
+import qualified Lib.Finance.Domain.Types.Account as FAccountTypes
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -434,7 +436,8 @@ data DriverInformationRes = DriverInformationRes
     profilePhotoUploadedAt :: Maybe UTCTime,
     activeFleet :: Maybe FleetInfo,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
-    vehicleImageUploadedAt :: Maybe UTCTime
+    vehicleImageUploadedAt :: Maybe UTCTime,
+    subscriptionCreditBalance :: Maybe HighPrecMoney
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -516,7 +519,8 @@ data DriverEntityRes = DriverEntityRes
     isHighAccuracyLocationEnabled :: Maybe Bool,
     rideRequestVolumeEnabled :: Maybe Bool,
     profilePhotoUploadedAt :: Maybe UTCTime,
-    vehicleImageUploadedAt :: Maybe UTCTime
+    vehicleImageUploadedAt :: Maybe UTCTime,
+    subscriptionCreditBalance :: Maybe HighPrecMoney
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -1145,6 +1149,9 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
                   else (False, Nothing, Nothing)
               _ -> (False, Nothing, Nothing)
           _ -> (False, Nothing, Nothing)
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
+  mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just person.id.getId) FAccountTypes.RideCredit merchantOperatingCity.currency
+  let subsCreditBalance = (.balance) <$> mbRideCreditAccount
   return $
     DriverEntityRes
       { id = person.id,
@@ -1207,6 +1214,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         isTTSEnabled = driverInfo.isTTSEnabled,
         isHighAccuracyLocationEnabled = driverInfo.isHighAccuracyLocationEnabled,
         rideRequestVolumeEnabled = driverInfo.rideRequestVolumeEnabled,
+        subscriptionCreditBalance = subsCreditBalance,
         ..
       }
   where
@@ -1482,6 +1490,8 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           if transporterConfig.dynamicReferralCodeEnabled
             then DUR.checkAndUpdateDynamicReferralCode merchantOperatingCity.merchantId merchantOpCityId transporterConfig onRide drc
             else pure drc
+  mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just id.getId) FAccountTypes.RideCredit merchantOperatingCity.currency
+  let subsCreditBalance = (.balance) <$> mbRideCreditAccount
   CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast id))) >>= \cfg ->
     return $
       DriverInformationRes
@@ -1515,6 +1525,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           fleetRequest = fleetRequest,
           fleetOwnerId = (.fleetOwnerId) <$> mbActiveFda,
           onboardingAs = driverInfo.onboardingAs,
+          subscriptionCreditBalance = subsCreditBalance,
           ..
         }
 

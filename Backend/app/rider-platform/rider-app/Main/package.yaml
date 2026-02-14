@@ -182,6 +182,7 @@ library:
     - sessionizer-metrics
     - beckn-services
     - shared-services
+    - finance-kernel
     - utils
     - external
 

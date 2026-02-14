@@ -1458,6 +1458,7 @@ library
     , external
     , extra
     , filepath
+    , finance-kernel
     , geohash ==1.0.1
     , hashable
     , haskell-cac

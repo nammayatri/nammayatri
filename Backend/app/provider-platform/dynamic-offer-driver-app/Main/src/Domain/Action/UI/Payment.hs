@@ -92,6 +92,7 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Webhook ()
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
@@ -99,6 +100,7 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDP
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Notification as QNTF
@@ -461,7 +463,8 @@ processSubscriptionPurchasePayment ::
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    EncFlow m r
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -481,13 +484,33 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
           isFleetOwner = DCommon.checkFleetOwnerRole person.role
           counterpartyType = if isFleetOwner then counterpartyFleetOwner else counterpartyDriver
           expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
-          invoiceParams =
+      -- Fetch merchant for issuedByName and issuedByAddress
+      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      -- Fetch operating city for issuedToAddress
+      merchantOperatingCity <- CQMOC.findById subscriptionPurchase.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist subscriptionPurchase.merchantOperatingCityId.getId)
+      let issuedToAddress = Just $ show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
+          issuedByAddress = Just $ show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country
+      -- Fetch fleet owner GSTIN if applicable
+      gstinOfParty <-
+        if isFleetOwner
+          then do
+            mbFleetInfo <- QFOI.findByPrimaryKey person.id
+            case mbFleetInfo of
+              Just fleetInfo -> mapM decrypt fleetInfo.gstNumber
+              Nothing -> pure Nothing
+          else pure Nothing
+      let invoiceParams =
             InvoiceCreationParams
               { paymentOrderId = subscriptionPurchase.paymentOrderId.getId,
                 issuedToType = if isFleetOwner then "FLEET_OWNER" else "DRIVER",
                 issuedToName = Just person.firstName,
+                issuedToAddress = issuedToAddress,
                 issuedByType = "SELLER",
-                issuedById = merchantId.getId
+                issuedById = merchantId.getId,
+                issuedByName = Just merchant.name,
+                issuedByAddress = issuedByAddress,
+                gstinOfParty = gstinOfParty,
+                merchantShortId = getShortId merchant.shortId
               }
       (_newBalance, mbInvoiceId) <-
         creditPrepaidBalance

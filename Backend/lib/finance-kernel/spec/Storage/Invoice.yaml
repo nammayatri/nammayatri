@@ -25,9 +25,11 @@ Invoice:
     issuedToType: Text
     issuedToId: Text
     issuedToName: Maybe Text
+    issuedToAddress: Maybe Text
     issuedByType: Text
     issuedById: Text
     issuedByName: Maybe Text
+    issuedByAddress: Maybe Text
     lineItems: Value
     subtotal: HighPrecMoney
     taxBreakdown: Maybe Value
@@ -64,6 +66,9 @@ Invoice:
       kvFunction: updateWithKV
       params: [status]
       where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

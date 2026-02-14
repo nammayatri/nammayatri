@@ -31,13 +31,17 @@ data InvoiceInput = InvoiceInput
     issuedToType :: Text,
     issuedToId :: Text,
     issuedToName :: Maybe Text,
+    issuedToAddress :: Maybe Text,
     issuedByType :: Text,
     issuedById :: Text,
     issuedByName :: Maybe Text,
+    issuedByAddress :: Maybe Text,
+    gstinOfParty :: Maybe Text,
     lineItems :: [InvoiceLineItem],
     currency :: Currency,
     dueAt :: Maybe UTCTime,
     merchantId :: Text,
-    merchantOperatingCityId :: Text
+    merchantOperatingCityId :: Text,
+    merchantShortId :: Text
   }
   deriving (Eq, Show, Generic)

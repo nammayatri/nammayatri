@@ -28,3 +28,9 @@ ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN payment_order_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN issued_to_address text ;
+ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN issued_by_address text ;

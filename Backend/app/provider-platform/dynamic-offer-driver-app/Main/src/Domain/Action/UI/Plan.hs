@@ -264,23 +264,21 @@ subscriptionPurchaseList ::
   Flow SubscriptionPurchaseListRes
 subscriptionPurchaseList (driverId, _merchantId, merchantOperatingCityId) mbLimit mbOffset mbStatus = do
   person <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
   let limit = Just $ fromMaybe 10 mbLimit
       offset = Just $ fromMaybe 0 mbOffset
   purchases <-
     B.runInReplica $
       QSPE.findAllByOwnerAndServiceNameWithPagination ownerId ownerType PREPAID_SUBSCRIPTION mbStatus limit offset
-  currentPlanResList <- mapM (buildCurrentPlanResFromPurchase driverId merchantOperatingCityId driverInfo) purchases
+  currentPlanResList <- mapM (buildCurrentPlanResFromPurchase driverId merchantOperatingCityId) purchases
   return $ SubscriptionPurchaseListRes {list = currentPlanResList}
 
 buildCurrentPlanResFromPurchase ::
   Id SP.Person ->
   Id DMOC.MerchantOperatingCity ->
-  DI.DriverInformation ->
   DSP.SubscriptionPurchase ->
   Flow CurrentPlanRes
-buildCurrentPlanResFromPurchase driverId merchantOperatingCityId driverInfo purchase = do
+buildCurrentPlanResFromPurchase driverId merchantOperatingCityId purchase = do
   let syntheticDriverPlan = mkSyntheticDriverPlanFromPurchase purchase
   mPlan <- QPD.findByIdAndPaymentModeWithServiceName purchase.planId MANUAL PREPAID_SUBSCRIPTION
   subscriptionConfig <-
@@ -306,7 +304,7 @@ buildCurrentPlanResFromPurchase driverId merchantOperatingCityId driverInfo purc
       { currentPlanDetails = currentPlanEntity,
         mandateDetails = Nothing,
         autoPayStatus = Nothing,
-        subscribed = driverInfo.subscribed,
+        subscribed = True,
         orderId,
         lastPaymentType,
         latestManualPaymentDate = Just purchase.updatedAt,
@@ -316,7 +314,7 @@ buildCurrentPlanResFromPurchase driverId merchantOperatingCityId driverInfo purc
         subscriptionPurchaseStatus = Just purchase.status,
         isLocalized = Just True,
         isEligibleForCharge = Just syntheticDriverPlan.enableServiceUsageCharge,
-        payoutVpa = driverInfo.payoutVpa,
+        payoutVpa = Nothing,
         askForPlanSwitchByCity = False,
         askForPlanSwitchByVehicle = False,
         safetyPlusData = Nothing
@@ -542,8 +540,8 @@ currentPlan ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Flow CurrentPlanRes
 currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
-  driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  driverStats <- QDS.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  mbDriverInfo <- DI.findById (cast driverId)
+  mbDriverStats <- QDS.findById (cast driverId)
   person <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
   subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
@@ -589,13 +587,16 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   safetyPlusData <- do
     if (SubsConfig.SAFETY_PLUS `elem` subscriptionConfig.dataEntityToSend)
       then do
-        return
-          ( Just $
-              SafetyPlusData
-                { safetyPlusTrips = driverStats.safetyPlusRideCount,
-                  safetyPlusEarnings = PriceAPIEntity driverStats.safetyPlusEarnings currency
-                }
-          )
+        case mbDriverStats of
+          Just driverStats ->
+            return
+              ( Just $
+                  SafetyPlusData
+                    { safetyPlusTrips = driverStats.safetyPlusRideCount,
+                      safetyPlusEarnings = PriceAPIEntity driverStats.safetyPlusEarnings currency
+                    }
+              )
+          Nothing -> return Nothing
       else return Nothing
   let validity = Nothing
   let subscriptionPurchaseStatus = Nothing
@@ -604,7 +605,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
       { currentPlanDetails = currentPlanEntity,
         mandateDetails = mandateDetailsEntity,
         autoPayStatus = autoPayStatus,
-        subscribed = driverInfo.subscribed,
+        subscribed = maybe False (.subscribed) mbDriverInfo,
         orderId,
         lastPaymentType,
         latestManualPaymentDate = latestManualPaymentDate,
@@ -612,7 +613,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
         planRegistrationDate = mDriverPlan <&> (.createdAt),
         isLocalized = Just True,
         isEligibleForCharge,
-        payoutVpa = driverInfo.payoutVpa,
+        payoutVpa = mbDriverInfo >>= (.payoutVpa),
         safetyPlusData = safetyPlusData,
         ..
       }
