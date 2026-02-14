@@ -1,0 +1,45 @@
+imports:
+  Driver: Dashboard.Common
+  APISuccess: Kernel.Types.APISuccess
+  PayoutOrderStatusResp: Kernel.External.Payout.Interface.Types
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
+  Text: Data.Text
+
+importPackageOverrides:
+  Lib.Payment.Domain.Types.PaymentOrder: payment
+
+module: ReferralPayout
+
+
+apis:
+  - POST:
+      endpoint: /dashboardPayout/delete/vpa
+      auth: ApiAuthV2
+      query:
+        - driverId: Maybe (Id Driver)
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /dashboardPayout/registration
+      auth: ApiAuthV2
+      query:
+        - driverId: Maybe (Id Driver)
+      response:
+        type: ReferralPayoutRegistrationRes
+
+  - GET:
+      endpoint: /dashboardPayout/order/status
+      auth: ApiAuthV2
+      query:
+        - driverId: Maybe (Id Driver)
+      mandatoryQuery:
+        orderId: Text
+      response:
+        type: PayoutOrderStatusResp
+
+types:
+  ReferralPayoutRegistrationRes:
+    - orderId: Id PaymentOrder
+    - orderResp: CreateOrderResp

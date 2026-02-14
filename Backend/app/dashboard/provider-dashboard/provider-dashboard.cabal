@@ -63,6 +63,7 @@ library
       Domain.Action.ProviderPlatform.Management.NammaTag
       Domain.Action.ProviderPlatform.Management.Payout
       Domain.Action.ProviderPlatform.Management.PlanManagement
+      Domain.Action.ProviderPlatform.Management.ReferralPayout
       Domain.Action.ProviderPlatform.Management.Revenue
       Domain.Action.ProviderPlatform.Management.Ride
       Domain.Action.ProviderPlatform.Management.System
@@ -115,6 +116,7 @@ library
       API.Action.ProviderPlatform.Management.NammaTag
       API.Action.ProviderPlatform.Management.Payout
       API.Action.ProviderPlatform.Management.PlanManagement
+      API.Action.ProviderPlatform.Management.ReferralPayout
       API.Action.ProviderPlatform.Management.Revenue
       API.Action.ProviderPlatform.Management.Ride
       API.Action.ProviderPlatform.Management.System
