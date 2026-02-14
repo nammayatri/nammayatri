@@ -26,6 +26,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.PlanExtra as CQPlan
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.PlanExtra as QPlanExtra
 
@@ -73,6 +74,7 @@ postPlanManagementCreate merchantShortId opCity req = do
             isFleetOwnerPlan = req.isFleetOwnerPlan
           }
   QPlan.create plan
+  CQPlan.clearPlanCacheByCity merchantOpCityId plan.serviceName
   pure $ Common.CreatePlanResp {planId = planId.getId}
 
 postPlanManagementDeletePlan ::
@@ -82,8 +84,9 @@ postPlanManagementDeletePlan ::
   Flow APISuccess
 postPlanManagementDeletePlan _merchantShortId _opCity planIdText = do
   let planId = Id planIdText
-  _ <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
+  plan <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
   QPlanExtra.markAsDeprecated planId
+  CQPlan.clearPlanCacheByCity plan.merchantOpCityId plan.serviceName
   pure Success
 
 postPlanManagementActivatePlan ::
@@ -93,8 +96,9 @@ postPlanManagementActivatePlan ::
   Flow APISuccess
 postPlanManagementActivatePlan _merchantShortId _opCity planIdText = do
   let planId = Id planIdText
-  _ <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
+  plan <- QPlan.findByPrimaryKey planId >>= fromMaybeM (InvalidRequest "Plan not found")
   QPlanExtra.markAsActive planId
+  CQPlan.clearPlanCacheByCity plan.merchantOpCityId plan.serviceName
   pure Success
 
 getPlanManagementListPlans ::

@@ -109,6 +109,7 @@ data PlanEntity = PlanEntity
     currentDuesWithCurrency :: PriceAPIEntity,
     autopayDuesWithCurrency :: PriceAPIEntity,
     dueBoothChargesWithCurrency :: PriceAPIEntity,
+    validInDays :: Int,
     dues :: [DriverDuesEntity],
     coinEntity :: Maybe CoinEntity,
     bankErrors :: [ErrorEntity],
@@ -149,6 +150,8 @@ data CurrentPlanRes = CurrentPlanRes
     planRegistrationDate :: Maybe UTCTime,
     latestAutopayPaymentDate :: Maybe UTCTime,
     latestManualPaymentDate :: Maybe UTCTime,
+    validity :: Maybe UTCTime,
+    subscriptionPurchaseStatus :: Maybe DSP.SubscriptionPurchaseStatus,
     isEligibleForCharge :: Maybe Bool,
     isLocalized :: Maybe Bool,
     payoutVpa :: Maybe Text,
@@ -309,6 +312,8 @@ buildCurrentPlanResFromPurchase driverId merchantOperatingCityId driverInfo purc
         latestManualPaymentDate = Just purchase.updatedAt,
         latestAutopayPaymentDate = Nothing,
         planRegistrationDate = Just purchase.createdAt,
+        validity = purchase.expiryDate,
+        subscriptionPurchaseStatus = Just purchase.status,
         isLocalized = Just True,
         isEligibleForCharge = Just syntheticDriverPlan.enableServiceUsageCharge,
         payoutVpa = driverInfo.payoutVpa,
@@ -592,6 +597,8 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
                 }
           )
       else return Nothing
+  let validity = Nothing
+  let subscriptionPurchaseStatus = Nothing
   return $
     CurrentPlanRes
       { currentPlanDetails = currentPlanEntity,
@@ -1066,6 +1073,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             planFee = plan.registrationAmount,
             purchaseTimestamp = now,
             paymentOrderId = paymentOrderId,
+            financeInvoiceId = Nothing,
             status = DSP.PENDING,
             expiryDate = expiryDate,
             vehicleCategory = Just plan.vehicleCategory,
@@ -1186,6 +1194,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
   let autopayDues = sum $ map (.driverFeeAmount) $ filter (\due -> due.feeType == DF.RECURRING_EXECUTION_INVOICE) dues
   let dueBoothCharges = roundToHalf currency $ sum $ map (.specialZoneAmount) (nubBy (\x y -> (x.startTime == y.startTime) && (x.endTime == y.endTime)) dueDriverFees)
   cancellationPenalties <- getCancellationPenalties (cast driverId) serviceNameParam
+  let validInDays = fromMaybe 0 validityInDays
   return
     PlanEntity
       { id = plan.id.getId,
@@ -1245,6 +1254,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
           waiveOffEnabledOn = fromMaybe now $ driverPlan >>= (.waiveOffEnabledOn)
           waiveOffValidTill = fromMaybe now $ driverPlan >>= (.waiveOffValidTill)
           isWaiveoffValid = now >= waiveOffEnabledOn && now < waiveOffValidTill
+          oRegistrationAmount = fromMaybe plan.registrationAmount plan.originalRegistrationAmount
           (discountAmount, finalOrderAmount) =
             if isWaiveoffValid
               then do
@@ -1255,6 +1265,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
               else (discountAmountOffers, finalOrderAmountOffers)
       [ PlanFareBreakup {component = "INITIAL_BASE_FEE", amount = baseAmount, amountWithCurrency = PriceAPIEntity baseAmount currency},
         PlanFareBreakup {component = "REGISTRATION_FEE", amount = plan.registrationAmount, amountWithCurrency = PriceAPIEntity plan.registrationAmount currency},
+        PlanFareBreakup {component = "ORIGINAL_REGISTRATION_FEE", amount = oRegistrationAmount, amountWithCurrency = PriceAPIEntity oRegistrationAmount currency},
         PlanFareBreakup {component = "MAX_FEE_LIMIT", amount = plan.maxAmount, amountWithCurrency = PriceAPIEntity plan.maxAmount currency},
         PlanFareBreakup {component = "DISCOUNTED_FEE", amount = discountAmount, amountWithCurrency = PriceAPIEntity discountAmount currency},
         PlanFareBreakup {component = "FINAL_FEE", amount = finalOrderAmount, amountWithCurrency = PriceAPIEntity finalOrderAmount currency}

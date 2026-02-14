@@ -16,7 +16,7 @@ Account:
       derive: "ToParamSchema"
 
     CounterpartyType:
-      enum: "BUYER,SELLER,DRIVER,FLEET_OWNER,GOVERNMENT_DIRECT,GOVERNMENT_INDIRECT,GOVERNMENT"
+      enum: "BUYER,SELLER,DRIVER,FLEET_OWNER,GOVERNMENT_DIRECT,GOVERNMENT_INDIRECT"
       derive: "ToParamSchema"
 
     AccountStatus:

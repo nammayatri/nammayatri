@@ -1,2 +1,3 @@
 ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN domain_entity_id text;
 ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN domain_transaction_id text;
+ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN payment_fulfillment_status text;

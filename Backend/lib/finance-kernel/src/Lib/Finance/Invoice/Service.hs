@@ -32,17 +32,23 @@ import Data.Time (defaultTimeLocale, formatTime)
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
+import Lib.Finance.Domain.Types.IndirectTaxTransaction
 import Lib.Finance.Domain.Types.Invoice
 import Lib.Finance.Domain.Types.InvoiceLedgerLink
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntry)
 import Lib.Finance.Error.Types
 import Lib.Finance.Invoice.Interface
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
+import qualified Lib.Finance.Storage.Queries.Account as QAccount
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QLink
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
 
--- | Create an invoice and link to ledger entries
+-- | Create an invoice and link to ledger entries.
+--   If any linked entry targets a GOVERNMENT_INDIRECT account (GST),
+--   an IndirectTaxTransaction record is also created.
 createInvoice ::
   (BeamFlow.BeamFlow m r) =>
   InvoiceInput ->
@@ -56,12 +62,13 @@ createInvoice input entryIds = do
   -- Calculate totals from line items
   let lineItemsJson = Aeson.toJSON input.lineItems
       subtotal = sum $ map (.lineTotal) input.lineItems
-      totalAmount = subtotal -- Could add tax calculation here
+      totalAmount = subtotal
   let invoice =
         Invoice
           { id = Id invoiceId,
             invoiceNumber = invoiceNum,
             invoiceType = input.invoiceType,
+            paymentOrderId = input.paymentOrderId,
             issuedToType = input.issuedToType,
             issuedToId = input.issuedToId,
             issuedToName = input.issuedToName,
@@ -98,6 +105,46 @@ createInvoice input entryIds = do
               updatedAt = now
             }
     QLink.create link
+
+  -- Create IndirectTaxTransaction for GST entries (toAccount is GOVERNMENT_INDIRECT)
+  entries <- catMaybes <$> mapM QLedger.findById entryIds
+  forM_ entries $ \entry -> do
+    mbToAccount <- QAccount.findById entry.toAccountId
+    case mbToAccount of
+      Just toAccount
+        | toAccount.counterpartyType == Just GOVERNMENT_INDIRECT -> do
+            taxTxnId <- generateGUID
+            let gstAmount = entry.amount
+                halfGst = gstAmount / 2.0
+                taxableValue = subtotal - gstAmount
+                gstRate = if taxableValue > 0 then realToFrac (gstAmount / taxableValue) * 100.0 else 0.0
+                txnType = invoiceTypeToTransactionType input.invoiceType
+            let taxTxn =
+                  IndirectTaxTransaction
+                    { id = Id taxTxnId,
+                      transactionDate = now,
+                      transactionType = txnType,
+                      referenceId = entry.referenceId,
+                      taxableValue = taxableValue,
+                      gstRate = gstRate,
+                      cgstAmount = halfGst,
+                      sgstAmount = halfGst,
+                      igstAmount = 0,
+                      totalGstAmount = gstAmount,
+                      gstCreditType = Output,
+                      counterpartyId = input.issuedToId,
+                      gstinOfParty = Nothing,
+                      saleType = B2C,
+                      invoiceNumber = Just invoiceNum,
+                      creditOrDebitNoteNumber = Nothing,
+                      sacCode = Just (sacCodeForTransactionType txnType),
+                      merchantId = input.merchantId,
+                      merchantOperatingCityId = input.merchantOperatingCityId,
+                      createdAt = now,
+                      updatedAt = now
+                    }
+            QIndirectTax.create taxTxn
+      _ -> pure ()
 
   pure $ Right invoice
 
@@ -158,3 +205,27 @@ generateInvoiceNumber now = do
   suffix <- generateGUID
   let dateStr = formatTime defaultTimeLocale "%Y%m%d" now
   pure $ "INV-" <> pack dateStr <> "-" <> Data.Text.take 6 suffix
+
+-- | Map invoiceType text to TransactionType
+invoiceTypeToTransactionType :: Text -> TransactionType
+invoiceTypeToTransactionType invoiceType = case invoiceType of
+  "SubscriptionPurchase" -> Subscription
+  "Subscription" -> Subscription
+  "RideFare" -> RideFare
+  "Incentive" -> Incentive
+  "Cancellation" -> Cancellation
+  "BuyerCommission" -> BuyerCommission
+  "CreditNote" -> CreditNote
+  "DebitNote" -> DebitNote
+  _ -> Subscription -- default fallback
+
+-- | SAC code mapping per transaction type
+sacCodeForTransactionType :: TransactionType -> Text
+sacCodeForTransactionType = \case
+  Subscription -> "998314"
+  RideFare -> "996412"
+  Incentive -> "998314"
+  Cancellation -> "996412"
+  BuyerCommission -> "998314"
+  CreditNote -> "998314"
+  DebitNote -> "998314"

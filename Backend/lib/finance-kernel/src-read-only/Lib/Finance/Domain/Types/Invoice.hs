@@ -26,6 +26,7 @@ data Invoice = Invoice
     lineItems :: Data.Aeson.Value,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
+    paymentOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Lib.Finance.Domain.Types.Invoice.InvoiceStatus,
     subtotal :: Kernel.Types.Common.HighPrecMoney,
     taxBreakdown :: Kernel.Prelude.Maybe Data.Aeson.Value,

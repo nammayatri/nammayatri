@@ -28,7 +28,7 @@ data AccountStatus = Active | Suspended | Closed deriving (Eq, Ord, Show, Read, 
 
 data AccountType = Asset | Liability | Revenue | Expense | External | RideCredit deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data CounterpartyType = BUYER | SELLER | DRIVER | FLEET_OWNER | GOVERNMENT_DIRECT | GOVERNMENT_INDIRECT | GOVERNMENT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data CounterpartyType = BUYER | SELLER | DRIVER | FLEET_OWNER | GOVERNMENT_DIRECT | GOVERNMENT_INDIRECT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''AccountType))
 

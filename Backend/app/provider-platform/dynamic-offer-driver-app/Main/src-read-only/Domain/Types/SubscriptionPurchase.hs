@@ -15,12 +15,14 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
+import qualified Lib.Finance.Domain.Types.Invoice
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Tools.Beam.UtilsTH
 
 data SubscriptionPurchase = SubscriptionPurchase
   { enableServiceUsageCharge :: Kernel.Prelude.Bool,
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    financeInvoiceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice),
     id :: Kernel.Types.Id.Id Domain.Types.SubscriptionPurchase.SubscriptionPurchase,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

@@ -3831,3 +3831,7 @@ WHERE
     vehicle_category = 'CAR' AND merchant_operating_city_id = (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Minneapolis' and merchant_short_id = 'BRIDGE_CABS_PARTNER') AND document_type = 'BackgroundVerification' ON CONFLICT DO NOTHING;
 
 update atlas_driver_offer_bpp.transporter_config set send_sms_on_enablement = true, requires_driver_onboarding_inspection = true, separate_driver_vehicle_enablement = true, reminder_system_enabled = true where merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'MSIL_PARTNER');
+
+update atlas_driver_offer_bpp.subscription_config set show_manual_plans_in_ui = true;
+
+update atlas_driver_offer_bpp.subscription_config set subscription_enabled_for_vehicle_categories = '{CAR,AUTO_CATEGORY}';

@@ -15,6 +15,7 @@ module SharedLogic.Finance.Prepaid
     voidPrepaidHold,
     creditPrepaidBalance,
     debitPrepaidBalance,
+    InvoiceCreationParams (..),
   )
 where
 
@@ -23,8 +24,19 @@ import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id
 import Lib.Finance
+import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+
+-- | Optional parameters for creating a finance invoice during prepaid balance credit
+data InvoiceCreationParams = InvoiceCreationParams
+  { paymentOrderId :: Text,
+    issuedToType :: Text,
+    issuedToName :: Maybe Text,
+    issuedByType :: Text,
+    issuedById :: Text
+  }
+  deriving (Show)
 
 counterpartyDriver :: CounterpartyType
 counterpartyDriver = DRIVER
@@ -39,10 +51,10 @@ subscriptionCreditReferenceType :: Text
 subscriptionCreditReferenceType = "SubscriptionCredit"
 
 subscriptionRideReferenceType :: Text
-subscriptionRideReferenceType = "SubsctiptionRide"
+subscriptionRideReferenceType = "RideRevenueRecognition"
 
 prepaidRideDebitReferenceType :: Text
-prepaidRideDebitReferenceType = "RideDebit"
+prepaidRideDebitReferenceType = "RideSubscriptionDebit"
 
 getPrepaidAccountByOwner ::
   (BeamFlow m r) =>
@@ -151,7 +163,7 @@ getOrCreateGovernmentLiabilityAccount currency merchantId merchantOperatingCityI
   let input =
         AccountInput
           { accountType = Liability,
-            counterpartyType = Just GOVERNMENT,
+            counterpartyType = Just GOVERNMENT_INDIRECT,
             counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
@@ -309,8 +321,9 @@ creditPrepaidBalance ::
   Text -> -- Merchant operating city ID
   Text -> -- Reference ID
   Maybe Value ->
-  m (Either FinanceError HighPrecMoney)
-creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount currency merchantId merchantOperatingCityId referenceId metadata = do
+  Maybe InvoiceCreationParams -> -- Optional invoice creation params
+  m (Either FinanceError (HighPrecMoney, Maybe (Id FInvoice.Invoice)))
+creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount currency merchantId merchantOperatingCityId referenceId metadata mbInvoiceParams = do
   mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
   mbSellerAsset <- getOrCreateSellerAssetAccount currency merchantId merchantOperatingCityId
   mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
@@ -318,62 +331,127 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
   mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
   case (mbOwnerAccount, mbSellerAsset, mbSellerLiability, mbGovernmentLiability, mbSellerRideCredit) of
     (Right ownerAccount, Right sellerAsset, Right sellerLiability, Right governmentLiability, Right sellerRideCredit) -> do
-      when (paidAmount > 0) $ do
-        let gstAmount' = max 0 gstAmount
-        when (gstAmount' > 0) $ do
-          let gstEntry =
-                LedgerEntryInput
-                  { fromAccountId = sellerAsset.id,
-                    toAccountId = governmentLiability.id,
-                    amount = gstAmount',
+      -- Create GST entry
+      gstEntryId <-
+        if paidAmount > 0 && max 0 gstAmount > 0
+          then do
+            let gstAmount' = max 0 gstAmount
+                gstEntry =
+                  LedgerEntryInput
+                    { fromAccountId = sellerAsset.id,
+                      toAccountId = governmentLiability.id,
+                      amount = gstAmount',
+                      currency = currency,
+                      entryType = LiabilityCreated,
+                      status = SETTLED,
+                      referenceType = subscriptionPurchaseReferenceType,
+                      referenceId = referenceId,
+                      metadata = Nothing,
+                      merchantId = merchantId,
+                      merchantOperatingCityId = merchantOperatingCityId
+                    }
+            result <- createEntryWithBalanceUpdate gstEntry
+            pure $ either (const Nothing) (Just . (.id)) result
+          else pure Nothing
+      -- Create liability entry
+      liabilityEntryId <-
+        if paidAmount > 0
+          then do
+            let gstAmount' = max 0 gstAmount
+                netAmount = max 0 (paidAmount - gstAmount')
+            if netAmount > 0
+              then do
+                let liabilityEntry =
+                      LedgerEntryInput
+                        { fromAccountId = sellerAsset.id,
+                          toAccountId = sellerLiability.id,
+                          amount = netAmount,
+                          currency = currency,
+                          entryType = LiabilityCreated,
+                          status = SETTLED,
+                          referenceType = subscriptionPurchaseReferenceType,
+                          referenceId = referenceId,
+                          metadata = Nothing,
+                          merchantId = merchantId,
+                          merchantOperatingCityId = merchantOperatingCityId
+                        }
+                result <- createEntryWithBalanceUpdate liabilityEntry
+                pure $ either (const Nothing) (Just . (.id)) result
+              else pure Nothing
+          else pure Nothing
+      -- Create credit entry
+      _ <-
+        if creditAmount > 0
+          then do
+            let creditEntry =
+                  LedgerEntryInput
+                    { fromAccountId = sellerRideCredit.id,
+                      toAccountId = ownerAccount.id,
+                      amount = creditAmount,
+                      currency = currency,
+                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
+                      status = SETTLED,
+                      referenceType = subscriptionCreditReferenceType,
+                      referenceId = referenceId,
+                      metadata = metadata,
+                      merchantId = merchantId,
+                      merchantOperatingCityId = merchantOperatingCityId
+                    }
+            result <- createEntryWithBalanceUpdate creditEntry
+            pure $ either (const Nothing) (Just . (.id)) result
+          else pure Nothing
+      -- Collect all entry IDs
+      let entryIds = catMaybes [gstEntryId, liabilityEntryId]
+      -- Create invoice for subscription purchases
+      mbInvoiceId <- case mbInvoiceParams of
+        Just invoiceParams -> do
+          let invoiceInput =
+                InvoiceInput
+                  { invoiceType = "SubscriptionPurchase",
+                    paymentOrderId = Just invoiceParams.paymentOrderId,
+                    issuedToType = invoiceParams.issuedToType,
+                    issuedToId = ownerId,
+                    issuedToName = invoiceParams.issuedToName,
+                    issuedByType = invoiceParams.issuedByType,
+                    issuedById = invoiceParams.issuedById,
+                    issuedByName = Nothing,
+                    lineItems =
+                      let gstAmount' = max 0 gstAmount
+                          netAmount = max 0 (paidAmount - gstAmount')
+                       in catMaybes
+                            [ if netAmount > 0
+                                then
+                                  Just
+                                    InvoiceLineItem
+                                      { description = "Subscription Plan Fee",
+                                        quantity = 1,
+                                        unitPrice = netAmount,
+                                        lineTotal = netAmount
+                                      }
+                                else Nothing,
+                              if gstAmount' > 0
+                                then
+                                  Just
+                                    InvoiceLineItem
+                                      { description = "GST",
+                                        quantity = 1,
+                                        unitPrice = gstAmount',
+                                        lineTotal = gstAmount'
+                                      }
+                                else Nothing
+                            ],
                     currency = currency,
-                    entryType = LiabilityCreated,
-                    status = SETTLED,
-                    referenceType = subscriptionPurchaseReferenceType,
-                    referenceId = referenceId,
-                    metadata = Nothing,
+                    dueAt = Nothing,
                     merchantId = merchantId,
                     merchantOperatingCityId = merchantOperatingCityId
                   }
-          _ <- createEntryWithBalanceUpdate gstEntry
-          pure ()
-        let netAmount = max 0 (paidAmount - gstAmount')
-        when (netAmount > 0) $ do
-          let liabilityEntry =
-                LedgerEntryInput
-                  { fromAccountId = sellerAsset.id,
-                    toAccountId = sellerLiability.id,
-                    amount = netAmount,
-                    currency = currency,
-                    entryType = LiabilityCreated,
-                    status = SETTLED,
-                    referenceType = subscriptionPurchaseReferenceType,
-                    referenceId = referenceId,
-                    metadata = Nothing,
-                    merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId
-                  }
-          _ <- createEntryWithBalanceUpdate liabilityEntry
-          pure ()
-      when (creditAmount > 0) $ do
-        let creditEntry =
-              LedgerEntryInput
-                { fromAccountId = sellerRideCredit.id,
-                  toAccountId = ownerAccount.id,
-                  amount = creditAmount,
-                  currency = currency,
-                  entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
-                  status = SETTLED,
-                  referenceType = subscriptionCreditReferenceType,
-                  referenceId = referenceId,
-                  metadata = metadata,
-                  merchantId = merchantId,
-                  merchantOperatingCityId = merchantOperatingCityId
-                }
-        _ <- createEntryWithBalanceUpdate creditEntry
-        pure ()
+          invoiceResult <- createInvoice invoiceInput entryIds
+          case invoiceResult of
+            Right invoice -> pure (Just invoice.id)
+            Left _err -> pure Nothing
+        Nothing -> pure Nothing
       mbBal <- getBalance ownerAccount.id
-      pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
+      pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") (\bal -> Right (bal, mbInvoiceId)) mbBal
     (Left err, _, _, _, _) -> pure $ Left err
     (_, Left err, _, _, _) -> pure $ Left err
     (_, _, Left err, _, _) -> pure $ Left err

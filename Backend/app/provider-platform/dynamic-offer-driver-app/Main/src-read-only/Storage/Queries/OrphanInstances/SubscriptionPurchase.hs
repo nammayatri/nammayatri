@@ -19,6 +19,7 @@ instance FromTType' Beam.SubscriptionPurchase Domain.Types.SubscriptionPurchase.
         Domain.Types.SubscriptionPurchase.SubscriptionPurchase
           { enableServiceUsageCharge = enableServiceUsageCharge,
             expiryDate = expiryDate,
+            financeInvoiceId = Kernel.Types.Id.Id <$> financeInvoiceId,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -46,6 +47,7 @@ instance ToTType' Beam.SubscriptionPurchase Domain.Types.SubscriptionPurchase.Su
     Beam.SubscriptionPurchaseT
       { Beam.enableServiceUsageCharge = enableServiceUsageCharge,
         Beam.expiryDate = expiryDate,
+        Beam.financeInvoiceId = Kernel.Types.Id.getId <$> financeInvoiceId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
