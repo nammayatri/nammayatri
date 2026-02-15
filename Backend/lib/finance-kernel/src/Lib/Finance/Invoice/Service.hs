@@ -60,7 +60,8 @@ createInvoice input entryIds = do
   now <- getCurrentTime
   invoiceId <- generateGUID
   let dbFallback = fmap (.invoiceNumber) <$> QInvoice.findLatestByCreatedAt now
-  invoiceNum <- generateInvoiceNumber input.merchantShortId purposeSubscription typePayment now dbFallback
+      purposeAbbr = invoiceTypeToPurpose input.invoiceType
+  invoiceNum <- generateInvoiceNumber input.merchantShortId purposeAbbr typePayment now dbFallback
 
   -- Calculate totals from line items
   let lineItemsJson = Aeson.toJSON input.lineItems
@@ -221,3 +222,10 @@ sacCodeForTransactionType = \case
   BuyerCommission -> "998314"
   CreditNote -> "998314"
   DebitNote -> "998314"
+
+-- | Map InvoiceType to purpose abbreviation for invoice number generation
+invoiceTypeToPurpose :: InvoiceType -> Text
+invoiceTypeToPurpose = \case
+  SubscriptionPurchase -> purposeSubscription
+  Ride -> purposeRideFare
+  RideCancellation -> purposeCancellation

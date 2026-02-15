@@ -85,11 +85,11 @@ getWalletTransactions (mbPersonId, _, _) mbFromDate mbToDate mbTransactionType m
     Just account -> do
       let referenceTypes =
             maybe
-              [ walletReferenceRideEarning,
-                walletReferenceRideGstDeduction,
-                walletReferenceTopup,
-                walletReferencePayout
-              ]
+              ( rideReferenceTypes
+                  <> [ walletReferenceTopup,
+                       walletReferencePayout
+                     ]
+              )
               transactionTypeToRefs
               mbTransactionType
       entries <- findByAccountWithFilters account.id (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just referenceTypes)
@@ -106,8 +106,11 @@ getWalletTransactions (mbPersonId, _, _) mbFromDate mbToDate mbTransactionType m
             _ -> return (Nothing, Nothing)
           let (collectionAmount, gstDeduction, merchantPayable, driverPayable) =
                 case entry.referenceType of
-                  ref | ref == walletReferenceRideEarning -> (Nothing, Nothing, Just entry.amount, Nothing)
-                  ref | ref == walletReferenceRideGstDeduction -> (Nothing, Just entry.amount, Nothing, Just entry.amount)
+                  ref | ref == walletReferenceBaseRide -> (Nothing, Nothing, Just entry.amount, Nothing)
+                  ref | ref == walletReferenceTollCharges -> (Nothing, Nothing, Just entry.amount, Nothing)
+                  ref | ref == walletReferenceParkingCharges -> (Nothing, Nothing, Just entry.amount, Nothing)
+                  ref | ref == walletReferenceGSTOnline -> (Nothing, Just entry.amount, Nothing, Just entry.amount)
+                  ref | ref == walletReferenceGSTCash -> (Nothing, Just entry.amount, Nothing, Just entry.amount)
                   _ -> (Nothing, Nothing, Nothing, Nothing)
           let runningBalance = fromMaybe 0 (lookup entry.id balanceByEntryId)
           return $
@@ -129,14 +132,22 @@ getWalletTransactions (mbPersonId, _, _) mbFromDate mbToDate mbTransactionType m
   where
     maxLimit = 10
     transactionTypeToRefs = \case
-      DriverWallet.RIDE_TRANSACTION -> [walletReferenceRideEarning, walletReferenceRideGstDeduction]
+      DriverWallet.RIDE_TRANSACTION -> rideReferenceTypes
       DriverWallet.TOPUP -> [walletReferenceTopup]
       DriverWallet.PAYOUT -> [walletReferencePayout]
     referenceTypeToTransactionType = \case
       ref | ref `elem` rideReferenceTypes -> DriverWallet.RIDE_TRANSACTION
       ref | ref == walletReferenceTopup -> DriverWallet.TOPUP
       _ -> DriverWallet.PAYOUT
-    rideReferenceTypes = [walletReferenceRideEarning, walletReferenceRideGstDeduction]
+    rideReferenceTypes =
+      [ walletReferenceBaseRide,
+        walletReferenceGSTOnline,
+        walletReferenceGSTCash,
+        walletReferenceTollCharges,
+        walletReferenceParkingCharges,
+        walletReferenceTDSDeductionOnline,
+        walletReferenceTDSDeductionCash
+      ]
     buildRunningBalances accountId entries =
       let step (accBal, accMap) entry =
             let delta =
@@ -190,7 +201,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
         utcCutOffTime = addUTCTime (negate timeDiff) (Data.Time.UTCTime cutOffDate 0)
     entriesAfterCutoff <- case mbAccount of
       Nothing -> pure []
-      Just account -> findByAccountWithFilters account.id (Just utcCutOffTime) (Just utcTimeNow) Nothing Nothing Nothing (Just [walletReferenceRideEarning])
+      Just account -> findByAccountWithFilters account.id (Just utcCutOffTime) (Just utcTimeNow) Nothing Nothing Nothing (Just [walletReferenceBaseRide])
     let unsettledReceivables = sum $ map (.amount) entriesAfterCutoff
     let payoutableBalance = walletBalance - unsettledReceivables
     when (payoutableBalance < minPayoutAmount) $ throwError $ InvalidRequest ("Minimum payout amount is " <> show minPayoutAmount)

@@ -1,11 +1,13 @@
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Wallet
-  ( walletReferenceRideEarning,
-    walletReferenceRideGstDeduction,
-    walletReferenceRidePaymentOnline,
-    walletReferenceRidePaymentCash,
-    walletReferenceRidePlatformRevenue,
+  ( walletReferenceBaseRide,
+    walletReferenceGSTOnline,
+    walletReferenceTollCharges,
+    walletReferenceParkingCharges,
+    walletReferenceTDSDeductionOnline,
+    walletReferenceGSTCash,
+    walletReferenceTDSDeductionCash,
     walletReferenceTopup,
     walletReferencePayout,
     getWalletAccountByOwner,
@@ -13,12 +15,14 @@ module SharedLogic.Finance.Wallet
     getOrCreateWalletAccount,
     createWalletEntryDelta,
     reverseWalletEntryByReference,
-    getOrCreatePlatformSuspenseAccount,
-    getOrCreatePlatformRevenueAccount,
-    getOrCreateRideGSTExpenseAccount,
-    getOrCreateExternalCustomerBankAccount,
-    getOrCreateExternalDriverBankAccount,
+    getOrCreateBuyerAssetAccount,
+    getOrCreateBuyerExternalAccount,
+    getOrCreateDriverLiabilityAccount,
+    getOrCreateFleetOwnerLiabilityAccount,
+    getOrCreateGovtIndirectLiabilityAccount,
+    getOrCreateGovtDirectLiabilityAccount,
     createLedgerTransfer,
+    createLedgerTransferAllowZero,
   )
 where
 
@@ -26,31 +30,42 @@ import Data.Aeson (Value)
 import Data.List (sortOn)
 import Data.Ord (Down (..))
 import Kernel.Prelude
+import Kernel.Types.Id
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 
-walletReferenceRideEarning :: Text
-walletReferenceRideEarning = "WALLET_RIDE_EARNING"
+-- Reference type constants (PascalCase, abbreviations in all caps)
 
-walletReferenceRideGstDeduction :: Text
-walletReferenceRideGstDeduction = "WALLET_RIDE_GST_DEDUCTION"
+walletReferenceBaseRide :: Text
+walletReferenceBaseRide = "BaseRide"
 
-walletReferenceRidePaymentOnline :: Text
-walletReferenceRidePaymentOnline = "RIDE_PAYMENT_ONLINE"
+walletReferenceGSTOnline :: Text
+walletReferenceGSTOnline = "GSTOnline"
 
-walletReferenceRidePaymentCash :: Text
-walletReferenceRidePaymentCash = "RIDE_PAYMENT_CASH"
+walletReferenceTollCharges :: Text
+walletReferenceTollCharges = "TollCharges"
 
-walletReferenceRidePlatformRevenue :: Text
-walletReferenceRidePlatformRevenue = "RIDE_PLATFORM_REVENUE"
+walletReferenceParkingCharges :: Text
+walletReferenceParkingCharges = "ParkingCharges"
+
+walletReferenceTDSDeductionOnline :: Text
+walletReferenceTDSDeductionOnline = "TDSDeductionOnline"
+
+walletReferenceGSTCash :: Text
+walletReferenceGSTCash = "GSTCash"
+
+walletReferenceTDSDeductionCash :: Text
+walletReferenceTDSDeductionCash = "TDSDeductionCash"
 
 walletReferenceTopup :: Text
 walletReferenceTopup = "WALLET_TOPUP"
 
 walletReferencePayout :: Text
 walletReferencePayout = "WALLET_PAYOUT"
+
+-- Account helpers
 
 getWalletAccountByOwner ::
   (BeamFlow m r) =>
@@ -59,7 +74,7 @@ getWalletAccountByOwner ::
   m (Maybe Account)
 getWalletAccountByOwner counterpartyType ownerId = do
   accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
-  pure $ find (\acc -> acc.accountType == Asset) accounts
+  pure $ find (\acc -> acc.accountType == Liability) accounts
 
 getWalletBalanceByOwner ::
   (BeamFlow m r) =>
@@ -81,7 +96,7 @@ getOrCreateWalletAccount ::
 getOrCreateWalletAccount counterpartyType ownerId currency merchantId merchantOperatingCityId = do
   let input =
         AccountInput
-          { accountType = Asset,
+          { accountType = Liability,
             counterpartyType = Just counterpartyType,
             counterpartyId = Just ownerId,
             currency = currency,
@@ -99,24 +114,6 @@ getOrCreatePlatformAccount ::
 getOrCreatePlatformAccount currency merchantId merchantOperatingCityId = do
   let input =
         AccountInput
-          { accountType = Liability,
-            counterpartyType = Just SELLER,
-            counterpartyId = Just merchantId,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  getOrCreateAccount input
-
-getOrCreatePlatformSuspenseAccount ::
-  (BeamFlow m r) =>
-  Currency ->
-  Text ->
-  Text ->
-  m (Either FinanceError Account)
-getOrCreatePlatformSuspenseAccount currency merchantId merchantOperatingCityId = do
-  let input =
-        AccountInput
           { accountType = Asset,
             counterpartyType = Just SELLER,
             counterpartyId = Just merchantId,
@@ -126,17 +123,19 @@ getOrCreatePlatformSuspenseAccount currency merchantId merchantOperatingCityId =
           }
   getOrCreateAccount input
 
-getOrCreatePlatformRevenueAccount ::
+-- New account helpers for the refactored wallet flow
+
+getOrCreateBuyerAssetAccount ::
   (BeamFlow m r) =>
   Currency ->
-  Text ->
-  Text ->
+  Text -> -- Merchant ID
+  Text -> -- Merchant operating city ID
   m (Either FinanceError Account)
-getOrCreatePlatformRevenueAccount currency merchantId merchantOperatingCityId = do
+getOrCreateBuyerAssetAccount currency merchantId merchantOperatingCityId = do
   let input =
         AccountInput
-          { accountType = Revenue,
-            counterpartyType = Just SELLER,
+          { accountType = Asset,
+            counterpartyType = Just BUYER,
             counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
@@ -144,35 +143,17 @@ getOrCreatePlatformRevenueAccount currency merchantId merchantOperatingCityId = 
           }
   getOrCreateAccount input
 
-getOrCreateRideGSTExpenseAccount ::
+getOrCreateBuyerExternalAccount ::
   (BeamFlow m r) =>
   Currency ->
-  Text ->
-  Text ->
+  Text -> -- Merchant ID
+  Text -> -- Merchant operating city ID
   m (Either FinanceError Account)
-getOrCreateRideGSTExpenseAccount currency merchantId merchantOperatingCityId = do
-  let input =
-        AccountInput
-          { accountType = Expense,
-            counterpartyType = Just SELLER,
-            counterpartyId = Just merchantId,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  getOrCreateAccount input
-
-getOrCreateExternalCustomerBankAccount ::
-  (BeamFlow m r) =>
-  Currency ->
-  Text ->
-  Text ->
-  m (Either FinanceError Account)
-getOrCreateExternalCustomerBankAccount currency merchantId merchantOperatingCityId = do
+getOrCreateBuyerExternalAccount currency merchantId merchantOperatingCityId = do
   let input =
         AccountInput
           { accountType = External,
-            counterpartyType = Just SELLER,
+            counterpartyType = Just BUYER,
             counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
@@ -180,24 +161,63 @@ getOrCreateExternalCustomerBankAccount currency merchantId merchantOperatingCity
           }
   getOrCreateAccount input
 
-getOrCreateExternalDriverBankAccount ::
+getOrCreateDriverLiabilityAccount ::
   (BeamFlow m r) =>
   Currency ->
-  Text ->
-  Text ->
-  Text ->
+  Text -> -- Driver ID
+  Text -> -- Merchant ID
+  Text -> -- Merchant operating city ID
   m (Either FinanceError Account)
-getOrCreateExternalDriverBankAccount currency merchantId merchantOperatingCityId driverId = do
+getOrCreateDriverLiabilityAccount currency driverId =
+  getOrCreateWalletAccount DRIVER driverId currency
+
+getOrCreateFleetOwnerLiabilityAccount ::
+  (BeamFlow m r) =>
+  Currency ->
+  Text -> -- Fleet owner ID
+  Text -> -- Merchant ID
+  Text -> -- Merchant operating city ID
+  m (Either FinanceError Account)
+getOrCreateFleetOwnerLiabilityAccount currency fleetOwnerId =
+  getOrCreateWalletAccount FLEET_OWNER fleetOwnerId currency
+
+getOrCreateGovtIndirectLiabilityAccount ::
+  (BeamFlow m r) =>
+  Currency ->
+  Text -> -- Merchant ID
+  Text -> -- Merchant operating city ID
+  m (Either FinanceError Account)
+getOrCreateGovtIndirectLiabilityAccount currency merchantId merchantOperatingCityId = do
   let input =
         AccountInput
-          { accountType = External,
-            counterpartyType = Just DRIVER,
-            counterpartyId = Just driverId,
+          { accountType = Liability,
+            counterpartyType = Just GOVERNMENT_INDIRECT,
+            counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
           }
   getOrCreateAccount input
+
+getOrCreateGovtDirectLiabilityAccount ::
+  (BeamFlow m r) =>
+  Currency ->
+  Text -> -- Merchant ID
+  Text -> -- Merchant operating city ID
+  m (Either FinanceError Account)
+getOrCreateGovtDirectLiabilityAccount currency merchantId merchantOperatingCityId = do
+  let input =
+        AccountInput
+          { accountType = Liability,
+            counterpartyType = Just GOVERNMENT_DIRECT,
+            counterpartyId = Just merchantId,
+            currency = currency,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId
+          }
+  getOrCreateAccount input
+
+-- Ledger transfer functions
 
 createLedgerTransfer ::
   (BeamFlow m r) =>
@@ -206,10 +226,10 @@ createLedgerTransfer ::
   HighPrecMoney ->
   Text ->
   Text ->
-  m (Either FinanceError ())
+  m (Either FinanceError (Maybe (Id LedgerEntry)))
 createLedgerTransfer fromAccount toAccount amount referenceType referenceId = do
   if amount <= 0
-    then pure $ Right ()
+    then pure $ Right Nothing
     else do
       let entryInput =
             LedgerEntryInput
@@ -228,7 +248,41 @@ createLedgerTransfer fromAccount toAccount amount referenceType referenceId = do
       entryRes <- createEntryWithBalanceUpdate entryInput
       case entryRes of
         Left err -> pure $ Left err
-        Right _ -> pure $ Right ()
+        Right entry -> pure $ Right (Just entry.id)
+
+-- | Like createLedgerTransfer but allows zero-amount entries (for placeholder entries like TDS)
+createLedgerTransferAllowZero ::
+  (BeamFlow m r) =>
+  Account ->
+  Account ->
+  HighPrecMoney ->
+  Text ->
+  Text ->
+  m (Either FinanceError (Maybe (Id LedgerEntry)))
+createLedgerTransferAllowZero fromAccount toAccount amount referenceType referenceId = do
+  if amount < 0
+    then pure $ Right Nothing
+    else do
+      let entryInput =
+            LedgerEntryInput
+              { fromAccountId = fromAccount.id,
+                toAccountId = toAccount.id,
+                amount = amount,
+                currency = fromAccount.currency,
+                entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
+                status = SETTLED,
+                referenceType = referenceType,
+                referenceId = referenceId,
+                metadata = Nothing,
+                merchantId = fromAccount.merchantId,
+                merchantOperatingCityId = fromAccount.merchantOperatingCityId
+              }
+      entryRes <- createEntryWithBalanceUpdate entryInput
+      case entryRes of
+        Left err -> pure $ Left err
+        Right entry -> pure $ Right (Just entry.id)
+
+-- Wallet entry delta (for topup/payout)
 
 createWalletEntryDelta ::
   (BeamFlow m r) =>

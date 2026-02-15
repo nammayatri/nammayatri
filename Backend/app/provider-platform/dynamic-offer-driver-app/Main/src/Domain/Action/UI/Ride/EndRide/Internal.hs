@@ -15,6 +15,7 @@
 module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
     createDriverWalletTransaction,
+    processEndRideFinance,
     putDiffMetric,
     getRouteAndDistanceBetweenPoints,
     safeMod,
@@ -108,6 +109,8 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
+import Lib.Finance (CounterpartyType (..), InvoiceInput (..), InvoiceLineItem (..), createInvoice)
+import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import qualified SharedLogic.FleetVehicleStats as FVS
 import SharedLogic.Reminder.Helper (checkAndCreateReminderIfNeeded, isDocumentExpiryType, precomputeThresholdCheckData)
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
@@ -259,20 +262,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
         QRD.updateCancellationDues 0 riderDetails.id >> QCC.create cancellationCharges
       -- QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
-  when
-    ( isJust thresholdConfig.subscriptionConfig.prepaidSubscriptionThreshold
-        || isJust thresholdConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
-    )
-    $ do
-      case ride.fare of
-        Just fare -> fork "update prepaid balance" $ updateBalance fare
-        Nothing -> logWarning $ "Fare is not present for ride: " <> show ride.id.getId
-  when (thresholdConfig.subscription) $ do
-    -- Turn this off for only prepaid subscriptions
-    let serviceName = YATRI_SUBSCRIPTION
-    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
-  when thresholdConfig.driverWalletConfig.enableDriverWallet $ do
-    fork "createDriverWalletTransaction" $ createDriverWalletTransaction ride booking thresholdConfig
+  fork "processEndRideFinance" $ processEndRideFinance ride booking newFareParams driverId driverInfo thresholdConfig
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -284,56 +274,103 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.END_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driverId)
+
+processEndRideFinance ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    MonadFlow m,
+    Esq.EsqDBReplicaFlow m r,
+    HasField "maxShards" r Int,
+    EventStreamFlow m r,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "blackListedJobs" r [Text]
+  ) =>
+  Ride.Ride ->
+  SRB.Booking ->
+  DFare.FareParameters ->
+  Id DP.Driver ->
+  DI.DriverInformation ->
+  TransporterConfig ->
+  m ()
+processEndRideFinance ride booking newFareParams driverId driverInfo thresholdConfig = do
+  -- Compute fare components
+  let totalFare = fromMaybe 0 ride.fare
+      gstAmount = fromMaybe 0 newFareParams.govtCharges
+      tollAmount = fromMaybe 0 newFareParams.tollCharges
+      parkingAmount = fromMaybe 0 newFareParams.parkingCharge
+      baseFare = totalFare - gstAmount - tollAmount - parkingAmount
+      baseFareWithGST = baseFare + gstAmount
+
+  -- Determine driver's active service name
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
+  mbPrepaidPurchase <- QSPE.findLatestActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+  let serviceName = if isJust mbPrepaidPurchase then PREPAID_SUBSCRIPTION else YATRI_SUBSCRIPTION
+
+  -- 1. Subscription Flow — route by serviceName
+  case serviceName of
+    PREPAID_SUBSCRIPTION -> processEndRidePrepaidSubscription baseFareWithGST
+    _ | thresholdConfig.subscription -> createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
+    _ -> pure ()
+
+  -- 2. Wallet Flow
+  when thresholdConfig.driverWalletConfig.enableDriverWallet $ do
+    createDriverWalletTransaction ride booking newFareParams
   where
-    updateBalance fare = do
-      let subscriptionConfig = thresholdConfig.subscriptionConfig
+    processEndRidePrepaidSubscription fare = do
       case ride.fleetOwnerId of
         Just fleetOwnerId -> do
-          when (isJust subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ do
-            Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
-              revenueAmount <- getPrepaidRevenueAmount fare
-              _ <-
-                debitPrepaidBalance
-                  counterpartyFleetOwner
-                  fleetOwnerId.getId
-                  fare
-                  revenueAmount
-                  ride.currency
-                  booking.providerId.getId
-                  booking.merchantOperatingCityId.getId
-                  ride.id.getId
-                  booking.id.getId
-                  Nothing
-                  >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
-              pure ()
+          Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
+            revenueAmount <- getPrepaidRevenueAmount fare
+            _ <-
+              debitPrepaidBalance
+                counterpartyFleetOwner
+                fleetOwnerId.getId
+                fare
+                revenueAmount
+                ride.currency
+                booking.providerId.getId
+                booking.merchantOperatingCityId.getId
+                ride.id.getId
+                booking.id.getId
+                Nothing
+                >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
+            pure ()
         Nothing -> do
-          when (isJust subscriptionConfig.prepaidSubscriptionThreshold) $ do
-            Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
-              -- Fetching again to avoid race conditions
-              revenueAmount <- getPrepaidRevenueAmount fare
-              newBalance <-
-                debitPrepaidBalance
-                  counterpartyDriver
-                  ride.driverId.getId
-                  fare
-                  revenueAmount
-                  ride.currency
-                  booking.providerId.getId
-                  booking.merchantOperatingCityId.getId
-                  ride.id.getId
-                  booking.id.getId
-                  Nothing
-                  >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
-              driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-              let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
-                  balanceUpdatedTitle = "Subscription balance updated!"
-              sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
-              let prepaidSubscriptionThreshold = subscriptionConfig.prepaidSubscriptionThreshold
-              when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do
-                logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
-                let unsubscribedMessage = "Your subscription balance is low. Please recharge to get rides"
-                    unsubscribedTitle = "Low Balance Alert!"
-                sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
+          Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+            revenueAmount <- getPrepaidRevenueAmount fare
+            newBalance <-
+              debitPrepaidBalance
+                counterpartyDriver
+                ride.driverId.getId
+                fare
+                revenueAmount
+                ride.currency
+                booking.providerId.getId
+                booking.merchantOperatingCityId.getId
+                ride.id.getId
+                booking.id.getId
+                Nothing
+                >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
+            driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+            let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
+                balanceUpdatedTitle = "Subscription balance updated!"
+            sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
+            let subscriptionConfig = thresholdConfig.subscriptionConfig
+            let prepaidSubscriptionThreshold = subscriptionConfig.prepaidSubscriptionThreshold
+            when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do
+              logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
+              let unsubscribedMessage = "Your subscription balance is low. Please recharge to get rides"
+                  unsubscribedTitle = "Low Balance Alert!"
+              sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
 
     getPrepaidRevenueAmount fare = do
       person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -363,50 +400,114 @@ createDriverWalletTransaction ::
   ) =>
   Ride.Ride ->
   SRB.Booking ->
-  TransporterConfig ->
+  DFare.FareParameters ->
   m ()
-createDriverWalletTransaction ride booking transporterConfig = do
-  let collectionAmount = fromMaybe 0 ride.fare
-      gstPercentage = transporterConfig.driverWalletConfig.gstPercentage
-      gstDeduction = collectionAmount * (realToFrac gstPercentage / 100)
+createDriverWalletTransaction ride booking fareParams = do
+  let totalFare = fromMaybe 0 ride.fare
+      gstAmount = fromMaybe 0 fareParams.govtCharges
+      tollAmount = fromMaybe 0 fareParams.tollCharges
+      parkingAmount = fromMaybe 0 fareParams.parkingCharge
+      baseFare = totalFare - gstAmount - tollAmount - parkingAmount
 
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
-    (merchantPayable, _driverPayable, isOnline) <- do
+    isOnline <- do
       mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
         do
           CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
           >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
       case mbPaymentMethod of
-        Nothing -> pure (0, gstDeduction, False) -- Considering OFFLINE. To be tested
+        Nothing -> pure False -- Considering OFFLINE
         Just paymentMethod -> do
           case paymentMethod.paymentInstrument of
-            Cash -> pure (0, gstDeduction, False) -- OFFLINE
-            BoothOnline -> pure (0, gstDeduction, False) -- OFFLINE
-            _ -> pure (collectionAmount - gstDeduction, 0, True) -- ONLINE
-    let platformRevenue = max 0 (collectionAmount - merchantPayable - gstDeduction)
+            Cash -> pure False
+            BoothOnline -> pure False
+            _ -> pure True
 
     let merchantId = fromMaybe booking.providerId ride.merchantId
     let merchantOpCityId = ride.merchantOperatingCityId
-    driverAccount <- getOrCreateWalletAccount counterpartyDriver ride.driverId.getId ride.currency merchantId.getId merchantOpCityId.getId >>= fromEitherM (\err -> InternalError ("Driver settlement account not found: " <> show err))
-    platformSuspense <- getOrCreatePlatformSuspenseAccount ride.currency merchantId.getId merchantOpCityId.getId >>= fromEitherM (\err -> InternalError ("Platform suspense account not found: " <> show err))
-    gstExpense <- getOrCreateRideGSTExpenseAccount ride.currency merchantId.getId merchantOpCityId.getId >>= fromEitherM (\err -> InternalError ("Ride GST expense account not found: " <> show err))
-    platformRevenueAcc <- getOrCreatePlatformRevenueAccount ride.currency merchantId.getId merchantOpCityId.getId >>= fromEitherM (\err -> InternalError ("Platform revenue account not found: " <> show err))
-    customerBank <- getOrCreateExternalCustomerBankAccount ride.currency merchantId.getId merchantOpCityId.getId >>= fromEitherM (\err -> InternalError ("Customer external bank account not found: " <> show err))
-    driverBank <- getOrCreateExternalDriverBankAccount ride.currency merchantId.getId merchantOpCityId.getId ride.driverId.getId >>= fromEitherM (\err -> InternalError ("Driver external bank account not found: " <> show err))
+    let mid = merchantId.getId
+    let mocid = merchantOpCityId.getId
 
-    if isOnline
-      then do
-        _ <- createLedgerTransfer customerBank platformSuspense collectionAmount walletReferenceRidePaymentOnline ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create online payment transfer: " <> show err))
-        _ <- createLedgerTransfer platformSuspense driverAccount merchantPayable walletReferenceRideEarning ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create driver settlement entry: " <> show err))
-        _ <- createLedgerTransfer platformSuspense gstExpense gstDeduction walletReferenceRideGstDeduction ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GST expense entry: " <> show err))
-        _ <- createLedgerTransfer platformSuspense platformRevenueAcc platformRevenue walletReferenceRidePlatformRevenue ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create platform revenue entry: " <> show err))
-        pure ()
-      else do
-        _ <- createLedgerTransfer customerBank driverBank collectionAmount walletReferenceRidePaymentCash ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create cash payment transfer: " <> show err))
-        _ <- createLedgerTransfer driverBank driverAccount collectionAmount walletReferenceRideEarning ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create driver settlement credit: " <> show err))
-        _ <- createLedgerTransfer driverAccount gstExpense gstDeduction walletReferenceRideGstDeduction ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GST expense entry: " <> show err))
-        _ <- createLedgerTransfer driverAccount platformRevenueAcc platformRevenue walletReferenceRidePlatformRevenue ride.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create platform revenue entry: " <> show err))
-        pure ()
+    -- Determine counterparty: Driver or FleetOwner
+    let (driverOrFleetCounterparty, driverOrFleetId) =
+          case ride.fleetOwnerId of
+            Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId.getId)
+            Nothing -> (DRIVER, ride.driverId.getId)
+
+    -- Create accounts
+    buyerAsset <- getOrCreateBuyerAssetAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Buyer asset account not found: " <> show err))
+    buyerExternal <- getOrCreateBuyerExternalAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Buyer external account not found: " <> show err))
+    driverOrFleetLiability <-
+      (if driverOrFleetCounterparty == FLEET_OWNER
+         then getOrCreateFleetOwnerLiabilityAccount ride.currency driverOrFleetId mid mocid
+         else getOrCreateDriverLiabilityAccount ride.currency driverOrFleetId mid mocid)
+        >>= fromEitherM (\err -> InternalError ("Driver/FleetOwner liability account not found: " <> show err))
+    govtIndirect <- getOrCreateGovtIndirectLiabilityAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Government indirect liability account not found: " <> show err))
+    govtDirect <- getOrCreateGovtDirectLiabilityAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Government direct liability account not found: " <> show err))
+
+    entryIds <-
+      if isOnline
+        then do
+          -- Step 1: Asset(BUYER) -> External(BUYER) for each component (both accounts increase)
+          _ <- createLedgerTransfer buyerAsset buyerExternal baseFare walletReferenceBaseRide booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create BaseRide asset->external entry: " <> show err))
+          _ <- createLedgerTransfer buyerAsset buyerExternal gstAmount walletReferenceGSTOnline booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GSTOnline asset->external entry: " <> show err))
+          _ <- createLedgerTransfer buyerAsset buyerExternal tollAmount walletReferenceTollCharges booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create TollCharges asset->external entry: " <> show err))
+          _ <- createLedgerTransfer buyerAsset buyerExternal parkingAmount walletReferenceParkingCharges booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create ParkingCharges asset->external entry: " <> show err))
+          -- Step 2: External(BUYER) -> Liability(DRIVER/FLEET_OWNER) for base, toll, parking
+          baseFareEntryId <- createLedgerTransfer buyerExternal driverOrFleetLiability baseFare walletReferenceBaseRide booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create BaseRide external->liability entry: " <> show err))
+          tollEntryId <- createLedgerTransfer buyerExternal driverOrFleetLiability tollAmount walletReferenceTollCharges booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create TollCharges external->liability entry: " <> show err))
+          parkingEntryId <- createLedgerTransfer buyerExternal driverOrFleetLiability parkingAmount walletReferenceParkingCharges booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create ParkingCharges external->liability entry: " <> show err))
+          -- Step 3: External(BUYER) -> Liability(GOVERNMENT_INDIRECT) for GST
+          gstEntryId <- createLedgerTransfer buyerExternal govtIndirect gstAmount walletReferenceGSTOnline booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GSTOnline external->govt_indirect entry: " <> show err))
+          -- Step 4: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT) for TDS (0 amount placeholder)
+          _ <- createLedgerTransferAllowZero driverOrFleetLiability govtDirect 0 walletReferenceTDSDeductionOnline booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create TDSDeductionOnline entry: " <> show err))
+          pure $ catMaybes [baseFareEntryId, tollEntryId, parkingEntryId, gstEntryId]
+        else do
+          -- Cash: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_INDIRECT) for GST
+          gstEntryId <- createLedgerTransfer driverOrFleetLiability govtIndirect gstAmount walletReferenceGSTCash booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GSTCash entry: " <> show err))
+          -- Cash: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT) for TDS (0 amount placeholder)
+          _ <- createLedgerTransferAllowZero driverOrFleetLiability govtDirect 0 walletReferenceTDSDeductionCash booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create TDSDeductionCash entry: " <> show err))
+          pure $ catMaybes [gstEntryId]
+
+    -- Create invoice for the ride with linked GST entries
+    when (not $ null entryIds) $ do
+      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      let invoiceInput =
+            InvoiceInput
+              { invoiceType = Invoice.Ride,
+                paymentOrderId = Nothing,
+                issuedToType = "BUYER",
+                issuedToId = "",
+                issuedToName = Nothing,
+                issuedToAddress = Nothing,
+                issuedByType = "SELLER",
+                issuedById = mid,
+                issuedByName = Just merchant.name,
+                issuedByAddress = Nothing,
+                gstinOfParty = Nothing,
+                lineItems =
+                  catMaybes
+                    [ if baseFare > 0
+                        then Just InvoiceLineItem {description = "Base Fare", quantity = 1, unitPrice = baseFare, lineTotal = baseFare}
+                        else Nothing,
+                      if gstAmount > 0
+                        then Just InvoiceLineItem {description = "GST", quantity = 1, unitPrice = gstAmount, lineTotal = gstAmount}
+                        else Nothing,
+                      if tollAmount > 0
+                        then Just InvoiceLineItem {description = "Toll Charges", quantity = 1, unitPrice = tollAmount, lineTotal = tollAmount}
+                        else Nothing,
+                      if parkingAmount > 0
+                        then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount}
+                        else Nothing
+                    ],
+                currency = ride.currency,
+                dueAt = Nothing,
+                merchantId = mid,
+                merchantOperatingCityId = mocid,
+                merchantShortId = merchant.shortId.getShortId
+              }
+      _ <- createInvoice invoiceInput entryIds
+      pure ()
     pure ()
 
 makeWalletRunningBalanceLockKey :: Text -> Text
