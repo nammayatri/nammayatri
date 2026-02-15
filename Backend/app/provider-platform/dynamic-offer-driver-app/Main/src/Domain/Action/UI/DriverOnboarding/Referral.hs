@@ -130,8 +130,8 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           void $ QDOA.create driverOperatorAssData
           Analytics.handleDriverAnalyticsAndFlowStatus
             transporterConfig
-            dr.driverId
-            Nothing
+            personId
+            (Just di)
             ( \driverInfo -> do
                 when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig dr.driverId.getId
                 Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig dr.driverId.getId

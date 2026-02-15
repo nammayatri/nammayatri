@@ -289,6 +289,7 @@ mapDocumentType Common.VehicleLeft = DVC.VehicleLeft
 mapDocumentType Common.VehicleRight = DVC.VehicleRight
 mapDocumentType Common.Odometer = DVC.Odometer
 mapDocumentType Common.InspectionHub = DVC.InspectionHub
+mapDocumentType Common.DriverInspectionHub = DVC.DriverInspectionHub
 -- Netherlands Document Types
 mapDocumentType Common.KIWADriverCard = DVC.KIWADriverCard
 mapDocumentType Common.KIWATaxiPermit = DVC.KIWATaxiPermit
@@ -300,11 +301,11 @@ mapDocumentType Common.SchipolAirportAgreement = DVC.SchipolAirportAgreement
 mapDocumentType Common.SchipolSmartcardProof = DVC.SchipolSmartcardProof
 mapDocumentType Common.TXQualityMark = DVC.TXQualityMark
 -- Finland Document Types
-mapDocumentType Common.PersonalId = DVC.PersonalId
 mapDocumentType Common.TaxiDriverPermit = DVC.TaxiDriverPermit
 mapDocumentType Common.TaxiTransportLicense = DVC.TaxiTransportLicense
 mapDocumentType Common.FinnishIDResidencePermit = DVC.FinnishIDResidencePermit
 mapDocumentType Common.BusinessRegistrationExtract = DVC.BusinessRegistrationExtract
+mapDocumentType Common.PersonalId = DVC.PersonalId
 mapDocumentType Common.LocalResidenceProof = DVC.LocalResidenceProof
 mapDocumentType Common.PoliceVerificationCertificate = DVC.PoliceVerificationCertificate
 mapDocumentType Common.DrivingSchoolCertificate = DVC.DrivingSchoolCertificate

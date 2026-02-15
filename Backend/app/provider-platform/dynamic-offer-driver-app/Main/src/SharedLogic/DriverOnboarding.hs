@@ -82,7 +82,7 @@ import qualified Tools.Whatsapp as Whatsapp
 import Utils.Common.Cac.KeyNameConstants
 
 defaultDriverDocumentTypes :: [DVC.DocumentType]
-defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense, DVC.LocalResidenceProof, DVC.PoliceVerificationCertificate, DVC.DrivingSchoolCertificate, DVC.TrainingForm]
+defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense, DVC.LocalResidenceProof, DVC.PoliceVerificationCertificate, DVC.DrivingSchoolCertificate, DVC.TrainingForm, DVC.DriverInspectionHub]
 
 defaultFleetDocumentTypes :: [DVC.DocumentType]
 defaultFleetDocumentTypes = [DVC.AadhaarCard, DVC.PanCard, DVC.GSTCertificate, DVC.BusinessLicense]
@@ -717,6 +717,7 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.VehicleBackInterior -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VehicleBackInterior
   Domain.Types.DocumentVerificationConfig.Odometer -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.Odometer
   Domain.Types.DocumentVerificationConfig.InspectionHub -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.InspectionHub
+  Domain.Types.DocumentVerificationConfig.DriverInspectionHub -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DriverInspectionHub
   -- Netherlands Document Types
   Domain.Types.DocumentVerificationConfig.KIWADriverCard -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.KIWADriverCard
   Domain.Types.DocumentVerificationConfig.KIWATaxiPermit -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.KIWATaxiPermit

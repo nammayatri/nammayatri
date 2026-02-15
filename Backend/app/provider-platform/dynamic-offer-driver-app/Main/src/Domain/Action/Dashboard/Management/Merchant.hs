@@ -946,6 +946,7 @@ castDDocumentType = \case
   DVC.DriverInspectionForm -> Common.DriverInspectionForm
   DVC.TrainingForm -> Common.TrainingForm
   DVC.InspectionHub -> Common.InspectionHub
+  DVC.DriverInspectionHub -> Common.DriverInspectionHub
   DVC.ProfilePhoto -> Common.ProfilePhoto
   DVC.PanCard -> Common.PanCard
   DVC.VehicleNOC -> Common.VehicleNOC
@@ -1051,6 +1052,7 @@ castDocumentType = \case
   Common.BusinessLicense -> DVC.BusinessLicense
   Common.Odometer -> DVC.Odometer
   Common.InspectionHub -> DVC.InspectionHub
+  Common.DriverInspectionHub -> DVC.DriverInspectionHub
   Common.AadhaarCard -> DVC.AadhaarCard
   Common.GSTCertificate -> DVC.GSTCertificate
   Common.Permissions -> DVC.Permissions

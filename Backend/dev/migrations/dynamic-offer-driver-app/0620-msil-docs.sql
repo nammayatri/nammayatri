@@ -3835,3 +3835,55 @@ update atlas_driver_offer_bpp.transporter_config set send_sms_on_enablement = tr
 update atlas_driver_offer_bpp.subscription_config set show_manual_plans_in_ui = true;
 
 update atlas_driver_offer_bpp.subscription_config set subscription_enabled_for_vehicle_categories = '{CAR,AUTO_CATEGORY}';
+
+INSERT INTO atlas_driver_offer_bpp.document_verification_config (
+    check_expiry,
+    check_extraction,
+    dependency_document_type,
+    description,
+    disable_warning,
+    document_type,
+    is_disabled,
+    is_hidden,
+    is_mandatory,
+    max_retry_count,
+    merchant_id,
+    merchant_operating_city_id,
+    rc_number_prefix_list,
+    supported_vehicle_classes_json,
+    title,
+    vehicle_category,
+    vehicle_class_check_type,
+    created_at,
+    updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required,
+    "order"
+)
+SELECT
+    check_expiry,
+    check_extraction,
+    dependency_document_type,
+    "Driver's Inspection Hub flow",
+    disable_warning,
+    'DriverInspectionHub',
+    is_disabled,
+    is_hidden,
+    true,
+    max_retry_count,
+    (select id from atlas_driver_offer_bpp.merchant where short_id = 'MSIL_PARTNER') as merchant_id,
+    (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Delhi' and merchant_short_id = 'MSIL_PARTNER') as merchant_operating_city_id,
+    '{DL}',
+    supported_vehicle_classes_json,
+    title,
+    vehicle_category,
+    vehicle_class_check_type,
+    CURRENT_TIMESTAMP as created_at,
+    CURRENT_TIMESTAMP as updated_at,
+    is_default_enabled_on_manual_verification,
+    is_image_validation_required,
+    "order"
+FROM
+    atlas_driver_offer_bpp.document_verification_config
+WHERE
+    vehicle_category = 'CAR' AND merchant_operating_city_id = (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Delhi' and merchant_short_id = 'MSIL_PARTNER') AND document_type in ('VehicleInspectionForm') ON CONFLICT DO NOTHING;

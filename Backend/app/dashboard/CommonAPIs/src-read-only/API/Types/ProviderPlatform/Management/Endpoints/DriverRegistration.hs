@@ -146,6 +146,7 @@ data DocumentType
   | VehicleBackInterior
   | Odometer
   | InspectionHub
+  | DriverInspectionHub
   | KIWADriverCard
   | KIWATaxiPermit
   | KvKChamberOfCommerceRegistration
@@ -160,14 +161,14 @@ data DocumentType
   | FinnishIDResidencePermit
   | BusinessRegistrationExtract
   | PersonalId
-  | LocalResidenceProof
-  | PoliceVerificationCertificate
-  | DrivingSchoolCertificate
-  | BankAccount
   | LDCCertificate
   | TDSCertificate
   | TANCertificate
   | UDYAMCertificate
+  | LocalResidenceProof
+  | PoliceVerificationCertificate
+  | DrivingSchoolCertificate
+  | BankAccount
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
