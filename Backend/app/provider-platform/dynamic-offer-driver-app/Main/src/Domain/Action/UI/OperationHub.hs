@@ -29,9 +29,20 @@ getOperationGetAllHubs (_, _, opCityId) = QOH.findAllByCityId opCityId
 postOperationCreateRequest :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> DriverOperationHubRequest -> Flow APISuccess
 postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req = do
   runRequestValidation validateDriverOperationHubRequest req
-  -- At least one of registrationNo or driverId must be provided
-  unless (isJust req.registrationNo || isJust req.driverId) $
-    throwError $ InvalidRequest "Either registrationNo or driverId must be provided"
+  -- Validate based on request type
+  case req.requestType of
+    ONBOARDING_INSPECTION -> do
+      unless (isJust req.registrationNo) $
+        throwError $ InvalidRequest "registrationNo is required for ONBOARDING_INSPECTION"
+    REGULAR_INSPECTION -> do
+      unless (isJust req.registrationNo) $
+        throwError $ InvalidRequest "registrationNo is required for REGULAR_INSPECTION"
+    DRIVER_ONBOARDING_INSPECTION -> do
+      unless (isJust req.driverId) $
+        throwError $ InvalidRequest "driverId is required for DRIVER_ONBOARDING_INSPECTION"
+    DRIVER_REGULAR_INSPECTION -> do
+      unless (isJust req.driverId) $
+        throwError $ InvalidRequest "driverId is required for DRIVER_REGULAR_INSPECTION"
   let creatorId = fromMaybe (Id req.creatorId) mbPersonId
   Redis.whenWithLockRedis (opsHubDriverLockKey creatorId.getId) 60 $ do
     id <- generateGUID

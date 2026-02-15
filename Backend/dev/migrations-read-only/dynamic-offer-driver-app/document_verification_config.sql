@@ -93,3 +93,18 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN allow
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN document_flow_grouping text  default 'STANDARD';
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

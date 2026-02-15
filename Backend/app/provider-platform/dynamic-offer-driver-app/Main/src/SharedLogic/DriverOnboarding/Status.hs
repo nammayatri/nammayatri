@@ -881,6 +881,9 @@ getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL = do
     DVC.TrainingForm -> do
       let (status, reason, url) = checkImageValidity driverImagesInfo DVC.TrainingForm
       return (status, reason, url, Nothing, mbS3Path)
+    DVC.DriverInspectionHub -> do
+      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.DriverInspectionHub
+      return (status, reason, url, Nothing, Nothing)
     _ -> return (Nothing, Nothing, Nothing, Nothing, mbS3Path)
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
