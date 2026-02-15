@@ -118,6 +118,7 @@ import qualified SharedLogic.ScheduledNotifications as SN
 import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
@@ -469,21 +470,25 @@ createDriverWalletTransaction ride booking fareParams = do
           _ <- createLedgerTransferAllowZero driverOrFleetLiability govtDirect 0 walletReferenceTDSDeductionCash booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create TDSDeductionCash entry: " <> show err))
           pure $ catMaybes [gstEntryId]
 
-    -- Create invoice for the ride with linked GST entries
+    -- Create invoice for the ride with linked entries
     when (not $ null entryIds) $ do
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
+      let issuedByAddress = Just $ show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
+          issuedToAddress = booking.fromLocation.address.fullAddress
+          issuedToId = maybe "" (.getId) booking.riderId
       let invoiceInput =
             InvoiceInput
               { invoiceType = Invoice.Ride,
                 paymentOrderId = Nothing,
-                issuedToType = "BUYER",
-                issuedToId = "",
-                issuedToName = Nothing,
-                issuedToAddress = Nothing,
-                issuedByType = "SELLER",
+                issuedToType = "CUSTOMER",
+                issuedToId = issuedToId,
+                issuedToName = booking.riderName,
+                issuedToAddress = issuedToAddress,
+                issuedByType = "BUYER",
                 issuedById = mid,
                 issuedByName = Just merchant.name,
-                issuedByAddress = Nothing,
+                issuedByAddress = issuedByAddress,
                 gstinOfParty = Nothing,
                 lineItems =
                   catMaybes
