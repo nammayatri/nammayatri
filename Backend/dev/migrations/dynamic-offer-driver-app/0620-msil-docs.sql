@@ -3864,7 +3864,7 @@ SELECT
     check_expiry,
     check_extraction,
     dependency_document_type,
-    "Driver's Inspection Hub flow",
+    'Driver Inspection Hub flow',
     disable_warning,
     'DriverInspectionHub',
     is_disabled,
