@@ -152,6 +152,13 @@ type API =
            Kernel.External.Verification.Types.BankAccountVerificationResponse
       :<|> TokenAuth
       :> "driver"
+      :> "delete"
+      :> "bankAccount"
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "driver"
       :> "backgroundVerification"
       :> Post
            '[JSON]
@@ -270,7 +277,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverVerifyBankAccount :<|> getInfoBankAccount :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverVerifyBankAccount :<|> getInfoBankAccount :<|> postDriverDeleteBankAccount :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -383,6 +390,15 @@ getInfoBankAccount ::
     Environment.FlowHandler Kernel.External.Verification.Types.BankAccountVerificationResponse
   )
 getInfoBankAccount a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getInfoBankAccount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postDriverDeleteBankAccount ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postDriverDeleteBankAccount a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverDeleteBankAccount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postDriverBackgroundVerification ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

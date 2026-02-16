@@ -50,6 +50,7 @@ data DriverInformationT f = DriverInformationT
     dailyExtraKms :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     dlNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dlNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    driverBankAccountDetails :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     driverDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverFlowStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverFlowStatus.DriverFlowStatus),
     driverId :: B.C f Kernel.Prelude.Text,
