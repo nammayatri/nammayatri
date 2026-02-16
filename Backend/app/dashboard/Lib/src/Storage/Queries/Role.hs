@@ -48,6 +48,9 @@ findAllInDashboardAccessType :: BeamFlow m r => [Role.DashboardAccessType] -> m 
 findAllInDashboardAccessType dashboardAccessTypes =
   findAllWithKV [Se.Is BeamR.dashboardAccessType $ Se.In dashboardAccessTypes]
 
+findAll :: BeamFlow m r => m [Role]
+findAll = findAllWithKV @BeamR.RoleT [] -- [Se.Is BeamR.id $ Se.Not $ Se.Eq ""] ?
+
 findAllByLimitOffset :: BeamFlow m r => Maybe Integer -> Maybe Integer -> m [Role]
 findAllByLimitOffset mbLimit mbOffset = do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
@@ -83,21 +86,21 @@ findAllWithLimitOffset mbLimit mbOffset mbSearchString = do
     Left _ -> pure []
 
 -- Do not use directly. Use cached version!
-findParentRolesRecursively :: BeamFlow m r => Role.Role -> m [Role.Role]
-findParentRolesRecursively role = findNextParentRoleRecursively role.parentRoleId []
-  where
-    findNextParentRoleRecursively :: BeamFlow m r => Maybe (Id Role.Role) -> [Role.Role] -> m [Role.Role]
-    findNextParentRoleRecursively Nothing acc = pure $ reverse acc
-    findNextParentRoleRecursively (Just parentId) acc = do
-      -- detect cycle via already accumulated parents, including current role.id
-      -- in current implementation role can't be parent of itself
-      when (any (\r -> r.id == parentId) (role : acc)) $ do
-        let cyclicParentIds = reverse $ parentId : (acc <&> (.id))
-        logError $ "Cyclic parentRoleId reference detected in roles: rodeId: " <> role.id.getId <> "; roleName: " <> show role.name <> "; parentIds: " <> show (cyclicParentIds <&> (.getId))
-      mbParent <- findById parentId
-      case mbParent of
-        Nothing -> pure $ reverse acc -- should we throw error?
-        Just parentRole -> findNextParentRoleRecursively parentRole.parentRoleId (parentRole : acc)
+-- findParentRolesRecursively :: BeamFlow m r => Role.Role -> m [Role.Role]
+-- findParentRolesRecursively role = findNextParentRoleRecursively role.parentRoleId []
+--   where
+--     findNextParentRoleRecursively :: BeamFlow m r => Maybe (Id Role.Role) -> [Role.Role] -> m [Role.Role]
+--     findNextParentRoleRecursively Nothing acc = pure $ reverse acc
+--     findNextParentRoleRecursively (Just parentId) acc = do
+--       -- detect cycle via already accumulated parents, including current role.id
+--       -- in current implementation role can't be parent of itself
+--       when (any (\r -> r.id == parentId) (role : acc)) $ do
+--         let cyclicParentIds = reverse $ parentId : (acc <&> (.id))
+--         logError $ "Cyclic parentRoleId reference detected in roles: rodeId: " <> role.id.getId <> "; roleName: " <> show role.name <> "; parentIds: " <> show (cyclicParentIds <&> (.getId))
+--       mbParent <- findById parentId
+--       case mbParent of
+--         Nothing -> pure $ reverse acc -- should we throw error?
+--         Just parentRole -> findNextParentRoleRecursively parentRole.parentRoleId (parentRole : acc)
 
 -- by default parentRoleId can be DASHBOARD_ADMIN
 updateById :: BeamFlow m r => Role.Role -> m ()

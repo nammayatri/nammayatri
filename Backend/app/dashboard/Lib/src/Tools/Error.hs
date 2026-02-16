@@ -54,6 +54,7 @@ instance IsBecknAPIError Error where
 
 instanceExceptionWithParent 'HTTPException ''Error
 
+-- TODO CyclicRoles
 data RoleError
   = RoleNotFound Text
   | RoleDoesNotExist Text

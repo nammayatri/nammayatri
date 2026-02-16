@@ -14,6 +14,7 @@
 
 module Domain.Action.Dashboard.Roles where
 
+import qualified SharedLogic.Roles as SRoles
 import Control.Applicative ((<|>))
 import Dashboard.Common
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -32,7 +33,7 @@ import Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import Tools.Auth
-import Tools.Error (RoleError (..))
+import Tools.Error (RoleError (..), GenericError (..))
 
 data CreateRoleReq = CreateRoleReq
   { name :: Text,
@@ -74,8 +75,29 @@ createRole _ req = do
   mbExistingRole <- CQRole.findByName req.name
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
   role <- buildRole req
-  CQRole.create role
-  void $ CQRole.cacheParentRolesRecursively role
+  -- void $ CQRole.cacheParentRolesRecursively role
+
+  case req.parentRoleId of
+    Just parentRoleId -> do
+      -- fetch roles, including updated role
+      allRoles <- CQRole.findAll
+      _parentRole <- find (\r -> r.id == parentRoleId) allRoles & fromMaybeM (RoleDoesNotExist parentRoleId.getId)
+      let allUpdRoles = role : allRoles
+      case SRoles.calculateRoleHierarchy allUpdRoles of
+        Left (SRoles.CycleDetected cycleRoles) -> throwError (InvalidRequest $ "Cycle detected in roles hierarchy: " <> show cycleRoles)
+        Right rolesHierarchy -> do
+          CQRole.create role
+          CQRole.cacheRoleHierarchy rolesHierarchy
+    Nothing -> do
+      -- no need to update whole cache as hierarchy did not changed
+      let newRoleHierarchy = pure SRoles.RoleHierarchy
+            { role,
+              roleAncestors = [],
+              roleDescendants = []
+            }
+      CQRole.create role
+      CQRole.cacheRoleHierarchy newRoleHierarchy
+
   pure $ DRole.mkRoleAPIEntity role
 
 -- Validate input fields
@@ -119,6 +141,7 @@ updateRole _ req = do
         throwError (RoleNameExists reqName)
 
   role <- CQRole.findById req.roleId >>= fromMaybeM (RoleDoesNotExist req.roleId.getId)
+
   let updRole =
         role{name = fromMaybe role.name req.name,
              dashboardAccessType = fromMaybe role.dashboardAccessType req.dashboardAccessType,
@@ -126,14 +149,21 @@ updateRole _ req = do
              description = fromMaybe role.description req.description
             }
 
-  whenJust req.parentRoleId \_parentRoleId -> do
-    -- Error will thrown in case of cyclic parent
-    _roleParents <- CQRole.cacheParentRolesRecursively role
-    error "TODO"
-    -- TODO recalculate cache
-
-  CQRole.updateById updRole
-  error "TODO"
+  case req.parentRoleId of
+    Just parentRoleId -> do
+      -- fetch roles, including updated role
+      allRoles <- CQRole.findAll
+      _parentRole <- find (\r -> r.id == parentRoleId) allRoles & fromMaybeM (RoleDoesNotExist parentRoleId.getId)
+      let allUpdRoles = map (\r -> if r.id == updRole.id then updRole else r) allRoles
+      case SRoles.calculateRoleHierarchy allUpdRoles of
+        Left (SRoles.CycleDetected cycleRoles) -> throwError (InvalidRequest $ "Cycle detected in roles hierarchy: " <> show cycleRoles)
+        Right rolesHierarchy -> do
+          CQRole.updateById updRole
+          CQRole.cacheRoleHierarchy rolesHierarchy
+    Nothing ->
+      -- no need to update cache as hierarchy did not changed
+      CQRole.updateById updRole
+  pure $ DRole.mkRoleAPIEntity updRole
 
 assignAccessLevel ::
   BeamFlow m r =>
