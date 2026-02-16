@@ -154,14 +154,15 @@ generateReferralCode mbRole (driverId, merchantId, merchantOpCityId) = do
   case mbReferralCodeWithDriver of
     Just driverReferral -> pure $ GenerateReferralCodeRes driverReferral.referralCode.getId driverReferral.dynamicReferralCode driverReferral.dynamicReferralCodeValidTill
     Nothing -> do
-      Redis.withLockRedisAndReturnValue makeLastRefferalCodeKey 60 $ do
-        refferalCodeNumber <- CQD.getNextRefferalCode
-        dynamicReferralCode <- CQD.getDynamicRefferalCode
-        let referralCode' = T.pack $ formatReferralCode (show refferalCodeNumber) 6
-        let dynamicReferralCode' = T.pack $ formatReferralCode (show dynamicReferralCode) 4
-        driverRefferalRecord <- mkDriverRefferalType referralCode' (Just dynamicReferralCode') transporterConfig role
-        void (QRD.create driverRefferalRecord)
-        pure $ GenerateReferralCodeRes referralCode' driverRefferalRecord.dynamicReferralCode driverRefferalRecord.dynamicReferralCodeValidTill
+      Redis.runInMasterCloudRedisCell $
+        Redis.withLockRedisAndReturnValue makeLastRefferalCodeKey 60 $ do
+          refferalCodeNumber <- CQD.getNextRefferalCode
+          dynamicReferralCode <- CQD.getDynamicRefferalCode
+          let referralCode' = T.pack $ formatReferralCode (show refferalCodeNumber) 6
+          let dynamicReferralCode' = T.pack $ formatReferralCode (show dynamicReferralCode) 4
+          driverRefferalRecord <- mkDriverRefferalType referralCode' (Just dynamicReferralCode') transporterConfig role
+          void (QRD.create driverRefferalRecord)
+          pure $ GenerateReferralCodeRes referralCode' driverRefferalRecord.dynamicReferralCode driverRefferalRecord.dynamicReferralCodeValidTill
   where
     mkDriverRefferalType rc dynamicReferralCode transporterConfig roleData = do
       now <- getCurrentTime
