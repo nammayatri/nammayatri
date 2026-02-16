@@ -39,7 +39,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.ServiceTierType as DVST
-import Domain.Types.Sos as DSos
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.Trip as Trip
 import Domain.Types.VehicleVariant (VehicleVariant (..))
@@ -54,11 +53,13 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import qualified Safety.Domain.Types.Sos as SafetyDSos
+import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
-import qualified Storage.CachedQueries.Sos as CQSos
+import qualified Storage.CachedQueries.Sos as CQSos -- Keep for mockSosKey only
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -113,7 +114,7 @@ data BookingAPIEntity = BookingAPIEntity
     paymentMode :: Maybe DMPM.PaymentMode,
     paymentUrl :: Maybe Text,
     hasDisability :: Maybe Bool,
-    sosStatus :: Maybe DSos.SosStatus,
+    sosStatus :: Maybe SafetyDSos.SosStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     isPetRide :: Bool,
@@ -157,7 +158,7 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange,
     driverArrivalTime :: Maybe UTCTime,
     destinationReachedAt :: Maybe UTCTime,
-    sosStatus :: Maybe DSos.SosStatus,
+    sosStatus :: Maybe SafetyDSos.SosStatus,
     driversPreviousRideDropLocLat :: Maybe Double,
     driversPreviousRideDropLocLon :: Maybe Double,
     stopInfo :: [DSI.StopInformation],
@@ -273,7 +274,7 @@ makeBookingAPIEntity ::
   Maybe DExophone.Exophone ->
   Maybe Payment.PaymentMethodId ->
   Bool ->
-  Maybe DSos.SosStatus ->
+  Maybe SafetyDSos.SosStatus ->
   DBppDetails.BppDetails ->
   Bool ->
   Bool ->
@@ -452,27 +453,27 @@ makeFavouriteBookingAPIEntity ride = do
       vehicleVariant = Just ride.vehicleVariant
     }
 
-getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
+getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe SafetyDSos.SosStatus)
 getActiveSos mbRide personId = do
   case mbRide of
     Nothing -> return Nothing
     Just ride -> do
-      sosDetails <- CQSos.findByRideId ride.id
+      sosDetails <- SafetyCQSos.findByRideId (cast ride.id)
       case sosDetails of
         Nothing -> do
-          mockSos :: Maybe DSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
+          mockSos :: Maybe SafetyDSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
           return $ mockSos <&> (.status)
         Just sos -> return $ Just sos.status
 
-getActiveSos' :: (CacheFlow m r, EsqDBFlow m r) => Maybe QRideLite.RideLite -> Id Person.Person -> m (Maybe DSos.SosStatus)
+getActiveSos' :: (CacheFlow m r, EsqDBFlow m r) => Maybe QRideLite.RideLite -> Id Person.Person -> m (Maybe SafetyDSos.SosStatus)
 getActiveSos' mbRide personId = do
   case mbRide of
     Nothing -> return Nothing
     Just ride -> do
-      sosDetails <- CQSos.findByRideId ride.id
+      sosDetails <- SafetyCQSos.findByRideId (cast ride.id)
       case sosDetails of
         Nothing -> do
-          mockSos :: Maybe DSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
+          mockSos :: Maybe SafetyDSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
           return $ mockSos <&> (.status)
         Just sos -> return $ Just sos.status
 

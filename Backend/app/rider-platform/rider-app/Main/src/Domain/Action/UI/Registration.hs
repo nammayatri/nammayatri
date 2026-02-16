@@ -115,7 +115,7 @@ import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonExtra as PersonExtra
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import Storage.Queries.SafetySettings as QSafety
+import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -790,7 +790,7 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   decPerson <- decrypt updPerson
   customerDisability <- B.runInReplica $ PDisability.findByPersonId person.id
   let tag = customerDisability <&> (.tag)
-  safetySettings <- QSafety.findSafetySettingsWithFallback person.id (Just updPerson)
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback person.id (Just updPerson)
   isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled updPerson safetySettings
   let personAPIEntity = SP.makePersonAPIEntity decPerson tag isSafetyCenterDisabled safetySettings
   unless (decPerson.whatsappNotificationEnrollStatus == whatsappNotificationEnroll && isJust whatsappNotificationEnroll) $ do

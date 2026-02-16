@@ -52,7 +52,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
-import qualified Domain.Types.Sos as DSos
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -69,13 +68,14 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate (UniqueField (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
+import qualified Safety.Domain.Types.Sos as SafetyDSos
+import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
-import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -154,7 +154,7 @@ buildShareRideInfo merchantId ride = do
             _ -> Nothing
         )
           <&> (\number -> if ride.status `elem` [DRide.NEW, DRide.INPROGRESS] then number else "xxxx")
-  sosDetails <- CQSos.findByRideId ride.id
+  sosDetails <- SafetyCQSos.findByRideId (cast ride.id)
   let fareProductType = mkFareProductType booking.bookingDetails
   return $
     Common.ShareRideInfoRes
@@ -191,13 +191,13 @@ getStopFromBookingDetails bookingDetails = case bookingDetails of
   DB.RentalDetails rentalDetails -> mkCommonBookingLocation <$> rentalDetails.stopLocation
   _ -> Nothing
 
-castSosStatus :: DSos.SosStatus -> Common.SosStatus
+castSosStatus :: SafetyDSos.SosStatus -> Common.SosStatus
 castSosStatus = \case
-  DSos.Pending -> Common.Pending
-  DSos.Resolved -> Common.Resolved
-  DSos.NotResolved -> Common.NotResolved
-  DSos.MockPending -> Common.MockPending
-  DSos.MockResolved -> Common.MockResolved
+  SafetyDSos.Pending -> Common.Pending
+  SafetyDSos.Resolved -> Common.Resolved
+  SafetyDSos.NotResolved -> Common.NotResolved
+  SafetyDSos.MockPending -> Common.MockPending
+  SafetyDSos.MockResolved -> Common.MockResolved
 
 ---------------------------------------------------------------------
 
