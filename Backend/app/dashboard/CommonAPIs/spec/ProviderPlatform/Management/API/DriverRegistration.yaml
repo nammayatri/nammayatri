@@ -80,6 +80,13 @@ apis:
         driverId: Id Driver
       response:
         type: BankAccountVerificationResponse
+  - POST: # DeleteBankAccountAPI
+      endpoint: /{driverId}/delete/bankAccount
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
   - POST: # RegisterRCAPI
       endpoint: /{driverId}/register/rc
       auth: ApiAuthV2

@@ -30,6 +30,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationTriggerReminder,
     postDriverRegistrationVerifyBankAccount,
     getDriverRegistrationInfoBankAccount,
+    postDriverRegistrationDeleteBankAccount
   )
 where
 
@@ -1294,3 +1295,12 @@ getDriverRegistrationInfoBankAccount merchantShortId opCity driverId requestId =
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
   BankAccountVerification.getInfoBankAccount (personId, merchant.id, merchantOpCityId) requestId
+
+postDriverRegistrationDeleteBankAccount :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+postDriverRegistrationDeleteBankAccount merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  _ <- BankAccountVerification.deleteBankAccount (personId, merchant.id, merchantOpCityId)
+  pure Success
+

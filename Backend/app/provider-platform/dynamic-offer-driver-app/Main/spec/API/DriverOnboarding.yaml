@@ -277,6 +277,11 @@ apis:
       response:
         type: BankAccountVerificationResponse
   - POST:
+      endpoint: /driver/delete/bankAccount
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: APISuccess
+  - POST:
       endpoint: /driver/backgroundVerification
       auth: TokenAuth PROVIDER_TYPE
       response:
