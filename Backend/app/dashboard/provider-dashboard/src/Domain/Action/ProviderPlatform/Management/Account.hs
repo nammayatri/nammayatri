@@ -42,7 +42,8 @@ import Tools.Auth.Api
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
-  ( PersonError (PersonDoesNotExist),
+  ( AuthError (AccessDenied),
+    PersonError (PersonDoesNotExist),
     RoleError (RoleDoesNotExist),
   )
 
@@ -147,6 +148,26 @@ putAccountUpdateRole merchantShortId opCity apiTokenInfo personId' roleId' = do
       roleId = Kernel.Types.Id.cast roleId'
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   role <- CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+
+  let requestorRoleId = apiTokenInfo.person.roleId
+  requestorDashboardAccessType <- case apiTokenInfo.person.dashboardAccessType of
+    Just dashboardAccessType -> pure dashboardAccessType
+    Nothing -> do
+      requestorRole <- CQRole.findById requestorRoleId >>= fromMaybeM (RoleDoesNotExist requestorRoleId.getId)
+      pure requestorRole.dashboardAccessType
+
+  unless (requestorDashboardAccessType == DRole.DASHBOARD_ADMIN) $ do
+    requestorDescendants <- CQRole.findRoleDescendants requestorRoleId
+    unless (roleId `elem` requestorDescendants) $ do
+      logError $
+        "Couldn't assign role which is not descendant of requestor: "
+          <> apiTokenInfo.person.id.getId
+          <> "; requestorRoleId: "
+          <> requestorRoleId.getId
+          <> "; roleId: "
+          <> roleId.getId
+      throwError AccessDenied
+
   QP.updatePersonRole personId role
   let mbAccessType =
         case role.dashboardAccessType of
