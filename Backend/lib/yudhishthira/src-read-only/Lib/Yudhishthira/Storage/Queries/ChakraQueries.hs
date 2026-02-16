@@ -28,13 +28,24 @@ deleteByPrimaryKey chakra queryName = do deleteWithKV [Se.And [Se.Is Beam.chakra
 findAllByChakra :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> m [Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries])
 findAllByChakra chakra = do findAllWithKV [Se.Is Beam.chakra $ Se.Eq chakra]
 
+findAllByChakraAndQueryType ::
+  (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Lib.Yudhishthira.Types.Chakra -> Kernel.Prelude.Maybe Lib.Yudhishthira.Types.QueryType -> m [Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries])
+findAllByChakraAndQueryType chakra queryType = do findAllWithKV [Se.And [Se.Is Beam.chakra $ Se.Eq chakra, Se.Is Beam.queryType $ Se.Eq queryType]]
+
 findByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> Kernel.Prelude.Text -> m (Maybe Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries))
 findByPrimaryKey chakra queryName = do findOneWithKV [Se.And [Se.Is Beam.chakra $ Se.Eq chakra, Se.Is Beam.queryName $ Se.Eq queryName]]
 
 updateByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries -> m ())
 updateByPrimaryKey (Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {..}) = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.queryResults queryResults, Se.Set Beam.queryText queryText, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.chakra $ Se.Eq chakra, Se.Is Beam.queryName $ Se.Eq queryName]]
+  updateWithKV
+    [Se.Set Beam.queryResults queryResults, Se.Set Beam.queryText queryText, Se.Set Beam.queryType queryType, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.chakra $ Se.Eq chakra,
+          Se.Is Beam.queryName $ Se.Eq queryName
+        ]
+    ]
 
 instance FromTType' Beam.ChakraQueries Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries where
   fromTType' (Beam.ChakraQueriesT {..}) = do
@@ -45,6 +56,7 @@ instance FromTType' Beam.ChakraQueries Lib.Yudhishthira.Types.ChakraQueries.Chak
             queryName = queryName,
             queryResults = queryResults,
             queryText = queryText,
+            queryType = queryType,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -56,6 +68,7 @@ instance ToTType' Beam.ChakraQueries Lib.Yudhishthira.Types.ChakraQueries.Chakra
         Beam.queryName = queryName,
         Beam.queryResults = queryResults,
         Beam.queryText = queryText,
+        Beam.queryType = queryType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
