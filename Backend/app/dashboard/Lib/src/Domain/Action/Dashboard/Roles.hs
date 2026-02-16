@@ -196,7 +196,7 @@ buildAccessMatrixItem roleId req = do
         apiEntity = req.apiEntity,
         userActionType = req.userActionType,
         userAccessType = req.userAccessType,
-        isDerived = False,
+        -- isDerived = False,
         createdAt = now,
         updatedAt = now
       }
