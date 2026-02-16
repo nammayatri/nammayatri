@@ -77,10 +77,10 @@ getBookingMetricsByDateRange merchantOpCityId targetDate = do
       startOfDayUTC = addUTCTime (negate istOffset) (UTCTime targetDate 0)
       endOfDayUTC = addUTCTime (86400 - istOffset) (UTCTime targetDate 0) -- 24 hours later in IST
 
-  -- 1. Fetch Booking Data
+  -- 1. Fetch Booking Data (only required fields)
   bookings <-
     CH.findAll $
-      CH.select $
+      CH.select_ (\b -> CH.notGrouped (b.bookingId, b.finalPrice, b.price, b.quantity, b.childTicketQuantity, b.vehicleType, b.quoteId)) $
         CH.filter_
           ( \b ->
               b.status CH.==. "CONFIRMED"
@@ -91,7 +91,7 @@ getBookingMetricsByDateRange merchantOpCityId targetDate = do
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fRFSTicketBookingTTable)
 
   -- 2. Fetch Quote Categories
-  let quoteIds = Set.toList $ Set.fromList [b.quoteId | b <- bookings]
+  let quoteIds = Set.toList $ Set.fromList [qId | (_, _, _, _, _, _, qId) <- bookings]
       quoteIdBatches = chunkList 500 quoteIds
   quoteCategories <-
     concat
@@ -109,10 +109,8 @@ getBookingMetricsByDateRange merchantOpCityId targetDate = do
 
   -- 4. Aggregate Bookings in Memory
   let initialMap = Map.empty -- Map VehicleType (SumPrice, Set BookingId, SumTickets)
-      processBooking acc b =
-        let -- Price Logic: coalesce(finalPrice, price), but treat 0 as missing
-            finalP = b.finalPrice
-            priceP = b.price
+      processBooking acc (bId, finalP, priceP, qty, childQty', vType, qId) =
+        let
             effectivePrice =
               case finalP of
                 Just v | v > 0 -> Just v
@@ -120,16 +118,16 @@ getBookingMetricsByDateRange merchantOpCityId targetDate = do
             priceVal = maybe 0 (realToFrac . toRational) effectivePrice
 
             -- Quantity Logic
-            quoteTotal = Map.findWithDefault 0 b.quoteId quoteMap
+            quoteTotal = Map.findWithDefault 0 qId quoteMap
 
-            adultQty = fromMaybe 0 b.quantity
-            childQty = fromMaybe 0 b.childTicketQuantity
+            adultQty = fromMaybe 0 qty
+            childQty = fromMaybe 0 childQty'
             bookingTotal = adultQty + childQty
 
             ticketsCount = if bookingTotal > 0 then bookingTotal else quoteTotal
 
-            (curPrice, curIds, curTickets) = Map.findWithDefault (0, Set.empty, 0) b.vehicleType acc
-         in Map.insert b.vehicleType (curPrice + priceVal, Set.insert b.bookingId curIds, curTickets + ticketsCount) acc
+            (curPrice, curIds, curTickets) = Map.findWithDefault (0, Set.empty, 0) vType acc
+         in Map.insert vType (curPrice + priceVal, Set.insert bId curIds, curTickets + ticketsCount) acc
 
       aggregated = List.foldl' processBooking initialMap bookings
 
