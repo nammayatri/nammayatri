@@ -1,0 +1,17 @@
+imports:
+  Person: Dashboard.Common
+  Role: Dashboard.Common
+
+module: Account
+
+apis:
+  - PUT:
+      endpoint: /updateRole/{personId}/{roleId}
+      auth: ApiAuthV2
+      params:
+        personId: Id Person
+        roleId: Id Role
+      response:
+        type: APISuccess
+
+types: {}
