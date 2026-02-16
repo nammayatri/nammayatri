@@ -1,4 +1,9 @@
-module SharedLogic.Roles where -----
+module SharedLogic.Roles
+  ( CycleDetection (..),
+    RoleHierarchy (..),
+    calculateRoleHierarchy,
+  )
+  where -----
 
 import qualified Data.Map as M
 import qualified Data.Set as Set
@@ -8,6 +13,7 @@ import Kernel.Types.Id
 
 -- TODO add time metrics for recalculate hierarchy, pure code, queries etc
 -- TODO unit tests
+-- TODO api for recalculate roles/store redis cache and return roles hierarchy
 
 -- -----------------------------------------------------------------------------
 -- Type synonyms for clarity and maintainability
@@ -28,9 +34,7 @@ type ChildrenMap = M.Map RoleId [RoleId]
 type HierarchyM = Either CycleDetection
 
 -- | Cycle detection result
-data CycleDetection
-  = NoCycle
-  | CycleDetected [RoleId] -- The path that forms a cycle
+newtype CycleDetection = CycleDetected [RoleId] -- The path that forms a cycle
   -- deriving (Show, Eq)
 
 -- | Complete role hierarchy information
