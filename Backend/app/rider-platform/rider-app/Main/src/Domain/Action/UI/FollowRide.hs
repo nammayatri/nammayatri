@@ -40,7 +40,7 @@ getFollowRide (mbPersonId, _) = do
           Nothing -> pure acc
           Just person -> do
             phoneNo <- mapM decrypt person.mobileNumber
-            mbBookingId <- Booking.findByRiderId person.id
+            mbBookingId <- runInMultiCloud $ Booking.findByRiderId person.id
             case mbBookingId of
               Nothing -> pure acc
               Just bookingId -> do
