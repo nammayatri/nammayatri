@@ -541,7 +541,7 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
           driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
           when shouldUpdateRideComplete $ do
             let referralMessage = "Congratulations!"
-                referralTitle = "Your referred customer has completed their first Namma Yatri ride"
+                referralTitle = "Your referred customer has completed their first ride"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             fork "DriverToCustomerReferralCoin Event : " $ do
               DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
