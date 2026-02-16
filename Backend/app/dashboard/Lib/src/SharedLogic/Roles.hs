@@ -3,7 +3,9 @@ module SharedLogic.Roles
     RoleHierarchy (..),
     calculateRoleHierarchy,
   )
-  where -----
+where
+
+-----
 
 import qualified Data.Map as M
 import qualified Data.Set as Set
@@ -35,7 +37,7 @@ type HierarchyM = Either CycleDetection
 
 -- | Cycle detection result
 newtype CycleDetection = CycleDetected [RoleId] -- The path that forms a cycle
-  -- deriving (Show, Eq)
+-- deriving (Show, Eq)
 
 -- | Complete role hierarchy information
 data RoleHierarchy = RoleHierarchy
@@ -82,8 +84,8 @@ calculateRoleHierarchy allRoles = do
 buildAncestorCache :: ParentMap -> [DRole.Role] -> HierarchyM (AncestorCache, ChildrenMap)
 buildAncestorCache parentMap = foldM processRole (M.empty, M.empty)
   where
-    -- | Process a single role: compute its ancestors and update caches
-    --   Skips already processed roles using memoization
+    -- Process a single role: compute its ancestors and update caches
+    -- Skips already processed roles using memoization
     processRole ::
       (AncestorCache, ChildrenMap) ->
       DRole.Role ->
@@ -100,15 +102,13 @@ buildAncestorCache parentMap = foldM processRole (M.empty, M.empty)
           let newChildrenAcc = case role.parentRoleId of
                 Nothing -> childrenAcc
                 Just parentId -> M.insertWith (++) parentId [role.id] childrenAcc -- M.adjust will not work if key does not exist in Map
-
           pure (newCache, newChildrenAcc)
-
-    -- | Write ancestors to cache for a role AND recursively for all its ancestors.
-    --   This implements cross-caching: computing for one role also caches all roles
-    --   in its ancestor chain, maximizing cache reuse.
+    -- Write ancestors to cache for a role AND recursively for all its ancestors.
+    -- This implements cross-caching: computing for one role also caches all roles
+    -- in its ancestor chain, maximizing cache reuse.
     writeAncestorsToCache :: RoleId -> [RoleId] -> AncestorCache -> AncestorCache
     writeAncestorsToCache roleId [] cache = M.insert roleId [] cache
-    writeAncestorsToCache roleId ancestors@(a:as) cache = writeAncestorsToCache a as (M.insert roleId ancestors cache)
+    writeAncestorsToCache roleId ancestors@(a : as) cache = writeAncestorsToCache a as (M.insert roleId ancestors cache)
 
 -- | Recursively get all ancestors of a role, detecting cycles
 --   Uses Set for O(log n) visited checks instead of O(n) for lists

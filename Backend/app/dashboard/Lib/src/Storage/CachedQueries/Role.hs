@@ -17,16 +17,18 @@ module Storage.CachedQueries.Role
     -- makeParentRolesKey,
     makeRoleDescendantsKey,
     cacheRoleHierarchy,
+    findRoleDescendants,
   )
 where
 
-import qualified SharedLogic.Roles as SRoles
 import qualified Domain.Types.Role as DRole
 import Kernel.Prelude
 -- import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error (GenericError (..))
 import Kernel.Types.Id
--- import Kernel.Utils.Common
+import Kernel.Utils.Common
+import qualified SharedLogic.Roles as SRoles
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Role as Queries
 
@@ -35,6 +37,7 @@ import qualified Storage.Queries.Role as Queries
 -- makeParentRolesKey roleId = "dashboard:parentRoles:" <> roleId.getId -- roleAncestors
 
 -- TODO do we need prefix for rider and provider dashboard?
+
 -- | All children (down the tree), leaf has empty list
 makeRoleDescendantsKey :: Id DRole.Role -> Text
 makeRoleDescendantsKey roleId = "dashboard:roleDescendants:" <> roleId.getId
@@ -47,7 +50,6 @@ makeRoleDescendantsKey roleId = "dashboard:roleDescendants:" <> roleId.getId
 --   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
 --   Hedis.setExp (makeParentRolesKey role.id) parents expTime
 --   pure parents
-
 
 -- TODO remove if we will use calculateRoleHierarchy, because cache will be calculated for all roles at once
 -- findParentRolesRecursivelyCached ::
@@ -114,3 +116,25 @@ cacheRoleHierarchy rolesHierarchy = do
   forM_ rolesHierarchy $ \roleHierarchy ->
     -- currently we don't store ancestors
     Hedis.setExp (makeRoleDescendantsKey roleHierarchy.role.id) roleHierarchy.roleDescendants expTime
+
+-- TODO add time metrics and reuse caching func
+findRoleDescendants :: BeamFlow m r => Id DRole.Role -> m [Id DRole.Role]
+findRoleDescendants roleId = do
+  -- Try to get from cache first
+  mbCachedDescendants :: Maybe [Id DRole.Role] <- Hedis.safeGet (makeRoleDescendantsKey roleId)
+  case mbCachedDescendants of
+    Just descendants -> pure descendants
+    Nothing -> do
+      -- Cache miss: fetch all roles from DB and rebuild cache
+      logInfo $ "Descendants cache for roleId: " <> roleId.getId <> " missed, rebuild cache"
+      allRoles <- findAll
+      case SRoles.calculateRoleHierarchy allRoles of
+        Left (SRoles.CycleDetected cycleRoles) ->
+          throwError $ InternalError $ "Cycle detected in roles hierarchy: " <> show cycleRoles
+        Right rolesHierarchy -> do
+          -- Cache the entire hierarchy
+          cacheRoleHierarchy rolesHierarchy
+          -- Find the requested role's descendants
+          case find (\rh -> rh.role.id == roleId) rolesHierarchy of
+            Just roleHierarchy -> pure $ map (.id) roleHierarchy.roleDescendants
+            Nothing -> pure []

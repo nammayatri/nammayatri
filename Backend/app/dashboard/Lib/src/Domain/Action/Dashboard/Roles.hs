@@ -14,7 +14,6 @@
 
 module Domain.Action.Dashboard.Roles where
 
-import qualified SharedLogic.Roles as SRoles
 import Control.Applicative ((<|>))
 import Dashboard.Common
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -29,11 +28,12 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified SharedLogic.Roles as SRoles
 import Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import Tools.Auth
-import Tools.Error (RoleError (..), GenericError (..))
+import Tools.Error (GenericError (..), RoleError (..))
 
 data CreateRoleReq = CreateRoleReq
   { name :: Text,
@@ -90,11 +90,13 @@ createRole _ req = do
           CQRole.cacheRoleHierarchy rolesHierarchy
     Nothing -> do
       -- no need to update whole cache as hierarchy did not changed
-      let newRoleHierarchy = pure SRoles.RoleHierarchy
-            { role,
-              roleAncestors = [],
-              roleDescendants = []
-            }
+      let newRoleHierarchy =
+            pure
+              SRoles.RoleHierarchy
+                { role,
+                  roleAncestors = [],
+                  roleDescendants = []
+                }
       CQRole.create role
       CQRole.cacheRoleHierarchy newRoleHierarchy
 

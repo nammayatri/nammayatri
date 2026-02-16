@@ -32,6 +32,7 @@ import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (throwError)
 import Storage.Beam.BeamFlow
+import qualified Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.AccessMatrix as QAccessMatrix
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
@@ -122,10 +123,16 @@ verifyAccessLevel requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   maybe (pure ()) (\a -> when (a `elem` [DRole.DASHBOARD_ADMIN, DRole.DASHBOARD_USER]) $ Common.checkPasswordExpiry person) person.dashboardAccessType
   -- TODO for DASHBOARD_ADMIN skip access matrix checking
-  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId requiredApiAccessLevel.apiEntity $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
-  let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
-  unless (checkUserAccess userAccessType) $
-    throwError AccessDenied
+
+  case person.dashboardAccessType of
+    Just DRole.DASHBOARD_ADMIN -> do
+      logInfo $ "Skip auth checking for dashboard admin: " <> person.id.getId <> "; userActionType: " <> show requiredApiAccessLevel.userActionType
+    _ -> do
+      personDescendants <- CQRole.findRoleDescendants person.roleId
+      mbAccessMatrixItem <- QAccessMatrix.findOneByRoleIdsAndEntityAndActionType (person.roleId : personDescendants) requiredApiAccessLevel.apiEntity $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
+      let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
+      unless (checkUserAccess userAccessType) $
+        throwError AccessDenied
   pure person
 
 checkUserAccess :: DMatrix.UserAccessType -> Bool
