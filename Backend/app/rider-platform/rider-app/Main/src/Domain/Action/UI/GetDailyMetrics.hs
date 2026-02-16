@@ -64,19 +64,16 @@ getDailyMetricsWithAuth mbApiKey mbIpAddress dateStr = withFlowHandlerAPI $ do
   let merchantOpCityId = Id merchantOpCityIdText :: Id DMOC.MerchantOperatingCity
 
   let redisKey = "frfs:daily_metrics:" <> merchantOpCityIdText <> ":" <> dateStr
-
   -- Try to get from Redis first
   mbCachedData <- Redis.withCrossAppRedis $ Redis.safeGet redisKey
-
   metricsData <- case mbCachedData of
-    Just cachedData -> pure cachedData
+    Just cachedData -> do
+      pure cachedData
     Nothing -> do
       -- Query from ClickHouse if not in cache
       freshData <- queryMetricsFromClickHouse merchantOpCityId dateStr
-
       -- Store in Redis with 1 hour TTL (3600 seconds)
       Redis.withCrossAppRedis $ Redis.setExp redisKey freshData 3600
-
       pure freshData
 
   -- Return the response
@@ -108,13 +105,9 @@ queryMetricsFromClickHouse merchantOpCityId dateStr = do
   targetDate <- case parseTimeM True defaultTimeLocale "%Y-%m-%d" (T.unpack dateStr) of
     Nothing -> throwError $ InvalidRequest $ "Invalid date format: " <> dateStr <> ". Expected YYYY-MM-DD"
     Just day -> pure day
-
   bookingMetrics <- CHFRFS.getBookingMetricsByDateRange merchantOpCityId targetDate
-
   let bookingSummaries = map transformBookingMetrics bookingMetrics
-
   registrationMetrics <- CHPerson.getRegistrationMetricsByDateRange merchantOpCityId targetDate
-
   -- Transform to response format
   let registrationSummaries = map transformRegistrationMetrics registrationMetrics
 
@@ -167,5 +160,6 @@ validateApiKeyAndGetCityId mbApiKey = do
   providedKey <- fromMaybeM (InvalidRequest "API key required") mbApiKey
   mbRiderConfig <- QRiderConfig.findByFrfsMetricsApiKey (Just providedKey)
   case mbRiderConfig of
-    Just riderConfig -> pure $ getId riderConfig.merchantOperatingCityId
+    Just riderConfig -> do
+      pure $ riderConfig.merchantOperatingCityId.getId
     Nothing -> throwError (InvalidRequest "Invalid API key")
