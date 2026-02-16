@@ -15,6 +15,7 @@ data ChakraQueriesT f = ChakraQueriesT
     queryName :: B.C f Kernel.Prelude.Text,
     queryResults :: B.C f [Lib.Yudhishthira.Types.QueryResult],
     queryText :: B.C f Kernel.Prelude.Text,
+    queryType :: B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.QueryType),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

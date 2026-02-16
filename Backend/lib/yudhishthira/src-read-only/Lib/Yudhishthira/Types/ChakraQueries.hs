@@ -13,6 +13,7 @@ data ChakraQueries = ChakraQueries
     queryName :: Kernel.Prelude.Text,
     queryResults :: [Lib.Yudhishthira.Types.QueryResult],
     queryText :: Kernel.Prelude.Text,
+    queryType :: Kernel.Prelude.Maybe Lib.Yudhishthira.Types.QueryType,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

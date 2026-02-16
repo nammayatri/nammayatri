@@ -15,11 +15,15 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as A
 import qualified Data.Aeson.KeyMap as A
 import qualified Data.Aeson.Types as A
-import Data.List (nub)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BL
+import Data.List (nub, partition)
 import qualified Data.Map as M
+import qualified Database.Redis as Redis
 import Data.Scientific (fromFloatDigits, toRealFloat)
 import qualified Data.Set as S
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time.Clock as Time
 import qualified Data.Vector as V
 import qualified JsonLogic
@@ -37,6 +41,7 @@ import qualified Lib.Yudhishthira.Storage.Queries.UserData as QUserData
 import qualified Lib.Yudhishthira.Storage.Queries.UserDataExtra as QUserDataE
 import Lib.Yudhishthira.Tools.Error
 import Lib.Yudhishthira.Tools.Utils
+import qualified Lib.Yudhishthira.Types as YT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified Lib.Yudhishthira.Types.NammaTagV2 as DNTv2
@@ -54,6 +59,7 @@ data Handle m action = Handle
 type ChakraEvent m r action =
   ( BeamFlow m r,
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
+    CacheFlow m r,
     Read action,
     Show action
   )
@@ -86,7 +92,7 @@ kaalChakraEvent req = do
         pure Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Failed}
 
 kaalChakraEventInternal ::
-  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>
   Id Yudhishthira.Event ->
   Yudhishthira.RunKaalChakraJobReq ->
   m Yudhishthira.RunKaalChakraJobRes
@@ -106,9 +112,10 @@ kaalChakraEventInternal eventId req = withLogTag ("EventId-" <> eventId.getId) d
       <> "; max batches: "
       <> show req.maxBatches
   chakraQueries <- QChakraQueries.findAllByChakra req.chakra
+  let clickhouseQueries = filter (\query -> query.queryType == Just YT.CLICKHOUSE) chakraQueries
   bn <- nextChakraBatchNumber req.chakra
   let batchesNumber = bn - 1
-  batchedUserData <- fetchUserDataBatch req eventId chakraQueries batchesNumber
+  batchedUserData <- fetchUserDataBatch req eventId clickhouseQueries batchesNumber
   let usersNumber = length batchedUserData.userIds
   endTime <- getCurrentTime
   let durationInSeconds = Time.nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
@@ -196,7 +203,7 @@ data ChakraBatchedUserData = ChakraBatchedUserData
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 fetchUserDataBatch ::
-  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>
   Yudhishthira.RunKaalChakraJobReq ->
   Id Yudhishthira.Event ->
   [Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries] ->
@@ -205,10 +212,17 @@ fetchUserDataBatch ::
 fetchUserDataBatch req eventId chakraQueries batchNumber = do
   logInfo $ "Running batch: " <> show batchNumber
   when (req.usersInBatch < 1) $ throwError (InvalidRequest "Quantity of users in batch should be more than 0")
+
+  -- 1. Separate queries by type
+  let (clickhouseQueries, redisQueries) =
+        partition (\q -> q.queryType == Just YT.CLICKHOUSE) chakraQueries
+
+  -- 2. Execute ClickHouse queries first (to get userIds)
   let limit = Yudhishthira.QLimit req.usersInBatch
   let offset = Yudhishthira.QOffset $ batchNumber * req.usersInBatch
   let template = Template.Template {limit, offset, usersSet = req.usersSet}
-  chakraQueriesResults <- forM chakraQueries $ \chakraQuery -> do
+
+  clickhouseResults <- forM clickhouseQueries $ \chakraQuery -> do
     queryResults <- runQueryRequestTemplate chakraQuery template
     if req.parseQueryResults
       then do
@@ -217,7 +231,31 @@ fetchUserDataBatch req eventId chakraQueries batchNumber = do
         pure $ queryResults{queryResultObjects = parsedObjects}
       else pure queryResults
 
-  let notEmptyResults = filter (\res -> not (null res.queryResultObjects)) chakraQueriesResults
+  -- 3. Extract userIds from ClickHouse results
+  let userIds = S.toList $ extractUserIdsFromClickHouseResults clickhouseResults
+
+  -- 4. Execute Redis queries using extracted userIds
+  redisResults <- forM redisQueries $ \chakraQuery -> do
+    redisObjects <- runRedisQueryRequest chakraQuery userIds
+    if req.parseQueryResults
+      then do
+        parsedObjects <- Parse.parseQueryResult chakraQuery redisObjects
+        pure ChakraQueryResult
+          { queryName = chakraQuery.queryName
+          , queryText = chakraQuery.queryText
+          , queryResultObjects = parsedObjects
+          }
+      else pure ChakraQueryResult
+        { queryName = chakraQuery.queryName
+        , queryText = chakraQuery.queryText
+        , queryResultObjects = redisObjects
+        }
+
+  -- 5. Combine ClickHouse and Redis results
+  let allResults = clickhouseResults ++ redisResults
+
+  -- 6. Continue with existing logic
+  let notEmptyResults = filter (\res -> not (null res.queryResultObjects)) allResults
   case notEmptyResults of
     [] -> do
       logError $ "Got empty result for the batchNumber:" <> show batchNumber <> ", chakra successfully finished, rescheduling for the next chakra"
@@ -530,34 +568,330 @@ data ChakraQueryResult = ChakraQueryResult
   }
 
 runQueryRequestTemplate ::
-  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>
   Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries ->
   Template.Template ->
   m ChakraQueryResult
 runQueryRequestTemplate chakraQuery template = do
-  case Template.replaceTemplateUnits (Template.RawQuery chakraQuery.queryText) template of
-    Right (Template.RawQuery rawQuery) -> do
-      res <- runQueryRequest chakraQuery{queryText = rawQuery}
-      pure
-        ChakraQueryResult
-          { queryName = chakraQuery.queryName,
-            queryText = rawQuery,
-            queryResultObjects = res
-          }
-    Left err -> throwError $ InvalidRequest err
+  let queryType = fromMaybe YT.CLICKHOUSE chakraQuery.queryType
+  case queryType of
+    YT.CLICKHOUSE -> do
+      case Template.replaceTemplateUnits (Template.RawQuery chakraQuery.queryText) template of
+        Right (Template.RawQuery rawQuery) -> do
+          res <- runClickhouseQueryRequest chakraQuery{queryText = rawQuery}
+          pure
+            ChakraQueryResult
+              { queryName = chakraQuery.queryName,
+                queryText = rawQuery,
+                queryResultObjects = res
+              }
+        Left err -> throwError $ InvalidRequest err
+    YT.REDIS -> do
+      -- Redis queries don't use template system - they're handled in fetchUserDataBatch
+      throwError $ InvalidRequest "Redis queries should be handled in fetchUserDataBatch"
 
-runQueryRequest ::
+runClickhouseQueryRequest ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries ->
   m [A.Object]
-runQueryRequest queryRequest = do
-  logDebug $ "Run query request: name:" <> show queryRequest.queryName <> "; raw query: '" <> queryRequest.queryText <> "'"
+runClickhouseQueryRequest queryRequest = do
+  logDebug $ "Run ClickHouse query request: name:" <> show queryRequest.queryName <> "; raw query: '" <> queryRequest.queryText <> "'"
   eQueryResult :: Either String [A.Object] <- CH.runRawQuery (Proxy @CH.APP_SERVICE_CLICKHOUSE) $ CH.RawQuery $ T.unpack queryRequest.queryText
   case eQueryResult of
     Right queryResult -> do
       checkForMissingFieldsInQueryResponse (queryRequest.queryResults <&> (.resultName)) queryResult
       pure queryResult
     Left err -> throwError (InvalidRequest $ "Error while run clickhouse query: " <> T.pack err <> " query: " <> queryRequest.queryText)
+
+-- Helper type for userId-key mapping
+type UserIdKeyMapping = [(Id Yudhishthira.User, Text)]
+
+-- Extract User IDs from ClickHouse Results
+extractUserIdsFromClickHouseResults :: [ChakraQueryResult] -> S.Set (Id Yudhishthira.User)
+extractUserIdsFromClickHouseResults results =
+  S.fromList $ concatMap extractUserIdsFromResult results
+  where
+    extractUserIdsFromResult :: ChakraQueryResult -> [Id Yudhishthira.User]
+    extractUserIdsFromResult ChakraQueryResult{queryResultObjects} =
+      mapMaybe extractUserId queryResultObjects
+
+    extractUserId :: A.Object -> Maybe (Id Yudhishthira.User)
+    extractUserId obj = do
+      userIdValue <- A.lookup (A.fromText userIdField) obj
+      userIdText <- case userIdValue of
+        A.String txt -> Just txt
+        _ -> Nothing
+      Just $ Id userIdText
+
+-- Parse Redis Query Config
+parseRedisQueryConfig :: Text -> Either Text YT.RedisQueryConfig
+parseRedisQueryConfig queryText =
+  case A.eitherDecode (encodeUtf8 queryText) of
+    Left err -> Left $ "Failed to parse Redis query config: " <> T.pack err
+    Right config -> Right config
+
+-- Build Redis Keys with Mapping
+buildRedisKeysWithMapping ::
+  YT.RedisQueryConfig ->
+  [Id Yudhishthira.User] ->
+  (UserIdKeyMapping, [Text])
+buildRedisKeysWithMapping config userIds =
+  let mappings = map buildKeyMapping userIds
+      keys = map snd mappings
+  in (mappings, keys)
+  where
+    buildKeyMapping :: Id Yudhishthira.User -> (Id Yudhishthira.User, Text)
+    buildKeyMapping userId =
+      (userId, T.replace "{userId}" userId.getId config.key)
+
+-- Group Keys by Redis Slot
+groupKeysBySlot :: [Text] -> M.Map Int [Text]
+groupKeysBySlot keys =
+  foldl' insertKeyBySlot M.empty keys
+  where
+    insertKeyBySlot :: M.Map Int [Text] -> Text -> M.Map Int [Text]
+    insertKeyBySlot acc key =
+      let hashSlot = Redis.keyToSlot $ TE.encodeUtf8 key
+          slot = fromIntegral hashSlot :: Int
+      in M.insertWith (++) slot [key] acc
+
+-- Chunks helper (if not available)
+chunksOf :: Int -> [a] -> [[a]]
+chunksOf _ [] = []
+chunksOf n xs = take n xs : chunksOf n (drop n xs)
+
+-- Execute MGET Batch
+executeMgetBatch ::
+  (CacheFlow m r, MonadThrow m, Log m) =>
+  Int ->
+  M.Map Int [Text] ->
+  m [Maybe BS.ByteString]
+executeMgetBatch batchSize slotGroupedKeys = do
+  -- Execute GET per slot, batching within each slot
+  -- Since Redis.mget doesn't work with Hedis.withCrossAppRedis, we use multiple GET calls
+  -- Collect all results from all slots and batches
+  slotResultsList <- forM (M.toList slotGroupedKeys) $ \(_slot, keys) -> do
+    let batches = chunksOf batchSize keys
+    -- For each batch, execute GET for each key
+    batchResultsList <- forM batches $ \batchKeys -> do
+      -- Execute GET for each key in the batch using raw Redis commands
+      forM batchKeys $ \key -> do
+        -- Use Hedis.runHedis with Database.Redis.get to get raw ByteString
+        Hedis.withCrossAppRedis $ Hedis.runHedis $ Redis.get (TE.encodeUtf8 key)
+    -- batchResultsList is [[Maybe BS.ByteString]], concat to [Maybe BS.ByteString] for this slot
+    pure $ concat batchResultsList
+
+  -- slotResultsList is [[Maybe BS.ByteString]] (one list per slot), concat to [Maybe BS.ByteString]
+  pure $ concat slotResultsList
+
+-- Execute GET Single
+executeGetSingle ::
+  (CacheFlow m r, MonadThrow m, Log m) =>
+  [Text] ->
+  m [Maybe BS.ByteString]
+executeGetSingle keys =
+  forM keys $ \key -> Hedis.withCrossAppRedis $ Hedis.runHedis $ Redis.get (TE.encodeUtf8 key)
+
+-- Execute HGET
+executeHget ::
+  (CacheFlow m r, MonadThrow m, Log m) =>
+  Text ->
+  Text ->
+  m (Maybe BS.ByteString)
+executeHget hashKey fieldName =
+  Hedis.withCrossAppRedis $ Hedis.runHedis $ Redis.hget (TE.encodeUtf8 hashKey) (TE.encodeUtf8 fieldName)
+
+-- Execute HGETALL
+executeHgetall ::
+  (CacheFlow m r, MonadThrow m, Log m) =>
+  [Text] ->
+  m [[(Text, BS.ByteString)]]
+executeHgetall keys =
+  forM keys $ \key -> do
+    -- Use raw Redis hgetall command, Hedis.runHedis unwraps Either Reply
+    result <- Hedis.withCrossAppRedis $ Hedis.runHedis $ Redis.hgetall (TE.encodeUtf8 key)
+    -- Convert [(BS.ByteString, BS.ByteString)] to [(Text, BS.ByteString)]
+    pure $ map (\(k, v) -> (TE.decodeUtf8 k, v)) result
+
+-- Execute SMEMBERS
+executeSmembers ::
+  (CacheFlow m r, MonadThrow m, Log m) =>
+  [Text] ->
+  m [[BS.ByteString]]
+executeSmembers keys =
+  forM keys $ \key -> Hedis.withCrossAppRedis $ Hedis.runHedis $ Redis.smembers (TE.encodeUtf8 key)
+
+-- Execute ZRANGE
+executeZrange ::
+  (CacheFlow m r, MonadThrow m, Log m) =>
+  [Text] ->
+  Int ->
+  Int ->
+  m [[BS.ByteString]]
+executeZrange keys start stop =
+  forM keys $ \key -> Hedis.withCrossAppRedis $ Hedis.runHedis $ Redis.zrange (TE.encodeUtf8 key) (fromIntegral start) (fromIntegral stop)
+
+-- Format Redis Results
+formatRedisResults ::
+  YT.RedisQueryConfig ->
+  UserIdKeyMapping ->
+  [Maybe BS.ByteString] ->
+  Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries ->
+  Either Text [A.Object]
+formatRedisResults config userIdMapping redisResponses chakraQuery = do
+  let pairedResults = zip userIdMapping redisResponses
+
+  formattedResults <- forM pairedResults $ \((userId, _key), mbResponse) -> do
+    formatSingleResult config userId mbResponse chakraQuery
+
+  pure formattedResults
+
+formatSingleResult ::
+  YT.RedisQueryConfig ->
+  Id Yudhishthira.User ->
+  Maybe BS.ByteString ->
+  Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries ->
+  Either Text A.Object
+formatSingleResult config userId mbResponse chakraQuery = do
+  let baseObj = A.singleton (A.fromText userIdField) (A.String userId.getId)
+
+  parsedFields <- case mbResponse of
+    Nothing ->
+      pure $ mkDefaultFields chakraQuery.queryResults
+    Just response -> do
+      parseRedisResponse config.operation response chakraQuery.queryResults
+
+  pure $ foldl' (\obj (key, value) -> A.insert key value obj) baseObj parsedFields
+
+parseRedisResponse ::
+  YT.RedisOp ->
+  BS.ByteString ->
+  [YT.QueryResult] ->
+  Either Text [(A.Key, A.Value)]
+parseRedisResponse op response queryResults =
+  case op of
+    YT.GET -> parseGetResponse response queryResults
+    YT.MGET -> parseGetResponse response queryResults
+    YT.HGET -> parseHgetResponse response queryResults
+    YT.HGETALL -> parseGetResponse response queryResults  -- HGETALL converted to JSON object
+    YT.SMEMBERS -> parseGetResponse response queryResults  -- SMEMBERS converted to JSON array
+    YT.ZRANGE -> parseGetResponse response queryResults  -- ZRANGE converted to JSON array
+
+parseGetResponse ::
+  BS.ByteString ->
+  [YT.QueryResult] ->
+  Either Text [(A.Key, A.Value)]
+parseGetResponse response queryResults = do
+  case A.eitherDecodeStrict response of
+    Right (A.Object obj) -> do
+      extractFieldsFromObject obj queryResults
+    Right otherValue ->
+      case queryResults of
+        [singleResult] -> do
+          parsedValue <- parseValueForQueryResult singleResult otherValue
+          pure [(A.fromText singleResult.resultName, parsedValue)]
+        _ -> Left "GET operation with non-object JSON requires exactly one queryResult"
+    Left _ -> do
+      case queryResults of
+        [singleResult] -> do
+          let textValue = A.String $ TE.decodeUtf8 response
+          parsedValue <- parseValueForQueryResult singleResult textValue
+          pure [(A.fromText singleResult.resultName, parsedValue)]
+        _ -> Left "GET operation with plain text requires exactly one queryResult"
+
+parseHgetResponse ::
+  BS.ByteString ->
+  [YT.QueryResult] ->
+  Either Text [(A.Key, A.Value)]
+parseHgetResponse response queryResults = do
+  case queryResults of
+    [singleResult] -> do
+      let textValue = A.String $ TE.decodeUtf8 response
+      parsedValue <- parseValueForQueryResult singleResult textValue
+      pure [(A.fromText singleResult.resultName, parsedValue)]
+    _ -> Left "HGET operation requires exactly one queryResult"
+
+extractFieldsFromObject ::
+  A.Object ->
+  [YT.QueryResult] ->
+  Either Text [(A.Key, A.Value)]
+extractFieldsFromObject obj queryResults =
+  forM queryResults $ \queryResult -> do
+    let fieldKey = A.fromText queryResult.resultName
+    case A.lookup fieldKey obj of
+      Just value -> do
+        parsedValue <- parseValueForQueryResult queryResult value
+        pure (fieldKey, parsedValue)
+      Nothing ->
+        pure (fieldKey, mkDefaultValue queryResult.resultDefault)
+
+parseValueForQueryResult ::
+  YT.QueryResult ->
+  A.Value ->
+  Either Text A.Value
+parseValueForQueryResult queryResult value =
+  Parse.parseQueryResultField queryResult.resultDefault value
+
+mkDefaultFields ::
+  [YT.QueryResult] ->
+  [(A.Key, A.Value)]
+mkDefaultFields = map $ \queryResult ->
+  (A.fromText queryResult.resultName, mkDefaultValue queryResult.resultDefault)
+
+mkDefaultValue :: YT.QueryResultDefault -> A.Value
+mkDefaultValue (YT.BOOL v) = A.Bool v
+mkDefaultValue (YT.INT v) = A.Number $ fromIntegral v
+mkDefaultValue (YT.DOUBLE v) = A.toJSON v
+mkDefaultValue (YT.TEXT v) = A.String v
+
+-- Main Redis Query Execution
+runRedisQueryRequest ::
+  (CacheFlow m r, MonadThrow m, Log m) =>
+  Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries ->
+  [Id Yudhishthira.User] ->
+  m [A.Object]
+runRedisQueryRequest chakraQuery userIds = do
+  logDebug $ "Run Redis query request: name:" <> show chakraQuery.queryName <> "; userIds count: " <> show (length userIds)
+
+  -- 1. Parse Redis query config
+  redisConfig <- case parseRedisQueryConfig chakraQuery.queryText of
+    Left err -> throwError $ InvalidRequest $ "Invalid Redis query config: " <> err
+    Right config -> pure config
+
+  -- 2. Build Redis keys with mapping
+  let (userIdMapping, keys) = buildRedisKeysWithMapping redisConfig userIds
+
+  -- 3. Execute Redis operation based on config
+  redisResponses <- case redisConfig.operation of
+    YT.MGET -> case redisConfig.batch of
+      YT.Batch -> do
+        let batchSize = fromMaybe 100 redisConfig.batchSize
+        let slotGroupedKeys = groupKeysBySlot keys
+        executeMgetBatch batchSize slotGroupedKeys
+      YT.Single -> executeGetSingle keys
+    YT.GET -> executeGetSingle keys
+    YT.HGET -> do
+      let hashField = fromMaybe "" redisConfig.hashField
+      forM keys $ \key -> executeHget key hashField
+    YT.HGETALL -> do
+      hashMaps <- executeHgetall keys
+      -- Convert hash maps to JSON ByteString
+      pure $ map (Just . BL.toStrict . A.encode . A.object . map (\(k, v) -> (A.fromText k, A.String $ TE.decodeUtf8 v))) hashMaps
+    YT.SMEMBERS -> do
+      sets <- executeSmembers keys
+      -- Convert sets to JSON array ByteString
+      pure $ map (Just . BL.toStrict . A.encode . A.Array . V.fromList . map (A.String . TE.decodeUtf8)) sets
+    YT.ZRANGE -> do
+      let start = fromMaybe 0 redisConfig.zrangeStart
+      let stop = fromMaybe (-1) redisConfig.zrangeStop
+      sortedSets <- executeZrange keys start stop
+      -- Convert sorted sets to JSON array ByteString
+      pure $ map (Just . BL.toStrict . A.encode . A.Array . V.fromList . map (A.String . TE.decodeUtf8)) sortedSets
+
+  -- 4. Format results
+  case formatRedisResults redisConfig userIdMapping redisResponses chakraQuery of
+    Left err -> throwError $ InvalidRequest $ "Failed to format Redis results: " <> err
+    Right formattedResults -> pure formattedResults
 
 checkForMissingFieldsInQueryResponse :: (Log m, MonadThrow m) => [Text] -> [A.Object] -> m ()
 checkForMissingFieldsInQueryResponse _ [] = pure ()

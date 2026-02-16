@@ -1,5 +1,6 @@
 module Lib.Yudhishthira.Event.KaalChakra.Parse
   ( parseQueryResult,
+    parseQueryResultField,
     mkDefaultUserDataMap,
     appendDefaultValues,
     DefaultDataMap (..),

@@ -36,6 +36,10 @@ module Lib.Yudhishthira.Types
     UsersSet (..),
     QueryResult (..),
     QueryResultDefault (..),
+    QueryType (..),
+    RedisQueryConfig (..),
+    BatchMode (..),
+    RedisOp (..),
     UpdateNammaTagRequest (..),
     GetLogicsResp (..),
     LogicRolloutObject (..),
@@ -139,7 +143,8 @@ data ChakraQueriesAPIEntity = ChakraQueriesAPIEntity
   { chakra :: Chakra,
     queryName :: Text,
     queryResults :: [QueryResult],
-    queryText :: Text
+    queryText :: Text,
+    queryType :: QueryType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -152,6 +157,33 @@ data QueryResult = QueryResult
 data QueryResultDefault = BOOL Bool | INT Int | DOUBLE Double | TEXT Text
   deriving (Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, ToSchema)
 
+data QueryType
+  = CLICKHOUSE
+  | REDIS
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToParamSchema, ToSchema)
+
+$(mkHttpInstancesForEnum ''QueryType)
+$(mkBeamInstancesForEnum ''QueryType)
+
+-- Redis Query Configuration Types
+
+data RedisQueryConfig = RedisQueryConfig
+  { key :: Text, -- Template: "user:{userId}:stats"
+    batch :: BatchMode, -- "single" | "batch"
+    batchSize :: Maybe Int, -- Only when batch == "batch", default: 100
+    operation :: RedisOp, -- "mget" | "get" | "hget" | "hgetall" | "smembers" | "zrange"
+    hashField :: Maybe Text, -- Required for HGET operation
+    zrangeStart :: Maybe Int, -- Optional: start index for ZRANGE
+    zrangeStop :: Maybe Int -- Optional: stop index for ZRANGE
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+data BatchMode = Single | Batch
+  deriving (Eq, Show, Read, Generic, ToJSON, FromJSON)
+
+data RedisOp = MGET | GET | HGET | HGETALL | SMEMBERS | ZRANGE
+  deriving (Eq, Show, Read, Generic, ToJSON, FromJSON)
+
 $(mkBeamInstancesForEnumAndList ''QueryResult)
 
 instance HideSecrets ChakraQueriesAPIEntity where
@@ -161,7 +193,8 @@ data ChakraQueryUpdateReq = ChakraQueryUpdateReq
   { chakra :: Chakra,
     queryName :: Text,
     queryResults :: Maybe [QueryResult],
-    queryText :: Maybe Text
+    queryText :: Maybe Text,
+    queryType :: Maybe QueryType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

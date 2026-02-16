@@ -1,6 +1,7 @@
 imports:
   Chakra: Lib.Yudhishthira.Types
   QueryResult: Lib.Yudhishthira.Types
+  QueryType: Lib.Yudhishthira.Types
 
 ChakraQueries:
   tableName: chakra_queries
@@ -10,6 +11,7 @@ ChakraQueries:
     queryName: Text
     queryText: Text
     queryResults: '[QueryResult]'
+    queryType: 'Maybe QueryType'
 
   constraints:
     chakra: PrimaryKey
@@ -22,6 +24,10 @@ ChakraQueries:
     findAllByChakra:
       kvFunction: findAllWithKV
       where: chakra
+    findAllByChakraAndQueryType:
+      kvFunction: findAllWithKV
+      where:
+        and: [chakra, queryType]
     deleteByPrimaryKey:
       kvFunction: deleteWithKV
       where:
