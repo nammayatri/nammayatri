@@ -30,9 +30,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import "lib-dashboard" Storage.Queries.Person as QP
-import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
@@ -50,7 +50,7 @@ postRegistrationV2LoginOtp merchantShortId opCity req = do
   merchantServerAccessCheck merchant
   mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
   let req' = buildFleetOwnerRegisterReqV2 merchantShortId opCity req
-  fleetOwnerRole <- QRole.findByDashboardAccessType DRole.FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show DRole.FLEET_OWNER)
+  fleetOwnerRole <- CQRole.findByDashboardAccessType DRole.FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show DRole.FLEET_OWNER)
   res <- Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2LoginOtp) enabled req
   when (isNothing mbPerson) $ do
     let personId = cast @Common.Person @DP.Person res.personId
@@ -133,7 +133,7 @@ postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req =
 
   encEmail <- forM req.email encrypt
   let fleetRole = getFleetRole req.fleetType
-  fleetOwnerRole <- QRole.findByDashboardAccessType fleetRole >>= fromMaybeM (RoleDoesNotExist $ show fleetRole)
+  fleetOwnerRole <- CQRole.findByDashboardAccessType fleetRole >>= fromMaybeM (RoleDoesNotExist $ show fleetRole)
 
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   res <-

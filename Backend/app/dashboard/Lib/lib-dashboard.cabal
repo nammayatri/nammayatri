@@ -49,6 +49,7 @@ library
       Domain.Types.ServerName
       Domain.Types.Transaction
       Environment
+      SharedLogic.Roles
       SharedLogic.Transaction
       Storage.Beam.AccessMatrix
       Storage.Beam.BeamFlow
@@ -59,9 +60,11 @@ library
       Storage.Beam.RegistrationToken
       Storage.Beam.Role
       Storage.Beam.Transaction
+      Storage.CachedQueries.Role
       Storage.Queries.AccessMatrix
       Storage.Queries.Merchant
       Storage.Queries.MerchantAccess
+      Storage.Queries.OrphanInstances.Role
       Storage.Queries.Person
       Storage.Queries.RegistrationToken
       Storage.Queries.Role

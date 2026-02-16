@@ -27,8 +27,8 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import "lib-dashboard" Storage.Queries.Person as QP
-import "lib-dashboard" Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
@@ -75,7 +75,7 @@ postFleetManagementFleetCreate merchantShortId opCity apiTokenInfo req = do
   merchantServerAccessCheck merchant
   mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
   let req' = DRegistrationV2.buildFleetOwnerRegisterReqV2 merchantShortId opCity req
-  fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show FLEET_OWNER)
+  fleetOwnerRole <- CQRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show FLEET_OWNER)
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   res <-
     SharedLogic.Transaction.withResponseTransactionStoring transaction $
@@ -103,7 +103,7 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity apiTokenInfo req = do
     SharedLogic.Transaction.withResponseTransactionStoring transaction $
       Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetLinkSendOtp) apiTokenInfo.personId.getId req
   when (isNothing mbPerson) $ do
-    fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show FLEET_OWNER)
+    fleetOwnerRole <- CQRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show FLEET_OWNER)
     let personId = Kernel.Types.Id.cast @API.Types.ProviderPlatform.Fleet.RegistrationV2.Person @DP.Person res.fleetOwnerId
     DRegistration.createFleetOwnerDashboardOnly fleetOwnerRole apiTokenInfo.merchant req' personId
   pure res

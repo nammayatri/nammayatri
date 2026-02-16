@@ -33,12 +33,12 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.BeamFlow
+import qualified Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.MerchantAccess as QMerchantAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QRT
-import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Error
@@ -93,7 +93,7 @@ createMerchantWithAdmin tokenInfo req = do
   whenJust mbExistingMerchant $ \_ -> throwError (MerchantAlreadyExist req.shortId)
   unlessM (isNothing <$> QP.findByEmail req.adminEmail) $ throwError (InvalidRequest "Email already registered")
   unlessM (isNothing <$> QP.findByMobileNumber req.adminMobileNumber req.adminMobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
-  role <- QRole.findByName "MERCHANT_ADMIN" >>= fromMaybeM (RoleDoesNotExist "MERCHANT_ADMIN")
+  role <- CQRole.findByName "MERCHANT_ADMIN" >>= fromMaybeM (RoleDoesNotExist "MERCHANT_ADMIN")
   person <- buildPersonCreateReq req role
   decPerson <- decrypt person
   QP.create person

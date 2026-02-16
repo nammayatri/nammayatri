@@ -41,13 +41,13 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow
+import qualified Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QReg
-import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
@@ -215,7 +215,7 @@ createPerson _ personEntity = do
     )
     $ throwError (InvalidRequest "Phone already registered")
   let roleId = personEntity.roleId
-  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  role <- CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   person <- buildPerson personEntity (role.dashboardAccessType)
   decPerson <- decrypt person
   let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing
@@ -259,7 +259,7 @@ assignRole ::
   m APISuccess
 assignRole _ personId roleId = do
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  role <- CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   QP.updatePersonRole personId role
   pure Success
 
@@ -421,7 +421,7 @@ profile ::
   m DP.PersonAPIEntity
 profile tokenInfo = do
   encPerson <- B.runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  role <- B.runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  role <- B.runInReplica $ CQRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
   merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId tokenInfo.personId
   decPerson <- decrypt encPerson
   case merchantAccessList of
@@ -449,7 +449,7 @@ getAccessMatrix ::
   m DMatrix.AccessMatrixRowAPIEntity
 getAccessMatrix tokenInfo = do
   encPerson <- B.runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  role <- B.runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  role <- B.runInReplica $ CQRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
   accessMatrixItems <- B.runInReplica $ QMatrix.findAllByRoleId encPerson.roleId
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role
 

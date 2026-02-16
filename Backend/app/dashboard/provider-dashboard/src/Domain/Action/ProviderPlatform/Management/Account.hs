@@ -27,6 +27,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import "lib-dashboard" Storage.Queries.Person
   ( findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset,
     findById,
@@ -37,12 +38,12 @@ import "lib-dashboard" Storage.Queries.Person
   )
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QR
-import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
-  ( PersonError (PersonDoesNotExist),
+  ( AuthError (AccessDenied),
+    PersonError (PersonDoesNotExist),
     RoleError (RoleDoesNotExist),
   )
 
@@ -64,7 +65,7 @@ getAccountFetchUnverifiedAccounts _merchantShortId _opCity _apiTokenInfo mbFromD
   pure $ Common.UnverifiedAccountsResp {listItems = res, summary = summary}
   where
     convertPersonToPersonAPIEntity DP.Person {..} = do
-      role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+      role <- CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
       mobileNumber' <- decrypt mobileNumber
       email' <- traverse decrypt email
       pure $
@@ -146,7 +147,27 @@ putAccountUpdateRole merchantShortId opCity apiTokenInfo personId' roleId' = do
   let personId = Kernel.Types.Id.cast personId'
       roleId = Kernel.Types.Id.cast roleId'
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  role <- CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+
+  let requestorRoleId = apiTokenInfo.person.roleId
+  requestorDashboardAccessType <- case apiTokenInfo.person.dashboardAccessType of
+    Just dashboardAccessType -> pure dashboardAccessType
+    Nothing -> do
+      requestorRole <- CQRole.findById requestorRoleId >>= fromMaybeM (RoleDoesNotExist requestorRoleId.getId)
+      pure requestorRole.dashboardAccessType
+
+  unless (requestorDashboardAccessType == DRole.DASHBOARD_ADMIN) $ do
+    requestorDescendants <- CQRole.findRoleDescendants requestorRoleId
+    unless (roleId `elem` requestorDescendants) $ do
+      logError $
+        "Couldn't assign role which is not descendant of requestor: "
+          <> apiTokenInfo.person.id.getId
+          <> "; requestorRoleId: "
+          <> requestorRoleId.getId
+          <> "; roleId: "
+          <> roleId.getId
+      throwError AccessDenied
+
   QP.updatePersonRole personId role
   let mbAccessType =
         case role.dashboardAccessType of

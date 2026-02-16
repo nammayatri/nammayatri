@@ -27,6 +27,7 @@ data AccessMatrixT f = AccessMatrixT
     apiEntity :: B.C f Domain.ApiEntity,
     userActionType :: B.C f Domain.UserActionTypeWrapper,
     userAccessType :: B.C f Domain.UserAccessType,
+    -- isDerived :: B.C f (Maybe Bool), -- TODO remove if we will use calculateRoleHierarchy
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }

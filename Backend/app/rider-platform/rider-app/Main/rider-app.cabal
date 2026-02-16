@@ -165,6 +165,7 @@ library
       Domain.Action.Beckn.OnStatus
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
+      Domain.Action.Dashboard.Account
       Domain.Action.Dashboard.AlertIncident
       Domain.Action.Dashboard.AppManagement.Customer
       Domain.Action.Dashboard.AppManagement.EventManagement
@@ -708,6 +709,7 @@ library
       API.Action.Dashboard.IssueManagement.Issue
       API.Action.Dashboard.IssueManagement.IssueList
       API.Action.Dashboard.Management
+      API.Action.Dashboard.Management.Account
       API.Action.Dashboard.Management.AlertIncident
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.Customer

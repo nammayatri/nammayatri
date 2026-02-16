@@ -38,6 +38,7 @@ data Role = Role
   { id :: Id Role,
     name :: Text,
     dashboardAccessType :: DashboardAccessType,
+    parentRoleId :: Maybe (Id Role),
     description :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -48,6 +49,7 @@ data RoleAPIEntity = RoleAPIEntity
   { id :: Id Role,
     name :: Text,
     dashboardAccessType :: DashboardAccessType,
+    parentRoleId :: Maybe (Id Role),
     description :: Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)

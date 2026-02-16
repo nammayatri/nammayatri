@@ -43,6 +43,26 @@ findByRoleIdAndEntityAndActionType roleId apiEntity userActionType =
         ]
     ]
 
+findOneByRoleIdsAndEntityAndActionType ::
+  BeamFlow m r =>
+  [Id DRole.Role] ->
+  DMatrix.ApiEntity ->
+  DMatrix.UserActionTypeWrapper ->
+  m (Maybe DMatrix.AccessMatrixItem)
+findOneByRoleIdsAndEntityAndActionType roleIds apiEntity userActionType =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamAM.roleId $ Se.In $ getId <$> roleIds,
+          Se.Is BeamAM.apiEntity $ Se.Eq apiEntity,
+          Se.Is BeamAM.userActionType $ Se.Eq userActionType,
+          Se.Is BeamAM.userAccessType $ Se.Eq DMatrix.USER_FULL_ACCESS
+        ]
+    ]
+    (Se.Asc BeamAM.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
+
 findAllByRoles ::
   BeamFlow m r =>
   [DRole.Role] ->
@@ -82,6 +102,8 @@ instance FromTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
             ..
           }
 
+-- isDerived = fromMaybe False isDerived,
+
 instance ToTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
   toTType' DMatrix.AccessMatrixItem {..} =
     BeamAM.AccessMatrixT
@@ -89,3 +111,5 @@ instance ToTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
         roleId = getId roleId,
         ..
       }
+
+-- isDerived = Just isDerived,

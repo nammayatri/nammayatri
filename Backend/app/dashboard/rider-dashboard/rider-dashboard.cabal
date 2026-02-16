@@ -39,6 +39,7 @@ library
       Domain.Action.RiderPlatform.AppManagement.Tickets
       Domain.Action.RiderPlatform.IssueManagement.Issue
       Domain.Action.RiderPlatform.IssueManagement.IssueList
+      Domain.Action.RiderPlatform.Management.Account
       Domain.Action.RiderPlatform.Management.AlertIncident
       Domain.Action.RiderPlatform.Management.Booking
       Domain.Action.RiderPlatform.Management.Customer
@@ -77,6 +78,7 @@ library
       API.Action.RiderPlatform.IssueManagement.Issue
       API.Action.RiderPlatform.IssueManagement.IssueList
       API.Action.RiderPlatform.Management
+      API.Action.RiderPlatform.Management.Account
       API.Action.RiderPlatform.Management.AlertIncident
       API.Action.RiderPlatform.Management.Booking
       API.Action.RiderPlatform.Management.Customer

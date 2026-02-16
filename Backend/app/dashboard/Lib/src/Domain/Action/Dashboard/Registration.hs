@@ -42,12 +42,12 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow
+import qualified Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as MA
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
@@ -342,7 +342,7 @@ registerFleetOwner req personId = do
   let validateFn = if fromMaybe True merchant.isStrongNameCheckRequired then validateFleetOwner else weakValidateFleetOwner
   runRequestValidation validateFn req
   unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
-  fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist (show $ getFleetRole req.fleetType))
+  fleetOwnerRole <- CQRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist (show $ getFleetRole req.fleetType))
 
   merchantServerAccessCheck merchant
   createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId

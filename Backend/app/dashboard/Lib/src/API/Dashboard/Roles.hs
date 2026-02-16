@@ -32,6 +32,10 @@ type API =
            :> DashboardAuth 'DASHBOARD_ADMIN
            :> ReqBody '[JSON] DRoles.CreateRoleReq
            :> Post '[JSON] DRole.RoleAPIEntity
+           :<|> "update"
+             :> DashboardAuth 'DASHBOARD_ADMIN
+             :> ReqBody '[JSON] DRoles.UpdateRoleReq
+             :> Post '[JSON] DRole.RoleAPIEntity
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "roleId" (Id DRole.Role)
              :> "assignAccessLevel"
@@ -48,12 +52,17 @@ type API =
 handler :: BeamFlow' => FlowServer API
 handler =
   createRole
+    :<|> updateRole
     :<|> assignAccessLevel
     :<|> listRoles
 
 createRole :: BeamFlow' => TokenInfo -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
 createRole tokenInfo =
   withFlowHandlerAPI' . DRoles.createRole tokenInfo
+
+updateRole :: BeamFlow' => TokenInfo -> DRoles.UpdateRoleReq -> FlowHandler DRole.RoleAPIEntity
+updateRole tokenInfo =
+  withFlowHandlerAPI' . DRoles.updateRole tokenInfo
 
 assignAccessLevel :: BeamFlow' => TokenInfo -> Id DRole.Role -> DRoles.AssignAccessLevelReq -> FlowHandler APISuccess
 assignAccessLevel tokenInfo roleId =

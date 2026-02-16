@@ -3,6 +3,7 @@
 
 module API.Types.RiderPlatform.Management where
 
+import qualified API.Types.RiderPlatform.Management.Account
 import qualified API.Types.RiderPlatform.Management.AlertIncident
 import qualified API.Types.RiderPlatform.Management.Booking
 import qualified API.Types.RiderPlatform.Management.Customer
@@ -24,7 +25,8 @@ import qualified Text.Read
 import qualified Text.Show
 
 data ManagementUserActionType
-  = ALERT_INCIDENT API.Types.RiderPlatform.Management.AlertIncident.AlertIncidentUserActionType
+  = ACCOUNT API.Types.RiderPlatform.Management.Account.AccountUserActionType
+  | ALERT_INCIDENT API.Types.RiderPlatform.Management.AlertIncident.AlertIncidentUserActionType
   | BOOKING API.Types.RiderPlatform.Management.Booking.BookingUserActionType
   | CUSTOMER API.Types.RiderPlatform.Management.Customer.CustomerUserActionType
   | FRFS_ALERTS API.Types.RiderPlatform.Management.FRFSAlerts.FRFSAlertsUserActionType
@@ -42,6 +44,7 @@ data ManagementUserActionType
 
 instance Text.Show.Show ManagementUserActionType where
   show = \case
+    ACCOUNT e -> "ACCOUNT/" <> show e
     ALERT_INCIDENT e -> "ALERT_INCIDENT/" <> show e
     BOOKING e -> "BOOKING/" <> show e
     CUSTOMER e -> "CUSTOMER/" <> show e
@@ -61,12 +64,21 @@ instance Text.Read.Read ManagementUserActionType where
     Text.Read.readParen
       (d' > app_prec)
       ( \r ->
-          [(ALERT_INCIDENT v1, r2) | r1 <- stripPrefix "ALERT_INCIDENT/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+          [(ACCOUNT v1, r2) | r1 <- stripPrefix "ACCOUNT/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+            ++ [ ( ALERT_INCIDENT v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "ALERT_INCIDENT/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( BOOKING v1,
                    r2
                  )
                  | r1 <- stripPrefix "BOOKING/" r,
-                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( CUSTOMER v1,
                    r2
