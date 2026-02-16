@@ -94,6 +94,7 @@ Merchant:
     onlinePayment: Bool
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
     fleetOwnerEnabledCheck: Maybe Bool
+    prepaidSubscriptionAndWalletEnabled: Maybe Bool
     overwriteAssociation: Maybe Bool
     mediaFileDocumentLinkExpires: Seconds
     signingPublicKey: Base64

@@ -28,12 +28,14 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.VehicleServiceTier
 import Storage.Beam.Finance ()
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
 import qualified Storage.Queries.Person.GetNearestDrivers as QGND
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
+import Tools.Error
 
 data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   { driverId :: Id Driver,
@@ -97,6 +99,7 @@ getNearestDriversCurrentlyOnRide ::
   m [NearestDriversResultCurrentlyOnRide]
 getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
   let onRideRadius = nearestRadius
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   logDebug $ "On Ride radius " <> show onRideRadius
   logDebug $ "lat long" <> show fromLocLatLong
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
@@ -104,8 +107,8 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong onRideRadius (Just allowedVehicleVariant)
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
   driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity
-  driverInfosPrepaid <- QGND.filterDriversBySufficientBalance rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
-  driverInfos <- QGND.filterDriversByMinWalletBalance minWalletAmountForCashRides paymentInstrument driverInfosPrepaid
+  driverInfosPrepaid <- QGND.filterDriversBySufficientBalance merchant rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
+  driverInfos <- QGND.filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInstrument driverInfosPrepaid
   logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show (DIAPI.convertToDriverInfoAPIEntity <$> driverInfos)
   vehicles <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicles

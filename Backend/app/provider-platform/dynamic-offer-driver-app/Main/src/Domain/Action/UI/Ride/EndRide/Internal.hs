@@ -95,6 +95,8 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.Finance (CounterpartyType (..), InvoiceInput (..), InvoiceLineItem (..), createInvoice)
+import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
@@ -109,8 +111,6 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
-import Lib.Finance (CounterpartyType (..), InvoiceInput (..), InvoiceLineItem (..), createInvoice)
-import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import qualified SharedLogic.FleetVehicleStats as FVS
 import SharedLogic.Reminder.Helper (checkAndCreateReminderIfNeeded, isDocumentExpiryType, precomputeThresholdCheckData)
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
@@ -118,8 +118,8 @@ import qualified SharedLogic.ScheduledNotifications as SN
 import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
@@ -263,7 +263,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
         QRD.updateCancellationDues 0 riderDetails.id >> QCC.create cancellationCharges
       -- QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
-  fork "processEndRideFinance" $ processEndRideFinance ride booking newFareParams driverId driverInfo thresholdConfig
+  merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  fork "processEndRideFinance" $ processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -294,6 +295,7 @@ processEndRideFinance ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text]
   ) =>
+  Merchant ->
   Ride.Ride ->
   SRB.Booking ->
   DFare.FareParameters ->
@@ -301,7 +303,7 @@ processEndRideFinance ::
   DI.DriverInformation ->
   TransporterConfig ->
   m ()
-processEndRideFinance ride booking newFareParams driverId driverInfo thresholdConfig = do
+processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig = do
   -- Compute fare components
   let totalFare = fromMaybe 0 ride.fare
       gstAmount = fromMaybe 0 newFareParams.govtCharges
@@ -309,6 +311,7 @@ processEndRideFinance ride booking newFareParams driverId driverInfo thresholdCo
       parkingAmount = fromMaybe 0 newFareParams.parkingCharge
       baseFare = totalFare - gstAmount - tollAmount - parkingAmount
       baseFareWithGST = baseFare + gstAmount
+      isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
 
   -- Determine driver's active service name
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -323,7 +326,7 @@ processEndRideFinance ride booking newFareParams driverId driverInfo thresholdCo
     _ -> pure ()
 
   -- 2. Wallet Flow
-  when thresholdConfig.driverWalletConfig.enableDriverWallet $ do
+  when (isPrepaidSubscriptionAndWalletEnabled && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
     createDriverWalletTransaction ride booking newFareParams
   where
     processEndRidePrepaidSubscription fare = do
@@ -439,9 +442,10 @@ createDriverWalletTransaction ride booking fareParams = do
     buyerAsset <- getOrCreateBuyerAssetAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Buyer asset account not found: " <> show err))
     buyerExternal <- getOrCreateBuyerExternalAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Buyer external account not found: " <> show err))
     driverOrFleetLiability <-
-      (if driverOrFleetCounterparty == FLEET_OWNER
-         then getOrCreateFleetOwnerLiabilityAccount ride.currency driverOrFleetId mid mocid
-         else getOrCreateDriverLiabilityAccount ride.currency driverOrFleetId mid mocid)
+      ( if driverOrFleetCounterparty == FLEET_OWNER
+          then getOrCreateFleetOwnerLiabilityAccount ride.currency driverOrFleetId mid mocid
+          else getOrCreateDriverLiabilityAccount ride.currency driverOrFleetId mid mocid
+        )
         >>= fromEitherM (\err -> InternalError ("Driver/FleetOwner liability account not found: " <> show err))
     govtIndirect <- getOrCreateGovtIndirectLiabilityAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Government indirect liability account not found: " <> show err))
     govtDirect <- getOrCreateGovtDirectLiabilityAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Government direct liability account not found: " <> show err))

@@ -39,6 +39,7 @@ import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
 import SharedLogic.VehicleServiceTier
 import Storage.Beam.Finance ()
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
@@ -46,6 +47,7 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
+import Tools.Error
 
 data NearestDriversResult = NearestDriversResult
   { driverId :: Id Driver,
@@ -106,10 +108,11 @@ getNearestDrivers ::
 getNearestDrivers NearestDriversReq {..} = do
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub (concatMap (.allowedVehicleVariant) allowedCityServiceTiers)
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant))
   driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
-  driverInfosPrepaid <- filterDriversBySufficientBalance rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
-  driverInfos <- filterDriversByMinWalletBalance minWalletAmountForCashRides paymentInstrument driverInfosPrepaid
+  driverInfosPrepaid <- filterDriversBySufficientBalance merchant rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
+  driverInfos <- filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInstrument driverInfosPrepaid
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
@@ -240,13 +243,17 @@ hasSufficientBalance fare fleetThreshold driverThreshold fleetAssociationMap fle
 
 filterDriversBySufficientBalance ::
   (EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
+  Merchant ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   [DI.DriverInformation] ->
   m [DI.DriverInformation]
-filterDriversBySufficientBalance rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_ =
-  case rideFare of
+filterDriversBySufficientBalance merchant rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_ = do
+  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+  if not isPrepaidSubscriptionAndWalletEnabled
+    then pure driverInfos_
+    else case rideFare of
     Just fare -> do
       fleetAssociations <- QFDA.findAllByDriverIds (driverInfos_ <&> (.driverId))
       let fleetOwnerIds = fleetAssociations <&> (.fleetOwnerId)
@@ -258,17 +265,25 @@ filterDriversBySufficientBalance rideFare fleetPrepaidSubscriptionThreshold prep
 
 filterDriversByMinWalletBalance ::
   (EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
+  Merchant ->
   Maybe HighPrecMoney ->
   Maybe MP.PaymentInstrument ->
   [DI.DriverInformation] ->
   m [DI.DriverInformation]
-filterDriversByMinWalletBalance minWalletAmountForCashRides paymentInstrument driverInfos_ =
-  case (minWalletAmountForCashRides, paymentInstrument) of
-    (Just minAmt, Nothing) -> filterM (hasMinWalletBalance minAmt) driverInfos_
-    (Just minAmt, Just MP.Cash) -> filterM (hasMinWalletBalance minAmt) driverInfos_
-    (Just minAmt, Just MP.BoothOnline) -> filterM (hasMinWalletBalance minAmt) driverInfos_
+filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInstrument driverInfos_ = do
+  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+  if not isPrepaidSubscriptionAndWalletEnabled
+    then pure driverInfos_
+    else case minWalletAmountForCashRides of
+    Just minAmt | shouldCheckWalletBalance paymentInstrument -> filterM (hasMinWalletBalance minAmt) driverInfos_
     _ -> pure driverInfos_
   where
+    shouldCheckWalletBalance = \case
+      Nothing -> True
+      Just MP.Cash -> True
+      Just MP.BoothOnline -> True
+      _ -> False
+
     hasMinWalletBalance minAmt driver = do
       mbBalance <- getWalletBalanceByOwner counterpartyDriver driver.driverId.getId
       pure $ maybe False (>= minAmt) mbBalance
