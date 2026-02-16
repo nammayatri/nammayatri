@@ -54,6 +54,11 @@ DriverInformation:
       driverBadges: "[Badges]"
     AddressDocumentType:
       enum: "RationCard,UtilityBill,Passport"
+    DriverBankAccountDetails:
+      accountNumber: Maybe Text
+      ifscCode: Maybe Text
+      nameAtBank: Maybe Text
+    
 
   fields:
     driverId: Id Person
@@ -95,6 +100,7 @@ DriverInformation:
     availableUpiApps: Maybe Text
     blockStateModifier: Maybe Text
     driverDob: Maybe UTCTime
+    driverBankAccountDetails: Maybe DriverBankAccountDetails
     airConditionScore: Maybe Double
     acUsageRestrictionType: AirConditionedRestrictionType
     acRestrictionLiftCount: Int
@@ -205,10 +211,12 @@ DriverInformation:
     issueBreachCooldownTimes: Maybe Value
     servicesEnabledForSubscription: Maybe [ServiceNames]
     ruleBasedUpgradeTiers: Maybe Value
+    driverBankAccountDetails: Maybe Value
 
   sqlType:
     preferredSecondarySpecialLocIds: "text[]"
     issueBreachCooldownTimes: "json"
+    driverBankAccountDetails: "json"
     softBlockStiers: "text[]"
     servicesEnabledForSubscription: "text[]"
     ruleBasedUpgradeTiers: "json"
@@ -235,6 +243,8 @@ DriverInformation:
     dlNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem dlNumberEncrypted dlNumberHash|E
     ruleBasedUpgradeTiers: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< ruleBasedUpgradeTiers|E
+    driverBankAccountDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< driverBankAccountDetails|E
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
@@ -260,6 +270,7 @@ DriverInformation:
     dlNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
     dlNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
     ruleBasedUpgradeTiers: Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers|E
+    driverBankAccountDetails: Kernel.Prelude.toJSON <$> driverBankAccountDetails|E
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -460,4 +471,8 @@ DriverInformation:
     updateDailyAndWeeklyExtraKms:
       kvFunction: updateOneWithKV
       params: [dailyExtraKms, weeklyExtraKms]
+      where: driverId
+    updateDriverBankAccountDetails:
+      kvFunction: updateOneWithKV
+      params: [driverBankAccountDetails]
       where: driverId

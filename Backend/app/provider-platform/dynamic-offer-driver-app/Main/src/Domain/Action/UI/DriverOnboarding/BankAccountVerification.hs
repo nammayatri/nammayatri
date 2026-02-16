@@ -16,10 +16,12 @@ module Domain.Action.UI.DriverOnboarding.BankAccountVerification
   ( DriverBankAccountVerifyReq (..),
     verifyBankAccount,
     getInfoBankAccount,
+    deleteBankAccount
   )
 where
 
 import qualified Domain.Types.DriverBankAccount as DDBA
+import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -34,9 +36,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, getCurrentTime, throwError)
 import Kernel.Utils.Logging (logDebug)
 import qualified Storage.Queries.DriverBankAccount as QDBA
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Person as Person
 import qualified Tools.Verification as Verification
+import Kernel.Types.APISuccess
 
 data DriverBankAccountVerifyReq = DriverBankAccountVerifyReq
   { bankAccountNo :: Text,
@@ -48,7 +52,6 @@ data DriverBankAccountVerifyReq = DriverBankAccountVerifyReq
 verifyBankAccount ::
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverBankAccountVerifyReq ->
-  -- Flow VerificationTypes.BankAccountVerificationResponse
   Flow Kernel.External.Verification.Interface.Types.VerifyAsyncResp
 verifyBankAccount (personId, _merchantId, merchantOpCityId) req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -64,32 +67,6 @@ verifyBankAccount (personId, _merchantId, merchantOpCityId) req = do
           driverId = person.id.getId
         }
   return verifyRes
-
--- now <- getCurrentTime
--- rsp <- Verification.getTask merchantOpCityId KEV.Idfy (KEV.GetTaskReq Nothing verifyRes.requestId) IVQuery.updateResponse
--- case rsp of
---   KEV.BankAccountResp resp -> do
---     logDebug $ "Bank account verification response: " <> show resp
---     let driverBankAccount =
---           DDBA.DriverBankAccount
---             { accountId = req.bankAccountNo,
---               chargesEnabled = False,
---               currentAccountLink = Nothing,
---               currentAccountLinkExpiry = Nothing,
---               detailsSubmitted = False,
---               driverId = person.id,
---               merchantId = Just person.merchantId,
---               merchantOperatingCityId = Just person.merchantOperatingCityId,
---               paymentMode = Nothing,
---               createdAt = now,
---               updatedAt = now,
---               ifscCode = resp.ifscCode,
---               nameAtBank = resp.nameAtBank
---             }
---     when (resp.accountExists) $
---       QDBA.create driverBankAccount
---     return resp
---   _ -> throwError $ InternalError "verification response and apiEndpoint mismatch occurred !!!!!!!!"
 
 -- | Placeholder image Id for bank account verification (no document image); used only to satisfy IdfyVerification schema.
 getInfoBankAccount :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> Flow VerificationTypes.BankAccountVerificationResponse
@@ -117,5 +94,18 @@ getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId = do
               }
       when (resp.accountExists) $
         QDBA.create driverBankAccount
+      let driverBankAccountDetails =
+            DDI.DriverBankAccountDetails
+              { accountNumber = resp.bankAccountNumber,
+                ifscCode = driverBankAccount.ifscCode,
+                nameAtBank = driverBankAccount.nameAtBank
+              }
+      QDI.updateDriverBankAccountDetails (Just driverBankAccountDetails) personId
       return resp
     _ -> throwError $ InternalError "verification response and apiEndpoint mismatch occurred !!!!!!!!"
+
+deleteBankAccount :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
+deleteBankAccount (personId, _merchantId, _merchantOpCityId) = do
+  QDBA.deleteById personId
+  QDI.updateDriverBankAccountDetails Nothing personId
+  pure Success

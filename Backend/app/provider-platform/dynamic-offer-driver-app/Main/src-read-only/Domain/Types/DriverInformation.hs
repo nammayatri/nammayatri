@@ -52,6 +52,7 @@ data DriverInformationE e = DriverInformation
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     dailyExtraKms :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     dlNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
+    driverBankAccountDetails :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverBankAccountDetails,
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverFlowStatus :: Kernel.Prelude.Maybe Domain.Types.DriverFlowStatus.DriverFlowStatus,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -161,6 +162,7 @@ instance EncryptedItem DriverInformation where
           dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
           dailyExtraKms = dailyExtraKms entity,
           dlNumber = dlNumber_,
+          driverBankAccountDetails = driverBankAccountDetails entity,
           driverDob = driverDob entity,
           driverFlowStatus = driverFlowStatus entity,
           driverId = driverId entity,
@@ -262,6 +264,7 @@ instance EncryptedItem DriverInformation where
             dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
             dailyExtraKms = dailyExtraKms entity,
             dlNumber = dlNumber_,
+            driverBankAccountDetails = driverBankAccountDetails entity,
             driverDob = driverDob entity,
             driverFlowStatus = driverFlowStatus entity,
             driverId = driverId entity,
@@ -355,6 +358,9 @@ data DriverAutoPayStatus
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 newtype DriverBadges = DriverBadges {driverBadges :: [Domain.Types.DriverInformation.Badges]} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data DriverBankAccountDetails = DriverBankAccountDetails {accountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text, ifscCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, nameAtBank :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data DriverMissedOpp = DriverMissedOpp
   { cancellationRate :: Kernel.Prelude.Int,

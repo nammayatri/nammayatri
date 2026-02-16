@@ -119,6 +119,13 @@ updateDriverAddress address addressDocumentType driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.address address, Se.Set Beam.addressDocumentType addressDocumentType, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateDriverBankAccountDetails ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverBankAccountDetails -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDriverBankAccountDetails driverBankAccountDetails driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.driverBankAccountDetails (Kernel.Prelude.toJSON <$> driverBankAccountDetails), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateDriverDob :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDriverDob driverDob driverId = do
   _now <- getCurrentTime
@@ -395,6 +402,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.dailyExtraKms dailyExtraKms,
       Se.Set Beam.dlNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted dlNumber),
       Se.Set Beam.dlNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash dlNumber),
+      Se.Set Beam.driverBankAccountDetails (Kernel.Prelude.toJSON <$> driverBankAccountDetails),
       Se.Set Beam.driverDob driverDob,
       Se.Set Beam.driverFlowStatus driverFlowStatus,
       Se.Set Beam.driverTripEndLocationLat (Kernel.Prelude.fmap (.lat) driverTripEndLocation),

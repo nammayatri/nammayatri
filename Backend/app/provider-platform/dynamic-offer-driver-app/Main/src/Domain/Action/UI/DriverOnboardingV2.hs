@@ -1354,3 +1354,15 @@ getInfoBankAccount (mbPersonId, merchantId, merchantOpCityId) requestId _driverI
   bankAccountVerificationResponse <-
     BankAccountVerification.getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId
   return bankAccountVerificationResponse
+
+
+postDriverDeleteBankAccount :: 
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postDriverDeleteBankAccount (mbPersonId, merchantId, merchantOpCityId) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  _ <- BankAccountVerification.deleteBankAccount (personId, merchantId, merchantOpCityId)
+  pure Kernel.Types.APISuccess.Success
