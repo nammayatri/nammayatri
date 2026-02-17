@@ -78,6 +78,10 @@ Sos:
     findByPersonId:
       kvFunction: findAllWithKV
       where: personId
+    updateExternalReferenceId:
+      kvFunction: updateOneWithKV
+      params: [externalReferenceId]
+      where: id
 
   beamType:
     mediaFiles: Maybe [Text]

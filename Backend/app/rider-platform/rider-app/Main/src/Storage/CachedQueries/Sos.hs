@@ -17,7 +17,6 @@ module Storage.CachedQueries.Sos
     clearCache,
     cacheSosIdByRideId,
     mockSosKey,
-    externalSOSStatusKey,
   )
 where
 
@@ -47,6 +46,3 @@ clearCache rideId = Hedis.del $ makeIdKey rideId
 
 mockSosKey :: Id Person.Person -> Text
 mockSosKey personId = "mock-sos-" <> getId personId
-
-externalSOSStatusKey :: Id Person.Person -> Text
-externalSOSStatusKey personId = "CachedQueries:Sos:ExternalSOSStatus:PersonId-" <> getId personId

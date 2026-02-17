@@ -5,8 +5,8 @@ module Domain.Action.RiderPlatform.Management.Sos (getSosTracking, postSosCallEx
 import qualified API.Client.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Sos
 import qualified Dashboard.Common
-import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Domain.Types.Merchant
+import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
