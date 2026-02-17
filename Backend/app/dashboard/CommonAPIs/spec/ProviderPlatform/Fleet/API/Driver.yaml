@@ -575,6 +575,7 @@ apis:
       query:
         - from: Day
         - to: Day
+        - fleetOwnerId: Text
         - search: Text
         - limit: Int
         - offset: Int
@@ -592,6 +593,7 @@ apis:
             query:
               - from: Day
               - to: Day
+              - requestorId: Text
               - search: Text
               - limit: Int
               - offset: Int
@@ -1190,6 +1192,8 @@ apis:
   - GET:
       endpoint: /fleet/dashboard/analytics/allTime
       auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
       response:
         type: AllTimeFleetAnalyticsRes
       helperApi:
@@ -1198,6 +1202,8 @@ apis:
             auth: ApiAuthV2
             params:
               fleetOwnerId: Text
+            query:
+              - requestorId: Text
             response:
               type: AllTimeFleetAnalyticsRes
   - GET:
@@ -1207,7 +1213,8 @@ apis:
         - from: Day
         - to: Day
       query:
-        responseType: FleetAnalyticsResponseType
+        - fleetOwnerId: Text
+        - responseType: FleetAnalyticsResponseType
       response:
         type: FleetAnalyticsRes
       helperApi:
@@ -1220,7 +1227,8 @@ apis:
               - from: Day
               - to: Day
             query:
-              responseType: FleetAnalyticsResponseType
+              - requestorId: Text
+              - responseType: FleetAnalyticsResponseType
             response:
               type: FleetAnalyticsRes
   - POST:
@@ -1329,6 +1337,7 @@ apis:
         - from: Day
         - to: Day
       query:
+        - fleetOwnerId: Text
         - vehicleNo: Text
         - limit: Int
         - offset: Int
@@ -1344,6 +1353,7 @@ apis:
               - from: Day
               - to: Day
             query:
+              - requestorId: Text
               - vehicleNo: Text
               - limit: Int
               - offset: Int

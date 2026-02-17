@@ -438,23 +438,23 @@ getDriverFleetStatus merchantShortId opCity apiTokenInfo mbFleetOwnerId = do
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetStatus) requestorId mbFleetOwnerId'
 
-getDriverFleetDashboardAnalyticsAllTime :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Flow Common.AllTimeFleetAnalyticsRes
-getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity apiTokenInfo = do
+getDriverFleetDashboardAnalyticsAllTime :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Flow Common.AllTimeFleetAnalyticsRes
+getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity apiTokenInfo mbFleetOwnerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDashboardAnalyticsAllTime) fleetOwnerId
+  (fleetOwnerId, requestorId) <- getFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDashboardAnalyticsAllTime) fleetOwnerId (Just requestorId)
 
-getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Common.FleetAnalyticsResponseType -> Day -> Day -> Flow Common.FleetAnalyticsRes
-getDriverFleetDashboardAnalytics merchantShortId opCity apiTokenInfo mbResponseType from to = do
+getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Common.FleetAnalyticsResponseType -> Day -> Day -> Flow Common.FleetAnalyticsRes
+getDriverFleetDashboardAnalytics merchantShortId opCity apiTokenInfo mbFleetOwnerId mbResponseType from to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDashboardAnalytics) fleetOwnerId mbResponseType from to
+  (fleetOwnerId, requestorId) <- getFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDashboardAnalytics) fleetOwnerId (Just requestorId) mbResponseType from to
 
-getDriverFleetDriverListStats :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Day -> Maybe Day -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Common.FleetDriverListStatsSortOn -> Maybe Common.FleetDriverStatsResponseType -> Flow Common.FleetDriverStatsListRes
-getDriverFleetDriverListStats merchantShortId opCity apiTokenInfo from to search limit offset sortDesc sortOn responseType = do
+getDriverFleetDriverListStats :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Day -> Maybe Day -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Common.FleetDriverListStatsSortOn -> Maybe Common.FleetDriverStatsResponseType -> Flow Common.FleetDriverStatsListRes
+getDriverFleetDriverListStats merchantShortId opCity apiTokenInfo from to mbFleetOwnerId search limit offset sortDesc sortOn responseType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverListStats) fleetOwnerId from to search limit offset sortDesc sortOn responseType
+  (fleetOwnerId, requestorId) <- getFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverListStats) fleetOwnerId from to (Just requestorId) search limit offset sortDesc sortOn responseType
 
 ---------------------------------------------------------------------------------------------------------------------------------
 ----------------------------------------------- READ LAYER (Multi Fleet Level) --------------------------------------------------
@@ -627,11 +627,11 @@ postDriverFleetDriverUpdate merchantShortId opCity apiTokenInfo driverId req = d
     -- Pass requestorId to BPP - role-based checks and associations are validated on BPP side
     Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetDriverUpdate) driverId requestorId req
 
-getDriverFleetVehicleListStats :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Data.Time.Day -> Data.Time.Day -> Environment.Flow Common.FleetVehicleStatsRes)
-getDriverFleetVehicleListStats merchantShortId opCity apiTokenInfo vehicleNo limit offset from to = do
+getDriverFleetVehicleListStats :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Data.Time.Day -> Data.Time.Day -> Environment.Flow Common.FleetVehicleStatsRes)
+getDriverFleetVehicleListStats merchantShortId opCity apiTokenInfo mbFleetOwnerId vehicleNo limit offset from to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  let fleetOwnerId = apiTokenInfo.personId.getId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleListStats) fleetOwnerId vehicleNo limit offset from to
+  (fleetOwnerId, requestorId) <- getFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleListStats) fleetOwnerId (Just requestorId) vehicleNo limit offset from to
 
 getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow Common.OnboardedDriversAndUnlinkedVehiclesRes)
 getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles merchantShortId opCity apiTokenInfo fleetOwnerId limit offset = do
