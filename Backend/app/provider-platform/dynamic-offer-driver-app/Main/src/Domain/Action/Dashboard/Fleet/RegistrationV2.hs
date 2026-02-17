@@ -11,6 +11,7 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     castRoleToFleetType,
     postRegistrationV2RegisterBankAccountLink,
     getRegistrationV2RegisterBankAccountStatus,
+    checkRequestorAcccessToFleet,
     castFleetType,
     sendFleetOnboardingSms,
   )
