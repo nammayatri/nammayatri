@@ -1,0 +1,41 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  ServiceTierType: Domain.Types.Common
+  BillingCategory: SharedLogic.Type
+
+DomainDiscountConfig:
+  tableName: domain_discount_config
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    domain: Text
+    billingCategory: BillingCategory
+    vehicleServiceTier: ServiceTierType
+    discountPercentage: Double
+    enabled: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    domain: PrimaryKey
+    billingCategory: PrimaryKey
+    vehicleServiceTier: PrimaryKey
+
+  queries:
+    findByMerchantOpCityIdAndDomainAndBillingCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, domain, billingCategory, vehicleServiceTier]
+
+    findAllByMerchantOpCityIdAndBillingCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, billingCategory]
+
+  excludedDefaultQueries:
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey

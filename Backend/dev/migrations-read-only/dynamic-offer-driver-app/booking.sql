@@ -202,4 +202,15 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN special_location_name text
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN email_domain text ;
+
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN toll_charges double precision ;

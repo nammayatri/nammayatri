@@ -290,5 +290,6 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     isRepeatSearch :: Bool,
     isAllocatorBatch :: Bool,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    billingCategory :: SLT.BillingCategory
+    billingCategory :: SLT.BillingCategory,
+    emailDomain :: Maybe Text
   }

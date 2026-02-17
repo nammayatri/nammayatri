@@ -23,6 +23,7 @@ import Data.Aeson
 import qualified Data.Aeson.Text as AT
 import Data.Default.Class
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as TE
 import Domain.Action.UI.HotSpot
@@ -335,6 +336,12 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     Just True -> B.runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
     _ -> return Nothing
 
+  let parseDomain mbEmail = T.drop 1 . T.strip . snd <$> (mbEmail >>= (\e -> if T.isInfixOf "@" e then Just (T.breakOn "@" e) else Nothing))
+  decryptedEmail <- mapM decrypt person.email
+  decryptedBusinessEmail <- mapM decrypt person.businessEmail
+  let emailDomain = parseDomain decryptedEmail
+      businessEmailDomain = parseDomain decryptedBusinessEmail
+
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   let txnCity = show merchant.defaultCity
 
@@ -437,7 +444,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages (searchRequest.fromSpecialLocationId) (searchRequest.toSpecialLocationId),
+        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages (searchRequest.fromSpecialLocationId) (searchRequest.toSpecialLocationId) emailDomain businessEmailDomain,
         ..
       }
   where
@@ -465,7 +472,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber numberOfLuggages mbFromSpecialLocationId mbToSpecialLocationId = do
+    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber numberOfLuggages mbFromSpecialLocationId mbToSpecialLocationId mbEmailDomain mbBusinessEmailDomain = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       let reserveTag = case searchRequest.searchMode of
@@ -503,7 +510,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 (Beckn.CUSTOMER_VEHICLE_CATEGORY, maybe Nothing (Just . show) (personVehicleCategory person)),
                 (Beckn.DASHBOARD_USER, (Just . show) isDashboardRequest),
                 (Beckn.CUSTOMER_DISABILITY, (decode . encode) tag),
-                (Beckn.CUSTOMER_NAMMA_TAGS, show @Text @[Text] . fmap ((.getTagNameValue) . Yudhishthira.removeTagExpiry) <$> person.customerNammaTags)
+                (Beckn.CUSTOMER_NAMMA_TAGS, show @Text @[Text] . fmap ((.getTagNameValue) . Yudhishthira.removeTagExpiry) <$> person.customerNammaTags),
+                (Beckn.EMAIL_DOMAIN, mbEmailDomain),
+                (Beckn.BUSINESS_EMAIL_DOMAIN, mbBusinessEmailDomain)
               ]
                 ++ maybe [] (\pn -> [(Beckn.CUSTOMER_PHONE_NUMBER, Just pn)]) phoneNumber
            }

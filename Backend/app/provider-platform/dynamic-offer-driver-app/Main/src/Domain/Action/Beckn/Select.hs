@@ -67,7 +67,8 @@ data DSelectReq = DSelectReq
     parcelDetails :: (Maybe Text, Maybe Int),
     preferSafetyPlus :: Bool,
     billingCategory :: SLT.BillingCategory,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    emailDomain :: Maybe Text
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
@@ -129,7 +130,8 @@ handler merchant sReq searchReq estimates = do
             isRepeatSearch = False,
             billingCategory = sReq.billingCategory,
             isAllocatorBatch = False,
-            paymentMethodInfo = sReq.paymentMethodInfo
+            paymentMethodInfo = sReq.paymentMethodInfo,
+            emailDomain = sReq.emailDomain
           }
   initiateDriverSearchBatch driverSearchBatchInput
   Metrics.finishGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST searchReq.transactionId

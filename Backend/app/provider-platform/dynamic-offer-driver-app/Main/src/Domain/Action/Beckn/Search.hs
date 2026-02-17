@@ -93,11 +93,13 @@ import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.TollsDetector
+import qualified SharedLogic.Type as SLT
 import Storage.Beam.Yudhishthira ()
 import Storage.Cac.DriverPoolConfig as CDP
 import qualified Storage.Cac.FarePolicy as QFPolicy
 import Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
+import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.InterCityTravelCities as CQITC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -156,7 +158,9 @@ data DSearchReq = DSearchReq
     numberOfLuggages :: Maybe Int,
     paymentMode :: Maybe DMPM.PaymentMode,
     fromSpecialLocationId :: Maybe (Id SL.SpecialLocation), -- Fixed route: from area ID
-    toSpecialLocationId :: Maybe (Id SL.SpecialLocation) -- Fixed route: to area ID
+    toSpecialLocationId :: Maybe (Id SL.SpecialLocation), -- Fixed route: to area ID
+    emailDomain :: Maybe Text,
+    businessEmailDomain :: Maybe Text
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo
@@ -385,13 +389,17 @@ handler ValidatedDSearchReq {..} sReq = do
       Flow ([DEst.Estimate], [DQuote.Quote])
     processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap (estimates, quotes) = do
       mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow fp.vehicleServiceTier merchantOpCityId configVersionMap
+      -- Resolve domain discount using the correct email domain per billing category
+      mbBusinessDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.businessEmailDomain SLT.BUSINESS fp.vehicleServiceTier
+      mbPersonalDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.emailDomain SLT.PERSONAL fp.vehicleServiceTier
+      let fp' = fp{DFP.businessDiscountPercentage = mbBusinessDiscount <|> fp.businessDiscountPercentage, DFP.personalDiscountPercentage = mbPersonalDiscount <|> fp.personalDiscountPercentage} :: DFP.FullFarePolicy
       case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem ->
-          case tripCategoryToPricingPolicy fp.tripCategory of
-            EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp >>= \est -> pure (est : estimates, quotes)
-            QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking vehicleServiceTierItem fp >>= \quote -> pure (estimates, quote : quotes)
+          case tripCategoryToPricingPolicy fp'.tripCategory of
+            EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \est -> pure (est : estimates, quotes)
+            QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \quote -> pure (estimates, quote : quotes)
         Nothing -> do
-          logError $ "Vehicle service tier not found for " <> show fp.vehicleServiceTier
+          logError $ "Vehicle service tier not found for " <> show fp'.vehicleServiceTier
           pure (estimates, quotes)
 
     buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName now fareParametersInRateCard isMultimodalSearch = do
