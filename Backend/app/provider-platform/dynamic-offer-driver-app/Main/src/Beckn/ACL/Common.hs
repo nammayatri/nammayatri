@@ -124,6 +124,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "LUGGAGE_CHARGE",
                  "RETURN_FEE",
                  "BOOTH_CHARGE",
+                 "DRIVER_ALLOWANCE",
                  "RIDE_VAT",
                  "TOLL_VAT"
                ]
@@ -143,6 +144,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "CANCELLATION_CHARGES",
                  "PARKING_CHARGE",
                  "LUGGAGE_CHARGE",
+                 "DRIVER_ALLOWANCE",
                  "RETURN_FEE",
                  "BOOTH_CHARGE",
                  "RIDE_VAT",
@@ -164,6 +166,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "CANCELLATION_CHARGES",
                  "PARKING_CHARGE",
                  "LUGGAGE_CHARGE",
+                 "DRIVER_ALLOWANCE",
                  "RETURN_FEE",
                  "BOOTH_CHARGE",
                  "RIDE_VAT",
@@ -186,6 +189,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "CANCELLATION_CHARGES",
                  "PARKING_CHARGE",
                  "LUGGAGE_CHARGE",
+                 "DRIVER_ALLOWANCE",
                  "RETURN_FEE",
                  "BOOTH_CHARGE",
                  "RIDE_VAT",

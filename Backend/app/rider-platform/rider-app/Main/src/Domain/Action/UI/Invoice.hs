@@ -46,6 +46,7 @@ getInvoice (mbPersonId, merchantId) from to = do
                   ("RIDE_STOP_CHARGES", "Ride Stop Charges"),
                   ("PER_STOP_CHARGES", "Per Stop Charges"),
                   ("LUGGAGE_CHARGE", "Luggage Charge"),
+                  ("DRIVER_ALLOWANCE", "Driver Allowance"),
                   ("RETURN_FEE", "Return Fee"),
                   ("BOOTH_CHARGE", "Booth Charge")
                 ]
