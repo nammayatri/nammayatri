@@ -24,6 +24,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Sos.Sos] -> m ())
 createMany = traverse_ create
 
+findByExternalReferenceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Sos.Sos))
+findByExternalReferenceId externalReferenceId = do findOneWithKV [Se.Is Beam.externalReferenceId $ Se.Eq externalReferenceId]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe Domain.Types.Sos.Sos))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -38,6 +41,23 @@ findByTicketId ticketId = do findOneWithKV [Se.Is Beam.ticketId $ Se.Eq ticketId
 
 updateEntityType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Sos.SosEntityType -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ())
 updateEntityType entityType id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.entityType entityType, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateExternalReferenceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ())
+updateExternalReferenceId externalReferenceId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.externalReferenceId externalReferenceId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateExternalReferenceStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ())
+updateExternalReferenceStatus externalReferenceStatus externalStatusHistory id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.externalReferenceStatus externalReferenceStatus,
+      Se.Set Beam.externalStatusHistory externalStatusHistory,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateMediaFiles :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile] -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ())
 updateMediaFiles mediaFiles id = do
@@ -63,6 +83,9 @@ updateByPrimaryKey (Domain.Types.Sos.Sos {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.entityType entityType,
+      Se.Set Beam.externalReferenceId externalReferenceId,
+      Se.Set Beam.externalReferenceStatus externalReferenceStatus,
+      Se.Set Beam.externalStatusHistory externalStatusHistory,
       Se.Set Beam.flow flow,
       Se.Set Beam.mediaFiles (Kernel.Prelude.Just (Kernel.Types.Id.getId <$> mediaFiles)),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
@@ -83,6 +106,9 @@ instance FromTType' Beam.Sos Domain.Types.Sos.Sos where
       Just
         Domain.Types.Sos.Sos
           { entityType = entityType,
+            externalReferenceId = externalReferenceId,
+            externalReferenceStatus = externalReferenceStatus,
+            externalStatusHistory = externalStatusHistory,
             flow = flow,
             id = Kernel.Types.Id.Id id,
             mediaFiles = Kernel.Types.Id.Id <$> Kernel.Prelude.fromMaybe [] mediaFiles,
@@ -102,6 +128,9 @@ instance ToTType' Beam.Sos Domain.Types.Sos.Sos where
   toTType' (Domain.Types.Sos.Sos {..}) = do
     Beam.SosT
       { Beam.entityType = entityType,
+        Beam.externalReferenceId = externalReferenceId,
+        Beam.externalReferenceStatus = externalReferenceStatus,
+        Beam.externalStatusHistory = externalStatusHistory,
         Beam.flow = flow,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.mediaFiles = Kernel.Prelude.Just (Kernel.Types.Id.getId <$> mediaFiles),
