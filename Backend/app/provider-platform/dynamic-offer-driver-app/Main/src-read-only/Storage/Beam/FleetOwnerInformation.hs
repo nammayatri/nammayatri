@@ -11,7 +11,9 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
+import qualified Tools.Error
 
 data FleetOwnerInformationT f = FleetOwnerInformationT
   { aadhaarBackImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -19,11 +21,14 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     aadhaarNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     aadhaarNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     aadhaarNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    autoPayStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.FleetOwnerInformation.DriverAutoPayStatus),
+    blockReasonFlag :: B.C f (Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag),
     blocked :: B.C f Kernel.Prelude.Bool,
     businessLicenseImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     businessLicenseNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     businessLicenseNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     businessLicenseNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    dailyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     enabled :: B.C f Kernel.Prelude.Bool,
     fleetDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fleetName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -33,6 +38,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     gstNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gstNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     gstNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    isBlockedForReferralPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBlockedForScheduledPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isEligibleForSubscription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
@@ -41,14 +47,22 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     panNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     panNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    paymentPending :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    payoutRegAmountRefunded :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    payoutVpaBankAccount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    payoutVpaStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.FleetOwnerInformation.PayoutVpaStatus),
     referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registeredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     stripeAddress :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     stripeIdNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     stripeIdNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    subscribed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     tdsRate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     ticketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    tollRouteBlockedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     verified :: B.C f Kernel.Prelude.Bool,
+    weeklyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

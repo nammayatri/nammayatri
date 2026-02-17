@@ -30,6 +30,8 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     postDriverRegistrationTriggerReminder,
     postDriverRegistrationVerifyBankAccount,
     getDriverRegistrationInfoBankAccount,
+    getDriverRegistrationPayoutRegistration,
+    getDriverRegistrationPayoutOrderStatus,
     postDriverRegistrationDeleteBankAccount,
     getDriverRegistrationDocumentsCommonList,
   )
@@ -42,6 +44,7 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import qualified Kernel.External.Payout.Interface.Types as PayoutTypes
 import Kernel.External.Verification.Interface.Types
 import qualified Kernel.External.Verification.Types
 import Kernel.Prelude
@@ -214,6 +217,16 @@ postDriverRegistrationTriggerReminder merchantShortId opCity apiTokenInfo driver
   let mbRequestorId = determineRequestorId apiTokenInfo driverId
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationTriggerReminder) driverId mbRequestorId req
+
+getDriverRegistrationPayoutRegistration :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.PayoutRegistrationRes
+getDriverRegistrationPayoutRegistration merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationPayoutRegistration) driverId
+
+getDriverRegistrationPayoutOrderStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Text -> Flow PayoutTypes.PayoutOrderStatusResp
+getDriverRegistrationPayoutOrderStatus merchantShortId opCity apiTokenInfo driverId orderId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationPayoutOrderStatus) driverId orderId
 
 getDriverRegistrationDocumentsCommonList ::
   ShortId DM.Merchant ->

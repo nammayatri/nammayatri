@@ -114,3 +114,33 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN tds_rate d
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN is_blocked_for_scheduled_payout boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN weekly_cancellation_rate_blocking_cooldown timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN toll_route_blocked_till timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN subscribed boolean  default true;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN payout_vpa_status text ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN payout_vpa_bank_account text ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN payout_vpa text ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN payout_reg_amount_refunded double precision ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN payment_pending boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN is_blocked_for_referral_payout boolean ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN daily_cancellation_rate_blocking_cooldown timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN block_reason_flag text ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN auto_pay_status text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
