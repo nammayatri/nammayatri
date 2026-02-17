@@ -13,6 +13,9 @@ import Tools.Beam.UtilsTH
 
 data SosT f = SosT
   { entityType :: B.C f (Kernel.Prelude.Maybe Domain.Types.Sos.SosEntityType),
+    externalReferenceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    externalReferenceStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    externalStatusHistory :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     flow :: B.C f Domain.Types.Sos.SosType,
     id :: B.C f Kernel.Prelude.Text,
     mediaFiles :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

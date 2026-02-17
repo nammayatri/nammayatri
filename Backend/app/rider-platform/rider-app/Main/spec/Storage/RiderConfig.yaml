@@ -55,6 +55,19 @@ RiderConfig:
       vehicleNo: Text
       notificationTitle: Text
       notificationMessage: Text
+    ExternalSOSFlow:
+      enum: "ERSS,GJ112"
+    ExternalSOSTriggerSource:
+      enum: "FRONTEND,DASHBOARD"
+    ExternalSOSConfig:
+      derive: "Eq"
+      flow: ExternalSOSFlow
+      triggerSource: ExternalSOSTriggerSource
+      mediaRequired: Bool
+      latLonRequired: Bool
+      trackingLinkRequired: Bool
+      tracePollingIntervalSeconds: Maybe Seconds
+      stateCode: Maybe Text
 
   tableName: rider_config
 
@@ -214,6 +227,7 @@ RiderConfig:
     kafkaTopicName: Text
     staticCustomerIdThresholdDay: Maybe Day
     invoiceLogoUrl: Maybe Text
+    externalSOSConfig: Maybe ExternalSOSConfig
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -266,6 +280,7 @@ RiderConfig:
     enableRideEndOffers: Maybe Bool
     kafkaTopicName: Maybe Text
     staticCustomerIdThresholdDay: Maybe Day
+    externalSOSConfig: Maybe Value
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -326,6 +341,7 @@ RiderConfig:
     enableRideEndOffers: fromMaybe False enableRideEndOffers|E
     kafkaTopicName: fromMaybe "gps-data" kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
+    externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -378,6 +394,7 @@ RiderConfig:
     enableRideEndOffers: Just enableRideEndOffers|E
     kafkaTopicName: Just kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
+    externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
 
 
   default:
@@ -474,6 +491,7 @@ RiderConfig:
     metricsBlacklistPatterns: text []
     ptCircuitBreakerConfig: "json"
     staticCustomerIdThresholdDay: date
+    externalSOSConfig: "json"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
