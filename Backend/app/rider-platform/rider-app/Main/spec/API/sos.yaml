@@ -10,8 +10,24 @@ imports:
 
 module: Sos
 types:
+  ErssStatusUpdateReq:
+    - idSource: Maybe Text
+    - idErss: Maybe Text
+    - currentStatus: Text
+    - statusDesc: Maybe Text
+    - comments: Maybe Text
+    - lastUpdatedTime: Maybe Int
+
+  ErssStatusUpdateRes:
+    - resultCode: Text
+    - resultString: Maybe Text
+    - errorMsg: Maybe Text
+    - message: Maybe Text
+    - payLoad: Maybe Text
+
   SosRes:
     sosId: Id Sos
+    externalSOSSuccess: Maybe Bool
 
   SosDetailsRes:
     sos: Maybe Sos
@@ -192,3 +208,12 @@ apis:
         sosId: Id Sos
       response:
         type: API.Types.UI.Sos.SosTrackingDetailsRes
+
+  # POST /sos/erss/statusUpdate (NoAuth webhook from C-DAC)
+  - POST:
+      endpoint: /sos/erss/statusUpdate
+      auth: NoAuth
+      request:
+        type: API.Types.UI.Sos.ErssStatusUpdateReq
+      response:
+        type: API.Types.UI.Sos.ErssStatusUpdateRes

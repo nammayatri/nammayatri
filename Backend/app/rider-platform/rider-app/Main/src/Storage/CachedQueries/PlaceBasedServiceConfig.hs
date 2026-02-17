@@ -24,6 +24,8 @@ import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
+import qualified Kernel.External.SOS.Interface.Types as SOSInterface
+import qualified Kernel.External.SOS.Types as SOS
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
@@ -138,3 +140,6 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit
   InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
     Insurance.AckoInsuranceConfig _ -> InsuranceService Insurance.Acko
+  SOSServiceConfig sosCfg -> case sosCfg of
+    SOSInterface.ERSSConfig _ -> SOSService SOS.ERSS
+    SOSInterface.GJ112Config _ -> SOSService SOS.GJ112

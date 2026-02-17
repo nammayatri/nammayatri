@@ -18,6 +18,8 @@ import Kernel.External.Notification.Interface.Types
 import Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payout.Interface as Payout
 import Kernel.External.SMS as Sms
+import qualified Kernel.External.SOS.Interface.Types as SOSInterface
+import qualified Kernel.External.SOS.Types as SOS
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import Kernel.External.Whatsapp.Interface as Whatsapp
@@ -51,6 +53,7 @@ data ServiceName
   | JuspayWalletService Payment.PaymentService
   | MultiModalStaticDataService MultiModal.MultiModalService
   | InsuranceService Insurance.InsuranceService
+  | SOSService SOS.SOSService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -80,6 +83,7 @@ instance Show ServiceName where
   show (JuspayWalletService s) = "JuspayWallet_" <> show s
   show (MultiModalStaticDataService s) = "MultiModalStaticData_" <> show s
   show (InsuranceService s) = "Insurance_" <> show s
+  show (SOSService s) = "SOS_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -178,6 +182,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Insurance_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (SOSService v1, r2)
+                 | r1 <- stripPrefix "SOS_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -207,6 +215,7 @@ data ServiceConfigD (s :: UsageSafety)
   | JuspayWalletServiceConfig !PaymentServiceConfig
   | MultiModalStaticDataServiceConfig !MultiModal.MultiModalServiceConfig
   | InsuranceServiceConfig !Insurance.InsuranceConfig
+  | SOSServiceConfig !SOSInterface.SOSServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -243,6 +252,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (JuspayWalletServiceConfig cfg) = "JuspayWalletServiceConfig " <> show cfg
   show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
   show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg
+  show (SOSServiceConfig cfg) = "SOSServiceConfig " <> show cfg
 
 instance Show (ServiceConfigD 'Unsafe) where
   show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
@@ -268,3 +278,4 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (JuspayWalletServiceConfig cfg) = "JuspayWalletServiceConfig " <> show cfg
   show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
   show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg
+  show (SOSServiceConfig cfg) = "SOSServiceConfig " <> show cfg
