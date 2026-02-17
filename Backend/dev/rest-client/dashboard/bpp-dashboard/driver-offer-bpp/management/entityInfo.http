@@ -1,0 +1,84 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+@operator = favorit-operator-token0-000000000000
+
+@fleet = 88ef2a2a-b014-4a86-b1c0-e453e8b0b688
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+# @name getEntityInfoListDriver
+
+@driverId2 = favorit-auto2-0000000000000000000000
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/entityInfo/DRIVER/{{driverId2}}/list
+token: {{fleet}}
+
+###
+# @name getEntityInfoListVehicle
+
+@rcId2 = auto2-driver-rc-00000000000000000000
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/entityInfo/RC/{{rcId2}}/list
+token: {{fleet}}
+
+
+###
+# @name postEntityInfoUpdateDriver
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/entityInfo/update
+token: {{fleet}}
+content-type: application/json
+
+{
+  "entityType": "DRIVER",
+  "entityId":  "{{driverId2}}",
+  "newInfo":
+    [
+        { "questionId" : "questionId1",
+          "question" : "question1",
+          "answer" : "answer1"
+        },
+        { "questionId" : "questionId2",
+          "question" : "question2",
+          "answer" : "answer2"
+        },
+        { "questionId" : "questionId3",
+          "question" : "question3",
+          "answer" : "answer3"
+        }
+    ]
+}
+
+
+###
+# @name postEntityInfoUpdateVehicle
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/entityInfo/update
+token: {{fleet}}
+content-type: application/json
+
+{
+  "entityType": "RC",
+  "entityId":  "{{rcId2}}",
+  "newInfo":
+    [
+        { "questionId" : "questionId4",
+          "question" : "question4",
+          "answer" : "answer4"
+        },
+        { "questionId" : "questionId5",
+          "question" : "question5",
+          "answer" : "answer5"
+        },
+        { "questionId" : "questionId6",
+          "question" : "question6",
+          "answer" : "answer6"
+        }
+    ]
+}

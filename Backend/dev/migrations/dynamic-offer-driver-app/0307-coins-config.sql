@@ -48,18 +48,6 @@ CREATE TABLE atlas_driver_offer_bpp.coin_history (
     coins_used INT NOT NULL
 );
 
-CREATE TABLE atlas_driver_offer_bpp.coin_purchase_history (
-    id VARCHAR (36) PRIMARY KEY,
-    driver_id VARCHAR (36) NOT NULL,
-    merchant_id VARCHAR (36) NOT NULL,
-    merchant_opt_city_id VARCHAR (36) NOT NULL,
-    num_coins INT NOT NULL,
-    created_at timestamp with time zone,
-    updated_at timestamp with time zone,
-    cash double precision NOT NULL,
-    title VARCHAR (36) NOT NULL
-);
-
 -- ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN distance_to_pickup double precision;
 
 -- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_feature BOOL NOT NULL DEFAULT True;

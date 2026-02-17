@@ -84,6 +84,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Validation
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -1258,7 +1259,8 @@ postDriverRegistrationTriggerReminder ::
   Maybe Text ->
   Common.TriggerReminderReq ->
   Flow APISuccess
-postDriverRegistrationTriggerReminder merchantShortId opCity driverId_ mbRequestorId Common.TriggerReminderReq {..} = do
+postDriverRegistrationTriggerReminder merchantShortId opCity driverId_ mbRequestorId req@Common.TriggerReminderReq {..} = do
+  runRequestValidation Common.validateTriggerReminderReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 

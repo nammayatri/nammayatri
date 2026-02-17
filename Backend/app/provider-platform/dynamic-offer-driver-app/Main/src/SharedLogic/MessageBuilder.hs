@@ -50,6 +50,8 @@ module SharedLogic.MessageBuilder
     buildFleetUnlinkSuccessMessage,
     BuildDriverPayoutMessageReq (..),
     buildDriverPayoutMessage,
+    BuildDocumentExpiryReminderMessageReq (..),
+    buildDocumentExpiryReminderMessage,
   )
 where
 
@@ -394,3 +396,18 @@ buildFleetLinkSuccessMessage = buildFleetLinkOrUnlinkSuccessMessage DMM.FLEET_LI
 
 buildFleetUnlinkSuccessMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetLinkUnlinkSuccessMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
 buildFleetUnlinkSuccessMessage = buildFleetLinkOrUnlinkSuccessMessage DMM.FLEET_UNLINK_SUCCESS_MESSAGE
+
+data BuildDocumentExpiryReminderMessageReq = BuildDocumentExpiryReminderMessageReq
+  { documentType :: Text
+  }
+
+buildDocumentExpiryReminderMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildDocumentExpiryReminderMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
+buildDocumentExpiryReminderMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.DOCUMENT_EXPIRY_REMINDER_SMS Nothing Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.DOCUMENT_EXPIRY_REMINDER_SMS))
+  let msg =
+        merchantMessage.message
+          & T.replace (templateText "documentType") req.documentType
+
+  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)

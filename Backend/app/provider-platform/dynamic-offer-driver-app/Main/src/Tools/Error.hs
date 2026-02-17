@@ -1212,6 +1212,7 @@ data DriverOnboardingError
   | RCAlreadyLinked
   | RCAlreadyUpdated
   | RCLimitReached Int
+  | RCDoesNotExist Text
   | RCNotFound Text
   | RCNotLinked
   | RCMandatory Text
@@ -1292,6 +1293,7 @@ instance IsBaseError DriverOnboardingError where
     InvalidOperatingCity city -> Just $ "Operating city \"" <> city <> "\" is invalid."
     GenerateAadhaarOtpExceedLimit id_ -> Just $ "Generate Aadhaar otp  try limit exceeded for person \"" <> id_ <> "\"."
     RCLimitReached limit -> Just $ "Linked RC limit exceed. Can't link more than " <> show limit <> " RCs."
+    RCDoesNotExist rcId -> Just $ "No Vehicle Registration Certificate matches passed data \"" <> rcId <> "\" not exist."
     RCNotFound rcNo -> Just $ "Vehicle Registration Certificate with registration number " <> rcNo <> " not found."
     RCNotLinked -> Just $ "Vehicle Registration Certificate is not linked with driver."
     RCMandatory docType -> Just $ "Vehicle Registration Certificate number is mandatory for document \"" <> docType <> "\"."
@@ -1369,6 +1371,7 @@ instance IsHTTPError DriverOnboardingError where
     InvalidOperatingCity _ -> "OPERATING_CITY_INVALID"
     GenerateAadhaarOtpExceedLimit _ -> "GENERATE_AADHAAR_OTP_EXCEED_LIMIT"
     RCLimitReached _ -> "MAXIMUM_RC_LIMIT_REACHED"
+    RCDoesNotExist _ -> "RC_DOES_NOT_EXIST"
     RCNotFound _ -> "RC_NOT_FOUND"
     RCNotLinked -> "RC_NOT_LINKED"
     RCMandatory _ -> "RC_MANDATORY"
@@ -1444,6 +1447,7 @@ instance IsHTTPError DriverOnboardingError where
     InvalidOperatingCity _ -> E400
     GenerateAadhaarOtpExceedLimit _ -> E429
     RCLimitReached _ -> E400
+    RCDoesNotExist _ -> E400
     RCNotFound _ -> E400
     RCNotLinked -> E400
     RCMandatory _ -> E400

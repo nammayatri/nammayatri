@@ -116,7 +116,7 @@ import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.FleetVehicleStats as FVS
-import SharedLogic.Reminder.Helper (checkAndCreateReminderIfNeeded, isDocumentExpiryType, precomputeThresholdCheckData)
+import SharedLogic.Reminder.Helper (checkAndCreateRemindersForRidesThreshold)
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.ScheduledNotifications as SN
 import SharedLogic.TollsDetector
@@ -146,7 +146,6 @@ import Storage.Queries.FleetOwnerInformation as QFOI
 import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RCStatsExtra as QRCStats
-import qualified Storage.Queries.ReminderConfig as QReminderConfig
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -201,34 +200,18 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   whenJust mbFareParams QFare.create
   QRide.updateAll ride.id ride
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
-  void $ QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
-  -- Increment RC stats for the driver's active RC
-  fork "incrementRCStats" $ do
+  -- Save driver ride count from increment to reuse in reminder check
+  driverRideCount <- QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  -- Increment RC stats and check reminders based on rides threshold
+  fork "incrementRCStatsAndCheckReminders" $ do
+    -- Increment RC stats for the driver's active RC
     mbRCAssoc <- QDRCA.findActiveAssociationByDriver (cast ride.driverId) True
-    whenJust mbRCAssoc $ \rcAssoc -> do
-      void $ QRCStats.incrementTotalRides rcAssoc.rcId
-  -- Check if reminders should be created based on rides threshold for all document types
-  -- Note: daysThreshold is handled proactively by recordDocumentCompletion, so we only check ridesThreshold here
-  -- Document expiry types (DriverLicense, VehicleRegistrationCertificate, etc.) are excluded
-  -- as they are based on expiry dates, not rides/days thresholds
-  fork "checkAndCreateReminderIfNeeded" $ do
-    -- Get all reminder configs that have ridesThreshold configured
-    allReminderConfigs <- QReminderConfig.findAllByMerchantOpCityId booking.merchantOperatingCityId
-    let ridesThresholdDocumentTypes =
-          DL.map (.documentType) $
-            filter
-              ( \config ->
-                  config.enabled
-                    && isJust config.ridesThreshold
-                    && not (isDocumentExpiryType config.documentType) -- Exclude document expiry types
-              )
-              allReminderConfigs
-    -- Precompute all data needed for threshold checks (ride counts, RC association, completion histories)
-    -- This avoids repeated DB queries in the loop
-    thresholdData <- precomputeThresholdCheckData driverId ridesThresholdDocumentTypes
-    -- Check rides threshold for all document types that have it configured
-    forM_ ridesThresholdDocumentTypes $ \documentType -> do
-      checkAndCreateReminderIfNeeded documentType driverId booking.providerId booking.merchantOperatingCityId thresholdData
+    -- Save RC ride count from increment to reuse in reminder check
+    mbRCRideCount <- case mbRCAssoc of
+      Just rcAssoc -> Just <$> QRCStats.incrementTotalRides rcAssoc.rcId
+      Nothing -> pure Nothing
+    -- Check and create reminders for all document types that have ridesThreshold configured
+    checkAndCreateRemindersForRidesThreshold driverId driverRideCount mbRCAssoc mbRCRideCount booking.merchantOperatingCityId booking.providerId
   when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
     fork "updateFleetVehicleDailyStats and updateOperatorAnalyticsTotalRideCount" $ do
       Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride booking

@@ -22,8 +22,11 @@ where
 import API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration as Reexport
 import Dashboard.Common as Reexport
 import Data.Aeson
+import Data.List (sortOn)
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.Prelude
+import Kernel.Types.Predicate
+import Kernel.Utils.Validation
 
 instance HideSecrets UploadDocumentReq where
   type ReqWithoutSecrets UploadDocumentReq = UploadDocumentTReq
@@ -53,3 +56,13 @@ data AuthVerifyReq = AuthVerifyReq
     deviceToken :: FCMRecipientToken
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+isDescOrder :: [Int] -> Bool
+isDescOrder xs = xs == sortOn negate xs
+
+validateTriggerReminderReq :: Validate TriggerReminderReq
+validateTriggerReminderReq TriggerReminderReq {..} = do
+  let mkMessage field = field <> " should have descending order"
+  sequenceA_
+    [ validateField "intervals" intervals $ InMaybe $ PredicateFunc mkMessage isDescOrder
+    ]
