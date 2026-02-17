@@ -64,6 +64,7 @@ import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver, sendTagActionNotification)
 import SharedLogic.Allocator.Jobs.SendFeedbackPN (sendFeedbackPN)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
+import SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase (expireSubscriptionPurchase)
 import SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
 import SharedLogic.Allocator.Jobs.Webhook.Webhook
@@ -144,6 +145,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendFeedbackPN)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSpecialZonePayout)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . processReminder)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . expireSubscriptionPurchase)
     }
 
 runDriverOfferAllocator ::

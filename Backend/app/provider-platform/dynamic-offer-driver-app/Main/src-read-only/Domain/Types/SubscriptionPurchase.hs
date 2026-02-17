@@ -48,7 +48,7 @@ data SubscriptionPurchase = SubscriptionPurchase
 
 data SubscriptionOwnerType = DRIVER | FLEET_OWNER deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read, ToParamSchema)
 
-data SubscriptionPurchaseStatus = PENDING | ACTIVE | EXPIRED | FAILED deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read, ToParamSchema)
+data SubscriptionPurchaseStatus = PENDING | ACTIVE | EXPIRED | FAILED | EXHAUSTED deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''SubscriptionPurchaseStatus)
 

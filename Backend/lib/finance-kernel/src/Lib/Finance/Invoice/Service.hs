@@ -125,7 +125,8 @@ createInvoice input entryIds = do
         | toAccount.counterpartyType == Just GOVERNMENT_INDIRECT -> do
           taxTxnId <- generateGUID
           let gstAmount = entry.amount
-              halfGst = gstAmount / 2.0
+              cgstAmount = gstAmount / 2.0
+              sgstAmount = gstAmount - cgstAmount
               taxableValue = subtotal - gstAmount
               gstRate = if taxableValue > 0 then realToFrac (gstAmount / taxableValue) * 100.0 else 0.0
               txnType = invoiceTypeToTransactionType input.invoiceType
@@ -137,8 +138,8 @@ createInvoice input entryIds = do
                     referenceId = entry.referenceId,
                     taxableValue = taxableValue,
                     gstRate = gstRate,
-                    cgstAmount = halfGst,
-                    sgstAmount = halfGst,
+                    cgstAmount,
+                    sgstAmount,
                     igstAmount = 0,
                     totalGstAmount = gstAmount,
                     gstCreditType = Output,

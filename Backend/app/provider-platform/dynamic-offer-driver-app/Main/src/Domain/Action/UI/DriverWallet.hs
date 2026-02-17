@@ -91,14 +91,15 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate = do
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
       toDate = fromMaybe now mbToDate
+      cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
+      cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
   mbAccount <- getWalletAccountByOwner counterparty driverId.getId
   case mbAccount of
     Nothing -> pure emptyWalletSummary
     Just account -> do
       currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty driverId.getId
-      nonRedeemableBalance <- getNonRedeemableBalance account.id timeDiff transporterConfig.driverWalletConfig.payoutCutOffDays now
+      (additions, deductions, nonRedeemableBalance) <- classifyEntries account.id fromDate toDate cutoff
       let redeemableBalance = max 0 (currentBalance - nonRedeemableBalance)
-      (additions, deductions) <- classifyEntries account.id fromDate toDate account.id
       pure $
         DriverWallet.WalletSummaryResponse
           { currentBalance,
@@ -119,15 +120,16 @@ emptyWalletSummary =
     }
 
 -- | Fetch entries in a date range, partition into additions/deductions,
---   and group by reference type.
+--   group by reference type, and compute per-item redeemable/nonRedeemable.
+--   Also returns the top-level nonRedeemableBalance (sum of additions after cutoff).
 classifyEntries ::
   (BeamFlow m r) =>
   Id Account ->
   UTCTime ->
   UTCTime ->
-  Id Account -> -- owner account id (for addition/deduction classification)
-  m (DriverWallet.WalletItemGroup, DriverWallet.WalletItemGroup)
-classifyEntries accountId fromDate toDate ownerAccountId = do
+  UTCTime -> -- payout cutoff time
+  m (DriverWallet.WalletItemGroup, DriverWallet.WalletItemGroup, HighPrecMoney)
+classifyEntries accountId fromDate toDate cutoff = do
   let allRefs =
         [ walletReferenceBaseRide,
           walletReferenceGSTOnline,
@@ -140,12 +142,42 @@ classifyEntries accountId fromDate toDate ownerAccountId = do
           walletReferencePayout
         ]
   entries <- findByAccountWithFilters accountId (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just allRefs)
-  let (addEntries, dedEntries) = partition (\e -> e.toAccountId == ownerAccountId) entries
-      toGroup es =
-        let refMap = foldl' (\acc e -> Map.insertWith (+) e.referenceType e.amount acc) Map.empty es
-            items = map (\(ref, val) -> DriverWallet.WalletItem {itemReference = ref, itemName = referenceTypeToItemName ref, itemValue = val}) (Map.toList refMap)
-         in DriverWallet.WalletItemGroup {totalAmount = sum (Map.elems refMap), items}
-  pure (toGroup addEntries, toGroup dedEntries)
+  let (addEntries, dedEntries) = partition (\e -> e.toAccountId == accountId) entries
+
+      -- For additions: compute total and non-redeemable (after cutoff) per reference type
+      addRefMap = foldl' (\acc e -> Map.insertWith (\(a1, b1) (a2, b2) -> (a1 + a2, b1 + b2)) e.referenceType (e.amount, if e.timestamp >= cutoff then e.amount else 0) acc) Map.empty addEntries
+      addItems =
+        map
+          ( \(ref, (total, nonRedeem)) ->
+              DriverWallet.WalletItem
+                { itemReference = ref,
+                  itemName = referenceTypeToItemName ref,
+                  itemValue = total,
+                  redeemableBalance = max 0 (total - nonRedeem),
+                  nonRedeemableBalance = nonRedeem
+                }
+          )
+          (Map.toList addRefMap)
+      addTotal = sum (map (\(_, (t, _)) -> t) (Map.toList addRefMap))
+      topLevelNonRedeemable = sum (map (\(_, (_, nr)) -> nr) (Map.toList addRefMap))
+
+      -- For deductions: all balance is redeemable
+      dedRefMap = foldl' (\acc e -> Map.insertWith (+) e.referenceType e.amount acc) Map.empty dedEntries
+      dedItems =
+        map
+          ( \(ref, val) ->
+              DriverWallet.WalletItem
+                { itemReference = ref,
+                  itemName = referenceTypeToItemName ref,
+                  itemValue = val,
+                  redeemableBalance = val,
+                  nonRedeemableBalance = 0
+                }
+          )
+          (Map.toList dedRefMap)
+      dedTotal = sum (Map.elems dedRefMap)
+
+  pure (DriverWallet.WalletItemGroup {totalAmount = addTotal, items = addItems}, DriverWallet.WalletItemGroup {totalAmount = dedTotal, items = dedItems}, topLevelNonRedeemable)
 
 referenceTypeToItemName :: Text -> Text
 referenceTypeToItemName ref
@@ -317,6 +349,15 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
     initiateWalletPayout ctx vpa payoutableBalance
   pure APISuccess.Success
 
+-- | Compute the payout fee based on the PayoutFeeConfig.
+--   Returns 0 if no config is set.
+computePayoutFee :: Maybe DTConf.PayoutFeeConfig -> HighPrecMoney -> HighPrecMoney
+computePayoutFee Nothing _ = 0
+computePayoutFee (Just feeConfig) amount =
+  case feeConfig.feeType of
+    DTConf.PERCENTAGE -> SPayment.roundToTwoDecimalPlaces $ amount * feeConfig.feeValue / 100
+    DTConf.FIXED -> min feeConfig.feeValue amount -- fee cannot exceed the amount
+
 -- | Create a PayoutRequest (INITIATED), then call Juspay createPayoutService (→ PROCESSING).
 --   No ledger entry here — that happens in the webhook handler on SUCCESS.
 initiateWalletPayout ::
@@ -332,13 +373,16 @@ initiateWalletPayout ctx vpa payoutableBalance = do
   payoutServiceName <- Payout.decidePayoutService (fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName) ctx.person.clientSdkVersion ctx.person.merchantOperatingCityId
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast ctx.person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound ctx.person.merchantOperatingCityId.getId)
 
-  let submission =
+  let fee = computePayoutFee ctx.transporterConfig.driverWalletConfig.payoutFee payoutableBalance
+      netAmount = SPayment.roundToTwoDecimalPlaces (payoutableBalance - fee)
+      submission =
         PayoutRequest.PayoutSubmission
           { beneficiaryId = ctx.driverId.getId,
             entityName = DPayment.DRIVER_WALLET_TRANSACTION,
             entityId = ctx.driverId.getId,
             entityRefId = Nothing,
-            amount = SPayment.roundToTwoDecimalPlaces payoutableBalance,
+            amount = netAmount,
+            payoutFee = if fee > 0 then Just fee else Nothing,
             merchantId = ctx.merchantId.getId,
             merchantOpCityId = ctx.mocId.getId,
             city = show merchantOperatingCity.city,
@@ -352,11 +396,11 @@ initiateWalletPayout ctx vpa payoutableBalance = do
           }
       payoutCall = Payout.createPayoutOrder ctx.person.merchantId ctx.person.merchantOperatingCityId payoutServiceName (Just ctx.person.id.getId)
 
-  when (payoutableBalance > 0.0) $ do
+  when (netAmount > 0.0) $ do
     result <- PayoutRequest.submitPayoutRequest submission payoutCall
     case result of
       PayoutRequest.PayoutInitiated _ _ ->
-        Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED "Payout Initiated" ("Your payout of " <> show payoutableBalance <> " has been initiated.") ctx.person ctx.person.deviceToken
+        Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED "Payout Initiated" ("Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "") ctx.person ctx.person.deviceToken
       PayoutRequest.PayoutFailed _ err ->
         logError $ "Wallet payout failed for driver " <> ctx.driverId.getId <> ": " <> err
 

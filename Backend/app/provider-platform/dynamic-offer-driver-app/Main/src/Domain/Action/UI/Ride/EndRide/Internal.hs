@@ -320,7 +320,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
       if DCommon.checkFleetOwnerRole person.role
         then pure (DSP.FLEET_OWNER, person.id.getId)
         else pure (DSP.DRIVER, person.id.getId)
-  mbPrepaidPurchase <- QSPE.findLatestActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+  mbPrepaidPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION
   let serviceName = if isJust mbPrepaidPurchase then PREPAID_SUBSCRIPTION else YATRI_SUBSCRIPTION
 
   -- 1. Subscription Flow — route by serviceName
@@ -350,6 +350,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 booking.id.getId
                 Nothing
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
+            checkAndMarkExhaustedSubscriptions counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER
             pure ()
         Nothing -> do
           Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
@@ -370,6 +371,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
             let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
                 balanceUpdatedTitle = "Subscription balance updated!"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
+            checkAndMarkExhaustedSubscriptions counterpartyDriver ride.driverId.getId DSP.DRIVER
             let subscriptionConfig = thresholdConfig.subscriptionConfig
             let prepaidSubscriptionThreshold = subscriptionConfig.prepaidSubscriptionThreshold
             when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do
@@ -386,7 +388,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
           if DCommon.checkFleetOwnerRole person.role
             then pure (DSP.FLEET_OWNER, person.id.getId)
             else pure (DSP.DRIVER, person.id.getId)
-      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName ownerId' ownerType' PREPAID_SUBSCRIPTION
+      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId' ownerType' PREPAID_SUBSCRIPTION
       let mbSyntheticPlan = Plan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
       plan <- getPlan mbSyntheticPlan PREPAID_SUBSCRIPTION booking.merchantOperatingCityId Nothing Nothing
       case plan of

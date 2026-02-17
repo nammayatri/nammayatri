@@ -290,6 +290,7 @@ let AllocatorJobType =
       | SendFeedbackPN
       | SpecialZonePayout
       | ProcessReminder
+      | ExpireSubscriptionPurchase
       >
 
 let jobInfoMapx =
@@ -344,6 +345,9 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.SendFeedbackPN, mapValue = True }
       , { mapKey = AllocatorJobType.SpecialZonePayout, mapValue = True }
       , { mapKey = AllocatorJobType.ProcessReminder, mapValue = True }
+      , { mapKey = AllocatorJobType.ExpireSubscriptionPurchase
+        , mapValue = True
+        }
       ]
 
 let LocationTrackingeServiceConfig =

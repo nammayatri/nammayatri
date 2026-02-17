@@ -37,6 +37,7 @@ data PayoutRequest = PayoutRequest
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
     orderType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    payoutFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     payoutTransactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

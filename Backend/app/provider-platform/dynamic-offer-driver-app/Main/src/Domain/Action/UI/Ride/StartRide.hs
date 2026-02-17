@@ -277,7 +277,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                         createdAt = now,
                         updatedAt = now,
                         merchantId = booking.providerId.getId,
-                        merchantOperatingCityId = ride.merchantOperatingCityId.getId
+                        merchantOperatingCityId = ride.merchantOperatingCityId.getId,
+                        payoutFee = Nothing
                       }
               PayoutRequest.createPayoutRequest payoutRequest
               when (payoutStatus == DPR.INITIATED) $ do

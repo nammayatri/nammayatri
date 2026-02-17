@@ -164,6 +164,7 @@ PayoutRequest:
     remark: Maybe Text
     orderType: Maybe Text
     city: Maybe Text
+    payoutFee: Maybe HighPrecMoney
     createdAt: UTCTime
     updatedAt: UTCTime
   domainInstance:

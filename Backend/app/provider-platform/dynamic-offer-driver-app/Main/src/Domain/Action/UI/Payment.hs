@@ -469,7 +469,9 @@ processSubscriptionPurchasePayment ::
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    JobCreatorEnv r,
+    HasField "schedulerType" r SchedulerType
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -539,6 +541,16 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                 financeInvoiceId = mbInvoiceId
               }
       QSP.updateByPrimaryKey updatedPurchase
+      -- Schedule expiry job
+      whenJust expiryDate $ \expiry -> do
+        let delay = diffUTCTime expiry now
+        createJobIn @_ @'ExpireSubscriptionPurchase
+          (Just merchantId)
+          (Just subscriptionPurchase.merchantOperatingCityId)
+          delay
+          $ ExpireSubscriptionPurchaseJobData
+            { subscriptionPurchaseId = subscriptionPurchase.id
+            }
       unless isFleetOwner $ do
         let prepaidRechargeMessage =
               "Your recharge worth Rs."
@@ -617,7 +629,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
     DP.PREPAID_SUBSCRIPTION -> do
       person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
-      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName ownerId ownerType serviceName
+      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType serviceName
       pure $ ADPlan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
     _ -> findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))

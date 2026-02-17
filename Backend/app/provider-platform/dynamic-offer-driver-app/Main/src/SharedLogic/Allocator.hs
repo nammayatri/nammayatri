@@ -35,6 +35,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
@@ -81,6 +82,7 @@ data AllocatorJobType
   | SendFeedbackPN
   | SpecialZonePayout
   | ProcessReminder
+  | ExpireSubscriptionPurchase
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -125,6 +127,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSendFeedbackPN jobData = AnyJobInfo <$> restoreJobInfo SSendFeedbackPN jobData
   restoreAnyJobInfo SSpecialZonePayout jobData = AnyJobInfo <$> restoreJobInfo SSpecialZonePayout jobData
   restoreAnyJobInfo SProcessReminder jobData = AnyJobInfo <$> restoreJobInfo SProcessReminder jobData
+  restoreAnyJobInfo SExpireSubscriptionPurchase jobData = AnyJobInfo <$> restoreJobInfo SExpireSubscriptionPurchase jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -476,3 +479,12 @@ data ProcessReminderJobData = ProcessReminderJobData
 instance JobInfoProcessor 'ProcessReminder
 
 type instance JobContent 'ProcessReminder = ProcessReminderJobData
+
+newtype ExpireSubscriptionPurchaseJobData = ExpireSubscriptionPurchaseJobData
+  { subscriptionPurchaseId :: Id DSP.SubscriptionPurchase
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ExpireSubscriptionPurchase
+
+type instance JobContent 'ExpireSubscriptionPurchase = ExpireSubscriptionPurchaseJobData

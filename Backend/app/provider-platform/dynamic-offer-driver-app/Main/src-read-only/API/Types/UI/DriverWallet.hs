@@ -41,7 +41,13 @@ data TopUpRequest = TopUpRequest {amount :: Kernel.Types.Common.HighPrecMoney}
 instance Kernel.Types.HideSecrets.HideSecrets TopUpRequest where
   hideSecrets = Kernel.Prelude.identity
 
-data WalletItem = WalletItem {itemName :: Kernel.Prelude.Text, itemReference :: Kernel.Prelude.Text, itemValue :: Kernel.Types.Common.HighPrecMoney}
+data WalletItem = WalletItem
+  { itemName :: Kernel.Prelude.Text,
+    itemReference :: Kernel.Prelude.Text,
+    itemValue :: Kernel.Types.Common.HighPrecMoney,
+    nonRedeemableBalance :: Kernel.Types.Common.HighPrecMoney,
+    redeemableBalance :: Kernel.Types.Common.HighPrecMoney
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

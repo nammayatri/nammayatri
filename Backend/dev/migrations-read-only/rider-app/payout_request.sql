@@ -27,3 +27,9 @@ ALTER TABLE atlas_app.payout_request ADD COLUMN scheduled_at timestamp with time
 ALTER TABLE atlas_app.payout_request ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_app.payout_request ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.payout_request ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_request ADD COLUMN payout_fee double precision ;

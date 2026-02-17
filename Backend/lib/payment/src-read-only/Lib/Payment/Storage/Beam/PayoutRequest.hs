@@ -33,6 +33,7 @@ data PayoutRequestT f = PayoutRequestT
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     orderType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    payoutFee :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     payoutTransactionId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     remark :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     retryCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),

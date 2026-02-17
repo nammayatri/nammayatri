@@ -1,1 +1,1 @@
-ALTER TABLE atlas_app.payout_order ADD COLUMN IF NOT EXISTS vpa TEXT;
+ALTER TABLE atlas_app.payment_order ADD COLUMN IF NOT EXISTS vpa TEXT;

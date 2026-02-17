@@ -864,6 +864,12 @@ TransporterConfig:
       useDbForEarningAndMetrics: Bool
       onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    PayoutFeeType:
+      enum: "PERCENTAGE, FIXED"
+    PayoutFeeConfig:
+      feeType: PayoutFeeType
+      feeValue: HighPrecMoney
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq
     DriverWalletConfig:
       enableDriverWallet: Bool
       driverWalletPayoutThreshold: HighPrecMoney
@@ -874,6 +880,7 @@ TransporterConfig:
       minimumWalletPayoutAmount: HighPrecMoney
       minWalletAmountForCashRides: Maybe HighPrecMoney
       payoutCutOffDays: Int
+      payoutFee: Maybe PayoutFeeConfig
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney

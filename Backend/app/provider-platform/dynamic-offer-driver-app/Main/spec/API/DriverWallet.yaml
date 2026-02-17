@@ -17,6 +17,8 @@ types:
     itemReference: Text
     itemName: Text
     itemValue: HighPrecMoney
+    redeemableBalance: HighPrecMoney
+    nonRedeemableBalance: HighPrecMoney
   WalletItemGroup:
     totalAmount: HighPrecMoney
     items: "[WalletItem]"

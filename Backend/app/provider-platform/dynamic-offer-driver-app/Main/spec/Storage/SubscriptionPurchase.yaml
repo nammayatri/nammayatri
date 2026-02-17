@@ -17,7 +17,7 @@ SubscriptionPurchase:
 
   types:
     SubscriptionPurchaseStatus:
-      enum: "PENDING,ACTIVE,EXPIRED,FAILED"
+      enum: "PENDING,ACTIVE,EXPIRED,FAILED,EXHAUSTED"
       derive': "Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read, ToParamSchema"
     SubscriptionOwnerType:
       enum: "DRIVER, FLEET_OWNER"

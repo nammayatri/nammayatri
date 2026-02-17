@@ -45,7 +45,7 @@ toPayoutItem :: PayoutRequest -> PayoutItem
 toPayoutItem pr =
   PayoutItem
     { amount = pr.amount,
-      payoutFee = 0,
+      payoutFee = fromMaybe 0 pr.payoutFee,
       entityName = pr.entityName,
       status = pr.status,
       timestamp = pr.createdAt,

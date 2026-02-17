@@ -225,6 +225,7 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city = d
                 entityId = orderId.getId,
                 entityRefId = Nothing,
                 amount = order.amount,
+                payoutFee = Nothing,
                 merchantId = order.merchantId.getId,
                 merchantOpCityId = maybe "" (.getId) order.merchantOperatingCityId,
                 city = city,

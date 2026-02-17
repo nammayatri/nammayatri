@@ -49,6 +49,7 @@ data PayoutSubmission = PayoutSubmission
     entityId :: Text,
     entityRefId :: Maybe Text,
     amount :: HighPrecMoney,
+    payoutFee :: Maybe HighPrecMoney,
     merchantId :: Text,
     merchantOpCityId :: Text,
     city :: Text,
@@ -319,6 +320,7 @@ buildPayoutRequest submission = do
         city = Just submission.city,
         merchantId = submission.merchantId,
         merchantOperatingCityId = submission.merchantOpCityId,
+        payoutFee = submission.payoutFee,
         createdAt = now,
         updatedAt = now
       }

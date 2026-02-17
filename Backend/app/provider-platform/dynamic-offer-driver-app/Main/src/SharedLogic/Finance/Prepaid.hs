@@ -7,6 +7,8 @@ module SharedLogic.Finance.Prepaid
     subscriptionCreditReferenceType,
     subscriptionPurchaseReferenceType,
     subscriptionRideReferenceType,
+    expiryRevenueRecognitionReferenceType,
+    expiryCreditTransferReferenceType,
     getPrepaidAccountByOwner,
     getPrepaidBalanceByOwner,
     getPrepaidPendingHoldByOwner,
@@ -15,18 +17,26 @@ module SharedLogic.Finance.Prepaid
     voidPrepaidHold,
     creditPrepaidBalance,
     debitPrepaidBalance,
+    handleSubscriptionExpiry,
+    checkAndMarkExhaustedSubscriptions,
     InvoiceCreationParams (..),
   )
 where
 
 import Data.Aeson (Value)
+import qualified Data.List as DL
+import Domain.Types.Extra.Plan (ServiceNames (..))
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.Prelude
-import Kernel.Types.Common (Currency, HighPrecMoney)
+import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import Kernel.Types.Id
+import Kernel.Utils.Common (logInfo)
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Storage.Queries.SubscriptionPurchase as QSP
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 
 -- | Optional parameters for creating a finance invoice during prepaid balance credit
 data InvoiceCreationParams = InvoiceCreationParams
@@ -60,6 +70,12 @@ subscriptionRideReferenceType = "RideRevenueRecognition"
 
 prepaidRideDebitReferenceType :: Text
 prepaidRideDebitReferenceType = "RideSubscriptionDebit"
+
+expiryRevenueRecognitionReferenceType :: Text
+expiryRevenueRecognitionReferenceType = "ExpiryRevenueRecognition"
+
+expiryCreditTransferReferenceType :: Text
+expiryCreditTransferReferenceType = "ExpiryCreditTransfer"
 
 getPrepaidAccountByOwner ::
   (BeamFlow m r) =>
@@ -517,3 +533,120 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
     (Left err, _, _) -> pure $ Left err
     (_, Left err, _) -> pure $ Left err
     (_, _, Left err) -> pure $ Left err
+
+-- | Handle subscription expiry: compute expired credits, create revenue recognition
+-- and credit transfer entries, then mark the subscription as EXPIRED.
+-- This is the shared handler used by both the scheduler job and the inline fallback.
+handleSubscriptionExpiry ::
+  (BeamFlow m r) =>
+  DSP.SubscriptionPurchase ->
+  m ()
+handleSubscriptionExpiry purchase = do
+  when (purchase.status == DSP.ACTIVE) $ do
+    let counterpartyType = case purchase.ownerType of
+          DSP.FLEET_OWNER -> counterpartyFleetOwner
+          DSP.DRIVER -> counterpartyDriver
+        ownerId = purchase.ownerId
+        currency = INR -- TODO: derive from merchant config if needed
+        merchantId = purchase.merchantId.getId
+        merchantOperatingCityId = purchase.merchantOperatingCityId.getId
+        referenceId = purchase.id.getId
+
+    -- Fetch all other ACTIVE subscriptions (excluding the one being expired)
+    allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId purchase.ownerType PREPAID_SUBSCRIPTION
+    let otherActive = filter (\p -> p.id /= purchase.id) allActive
+        otherActiveCredits = sum $ map (.planRideCredit) otherActive
+
+    -- Get current unified balance
+    mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId
+    let currentBalance = fromMaybe 0 mbBalance
+        -- Credits attributable to the expiring subscription
+        expiredCredits = max 0 (currentBalance - otherActiveCredits)
+
+    when (expiredCredits > 0) $ do
+      -- Calculate proportional revenue amount from planFee
+      let totalPlanCredit = purchase.planRideCredit
+          revenueAmount =
+            if totalPlanCredit > 0
+              then (expiredCredits / totalPlanCredit) * purchase.planFee
+              else 0
+
+      mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
+      mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
+      mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
+      mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
+
+      case (mbOwnerAccount, mbSellerLiability, mbSellerRevenue, mbSellerRideCredit) of
+        (Right ownerAccount, Right sellerLiability, Right sellerRevenue, Right sellerRideCredit) -> do
+          -- 1. Revenue Recognition: Seller Liability -> Seller Revenue
+          when (revenueAmount > 0) $ do
+            let revenueEntry =
+                  LedgerEntryInput
+                    { fromAccountId = sellerLiability.id,
+                      toAccountId = sellerRevenue.id,
+                      amount = revenueAmount,
+                      currency = currency,
+                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
+                      status = SETTLED,
+                      referenceType = expiryRevenueRecognitionReferenceType,
+                      referenceId = referenceId,
+                      metadata = Nothing,
+                      merchantId = merchantId,
+                      merchantOperatingCityId = merchantOperatingCityId
+                    }
+            _ <- createEntryWithBalanceUpdate revenueEntry
+            pure ()
+
+          -- 2. Credit Transfer: Owner RideCredit -> Seller RideCredit
+          let creditTransferEntry =
+                LedgerEntryInput
+                  { fromAccountId = ownerAccount.id,
+                    toAccountId = sellerRideCredit.id,
+                    amount = expiredCredits,
+                    currency = currency,
+                    entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
+                    status = SETTLED,
+                    referenceType = expiryCreditTransferReferenceType,
+                    referenceId = referenceId,
+                    metadata = Nothing,
+                    merchantId = merchantId,
+                    merchantOperatingCityId = merchantOperatingCityId
+                  }
+          _ <- createEntryWithBalanceUpdate creditTransferEntry
+          pure ()
+        _ -> do
+          logInfo $ "Failed to get accounts for subscription expiry: " <> referenceId
+          pure ()
+
+    QSP.updateStatusById DSP.EXPIRED purchase.id
+    logInfo $ "Subscription " <> purchase.id.getId <> " expired. Expired credits: " <> show expiredCredits
+
+-- | After a ride debit, check if the oldest ACTIVE subscription should be marked EXHAUSTED.
+-- FIFO logic: if the current balance is at or below the sum of newer subscriptions' credits,
+-- the oldest subscription's credits are fully used up.
+checkAndMarkExhaustedSubscriptions ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  Text -> -- Owner ID
+  DSP.SubscriptionOwnerType ->
+  m ()
+checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType = do
+  allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+  mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId
+  let currentBalance = fromMaybe 0 mbBalance
+      -- Sort by purchaseTimestamp ASC (already from query), process FIFO
+      sorted = DL.sortOn (.purchaseTimestamp) allActive
+  go sorted currentBalance
+  where
+    go [] _ = pure ()
+    go [_] _ = pure () -- Don't exhaust the last remaining subscription
+    go (oldest : rest) balance = do
+      let restCredits = sum $ map (.planRideCredit) rest
+      if balance <= restCredits
+        then do
+          -- Oldest subscription's credits are fully consumed
+          QSP.updateStatusById DSP.EXHAUSTED oldest.id
+          logInfo $ "Subscription " <> oldest.id.getId <> " marked EXHAUSTED"
+          -- Continue checking (there might be more to exhaust)
+          go rest balance
+        else pure ()
