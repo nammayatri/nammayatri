@@ -33,6 +33,7 @@ import Control.Applicative ((<|>))
 import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HMS
 import Data.OpenApi hiding (name)
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Registration as Reg
 import Domain.Types.Booking
@@ -184,7 +185,8 @@ data DSelectRes = DSelectRes
     preferSafetyPlus :: Bool,
     mbJourneyId :: Maybe (Id DJ.Journey),
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    paymentMode :: Maybe DMPM.PaymentMode
+    paymentMode :: Maybe DMPM.PaymentMode,
+    emailDomain :: Maybe Text
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -305,6 +307,10 @@ select2 personId estimateId req@DSelectReq {..} = do
     else do
       QJourney.updateByPrimaryKey journey
       QJourneyLeg.updateByPrimaryKey journeyLeg
+  let emailToUse = if billingCategory == Just BUSINESS then person.businessEmail else person.email
+  decryptedEmail <- mapM decrypt emailToUse
+  let emailDomain = T.strip . snd <$> (decryptedEmail >>= (\e -> if T.isInfixOf "@" e then Just (T.breakOn "@" e) else Nothing))
+  let emailDomain' = T.drop 1 <$> emailDomain -- drop the leading '@'
   pure
     DSelectRes
       { providerId = estimate.providerId,
@@ -318,6 +324,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         paymentMethodInfo = paymentMethodInfo,
         billingCategory = fromMaybe PERSONAL billingCategory,
         paymentMode = person.paymentMode,
+        emailDomain = emailDomain',
         ..
       }
   where

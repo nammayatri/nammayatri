@@ -107,6 +107,7 @@ Booking:
     paymentMode: Maybe PaymentMode
     commission: Maybe HighPrecMoney
     displayBookingId: Maybe Text
+    emailDomain: Maybe Text
 
   excludedFields:
     - merchantId

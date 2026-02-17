@@ -266,6 +266,7 @@ import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
+import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.FareProduct as CQFP
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -1750,10 +1751,17 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       unlessM (validateSearchTryActive searchTry.id) $ do
         logError ("RideRequestAlreadyAcceptedOrCancelled " <> "in respond quote for searchTryId:" <> getId searchTry.id <> " estimateId:" <> estimateId <> " driverId:" <> getId driver.id <> " and srfdId:" <> getId sReqFD.id)
         throwError (RideRequestAlreadyAcceptedOrCancelled sReqFD.id.getId)
+      mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId searchTry.emailDomain searchTry.billingCategory farePolicy.vehicleServiceTier
+      let farePolicy' =
+            farePolicy
+              { DFarePolicy.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
+                DFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
+              } ::
+              DFarePolicy.FullFarePolicy
       fareParams <- do
         FCV2.calculateFareParametersV2
           CalculateFareParametersParams
-            { farePolicy = farePolicy,
+            { farePolicy = farePolicy',
               actualDistance = searchReq.estimatedDistance,
               rideTime = sReqFD.startTime,
               returnTime = searchReq.returnTime,

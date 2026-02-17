@@ -23,6 +23,7 @@ data SearchTryT f = SearchTryT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerExtraFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     customerExtraFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    emailDomain :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     estimateId :: B.C f Kernel.Prelude.Text,
     estimateIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     id :: B.C f Kernel.Prelude.Text,
