@@ -3797,6 +3797,10 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId fleetOwnerId req = d
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   validateFleetDriverAssociation fleetOwnerId driver.id
   when (isJust req.firstName || isJust req.lastName || isJust req.email) $ do
+    whenJust req.email $ \reqEmail -> do
+      existingPerson <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
+      whenJust existingPerson $ \existing ->
+        when (existing.id /= personId) $ throwError (EmailAlreadyLinked reqEmail)
     let updDriver =
           driver
             { DP.firstName = fromMaybe driver.firstName req.firstName,

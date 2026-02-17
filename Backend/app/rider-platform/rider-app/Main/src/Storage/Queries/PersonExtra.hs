@@ -77,7 +77,7 @@ updateImeiNumber imeiNumber id = do
 updateMobileNumberByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Kernel.External.Encryption.EncryptedHashedField 'AsEncrypted Text -> DbHash -> Text -> m ()
 updateMobileNumberByPersonId (Id personId) encMobile mobileNumberHash mobileCountryCode = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.updatedAt now,
       Se.Set BeamP.mobileNumberEncrypted (Just $ unEncrypted (encMobile.encrypted)),
       Se.Set BeamP.mobileNumberHash (Just mobileNumberHash),
@@ -90,7 +90,7 @@ updateEmailByPersonId (Id personId) encEmail = do
   now <- getCurrentTime
   let encVal = unEncrypted (encEmail.encrypted)
       emailHash = encEmail.hash
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.updatedAt now,
       Se.Set BeamP.emailEncrypted (Just encVal),
       Se.Set BeamP.emailHash (Just emailHash)
@@ -103,7 +103,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersio
     ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice || isJust mbClientConfigVersion || isJust mbCloudType) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbClientConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= Just deploymentVersion || person.cloudType /= mbCloudType))
     do
       now <- getCurrentTime
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamP.updatedAt now,
           Se.Set BeamP.clientSdkVersion (versionToText <$> (mbClientVersion <|> person.clientSdkVersion)),
           Se.Set BeamP.clientBundleVersion (versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)),
@@ -170,7 +170,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         (Just _, Nothing) -> True -- New business email being added
         _ -> False
 
-  updateWithKV
+  updateOneWithKV
     ( [Se.Set BeamP.updatedAt now]
         <> [Se.Set BeamP.firstName mbFirstName | isJust mbFirstName]
         <> [Se.Set BeamP.middleName mbMiddleName | isJust mbMiddleName]
@@ -214,7 +214,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
 updateRefCode :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m ()
 updateRefCode (Id personId) refCode = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     ( [Se.Set BeamP.updatedAt now]
         <> [Se.Set BeamP.referralCode (Just refCode)]
         <> [Se.Set BeamP.referredAt (Just now)]
@@ -227,7 +227,7 @@ updateAndroidIdAndDeviceId (Id personId) mbAndroidId mbDeviceId =
     (Nothing, Nothing) -> pure ()
     _ -> do
       now <- getCurrentTime
-      updateWithKV
+      updateOneWithKV
         ( [Se.Set BeamP.updatedAt now]
             <> [Se.Set BeamP.deviceId mbDeviceId | isJust mbDeviceId]
             <> [Se.Set BeamP.androidId mbAndroidId | isJust mbAndroidId]
@@ -245,7 +245,7 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
     Nothing -> pure ()
     Just driverP -> do
       now <- getCurrentTime
-      updateWithKV
+      updateOneWithKV
         ( [ Se.Set BeamP.enabled (not isBlocked),
             Se.Set BeamP.blocked isBlocked,
             Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
@@ -267,7 +267,7 @@ updatingAuthEnabledAndBlockedState (Id personId) blockedByRule isAuthBlocked blo
     Just driverP -> do
       now <- getCurrentTime
       let authBlocked = fromMaybe False isAuthBlocked
-      updateWithKV
+      updateOneWithKV
         ( [ Se.Set BeamP.enabled (not authBlocked),
             Se.Set BeamP.authBlocked isAuthBlocked,
             Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
@@ -289,7 +289,7 @@ updatingBlockedStateWithUntil (Id personId) blockedByRule isBlocked blockedUntil
     Nothing -> pure ()
     Just driverP -> do
       now <- getCurrentTime
-      updateWithKV
+      updateOneWithKV
         ( [ Se.Set BeamP.enabled (not isBlocked),
             Se.Set BeamP.blocked isBlocked,
             Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
@@ -344,7 +344,7 @@ updateEmergencyInfo ::
   m ()
 updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyContactOption nightSafetyChecks hasCompletedSafetySetup informPoliceSosFlag = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     ( [Se.Set BeamP.updatedAt now]
         <> [Se.Set BeamP.shareEmergencyContacts (fromJust shareEmergencyContacts) | isJust shareEmergencyContacts]
         <> [Se.Set BeamP.shareTripWithEmergencyContactOption shareTripWithEmergencyContactOption | isJust shareTripWithEmergencyContactOption]
@@ -357,7 +357,7 @@ updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyC
 updateSafetyCenterBlockingCounter :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Maybe Int -> Maybe UTCTime -> m ()
 updateSafetyCenterBlockingCounter personId counter mbDate = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     ( [ Se.Set BeamP.updatedAt now,
         Se.Set BeamP.safetyCenterDisabledOnDate mbDate
       ]
@@ -379,7 +379,7 @@ updateCityInfoById (Id personId) currentCity (Id merchantOperatingCityId) = do
 updateHasTakenValidRide :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 updateHasTakenValidRide (Id personId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.hasTakenValidRide True,
       Se.Set BeamP.updatedAt now
     ]
@@ -388,7 +388,7 @@ updateHasTakenValidRide (Id personId) = do
 updateReferredByCustomer :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m () -- TODO: move this once DSL Bug Fixed
 updateReferredByCustomer personId referredByPersonId = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.referredByCustomer (Just referredByPersonId),
       Se.Set BeamP.updatedAt now
     ]
@@ -398,7 +398,7 @@ updateReferredByCustomer personId referredByPersonId = do
 updateCustomerReferralCode :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m () -- TODO: move this once DSL Bug Fixed
 updateCustomerReferralCode personId refferalCode = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.customerReferralCode (Just refferalCode),
       Se.Set BeamP.updatedAt now
     ]
@@ -411,7 +411,7 @@ findAllByIds personIds = findAllWithKV [Se.Is BeamP.id $ Se.In (getId <$> person
 clearDeviceTokenByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 clearDeviceTokenByPersonId personId = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.deviceToken Nothing,
       Se.Set BeamP.updatedAt now
     ]
@@ -422,7 +422,7 @@ updateTotalRidesCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Perso
 updateTotalRidesCount personId totalRidesCount = do
   whenJust totalRidesCount \totalRidesCount' -> do
     now <- getCurrentTime
-    updateWithKV
+    updateOneWithKV
       [ Se.Set BeamP.totalRidesCount (Just totalRidesCount'),
         Se.Set BeamP.updatedAt now
       ]
@@ -432,7 +432,7 @@ updatePersonComments :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person
 updatePersonComments personId comments = do
   whenJust comments \comments' -> do
     now <- getCurrentTime
-    updateWithKV
+    updateOneWithKV
       [ Se.Set BeamP.comments (Just comments'),
         Se.Set BeamP.updatedAt now
       ]
