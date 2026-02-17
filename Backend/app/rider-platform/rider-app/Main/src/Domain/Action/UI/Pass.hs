@@ -15,6 +15,7 @@ module Domain.Action.UI.Pass
     postMultimodalPassUploadProfilePicture,
     postMultimodalPassUpdateProfilePictureUtil,
     buildPurchasedPassAPIEntity,
+    expirePassStatus,
   )
 where
 
@@ -698,6 +699,13 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
           Sms.sendSMS merchantId merchantOpCityId (buildSmsReq phoneNumberWithCountryCode)
             >>= Sms.checkSmsResult
 
+-- | Expire a pass whose endDate has passed and has no pending renewal.
+expirePassStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPurchasedPass.PurchasedPass -> DT.Day -> m ()
+expirePassStatus purchasedPass today = do
+  when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired] && purchasedPass.endDate < today) $ do
+    QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
+    QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
+
 getMultimodalPassList ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
       Id.Id DM.Merchant
@@ -750,9 +758,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
           let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
           QPurchasedPassPayment.updateStatusByOrderId newStatus firstPreBookedPayment.orderId
           QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue firstPreBookedPayment.amount
-        Nothing -> do
-          QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
-          QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
+        Nothing -> expirePassStatus purchasedPass today
 
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
 

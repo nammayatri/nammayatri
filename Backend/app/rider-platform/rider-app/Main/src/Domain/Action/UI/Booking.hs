@@ -223,9 +223,13 @@ getPassList merchantId personId limitIntMaybe mbInitialPassOffsetInt mbFromDate'
         _ ->
           pure Nothing
       else pure Nothing
-  if mbSendEligiblePassIfAvailable == Just True
-    then QPurchasedPass.findAllActiveByPersonIdWithFiltersV2 personId merchantId passTypeIds mbFromDateDay mbToDateDay limitIntMaybe mbInitialPassOffsetInt
-    else pure []
+  passes <-
+    if mbSendEligiblePassIfAvailable == Just True
+      then QPurchasedPass.findAllActiveByPersonIdWithFiltersV2 personId merchantId passTypeIds mbFromDateDay mbToDateDay limitIntMaybe mbInitialPassOffsetInt
+      else pure []
+  today <- DT.utctDay <$> getLocalCurrentTime (19800 :: Seconds)
+  forM_ passes $ \pass -> DPass.expirePassStatus pass today
+  pure passes
   where
     millisecondsToDay =
       DT.utctDay . millisecondsToUTC
