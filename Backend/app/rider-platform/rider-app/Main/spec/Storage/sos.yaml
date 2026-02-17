@@ -19,6 +19,7 @@ Sos:
     trackingExpiresAt : Maybe UTCTime
     sosState : Maybe SosState
     entityType : Maybe SosEntityType
+    externalReferenceId : Maybe Text
 
   types:
     EmergencyContactId:
@@ -60,6 +61,10 @@ Sos:
     updateEntityType:
       kvFunction: updateOneWithKV
       params: [entityType]
+      where: id
+    updateExternalReferenceId:
+      kvFunction: updateOneWithKV
+      params: [externalReferenceId]
       where: id
     findById:
       kvFunction: findOneWithKV

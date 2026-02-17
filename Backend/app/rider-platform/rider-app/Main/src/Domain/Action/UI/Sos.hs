@@ -143,6 +143,7 @@ getSosGetDetails (mbPersonId, _) rideId_ = do
           trackingExpiresAt = Nothing,
           sosState = Nothing,
           entityType = Nothing,
+          externalReferenceId = Nothing,
           createdAt = now,
           updatedAt = now
         }
@@ -154,20 +155,23 @@ postSosCreate (mbPersonId, _merchantId) req = do
   Redis.del $ CQSos.mockSosKey personId
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  whenJust riderConfig.externalSOSConfig $ \sosConfig -> do
-    when (sosConfig.triggerSource == DRC.FRONTEND) $ do
-      let sosServiceType = flowToSOSService sosConfig.flow
-      merchantSvcCfg <-
-        QMSC.findByMerchantOpCityIdAndService person.merchantId person.merchantOperatingCityId (DMSC.SOSService sosServiceType)
-          >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantOperatingCityId.getId "SOS" (show sosServiceType))
-      case merchantSvcCfg.serviceConfig of
-        DMSC.SOSServiceConfig specificConfig -> do
-          mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
-          emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-          merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-          externalSOSDetails <- buildExternalSOSDetails req person sosConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
-          void $ PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
-        _ -> throwError $ InternalError "Invalid SOS Service Config for provider"
+  mbExternalReferenceId <- case riderConfig.externalSOSConfig of
+    Just sosConfig
+      | sosConfig.triggerSource == DRC.FRONTEND -> do
+          let sosServiceType = flowToSOSService sosConfig.flow
+          merchantSvcCfg <-
+            QMSC.findByMerchantOpCityIdAndService person.merchantId person.merchantOperatingCityId (DMSC.SOSService sosServiceType)
+              >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantOperatingCityId.getId "SOS" (show sosServiceType))
+          case merchantSvcCfg.serviceConfig of
+            DMSC.SOSServiceConfig specificConfig -> do
+              mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
+              emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+              merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+              externalSOSDetails <- buildExternalSOSDetails req person sosConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
+              response <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
+              pure $ if response.success then response.trackingId else Nothing
+            _ -> throwError $ InternalError "Invalid SOS Service Config for provider"
+    _ -> pure Nothing
   (sosId, trackLink, mbRideEndTime) <- case req.rideId of
     Just rideId -> do
       ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -175,7 +179,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
       riderConfig' <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
       let trackLink' = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig'.trackingShortUrlPattern
       let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig'.timeDiffFromUtc) <$> ride.rideEndTime
-      sosId' <- createTicketForNewSos person ride riderConfig' trackLink' req
+      sosId' <- createTicketForNewSos person ride riderConfig' trackLink' req mbExternalReferenceId
       return (sosId', trackLink', localRideEndTime)
     Nothing -> do
       riderConfig'' <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
@@ -183,7 +187,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
       now <- getCurrentTime
       let eightHoursInSeconds :: Int = 8 * 60 * 60
       let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
-      let sosDetailsWithEntityType = sosDetails {DSos.entityType = Just DSos.NonRide, DSos.sosState = Just DSos.SosActive, DSos.trackingExpiresAt = Just trackingExpiresAt}
+      let sosDetailsWithEntityType = sosDetails {DSos.entityType = Just DSos.NonRide, DSos.sosState = Just DSos.SosActive, DSos.trackingExpiresAt = Just trackingExpiresAt, DSos.externalReferenceId = Nothing}
       void $ QSos.create sosDetailsWithEntityType
 
       whenJust req.customerLocation $ \location -> do
@@ -230,8 +234,8 @@ enableFollowRideInSos emergencyContacts = do
     )
     emergencyContacts
 
-createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> SosReq -> Flow (Id DSos.Sos)
-createTicketForNewSos person ride riderConfig trackLink req = do
+createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> SosReq -> Maybe Text -> Flow (Id DSos.Sos)
+createTicketForNewSos person ride riderConfig trackLink req mbExternalReferenceId = do
   sosRes <- CQSos.findByRideId ride.id
   case sosRes of
     Just sosDetails -> do
@@ -252,7 +256,7 @@ createTicketForNewSos person ride riderConfig trackLink req = do
               Left _ -> return Nothing
           else return Nothing
       sosDetails <- SIVR.buildSosDetails person req ticketId
-      let sosDetailsWithEntityType = sosDetails {DSos.entityType = Just DSos.Ride, DSos.sosState = Just DSos.SosActive}
+      let sosDetailsWithEntityType = sosDetails {DSos.entityType = Just DSos.Ride, DSos.sosState = Just DSos.SosActive, DSos.externalReferenceId = mbExternalReferenceId}
       when (req.flow == DSos.SafetyFlow) $ CQSos.cacheSosIdByRideId ride.id sosDetailsWithEntityType
       void $ QSos.create sosDetailsWithEntityType
       return sosDetailsWithEntityType.id
@@ -411,6 +415,23 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
                   person.merchantId
                   person.merchantOperatingCityId
                   (mkTicket person phoneNumber (["https://" <> trackLink] <> dashboardFileUrl) rideInfo DSos.AudioRecording (riderConfig.kaptureConfig.disposition) kaptureQueue)
+      whenJust riderConfig.externalSOSConfig $ \sosConfig -> do
+        when sosConfig.mediaRequired $ do
+          -- Skip if no external reference ID (police SOS not created yet)
+          whenJust sosDetails.externalReferenceId $ \_ -> do
+            -- Skip if no phone number available
+            whenJust phoneNumber $ \phoneNo -> do
+              let sosServiceType = flowToSOSService sosConfig.flow
+              merchantSvcCfg <-
+                QMSC.findByMerchantOpCityIdAndService person.merchantId person.merchantOperatingCityId (DMSC.SOSService sosServiceType)
+                  >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantOperatingCityId.getId "SOS" (show sosServiceType))
+              case merchantSvcCfg.serviceConfig of
+                DMSC.SOSServiceConfig specificConfig -> do
+                  let fileName = "sos-" <> getId sosId <> "." <> fileExtension
+                  void $
+                    withTryCatch "PoliceSOS:uploadMedia" $
+                      PoliceSOS.uploadMedia specificConfig phoneNo fileName payload
+                _ -> pure ()
       return $ AddSosVideoRes {fileUrl = fileUrl}
 
 callUpdateTicket :: Person.Person -> DSos.Sos -> Maybe Text -> Flow APISuccess.APISuccess
@@ -706,6 +727,7 @@ postSosStartTracking (mbPersonId, merchantId) StartTrackingReq {..} = do
                 trackingExpiresAt = Just expiryTimeStamp,
                 sosState = Just DSos.LiveTracking,
                 entityType = Just DSos.NonRide,
+                externalReferenceId = Nothing,
                 createdAt = now,
                 updatedAt = now
               }

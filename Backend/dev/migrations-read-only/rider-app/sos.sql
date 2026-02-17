@@ -44,3 +44,8 @@ ALTER TABLE atlas_app.sos ADD COLUMN entity_type text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.sos ALTER COLUMN ride_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.sos ADD COLUMN external_reference_id text ;

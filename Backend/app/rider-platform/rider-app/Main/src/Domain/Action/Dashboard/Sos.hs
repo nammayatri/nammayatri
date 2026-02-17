@@ -90,7 +90,10 @@ callExternalSOS sosId = do
           emergencyContacts <- DP.getDefaultEmergencyNumbers (sos.personId, merchantId)
           merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
           externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos) person sosConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
-          void $ PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
+          response <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
+          when (response.success && sos.entityType /= Just DSos.NonRide) $ do
+            whenJust response.trackingId $ \trackingId ->
+              void $ QSos.updateExternalReferenceId (Just trackingId) sosId
         _ -> throwError $ InternalError "Invalid SOS Service Config for provider"
   where
     mkSosReq :: DSos.Sos -> UISos.SosReq

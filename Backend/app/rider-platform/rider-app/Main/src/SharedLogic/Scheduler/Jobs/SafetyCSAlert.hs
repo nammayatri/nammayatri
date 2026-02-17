@@ -164,6 +164,7 @@ buildSosDetails person req ticketId = do
         trackingExpiresAt = Nothing,
         entityType = Just DSos.Ride,
         sosState = Just DSos.SosActive,
+        externalReferenceId = Nothing,
         createdAt = now,
         updatedAt = now
       }
