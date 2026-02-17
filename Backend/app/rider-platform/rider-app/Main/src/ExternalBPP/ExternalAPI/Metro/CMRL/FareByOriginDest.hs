@@ -87,7 +87,8 @@ getFareByOriginDest integrationBPPConfig config fareReq = do
                               amount = amount,
                               currency = INR
                             },
-                        eligibility = True
+                        eligibility = True,
+                        bppItemId = FRFSUtils.getProviderName integrationBPPConfig
                       }
                   ],
                 fareDetails = Nothing,

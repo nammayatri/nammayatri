@@ -58,6 +58,7 @@ import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Station as Station
+
 import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
 import EulerHS.Prelude (comparing, concatMapM, (+||), (||+))
 import Kernel.Beam.Functions as B
@@ -113,6 +114,17 @@ import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
+
+getProviderName :: IntegratedBPPConfig -> Text
+getProviderName integrationBPPConfig =
+  case (integrationBPPConfig.providerName, integrationBPPConfig.providerConfig) of
+    (Just name, _) -> name
+    (_, DIBC.CMRL _) -> "Chennai Metro Rail Limited"
+    (_, DIBC.CMRLV2 _) -> "Chennai Metro Rail Limited v2"
+    (_, DIBC.EBIX _) -> "Kolkata Buses"
+    (_, DIBC.DIRECT _) -> "Direct Multimodal Services"
+    (_, DIBC.ONDC _) -> "ONDC Services"
+    (_, DIBC.CRIS _) -> "CRIS Subway"
 
 mkTicketAPI :: DT.FRFSTicket -> APITypes.FRFSTicketAPI
 mkTicketAPI DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
@@ -309,6 +321,7 @@ data FRFSTicketCategory = FRFSTicketCategory
   { category :: FRFSQuoteCategoryType,
     price :: Price,
     offeredPrice :: Price,
+    bppItemId :: Text,
     eligibility :: Bool
   }
   deriving stock (Generic, Show)
@@ -344,23 +357,43 @@ getFare riderId vehicleType serviceTier integratedBPPConfigId merchantId merchan
       maybeToList <$> QFRFSRouteFareProduct.findByRouteCodeAndVehicleServiceTierId routeCode vehicleServiceTier.id
     Nothing -> QFRFSRouteFareProduct.findByRouteCode routeCode integratedBPPConfigId
   let serviceableFareProducts = DTB.findBoundedDomain fareProducts now ++ filter (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded) fareProducts
-  mapM (buildFRFSFare riderId vehicleType merchantId merchantOperatingCityId routeCode startStopCode endStopCode) serviceableFareProducts
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigById integratedBPPConfigId
+  mapM (buildFRFSFare riderId vehicleType merchantId merchantOperatingCityId routeCode startStopCode endStopCode integratedBPPConfig) serviceableFareProducts
 
-buildFRFSFare :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Spec.VehicleCategory -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> FRFSRouteFareProduct -> m FRFSFare
-buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCode startStopCode endStopCode fareProduct = do
+buildFRFSFare :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Spec.VehicleCategory -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> IntegratedBPPConfig -> FRFSRouteFareProduct -> m FRFSFare
+buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCode startStopCode endStopCode integratedBPPConfig fareProduct = do
   vehicleServiceTier <- QFRFSVehicleServiceTier.findById fareProduct.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fareProduct.vehicleServiceTierId.getId)
   farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
   let cessCharge = fromMaybe (HighPrecMoney 0) farePolicy.cessCharge
-  price <-
+  categories <-
     case farePolicy._type of
       DFRFSFarePolicy.MatrixBased -> do
-        routeStopFare <- QRouteStopFare.findByRouteStartAndStopCode farePolicy.id startStopCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Fare Not Found")
-        return $
-          Price
-            { amountInt = roundToIntegral routeStopFare.amount,
-              amount = routeStopFare.amount,
-              currency = routeStopFare.currency
-            }
+        routeStopFares <- QRouteStopFare.findAllByStartStopAndIntegratedBPPConfigId startStopCode endStopCode integratedBPPConfig.id
+        case routeStopFares of
+          [] -> throwError $ InternalError "FRFS Route Stop Fare Not Found"
+          fares -> do
+            return $
+              map
+                ( \stopFare ->
+                    FRFSTicketCategory
+                      { category = stopFare.category,
+                        price =
+                          Price
+                            { amountInt = roundToIntegral stopFare.amount,
+                              amount = stopFare.amount,
+                              currency = stopFare.currency
+                            },
+                        offeredPrice =
+                          Price
+                            { amountInt = roundToIntegral $ fromMaybe stopFare.amount stopFare.offeredAmount,
+                              amount = fromMaybe stopFare.amount stopFare.offeredAmount,
+                              currency = stopFare.currency
+                            },
+                        bppItemId = fromMaybe (getProviderName integratedBPPConfig) stopFare.bppItemId,
+                        eligibility = True
+                      }
+                )
+                fares
       DFRFSFarePolicy.StageBased -> do
         stageFares <- QFRFSStageFare.findAllByFarePolicyId farePolicy.id
         startStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode startStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
@@ -368,23 +401,26 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
         let stage = max 1 (abs $ endStageFare.stage - startStageFare.stage) -- if stage is 0, then it is the same stage so we take 1 as the stage
         stageFare <- find (\stageFare -> stageFare.stage == stage) stageFares & fromMaybeM (InternalError "FRFS Stage Fare Not Found")
         let amount = stageFare.amount + cessCharge
-        return $
-          Price
-            { amountInt = roundToIntegral amount,
-              amount = amount,
-              currency = stageFare.currency
-            }
-  return $
-    FRFSFare
-      { farePolicyId = Just farePolicy.id,
-        categories =
+        let price =
+              Price
+                { amountInt = roundToIntegral amount,
+                  amount = amount,
+                  currency = stageFare.currency
+                }
+        -- For StageBased, create a single ADULT category
+        return
           [ FRFSTicketCategory
               { category = ADULT,
                 price = price,
                 offeredPrice = price,
+                bppItemId = getProviderName integratedBPPConfig,
                 eligibility = True
               }
-          ],
+          ]
+  return $
+    FRFSFare
+      { farePolicyId = Just farePolicy.id,
+        categories = categories,
         fareDetails = Nothing,
         vehicleServiceTier =
           FRFSVehicleServiceTier
@@ -398,16 +434,6 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
         fareQuoteType = Nothing
       }
 
-getCachedRouteStopFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
-getCachedRouteStopFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
-  routeStopFare <- QRouteStopFare.findByStartAndEndStopCodeAndIntegratedBPPConfigId startStopCode endStopCode integratedBPPConfig.id
-  case routeStopFare of
-    Just fare -> do
-      currentTime <- getCurrentTime
-      fareProducts <- QFRFSRouteFareProduct.findAllByFarePoliyIdAndIntegratedBPPConfigId fare.farePolicyId integratedBPPConfig.id
-      let serviceableFareProducts = DTB.findBoundedDomain fareProducts currentTime ++ filter (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded) fareProducts
-      mapM (buildFRFSFare riderId vehicleType merchantId merchantOperatingCityId routeCode startStopCode endStopCode) serviceableFareProducts
-    Nothing -> return []
 
 getFareThroughGTFS :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
@@ -446,6 +472,7 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
                             { category = ADULT,
                               price = price,
                               offeredPrice = price,
+                              bppItemId = getProviderName integratedBPPConfig,
                               eligibility = True
                             }
                         ],
@@ -481,20 +508,7 @@ getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchant
           Left err -> do
             logError $ "Error in getFare: " <> show err
             return []
-          Right fares' ->
-            case integratedBPPConfig.providerConfig of
-              DIBC.ONDC DIBC.ONDCBecknConfig {fareCachingAllowed} -> do
-                if null fares' && (fareCachingAllowed == Just True)
-                  then do
-                    -- TODO: hamdle serviceTier passing stuff here
-                    withTryCatch "getCachedRouteStopFares:getFares" (getCachedRouteStopFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
-                      >>= \case
-                        Left err -> do
-                          logError $ "Error in getCachedRouteStopFares: " <> show err
-                          return fares'
-                        Right cachedFares -> return cachedFares
-                  else return fares'
-              _ -> return fares'
+          Right fares' -> return fares'
     else return fares
 
 data VehicleTracking = VehicleTracking

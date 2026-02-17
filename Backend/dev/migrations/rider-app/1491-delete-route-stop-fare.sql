@@ -1,0 +1,1 @@
+delete from atlas_app.route_stop_fare where merchant_operating_city_id = 'aa05f109-08f6-447d-b642-3ce7cdd8d604' -- for city = 'Bhubaneshwar'

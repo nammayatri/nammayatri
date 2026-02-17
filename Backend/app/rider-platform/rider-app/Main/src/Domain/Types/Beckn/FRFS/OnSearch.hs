@@ -5,6 +5,7 @@ import qualified Domain.Types.FRFSFarePolicy as FRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSSearch as Search
+import qualified Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import qualified Domain.Types.StationType as Station
 import Kernel.External.Maps.Types
@@ -108,6 +109,7 @@ data ValidatedDOnSearch = ValidatedDOnSearch
     ticketsBookedInEvent :: Int,
     isEventOngoing :: Bool,
     mbFreeTicketInterval :: Maybe Int,
-    mbMaxFreeTicketCashback :: Maybe Int
+    mbMaxFreeTicketCashback :: Maybe Int,
+    integratedBppConfig :: Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig
   }
   deriving (Show)

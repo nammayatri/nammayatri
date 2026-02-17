@@ -187,7 +187,15 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                   buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
                 else do
                   (mbJourneyId, _) <- getAllJourneyFrfsBookings booking
-                  if paymentBookingStatus == FRFSTicketService.SUCCESS && (not isMultiModalBooking || isJust mbJourneyId)
+                  integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+                  let fareCachingAllowed = case integratedBppConfig.providerConfig of
+                        DIBC.ONDC ondcCfg -> fromMaybe False ondcCfg.fareCachingAllowed
+                        _ -> False
+                  let shouldProceedWithConfirm =
+                        if fareCachingAllowed
+                          then fromMaybe False booking.ondcOnInitReceived
+                          else True
+                  if paymentBookingStatus == FRFSTicketService.SUCCESS && (not isMultiModalBooking || isJust mbJourneyId) && shouldProceedWithConfirm
                     then do
                       -- Add default TTL of 1 min or the value provided in the config
                       let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
