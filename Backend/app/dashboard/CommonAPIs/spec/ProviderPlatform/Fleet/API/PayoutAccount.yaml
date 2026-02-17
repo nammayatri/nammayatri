@@ -1,0 +1,49 @@
+imports:
+  Person: Dashboard.Common
+  City: Kernel.Types.Beckn.Context
+  PaymentMode: Domain.Types.PaymentMode
+  VerifyAsyncResp: Kernel.External.Verification.Interface.Types
+  BankAccountVerificationResponse: Kernel.External.Verification.Types
+
+module: PayoutAccount
+apiPrefix: fleet
+
+apis:
+  - POST:
+      name: postPayoutAccount
+      endpoint: /payout/account
+      auth: ApiAuthV2
+      request:
+        type: PayoutAccountReq
+      response:
+        type: PayoutAccountResp
+      helperApi:
+        - POST:
+            endpoint: /payout/account/{requestorId}
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            request:
+              type: PayoutAccountReq
+            response:
+              type: PayoutAccountResp
+
+types:
+  PayoutAccountType:
+    - enum: "BANK,UPI"
+  PayoutAccountReq:
+    - accountType: PayoutAccountType
+    - fleetOwnerId: Maybe Text
+    - paymentMode: Maybe PaymentMode
+    - bankAccountNo: Maybe Text
+    - bankIfscCode: Maybe Text
+    - derive: "'HideSecrets"
+  PayoutAccountResp:
+    - accountType: PayoutAccountType
+    - bankVerifyResp: Maybe VerifyAsyncResp
+    - bankInfoResp: Maybe BankAccountVerificationResponse
+    - upiRegistrationResp: Maybe API.Types.ProviderPlatform.Management.DriverRegistration.PayoutRegistrationRes
+    - upiStatusResp: Maybe Kernel.External.Payout.Interface.Types.PayoutOrderStatusResp
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

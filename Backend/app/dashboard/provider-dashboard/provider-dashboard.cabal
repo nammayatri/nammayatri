@@ -46,6 +46,7 @@ library
       Domain.Action.ProviderPlatform.Fleet.Driver
       Domain.Action.ProviderPlatform.Fleet.LiveMap
       Domain.Action.ProviderPlatform.Fleet.Onboarding
+      Domain.Action.ProviderPlatform.Fleet.PayoutAccount
       Domain.Action.ProviderPlatform.Fleet.RegistrationV2
       Domain.Action.ProviderPlatform.IssueManagement.Issue
       Domain.Action.ProviderPlatform.Management.Account
@@ -97,6 +98,7 @@ library
       API.Action.ProviderPlatform.Fleet.Driver
       API.Action.ProviderPlatform.Fleet.LiveMap
       API.Action.ProviderPlatform.Fleet.Onboarding
+      API.Action.ProviderPlatform.Fleet.PayoutAccount
       API.Action.ProviderPlatform.Fleet.RegistrationV2
       API.Action.ProviderPlatform.IssueManagement
       API.Action.ProviderPlatform.IssueManagement.Issue

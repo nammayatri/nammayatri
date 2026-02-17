@@ -11,6 +11,8 @@ imports:
   CommonDriverOnboardingDocuments: Dashboard.Common
   BankAccountVerificationResponse : Kernel.External.Verification.Types
   VerifyAsyncResp : Kernel.External.Verification.Interface.Types
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
+  PayoutOrderStatusResp: Kernel.External.Payout.Interface.Types
 
 module: DriverRegistration
 apiPrefix: driver
@@ -80,6 +82,22 @@ apis:
         driverId: Id Driver
       response:
         type: BankAccountVerificationResponse
+  - GET: # PayoutRegistrationAPI (dashboard proxy for driver ReferralPayout GET /payout/registration)
+      endpoint: /{driverId}/payout/registration
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: PayoutRegistrationRes
+  - GET: # PayoutOrderStatusAPI (dashboard proxy for driver ReferralPayout GET /payout/order/status)
+      endpoint: /{driverId}/payout/order/status
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      mandatoryQuery:
+        orderId: Text
+      response:
+        type: PayoutOrderStatusResp
   - POST: # RegisterRCAPI
       endpoint: /{driverId}/register/rc
       auth: ApiAuthV2
@@ -317,6 +335,9 @@ types:
   VerifyBankAccountReq:
     - bankAccountNo : Text
     - bankIfscCode : Text
+  PayoutRegistrationRes:
+    - orderId: Text
+    - orderResp: CreateOrderResp
   AadhaarCardReq:
     aadhaarFrontImageId: Maybe (Id Image)
     aadhaarBackImageId: Maybe (Id Image)

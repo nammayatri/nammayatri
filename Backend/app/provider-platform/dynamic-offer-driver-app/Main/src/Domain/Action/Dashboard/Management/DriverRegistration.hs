@@ -30,6 +30,8 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationTriggerReminder,
     postDriverRegistrationVerifyBankAccount,
     getDriverRegistrationInfoBankAccount,
+    getDriverRegistrationPayoutRegistration,
+    getDriverRegistrationPayoutOrderStatus,
   )
 where
 
@@ -48,6 +50,7 @@ import Domain.Action.UI.DriverOnboarding.Image
 import qualified Domain.Action.UI.DriverOnboarding.Status as DStatus
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
+import qualified Domain.Action.UI.ReferralPayout as ReferralPayout
 import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -70,6 +73,7 @@ import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Payout.Interface.Types as PayoutTypes
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Types as Lang
 import Kernel.External.Verification.Interface.Types
@@ -1294,3 +1298,22 @@ getDriverRegistrationInfoBankAccount merchantShortId opCity driverId requestId =
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
   BankAccountVerification.getInfoBankAccount (personId, merchant.id, merchantOpCityId) requestId
+
+getDriverRegistrationPayoutRegistration :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.PayoutRegistrationRes
+getDriverRegistrationPayoutRegistration merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  res <- ReferralPayout.getPayoutRegistration (Just personId, merchant.id, merchantOpCityId)
+  pure $
+    Common.PayoutRegistrationRes
+      { orderId = res.orderId.getId,
+        orderResp = res.orderResp
+      }
+
+getDriverRegistrationPayoutOrderStatus :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow PayoutTypes.PayoutOrderStatusResp
+getDriverRegistrationPayoutOrderStatus merchantShortId opCity driverId orderId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  ReferralPayout.getPayoutOrderStatus (Just personId, merchant.id, merchantOpCityId) orderId
