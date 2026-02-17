@@ -188,7 +188,8 @@ handler merchant req validatedQuote = do
                 billingCategory = booking.billingCategory,
                 isRepeatSearch = False,
                 isAllocatorBatch = False,
-                paymentMethodInfo = paymentMethodInfo
+                paymentMethodInfo = paymentMethodInfo,
+                emailDomain = booking.emailDomain
               }
       initiateDriverSearchBatch driverSearchBatchInput
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
