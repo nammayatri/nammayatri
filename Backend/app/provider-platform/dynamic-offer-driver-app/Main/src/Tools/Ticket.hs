@@ -15,6 +15,10 @@
 module Tools.Ticket
   ( createTicket,
     updateTicket,
+    addAndUpdateKaptureCustomer,
+    kaptureEncryption,
+    kapturePullTicket,
+    kaptureGetTicket,
   )
 where
 
@@ -36,6 +40,18 @@ createTicket = runWithServiceConfig Ticket.createTicket
 
 updateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
 updateTicket = runWithServiceConfig Ticket.updateTicket
+
+addAndUpdateKaptureCustomer :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.KaptureCustomerReq -> m TIT.KaptureCustomerResp
+addAndUpdateKaptureCustomer = runWithServiceConfig Ticket.addAndUpdateKaptureCustomer
+
+kaptureEncryption :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.KaptureEncryptionReq -> m TIT.KaptureEncryptionResp
+kaptureEncryption = runWithServiceConfig Ticket.kaptureEncryption
+
+kapturePullTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.KapturePullTicketReq -> m TIT.KapturePullTicketResp
+kapturePullTicket = runWithServiceConfig Ticket.kapturePullTicket
+
+kaptureGetTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.GetTicketReq -> m [TIT.GetTicketResp]
+kaptureGetTicket = runWithServiceConfig Ticket.kaptureGetTicket
 
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>

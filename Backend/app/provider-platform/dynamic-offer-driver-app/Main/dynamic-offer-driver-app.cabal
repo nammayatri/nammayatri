@@ -27,6 +27,7 @@ flag Local
 library
   exposed-modules:
       API
+      API.Action.UI.TicketKapture
       API.Beckn
       API.Beckn.Cancel
       API.Beckn.Confirm
@@ -77,6 +78,7 @@ library
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
       API.Internal.ViolationDetection
+      API.Types.UI.TicketKapture
       API.UI
       API.UI.Call
       API.UI.CallEvent
@@ -185,6 +187,7 @@ library
       Domain.Action.Dashboard.Management.PlanManagement
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
+      Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.System
       Domain.Action.Dashboard.Management.VehicleInfo
       Domain.Action.Dashboard.Management.Volunteer
@@ -319,6 +322,7 @@ library
       Domain.Action.UI.SpecialLocationWarrior
       Domain.Action.UI.StclMembership
       Domain.Action.UI.SubscriptionTransaction
+      Domain.Action.UI.TicketKapture
       Domain.Action.UI.Tokenization
       Domain.Action.UI.Transporter
       Domain.Action.UI.VehicleDetails
@@ -381,6 +385,7 @@ library
       Domain.Types.OnUpdate
       Domain.Types.Quote
       Domain.Types.RideRoute
+      Domain.Types.TicketKapture
       Domain.Types.UpgradedTier
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
@@ -732,7 +737,6 @@ library
       Storage.Queries.RiderDetailsExtra
       Storage.Queries.RouteExtra
       Storage.Queries.SafetySettingsExtra
-      Storage.Queries.ScheduledPayoutExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
@@ -854,6 +858,7 @@ library
       API.Action.Dashboard.Management.PlanManagement
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.Management.VehicleInfo
       API.Action.Dashboard.Management.Volunteer

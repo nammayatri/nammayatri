@@ -47,6 +47,7 @@ import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
 import qualified API.Action.UI.StclMembership as StclMembership
 import qualified API.Action.UI.SubscriptionTransaction as SubscriptionTransaction
+import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.Tokenization as Tokenization
 import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.Action.UI.WMB as WMB
@@ -111,6 +112,7 @@ type API =
            :<|> Rating.API
            :<|> DriverReferral.API
            :<|> Issue.API
+           :<|> TicketKapture.API
            :<|> ExotelEndRide.API
            :<|> LeaderBoard.API
            :<|> OnMessage.API
@@ -177,6 +179,7 @@ handler =
     :<|> Rating.handler
     :<|> DriverReferral.handler
     :<|> Issue.handler
+    :<|> TicketKapture.handler
     :<|> ExotelEndRide.handler
     :<|> LeaderBoard.handler
     :<|> OnMessage.handler

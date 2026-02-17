@@ -66,6 +66,7 @@ library
       Domain.Action.ProviderPlatform.Management.PlanManagement
       Domain.Action.ProviderPlatform.Management.Revenue
       Domain.Action.ProviderPlatform.Management.Ride
+      Domain.Action.ProviderPlatform.Management.SosMedia
       Domain.Action.ProviderPlatform.Management.System
       Domain.Action.ProviderPlatform.Management.VehicleInfo
       Domain.Action.ProviderPlatform.Management.Volunteer
@@ -119,6 +120,7 @@ library
       API.Action.ProviderPlatform.Management.PlanManagement
       API.Action.ProviderPlatform.Management.Revenue
       API.Action.ProviderPlatform.Management.Ride
+      API.Action.ProviderPlatform.Management.SosMedia
       API.Action.ProviderPlatform.Management.System
       API.Action.ProviderPlatform.Management.VehicleInfo
       API.Action.ProviderPlatform.Management.Volunteer

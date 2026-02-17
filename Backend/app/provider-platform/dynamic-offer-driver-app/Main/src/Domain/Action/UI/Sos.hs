@@ -22,23 +22,27 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as DRideDetails
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
-import GHC.IO.IOMode (IOMode(..))
+import GHC.IO.IOMode (IOMode (..))
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Ticket.Interface.Types as Ticket
+import Kernel.Prelude (ToSchema)
 import qualified Kernel.Prelude
+import Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.ServantMultipart
+import Kernel.Utils.Logging
+import Kernel.Utils.Servant.Client (withShortRetry)
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Domain.Types.Sos
@@ -47,17 +51,19 @@ import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import Servant hiding (throwError)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.PersonDefaultEmergencyNumber as SPDEN
+import Storage.Beam.IssueManagement ()
 import Storage.Beam.Sos ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRideDetails
+import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import qualified Tools.Ticket as TicketTools
-import Kernel.Prelude (ToSchema)
-import Storage.Beam.IssueManagement ()
 
 data SOSVideoUploadReq = SOSVideoUploadReq
   { payload :: FilePath,
@@ -117,23 +123,26 @@ getSosGetDetails (mbPersonId, _, _) rideId_ = do
       unless (personId_ == cast sosDetails.personId) $ throwError $ InvalidRequest "PersonId not same"
       return APISos.SosDetailsRes {sos = Just sosDetails}
 
--- Dummy tracking URL: same structure as rider (hardcoded base + rideId)
-buildDriverSosTrackLink :: Id DRide.Ride -> Text
-buildDriverSosTrackLink rideId = "https://nammayatri.in/t/?vp=shareRide&rideId=" <> rideId.getId
+-- Tracking URL: use transporterConfig pattern when present (parity with rider), else fallback
+buildDriverSosTrackLink :: Maybe Text -> Id DRide.Ride -> Text
+buildDriverSosTrackLink mbPattern rideId =
+  case mbPattern of
+    Nothing -> "https://nammayatri.in/t/?vp=shareRide&rideId=" <> rideId.getId
+    Just urlPattern -> Notify.buildTemplate [("vp", "shareRide")] urlPattern <> rideId.getId
 
 driverGetName :: Person.Person -> Text
 driverGetName person = person.firstName <> " " <> fromMaybe "" person.lastName
 
-buildRideInfo :: DRide.Ride -> Person.Person -> Maybe Text -> Ticket.RideInfo
-buildRideInfo ride person phoneNumber =
+buildRideInfo :: DRide.Ride -> DBooking.Booking -> DRideDetails.RideDetails -> Person.Person -> Maybe Text -> Maybe Text -> Ticket.RideInfo
+buildRideInfo ride booking rideDetails person driverPhoneNumber customerPhoneNumber =
   Ticket.RideInfo
     { rideShortId = ride.shortId.getShortId,
       rideCity = show person.merchantOperatingCityId,
-      customerName = Nothing,
-      customerPhoneNo = phoneNumber,
+      customerName = booking.riderName,
+      customerPhoneNo = customerPhoneNumber,
       driverName = Just $ driverGetName person,
-      driverPhoneNo = phoneNumber,
-      vehicleNo = "",
+      driverPhoneNo = driverPhoneNumber,
+      vehicleNo = rideDetails.vehicleNumber,
       vehicleCategory = show <$> ride.vehicleVariant,
       vehicleServiceTier = ride.vehicleServiceTierName,
       status = show ride.status,
@@ -180,28 +189,45 @@ mkTicket person phoneNumber mediaLinks info flow disposition queue =
       SafetyDSos.CustomerCare -> "Customer care called."
       _ -> "SOS activated (driver)"
 
-createTicketForNewSos :: Person.Person -> DRide.Ride -> DBooking.Booking -> Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Id Domain.Types.Merchant.Merchant -> API.Types.UI.Sos.SosReq -> Environment.Flow (Id SafetyDSos.Sos)
-createTicketForNewSos person ride _booking _merchantOperatingCityId _merchantId req = do
-  mbExistingSos <- SafetyCQSos.findByRideId (cast ride.id)
+createTicketForNewSos :: Person.Person -> DRide.Ride -> DBooking.Booking -> Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Id Domain.Types.Merchant.Merchant -> Bool -> Text -> Text -> Text -> API.Types.UI.Sos.SosReq -> Environment.Flow (Id SafetyDSos.Sos)
+createTicketForNewSos person ride booking _merchantOperatingCityId _merchantId enableSupportForSafety kaptureDisposition kaptureQueue trackLink req = do
+  cached <- SafetyCQSos.findByRideId (cast ride.id)
+  mbExistingSos <- case cached of
+    Just x -> pure (Just x)
+    Nothing -> SafetySos.findSosByRideId (cast ride.id)
   case mbExistingSos of
     Just existingSos -> do
+      logDebug $ "createTicketForNewSos: reactivating SOS, rideId=" <> ride.id.getId <> ", personId=" <> person.id.getId <> ", existingSosId=" <> existingSos.id.getId
       result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast _merchantOperatingCityId) (cast _merchantId) req.flow (Just existingSos) existingSos.ticketId
+      logDebug $ "createTicketForNewSos: createRideBasedSos (reactivate) returned, sosId=" <> result.sosId.getId
       void $ callUpdateTicket person result.sosDetails $ Just "SOS Re-Activated"
       return (cast result.sosId)
     Nothing -> do
-      transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
-      let trackLink = buildDriverSosTrackLink ride.id
-      phoneNumber <- mapM decrypt person.mobileNumber
-      let rideInfo = buildRideInfo ride person phoneNumber
+      driverPhoneNumber <- mapM decrypt person.mobileNumber
+      rideDetails <- QRideDetails.findById ride.id >>= fromMaybeM (InvalidRequest $ "RideDetailsNotFound: " <> ride.id.getId)
+      customerPhoneNumber <- case booking.riderId of
+        Nothing -> pure Nothing
+        Just riderDetailsId -> do
+          riderDetails <- QRiderDetails.findById riderDetailsId >>= fromMaybeM (RiderDetailsNotFound riderDetailsId.getId)
+          mobileNumber <- decrypt riderDetails.mobileNumber
+          pure $ Just (riderDetails.mobileCountryCode <> mobileNumber)
+      let rideInfo = buildRideInfo ride booking rideDetails person driverPhoneNumber customerPhoneNumber
       ticketId <- do
-        ticketResponse <-
-          withTryCatch "createTicket:sosTrigger" $
-            TicketTools.createTicket person.merchantId person.merchantOperatingCityId $
-              mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow transporterConfig.kaptureDisposition transporterConfig.kaptureQueue
-        case ticketResponse of
-          Right ticketResponse' -> return (Just ticketResponse'.ticketId)
-          Left _ -> return Nothing
+        if enableSupportForSafety
+          then do
+            ticketResponse <-
+              withTryCatch "createTicket:sosTrigger" $
+                TicketTools.createTicket person.merchantId person.merchantOperatingCityId $
+                  mkTicket person driverPhoneNumber ["https://" <> trackLink] rideInfo req.flow kaptureDisposition kaptureQueue
+            case ticketResponse of
+              Right ticketResponse' -> return (Just ticketResponse'.ticketId)
+              Left err -> do
+                logError $ "createTicket:sosTrigger failed for ride " <> ride.id.getId <> " / person " <> person.id.getId <> ": " <> T.pack (show err)
+                return Nothing
+          else return Nothing
+      logDebug $ "createTicketForNewSos: creating new SOS, rideId=" <> ride.id.getId <> ", personId=" <> person.id.getId
       result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast _merchantOperatingCityId) (cast _merchantId) req.flow Nothing ticketId
+      logDebug $ "createTicketForNewSos: createRideBasedSos (new) returned, sosId=" <> result.sosId.getId
       return (cast result.sosId)
 
 callUpdateTicket :: Person.Person -> SafetyDSos.Sos -> Maybe Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -225,7 +251,7 @@ postSosCreate ::
     API.Types.UI.Sos.SosReq ->
     Environment.Flow API.Types.UI.Sos.SosRes
   )
-postSosCreate (mbPersonId, _merchantId , _merchantOperatingCityId) req = do
+postSosCreate (mbPersonId, _merchantId, _merchantOperatingCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId
@@ -233,8 +259,12 @@ postSosCreate (mbPersonId, _merchantId , _merchantOperatingCityId) req = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (personId == ride.driverId) $ throwError $ InvalidRequest "Ride does not belong to this person"
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  sosId <- createTicketForNewSos person ride booking _merchantOperatingCityId _merchantId req
-  let trackLink = buildDriverSosTrackLink ride.id
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  let enableSupportForSafety = fromMaybe False transporterConfig.enableSupportForSafety
+      kaptureDisposition = transporterConfig.kaptureDisposition
+      kaptureQueue = transporterConfig.kaptureQueue
+      trackLink = buildDriverSosTrackLink transporterConfig.trackingShortUrlPattern ride.id
+  sosId <- createTicketForNewSos person ride booking _merchantOperatingCityId _merchantId enableSupportForSafety kaptureDisposition kaptureQueue trackLink req
   buildSmsReq <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
       MessageBuilder.BuildSOSAlertMessageReq
@@ -304,10 +334,55 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
           }
   result <- withTryCatch "S3:put:uploadSosMedia" $ S3.put (T.unpack filePath) mediaFile
   case result of
-    Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
+    Left err -> do
+      logError $ "S3:put:uploadSosMedia failed, filePath=" <> filePath <> ", error=" <> T.pack (show err)
+      throwError $ InternalError "S3 Upload Failed"
     Right _ -> do
       MFQuery.create fileEntity
       let currentMediaFiles = sosDetails.mediaFiles
           updatedMediaFiles = currentMediaFiles <> [mediaFileId]
       void $ SafetySos.updateSosMediaFiles updatedMediaFiles sosId
+      -- Create/update Kapture ticket with media link when support for safety is enabled (parity with rider)
+      let enableSupportForSafety = fromMaybe False transporterConfig.enableSupportForSafety
+          dashboardFileUrl =
+            maybe
+              []
+              ( \urlPattern ->
+                  [ urlPattern
+                      & T.replace "<FILE_PATH>" filePath
+                  ]
+              )
+              transporterConfig.dashboardMediaFileUrlPattern
+      when enableSupportForSafety $ do
+        when (SafetySos.isRideBasedSos sosDetails.entityType) $ do
+          rideId <- sosDetails.rideId & fromMaybeM (RideDoesNotExist "Ride ID not found")
+          ride <- QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist (getId rideId))
+          booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+          driverPhoneNumber <- mapM decrypt person.mobileNumber
+          rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (InvalidRequest $ "RideDetailsNotFound: " <> ride.id.getId)
+          customerPhoneNumber <- case booking.riderId of
+            Nothing -> pure Nothing
+            Just riderDetailsId -> do
+              riderDetails <- runInReplica $ QRiderDetails.findById riderDetailsId >>= fromMaybeM (RiderDetailsNotFound riderDetailsId.getId)
+              mobileNumber <- decrypt riderDetails.mobileNumber
+              pure $ Just (riderDetails.mobileCountryCode <> mobileNumber)
+          let rideInfo = buildRideInfo ride booking rideDetails person driverPhoneNumber customerPhoneNumber
+              trackLink = buildDriverSosTrackLink transporterConfig.trackingShortUrlPattern ride.id
+              mediaLinks = ["https://" <> trackLink] <> dashboardFileUrl
+          case sosDetails.ticketId of
+            Just ticketId -> do
+              let comment =
+                    "Audio recording/shared media uploaded. Links: "
+                      <> T.intercalate ", " mediaLinks
+              void $
+                withTryCatch "updateTicket:sendSosTracking" $
+                  withShortRetry $
+                    TicketTools.updateTicket person.merchantId person.merchantOperatingCityId (Ticket.UpdateTicketReq comment ticketId Ticket.IN)
+            Nothing -> do
+              -- Fallback: create a separate ticket only when SOS has no ticketId (e.g. ticket creation failed earlier)
+              void $
+                withTryCatch "createTicket:sendSosTracking" $
+                  withShortRetry $
+                    TicketTools.createTicket person.merchantId person.merchantOperatingCityId $
+                      mkTicket person driverPhoneNumber mediaLinks rideInfo SafetyDSos.AudioRecording transporterConfig.kaptureDisposition transporterConfig.kaptureQueue
       return $ AddSosVideoRes {fileUrl = fileUrl}

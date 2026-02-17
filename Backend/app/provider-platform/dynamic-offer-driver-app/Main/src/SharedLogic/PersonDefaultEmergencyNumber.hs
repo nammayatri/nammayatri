@@ -18,6 +18,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Domain.Types.PersonDefaultEmergencyNumber (DecryptedPersonDefaultEmergencyNumber)
 import Environment
+import qualified EulerHS.Prelude as EulerHS
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
@@ -31,7 +32,6 @@ import qualified Storage.Queries.PersonDefaultEmergencyNumberExtra as QPDEN
 import Tools.Error
 import Tools.Notifications hiding (buildTemplate)
 import qualified Tools.SMS as Sms
-import qualified EulerHS.Prelude as EulerHS
 
 data DriverEmergencyContactEntity = DriverEmergencyContactEntity
   { name :: Text,

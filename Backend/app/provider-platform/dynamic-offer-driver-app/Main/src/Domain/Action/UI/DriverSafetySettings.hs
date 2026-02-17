@@ -14,15 +14,15 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import Kernel.Types.Id
 import qualified Kernel.Types.Id
-import qualified Safety.Domain.Types.SafetySettings as DSafety
 import Kernel.Utils.Common
+import qualified Safety.Domain.Types.SafetySettings as DSafety
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import Servant hiding (throwError)
 import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Tools.Auth
 import Tools.Error
-import Kernel.Types.Id
 
 getDriverGetSafetySettings ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

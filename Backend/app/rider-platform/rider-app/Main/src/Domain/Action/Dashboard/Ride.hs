@@ -71,6 +71,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
+import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -155,7 +156,13 @@ buildShareRideInfo merchantId ride = do
             _ -> Nothing
         )
           <&> (\number -> if ride.status `elem` [DRide.NEW, DRide.INPROGRESS] then number else "xxxx")
-  sosDetails <- SafetyCQSos.findByRideId (cast ride.id)
+  cached <- SafetyCQSos.findByRideId (cast ride.id)
+  sosDetails <- case cached of
+    Just x -> pure (Just x)
+    Nothing -> do
+      mbFromDb <- SafetyQSos.findByRideId (Just (cast ride.id))
+      whenJust mbFromDb $ \sos -> SafetyCQSos.cacheSosIdByRideId (cast ride.id) sos
+      pure mbFromDb
   let fareProductType = mkFareProductType booking.bookingDetails
   return $
     Common.ShareRideInfoRes

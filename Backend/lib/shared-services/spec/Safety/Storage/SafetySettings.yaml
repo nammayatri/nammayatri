@@ -44,7 +44,6 @@ SafetySettings:
     autoCallDefaultContact : "false"
     notifySosWithEmergencyContacts : "false"
     enableUnexpectedEventsCheck : "'NEVER_SHARE'"
-    enablePostRideSafetyCheck : "false"
     notifySafetyTeamForSafetyCheckFailure : "false"
     shakeToActivate : "false"
 

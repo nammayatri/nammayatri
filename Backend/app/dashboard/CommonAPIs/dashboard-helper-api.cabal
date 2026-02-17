@@ -87,6 +87,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
+      API.Types.ProviderPlatform.Management.Endpoints.SosMedia
       API.Types.ProviderPlatform.Management.Endpoints.System
       API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
       API.Types.ProviderPlatform.Management.Endpoints.Volunteer
@@ -100,6 +101,7 @@ library
       API.Types.ProviderPlatform.Management.PlanManagement
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
+      API.Types.ProviderPlatform.Management.SosMedia
       API.Types.ProviderPlatform.Management.System
       API.Types.ProviderPlatform.Management.VehicleInfo
       API.Types.ProviderPlatform.Management.Volunteer

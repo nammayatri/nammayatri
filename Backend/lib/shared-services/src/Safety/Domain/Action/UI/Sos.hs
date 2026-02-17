@@ -10,6 +10,7 @@
 
 module Safety.Domain.Action.UI.Sos where
 
+import Data.List (sortBy)
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -44,11 +45,28 @@ updateSosFromNonRideToRide sosId newRideId = do
 
   let updatedSos =
         sos{entityType = Just DSos.Ride,
-            rideId = Just newRideId
+            rideId = Just newRideId,
+            sosState = Just DSos.SosActive
            }
 
   QSos.updateByPrimaryKey updatedSos
   CQSos.cacheSosIdByRideId newRideId updatedSos
+
+-- | Update ticketId on an existing SOS (e.g. after creating Kapture ticket when converting non-ride SOS to ride).
+-- Updates DB and cache when SOS has a rideId.
+updateSosTicketId ::
+  ( BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  Id DSos.Sos ->
+  Maybe Text ->
+  m ()
+updateSosTicketId sosId mbTicketId = do
+  sos <- QSos.findById sosId >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId.getId)
+  let updatedSos = sos {DSos.ticketId = mbTicketId}
+  QSos.updateByPrimaryKey updatedSos
+  whenJust sos.rideId $ \rid -> CQSos.cacheSosIdByRideId rid updatedSos
 
 -- | Create a new SOS record
 createSos ::
@@ -58,7 +76,9 @@ createSos ::
   DSos.Sos ->
   m (Id DSos.Sos)
 createSos sos = do
+  logDebug $ "createSos: before QSos.create, sosId=" <> sos.id.getId <> ", personId=" <> sos.personId.getId <> ", rideId=" <> maybe "nothing" (.getId) sos.rideId
   QSos.create sos
+  logDebug $ "createSos: after QSos.create, sosId=" <> sos.id.getId
   return sos.id
 
 -- | Update SOS status
@@ -104,7 +124,6 @@ updateSosTrackingExpiresAt trackingExpiresAt sosId = QSos.updateTrackingExpiresA
 -- | Find SOS by ID
 findSosById ::
   ( BeamFlow m r,
-    EsqDBReplicaFlow m r,
     CoreMetrics m
   ) =>
   Id DSos.Sos ->
@@ -114,7 +133,6 @@ findSosById sosId = QSos.findById sosId
 -- | Find SOS by ticket ID
 findSosByTicketId ::
   ( BeamFlow m r,
-    EsqDBReplicaFlow m r,
     CoreMetrics m
   ) =>
   Maybe Text ->
@@ -124,12 +142,25 @@ findSosByTicketId ticketId = QSos.findByTicketId ticketId
 -- | Find SOS by person ID
 findSosByPersonId ::
   ( BeamFlow m r,
-    EsqDBReplicaFlow m r,
     CoreMetrics m
   ) =>
   Id Common.Person ->
   m [DSos.Sos]
 findSosByPersonId personId = QSos.findByPersonId personId
+
+-- | Find active SOS for a person (status is Pending or NotResolved).
+-- Returns the most recent one by createdAt if multiple exist.
+findActiveSosByPersonId ::
+  ( BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  Id Common.Person ->
+  m (Maybe DSos.Sos)
+findActiveSosByPersonId personId = do
+  allSos <- findSosByPersonId personId
+  let active = filter (\s -> s.status == DSos.Pending || s.status == DSos.NotResolved) allSos
+  return $ listToMaybe $ sortBy (\a b -> compare (b.createdAt) (a.createdAt)) active
 
 findSosByRideId ::
   ( BeamFlow m r,
@@ -218,12 +249,14 @@ markSosAsSafe sosId personId mbIsEndLiveTracking mbIsRideEnded = do
     void $ updateSosState (Just DSos.LiveTracking) sosId
 
   -- Fetch updated SOS details from DB after all updates
-  updatedSosDetails <- B.runInReplica $ QSos.findById sosId >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> sosId.getId)
+  updatedSosDetails <- QSos.findById sosId >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> sosId.getId)
 
   -- Cache SOS by rideId if ride-based and resolved (Redis - shared-services)
   when (isRideBased && shouldMarkAsResolved) $ do
-    rideId <- updatedSosDetails.rideId & fromMaybeM (InvalidRequest "Ride ID not found")
-    CQSos.cacheSosIdByRideId rideId updatedSosDetails
+    -- Legacy safety_sos rows may have entityType = Nothing but rideId = Nothing.
+    -- Don't fail on caching in that case.
+    whenJust updatedSosDetails.rideId $ \rideId ->
+      CQSos.cacheSosIdByRideId rideId updatedSosDetails
 
   -- Determine notification logic
   let shouldNotifyContacts =
@@ -263,67 +296,83 @@ createRideBasedSos ::
   Id Common.MerchantOperatingCity ->
   Id Common.Merchant ->
   DSos.SosType ->
-  Maybe DSos.Sos->
+  Maybe DSos.Sos ->
   Maybe Text -> -- ticketId
   m CreateSosResult
 createRideBasedSos personId rideId merchantOperatingCityId merchantId flow mbExistingSos ticketId = do
-  case mbExistingSos of
-    Just existingSos -> do
-      -- Update existing SOS status to Pending
-      void $ updateSosStatus DSos.Pending existingSos.id
+  -- Only one active SOS per person: if person has active SOS for another ride or non-ride, reuse it
+  mbActive <- findActiveSosByPersonId personId
+  case mbActive of
+    Just active
+      | active.rideId /= Just rideId ->
+        return $
+          CreateSosResult
+            { sosId = active.id,
+              wasReactivated = True,
+              sosDetails = active
+            }
+    _ -> do
+      case mbExistingSos of
+        Just existingSos -> do
+          -- Update existing SOS status to Pending
+          void $ updateSosStatus DSos.Pending existingSos.id
 
-      -- Fetch updated SOS from DB after update
-      updatedSos <- B.runInReplica $ QSos.findById existingSos.id >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> existingSos.id.getId)
+          -- Fetch updated SOS from DB after update
+          -- NOTE: Read from primary after writes to avoid replica staleness.
+          updatedSos <- QSos.findById existingSos.id >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> existingSos.id.getId)
 
-      -- Cache updated SOS
-      CQSos.cacheSosIdByRideId rideId updatedSos
+          -- Cache updated SOS
+          CQSos.cacheSosIdByRideId rideId updatedSos
 
-      return $
-        CreateSosResult
-          { sosId = existingSos.id,
-            wasReactivated = True,
-            sosDetails = updatedSos
-          }
-    Nothing -> do
-      -- Create new SOS
-      now <- getCurrentTime
-      pid <- generateGUID
-      let eightHoursInSeconds :: Int = 8 * 60 * 60
-      let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
-      let newSos =
-            DSos.Sos
-              { id = pid,
-                personId = personId,
-                status = DSos.Pending,
-                flow = flow,
-                rideId = Just rideId,
-                ticketId = ticketId,
-                mediaFiles = [],
-                merchantId = Just merchantId,
-                merchantOperatingCityId = Just merchantOperatingCityId,
-                trackingExpiresAt = Just trackingExpiresAt,
-                entityType = Just DSos.Ride,
-                sosState = Just DSos.SosActive,
-                createdAt = now,
-                updatedAt = now
+          return $
+            CreateSosResult
+              { sosId = existingSos.id,
+                wasReactivated = True,
+                sosDetails = updatedSos
               }
+        Nothing -> do
+          -- Create new SOS
+          now <- getCurrentTime
+          pid <- generateGUID
+          let eightHoursInSeconds :: Int = 8 * 60 * 60
+          let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
+          let newSos =
+                DSos.Sos
+                  { id = pid,
+                    personId = personId,
+                    status = DSos.Pending,
+                    flow = flow,
+                    rideId = Just rideId,
+                    ticketId = ticketId,
+                    mediaFiles = [],
+                    merchantId = Just merchantId,
+                    merchantOperatingCityId = Just merchantOperatingCityId,
+                    trackingExpiresAt = Just trackingExpiresAt,
+                    entityType = Just DSos.Ride,
+                    sosState = Just DSos.SosActive,
+                    createdAt = now,
+                    updatedAt = now
+                  }
 
-      void $ createSos newSos
+          logDebug $ "createRideBasedSos: about to createSos, sosId=" <> getId pid <> ", rideId=" <> rideId.getId
+          void $ createSos newSos
+          logDebug $ "createRideBasedSos: createSos returned, sosId=" <> getId pid
 
-      -- Cache new SOS
-      CQSos.cacheSosIdByRideId rideId newSos
+          -- Cache new SOS
+          CQSos.cacheSosIdByRideId rideId newSos
 
-      return $
-        CreateSosResult
-          { sosId = newSos.id,
-            wasReactivated = False,
-            sosDetails = newSos
-          }
+          return $
+            CreateSosResult
+              { sosId = newSos.id,
+                wasReactivated = False,
+                sosDetails = newSos
+              }
 
 -- | Core logic for creating non-ride SOS
 -- Handles SOS DB operations
 createNonRideSos ::
   ( BeamFlow m r,
+    EsqDBReplicaFlow m r,
     CoreMetrics m
   ) =>
   Id Common.Person ->
@@ -333,28 +382,33 @@ createNonRideSos ::
   DSos.SosType ->
   m DSos.Sos
 createNonRideSos personId mbMerchantId mbMerchantOperatingCityId mbTrackingExpiresAt flow = do
-  now <- getCurrentTime
-  pid <- generateGUID
-  let newSos =
-        DSos.Sos
-          { id = pid,
-            personId = personId,
-            status = DSos.Pending,
-            flow = flow,
-            rideId = Nothing,
-            ticketId = Nothing,
-            mediaFiles = [],
-            merchantId = mbMerchantId,
-            merchantOperatingCityId = mbMerchantOperatingCityId,
-            trackingExpiresAt = mbTrackingExpiresAt,
-            entityType = Just DSos.NonRide,
-            sosState = Just DSos.SosActive,
-            createdAt = now,
-            updatedAt = now
-          }
+  -- Only one active SOS per person: reuse existing active if any
+  mbActive <- findActiveSosByPersonId personId
+  case mbActive of
+    Just active -> return active
+    Nothing -> do
+      now <- getCurrentTime
+      pid <- generateGUID
+      let newSos =
+            DSos.Sos
+              { id = pid,
+                personId = personId,
+                status = DSos.Pending,
+                flow = flow,
+                rideId = Nothing,
+                ticketId = Nothing,
+                mediaFiles = [],
+                merchantId = mbMerchantId,
+                merchantOperatingCityId = mbMerchantOperatingCityId,
+                trackingExpiresAt = mbTrackingExpiresAt,
+                entityType = Just DSos.NonRide,
+                sosState = Just DSos.SosActive,
+                createdAt = now,
+                updatedAt = now
+              }
 
-  void $ createSos newSos
-  return newSos
+      void $ createSos newSos
+      return newSos
 
 -- | Update SOS status and handle caching for ride-based SOS
 updateSosStatusWithCache ::
@@ -377,12 +431,13 @@ updateSosStatusWithCache sosId status personId = do
   void $ updateSosStatus status sosId
 
   -- Fetch updated SOS from DB after update
-  updatedSos <- B.runInReplica $ QSos.findById sosId >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> sosId.getId)
+  -- NOTE: Read from primary after writes to avoid replica staleness.
+  updatedSos <- QSos.findById sosId >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> sosId.getId)
 
   -- If ride-based: cache updated SOS
   when (isRideBasedSos updatedSos.entityType) $ do
-    rideId <- updatedSos.rideId & fromMaybeM (InvalidRequest "Ride ID not found")
-    CQSos.cacheSosIdByRideId rideId updatedSos
+    whenJust updatedSos.rideId $ \rideId ->
+      CQSos.cacheSosIdByRideId rideId updatedSos
 
   return updatedSos
 
@@ -443,7 +498,7 @@ updateSosStateWithTracking sos personId newState mbTrackingExpiresAt = do
     void $ updateSosTrackingExpiresAt (Just trackingExpiresAt) sos.id
 
   -- Fetch updated SOS from DB after all updates
-  updatedSos <- B.runInReplica $ QSos.findById sos.id >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> sos.id.getId)
+  updatedSos <- QSos.findById sos.id >>= fromMaybeM (InvalidRequest $ "Failed to fetch updated SOS: " <> sos.id.getId)
 
   return updatedSos
 

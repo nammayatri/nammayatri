@@ -91,12 +91,11 @@ data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   deriving (Generic)
 
 buildSendOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m SmsReqBuilder
-buildSendOTPMessage _merchantOperatingCityId _req = do
-  -- Totally hardcoded message with OTP 7891
-  let smsBody = "7891 is your OTP for login to Namma Yatri App. test -Namma Yatri"
-      sender = "NMAYTI"
-      templateId = ""
-  return $ \phoneNumber -> Sms.SendSMSReq {..}
+buildSendOTPMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_OTP Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_OTP))
+  buildSendSmsReq merchantMessage [("otp", req.otp), ("hash", req.hash)]
 
 newtype BuildFRFSTicketCancelOTPMessageReq = BuildFRFSTicketCancelOTPMessageReq
   { otp :: Text
