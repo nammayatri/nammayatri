@@ -11,6 +11,7 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     castRoleToFleetType,
     postRegistrationV2RegisterBankAccountLink,
     getRegistrationV2RegisterBankAccountStatus,
+    checkRequestorAcccessToFleet,
     castFleetType,
     sendFleetOnboardingSms,
   )
@@ -319,6 +320,15 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             panNumberDec = Nothing,
             tdsRate = mbTdsRate,
             stripeIdNumber = Nothing,
+            autoPayStatus = Nothing,
+            blockReasonFlag = Nothing,
+            dailyCancellationRateBlockingCooldown = Nothing,
+            isBlockedForReferralPayout = Nothing,
+            paymentPending = Nothing,
+            payoutRegAmountRefunded = Nothing,
+            payoutVpa = Nothing,
+            payoutVpaBankAccount = Nothing,
+            payoutVpaStatus = Nothing,
             createdAt = now,
             updatedAt = now,
             registeredAt = Nothing,
@@ -327,7 +337,10 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             fleetDob = Nothing,
             stripeAddress = Nothing,
             merchantOperatingCityId = mbMerchantOperatingCityId,
-            isBlockedForScheduledPayout = Nothing
+            isBlockedForScheduledPayout = Nothing,
+            subscribed = Nothing,
+            tollRouteBlockedTill = Nothing,
+            weeklyCancellationRateBlockingCooldown = Nothing
           }
   QFOI.create fleetOwnerInfo
 

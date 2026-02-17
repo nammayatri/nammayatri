@@ -7,6 +7,7 @@ imports:
   Value: Data.Aeson
   Address: Kernel.External.Payment.Stripe.Types
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  BlockReasonFlag: Tools.Error
 
 FleetOwnerInformation:
   tableName: fleet_owner_information
@@ -41,12 +42,32 @@ FleetOwnerInformation:
     stripeAddress: Maybe Address
     fleetName: Maybe Text
     isBlockedForScheduledPayout: Maybe Bool
+    subscribed: Maybe Bool
+    paymentPending: Maybe Bool
+    autoPayStatus: Maybe DriverAutoPayStatus
+    payoutVpa: Maybe Text
+    payoutVpaStatus: Maybe PayoutVpaStatus
+    payoutVpaBankAccount: Maybe Text
+    dailyCancellationRateBlockingCooldown: Maybe UTCTime
+    weeklyCancellationRateBlockingCooldown: Maybe UTCTime
+    blockReasonFlag: Maybe BlockReasonFlag
+    payoutRegAmountRefunded: Maybe HighPrecMoney
+    tollRouteBlockedTill: Maybe UTCTime
+    isBlockedForReferralPayout: Maybe Bool
 
   excludedFields: [merchantOperatingCityId]
+  default:
+    subscribed: "true"
+    paymentPending: "false"
   types:
     FleetType:
       enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
       derive: "HttpInstance"
+    DriverAutoPayStatus:
+      enum: "PENDING,ACTIVE,SUSPENDED,PAUSED_PSP,CANCELLED_PSP,MANDATE_FAILED,MANDATE_EXPIRED"
+      derive: "HttpInstance"
+    PayoutVpaStatus:
+      enum: "VIA_WEBHOOK, MANUALLY_ADDED, VERIFIED_BY_USER"
   beamType:
     isEligibleForSubscription: Maybe Bool
     stripeAddress: Maybe Value
