@@ -271,6 +271,14 @@ validateRedisQueryConfig queryText = do
         throwError $ InvalidRequest "zrangeStop is required for ZRANGE operation"
       when (fromMaybe 0 redisConfig.zrangeStart > fromMaybe 0 redisConfig.zrangeStop) $
         throwError $ InvalidRequest "zrangeStart must be <= zrangeStop"
+    Lib.Yudhishthira.Types.SLIDING_WINDOW_COUNT -> do
+      when (isNothing redisConfig.windowPeriod || fromMaybe 0 redisConfig.windowPeriod < 1) $
+        throwError $ InvalidRequest "SLIDING_WINDOW_COUNT requires windowPeriod >= 1"
+      when (isNothing redisConfig.windowPeriodType || T.null (fromMaybe "" redisConfig.windowPeriodType)) $
+        throwError $ InvalidRequest "SLIDING_WINDOW_COUNT requires windowPeriodType (Minutes, Hours, Days, Months, Years)"
+      let allowed = ["Minutes", "Hours", "Days", "Months", "Years"]
+      when (fromMaybe "" redisConfig.windowPeriodType `notElem` allowed) $
+        throwError $ InvalidRequest $ "windowPeriodType must be one of: " <> T.intercalate ", " allowed
     _ -> pure () -- No extra validation for GET, MGET, HGETALL, SMEMBERS
 
   -- 4. Validate key format (basic sanity check)

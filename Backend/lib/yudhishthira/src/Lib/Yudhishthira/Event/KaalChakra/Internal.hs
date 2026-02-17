@@ -31,6 +31,8 @@ import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters as SWCTypes
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Event.KaalChakra.Parse as Parse
 import qualified Lib.Yudhishthira.Event.KaalChakra.Template as Template
@@ -734,6 +736,43 @@ executeZrange ::
 executeZrange keys start stop =
   forM keys $ \key -> Hedis.withCrossAppRedis $ Hedis.runHedis $ Redis.zrange (TE.encodeUtf8 key) (fromIntegral start) (fromIntegral stop)
 
+-- Parse window period type from config text (for SLIDING_WINDOW_COUNT).
+-- TODO: TEMPORARY – remove with Chakra cancellation-rate SWC query. See Backend/docs/chakra-cancellation-rate-plan.md
+parseWindowPeriodType :: Text -> Either Text SWCTypes.PeriodType
+parseWindowPeriodType "Minutes" = Right SWCTypes.Minutes
+parseWindowPeriodType "Hours" = Right SWCTypes.Hours
+parseWindowPeriodType "Days" = Right SWCTypes.Days
+parseWindowPeriodType "Months" = Right SWCTypes.Months
+parseWindowPeriodType "Years" = Right SWCTypes.Years
+parseWindowPeriodType t = Left $ "Invalid windowPeriodType: " <> t <> ". Use Minutes, Hours, Days, Months or Years."
+
+-- Execute SLIDING_WINDOW_COUNT: for each user, build base key and call SWC.getCurrentWindowCount,
+-- return results as [Maybe ByteString] (JSON number) for formatRedisResults.
+-- TODO: TEMPORARY – remove with Chakra cancellation-rate SWC query. See Backend/docs/chakra-cancellation-rate-plan.md
+executeSlidingWindowCount ::
+  (CacheFlow m r, MonadThrow m, Log m, MonadFlow m) =>
+  YT.RedisQueryConfig ->
+  UserIdKeyMapping ->
+  m [Maybe BS.ByteString]
+executeSlidingWindowCount config userIdMapping = do
+  period <- maybe (throwError $ InvalidRequest "SLIDING_WINDOW_COUNT requires windowPeriod") pure config.windowPeriod
+  periodTypeText <- maybe (throwError $ InvalidRequest "SLIDING_WINDOW_COUNT requires windowPeriodType") pure config.windowPeriodType
+  periodType <- either (throwError . InvalidRequest) pure $ parseWindowPeriodType periodTypeText
+  let opts = SWCTypes.SlidingWindowOptions period periodType
+  logInfo $
+    "SLIDING_WINDOW_COUNT: keyTemplate=" <> config.key
+      <> ", windowPeriod=" <> show period
+      <> ", windowPeriodType=" <> periodTypeText
+      <> ", usersCount=" <> show (length userIdMapping)
+  results <- forM (zip [1 :: Int ..] userIdMapping) $ \(idx, (userId, baseKey)) -> do
+    count <- Hedis.withCrossAppRedis $ SWC.getCurrentWindowCount baseKey opts
+    when (idx <= 3) $
+      logDebug $
+        "SLIDING_WINDOW_COUNT user " <> show idx <> ": userId=" <> userId.getId <> ", baseKey=" <> baseKey <> ", count=" <> show count
+    pure $ Just $ BS.toStrict $ A.encode (A.Number $ fromIntegral count)
+  logInfo $ "SLIDING_WINDOW_COUNT: completed, returned " <> show (length results) <> " results"
+  pure results
+
 -- Format Redis Results
 formatRedisResults ::
   YT.RedisQueryConfig ->
@@ -757,12 +796,13 @@ formatSingleResult ::
   Either Text A.Object
 formatSingleResult config userId mbResponse chakraQuery = do
   let baseObj = A.singleton (A.fromText userIdField) (A.String userId.getId)
+  let effectiveQueryResults = filter (\qr -> qr.resultName /= userIdField) chakraQuery.queryResults
 
   parsedFields <- case mbResponse of
     Nothing ->
-      pure $ mkDefaultFields chakraQuery.queryResults
+      pure $ mkDefaultFields effectiveQueryResults
     Just response -> do
-      parseRedisResponse config.operation response chakraQuery.queryResults
+      parseRedisResponse config.operation response effectiveQueryResults
 
   pure $ foldl' (\obj (key, value) -> A.insert key value obj) baseObj parsedFields
 
@@ -779,6 +819,21 @@ parseRedisResponse op response queryResults =
     YT.HGETALL -> parseGetResponse response queryResults -- HGETALL converted to JSON object
     YT.SMEMBERS -> parseGetResponse response queryResults -- SMEMBERS converted to JSON array
     YT.ZRANGE -> parseGetResponse response queryResults -- ZRANGE converted to JSON array
+    YT.SLIDING_WINDOW_COUNT -> parseSlidingWindowCountResponse response queryResults
+
+parseSlidingWindowCountResponse ::
+  BS.ByteString ->
+  [YT.QueryResult] ->
+  Either Text [(A.Key, A.Value)]
+parseSlidingWindowCountResponse response queryResults =
+  case queryResults of
+    [singleResult] -> do
+      let val = case A.eitherDecodeStrict response of
+            Right (A.Number n) -> A.Number n
+            _ -> A.Number 0
+      parsedValue <- parseValueForQueryResult singleResult val
+      pure [(A.fromText singleResult.resultName, parsedValue)]
+    _ -> Left "SLIDING_WINDOW_COUNT requires exactly one queryResult"
 
 parseGetResponse ::
   BS.ByteString ->
@@ -849,7 +904,7 @@ mkDefaultValue (YT.TEXT v) = A.String v
 
 -- Main Redis Query Execution
 runRedisQueryRequest ::
-  (CacheFlow m r, MonadThrow m, Log m) =>
+  (CacheFlow m r, MonadThrow m, Log m, MonadFlow m) =>
   Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries ->
   [Id Yudhishthira.User] ->
   m [A.Object]
@@ -861,8 +916,10 @@ runRedisQueryRequest chakraQuery userIds = do
     Left err -> throwError $ InvalidRequest $ "Invalid Redis query config: " <> err
     Right config -> pure config
 
-  -- 2. Build Redis keys with mapping
+  -- 2. Build Redis keys with mapping (for SLIDING_WINDOW_COUNT only userIdMapping is used)
   let (userIdMapping, keys) = buildRedisKeysWithMapping redisConfig userIds
+  when (redisConfig.operation == YT.SLIDING_WINDOW_COUNT) $
+    logInfo $ "Run Redis query: SLIDING_WINDOW_COUNT queryName=" <> show chakraQuery.queryName
 
   -- 3. Execute Redis operation based on config
   redisResponses <- case redisConfig.operation of
@@ -890,6 +947,8 @@ runRedisQueryRequest chakraQuery userIds = do
       sortedSets <- executeZrange keys start stop
       -- Convert sorted sets to JSON array ByteString
       pure $ map (Just . BL.toStrict . A.encode . A.Array . V.fromList . map (A.String . TE.decodeUtf8)) sortedSets
+    YT.SLIDING_WINDOW_COUNT ->
+      executeSlidingWindowCount redisConfig userIdMapping
 
   -- 4. Format results
   case formatRedisResults redisConfig userIdMapping redisResponses chakraQuery of
