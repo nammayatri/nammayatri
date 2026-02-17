@@ -21,7 +21,9 @@ data InvoiceLineItem = InvoiceLineItem
   { description :: Text,
     quantity :: Int,
     unitPrice :: HighPrecMoney,
-    lineTotal :: HighPrecMoney
+    lineTotal :: HighPrecMoney,
+    -- | True for pass-through charges (toll, parking) excluded from taxable value
+    isExternalCharge :: Bool
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 

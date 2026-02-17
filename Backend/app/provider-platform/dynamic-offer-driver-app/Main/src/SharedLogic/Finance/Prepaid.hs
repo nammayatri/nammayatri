@@ -459,7 +459,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                                       { description = "Subscription Plan Fee",
                                         quantity = 1,
                                         unitPrice = netAmount,
-                                        lineTotal = netAmount
+                                        lineTotal = netAmount,
+                                        isExternalCharge = False
                                       }
                                 else Nothing,
                               if gstAmount' > 0
@@ -469,7 +470,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                                       { description = "GST",
                                         quantity = 1,
                                         unitPrice = gstAmount',
-                                        lineTotal = gstAmount'
+                                        lineTotal = gstAmount',
+                                        isExternalCharge = False
                                       }
                                 else Nothing
                             ],

@@ -528,16 +528,16 @@ createDriverWalletTransaction ride booking fareParams = do
                 lineItems =
                   catMaybes
                     [ if baseFare > 0
-                        then Just InvoiceLineItem {description = "Base Fare", quantity = 1, unitPrice = baseFare, lineTotal = baseFare}
+                        then Just InvoiceLineItem {description = "Base Fare", quantity = 1, unitPrice = baseFare, lineTotal = baseFare, isExternalCharge = False}
                         else Nothing,
                       if gstAmount > 0
-                        then Just InvoiceLineItem {description = "GST", quantity = 1, unitPrice = gstAmount, lineTotal = gstAmount}
+                        then Just InvoiceLineItem {description = "GST", quantity = 1, unitPrice = gstAmount, lineTotal = gstAmount, isExternalCharge = False}
                         else Nothing,
                       if tollAmount > 0
-                        then Just InvoiceLineItem {description = "Toll Charges", quantity = 1, unitPrice = tollAmount, lineTotal = tollAmount}
+                        then Just InvoiceLineItem {description = "Toll Charges", quantity = 1, unitPrice = tollAmount, lineTotal = tollAmount, isExternalCharge = True}
                         else Nothing,
                       if parkingAmount > 0
-                        then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount}
+                        then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount, isExternalCharge = True}
                         else Nothing
                     ],
                 currency = ride.currency,

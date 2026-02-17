@@ -13,6 +13,7 @@ data IndirectTaxTransaction = IndirectTaxTransaction
     counterpartyId :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     creditOrDebitNoteNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    externalCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     gstCreditType :: Lib.Finance.Domain.Types.IndirectTaxTransaction.GstCreditType,
     gstRate :: Kernel.Prelude.Double,
     gstinOfParty :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

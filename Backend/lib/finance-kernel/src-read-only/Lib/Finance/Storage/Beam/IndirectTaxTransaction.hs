@@ -16,6 +16,7 @@ data IndirectTaxTransactionT f = IndirectTaxTransactionT
     counterpartyId :: (B.C f Kernel.Prelude.Text),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     creditOrDebitNoteNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    externalCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     gstCreditType :: (B.C f Lib.Finance.Domain.Types.IndirectTaxTransaction.GstCreditType),
     gstRate :: (B.C f Kernel.Prelude.Double),
     gstinOfParty :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),

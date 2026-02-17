@@ -22,3 +22,9 @@ ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD COLUMN transacti
 ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD COLUMN transaction_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.indirect_tax_transaction ADD COLUMN external_charges double precision ;
