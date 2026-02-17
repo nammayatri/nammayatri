@@ -19,3 +19,8 @@ ALTER TABLE atlas_driver_offer_bpp.chakra_queries ALTER COLUMN query_name SET NO
 --- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
 ALTER TABLE atlas_driver_offer_bpp.chakra_queries ALTER COLUMN id DROP NOT NULL;
 --- Drop section ends. Please check before running ---
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.chakra_queries ADD COLUMN query_type text ;

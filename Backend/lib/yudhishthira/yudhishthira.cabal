@@ -167,6 +167,7 @@ library
     , geohash ==1.0.1
     , hashable
     , haskell-cac
+    , hedis
     , hspec
     , http-client
     , http-client-tls
@@ -290,6 +291,7 @@ test-suite yudhishthira-tests
     , generic-lens
     , geohash ==1.0.1
     , hashable
+    , hedis
     , hspec
     , http-client
     , http-client-tls

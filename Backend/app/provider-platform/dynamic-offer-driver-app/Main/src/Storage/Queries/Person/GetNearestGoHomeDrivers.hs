@@ -29,6 +29,7 @@ import Kernel.Utils.Common hiding (Value)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.VehicleServiceTier
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal as Int
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as Int
@@ -36,6 +37,7 @@ import qualified Storage.Queries.DriverLocation.Internal as Int
 import qualified Storage.Queries.Person.GetNearestDrivers as QGND
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
+import Tools.Error
 
 data NearestGoHomeDriversReq = NearestGoHomeDriversReq
   { cityServiceTiers :: [DVST.VehicleServiceTier],
@@ -95,6 +97,7 @@ getNearestGoHomeDrivers ::
   NearestGoHomeDriversReq ->
   m [NearestGoHomeDriversResult]
 getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub $ concatMap (.allowedVehicleVariant) allowedCityServiceTiers
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius (Just allowedVehicleVariant)
@@ -102,8 +105,8 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
   driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity
   let driverInfos_ = specialLocWarriorDriverInfos <> driverInfoWithoutSpecialLocWarrior
-  driverInfosPrepaid <- QGND.filterDriversBySufficientBalance rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
-  driverInfos <- QGND.filterDriversByMinWalletBalance minWalletAmountForCashRides paymentInstrument driverInfosPrepaid
+  driverInfosPrepaid <- QGND.filterDriversBySufficientBalance merchant rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
+  driverInfos <- QGND.filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInstrument driverInfosPrepaid
   logDebug $ "MetroWarriorDebugging getNearestGoHomeDrivers" <> show (DIAPI.convertToDriverInfoAPIEntity <$> specialLocWarriorDriverInfos)
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle

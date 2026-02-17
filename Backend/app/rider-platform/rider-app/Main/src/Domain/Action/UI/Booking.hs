@@ -59,6 +59,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType (GCP))
 import Kernel.Utils.Common
 import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
@@ -264,88 +265,93 @@ bookingListV2ByCustomerLookup merchantId mbLimit mbOffset mbBookingOffset mbJour
 
 bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Flow BookingListResV2
 bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate' mbToDate' billingCategoryList rideTypeList mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable mbPassTypes = do
-  allPasses <- getPassList merchantId personId limitIntMaybe mbInitialPassOffsetInt mbFromDate' mbToDate' mbSendEligiblePassIfAvailable mbPassTypes
-  (apiEntity, nextBookingOffset, nextJourneyOffset, nextPassOffset, hasMoreData) <- case mbBookingRequestType of
-    Just SRB.BookingRequest -> do
-      (rbList, allbookings) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
+  mbCloudType <- asks (.cloudType)
+  let runQuery = case mbCloudType of
+        Just cloudType | cloudType == GCP -> B.runInMasterDb
+        _ -> \x -> x
+  runQuery $ do
+    allPasses <- getPassList merchantId personId limitIntMaybe mbInitialPassOffsetInt mbFromDate' mbToDate' mbSendEligiblePassIfAvailable mbPassTypes
+    (apiEntity, nextBookingOffset, nextJourneyOffset, nextPassOffset, hasMoreData) <- case mbBookingRequestType of
+      Just SRB.BookingRequest -> do
+        (rbList, allbookings) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
 
-      -- Filter by ride type and billing category
-      let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if not (null rideTypeList) then ((filter (SB.matchesRideType rideTypeList) rbList), (filter (SB.matchesRideType rideTypeList) allbookings)) else (rbList, allbookings)
+        -- Filter by ride type and billing category
+        let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if not (null rideTypeList) then ((filter (SB.matchesRideType rideTypeList) rbList), (filter (SB.matchesRideType rideTypeList) allbookings)) else (rbList, allbookings)
 
-          (rbFilteredList, filteredAllBookingsList) = if not (null billingCategoryList) then ((filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList), (filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList)) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
+            (rbFilteredList, filteredAllBookingsList) = if not (null billingCategoryList) then ((filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList), (filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList)) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
 
-      clearStuckRides (Just filteredAllBookingsList) rbFilteredList
+        clearStuckRides (Just filteredAllBookingsList) rbFilteredList
 
-      logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialBookingOffset <> " BookingRequest rbList (id, startTime): " <> show (map (\b -> (b.id, b.startTime)) rbFilteredList)
+        logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialBookingOffset <> " BookingRequest rbList (id, startTime): " <> show (map (\b -> (b.id, b.startTime)) rbFilteredList)
 
-      let hasMoreData = length rbFilteredList + length allPasses >= limit
+        let hasMoreData = length rbFilteredList + length allPasses >= limit
 
-      (entitiesWithSource, finalBookingOffset, _, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList [] allPasses mbInitialBookingOffset (Just 0) (Just 0)
+        (entitiesWithSource, finalBookingOffset, _, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList [] allPasses mbInitialBookingOffset (Just 0) (Just 0)
 
-      pure (entitiesWithSource, Just finalBookingOffset, Nothing, Just finalPassOffset, hasMoreData)
-    Just SRB.JourneyRequest -> do
-      -- Journeys (NammaTransit) should only be included for PERSONAL billing category and NORMAL ride type
-      let shouldIncludeJourneys = shouldIncludeJourneysForFilters billingCategoryList rideTypeList
-      allJourneys <-
-        if shouldIncludeJourneys
-          then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
-          else pure []
-      clearStuckRides Nothing []
-
-      logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialJourneyOffset <> " JourneyRequest allJourneys (id, createdAt): " <> show (map (\j -> (j.id, j.createdAt)) allJourneys)
-
-      let hasMoreData = length allJourneys + length allPasses >= limit
-
-      (entitiesWithSource, _, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit [] allJourneys allPasses (Just 0) mbInitialJourneyOffset (Just 0)
-
-      pure (entitiesWithSource, Nothing, Just finalJourneyOffset, Just finalPassOffset, hasMoreData)
-    _ -> do
-      bookingListFork <- awaitableFork "bookingListV2->getBookingList" $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
-
-      -- Journeys (NammaTransit) should only be included for PERSONAL billing category and NORMAL ride type
-      let shouldIncludeJourneys = shouldIncludeJourneysForFilters billingCategoryList rideTypeList
-      journeyListFork <-
-        awaitableFork "bookingListV2->getJourneyList" $
+        pure (entitiesWithSource, Just finalBookingOffset, Nothing, Just finalPassOffset, hasMoreData)
+      Just SRB.JourneyRequest -> do
+        -- Journeys (NammaTransit) should only be included for PERSONAL billing category and NORMAL ride type
+        let shouldIncludeJourneys = shouldIncludeJourneysForFilters billingCategoryList rideTypeList
+        allJourneys <-
           if shouldIncludeJourneys
             then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
             else pure []
+        clearStuckRides Nothing []
 
-      (rbList, allbookings) <-
-        L.await Nothing bookingListFork >>= \case
-          Left err -> throwError $ InternalError $ "Failed to get booking list: " <> show err
-          Right result -> pure result
+        logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialJourneyOffset <> " JourneyRequest allJourneys (id, createdAt): " <> show (map (\j -> (j.id, j.createdAt)) allJourneys)
 
-      -- Filter by ride type and billing category
-      let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if not (null rideTypeList) then ((filter (SB.matchesRideType rideTypeList) rbList), (filter (SB.matchesRideType rideTypeList) allbookings)) else (rbList, allbookings)
+        let hasMoreData = length allJourneys + length allPasses >= limit
 
-          (rbFilteredList, filteredAllBookingsList) = if not (null billingCategoryList) then ((filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList), (filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList)) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
+        (entitiesWithSource, _, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit [] allJourneys allPasses (Just 0) mbInitialJourneyOffset (Just 0)
 
-      logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialBookingOffset <> " BookingRequest rbList (id, startTime): " <> show (map (\b -> (b.id, b.startTime)) rbFilteredList)
+        pure (entitiesWithSource, Nothing, Just finalJourneyOffset, Just finalPassOffset, hasMoreData)
+      _ -> do
+        bookingListFork <- awaitableFork "bookingListV2->getBookingList" $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
 
-      allJourneys <-
-        L.await Nothing journeyListFork >>= \case
-          Left err -> throwError $ InternalError $ "Failed to get journey list: " <> show err
-          Right result -> pure result
+        -- Journeys (NammaTransit) should only be included for PERSONAL billing category and NORMAL ride type
+        let shouldIncludeJourneys = shouldIncludeJourneysForFilters billingCategoryList rideTypeList
+        journeyListFork <-
+          awaitableFork "bookingListV2->getJourneyList" $
+            if shouldIncludeJourneys
+              then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+              else pure []
 
-      logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialJourneyOffset <> " JourneyRequest allJourneys (id, createdAt): " <> show (map (\j -> (j.id, j.createdAt)) allJourneys)
-      logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show mbInitialPassOffset <> " PassRequest allPasses (id, startDate): " <> show (map (\p -> (p.id, p.startDate)) allPasses)
+        (rbList, allbookings) <-
+          L.await Nothing bookingListFork >>= \case
+            Left err -> throwError $ InternalError $ "Failed to get booking list: " <> show err
+            Right result -> pure result
 
-      let hasMoreData = length rbFilteredList + length allJourneys + length allPasses >= limit
+        -- Filter by ride type and billing category
+        let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if not (null rideTypeList) then ((filter (SB.matchesRideType rideTypeList) rbList), (filter (SB.matchesRideType rideTypeList) allbookings)) else (rbList, allbookings)
 
-      clearStuckRides (Just filteredAllBookingsList) rbFilteredList
+            (rbFilteredList, filteredAllBookingsList) = if not (null billingCategoryList) then ((filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList), (filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList)) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
 
-      (entitiesWithSource, finalBookingOffset, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList allJourneys allPasses mbInitialBookingOffset mbInitialJourneyOffset mbInitialPassOffset
+        logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialBookingOffset <> " BookingRequest rbList (id, startTime): " <> show (map (\b -> (b.id, b.startTime)) rbFilteredList)
 
-      pure (entitiesWithSource, Just finalBookingOffset, Just finalJourneyOffset, Just finalPassOffset, hasMoreData)
+        allJourneys <-
+          L.await Nothing journeyListFork >>= \case
+            Left err -> throwError $ InternalError $ "Failed to get journey list: " <> show err
+            Right result -> pure result
 
-  pure $
-    BookingListResV2
-      { list = apiEntity,
-        bookingOffset = nextBookingOffset,
-        journeyOffset = nextJourneyOffset,
-        passOffset = nextPassOffset,
-        hasMoreData = hasMoreData
-      }
+        logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialJourneyOffset <> " JourneyRequest allJourneys (id, createdAt): " <> show (map (\j -> (j.id, j.createdAt)) allJourneys)
+        logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show mbInitialPassOffset <> " PassRequest allPasses (id, startDate): " <> show (map (\p -> (p.id, p.startDate)) allPasses)
+
+        let hasMoreData = length rbFilteredList + length allJourneys + length allPasses >= limit
+
+        clearStuckRides (Just filteredAllBookingsList) rbFilteredList
+
+        (entitiesWithSource, finalBookingOffset, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList allJourneys allPasses mbInitialBookingOffset mbInitialJourneyOffset mbInitialPassOffset
+
+        pure (entitiesWithSource, Just finalBookingOffset, Just finalJourneyOffset, Just finalPassOffset, hasMoreData)
+
+    pure $
+      BookingListResV2
+        { list = apiEntity,
+          bookingOffset = nextBookingOffset,
+          journeyOffset = nextJourneyOffset,
+          passOffset = nextPassOffset,
+          hasMoreData = hasMoreData
+        }
   where
     mbInitialBookingOffset = mbBookingOffset <|> mbOffset
     mbInitialJourneyOffset = mbJourneyOffset <|> mbOffset

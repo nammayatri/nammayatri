@@ -173,18 +173,23 @@ deleteTag merchantOpCityId tagName = do
   return Kernel.Types.APISuccess.Success
 
 postQueryCreate ::
-  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>
   Lib.Yudhishthira.Types.ChakraQueriesAPIEntity ->
   m Kernel.Types.APISuccess.APISuccess
 postQueryCreate queryRequest = do
   validateQueryResults queryRequest.queryResults
+  -- Validate Redis query config if queryType is REDIS
+  when (queryRequest.queryType == Lib.Yudhishthira.Types.REDIS) $ do
+    validateRedisQueryConfig queryRequest.queryText
   existingChakraQuery <- SQCQ.findByPrimaryKey queryRequest.chakra queryRequest.queryName
   whenJust existingChakraQuery $ \_ -> do
     throwError $ ChakraQueriesAlreadyExists (show queryRequest.chakra) queryRequest.queryName
   chakraQuery <- buildQuery
 
   -- TODO find a better way to validate query than run it
-  void $ KaalChakraEvent.runQueryRequestTemplate chakraQuery defaultTemplate
+  -- Skip template validation for Redis queries as they don't use templates
+  when (queryRequest.queryType == Lib.Yudhishthira.Types.CLICKHOUSE) $ do
+    void $ KaalChakraEvent.runQueryRequestTemplate chakraQuery defaultTemplate
   SQCQ.create chakraQuery
 
   pure Kernel.Types.APISuccess.Success
@@ -192,10 +197,10 @@ postQueryCreate queryRequest = do
     buildQuery = do
       now <- getCurrentTime
       let Lib.Yudhishthira.Types.ChakraQueriesAPIEntity {..} = queryRequest
-      return $ Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {createdAt = now, updatedAt = now, ..}
+      return $ Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {createdAt = now, updatedAt = now, queryType = Just queryType, ..}
 
 postQueryUpdate ::
-  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>
   Lib.Yudhishthira.Types.ChakraQueryUpdateReq ->
   m Kernel.Types.APISuccess.APISuccess
 postQueryUpdate queryRequest = do
@@ -204,7 +209,14 @@ postQueryUpdate queryRequest = do
     SQCQ.findByPrimaryKey queryRequest.chakra queryRequest.queryName >>= fromMaybeM (ChakraQueriesDoesNotExist (show queryRequest.chakra) queryRequest.queryName)
   chakraQuery <- buildUpdatedQuery existingChakraQuery
 
-  void $ KaalChakraEvent.runQueryRequestTemplate chakraQuery defaultTemplate
+  -- Validate Redis query config if queryType is REDIS
+  let finalQueryType = fromMaybe (fromMaybe Lib.Yudhishthira.Types.CLICKHOUSE existingChakraQuery.queryType) queryRequest.queryType
+  when (finalQueryType == Lib.Yudhishthira.Types.REDIS) $ do
+    validateRedisQueryConfig chakraQuery.queryText
+
+  -- Skip template validation for Redis queries as they don't use templates
+  when (finalQueryType == Lib.Yudhishthira.Types.CLICKHOUSE) $ do
+    void $ KaalChakraEvent.runQueryRequestTemplate chakraQuery defaultTemplate
   SQCQ.updateByPrimaryKey chakraQuery
 
   pure Kernel.Types.APISuccess.Success
@@ -212,7 +224,8 @@ postQueryUpdate queryRequest = do
     buildUpdatedQuery existingChakraQuery = do
       let queryResults = fromMaybe existingChakraQuery.queryResults queryRequest.queryResults
       let queryText = fromMaybe existingChakraQuery.queryText queryRequest.queryText
-      return $ existingChakraQuery{queryResults = queryResults, queryText = queryText}
+      let queryType = fromMaybe (fromMaybe Lib.Yudhishthira.Types.CLICKHOUSE existingChakraQuery.queryType) queryRequest.queryType
+      return $ existingChakraQuery{queryResults = queryResults, queryText = queryText, queryType = Just queryType}
 
 validateQueryResults :: (MonadThrow m, Log m) => [Lib.Yudhishthira.Types.QueryResult] -> m ()
 validateQueryResults newQueryFields = do
@@ -226,6 +239,43 @@ validateQueryResults newQueryFields = do
     checkIfFieldsAreNotRepeated newQueryFieldNames = do
       let repeatedFields = filter (\f -> length (filter (== f) newQueryFieldNames) > 1) newQueryFieldNames
       unless (null repeatedFields) $ throwError (RepeatedQueryFields repeatedFields)
+
+validateRedisQueryConfig :: (MonadThrow m, Log m) => Text -> m ()
+validateRedisQueryConfig queryText = do
+  redisConfig <- case A.eitherDecode @LYT.RedisQueryConfig (encodeUtf8 queryText) of
+    Left err -> throwError $ InvalidRequest $ "Failed to parse Redis query config: " <> T.pack err
+    Right config -> pure config
+
+  -- 1. Validate key template contains {userId}
+  unless ("{userId}" `T.isInfixOf` redisConfig.key) $
+    throwError $ InvalidRequest "Redis key template must contain {userId} placeholder"
+
+  -- 2. Validate batch mode and batchSize
+  case redisConfig.batch of
+    Lib.Yudhishthira.Types.Batch -> do
+      when (isNothing redisConfig.batchSize || fromMaybe 0 redisConfig.batchSize < 1) $
+        throwError $ InvalidRequest "batchSize must be >= 1 when batch mode is 'batch'"
+    Lib.Yudhishthira.Types.Single -> do
+      when (isJust redisConfig.batchSize) $
+        throwError $ InvalidRequest "batchSize should not be provided when batch mode is 'single'"
+
+  -- 3. Validate operation-specific requirements
+  case redisConfig.operation of
+    Lib.Yudhishthira.Types.HGET -> do
+      when (isNothing redisConfig.hashField || T.null (fromMaybe "" redisConfig.hashField)) $
+        throwError $ InvalidRequest "hashField is required for HGET operation"
+    Lib.Yudhishthira.Types.ZRANGE -> do
+      when (isNothing redisConfig.zrangeStart) $
+        throwError $ InvalidRequest "zrangeStart is required for ZRANGE operation"
+      when (isNothing redisConfig.zrangeStop) $
+        throwError $ InvalidRequest "zrangeStop is required for ZRANGE operation"
+      when (fromMaybe 0 redisConfig.zrangeStart > fromMaybe 0 redisConfig.zrangeStop) $
+        throwError $ InvalidRequest "zrangeStart must be <= zrangeStop"
+    _ -> pure () -- No extra validation for GET, MGET, HGETALL, SMEMBERS
+
+  -- 4. Validate key format (basic sanity check)
+  when (T.length redisConfig.key < 3) $
+    throwError $ InvalidRequest "Redis key template is too short"
 
 defaultTemplate :: KaalChakraEvent.Template
 defaultTemplate =
@@ -712,7 +762,7 @@ getAppDynamicLogicVersions mbLimit mbOffset domain_ = do
 getNammaTagQueryAll :: BeamFlow m r => Lib.Yudhishthira.Types.Chakra -> m Lib.Yudhishthira.Types.ChakraQueryResp
 getNammaTagQueryAll chakra_ = do
   chakraQueries <- QChakraQueries.findAllByChakra chakra_
-  return $ (\LYTCQ.ChakraQueries {..} -> Lib.Yudhishthira.Types.ChakraQueriesAPIEntity {..}) <$> chakraQueries
+  return $ (\LYTCQ.ChakraQueries {..} -> Lib.Yudhishthira.Types.ChakraQueriesAPIEntity {chakra, queryName, queryResults, queryText, queryType = fromMaybe Lib.Yudhishthira.Types.CLICKHOUSE queryType}) <$> chakraQueries
 
 groupByTimeBounds :: [AppDynamicLogicRollout] -> [[AppDynamicLogicRollout]]
 groupByTimeBounds = groupBy sameTimeBounds

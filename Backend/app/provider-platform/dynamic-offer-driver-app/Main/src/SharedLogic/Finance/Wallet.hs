@@ -30,8 +30,8 @@ import Data.Aeson (Value)
 import Data.List (sortOn)
 import Data.Ord (Down (..))
 import Kernel.Prelude
-import Kernel.Types.Id
 import Kernel.Types.Common (Currency, HighPrecMoney)
+import Kernel.Types.Id
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)

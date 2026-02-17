@@ -49,6 +49,7 @@ import SharedLogic.Finance.Prepaid (counterpartyDriver)
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Payment as SPayment
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverFee as QDF
@@ -174,7 +175,9 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId "PREPAID_SUBSCRIPTION") -- Driver wallet is not required for postpaid
-  unless transporterConfig.driverWalletConfig.enableWalletPayout $ throwError $ InvalidRequest "Payouts are disabled"
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+  unless (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletPayout) $ throwError $ InvalidRequest "Payouts are disabled"
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
     mbAccount <- getWalletAccountByOwner counterpartyDriver driverId.getId
     walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterpartyDriver driverId.getId
@@ -261,7 +264,9 @@ postWalletTopup ::
 postWalletTopup (mbPersonId, merchantId, mocId) req = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-  unless transporterConfig.driverWalletConfig.enableWalletTopup $ throwError $ InvalidRequest "Wallet topups are disabled"
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+  unless (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletTopup) $ throwError $ InvalidRequest "Wallet topups are disabled"
   when (req.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
   eitherResult <- Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
     existingTopUpFee <- QDFE.findLatestByFeeTypeAndStatusWithTotalEarnings DF.WALLET_TOPUP [DF.PAYMENT_PENDING] driverId req.amount
