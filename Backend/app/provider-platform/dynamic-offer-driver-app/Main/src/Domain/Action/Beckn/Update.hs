@@ -59,6 +59,7 @@ import SharedLogic.Ride
 import SharedLogic.TollsDetector
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
@@ -266,10 +267,17 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             when (not isTollAllowed) $ do
               sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Auto rickshaw not allowed for toll route."
               throwError $ InvalidRequest "Auto rickshaw not allowed for toll route."
+            mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.billingCategory farePolicy.vehicleServiceTier
+            let farePolicy' =
+                  farePolicy
+                    { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
+                      DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
+                    } ::
+                    DFP.FullFarePolicy
             fareParameters <-
               FCV2.calculateFareParametersV2
                 CalculateFareParametersParams
-                  { farePolicy,
+                  { farePolicy = farePolicy',
                     actualDistance = Just estimatedDistance,
                     rideTime = booking.startTime,
                     returnTime = booking.returnTime,

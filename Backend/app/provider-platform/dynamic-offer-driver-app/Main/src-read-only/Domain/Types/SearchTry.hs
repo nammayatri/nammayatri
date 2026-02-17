@@ -23,6 +23,7 @@ data SearchTry = SearchTry
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     customerExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    emailDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimateId :: Kernel.Prelude.Text,
     estimateIds :: [Kernel.Prelude.Text],
     id :: Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry,

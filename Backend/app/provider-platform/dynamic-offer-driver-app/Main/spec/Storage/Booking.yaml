@@ -110,6 +110,7 @@ Booking:
     displayBookingId: Maybe Text
     searchTryId: Maybe (Id SearchTry)
     dqDurationToPickup: Maybe Seconds
+    emailDomain: Maybe Text
 
   excludedFields:
     - merchantId

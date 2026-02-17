@@ -551,6 +551,7 @@ library
       Storage.CachedQueries.BlockedRoute
       Storage.CachedQueries.CoinsConfig
       Storage.CachedQueries.DocumentVerificationConfig
+      Storage.CachedQueries.DomainDiscountConfig
       Storage.CachedQueries.Driver.DriverImage
       Storage.CachedQueries.Driver.GoHomeRequest
       Storage.CachedQueries.Driver.OnBoarding
@@ -998,6 +999,7 @@ library
       Domain.Types.DigilockerVerification
       Domain.Types.DocumentReminderHistory
       Domain.Types.DocumentVerificationConfig
+      Domain.Types.DomainDiscountConfig
       Domain.Types.DriverBankAccount
       Domain.Types.DriverBlockReason
       Domain.Types.DriverBlockTransactions
@@ -1163,6 +1165,7 @@ library
       Storage.Beam.DigilockerVerification
       Storage.Beam.DocumentReminderHistory
       Storage.Beam.DocumentVerificationConfig
+      Storage.Beam.DomainDiscountConfig
       Storage.Beam.DriverBankAccount
       Storage.Beam.DriverBlockReason
       Storage.Beam.DriverBlockTransactions
@@ -1332,6 +1335,7 @@ library
       Storage.Queries.DigilockerVerification
       Storage.Queries.DocumentReminderHistory
       Storage.Queries.DocumentVerificationConfig
+      Storage.Queries.DomainDiscountConfig
       Storage.Queries.DriverBankAccount
       Storage.Queries.DriverBlockReason
       Storage.Queries.DriverBlockTransactions

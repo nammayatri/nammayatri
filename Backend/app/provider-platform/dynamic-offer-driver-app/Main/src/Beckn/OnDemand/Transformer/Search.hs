@@ -80,6 +80,8 @@ buildSearchReq messageId subscriber req context actualBapUri = do
       toSpecialLocationId_ = getToSpecialLocationId req
       userClientDevice = Beckn.OnDemand.Utils.Search.buildUserClientDevice req
       userBackendAppVersion = Beckn.OnDemand.Utils.Search.buildUserBackendAppVersion req
+      emailDomain_ = Beckn.OnDemand.Utils.Search.buildEmailDomain req
+      businessEmailDomain_ = Beckn.OnDemand.Utils.Search.buildBusinessEmailDomain req
   userBundleVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserBundleVersion req)
   userSdkVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserSdkVersion req)
   riderPreferredOption <- case Beckn.OnDemand.Utils.Search.buildRiderPreferredOption req of
@@ -130,6 +132,8 @@ buildSearchReq messageId subscriber req context actualBapUri = do
         mbAdditonalChargeCategories = Nothing,
         fromSpecialLocationId = Id <$> fromSpecialLocationId_,
         toSpecialLocationId = Id <$> toSpecialLocationId_,
+        emailDomain = emailDomain_,
+        businessEmailDomain = businessEmailDomain_,
         ..
       }
 
