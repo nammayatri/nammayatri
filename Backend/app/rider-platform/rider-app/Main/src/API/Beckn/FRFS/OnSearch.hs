@@ -23,6 +23,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Environment
 import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
@@ -64,11 +65,22 @@ onSearch _ reqBS = withFlowHandlerAPI $ do
         Redis.whenWithLockRedis (onSearchLockKey message_id) 60 $ do
           onSearchReq <- ACL.buildOnSearchReq req
           validatedReq <- DOnSearch.validateRequest onSearchReq
-          fork "FRFS normal on_search processing" $ do
-            Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
-              DOnSearch.onSearch onSearchReq validatedReq
-          fork "FRFS discovery onSearch logs" $ do
-            void $ pushLogs "discovery_on_search" (toJSON req) validatedReq.merchant.id.getId "PUBLIC_TRANSPORT"
+
+          let fareCachingAllowed = case validatedReq.integratedBppConfig.providerConfig of
+                DIBC.ONDC ondcCfg -> fromMaybe False (DIBC.fareCachingAllowed ondcCfg)
+                _ -> False
+
+          if fareCachingAllowed
+            then do
+              fork "FRFS on_search fare cache refresh" $ do
+                Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
+                  DOnSearch.upsertFareCache onSearchReq validatedReq
+            else do
+              fork "FRFS normal on_search processing" $ do
+                Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
+                  DOnSearch.onSearch onSearchReq validatedReq
+          fork "FRFS onSearch logs" $ do
+            void $ pushLogs "on_search" (toJSON req) validatedReq.merchant.id.getId "PUBLIC_TRANSPORT"
         pure Utils.ack
 
 onSearchLockKey :: Text -> Text

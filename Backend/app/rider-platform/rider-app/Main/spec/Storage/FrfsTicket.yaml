@@ -401,6 +401,8 @@ FRFSTicketBooking:
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
     isMockPayment: Maybe Bool
+    ondcOnInitReceived: Maybe Bool
+    ondcOnInitReceivedAt: Maybe UTCTime
 
   default:
     customerCancelled: "false"
@@ -548,6 +550,10 @@ FRFSTicketBooking:
     updateTotalPriceById:
       kvFunction: updateOneWithKV
       params: [totalPrice]
+      where: id
+    updateOndcOnInitReceivedById:
+      kvFunction: updateOneWithKV
+      params: [ondcOnInitReceived, ondcOnInitReceivedAt, updatedAt]
       where: id
 
   extraOperations:
@@ -967,19 +973,29 @@ StopFare:
     startStopCode: Text
     endStopCode: Text
     amount: HighPrecMoney
+    offeredAmount: Maybe HighPrecMoney
     currency: Currency
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     integratedBppConfigId: Id IntegratedBPPConfig
+    category: FRFSQuoteCategoryType|NoRelation
+    bppItemId: Maybe Text
   beamType:
     routeCode: Maybe Text
+    category: Maybe FRFSQuoteCategoryType
   default:
     timeBounds: "'Unbounded'"
     currency: "'INR'"
+    category: "'ADULT'"
+  fromTType:
+    category: Kernel.Prelude.fromMaybe Domain.Types.FRFSQuoteCategoryType.ADULT category|E
+  toTType:
+    category: Kernel.Prelude.Just|I
   constraints:
     farePolicyId: PrimaryKey
     startStopCode: PrimaryKey
     endStopCode: PrimaryKey
+    category: PrimaryKey
   queries:
     findByRouteCode:
       kvFunction: findAllWithKV
@@ -1001,7 +1017,7 @@ StopFare:
       kvFunction: updateOneWithKV
       params: [amount]
       where:
-        and: [farePolicyId, startStopCode, endStopCode]
+        and: [farePolicyId, startStopCode, endStopCode, category]
 
 
 FRFSStageFare:

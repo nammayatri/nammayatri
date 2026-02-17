@@ -16,6 +16,7 @@ import Data.Csv
 import Data.List (groupBy)
 import qualified Data.Text
 import qualified Data.Vector as V
+import qualified Domain.Types.FRFSQuoteCategoryType as DTFRFSQuoteCategoryType
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -169,7 +170,7 @@ putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity _routeCode integratedBPP
             logInfo $ "No matching fare found for route " <> row.routeCode <> " with startStopCode " <> row.startStopCode <> " and endStopCode " <> row.endStopCode
             pure [(row.routeCode, row.startStopCode, row.endStopCode)]
           _ -> do
-            QRSF.updateFareByStopCodes value farePolicy.id row.startStopCode row.endStopCode
+            QRSF.updateFareByStopCodes value farePolicy.id row.startStopCode row.endStopCode DTFRFSQuoteCategoryType.ADULT
             logInfo $ "Updated fare for route " <> row.routeCode <> " from " <> row.startStopCode <> " to " <> row.endStopCode <> " with amount " <> show value
             pure []
 

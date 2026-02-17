@@ -46,16 +46,20 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
     ONDC ONDCBecknConfig {networkHostUrl, networkId, fareCachingAllowed} -> do
       fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
         case (fareCachingAllowed, networkHostUrl, networkId, mbFare) of
-          (Just True, Just _, Just _, Just _) ->
+          (Just True, Just _, Just _, _) ->
             withTryCatch "callExternalBPP:searchFlow" (Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig networkHostUrl networkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode)
               >>= \case
                 Left err -> do
                   logError $ "Error in calling ONDC Search: " <> show err
                   callOndcSearch networkHostUrl
-                Right onSearchReq ->
+                Right onSearchReq -> do
                   if null onSearchReq.quotes
-                    then callOndcSearch networkHostUrl
-                    else processOnSearch onSearchReq
+                    then do
+                      logDebug $ "Quotes are null, calling ONDC Search"
+                      callOndcSearch networkHostUrl
+                    else do
+                      fork "FRFS ONDC SearchReq for cache refresh" $ callOndcSearch networkHostUrl
+                      processOnSearch onSearchReq
           _ -> callOndcSearch networkHostUrl
     _ -> do
       onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode
@@ -66,7 +70,7 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
       validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
       DOnSearch.onSearch onSearchReq validatedDOnSearch
 
-    callOndcSearch :: Maybe BaseUrl -> (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => m ()
+    callOndcSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Maybe BaseUrl -> m ()
     callOndcSearch networkHostUrl = do
       let providerUrl = fromMaybe bapConfig.gatewayUrl networkHostUrl
           cityForOndc = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city

@@ -149,7 +149,8 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
                             amount = fareAmount,
                             currency = INR
                           },
-                      eligibility = True
+                      eligibility = True,
+                      bppItemId = "CRIS Subway"
                     },
                   FRFSUtils.FRFSTicketCategory
                     { category = CHILD,
@@ -165,7 +166,8 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
                             amount = childFareAmount,
                             currency = INR
                           },
-                      eligibility = True
+                      eligibility = True,
+                      bppItemId = "CRIS Subway"
                     }
                 ],
               farePolicyId = Nothing,
