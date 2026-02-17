@@ -114,10 +114,9 @@ kaalChakraEventInternal eventId req = withLogTag ("EventId-" <> eventId.getId) d
       <> "; max batches: "
       <> show req.maxBatches
   chakraQueries <- QChakraQueries.findAllByChakra req.chakra
-  let clickhouseQueries = filter (\query -> query.queryType == Just YT.CLICKHOUSE) chakraQueries
   bn <- nextChakraBatchNumber req.chakra
   let batchesNumber = bn - 1
-  batchedUserData <- fetchUserDataBatch req eventId clickhouseQueries batchesNumber
+  batchedUserData <- fetchUserDataBatch req eventId chakraQueries batchesNumber
   let usersNumber = length batchedUserData.userIds
   endTime <- getCurrentTime
   let durationInSeconds = Time.nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
@@ -215,9 +214,14 @@ fetchUserDataBatch req eventId chakraQueries batchNumber = do
   logInfo $ "Running batch: " <> show batchNumber
   when (req.usersInBatch < 1) $ throwError (InvalidRequest "Quantity of users in batch should be more than 0")
 
-  -- 1. Separate queries by type
-  let (clickhouseQueries, redisQueries) =
+  -- 1. Separate queries by type (only run Redis path for queryType == Just REDIS, not for Nothing)
+  let (clickhouseQueries, nonClickhouseQueries) =
         partition (\q -> q.queryType == Just YT.CLICKHOUSE) chakraQueries
+  let redisQueries = filter (\q -> q.queryType == Just YT.REDIS) nonClickhouseQueries
+  logInfo $
+    "Chakra batch " <> show batchNumber <> ": ClickHouse queries=" <> show (length clickhouseQueries)
+      <> ", Redis queries=" <> show (length redisQueries)
+      <> if null redisQueries then " (no Redis queries; check query_type=REDIS in DB)" else ""
 
   -- 2. Execute ClickHouse queries first (to get userIds)
   let limit = Yudhishthira.QLimit req.usersInBatch
@@ -235,6 +239,8 @@ fetchUserDataBatch req eventId chakraQueries batchNumber = do
 
   -- 3. Extract userIds from ClickHouse results
   let userIds = S.toList $ extractUserIdsFromClickHouseResults clickhouseResults
+  when (null clickhouseQueries && not (null redisQueries)) $
+    logError "No ClickHouse queries: Redis queries will run with 0 userIds; need at least one ClickHouse query to define cohort"
 
   -- 4. Execute Redis queries using extracted userIds
   redisResults <- forM redisQueries $ \chakraQuery -> do
