@@ -4,12 +4,12 @@
 module API.Types.RiderPlatform.Management.Endpoints.Sos where
 
 import qualified Dashboard.Common
-import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
@@ -38,27 +38,26 @@ data SosTrackingRes = SosTrackingRes {currentLocation :: Kernel.Prelude.Maybe So
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("sos" :> GetSosTracking)
+type API = ("sos" :> (GetSosTracking :<|> PostSosCallExternalSOS))
 
 type GetSosTracking = (Capture "sosId" (Kernel.Types.Id.Id Dashboard.Common.Sos) :> "tracking" :> Get '[JSON] SosTrackingRes)
 
-newtype SosAPIs = SosAPIs {getSosTracking :: Kernel.Types.Id.Id Dashboard.Common.Sos -> EulerHS.Types.EulerClient SosTrackingRes}
+type PostSosCallExternalSOS = (Capture "sosId" (Kernel.Types.Id.Id Dashboard.Common.Sos) :> "callExternalSOS" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+data SosAPIs = SosAPIs
+  { getSosTracking :: Kernel.Types.Id.Id Dashboard.Common.Sos -> EulerHS.Types.EulerClient SosTrackingRes,
+    postSosCallExternalSOS :: Kernel.Types.Id.Id Dashboard.Common.Sos -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  }
 
 mkSosAPIs :: (Client EulerHS.Types.EulerClient API -> SosAPIs)
 mkSosAPIs sosClient = (SosAPIs {..})
   where
-    getSosTracking = sosClient
+    getSosTracking :<|> postSosCallExternalSOS = sosClient
 
 data SosUserActionType
   = GET_SOS_TRACKING
+  | POST_SOS_CALL_EXTERNAL_SOS
   deriving stock (Show, Read, Generic, Eq, Ord)
-  deriving anyclass (ToSchema)
-
-instance ToJSON SosUserActionType where
-  toJSON GET_SOS_TRACKING = Data.Aeson.String "GET_SOS_TRACKING"
-
-instance FromJSON SosUserActionType where
-  parseJSON (Data.Aeson.String "GET_SOS_TRACKING") = pure GET_SOS_TRACKING
-  parseJSON _ = fail "GET_SOS_TRACKING expected"
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 $(Data.Singletons.TH.genSingletons [''SosUserActionType])

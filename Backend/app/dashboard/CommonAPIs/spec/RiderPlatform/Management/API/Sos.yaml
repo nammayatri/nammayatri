@@ -1,5 +1,6 @@
 imports:
   Sos: Dashboard.Common
+  APISuccess: Kernel.Types.APISuccess
 
 module: Sos
 
@@ -12,6 +13,15 @@ apis:
         sosId: Id Sos
       response:
         type: SosTrackingRes
+
+  - POST:
+      endpoint: /{sosId}/callExternalSOS
+      name: PostSosCallExternalSOS
+      auth: ApiAuthV2
+      params:
+        sosId: Id Sos
+      response:
+        type: APISuccess
 
 types:
   SosLocationRes:

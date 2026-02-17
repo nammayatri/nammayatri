@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.Dashboard.Sos (getSosTracking, callExternalSOS) where
+module Domain.Action.Dashboard.Sos (getSosTracking, callExternalSOS, postSosCallExternalSOS) where
 
 import qualified API.Types.RiderPlatform.Management.Sos
 import qualified API.Types.UI.Sos as UISos
@@ -19,6 +19,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.SOS as PoliceSOS
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -110,3 +111,9 @@ callExternalSOS sosId = do
 flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
 flowToSOSService DRC.ERSS = SOS.ERSS
 flowToSOSService DRC.GJ112 = SOS.GJ112
+
+postSosCallExternalSOS :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postSosCallExternalSOS _merchantShortId _opCity sosId = do
+  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @Domain.Types.Sos.Sos sosId
+  callExternalSOS sosId'
+  pure Kernel.Types.APISuccess.Success
