@@ -23,9 +23,10 @@ import qualified Data.Text as Text
 import qualified Data.Time as Time
 import qualified Data.Tuple.Extra as TE
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Types.BusinessLicense as DBL
+import qualified Domain.Types.Common as DDriverInfo
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
@@ -47,7 +48,7 @@ import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.Documents as Documents
-import Kernel.Types.Error (PersonError (PersonDoesNotExist))
+import Kernel.Types.Error (PersonError (PersonDoesNotExist), TransporterError (TransporterConfigNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -58,8 +59,9 @@ import qualified SharedLogic.Allocator as Allocator
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding.Status as DriverOnboardingStatus (ResponseStatus (..), checkLMSTrainingStatus)
 import qualified SharedLogic.Reminder.Helper as ReminderHelper
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.BusinessLicense as QBL
@@ -134,23 +136,35 @@ scheduleReminderJob scheduleAfter reminderId merchantId merchantOpCityId = do
   let jobData = Allocator.ProcessReminderJobData {reminderId, merchantId, merchantOperatingCityId = merchantOpCityId}
   void $ createJobIn @_ @'ProcessReminder (Just merchantId) (Just merchantOpCityId) scheduleAfter jobData
 
--- | Disable driver and update fleet/operator analytics. Used when a mandatory reminder has expired.
+-- | Disable driver, set OFFLINE mode and update fleet/operator analytics. Used when a mandatory reminder has expired.
 disableDriverForMandatoryReminder ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     CacheFlow m r,
-    Redis.HedisFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
-  DI.DriverInformation ->
   DTC.TransporterConfig ->
   Id DP.Person ->
+  UTCTime ->
   Text ->
   m ()
-disableDriverForMandatoryReminder driverInfo transporterConfig driverId reason = do
-  Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig driverId False Nothing
-  logInfo $ "Disabled driver " <> driverId.getId <> " due to " <> reason
+disableDriverForMandatoryReminder transporterConfig driverId now documentTypeName = do
+  driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM (InternalError "DriverInformation not found")
+  when driverInfo.enabled $ do
+    Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig driverId False Nothing
+    logInfo $ "Disabled driver " <> driverId.getId <> " due to expired mandatory " <> documentTypeName <> " reminder"
+
+  let isActive = False
+  let mode = DDriverInfo.OFFLINE
+  when (driverInfo.active /= isActive || driverInfo.mode /= Just mode) $ do
+    let newFlowStatus = DDriverMode.getDriverFlowStatus (Just mode) isActive
+    -- Track offline timestamp when driver goes offline
+    if driverInfo.mode /= Just DDriverInfo.OFFLINE
+      then do
+        logInfo $ "Driver going OFFLINE at: " <> show now <> " for driverId: " <> show driverId <> " due to expired mandatory " <> documentTypeName <> " reminder"
+        DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (Just mode) newFlowStatus driverInfo Nothing (Just now)
+      else DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (Just mode) newFlowStatus driverInfo Nothing Nothing
 
 processReminder ::
   ( CoreMetrics m,
@@ -337,10 +351,10 @@ processInspectionReminder reminder driver config merchantId merchantOpCityId dis
       shouldDisable = isOverdue && isMandatory
   -- Check if reminder is overdue and mandatory, then disable driver and set approved = false
   when shouldDisable $ do
-    driverInfo <- QDriverInfo.findById reminder.driverId >>= fromMaybeM (InternalError "DriverInformation not found")
-    when driverInfo.enabled $ do
-      transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (InternalError $ "Transporter config not found for merchantOpCityId: " <> merchantOpCityId.getId)
-      disableDriverForMandatoryReminder driverInfo transporterConfig reminder.driverId ("expired mandatory " <> displayName <> " reminder")
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    disableDriverForMandatoryReminder transporterConfig reminder.driverId now displayName
+
+    -- Set approved flag to False (action depends on inspection type)
     setApprovedAction
   -- Before sending notification, check if reminder still exists and is still PENDING
   -- (it may have been cancelled if inspection was approved)
@@ -389,7 +403,6 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
   case mbCurrentIntervalMinutes of
     Nothing -> do
       logError $ "Invalid currentIntervalIndex " <> show reminder.currentIntervalIndex <> " for reminder " <> reminder.id.getId <> " (intervals length: " <> show (length intervals) <> "). Skipping processing."
-      return ()
     Just currentIntervalMinutes -> do
       let daysBeforeExpiry = currentIntervalMinutes `div` (24 * 60)
 
@@ -399,16 +412,15 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
           logInfo $ "Reminder expired for driver " <> driver.id.getId <> " (documentType: " <> documentTypeName <> ")"
 
           -- Check if reminder is mandatory (from ReminderConfig)
-          driverInfo <- QDriverInfo.findById reminder.driverId >>= fromMaybeM (InternalError "DriverInformation not found")
           let isMandatory = reminderConfig.isMandatory
           if isMandatory
             then do
-              transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (InternalError $ "Transporter config not found for merchantOpCityId: " <> merchantOpCityId.getId)
+              transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
               -- Disable driver when: not vehicle-related, OR vehicle-related but separateDriverVehicleEnablement is not true
               let isVehicleRelated = reminder.documentType `elem` vehicleRelatedDocumentTypes
-                  shouldDisableDriver = driverInfo.enabled && (not isVehicleRelated || transporterConfig.separateDriverVehicleEnablement /= Just True)
+                  shouldDisableDriver = not isVehicleRelated || transporterConfig.separateDriverVehicleEnablement /= Just True
               when shouldDisableDriver $
-                disableDriverForMandatoryReminder driverInfo transporterConfig reminder.driverId ("expired mandatory reminder: " <> documentTypeName)
+                disableDriverForMandatoryReminder transporterConfig reminder.driverId now documentTypeName
               -- For all vehicle-related docs: invalidate RC and remove vehicle; then invalidate the specific document
               if isVehicleRelated
                 then do
@@ -518,17 +530,33 @@ sendDriverNotifications reminder driver merchantOpCityId notificationKey smsKey 
   let mbMessageKey = readMaybe (Text.unpack smsKey) :: Maybe DMM.MessageKey
   case mbMessageKey of
     Just messageKey -> do
-      mbMerchantMessage <- CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing
-      case mbMerchantMessage of
-        Just merchantMsg -> do
-          smsCfg <- asks (.smsCfg)
-          let sender = fromMaybe smsCfg.sender merchantMsg.senderHeader
-          mbPhoneNumber <- mapM decrypt driver.mobileNumber
-          case mbPhoneNumber of
-            Just phoneNumber -> do
-              Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq merchantMsg.message phoneNumber sender merchantMsg.templateId merchantMsg.messageType) >>= Sms.checkSmsResult
-            Nothing -> logInfo $ "Driver mobile number not available, skipping SMS"
-        Nothing -> logInfo $ "MerchantMessage not found for " <> smsKey <> ", skipping SMS"
+      -- For DOCUMENT_EXPIRY_REMINDER_SMS, use MessageBuilder to replace template variables
+      mbSmsInfo <-
+        if messageKey == DMM.DOCUMENT_EXPIRY_REMINDER_SMS
+          then do
+            let documentTypeName = show reminder.documentType
+            (mbSender, msg, templateId, messageType) <-
+              MessageBuilder.buildDocumentExpiryReminderMessage
+                merchantOpCityId
+                (MessageBuilder.BuildDocumentExpiryReminderMessageReq {documentType = documentTypeName})
+            smsCfg <- asks (.smsCfg)
+            let sender = fromMaybe smsCfg.sender mbSender
+            pure $ Just (msg, sender, templateId, messageType)
+          else do
+            CMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing >>= \case
+              Just merchantMsg -> do
+                smsCfg <- asks (.smsCfg)
+                let sender = fromMaybe smsCfg.sender merchantMsg.senderHeader
+                pure $ Just (merchantMsg.message, sender, merchantMsg.templateId, merchantMsg.messageType)
+              Nothing -> do
+                logInfo $ "MerchantMessage not found for " <> smsKey <> ", skipping SMS"
+                pure Nothing
+      whenJust mbSmsInfo $ \(smsMessage, smsSender, smsTemplateId, messageType) -> do
+        mbPhoneNumber <- mapM decrypt driver.mobileNumber
+        case mbPhoneNumber of
+          Just phoneNumber -> do
+            Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq smsMessage phoneNumber smsSender smsTemplateId messageType) >>= Sms.checkSmsResult
+          Nothing -> logInfo "Driver mobile number not available, skipping SMS"
     Nothing -> logInfo $ "Invalid MessageKey: " <> smsKey <> ", skipping SMS"
 
 -- Helper function to send GRPC notifications to fleet owners and operators

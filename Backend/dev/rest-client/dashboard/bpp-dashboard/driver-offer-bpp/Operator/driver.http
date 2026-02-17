@@ -116,9 +116,9 @@ content-type: application/json
 # DELETE FROM atlas_driver_offer_bpp.operation_hub_requests
 
 @token2 = {{driver-offer-bpp-auto-token2}}
-@operationHubId = 29d6f629-1f0c-4d17-5546-db7f22f9c433
+@operationHubId = operation-hub-id-0000000000000000000
 
-@rcNo = 4814
+@rcNo = WB1111111
 
 POST {{driver-offer-bpp-host}}/ui/operation/createRequest
 content-type: application/json
@@ -136,7 +136,7 @@ token: {{token2}}
 
 @token2 = {{driver-offer-bpp-auto-token2}}
 
-GET {{driver-offer-bpp-host}}/ui/operation/getRequests?rcNo={{rcNo}}
+GET {{driver-offer-bpp-host}}/ui/operation/getRequests?mbRcNo={{rcNo}}
 content-type: application/json
 token: {{token2}}
 
