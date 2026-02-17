@@ -56,6 +56,8 @@ import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import Storage.Queries.Person as QP
 import qualified Tools.Verification as Verification
+import qualified Domain.Action.UI.DriverOnboarding.GstVerification as GstCard
+
 
 -- FIXME this is temprorary solution for backward compatibility
 oldIdfyWebhookHandler ::
@@ -182,7 +184,11 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             (Idfy.convertDLOutputToDLVerificationOutput resSrcOp.source_output)
             VT.Idfy
         Idfy.PanResult _ -> pure Ack
-        Idfy.GstResult _ -> pure Ack
+        Idfy.GstResult resSrcOp -> do
+          GstCard.onVerifyGst
+            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            (Idfy.convertGstOutputToGstVerification resSrcOp.source_output)
+            VT.Idfy
         Idfy.BankAccountResult _ -> pure Ack
         Idfy.PanAadhaarLinkResult _ -> pure Ack
         _ -> pure Ack
