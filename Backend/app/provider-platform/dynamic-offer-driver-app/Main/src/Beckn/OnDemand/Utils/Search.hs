@@ -204,6 +204,16 @@ buildRiderPreferredOption req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
   T.strip <$> Utils.getTagV2 Tag.CUSTOMER_INFO Tag.RIDER_PREFERRED_OPTION tagGroups
 
+buildEmailDomain :: Spec.SearchReqMessage -> Maybe Text
+buildEmailDomain req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
+  Utils.getTagV2 Tag.EMAIL_DOMAIN_INFO Tag.EMAIL_DOMAIN tagGroups
+
+buildBusinessEmailDomain :: Spec.SearchReqMessage -> Maybe Text
+buildBusinessEmailDomain req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
+  Utils.getTagV2 Tag.EMAIL_DOMAIN_INFO Tag.BUSINESS_EMAIL_DOMAIN tagGroups
+
 -- customerPerson <- req ^? (ix "searchReqMessageIntent" . key "intentFulfillment" . key "fulfillmentCustomer" . key "customerPerson" . key "tags") & fromMaybeM (InvalidRequest "Missing Fields")
 
 getIsReallocationEnabled :: Spec.SearchReqMessage -> Maybe Bool
