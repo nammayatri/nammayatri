@@ -146,7 +146,7 @@ postDriverProfileUpdateAuthDataVerifyOTP ::
   (Maybe (Id SP.Person), Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverProfileTypes.VerifyUpdateAuthOTPReq ->
   m APISuccess.APISuccess
-postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, _merchantId, _) req = do
+postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, merchantId, _) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "Person ID not found")
   identifierType <- req.identifier & fromMaybeM (InvalidRequest "Identifier type is required")
 
@@ -167,13 +167,19 @@ postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, _merchantId, _) req = do
       storedCountryCode <- case storedAuthData.mobileNumberCountryCode of
         Just code -> pure code
         _ -> throwError $ InvalidRequest "AUTH_COUNTRY_CODE_NOT_FOUND: Country code not found in auth data"
-      encMobileNumber <- encrypt storedMobileNumber
       mobileNumberHash <- getDbHash storedMobileNumber
+      mobileNumberExists <- QPersonExtra.findByMobileNumberAndMerchantAndRole storedCountryCode mobileNumberHash merchantId SP.DRIVER
+      whenJust mobileNumberExists $ \existing ->
+        when (existing.id /= personId) $ throwError (InvalidRequest "Phone number already registered")
+      encMobileNumber <- encrypt storedMobileNumber
       QPersonExtra.updateMobileNumberByPersonId personId encMobileNumber mobileNumberHash storedCountryCode
     SP.EMAIL -> do
       storedEmail <- case storedAuthData of
         AuthData {email = Just em} -> pure em
         _ -> throwError $ InvalidRequest "AUTH_EMAIL_NOT_FOUND: Email not found in auth data"
+      existingPerson <- QPersonExtra.findByEmailAndMerchantIdAndRole (Just storedEmail) merchantId SP.DRIVER
+      whenJust existingPerson $ \existing ->
+        when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       QPersonExtra.updateEmailByPersonId personId storedEmail
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
 
