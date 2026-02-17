@@ -110,8 +110,7 @@ getBookingMetricsByDateRange merchantOpCityId targetDate = do
   -- 4. Aggregate Bookings in Memory
   let initialMap = Map.empty -- Map VehicleType (SumPrice, Set BookingId, SumTickets)
       processBooking acc (bId, finalP, priceP, qty, childQty', vType, qId) =
-        let
-            effectivePrice =
+        let effectivePrice =
               case finalP of
                 Just v | v > 0 -> Just v
                 _ -> priceP

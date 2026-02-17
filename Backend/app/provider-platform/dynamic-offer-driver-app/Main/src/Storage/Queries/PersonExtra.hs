@@ -560,7 +560,7 @@ updateFleetOwnerDetails (Id personId) req = do
 clearDeviceTokenByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 clearDeviceTokenByPersonId personId = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.deviceToken Nothing,
       Se.Set BeamP.updatedAt now
     ]
@@ -570,7 +570,7 @@ clearDeviceTokenByPersonId personId = do
 updateMobileNumberByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> DbHash -> Text -> m ()
 updateMobileNumberByPersonId (Id personId) encMobile mobileNumberHash mobileCountryCode = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.updatedAt now,
       Se.Set BeamP.mobileNumberEncrypted (Just $ unEncrypted (encMobile.encrypted)),
       Se.Set BeamP.mobileNumberHash (Just mobileNumberHash),
@@ -581,7 +581,7 @@ updateMobileNumberByPersonId (Id personId) encMobile mobileNumberHash mobileCoun
 updateEmailByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Text -> m ()
 updateEmailByPersonId (Id personId) email = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.updatedAt now,
       Se.Set BeamP.email (Just email)
     ]
@@ -590,7 +590,7 @@ updateEmailByPersonId (Id personId) email = do
 updatePersonMobileByFleetRole :: (MonadFlow m, EsqDBFlow m r) => Text -> EncryptedHashed Text -> m ()
 updatePersonMobileByFleetRole personId encMobileNumber = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.mobileNumberEncrypted $ Just $ unEncrypted encMobileNumber.encrypted,
       Se.Set BeamP.mobileNumberHash $ Just encMobileNumber.hash,
       Se.Set BeamP.updatedAt now
@@ -602,7 +602,7 @@ updatePersonMobileByFleetRole personId encMobileNumber = do
 updatePersonRole :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Role -> m ()
 updatePersonRole personId role = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.role role,
       Se.Set BeamP.updatedAt now
     ]
@@ -612,7 +612,7 @@ updatePersonRole personId role = do
 updateMerchantIdAndCityId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 updateMerchantIdAndCityId personId merchantId merchantOperatingCityId = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.merchantId (getId merchantId),
       Se.Set BeamP.merchantOperatingCityId (Just $ getId merchantOperatingCityId),
       Se.Set BeamP.updatedAt now
