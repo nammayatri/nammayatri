@@ -175,6 +175,7 @@ checkBookingsForStatus [] = pure ()
 
 getBookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ([SRB.Booking], [SRB.Booking])
 getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
+  logInfo $ "getBookingList: Executing query for personId=" <> show mbPersonId <> ", merchantId=" <> show merchantId <> ", onlyActive=" <> show mbOnlyActive
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
   let mbOnlyDashboard = if onlyDashboard then Just True else Nothing
@@ -194,6 +195,7 @@ getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset
 
 getJourneyList :: Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [DJ.JourneyStatus] -> Maybe Bool -> Flow [DJ.Journey]
 getJourneyList personId mbLimit mbOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess = do
+  logInfo $ "getJourneyList: Executing query for personId=" <> show personId <> ", limit=" <> show mbLimit <> ", offset=" <> show mbOffset
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
   SQJ.findAllByRiderId personId mbLimit mbOffset mbFromDate mbToDate mbJourneyStatusList mbIsPaymentSuccess
@@ -263,13 +265,20 @@ bookingListV2ByCustomerLookup merchantId mbLimit mbOffset mbBookingOffset mbJour
           pure person.id
         Nothing -> throwError $ InternalError "No Person Found"
 
+applyMasterDbIfGcp :: Flow a -> Flow a
+applyMasterDbIfGcp computation = do
+  mbCloudType <- asks (.cloudType)
+  case mbCloudType of
+    Just cloudType | cloudType == GCP -> do
+      logInfo "applyMasterDbIfGcp: CloudType is GCP, routing queries to Master DB (AWS)"
+      B.runInMasterDb computation
+    _ -> do
+      logInfo $ "applyMasterDbIfGcp: CloudType is " <> show mbCloudType <> ", using default replica/local DB"
+      computation
+
 bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Flow BookingListResV2
 bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate' mbToDate' billingCategoryList rideTypeList mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable mbPassTypes = do
-  mbCloudType <- asks (.cloudType)
-  let runQuery = case mbCloudType of
-        Just cloudType | cloudType == GCP -> B.runInMasterDb
-        _ -> \x -> x
-  runQuery $ do
+  applyMasterDbIfGcp $ do
     allPasses <- getPassList merchantId personId limitIntMaybe mbInitialPassOffsetInt mbFromDate' mbToDate' mbSendEligiblePassIfAvailable mbPassTypes
     (apiEntity, nextBookingOffset, nextJourneyOffset, nextPassOffset, hasMoreData) <- case mbBookingRequestType of
       Just SRB.BookingRequest -> do
@@ -306,15 +315,17 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
         pure (entitiesWithSource, Nothing, Just finalJourneyOffset, Just finalPassOffset, hasMoreData)
       _ -> do
-        bookingListFork <- awaitableFork "bookingListV2->getBookingList" $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
+        bookingListFork <- awaitableFork "bookingListV2->getBookingList" $
+          applyMasterDbIfGcp $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
 
         -- Journeys (NammaTransit) should only be included for PERSONAL billing category and NORMAL ride type
         let shouldIncludeJourneys = shouldIncludeJourneysForFilters billingCategoryList rideTypeList
         journeyListFork <-
           awaitableFork "bookingListV2->getJourneyList" $
-            if shouldIncludeJourneys
-              then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
-              else pure []
+            applyMasterDbIfGcp $
+              if shouldIncludeJourneys
+                then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+                else pure []
 
         (rbList, allbookings) <-
           L.await Nothing bookingListFork >>= \case
@@ -377,8 +388,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
           fork "booking list status update" $ checkBookingsForStatus allbookings
           logInfo $ "rbList: test " <> show rbList
         Nothing -> do
-          fork "booking list status update" $ do
-            -- Fetching Bookings in Fork for stuck booking case
+          fork "booking list status update" $ applyMasterDbIfGcp $ do
             (rbList_, allbookings_) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
             checkBookingsForStatus allbookings_
             logInfo $ "rbList: test " <> show rbList_
