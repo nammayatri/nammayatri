@@ -33,6 +33,7 @@ import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride 
 import qualified Beckn.ACL.Common as Common
 import Beckn.ACL.Status
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Dashboard.Common
 import Data.Coerce (coerce)
 import qualified Data.List as DL
 import qualified Data.Text as T
@@ -198,6 +199,24 @@ castSosStatus = \case
   DSos.NotResolved -> Common.NotResolved
   DSos.MockPending -> Common.MockPending
   DSos.MockResolved -> Common.MockResolved
+
+castSosState :: DSos.SosState -> Common.SosState
+castSosState = \case
+  DSos.LiveTracking -> Common.LiveTracking
+  DSos.SosActive -> Common.SosActive
+
+mkSosDetails :: DSos.Sos -> Common.SosDetails
+mkSosDetails sos =
+  Common.SosDetails
+    { sosStatus = castSosStatus sos.status,
+      sosId = cast @DSos.Sos @Dashboard.Common.Sos sos.id,
+      sosState = castSosState <$> sos.sosState,
+      externalReferenceId = sos.externalReferenceId,
+      sosCreatedAt = sos.createdAt,
+      externalReferenceStatus = sos.externalReferenceStatus,
+      externalStatusHistory = sos.externalStatusHistory,
+      mediaFiles = map (.getId) sos.mediaFiles
+    }
 
 ---------------------------------------------------------------------
 
@@ -378,6 +397,8 @@ rideInfo merchantId reqRideId = do
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   unencryptedDriverAlternateNumber <- mapM decrypt ride.driverAlternateNumber
   let fareProductType = mkFareProductType booking.bookingDetails
+  mbSosDetails <- CQSos.findByRideId ride.id
+  let sosDetails = mkSosDetails <$> mbSosDetails
   pure
     Common.RideInfoRes
       { rideId = reqRideId,
@@ -428,7 +449,8 @@ rideInfo merchantId reqRideId = do
         roundTrip = booking.roundTrip,
         mobileCountryCode = person.mobileCountryCode,
         isSafetyPlus = ride.isSafetyPlus,
-        isAirConditioned = fromMaybe False booking.isAirConditioned
+        isAirConditioned = fromMaybe False booking.isAirConditioned,
+        sosDetails = sosDetails
       }
 
 transformFareBreakup :: DFareBreakup.FareBreakup -> Common.FareBreakup
