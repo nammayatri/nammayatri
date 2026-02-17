@@ -38,7 +38,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Time
 import Domain.Action.UI.Plan hiding (mkDriverFee)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
-import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -86,6 +85,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -277,7 +277,7 @@ data PayoutContext = PayoutContext
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     mocId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     person :: DP.Person,
-    driverInfo :: DDI.DriverInformation,
+    payoutVpa :: Maybe Text,
     transporterConfig :: DTConf.TransporterConfig
   }
 
@@ -293,7 +293,16 @@ loadPayoutContext mbPersonId merchantId mocId = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
+  payoutVpa <- case person.role of
+    DP.FLEET_OWNER -> do
+      mbFleetInfo <- QFOI.findByPersonIdAndEnabledAndVerified Nothing Nothing driverId
+      pure (mbFleetInfo >>= (.payoutVpa))
+    DP.FLEET_BUSINESS -> do
+      mbFleetInfo <- QFOI.findByPersonIdAndEnabledAndVerified Nothing Nothing driverId
+      pure (mbFleetInfo >>= (.payoutVpa))
+    _ -> do
+      mbDriverInfo <- QDI.findById driverId
+      pure (mbDriverInfo >>= (.payoutVpa))
   pure PayoutContext {..}
 
 -- | Validate that wallet payouts are enabled for this merchant.
@@ -328,10 +337,10 @@ ensureMinimumPayoutAmount ctx payoutableBalance = do
   when (payoutableBalance < minAmount) $
     throwError $ InvalidRequest ("Minimum payout amount is " <> show minAmount)
 
--- | Extract and validate the driver's payout VPA.
+-- | Extract and validate the payout VPA (works for both drivers and fleet owners).
 resolvePayoutVpa :: (MonadFlow m) => PayoutContext -> m Text
 resolvePayoutVpa ctx =
-  fromMaybeM (InternalError $ "Payout vpa not present for " <> ctx.driverId.getId) ctx.driverInfo.payoutVpa
+  fromMaybeM (InternalError $ "Payout vpa not present for " <> ctx.driverId.getId) ctx.payoutVpa
 
 postWalletPayout ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
