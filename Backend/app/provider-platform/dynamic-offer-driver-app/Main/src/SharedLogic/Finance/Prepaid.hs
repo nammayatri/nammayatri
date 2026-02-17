@@ -318,15 +318,18 @@ settlePrepaidHoldByReference counterpartyType ownerId referenceId finalAmount = 
       foldM
         ( \_ entry -> do
             let settleAmount = finalAmount
+            -- Read starting balances before applying deltas
+            fromStartBal <- fromMaybe 0 <$> getBalance entry.fromAccountId
+            toStartBal <- fromMaybe 0 <$> getBalance entry.toAccountId
             resFrom <- updateBalanceByDelta entry.fromAccountId (-1 * settleAmount)
             case resFrom of
               Left err -> pure $ Left err
-              Right _ -> do
+              Right fromEndBal -> do
                 resTo <- updateBalanceByDelta entry.toAccountId settleAmount
                 case resTo of
                   Left err -> pure $ Left err
-                  Right _ -> do
-                    settleEntry entry.id
+                  Right toEndBal -> do
+                    settleEntryWithBalances entry.id fromStartBal fromEndBal toStartBal toEndBal
                     pure $ Right ()
         )
         (Right ())

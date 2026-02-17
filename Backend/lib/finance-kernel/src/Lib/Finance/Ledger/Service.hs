@@ -23,6 +23,7 @@ module Lib.Finance.Ledger.Service
     -- * Status management
     updateEntryStatus,
     settleEntry,
+    settleEntryWithBalances,
     voidEntry,
 
     -- * Query by ID/reference
@@ -232,6 +233,31 @@ settleEntry ::
 settleEntry entryId = do
   now <- getCurrentTime
   QLedger.updateSettled SETTLED (Just now) entryId
+
+-- | Settle an entry AND write balance snapshots onto the entry
+-- Use when settling a previously-PENDING entry where balances weren't captured at creation time.
+settleEntryWithBalances ::
+  (BeamFlow.BeamFlow m r) =>
+  Id LedgerEntry ->
+  HighPrecMoney -> -- fromStartingBalance
+  HighPrecMoney -> -- fromEndingBalance
+  HighPrecMoney -> -- toStartingBalance
+  HighPrecMoney -> -- toEndingBalance
+  m ()
+settleEntryWithBalances entryId fromStartBal fromEndBal toStartBal toEndBal = do
+  now <- getCurrentTime
+  mbEntry <- QLedger.findById entryId
+  forM_ mbEntry $ \entry -> do
+    let updatedEntry =
+          entry
+            { status = SETTLED,
+              settledAt = Just now,
+              fromStartingBalance = Just fromStartBal,
+              fromEndingBalance = Just fromEndBal,
+              toStartingBalance = Just toStartBal,
+              toEndingBalance = Just toEndBal
+            }
+    QLedger.updateByPrimaryKey updatedEntry
 
 -- | Void an entry (mark as VOIDED with reason)
 voidEntry ::
