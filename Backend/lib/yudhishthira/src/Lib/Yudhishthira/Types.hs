@@ -168,20 +168,36 @@ $(mkBeamInstancesForEnum ''QueryType)
 -- Redis Query Configuration Types
 
 data RedisQueryConfig = RedisQueryConfig
-  { key :: Text, -- Template: "user:{userId}:stats"
+  { key :: Text, -- Template: "user:{userId}:stats" or base key for SLIDING_WINDOW_COUNT
     batch :: BatchMode, -- "single" | "batch"
     batchSize :: Maybe Int, -- Only when batch == "batch", default: 100
-    operation :: RedisOp, -- "mget" | "get" | "hget" | "hgetall" | "smembers" | "zrange"
+    operation :: RedisOp, -- "mget" | "get" | "hget" | "hgetall" | "smembers" | "zrange" | "sliding_window_count"
     hashField :: Maybe Text, -- Required for HGET operation
     zrangeStart :: Maybe Int, -- Optional: start index for ZRANGE
-    zrangeStop :: Maybe Int -- Optional: stop index for ZRANGE
+    zrangeStop :: Maybe Int, -- Optional: stop index for ZRANGE
+    -- Required for SLIDING_WINDOW_COUNT: window params (SWC uses base key + date internally)
+    windowPeriod :: Maybe Integer,
+    windowPeriodType :: Maybe Text -- "Minutes" | "Hours" | "Days" | "Months" | "Years"
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON)
+
+instance FromJSON RedisQueryConfig where
+  parseJSON = withObject "RedisQueryConfig" $ \o ->
+    RedisQueryConfig
+      <$> o .: "key"
+      <*> o .: "batch"
+      <*> o .:? "batchSize"
+      <*> o .: "operation"
+      <*> o .:? "hashField"
+      <*> o .:? "zrangeStart"
+      <*> o .:? "zrangeStop"
+      <*> o .:? "windowPeriod"
+      <*> o .:? "windowPeriodType"
 
 data BatchMode = Single | Batch
   deriving (Eq, Show, Read, Generic, ToJSON, FromJSON)
 
-data RedisOp = MGET | GET | HGET | HGETALL | SMEMBERS | ZRANGE
+data RedisOp = MGET | GET | HGET | HGETALL | SMEMBERS | ZRANGE | SLIDING_WINDOW_COUNT
   deriving (Eq, Show, Read, Generic, ToJSON, FromJSON)
 
 $(mkBeamInstancesForEnumAndList ''QueryResult)
