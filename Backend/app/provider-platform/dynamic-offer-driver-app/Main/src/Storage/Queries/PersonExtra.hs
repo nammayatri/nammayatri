@@ -410,7 +410,8 @@ updatePersonRec (Id personId) person = do
       Se.Set BeamP.clientModelName (deviceModel <$> person.clientDevice),
       Se.Set BeamP.clientManufacturer (deviceManufacturer =<< person.clientDevice),
       Se.Set BeamP.backendConfigVersion (versionToText <$> person.backendConfigVersion),
-      Se.Set BeamP.backendAppVersion (person.backendAppVersion)
+      Se.Set BeamP.backendAppVersion (person.backendAppVersion),
+      Se.Set BeamP.cloudType person.cloudType
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
@@ -458,6 +459,15 @@ updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVers
         Se.Set BeamP.cloudType cloudType
       ]
       [Se.Is BeamP.id (Se.Eq $ getId person.id)]
+
+updateCloudType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe CloudType -> Id Person -> m ()
+updateCloudType cloudType (Id personId) = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.cloudType cloudType,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 updateAlternateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
