@@ -931,6 +931,7 @@ types:
     - freeWaitingTime: Maybe Minutes
     - nightShiftCharge: Maybe NightShiftChargeAPIEntity
     - petCharges: Maybe HighPrecMoney
+    - driverAllowance: Maybe HighPrecMoney
     - businessDiscountPercentage: Maybe Double
     - personalDiscountPercentage: Maybe Double
     - derive: "'HideSecrets"

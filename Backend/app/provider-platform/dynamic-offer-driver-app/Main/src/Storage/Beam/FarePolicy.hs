@@ -33,6 +33,7 @@ data FarePolicyT f = FarePolicyT
     returnFee :: B.C f (Maybe Domain.ReturnFee),
     boothCharges :: B.C f (Maybe Domain.BoothCharge),
     petCharges :: B.C f (Maybe HighPrecMoney),
+    driverAllowance :: B.C f (Maybe HighPrecMoney),
     businessDiscountPercentage :: B.C f (Maybe Double),
     personalDiscountPercentage :: B.C f (Maybe Double),
     priorityCharges :: B.C f (Maybe HighPrecMoney),
