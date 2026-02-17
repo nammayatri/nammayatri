@@ -20,6 +20,8 @@ import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
+import qualified Kernel.External.SOS.Interface.Types as SOSInterface
+import qualified Kernel.External.SOS.Types as SOS
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
@@ -174,3 +176,6 @@ getServiceNameConfigJSON = \case
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalStaticDataService MultiModal.OTPTransit, toJSON cfg)
   Domain.InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
     Insurance.AckoInsuranceConfig cfg -> (Domain.InsuranceService Insurance.Acko, toJSON cfg)
+  Domain.SOSServiceConfig sosCfg -> case sosCfg of
+    SOSInterface.ERSSConfig cfg -> (Domain.SOSService SOS.ERSS, toJSON cfg)
+    SOSInterface.GJ112Config cfg -> (Domain.SOSService SOS.GJ112, toJSON cfg)

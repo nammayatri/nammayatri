@@ -19,6 +19,9 @@ Sos:
     trackingExpiresAt : Maybe UTCTime
     sosState : Maybe SosState
     entityType : Maybe SosEntityType
+    externalReferenceId : Maybe Text
+    externalReferenceStatus : Maybe Text
+    externalStatusHistory : Maybe Text
 
   types:
     EmergencyContactId:
@@ -73,6 +76,17 @@ Sos:
     findByPersonId:
       kvFunction: findAllWithKV
       where: personId
+    updateExternalReferenceId:
+      kvFunction: updateOneWithKV
+      params: [externalReferenceId]
+      where: id
+    findByExternalReferenceId:
+      kvFunction: findOneWithKV
+      where: externalReferenceId
+    updateExternalReferenceStatus:
+      kvFunction: updateOneWithKV
+      params: [externalReferenceStatus, externalStatusHistory]
+      where: id
 
   beamType:
     mediaFiles: Maybe [Text]

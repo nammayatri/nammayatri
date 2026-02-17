@@ -581,3 +581,22 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN static_customer_id_threshold_day d
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_logo_url text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN external_sos_config json;
+
+
+
+
+------- SQL updates -------
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
