@@ -79,9 +79,10 @@ getPickupRoutes (personId, merchantId) entityId GetPickupRoutesReq {..} = do
       case (mbRide, merchantConfig.getFirstPickupRoute) of
         (Just ride, Just firstPickupService) -> do
           let pikcupRouteCalls = fromMaybe 0 (ride.pickupRouteCallCount)
-          QRide.updatePickupRouteCallCount (Just $ pikcupRouteCalls + 1) ride.id
           if pikcupRouteCalls == 0
-            then return firstPickupService
+            then do
+              QRide.updatePickupRouteCallCount (Just $ pikcupRouteCalls + 1) ride.id
+              return firstPickupService
             else return merchantConfig.getPickupRoutes
         _ -> return merchantConfig.getPickupRoutes
 
