@@ -787,7 +787,8 @@ getInformationV2 ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasField "s3Env" r (S3.S3Env m)
+    HasField "s3Env" r (S3.S3Env m),
+    HasField "cloudType" r (Maybe CloudType)
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
@@ -816,7 +817,8 @@ getInformation ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasField "s3Env" r (S3.S3Env m)
+    HasField "s3Env" r (S3.S3Env m),
+    HasField "cloudType" r (Maybe CloudType)
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
@@ -832,6 +834,8 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
       serviceName = fromMaybe Plan.YATRI_SUBSCRIPTION mbServiceName
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId person.id
+  cloudType <- asks (.cloudType)
+  when (person.cloudType /= cloudType) $ QPerson.updateCloudType cloudType person.id
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- maybe (QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound) return mbDriverInfo
   driverReferralCode <- QDR.findById (cast driverId)
@@ -1235,7 +1239,8 @@ updateDriver ::
     EncFlow m r,
     CacheFlow m r,
     HasField "s3Env" r (S3.S3Env m),
-    HasField "version" r DeploymentVersion
+    HasField "version" r DeploymentVersion,
+    HasField "cloudType" r (Maybe CloudType)
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Version ->
@@ -1249,6 +1254,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   runRequestValidation validateUpdateDriverReq req
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   deploymentVersion <- asks (.version)
+  cloudType <- asks (.cloudType)
   let updPerson =
         person{firstName = fromMaybe person.firstName req.firstName,
                middleName = req.middleName <|> person.middleName,
@@ -1264,7 +1270,8 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
                backendAppVersion = Just deploymentVersion.getDeploymentVersion,
                gender = fromMaybe person.gender req.gender,
                hometown = req.hometown <|> person.hometown,
-               languagesSpoken = req.languagesSpoken <|> person.languagesSpoken
+               languagesSpoken = req.languagesSpoken <|> person.languagesSpoken,
+               cloudType = cloudType
               }
   mVehicle <- QVehicle.findById personId
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
