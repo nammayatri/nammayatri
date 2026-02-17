@@ -72,7 +72,15 @@ updateStatus rbId rbStatus = do
     [ Se.Set BeamB.status rbStatus,
       Se.Set BeamB.updatedAt now
     ]
-    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
+    ( [Se.Is BeamB.id (Se.Eq $ getId rbId)]
+        <> maybe [] (\s -> [Se.Is BeamB.status $ Se.In s]) possibleStateTransitions
+    )
+  where
+    possibleStateTransitions =
+      case rbStatus of
+        CONFIRMED -> Just [NEW]
+        -- TODO :: Handle other status race conditions if observed
+        _ -> Nothing
 
 updateBPPBookingId :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Id BPPBooking -> m ()
 updateBPPBookingId rbId bppRbId = do
