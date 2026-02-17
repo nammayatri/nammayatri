@@ -55,6 +55,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
+import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -68,6 +69,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.StopInformation as QSI
+import Storage.Beam.Sos ()
 import Tools.Error
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
@@ -458,8 +460,14 @@ getActiveSos mbRide personId = do
   case mbRide of
     Nothing -> return Nothing
     Just ride -> do
-      sosDetails <- SafetyCQSos.findByRideId (cast ride.id)
-      case sosDetails of
+      cached <- SafetyCQSos.findByRideId (cast ride.id)
+      mbSosDetails <- case cached of
+        Just x -> pure (Just x)
+        Nothing -> do
+          mbFromDb <- SafetyQSos.findByRideId (Just (cast ride.id))
+          Kernel.Prelude.whenJust mbFromDb $ \sos -> SafetyCQSos.cacheSosIdByRideId (cast ride.id) sos
+          pure mbFromDb
+      case mbSosDetails of
         Nothing -> do
           mockSos :: Maybe SafetyDSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
           return $ mockSos <&> (.status)
@@ -470,8 +478,14 @@ getActiveSos' mbRide personId = do
   case mbRide of
     Nothing -> return Nothing
     Just ride -> do
-      sosDetails <- SafetyCQSos.findByRideId (cast ride.id)
-      case sosDetails of
+      cached <- SafetyCQSos.findByRideId (cast ride.id)
+      mbSosDetails <- case cached of
+        Just x -> pure (Just x)
+        Nothing -> do
+          mbFromDb <- SafetyQSos.findByRideId (Just (cast ride.id))
+          Kernel.Prelude.whenJust mbFromDb $ \sos -> SafetyCQSos.cacheSosIdByRideId (cast ride.id) sos
+          pure mbFromDb
+      case mbSosDetails of
         Nothing -> do
           mockSos :: Maybe SafetyDSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
           return $ mockSos <&> (.status)

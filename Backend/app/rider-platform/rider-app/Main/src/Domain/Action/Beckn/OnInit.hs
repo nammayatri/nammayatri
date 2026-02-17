@@ -185,7 +185,7 @@ buildOnInitResFromBooking bookingId = do
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   decRider <- decrypt person
-  safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId (Just person)
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback booking.riderId (Just person)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <-
@@ -220,9 +220,9 @@ buildOnInitResFromBooking bookingId = do
         transactionId = booking.transactionId,
         merchant,
         city,
-        nightSafetyCheck = checkSafetySettingConstraint (Just safetySettings.enableUnexpectedEventsCheck) riderConfig now,
+        nightSafetyCheck = checkSafetySettingConstraint (Just $ convertToPersonRideShareOptions safetySettings.enableUnexpectedEventsCheck) riderConfig now,
         isValueAddNP,
-        enableFrequentLocationUpdates = checkSafetySettingConstraint safetySettings.aggregatedRideShareSetting riderConfig now,
+        enableFrequentLocationUpdates = checkSafetySettingConstraint (convertToPersonRideShareOptions <$> safetySettings.aggregatedRideShareSetting) riderConfig now,
         paymentId = Nothing,
         enableOtpLessRide = isBookingMeterRide booking.bookingDetails || fromMaybe False safetySettings.enableOtpLessRide,
         tripCategory = booking.tripCategory,
@@ -230,6 +230,12 @@ buildOnInitResFromBooking bookingId = do
         paymentInstrument = booking.paymentInstrument
       }
   where
+    convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> Person.RideShareOptions
+    convertToPersonRideShareOptions = \case
+      SafetyCommon.ALWAYS_SHARE -> Person.ALWAYS_SHARE
+      SafetyCommon.SHARE_WITH_TIME_CONSTRAINTS -> Person.SHARE_WITH_TIME_CONSTRAINTS
+      SafetyCommon.NEVER_SHARE -> Person.NEVER_SHARE
+
     prependZero :: Text -> Text
     prependZero str = "0" <> str
 

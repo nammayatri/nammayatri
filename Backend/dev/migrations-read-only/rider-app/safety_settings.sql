@@ -39,3 +39,9 @@ ALTER TABLE atlas_app.safety_settings ALTER COLUMN updated_at DROP NOT NULL;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.safety_settings ALTER COLUMN enable_post_ride_safety_check DROP DEFAULT;
