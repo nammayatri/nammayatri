@@ -115,9 +115,9 @@ data PersonE e = Person
   }
   deriving (Generic)
 
-type Person = PersonE 'AsEncrypted
+type Person = PersonE ('AsEncrypted)
 
-type DecryptedPerson = PersonE 'AsUnencrypted
+type DecryptedPerson = PersonE ('AsUnencrypted)
 
 instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
@@ -317,26 +317,26 @@ instance EncryptedItem' Person where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data IdentifierType = MOBILENUMBER | DEVICE | AADHAAR | EMAIL deriving (Show, (Eq), (Read), (Ord), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-data RideShareOptions = ALWAYS_SHARE | SHARE_WITH_TIME_CONSTRAINTS | NEVER_SHARE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data RideShareOptions = ALWAYS_SHARE | SHARE_WITH_TIME_CONSTRAINTS | NEVER_SHARE deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-data Role = USER | CUSTOMER_SUPPORT | METER_RIDE_DUMMY | TICKET_DASHBOARD_USER deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data Role = USER | CUSTOMER_SUPPORT | METER_RIDE_DUMMY | TICKET_DASHBOARD_USER deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''Role)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''Role))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Role)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Role))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''IdentifierType)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''IdentifierType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''IdentifierType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''IdentifierType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Gender)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Gender))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''Gender)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''Gender))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''RideShareOptions)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''RideShareOptions))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RideShareOptions)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''RideShareOptions))

@@ -1209,3 +1209,25 @@ instance IsHTTPError RefundRequestError where
     RefundRequestAlreadyExists _ -> E400
 
 instance IsAPIError RefundRequestError
+
+data GuestUserError
+  = GuestUserAccessDenied Text Text
+  | GuestLinkTokenMissing Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''GuestUserError
+
+instance IsBaseError GuestUserError where
+  toMessage = \case
+    GuestUserAccessDenied guestUserId reason -> Just $ "Guest user with id: " <> guestUserId <> ": " <> reason
+    GuestLinkTokenMissing linkToken -> Just $ "Guest link token with token: " <> linkToken <> " not found."
+
+instance IsHTTPError GuestUserError where
+  toErrorCode = \case
+    GuestUserAccessDenied _ _ -> "GUEST_USER_ACCESS_DENIED"
+    GuestLinkTokenMissing _ -> "GUEST_LINK_TOKEN_MISSING"
+  toHttpCode = \case
+    GuestUserAccessDenied _ _ -> E401
+    GuestLinkTokenMissing _ -> E400
+
+instance IsAPIError GuestUserError
