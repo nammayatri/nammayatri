@@ -1768,11 +1768,11 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
             merchantOperatingCityId = person.merchantOperatingCityId,
             merchantId = person.merchantId
           }
-  (srcCode, destCode) <- resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext
-  directRouteCodes <- JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
+  (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
+  directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
   if null directRouteCodes
-    then handleOtpRoute routeServiceabilityContext srcCode destCode
-    else handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes
+    then JMU.measureLatency (handleOtpRoute routeServiceabilityContext srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
+    else JMU.measureLatency (handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
   where
     authenticate :: Maybe (Id Domain.Types.Person.Person) -> Environment.Flow Domain.Types.Person.Person
     authenticate mbPersonId' = do
@@ -1789,7 +1789,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       | isJust mSrc && isJust mDest =
         pure (fromJust mSrc, fromJust mDest)
       | otherwise = do
-        (firstStop, lastStop) <- fetchRouteBoundaryStops routeCodes ctx
+        (firstStop, lastStop) <- JMU.measureLatency (fetchRouteBoundaryStops routeCodes ctx) ("fetchRouteBoundaryStops routeCodes=" <> show routeCodes)
         pure (fromMaybe firstStop mSrc, fromMaybe lastStop mDest)
 
     fetchRouteBoundaryStops ::
@@ -1893,7 +1893,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                 walkSpeed = Nothing
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq routeServiceabilityContext.merchantId routeServiceabilityContext.merchantOperatingCityId
-      otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) "getTransitRoutes"
+      otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) ("MultiModal.getTransitRoutes req=" <> show transitRoutesReq)
       oneWayRouteWithWalkLegs <- JMU.getBestOneWayRoute MultiModalTypes.Bus otpResponse.routes (Just srcCode') (Just destCode') & fromMaybeM (getRouteNotFoundError MultiModalTypes.Bus srcCode' destCode')
       pure $ onlyBusLegs oneWayRouteWithWalkLegs
 
@@ -2024,7 +2024,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       [ResolvedLeg] ->
       Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
     getRouteServiceability mEffStops ctx legs = do
-      legRoutes <- enrichResolvedLegs ctx legs
+      legRoutes <- JMU.measureLatency (enrichResolvedLegs ctx legs) ("enrichResolvedLegs legsCount=" <> show (length legs))
       pure $ ApiTypes.RouteServiceabilityResp mEffStops legRoutes
 
     handleDirectRoute ::
@@ -2036,7 +2036,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
     handleDirectRoute ctx srcCode destCode directRouteCodes = do
       let resolvedLegs =
             resolveLegsForDirectRoute srcCode destCode directRouteCodes
-      getRouteServiceability Nothing ctx resolvedLegs
+      JMU.measureLatency (getRouteServiceability Nothing ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
 
     handleOtpRoute ::
       RouteServiceabilityContext ->
@@ -2045,9 +2045,9 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
     handleOtpRoute ctx srcCode destCode = do
       (effectiveStops, resolvedLegs) <-
-        resolveLegsViaOtpCached ctx srcCode destCode
+        JMU.measureLatency (resolveLegsViaOtpCached ctx srcCode destCode) ("resolveLegsViaOtpCached src=" <> srcCode <> " dest=" <> destCode)
 
-      getRouteServiceability effectiveStops ctx resolvedLegs
+      JMU.measureLatency (getRouteServiceability effectiveStops ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
 
     makeOtpResolvedRouteKey ::
       RouteServiceabilityContext ->
@@ -2078,7 +2078,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
         Just result ->
           pure result
         Nothing -> do
-          result@(_, legs) <- resolveLegsViaOtp srcCode destCode ctx
+          result@(_, legs) <- JMU.measureLatency (resolveLegsViaOtp srcCode destCode ctx) ("resolveLegsViaOtp src=" <> srcCode <> " dest=" <> destCode)
           -- IMPORTANT: only cache non-empty successful results
           unless (null legs) $
             Hedis.setExp key result 86400
@@ -2113,7 +2113,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       RouteServiceabilityContext ->
       Environment.Flow (Maybe ApiTypes.EffectiveStops, [ResolvedLeg])
     resolveLegsViaOtp srcCode destCode ctx = do
-      validatedRoute <- getValidSingleModeRoute ctx srcCode destCode
+      validatedRoute <- JMU.measureLatency (getValidSingleModeRoute ctx srcCode destCode) ("getValidSingleModeRoute src=" <> srcCode <> " dest=" <> destCode)
       case validatedRoute.legs of
         [] -> pure (Nothing, [])
         legs -> do
@@ -2136,7 +2136,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                       }
               )
               (zip [0 ..] legs)
-          effectiveStops <- calculateEffectiveStops srcCode destCode effSrc effDest ctx.integratedBPPConfig
+          effectiveStops <- JMU.measureLatency (calculateEffectiveStops srcCode destCode effSrc effDest ctx.integratedBPPConfig) ("calculateEffectiveStops src=" <> srcCode <> " dest=" <> destCode <> " effSrc=" <> effSrc <> " effDest=" <> effDest)
           pure
             (Just effectiveStops, resolvedLegs)
 
