@@ -76,6 +76,8 @@ buildSearchReq messageId subscriber req context actualBapUri = do
       paymentMode = Beckn.OnDemand.Utils.Search.getPaymentMode req
       fromSpecialLocationId_ = getFromSpecialLocationId req
       toSpecialLocationId_ = getToSpecialLocationId req
+      emailDomain_ = Beckn.OnDemand.Utils.Search.buildEmailDomain req
+      businessEmailDomain_ = Beckn.OnDemand.Utils.Search.buildBusinessEmailDomain req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   customerPhoneNum_ <- getPhoneNumberFromTag $ Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
@@ -117,6 +119,8 @@ buildSearchReq messageId subscriber req context actualBapUri = do
         mbAdditonalChargeCategories = Nothing,
         fromSpecialLocationId = Id <$> fromSpecialLocationId_,
         toSpecialLocationId = Id <$> toSpecialLocationId_,
+        emailDomain = emailDomain_,
+        businessEmailDomain = businessEmailDomain_,
         ..
       }
 

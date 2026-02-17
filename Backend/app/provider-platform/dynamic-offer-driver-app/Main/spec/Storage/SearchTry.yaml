@@ -46,6 +46,7 @@ SearchTry:
     isScheduled: Bool
     preferSafetyPlus: Bool
     serviceTierArray: "[Text]"
+    emailDomain: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
 

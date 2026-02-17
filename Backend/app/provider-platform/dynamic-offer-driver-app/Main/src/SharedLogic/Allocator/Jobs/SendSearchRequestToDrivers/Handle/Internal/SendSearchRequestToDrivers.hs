@@ -18,6 +18,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Sen
 where
 
 import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
+import Control.Applicative ((<|>))
 import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HashMap
@@ -68,6 +69,7 @@ import SharedLogic.GoogleTranslate
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
+import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Coins.CoinsConfig as CoinsConfig (fetchCoinConfigByFunctionAndMerchant)
@@ -198,10 +200,17 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       DTR.TransporterConfig ->
       m HighPrecMoney
     getBaseFare searchReq farePolicy vehicleAge tripQuoteDetail transporterConfig = do
+      mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage searchReq.merchantOperatingCityId searchTry.emailDomain searchTry.billingCategory farePolicy.vehicleServiceTier
+      let farePolicy' =
+            farePolicy
+              { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
+                DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
+              } ::
+              DFP.FullFarePolicy
       fareParams <-
         Fare.calculateFareParameters
           Fare.CalculateFareParametersParams
-            { farePolicy = farePolicy,
+            { farePolicy = farePolicy',
               actualDistance = searchReq.estimatedDistance,
               estimatedDistance = searchReq.estimatedDistance,
               rideTime = searchReq.startTime,

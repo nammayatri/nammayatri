@@ -93,6 +93,7 @@ import qualified SharedLogic.TollsDetector as TollsDetector
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as QTC
+import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -709,10 +710,17 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
     then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
     else do
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
+      mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.billingCategory farePolicy.vehicleServiceTier
+      let farePolicy' =
+            farePolicy
+              { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
+                DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
+              } ::
+              DFP.FullFarePolicy
       fareParams <-
         calculateFareParameters
           Fare.CalculateFareParametersParams
-            { farePolicy = farePolicy,
+            { farePolicy = farePolicy',
               actualDistance = Just recalcDistance,
               estimatedDistance = Just oldDistance,
               rideTime = booking.startTime,
