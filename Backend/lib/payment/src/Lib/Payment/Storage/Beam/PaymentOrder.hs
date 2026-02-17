@@ -71,7 +71,8 @@ data PaymentOrderT f = PaymentOrderT
     domainTransactionId :: B.C f (Maybe Text),
     isMockPayment :: B.C f (Maybe Bool),
     paytmTidEncrypted :: B.C f (Maybe Text),
-    groupId :: B.C f (Maybe Text)
+    groupId :: B.C f (Maybe Text),
+    vpa :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

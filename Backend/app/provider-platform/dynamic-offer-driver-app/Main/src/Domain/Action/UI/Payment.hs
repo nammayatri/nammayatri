@@ -226,11 +226,14 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
           logDebug $ "Payment Status: " <> show status <> " Payer Vpa: " <> show payerVpa <> " OrderId: " <> order.id.getId
           logDebug $ "Invoices: " <> show invoices
           let isOneTimeSecurityInvoice = any (\inv -> inv.paymentMode == INV.ONE_TIME_SECURITY_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices
-          let isPayoutRegistrationInvoice = any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices
-          when ((isOneTimeSecurityInvoice || isPayoutRegistrationInvoice) && status == Payment.CHARGED) do
+          let isPayoutRegistration = order.entityName == Just DPayment.PAYOUT_REGISTRATION
+          when ((isOneTimeSecurityInvoice || isPayoutRegistration) && status == Payment.CHARGED) do
             whenJust payerVpa $ \vpa -> QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
             logDebug $ "Updating Payout (Via getStatus) And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show payerVpa
-            when (isJust payerVpa && isPayoutRegistrationInvoice) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
+            when isPayoutRegistration $ do
+              -- Store VPA on PaymentOrder
+              QOrder.updateVpa order.id payerVpa
+              when (isJust payerVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
           case mbSubscriptionPurchase of
             Just subscriptionPurchase -> do
               unless (status /= Payment.CHARGED) $ processSubscriptionPurchasePayment merchantId driver subscriptionPurchase
@@ -337,10 +340,12 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
           (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
           logDebug $ "Webhook Response Status: " <> show transactionStatus <> " Payer Vpa: " <> show payerVpa <> " OrderId: " <> show orderShortId
           logDebug $ "Invoices: " <> show invoices
-          when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && transactionStatus == Payment.CHARGED) do
+          when (order.entityName == Just DPayment.PAYOUT_REGISTRATION && transactionStatus == Payment.CHARGED) do
             let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
             whenJust mbVpa $ \vpa -> QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
             logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
+            -- Store VPA on PaymentOrder
+            QOrder.updateVpa order.id mbVpa
             when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchanOperatingCityId
           when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
             when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP && transactionStatus == Payment.CHARGED) $ do

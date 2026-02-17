@@ -57,29 +57,26 @@ refreshPayoutRequestStatus payoutRequest = do
       mbPayoutOrder <- PayoutOrder.findLatestPayoutOrderByEntityId DPayment.SPECIAL_ZONE_PAYOUT pr.id.getId
       case mbPayoutOrder of
         Nothing -> pure pr
-        Just payoutOrder ->
-          case (pr.merchantId, pr.merchantOperatingCityId) of
-            (Just merchantIdText, Just opCityIdText) -> do
-              let merchantId = Id merchantIdText
-                  opCityId = Id opCityIdText
-                  createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = Nothing}
-                  createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId opCityId (DEMSC.RidePayoutService TPayout.Juspay) (Just pr.beneficiaryId)
-                  shouldUpdate current new = current /= new && current `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]
-                  onUpdate newStatus rawStatus = do
-                    let statusMsg = "Order Status Updated: " <> show rawStatus
-                    PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) pr
-              newStatus <-
-                PayoutStatus.refreshPayoutStatus
-                  (cast merchantId)
-                  (Id pr.beneficiaryId)
-                  createPayoutOrderStatusReq
-                  createPayoutOrderStatusCall
-                  pr.status
-                  castPayoutOrderStatusToPayoutRequestStatus
-                  shouldUpdate
-                  onUpdate
-              pure pr {DPR.status = newStatus}
-            _ -> pure pr
+        Just payoutOrder -> do
+          let merchantId = Id pr.merchantId
+              opCityId = Id pr.merchantOperatingCityId
+              createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = Nothing}
+              createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId opCityId (DEMSC.RidePayoutService TPayout.Juspay) (Just pr.beneficiaryId)
+              shouldUpdate current new = current /= new && current `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]
+              onUpdate newStatus rawStatus = do
+                let statusMsg = "Order Status Updated: " <> show rawStatus
+                PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) pr
+          newStatus <-
+            PayoutStatus.refreshPayoutStatus
+              (cast merchantId)
+              (Id pr.beneficiaryId)
+              createPayoutOrderStatusReq
+              createPayoutOrderStatusCall
+              pr.status
+              castPayoutOrderStatusToPayoutRequestStatus
+              shouldUpdate
+              onUpdate
+          pure pr {DPR.status = newStatus}
 
 executeSpecialZonePayoutRequest ::
   ( EncFlow m r,

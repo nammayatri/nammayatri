@@ -6,29 +6,42 @@ imports:
   Location: Domain.Types.Location
   HighPrecMoney: Kernel.Types.Common
   Ride: Domain.Types.Ride
-  WalletTransactionType: Domain.Types.DriverWallet
   PlanSubscribeRes: Domain.Action.UI.Plan
+  PayoutRequestStatus: Lib.Payment.Domain.Types.PayoutRequest
+  EntityName: Lib.Payment.Domain.Types.Common
 
 module: DriverWallet
 
 types:
-  TransactionDetails:
-    id: Id LedgerEntry
-    rideId: Maybe (Id Ride)
-    transactionType: WalletTransactionType
-    collectionAmount: Maybe HighPrecMoney
-    gstDeduction: Maybe HighPrecMoney
-    merchantPayable: Maybe HighPrecMoney
-    driverPayable: Maybe HighPrecMoney
-    runningBalance: HighPrecMoney
-    fromLocation: Maybe Location
-    toLocation: Maybe Location
-    createdAt: UTCTime
-  TransactionResponse:
-    transactions: [TransactionDetails]
-    currentBalance: Maybe HighPrecMoney
+  WalletItem:
+    itemReference: Text
+    itemName: Text
+    itemValue: HighPrecMoney
+  WalletItemGroup:
+    totalAmount: HighPrecMoney
+    items: "[WalletItem]"
+  WalletSummaryResponse:
+    currentBalance: HighPrecMoney
+    redeemableBalance: HighPrecMoney
+    nonRedeemableBalance: HighPrecMoney
+    additions: WalletItemGroup
+    deductions: WalletItemGroup
   TopUpRequest:
     amount: HighPrecMoney
+    derive: "'HideSecrets"
+  PayoutHistoryItem:
+    amount: Maybe HighPrecMoney
+    payoutFee: HighPrecMoney
+    entityName: Maybe EntityName
+    status: PayoutRequestStatus
+    timestamp: UTCTime
+    payoutMethod: Text
+    payoutVpa: Maybe Text
+  PayoutHistoryResponse:
+    totalPaidOut: HighPrecMoney
+    lastPayout: Maybe PayoutHistoryItem
+    totalPending: HighPrecMoney
+    items: "[PayoutHistoryItem]"
 
 apis:
   - GET:
@@ -37,11 +50,8 @@ apis:
       query:
         - fromDate: UTCTime
         - toDate: UTCTime
-        - transactionType: WalletTransactionType
-        - limit: Int
-        - offset: Int
       response:
-        type: TransactionResponse
+        type: WalletSummaryResponse
   - POST:
       endpoint: /wallet/payout
       auth: TokenAuth PROVIDER_TYPE
@@ -54,3 +64,14 @@ apis:
         type: TopUpRequest
       response:
         type: PlanSubscribeRes
+  - GET:
+      endpoint: /wallet/payoutHistory
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - from: UTCTime
+        - to: UTCTime
+        - status: "[PayoutRequestStatus]"
+        - limit: Int
+        - offset: Int
+      response:
+        type: PayoutHistoryResponse

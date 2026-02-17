@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN IF NOT EXISTS vpa TEXT;

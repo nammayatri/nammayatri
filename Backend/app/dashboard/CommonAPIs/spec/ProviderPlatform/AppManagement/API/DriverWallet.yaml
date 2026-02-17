@@ -1,0 +1,59 @@
+imports:
+  Driver: Domain.Types.Person
+  WalletSummaryResponse: API.Types.UI.DriverWallet
+  TopUpRequest: API.Types.UI.DriverWallet
+  PayoutHistoryResponse: API.Types.UI.DriverWallet
+  PlanSubscribeRes: Domain.Action.UI.Plan
+  APISuccess: Kernel.Types.APISuccess
+  PayoutRequestStatus: Lib.Payment.Domain.Types.PayoutRequest
+
+importPackageOverrides:
+  API.Types.UI.DriverWallet: "dynamic-offer-driver-app"
+  Domain.Action.UI.Plan: "dynamic-offer-driver-app"
+  Domain.Types.Person: "dynamic-offer-driver-app"
+  Lib.Payment.Domain.Types.PayoutRequest: payment
+
+module: DriverWallet
+
+apis:
+  - GET:
+      endpoint: /wallet/{driverId}/transactions
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+      response:
+        type: WalletSummaryResponse
+  - POST:
+      endpoint: /wallet/{driverId}/payout
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /wallet/{driverId}/topup
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: TopUpRequest
+      response:
+        type: PlanSubscribeRes
+  - GET:
+      endpoint: /wallet/{driverId}/payoutHistory
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - from: UTCTime
+        - to: UTCTime
+        - status: "[PayoutRequestStatus]"
+        - limit: Int
+        - offset: Int
+      response:
+        type: PayoutHistoryResponse
+
+types: {}

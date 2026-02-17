@@ -101,10 +101,10 @@ findAllByMerchantAndCityWithFilters merchantId merchantOperatingCityId mbPersonI
   where
     isActiveVal = fromMaybe True mbIsActive
     conditions =
-      [ Se.And
-          $ [ Se.Is BeamT.merchantId $ Se.Eq merchantId.getId,
-              Se.Is BeamT.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId,
-              Se.Is BeamT.isActive $ Se.Eq isActiveVal
-            ]
-          <> maybe [] (\p -> [Se.Is BeamT.personId $ Se.Eq p.getId]) mbPersonId
+      [ Se.And $
+          [ Se.Is BeamT.merchantId $ Se.Eq merchantId.getId,
+            Se.Is BeamT.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId,
+            Se.Is BeamT.isActive $ Se.Eq isActiveVal
+          ]
+            <> maybe [] (\p -> [Se.Is BeamT.personId $ Se.Eq p.getId]) mbPersonId
       ]

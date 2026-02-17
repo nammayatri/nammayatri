@@ -151,6 +151,7 @@ library
       Domain.Action.Common.PayoutRequest
       Domain.Action.Dashboard.AppManagement.Driver
       Domain.Action.Dashboard.AppManagement.DriverSubscription
+      Domain.Action.Dashboard.AppManagement.DriverWallet
       Domain.Action.Dashboard.AppManagement.Overlay
       Domain.Action.Dashboard.AppManagement.Penalty
       Domain.Action.Dashboard.AppManagement.Subscription
@@ -810,6 +811,7 @@ library
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Driver
       API.Action.Dashboard.AppManagement.DriverSubscription
+      API.Action.Dashboard.AppManagement.DriverWallet
       API.Action.Dashboard.AppManagement.Overlay
       API.Action.Dashboard.AppManagement.Penalty
       API.Action.Dashboard.AppManagement.Subscription
@@ -899,8 +901,10 @@ library
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Driver
       API.Types.Dashboard.AppManagement.DriverSubscription
+      API.Types.Dashboard.AppManagement.DriverWallet
       API.Types.Dashboard.AppManagement.Endpoints.Driver
       API.Types.Dashboard.AppManagement.Endpoints.DriverSubscription
+      API.Types.Dashboard.AppManagement.Endpoints.DriverWallet
       API.Types.Dashboard.AppManagement.Endpoints.Overlay
       API.Types.Dashboard.AppManagement.Endpoints.Penalty
       API.Types.Dashboard.AppManagement.Endpoints.Subscription

@@ -23,12 +23,17 @@ module SharedLogic.Finance.Wallet
     getOrCreateGovtDirectLiabilityAccount,
     createLedgerTransfer,
     createLedgerTransferAllowZero,
+    utcToLocalDay,
+    payoutCutoffTimeUTC,
+    todayRangeUTC,
+    getNonRedeemableBalance,
   )
 where
 
 import Data.Aeson (Value)
 import Data.List (sortOn)
 import Data.Ord (Down (..))
+import qualified Data.Time as Time
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id
@@ -60,10 +65,46 @@ walletReferenceTDSDeductionCash :: Text
 walletReferenceTDSDeductionCash = "TDSDeductionCash"
 
 walletReferenceTopup :: Text
-walletReferenceTopup = "WALLET_TOPUP"
+walletReferenceTopup = "WalletTopup"
 
 walletReferencePayout :: Text
-walletReferencePayout = "WALLET_PAYOUT"
+walletReferencePayout = "WalletPayout"
+
+-- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)
+
+-- | Convert a UTC time to a local Day given a timezone offset (seconds from UTC)
+utcToLocalDay :: NominalDiffTime -> UTCTime -> Time.Day
+utcToLocalDay timeDiff utcTime = Time.utctDay (Time.addUTCTime timeDiff utcTime)
+
+-- | Compute the payout cutoff time in UTC.
+--   Entries after this time are considered non-redeemable (recent ride earnings).
+payoutCutoffTimeUTC :: NominalDiffTime -> Int -> UTCTime -> UTCTime
+payoutCutoffTimeUTC timeDiff cutOffDays now =
+  let localDay = utcToLocalDay timeDiff now
+      cutOffDay = Time.addDays (negate (fromIntegral cutOffDays)) localDay
+   in Time.addUTCTime (negate timeDiff) (Time.UTCTime cutOffDay 0)
+
+-- | Get the UTC time range for "today" given a timezone offset.
+--   Returns (startOfDayUTC, endOfDayUTC).
+todayRangeUTC :: NominalDiffTime -> UTCTime -> (UTCTime, UTCTime)
+todayRangeUTC timeDiff now =
+  let localDay = utcToLocalDay timeDiff now
+      start = Time.addUTCTime (negate timeDiff) (Time.UTCTime localDay 0)
+      end = Time.addUTCTime (negate timeDiff) (Time.UTCTime localDay 86399)
+   in (start, end)
+
+-- | Calculate non-redeemable balance: sum of recent ride earnings after payout cutoff.
+getNonRedeemableBalance ::
+  (BeamFlow m r) =>
+  Id Account ->
+  NominalDiffTime -> -- timezone offset
+  Int -> -- payoutCutOffDays
+  UTCTime -> -- current time
+  m HighPrecMoney
+getNonRedeemableBalance accountId timeDiff cutOffDays now = do
+  let cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
+  entries <- findByAccountWithFilters accountId (Just cutoff) (Just now) Nothing Nothing Nothing (Just [walletReferenceBaseRide])
+  pure $ sum $ map (.amount) entries
 
 -- Account helpers
 

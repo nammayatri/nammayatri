@@ -287,8 +287,9 @@ settlePrepaidHoldByReference ::
   CounterpartyType ->
   Text ->
   Text ->
+  HighPrecMoney -> -- Final amount to settle at (may differ from hold amount)
   m (Either FinanceError ())
-settlePrepaidHoldByReference counterpartyType ownerId referenceId = do
+settlePrepaidHoldByReference counterpartyType ownerId referenceId finalAmount = do
   mbOwnerAccount <- getPrepaidAccountByOwner counterpartyType ownerId
   case mbOwnerAccount of
     Nothing -> pure $ Right ()
@@ -300,11 +301,12 @@ settlePrepaidHoldByReference counterpartyType ownerId referenceId = do
               entries
       foldM
         ( \_ entry -> do
-            resFrom <- updateBalanceByDelta entry.fromAccountId (-1 * entry.amount)
+            let settleAmount = finalAmount
+            resFrom <- updateBalanceByDelta entry.fromAccountId (-1 * settleAmount)
             case resFrom of
               Left err -> pure $ Left err
               Right _ -> do
-                resTo <- updateBalanceByDelta entry.toAccountId entry.amount
+                resTo <- updateBalanceByDelta entry.toAccountId settleAmount
                 case resTo of
                   Left err -> pure $ Left err
                   Right _ -> do
@@ -422,6 +424,10 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                     issuedById = invoiceParams.issuedById,
                     issuedByName = invoiceParams.issuedByName,
                     issuedByAddress = invoiceParams.issuedByAddress,
+                    supplierName = Nothing,
+                    supplierAddress = Nothing,
+                    supplierGSTIN = Nothing,
+                    supplierId = Nothing,
                     gstinOfParty = invoiceParams.gstinOfParty,
                     lineItems =
                       let gstAmount' = max 0 gstAmount
@@ -471,22 +477,21 @@ debitPrepaidBalance ::
   (BeamFlow m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
-  HighPrecMoney -> -- Ride amount
+  HighPrecMoney -> -- Final ride fare (base fare for settlement)
   HighPrecMoney -> -- Revenue recognition amount
   Currency ->
   Text -> -- Merchant ID
   Text -> -- Merchant operating city ID
-  Text -> -- Ride reference ID
-  Text -> -- Hold reference ID
+  Text -> -- Reference ID (booking ID)
   Maybe Value ->
   m (Either FinanceError HighPrecMoney)
-debitPrepaidBalance counterpartyType ownerId _rideAmount revenueAmount currency merchantId merchantOperatingCityId rideReferenceId holdReferenceId _metadata = do
+debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency merchantId merchantOperatingCityId referenceId _metadata = do
   mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
   mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
   mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
   case (mbOwnerAccount, mbSellerLiability, mbSellerRevenue) of
     (Right ownerAccount, Right sellerLiability, Right sellerRevenue) -> do
-      holdRes <- settlePrepaidHoldByReference counterpartyType ownerId holdReferenceId
+      holdRes <- settlePrepaidHoldByReference counterpartyType ownerId referenceId finalFare
       case holdRes of
         Left err -> pure $ Left err
         Right _ -> do
@@ -500,7 +505,7 @@ debitPrepaidBalance counterpartyType ownerId _rideAmount revenueAmount currency 
                       entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
                       status = SETTLED,
                       referenceType = subscriptionRideReferenceType,
-                      referenceId = rideReferenceId,
+                      referenceId = referenceId,
                       metadata = Nothing,
                       merchantId = merchantId,
                       merchantOperatingCityId = merchantOperatingCityId

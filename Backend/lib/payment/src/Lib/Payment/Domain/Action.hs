@@ -336,7 +336,8 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId mbExistingOrde
             effectAmount = Nothing,
             isMockPayment = Just False,
             paytmTid = Nothing,
-            groupId = Nothing
+            groupId = Nothing,
+            vpa = Nothing
           }
 
     buildTransaction ::
@@ -691,7 +692,8 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             effectAmount = Nothing,
             isMockPayment = Just isMockPayment,
             paytmTid = Nothing,
-            groupId = mbGroupId
+            groupId = mbGroupId,
+            vpa = Nothing
           }
   buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
   pure mkPaymentOrder
@@ -1307,7 +1309,8 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             effectAmount = Nothing,
             isMockPayment = Just False,
             paytmTid = Nothing,
-            groupId = Nothing
+            groupId = Nothing,
+            vpa = Nothing
           }
 
 --- refunds api ----

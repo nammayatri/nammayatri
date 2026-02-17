@@ -31,6 +31,10 @@ data Invoice = Invoice
     paymentOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Lib.Finance.Domain.Types.Invoice.InvoiceStatus,
     subtotal :: Kernel.Types.Common.HighPrecMoney,
+    supplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierGSTIN :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     taxBreakdown :: Kernel.Prelude.Maybe Data.Aeson.Value,
     totalAmount :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime

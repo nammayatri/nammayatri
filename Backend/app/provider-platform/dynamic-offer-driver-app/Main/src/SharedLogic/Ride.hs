@@ -90,7 +90,10 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     whenJust mFleetOwnerId $ \fleetOwnerId -> do
       Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
         mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyFleetOwner fleetOwnerId.getId
-        let rideFare = booking.estimatedFare
+        let gstAmount = fromMaybe 0 booking.fareParams.govtCharges
+            tollAmount = fromMaybe 0 booking.fareParams.tollCharges
+            parkingAmount = fromMaybe 0 booking.fareParams.parkingCharge
+            rideFare = booking.estimatedFare - gstAmount - tollAmount - parkingAmount
             threshold = fromMaybe 0 transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
             balance = fromMaybe 0 mbAvailableBalance
         when (balance < rideFare + threshold) $ throwError (InvalidRequest "Low fleet balance.")

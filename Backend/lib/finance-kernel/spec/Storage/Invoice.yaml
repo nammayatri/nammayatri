@@ -33,6 +33,10 @@ Invoice:
     issuedById: Text
     issuedByName: Maybe Text
     issuedByAddress: Maybe Text
+    supplierName: Maybe Text
+    supplierAddress: Maybe Text
+    supplierGSTIN: Maybe Text
+    supplierId: Maybe Text
     lineItems: Value
     subtotal: HighPrecMoney
     taxBreakdown: Maybe Value

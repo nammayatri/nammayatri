@@ -61,6 +61,10 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.paymentOrderId paymentOrderId,
       Se.Set Beam.status status,
       Se.Set Beam.subtotal subtotal,
+      Se.Set Beam.supplierAddress supplierAddress,
+      Se.Set Beam.supplierGSTIN supplierGSTIN,
+      Se.Set Beam.supplierId supplierId,
+      Se.Set Beam.supplierName supplierName,
       Se.Set Beam.taxBreakdown taxBreakdown,
       Se.Set Beam.totalAmount totalAmount,
       Se.Set Beam.updatedAt _now

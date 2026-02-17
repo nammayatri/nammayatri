@@ -40,6 +40,7 @@ import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Trip
 import Environment (Flow)
 import EulerHS.Prelude
+import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -69,9 +70,11 @@ import SharedLogic.Ride (calculateEstimatedEndTimeRange)
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -244,6 +247,9 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                        )
                       then DPR.INITIATED
                       else DPR.CASH_PENDING
+              person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+              phoneNo <- mapM decrypt person.mobileNumber
+              merchantOperatingCity <- CQMOC.findById ride.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound ride.merchantOperatingCityId.getId)
               let payoutRequest =
                     DPR.PayoutRequest
                       { id = payoutRequestId,
@@ -261,10 +267,17 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                         cashMarkedAt = Nothing,
                         expectedCreditTime = if payoutStatus == DPR.INITIATED then Just scheduledTime else Nothing,
                         scheduledAt = if payoutStatus == DPR.INITIATED then Just scheduledTime else Nothing,
+                        customerVpa = driverInfo.payoutVpa,
+                        customerPhone = phoneNo,
+                        customerEmail = person.email,
+                        customerName = Just person.firstName,
+                        remark = Just "Payout for Airport Ride",
+                        orderType = Just "FULFILL_ONLY",
+                        city = Just (show merchantOperatingCity.city),
                         createdAt = now,
                         updatedAt = now,
-                        merchantId = Just booking.providerId.getId,
-                        merchantOperatingCityId = Just ride.merchantOperatingCityId.getId
+                        merchantId = booking.providerId.getId,
+                        merchantOperatingCityId = ride.merchantOperatingCityId.getId
                       }
               PayoutRequest.createPayoutRequest payoutRequest
               when (payoutStatus == DPR.INITIATED) $ do

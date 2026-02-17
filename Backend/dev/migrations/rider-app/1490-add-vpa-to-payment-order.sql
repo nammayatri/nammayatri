@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.payout_order ADD COLUMN IF NOT EXISTS vpa TEXT;

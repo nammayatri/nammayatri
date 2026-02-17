@@ -6,16 +6,16 @@ import Data.Time.Calendar
 import qualified Domain.Action.UI.Driver as DD
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DS
-import qualified Domain.Types.DriverFee as DFee
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
-import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
+import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Payment.Types as PaymentTypes
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (ServiceFlow)
@@ -28,10 +28,10 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
+import qualified Lib.Payment.Payout.Registration as Registration
 import qualified Lib.Payment.Payout.Status as PayoutStatus
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDS
@@ -41,8 +41,8 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TP
-import Utils.Common.Cac.KeyNameConstants
 
 getPayoutReferralEarnings ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -112,11 +112,35 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   unless payoutConfig.isPayoutEnabled $ throwError $ InvalidRequest "Payout Registration is Not Enabled"
-  let (fee, cgst, sgst) = (payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst)
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (Kernel.Types.Id.cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  clearDuesRes <- DD.clearDriverFeeWithCreate (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION (fee, Just cgst, Just sgst) DFee.PAYOUT_REGISTRATION transporterConfig.currency Nothing False
-  DrInfo.updatePayoutRegistrationOrderId (Just clearDuesRes.orderId.getId) personId
-  pure clearDuesRes
+
+  -- Get driver details for creating the payment order
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  let driverEmail = fromMaybe "test@juspay.in" person.email
+
+  -- Get Juspay createOrder call
+  paymentServiceName <- TPayment.decidePaymentService (DEMSC.PaymentService PaymentTypes.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+  (createOrderCall, _pseudoClientId) <- TPayment.createOrder merchantId merchantOpCityId paymentServiceName (Just person.id.getId)
+
+  -- Delegate to lib
+  regResult <-
+    Registration.initiateRegistration
+      (Kernel.Types.Id.cast merchantId)
+      (Just $ Kernel.Types.Id.cast merchantOpCityId)
+      (Kernel.Types.Id.cast personId)
+      createOrderCall
+      driverPhone
+      driverEmail
+      (Just person.firstName)
+      person.lastName
+
+  -- Store orderId on DriverInformation
+  DrInfo.updatePayoutRegistrationOrderId (Just regResult.orderId.getId) personId
+  pure $
+    DD.ClearDuesRes
+      { orderId = Kernel.Types.Id.cast regResult.orderId,
+        orderResp = regResult.orderResp
+      }
 
 postPayoutCreateOrder ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

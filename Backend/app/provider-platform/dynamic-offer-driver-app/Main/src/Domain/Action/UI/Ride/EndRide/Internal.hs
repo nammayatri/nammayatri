@@ -310,18 +310,22 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
       tollAmount = fromMaybe 0 newFareParams.tollCharges
       parkingAmount = fromMaybe 0 newFareParams.parkingCharge
       baseFare = totalFare - gstAmount - tollAmount - parkingAmount
-      baseFareWithGST = baseFare + gstAmount
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
 
-  -- Determine driver's active service name
-  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
+  -- Determine owner type and subscription
+  (ownerType, ownerId) <- case ride.fleetOwnerId of
+    Just fleetOwnerId -> pure (DSP.FLEET_OWNER, fleetOwnerId.getId)
+    Nothing -> do
+      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      if DCommon.checkFleetOwnerRole person.role
+        then pure (DSP.FLEET_OWNER, person.id.getId)
+        else pure (DSP.DRIVER, person.id.getId)
   mbPrepaidPurchase <- QSPE.findLatestActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
   let serviceName = if isJust mbPrepaidPurchase then PREPAID_SUBSCRIPTION else YATRI_SUBSCRIPTION
 
   -- 1. Subscription Flow — route by serviceName
   case serviceName of
-    PREPAID_SUBSCRIPTION -> processEndRidePrepaidSubscription baseFareWithGST
+    PREPAID_SUBSCRIPTION -> processEndRidePrepaidSubscription baseFare
     _ | thresholdConfig.subscription -> createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
     _ -> pure ()
 
@@ -343,7 +347,6 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 ride.currency
                 booking.providerId.getId
                 booking.merchantOperatingCityId.getId
-                ride.id.getId
                 booking.id.getId
                 Nothing
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
@@ -360,7 +363,6 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 ride.currency
                 booking.providerId.getId
                 booking.merchantOperatingCityId.getId
-                ride.id.getId
                 booking.id.getId
                 Nothing
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
@@ -377,9 +379,14 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
               sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
 
     getPrepaidRevenueAmount fare = do
-      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
-      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+      (ownerType', ownerId') <- case ride.fleetOwnerId of
+        Just fleetOwnerId -> pure (DSP.FLEET_OWNER, fleetOwnerId.getId)
+        Nothing -> do
+          person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          if DCommon.checkFleetOwnerRole person.role
+            then pure (DSP.FLEET_OWNER, person.id.getId)
+            else pure (DSP.DRIVER, person.id.getId)
+      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName ownerId' ownerType' PREPAID_SUBSCRIPTION
       let mbSyntheticPlan = Plan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
       plan <- getPlan mbSyntheticPlan PREPAID_SUBSCRIPTION booking.merchantOperatingCityId Nothing Nothing
       case plan of
@@ -481,6 +488,24 @@ createDriverWalletTransaction ride booking fareParams = do
       let issuedByAddress = Just $ show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
           issuedToAddress = booking.fromLocation.address.fullAddress
           issuedToId = maybe "" (.getId) booking.riderId
+
+      -- Fetch supplier details
+      (supplierName', supplierGSTIN', supplierId') <- case ride.fleetOwnerId of
+        Just fleetOwnerId -> do
+          mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+          pure
+            ( mbFleetInfo >>= (.fleetName),
+              mbFleetInfo >>= (.gstNumberDec),
+              Just fleetOwnerId.getId
+            )
+        Nothing -> do
+          driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+          pure
+            ( Just (driver.firstName <> maybe "" (" " <>) driver.lastName),
+              Nothing,
+              Just ride.driverId.getId
+            )
+
       let invoiceInput =
             InvoiceInput
               { invoiceType = Invoice.Ride,
@@ -493,6 +518,10 @@ createDriverWalletTransaction ride booking fareParams = do
                 issuedById = mid,
                 issuedByName = Just merchant.name,
                 issuedByAddress = issuedByAddress,
+                supplierName = supplierName',
+                supplierAddress = issuedByAddress,
+                supplierGSTIN = supplierGSTIN',
+                supplierId = supplierId',
                 gstinOfParty = Nothing,
                 lineItems =
                   catMaybes

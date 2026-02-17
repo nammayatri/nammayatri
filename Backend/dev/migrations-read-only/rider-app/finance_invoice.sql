@@ -34,3 +34,11 @@ ALTER TABLE atlas_app.finance_invoice ADD COLUMN payment_order_id text ;
 
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN issued_to_address text ;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN issued_by_address text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN supplier_name text ;
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN supplier_id text ;
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN supplier_gstin text ;
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN supplier_address text ;

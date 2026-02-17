@@ -46,7 +46,7 @@ mkConfig (personId, merchantId, merchantOpCityId) =
     ensureDriverAccess payoutRequest = do
       when (payoutRequest.beneficiaryId /= Id.getId personId) $
         throwError $ InvalidRequest "Unauthorized: You can only view your own payouts"
-      when (maybe False (/= Id.getId merchantId) payoutRequest.merchantId) $
+      when (payoutRequest.merchantId /= Id.getId merchantId) $
         throwError $ InvalidRequest "Invalid merchant for payout request"
-      when (maybe False (/= Id.getId merchantOpCityId) payoutRequest.merchantOperatingCityId) $
+      when (payoutRequest.merchantOperatingCityId /= Id.getId merchantOpCityId) $
         throwError $ InvalidRequest "Invalid merchant operating city for payout request"

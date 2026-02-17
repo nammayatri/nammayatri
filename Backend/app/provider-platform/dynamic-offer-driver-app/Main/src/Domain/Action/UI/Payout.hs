@@ -20,6 +20,7 @@ module Domain.Action.UI.Payout
   )
 where
 
+import qualified Data.Aeson as A
 import Data.Time (utctDay)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DailyStats as DS
@@ -55,8 +56,10 @@ import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
+import SharedLogic.Finance.Prepaid (counterpartyDriver)
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
+import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -186,9 +189,42 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                     SLDriverFee.adjustDues dueDriverFees
               Just DPayment.DRIVER_WALLET_TRANSACTION -> do
                 let driverId = Id payoutOrder.customerId
+                -- Look up PayoutRequest for state tracking
+                let mbPayoutRequestId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
+                mbPayoutReq <- case mbPayoutRequestId of
+                  Nothing -> pure Nothing
+                  Just prId -> QPR.findById (Id prId)
+
                 Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
-                  unless (isSuccessStatus payoutStatus) $ do
-                    reverseWalletEntryByReference walletReferencePayout payoutOrder.id.getId "Payout failed"
+                  when (isSuccessStatus payoutStatus) $ do
+                    -- Create wallet debit ledger entry only on confirmed success
+                    transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+                    let metadata =
+                          A.object
+                            [ "driverPayable" A..= (-1 * amount),
+                              "payoutOrderId" A..= payoutOrder.id.getId
+                            ]
+                    void $
+                      createWalletEntryDelta
+                        counterpartyDriver
+                        driverId.getId
+                        (negate amount)
+                        transporterConfig.currency
+                        payoutOrder.merchantId
+                        merchantOperatingCityId.getId
+                        walletReferencePayout
+                        payoutOrder.id.getId
+                        (Just metadata)
+                        >>= fromEitherM (\err -> InternalError ("Failed to create wallet payout entry: " <> show err))
+
+                  -- Update PayoutRequest status
+                  whenJust mbPayoutReq $ \payoutReq -> do
+                    let newStatus = castPayoutOrderStatusToPayoutRequestStatus payoutStatus
+                    when (payoutReq.status /= newStatus && payoutReq.status `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]) $ do
+                      let statusMsg = "Bank Webhook: " <> show payoutStatus
+                      PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutReq
+
+                  -- Notify driver
                   person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
                   let (notificationTitle, notificationMessage, notificationType) =
                         if isSuccessStatus payoutStatus

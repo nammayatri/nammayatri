@@ -5,6 +5,7 @@ module API.Types.Dashboard.AppManagement where
 
 import qualified API.Types.Dashboard.AppManagement.Driver
 import qualified API.Types.Dashboard.AppManagement.DriverSubscription
+import qualified API.Types.Dashboard.AppManagement.DriverWallet
 import qualified API.Types.Dashboard.AppManagement.Overlay
 import qualified API.Types.Dashboard.AppManagement.Penalty
 import qualified API.Types.Dashboard.AppManagement.Subscription
@@ -19,6 +20,7 @@ import qualified Text.Show
 data AppManagementUserActionType
   = DRIVER API.Types.Dashboard.AppManagement.Driver.DriverUserActionType
   | DRIVER_SUBSCRIPTION API.Types.Dashboard.AppManagement.DriverSubscription.DriverSubscriptionUserActionType
+  | DRIVER_WALLET API.Types.Dashboard.AppManagement.DriverWallet.DriverWalletUserActionType
   | OVERLAY API.Types.Dashboard.AppManagement.Overlay.OverlayUserActionType
   | PENALTY API.Types.Dashboard.AppManagement.Penalty.PenaltyUserActionType
   | SUBSCRIPTION API.Types.Dashboard.AppManagement.Subscription.SubscriptionUserActionType
@@ -30,6 +32,7 @@ instance Text.Show.Show AppManagementUserActionType where
   show = \case
     DRIVER e -> "DRIVER/" <> show e
     DRIVER_SUBSCRIPTION e -> "DRIVER_SUBSCRIPTION/" <> show e
+    DRIVER_WALLET e -> "DRIVER_WALLET/" <> show e
     OVERLAY e -> "OVERLAY/" <> show e
     PENALTY e -> "PENALTY/" <> show e
     SUBSCRIPTION e -> "SUBSCRIPTION/" <> show e
@@ -46,6 +49,15 @@ instance Text.Read.Read AppManagementUserActionType where
                  )
                  | r1 <- stripPrefix "DRIVER_SUBSCRIPTION/" r,
                    (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( DRIVER_WALLET v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "DRIVER_WALLET/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( OVERLAY v1,
                    r2

@@ -138,6 +138,7 @@ PayoutRequest:
   types:
     PayoutRequestStatus:
       enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED,CANCELLED,CASH_PAID,CASH_PENDING"
+      derive: "ToParamSchema"
   fields:
     id: Id PayoutRequest
     entityName: Maybe EntityName
@@ -154,10 +155,19 @@ PayoutRequest:
     cashMarkedById: Maybe Text
     cashMarkedByName: Maybe Text
     cashMarkedAt: Maybe UTCTime
-    merchantId: Maybe Text
-    merchantOperatingCityId: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    customerVpa: Maybe Text
+    customerPhone: Maybe Text
+    customerEmail: Maybe Text
+    customerName: Maybe Text
+    remark: Maybe Text
+    orderType: Maybe Text
+    city: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PayoutRequestStatus>
   sqlType:
     id: character varying(36)
     createdAt: timestamp with time zone

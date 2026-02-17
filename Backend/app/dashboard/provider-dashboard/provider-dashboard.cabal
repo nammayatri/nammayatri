@@ -37,6 +37,7 @@ library
       App
       Domain.Action.ProviderPlatform.AppManagement.Driver
       Domain.Action.ProviderPlatform.AppManagement.DriverSubscription
+      Domain.Action.ProviderPlatform.AppManagement.DriverWallet
       Domain.Action.ProviderPlatform.AppManagement.Overlay
       Domain.Action.ProviderPlatform.AppManagement.Penalty
       Domain.Action.ProviderPlatform.AppManagement.Subscription
@@ -87,6 +88,7 @@ library
       API.Action.ProviderPlatform.AppManagement
       API.Action.ProviderPlatform.AppManagement.Driver
       API.Action.ProviderPlatform.AppManagement.DriverSubscription
+      API.Action.ProviderPlatform.AppManagement.DriverWallet
       API.Action.ProviderPlatform.AppManagement.Overlay
       API.Action.ProviderPlatform.AppManagement.Penalty
       API.Action.ProviderPlatform.AppManagement.Subscription

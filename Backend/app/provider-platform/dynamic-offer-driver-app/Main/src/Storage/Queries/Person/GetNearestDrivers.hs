@@ -254,14 +254,14 @@ filterDriversBySufficientBalance merchant rideFare fleetPrepaidSubscriptionThres
   if not isPrepaidSubscriptionAndWalletEnabled
     then pure driverInfos_
     else case rideFare of
-    Just fare -> do
-      fleetAssociations <- QFDA.findAllByDriverIds (driverInfos_ <&> (.driverId))
-      let fleetOwnerIds = fleetAssociations <&> (.fleetOwnerId)
-      fleetOwners <- QFOI.findAllByPrimaryKeys (map Id fleetOwnerIds)
-      let fleetOwnerMap = HashMap.fromList $ map (\fo -> (fo.fleetOwnerPersonId, fo)) fleetOwners
-          fleetAssociationMap = HashMap.fromList $ map (\fa -> (fa.driverId, fa)) fleetAssociations
-      filterM (hasSufficientBalance fare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold fleetAssociationMap fleetOwnerMap) driverInfos_
-    Nothing -> pure driverInfos_
+      Just fare -> do
+        fleetAssociations <- QFDA.findAllByDriverIds (driverInfos_ <&> (.driverId))
+        let fleetOwnerIds = fleetAssociations <&> (.fleetOwnerId)
+        fleetOwners <- QFOI.findAllByPrimaryKeys (map Id fleetOwnerIds)
+        let fleetOwnerMap = HashMap.fromList $ map (\fo -> (fo.fleetOwnerPersonId, fo)) fleetOwners
+            fleetAssociationMap = HashMap.fromList $ map (\fa -> (fa.driverId, fa)) fleetAssociations
+        filterM (hasSufficientBalance fare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold fleetAssociationMap fleetOwnerMap) driverInfos_
+      Nothing -> pure driverInfos_
 
 filterDriversByMinWalletBalance ::
   (EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
@@ -275,8 +275,8 @@ filterDriversByMinWalletBalance merchant minWalletAmountForCashRides paymentInst
   if not isPrepaidSubscriptionAndWalletEnabled
     then pure driverInfos_
     else case minWalletAmountForCashRides of
-    Just minAmt | shouldCheckWalletBalance paymentInstrument -> filterM (hasMinWalletBalance minAmt) driverInfos_
-    _ -> pure driverInfos_
+      Just minAmt | shouldCheckWalletBalance paymentInstrument -> filterM (hasMinWalletBalance minAmt) driverInfos_
+      _ -> pure driverInfos_
   where
     shouldCheckWalletBalance = \case
       Nothing -> True
