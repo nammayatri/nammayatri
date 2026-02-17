@@ -36,6 +36,9 @@ import qualified Kernel.External.IncidentReport as IncidentReport
 import Kernel.External.IncidentReport.Interface.Types as IncidentReportTypes
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
+import qualified Kernel.External.SOS as PoliceSOS
+import qualified Kernel.External.SOS.Interface.Types as SOSInterface
+import qualified Kernel.External.SOS.Types as SOS
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.ServantMultipart
@@ -56,6 +59,7 @@ import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QBooking
@@ -149,17 +153,32 @@ postSosCreate (mbPersonId, _merchantId) req = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   Redis.del $ CQSos.mockSosKey personId
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  whenJust riderConfig.externalSOSConfig $ \sosConfig -> do
+    when (sosConfig.triggerSource == DRC.FRONTEND) $ do
+      let sosServiceType = flowToSOSService sosConfig.flow
+      merchantSvcCfg <-
+        QMSC.findByMerchantOpCityIdAndService person.merchantId person.merchantOperatingCityId (DMSC.SOSService sosServiceType)
+          >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantOperatingCityId.getId "SOS" (show sosServiceType))
+      case merchantSvcCfg.serviceConfig of
+        DMSC.SOSServiceConfig specificConfig -> do
+          mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
+          emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+          merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+          externalSOSDetails <- buildExternalSOSDetails req person sosConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
+          void $ PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
+        _ -> throwError $ InternalError "Invalid SOS Service Config for provider"
   (sosId, trackLink, mbRideEndTime) <- case req.rideId of
     Just rideId -> do
       ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
       booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-      riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-      let trackLink' = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
-      let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig.timeDiffFromUtc) <$> ride.rideEndTime
-      sosId' <- createTicketForNewSos person ride riderConfig trackLink' req
+      riderConfig' <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      let trackLink' = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig'.trackingShortUrlPattern
+      let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig'.timeDiffFromUtc) <$> ride.rideEndTime
+      sosId' <- createTicketForNewSos person ride riderConfig' trackLink' req
       return (sosId', trackLink', localRideEndTime)
     Nothing -> do
-      riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      riderConfig'' <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
       sosDetails <- SIVR.buildSosDetails person req Nothing
       now <- getCurrentTime
       let eightHoursInSeconds :: Int = 8 * 60 * 60
@@ -169,7 +188,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
 
       whenJust req.customerLocation $ \location -> do
         SOSLocation.updateSosRiderLocation sosDetailsWithEntityType.id location Nothing (Just trackingExpiresAt)
-      let finalTrackLink = buildSosTrackingUrl sosDetailsWithEntityType.id riderConfig.trackingShortUrlPattern
+      let finalTrackLink = buildSosTrackingUrl sosDetailsWithEntityType.id riderConfig''.trackingShortUrlPattern
       return (sosDetailsWithEntityType.id, finalTrackLink, Nothing)
   buildSmsReq <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
@@ -766,3 +785,81 @@ postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
         void $ callUpdateTicket person sosDetails $ Just "SOS State Updated"
 
       pure APISuccess.Success
+
+buildExternalSOSDetails ::
+  ( EncFlow m r,
+    MonadFlow m
+  ) =>
+  SosReq ->
+  Person.Person ->
+  DRC.ExternalSOSConfig ->
+  Maybe DRide.Ride ->
+  [DPDEN.PersonDefaultEmergencyNumberAPIEntity] ->
+  DMOC.MerchantOperatingCity ->
+  DRC.RiderConfig ->
+  m SOSInterface.InitialSOSReq
+buildExternalSOSDetails req person sosConfig mbRide emergencyContacts merchantOpCity riderConfig = do
+  now <- getCurrentTime
+  mobileNo <- fmap (fromMaybe "0000000000") $ traverse decrypt person.mobileNumber
+  let (lat, lon) =
+        if sosConfig.latLonRequired
+          then case req.customerLocation of
+            Just loc -> (loc.lat, loc.lon)
+            Nothing -> (0.0, 0.0)
+          else (0.0, 0.0)
+  let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" now
+  let trackLink = case mbRide of
+        Just ride -> Just $ Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
+        Nothing -> Nothing
+  let (ec1Name, ec1Phone, ec2Name, ec2Phone) = case emergencyContacts of
+        (c1 : c2 : _) -> (Just c1.name, Just c1.mobileNumber, Just c2.name, Just c2.mobileNumber)
+        (c1 : _) -> (Just c1.name, Just c1.mobileNumber, Nothing, Nothing)
+        _ -> (Nothing, Nothing, Nothing, Nothing)
+  return $
+    SOSInterface.InitialSOSReq
+      { sosId = Nothing,
+        dateTime = dateTimeStr,
+        latitude = lat,
+        longitude = lon,
+        speed = Nothing,
+        mobileNo = mobileNo,
+        imeiNo = Nothing,
+        gpsProvider = Nothing,
+        senderName = person.firstName,
+        address = Nothing,
+        gpsAccuracy = Nothing,
+        stateCode = Nothing,
+        silentCommunication = Nothing,
+        specialNeeds = Nothing,
+        dob = Nothing,
+        gender = Just $ T.pack $ show person.gender,
+        attachmentFileName = Nothing,
+        -- Ride context
+        driverName = (.driverName) <$> mbRide,
+        driverContactNo = (.driverMobileNumber) <$> mbRide,
+        vehicleNo = (.vehicleNumber) <$> mbRide,
+        vehicleModel = (.vehicleModel) <$> mbRide,
+        vehicleColor = mbRide >>= (.vehicleColor),
+        vehicleType = (T.pack . show . (.vehicleVariant)) <$> mbRide,
+        vehicleMake = Nothing,
+        vehicleAppearanceNotes = Nothing,
+        vehicleLat = Nothing,
+        vehicleLon = Nothing,
+        vehicleLocationUrl = trackLink,
+        videoPath = Nothing,
+        -- Emergency contacts
+        emergencyContact1Name = ec1Name,
+        emergencyContact1Phone = ec1Phone,
+        emergencyContact2Name = ec2Name,
+        emergencyContact2Phone = ec2Phone,
+        -- Additional context
+        city = Just $ T.pack $ show merchantOpCity.city,
+        emergencyMessage = Just "SOS Emergency",
+        email = Nothing,
+        vendorName = Just "Namma Yatri",
+        deviceType = Just 2
+      }
+
+flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
+flowToSOSService DRC.ERSS = SOS.ERSS
+flowToSOSService DRC.GJ112 = SOS.GJ112
