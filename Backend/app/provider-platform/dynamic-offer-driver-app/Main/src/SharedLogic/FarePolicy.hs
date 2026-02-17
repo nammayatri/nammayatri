@@ -114,7 +114,7 @@ getFarePolicyOnEndRide mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeoha
     handleFarePolicy = do
       dropSpecialLocation <- Esq.runInReplica (QSpecialLocation.findSpecialLocationByLatLong' toLocationLatLong) >>= mapM (FareProduct.getDropSpecialLocation merchantOpCityId)
       let isDropSpecialLocation = (Just . SL.Drop . DSpecialLocation.id . fst) =<< dropSpecialLocation
-          dropSpecialLocName = ((.locationName) . fst) <$> dropSpecialLocation
+          dropSpecialLocName = (.locationName) . fst <$> dropSpecialLocation
       selectedFarePolicy' <-
         if isJust isDropSpecialLocation && area /= isDropSpecialLocation
           then getFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration merchantOpCityId (fromMaybe False isDashboardRequest) tripCategory vehicleServiceTier isDropSpecialLocation mbBookingStartTime mbAppDynamicLogicVersion txnId configInExperimentVersions dropSpecialLocName
@@ -383,6 +383,9 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       petChargesCaption = show Tags.PET_CHARGES
       petChargesItem = mkBreakupItem petChargesCaption . (mkValue . show) <$> farePolicy.petCharges
 
+      driverAllowanceCaption = show Tags.DRIVER_ALLOWANCE
+      driverAllowanceItem = mkBreakupItem driverAllowanceCaption . (mkValue . show) <$> farePolicy.driverAllowance
+
       businessDiscountCaption = show Tags.BUSINESS_DISCOUNT_PERCENTAGE
       businessDiscountItem = mkBreakupItem businessDiscountCaption . (mkValue . show) <$> farePolicy.businessDiscountPercentage
 
@@ -465,6 +468,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       personalDiscountItem,
       driverMaxExtraFeeItem,
       petChargesItem,
+      driverAllowanceItem,
       priorityChargesItem,
       nightShiftStartItem,
       nightShiftEndItem,

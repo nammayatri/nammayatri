@@ -1356,6 +1356,7 @@ postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
             perMinuteRideExtraTimeCharge = (req.perMinuteRideExtraTimeChargeWithCurrency <&> (.amount)) <|> req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
             tollCharges = req.tollCharges <|> tollCharges,
             petCharges = req.petCharges <|> petCharges,
+            driverAllowance = req.driverAllowance <|> driverAllowance,
             priorityCharges = req.priorityCharges <|> priorityCharges,
             businessDiscountPercentage = req.businessDiscountPercentage <|> businessDiscountPercentage,
             personalDiscountPercentage = req.personalDiscountPercentage <|> personalDiscountPercentage,
@@ -1419,6 +1420,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     serviceCharge :: Text,
     tollCharges :: Text,
     petCharges :: Text,
+    driverAllowance :: Text,
     businessDiscountPercentage :: Text,
     personalDiscountPercentage :: Text,
     priorityCharges :: Text,
@@ -1522,6 +1524,7 @@ instance ToNamedRecord FarePolicyCSVRow where
         "service_charge" .= serviceCharge,
         "toll_charges" .= tollCharges,
         "pet_charges" .= petCharges,
+        "driver_allowance" .= driverAllowance,
         "business_discount_percentage" .= businessDiscountPercentage,
         "personal_discount_percentage" .= personalDiscountPercentage,
         "priority_charges" .= priorityCharges,
@@ -1624,6 +1627,7 @@ farePolicyCSVHeader =
       "service_charge",
       "toll_charges",
       "pet_charges",
+      "driver_allowance",
       "business_discount_percentage",
       "personal_discount_percentage",
       "priority_charges",
@@ -1726,6 +1730,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "service_charge"
       <*> r .: "toll_charges"
       <*> r .: "pet_charges"
+      <*> r .: "driver_allowance"
       <*> r .: "business_discount_percentage"
       <*> r .: "personal_discount_percentage"
       <*> r .: "priority_charges"
@@ -2017,6 +2022,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
               serviceCharge = maybe "" showT farePolicy.serviceCharge,
               tollCharges = maybe "" showT farePolicy.tollCharges,
               petCharges = maybe "" showT farePolicy.petCharges,
+              driverAllowance = maybe "" showT farePolicy.driverAllowance,
               businessDiscountPercentage = maybe "" showT farePolicy.businessDiscountPercentage,
               personalDiscountPercentage = maybe "" showT farePolicy.personalDiscountPercentage,
               priorityCharges = maybe "" showT farePolicy.priorityCharges,
@@ -2336,6 +2342,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let driverCancellationPenaltyAmount :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.driverCancellationPenaltyAmount "Driver Cancellation Penalty Amount"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"
+      let driverAllowance :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.driverAllowance "Driver Allowance"
       let businessDiscountPercentage :: (Maybe Double) = readMaybeCSVField idx row.businessDiscountPercentage "Business Discount Percentage"
       let personalDiscountPercentage :: (Maybe Double) = readMaybeCSVField idx row.personalDiscountPercentage "Personal Discount Percentage"
       let priorityCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.priorityCharges "Priority Charges"

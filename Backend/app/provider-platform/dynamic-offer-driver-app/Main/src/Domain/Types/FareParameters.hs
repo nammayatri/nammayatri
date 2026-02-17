@@ -43,6 +43,7 @@ data FareParameters = FareParameters
     tollCharges :: Maybe HighPrecMoney,
     congestionCharge :: Maybe HighPrecMoney,
     petCharges :: Maybe HighPrecMoney,
+    driverAllowance :: Maybe HighPrecMoney,
     businessDiscount :: Maybe HighPrecMoney,
     personalDiscount :: Maybe HighPrecMoney,
     priorityCharges :: Maybe HighPrecMoney,
