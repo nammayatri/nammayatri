@@ -1177,6 +1177,10 @@ TransporterConfig:
     allowedPaymentInstrumentForPayout: Maybe [PaymentInstrument]
     vehicleCategoryExcludedFromVerification: "Maybe [VehicleCategory]"
     linkFleetToUnVerifiedExistingRC: Maybe Bool
+    enableSupportForSafety: Maybe Bool
+    trackingShortUrlPattern: Maybe Text
+    dashboardMediaFileUrlPattern: Maybe Text
+    videoFileSizeUpperLimit: Maybe Int
     sendSmsOnEnablement: Maybe Bool # Controls whether SMS is sent to drivers/fleet owners when they are enabled
     reconciliationJobsEnabled: Maybe Bool # Enable reconciliation jobs for this merchant operating city
     reconciliationSchedulerTime: Maybe Seconds # Time of day to run reconciliation job (in seconds from midnight IST), e.g., 10800 = 3:00 AM IST
@@ -1631,6 +1635,10 @@ TransporterConfig:
     enableMobileNumberValidation: "false"
     allowRcUnlinkWhenDriverOffline: "false"
     vehicleCategoryExcludedFromVerification: "'{TOTO}'"
+    videoFileSizeUpperLimit: 15000000
+    enableSupportForSafety: "false"
+    trackingShortUrlPattern: "'nammayatri.in/t/'"
+    dashboardMediaFileUrlPattern: "'https://nammayatri.in/t/<FILE_PATH>'"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

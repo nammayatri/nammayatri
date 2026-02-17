@@ -16,3 +16,9 @@ ALTER TABLE atlas_driver_offer_bpp.safety_settings ADD COLUMN person_id characte
 ALTER TABLE atlas_driver_offer_bpp.safety_settings ADD COLUMN safety_center_disabled_on_date timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.safety_settings ADD COLUMN shake_to_activate boolean NOT NULL default false;
 ALTER TABLE atlas_driver_offer_bpp.safety_settings ADD PRIMARY KEY ( person_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.safety_settings ALTER COLUMN enable_post_ride_safety_check DROP DEFAULT;

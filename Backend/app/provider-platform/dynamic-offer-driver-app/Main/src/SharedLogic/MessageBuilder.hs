@@ -93,7 +93,7 @@ buildSendSmsReq merchantMessage vars = do
   let smsBody = foldl' (\msg (findKey, replaceVal) -> T.replace (templateText findKey) replaceVal msg) merchantMessage.message vars
       sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
       templateId = merchantMessage.templateId
-  return $ \phoneNumber -> Sms.SendSMSReq smsBody phoneNumber sender templateId
+  return $ \phoneNumber -> Sms.SendSMSReq smsBody phoneNumber sender templateId merchantMessage.messageType
 
 data BuildSendPaymentLinkReq = BuildSendPaymentLinkReq
   { paymentLink :: Text,
@@ -260,7 +260,9 @@ buildSOSAlertMessage ::
   m SmsReqBuilder
 buildSOSAlertMessage merchantOperatingCityId req = do
   let messageKey = if req.isRideEnded then DMM.POST_RIDE_SOS else DMM.SEND_SOS_ALERT
-      smsParams = if req.isRideEnded then [("userName", req.userName), ("rideEndTime", fromMaybe "" req.rideEndTime)] else [("userName", req.userName), ("rideLink", req.rideLink)]
+      -- Post-ride SMS: use a meaningful placeholder when rideEndTime is missing to avoid confusing empty text
+      rideEndTimeParam = fromMaybe "time unknown" req.rideEndTime
+      smsParams = if req.isRideEnded then [("userName", req.userName), ("rideEndTime", rideEndTimeParam)] else [("userName", req.userName), ("rideLink", req.rideLink)]
   merchantMessage <-
     QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show messageKey))
