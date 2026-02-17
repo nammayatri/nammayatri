@@ -31,7 +31,7 @@ getFollowRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Log m)
 getFollowRide (mbPersonId, _) = do
   id <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   emContacts <- PDEN.findAllByContactPersonId id
-  followList <- CQFollowRide.getFollowRideCounter id
+  followList <- runInMultiCloud $ CQFollowRide.getFollowRideCounter id
   let followingEmContacts = filter (\contact -> contact.personId.getId `elem` followList) emContacts
   foldlM
     ( \acc contact -> do
