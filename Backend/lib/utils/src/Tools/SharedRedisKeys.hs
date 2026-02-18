@@ -17,4 +17,4 @@ setBatchConfig id batchConfig = do
   Hedis.withCrossAppRedis $ Hedis.setExp (batchConfigKey id) batchConfig 600
 
 getBatchConfig :: CacheFlow m r => Text -> m (Maybe BatchConfig)
-getBatchConfig srId = Hedis.runInMultiCloudRedis False $ Hedis.withCrossAppRedis (Hedis.safeGet (batchConfigKey srId))
+getBatchConfig srId = Hedis.runInMultiCloudRedisMaybeResult $ Hedis.withCrossAppRedis (Hedis.safeGet (batchConfigKey srId))

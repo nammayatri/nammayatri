@@ -220,7 +220,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   whenJust (nonEmpty alreadySnappedPointsWithCurrentPoint) $ \alreadySnappedPointsWithCurrentPoint' -> do
                     deleteAndPushEditDestinationSnappedWayPoints ride.driverId alreadySnappedPointsWithCurrentPoint' -- deletes the existing snapped points and pushes the new snapped points for future update requests
                   deleteEditDestinationWaypoints ride.driverId
-                  reachedStopLocations <- Redis.runInMultiCloudRedis False $ Redis.withMasterRedis $ Redis.get (VID.mkReachedStopKey ride.id)
+                  reachedStopLocations <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get (VID.mkReachedStopKey ride.id)
                   let filteredStops = case reachedStopLocations of
                         Just reachedStops -> filter (\stop -> not (any (\reachedStop -> stop.lat == reachedStop.lat && stop.lon == reachedStop.lon) reachedStops)) stopLatLongs
                         Nothing -> stopLatLongs

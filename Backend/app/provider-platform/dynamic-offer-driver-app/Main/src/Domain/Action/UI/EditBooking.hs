@@ -71,8 +71,8 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
           dropLocMapRide <- SLM.buildLocationMapping' dropLocMapping.locationId ride.id.getId DLM.RIDE (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId) prevOrderforRide
           QLM.create dropLocMapBooking
           QLM.create dropLocMapRide
-          routeInfo :: RouteInfo <- Redis.runInMultiCloudRedis False (Redis.get (bookingRequestKeySoftUpdate booking.id.getId)) >>= fromMaybeM (InternalError $ "BookingRequestRoute not found for bookingId: " <> booking.id.getId)
-          multipleRoutes :: Maybe [RouteAndDeviationInfo] <- Redis.runInMultiCloudRedis False $ Redis.safeGet $ multipleRouteKeySoftUpdate booking.id.getId
+          routeInfo :: RouteInfo <- Redis.runInMultiCloudRedisMaybeResult (Redis.get (bookingRequestKeySoftUpdate booking.id.getId)) >>= fromMaybeM (InternalError $ "BookingRequestRoute not found for bookingId: " <> booking.id.getId)
+          multipleRoutes :: Maybe [RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.safeGet $ multipleRouteKeySoftUpdate booking.id.getId
           Redis.setExp (searchRequestKey booking.transactionId) routeInfo 3600
           whenJust multipleRoutes $ \allRoutes -> do
             Redis.setExp (multipleRouteKey booking.transactionId) allRoutes 3600
