@@ -230,7 +230,7 @@ generateAndEmailInvoice invoiceId person bookingAPIEntities merchantId email = d
   merchantOperatingCityId <- case bookingAPIEntities of
     (firstBooking : _) -> return firstBooking.merchantOperatingCityId
     [] -> throwError $ InvalidRequest "No bookings provided for invoice generation" -- This should never happen as we validate bookings exist
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
 
   -- Get fromEmail from rider config (use emailOtpConfig if available, otherwise default)
   let fromEmail = maybe "noreply@nammayatri.in" (.fromEmail) riderConfig.emailOtpConfig

@@ -51,6 +51,7 @@ import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as Person
 import Tools.Auth (TokenAuth)
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import Tools.Error
 import Tools.SignatureAuth (SignatureAuth, SignatureAuthResult (..))
 import Tools.SignatureResponseBody (SignedResponse)
@@ -164,16 +165,16 @@ resend :: Id SR.RegistrationToken -> Maybe Text -> FlowHandler DRegistration.Res
 resend tokenId mbSenderHash = withFlowHandlerAPI $ DRegistration.resend tokenId mbSenderHash
 
 generateTempAppCode :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DRegistration.TempCodeRes
-generateTempAppCode (perosnId, _) = withFlowHandlerAPI $ DRegistration.generateTempAppCode perosnId
+generateTempAppCode (perosnId, _) = withFlowHandlerAPIPersonId perosnId . withPersonIdLogTag perosnId $ DRegistration.generateTempAppCode perosnId
 
 makeSignature :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler (SignedResponse DRegistration.CustomerSignatureRes)
-makeSignature (personId, merchantId) = withFlowHandlerAPI $ DRegistration.makeSignature personId merchantId
+makeSignature (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRegistration.makeSignature personId merchantId
 
 logout :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
-logout (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRegistration.logout personId
+logout (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRegistration.logout personId
 
 sendBusinessEmailVerification :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
-sendBusinessEmailVerification (personId, merchantId) = withFlowHandlerAPI $ do
+sendBusinessEmailVerification (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   DRegistration.sendBusinessEmailVerification personId merchantId merchantOperatingCityId
@@ -184,7 +185,7 @@ _verifyBusinessEmailWithoutAuth req = withFlowHandlerAPI $ DRegistration.verifyB
 
 -- Verify business email with auth (for OTP entered in app)
 verifyBusinessEmailWithAuth :: (Id SP.Person, Id Merchant.Merchant) -> DRegistration.VerifyBusinessEmailReq -> FlowHandler DRegistration.VerifyBusinessEmailRes
-verifyBusinessEmailWithAuth (personId, _) req = withFlowHandlerAPI $ DRegistration.verifyBusinessEmail (Just personId) req
+verifyBusinessEmailWithAuth (personId, _) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRegistration.verifyBusinessEmail (Just personId) req
 
 -- Verify business email via magic link redirect (GET endpoint)
 verifyBusinessEmailRedirect :: Text -> FlowHandler HTMLResponse
@@ -224,7 +225,7 @@ verifyBusinessEmailRedirect token = withFlowHandlerAPI $ do
 
 -- Resend business email verification OTP
 resendBusinessEmailVerification :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
-resendBusinessEmailVerification (personId, merchantId) = withFlowHandlerAPI $ do
+resendBusinessEmailVerification (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   DRegistration.resendBusinessEmailVerification personId merchantId merchantOperatingCityId

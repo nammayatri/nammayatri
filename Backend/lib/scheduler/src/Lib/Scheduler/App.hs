@@ -81,6 +81,7 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   consumerId <- G.generateGUIDTextIO
   let requestId = Nothing
       sessionId = Nothing
+      txnId = Nothing
       shouldLogRequestId = False
   let cacheConfig = CacheConfig {configsExpTime = 0}
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)

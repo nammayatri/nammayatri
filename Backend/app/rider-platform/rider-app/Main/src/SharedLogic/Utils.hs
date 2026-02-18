@@ -20,11 +20,12 @@ import EulerHS.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Utils.Common
 import qualified Kernel.Utils.UUID as UUID
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 
 getStaticCustomerId :: (MonadFlow m, EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => DP.Person -> Text -> m Text
 getStaticCustomerId person phone = do
-  mbRiderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
   let mbThreshold = mbRiderConfig >>= (.staticCustomerIdThresholdDay)
   case mbThreshold of
     Just threshold ->
