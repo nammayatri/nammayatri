@@ -1769,10 +1769,13 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
             merchantId = person.merchantId
           }
   (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
-  directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
-  if null directRouteCodes
-    then JMU.measureLatency (handleOtpRoute routeServiceabilityContext srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
-    else JMU.measureLatency (handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
+  if (normalizeStopCode srcCode == normalizeStopCode destCode)
+  then do pure $ ApiTypes.RouteServiceabilityResp Nothing []
+  else do
+    directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
+    if null directRouteCodes
+      then JMU.measureLatency (handleOtpRoute routeServiceabilityContext srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
+      else JMU.measureLatency (handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
   where
     authenticate :: Maybe (Id Domain.Types.Person.Person) -> Environment.Flow Domain.Types.Person.Person
     authenticate mbPersonId' = do
@@ -2056,15 +2059,16 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       Text
     makeOtpResolvedRouteKey ctx srcCode destCode =
       "otp-resolved-route-"
-        <> show ctx.merchantOperatingCityId
+        <> show ctx.merchantOperatingCityId.getId
         <> "-"
-        <> normalize srcCode
+        <> normalizeStopCode srcCode
         <> "-"
-        <> normalize destCode
+        <> normalizeStopCode destCode
         <> "-"
         <> show ctx.integratedBPPConfig.id.getId
-      where
-        normalize = T.toUpper . T.strip
+
+    normalizeStopCode :: Text -> Text
+    normalizeStopCode = T.toUpper . T.strip
 
     resolveLegsViaOtpCached ::
       RouteServiceabilityContext ->
