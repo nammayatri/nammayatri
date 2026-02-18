@@ -17,6 +17,7 @@ module Tools.Verification
     verifyDLAsync,
     verifyBankAccountAsync,
     verifyGstAsync,
+    verifyPanAsync,
     verifyUdyamAadhaarAsync,
     verifyRC,
     validateImage,
@@ -66,6 +67,7 @@ import Kernel.External.Verification as Reexport hiding
     verifyBankAccountAsync,
     verifyDLAsync,
     verifyGstAsync,
+    verifyPanAsync,
     verifyRC,
     verifySdkResp,
     verifyUdyamAadhaarAsync,
@@ -119,6 +121,18 @@ verifyGstAsync _ merchantOpCityId req = do
     CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyGstAsync req
+
+verifyPanAsync ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  VerifyPanAsyncReq ->
+  m VerifyPanAsyncResp
+verifyPanAsync _ merchantOpCityId req = do
+  merchantServiceUsageConfig <-
+    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyPanAsync req -- TODO: Using first element of priority list as of now would be soon replacing this with a proper fallback implementation.
 
 verifyUdyamAadhaarAsync ::
   ServiceFlow m r =>

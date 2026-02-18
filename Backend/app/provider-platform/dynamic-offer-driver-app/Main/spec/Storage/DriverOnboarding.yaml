@@ -878,6 +878,7 @@ DriverPanCard:
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     docType: Maybe PanType
     driverNameOnGovtDB: Maybe Text
+    panAadhaarLinkage: Maybe PanAadhaarLinkage
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey

@@ -58,6 +58,7 @@ import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import Storage.Queries.Person as QP
 import qualified Tools.Verification as Verification
+import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanCard
 
 -- FIXME this is temprorary solution for backward compatibility
 oldIdfyWebhookHandler ::
@@ -184,7 +185,11 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
             (Idfy.convertDLOutputToDLVerificationOutput resSrcOp.source_output)
             VT.Idfy
-        Idfy.PanResult _ -> pure Ack
+        Idfy.PanResult resSrcOp ->
+          PanCard.onVerifyPan
+            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            (Idfy.convertPanOutputToPanVerification resSrcOp.source_output)
+            VT.Idfy
         Idfy.GstResult resSrcOp -> do
           GstCard.onVerifyGst
             (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
