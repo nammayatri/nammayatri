@@ -49,7 +49,7 @@ buildMeaninglessIdfyResponse mbRes = do
   pure
     IdfyResponse
       { action = "action",
-        completed_at = now,
+        completed_at = Just now,
         created_at = now,
         group_id = "gid",
         request_id = reqId,
