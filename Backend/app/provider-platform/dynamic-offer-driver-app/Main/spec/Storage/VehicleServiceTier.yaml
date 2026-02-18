@@ -40,16 +40,19 @@ VehicleServiceTier:
     stopFcmSuppressCount: Maybe Int
     scheduleBookingListEligibilityTags: Maybe [Text]
     isEnabled: Maybe Bool
+    allowedAreas: Maybe [Text]
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]
     autoSelectedVehicleVariant: text[]
     driverRating: double precision
     vehicleIconUrl: character varying(255)
+    allowedAreas: text[]
   default:
     priority: '0'
     isEnabled: 'true'
     autoSelectedVehicleVariant: "'{}'"
+    allowedAreas: 'NULL'
   beamType:
     vehicleIconUrl: Maybe Text
   fromTType:
