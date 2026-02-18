@@ -1019,6 +1019,34 @@ DriverBankAccount:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+DriverUdyam :
+  tableName: driver_udyam
+  fields:
+    id: Id DriverUdyam
+    driverId: Id Person
+    udyamNumber: EncryptedHashedField e Text
+    enterpriseType: Maybe Text
+    enterpriseName : Maybe Text
+    verifiedBy: Maybe Domain.Types.DriverPanCard.VerifiedBy
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    verificationStatus: VerificationStatus
+  excludedFields: [merchantOperatingCityId]
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    # udyamNumberHash: "!SecondaryKey" # forcing to be a secondary key
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, updatedAt]
+      where: driverId
+
 DriverRidePayoutBankAccount:
   tableName: driver_ride_payout_bank_account
   fields:

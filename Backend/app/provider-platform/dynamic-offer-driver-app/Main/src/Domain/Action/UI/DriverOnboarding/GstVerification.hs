@@ -20,9 +20,11 @@ module Domain.Action.UI.DriverOnboarding.GstVerification
   )
 where
 
+import Control.Applicative (liftA2)
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import Data.Aeson hiding (Success)
 import Data.Text as T hiding (elem, find, length, map, null, zip)
+import Data.Tuple.Extra (both)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
@@ -30,6 +32,7 @@ import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverGstin as DGst
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.IdfyVerification as DIdfy
+import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -38,6 +41,7 @@ import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface as VI
+import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -48,23 +52,19 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
-import qualified Kernel.External.Verification.Types as VT
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverGstin as DGQuery
-import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
+import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
-import qualified Storage.Queries.Image as ImageQuery
-import qualified Domain.Types.IdfyVerification as Domain
-import Control.Applicative (liftA2)
-import Data.Tuple.Extra (both)
 
 data DriverGstinReq = DriverGstinReq
   { gstin :: Text,
@@ -108,7 +108,6 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
   let mbGstVerificationService =
         (if isDashboard then merchantServiceUsageConfig.dashboardGstVerificationService else merchantServiceUsageConfig.gstVerificationService)
   let runBody = do
-
         case mbGstVerificationService of
           Just VI.Idfy -> do
             mdriverGstInformation <- DGQuery.findByDriverId person.id
@@ -236,7 +235,6 @@ verifyGstFlow person merchantOpCityId documentVerificationConfig gstNumber image
     VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntityGst person imageId1 verifyRes.requestId now imageExtractionValidation encryptedGst
     _ -> throwError $ InternalError ("Service provider not configured to return GST verification async responses. Provider Name : " <> (show verifyRes.requestor))
   pure ()
-
 
 onVerifyGst :: VerificationReqRecord -> VT.GstVerificationResponse -> VT.VerificationService -> Flow AckResponse
 onVerifyGst verificationReq output serviceName = do
