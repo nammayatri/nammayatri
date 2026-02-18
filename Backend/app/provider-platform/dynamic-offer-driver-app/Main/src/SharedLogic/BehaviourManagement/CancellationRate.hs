@@ -14,6 +14,7 @@
 
 module SharedLogic.BehaviourManagement.CancellationRate where
 
+import Data.Time (UTCTime (..), utctDay)
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -28,11 +29,15 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.Scheduler.Environment
+import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.External.LocationTrackingService.Types
 import qualified SharedLogic.Person as SPerson
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 import Tools.Notifications as Notify
@@ -148,6 +153,43 @@ getCancellationRateOfDaysStandalone driverId period windowSize = do
   assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
   return (cancelledCount, assignedCount)
 
+-- Update driver cancellation percentage tags once per day
+-- Uses Redis to track last update time to ensure it runs only once per day per driver
+-- Takes pre-calculated cancellation rates to avoid redundant calculations
+updateDriverCancellationPercentageTagsDaily ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  Int ->
+  Int ->
+  m ()
+updateDriverCancellationPercentageTagsDaily mocId driverId dailyCancellationRate weeklyCancellationRate = do
+  now <- getCurrentTime
+  let today = utctDay now
+      redisKey = "driver-cancellation-tags-updated:" <> driverId.getId <> ":" <> show today
+
+  -- Check if already updated today
+  alreadyUpdated <- Redis.withCrossAppRedis $ Redis.get @Text redisKey
+  when (isNothing alreadyUpdated) $ do
+    -- Update tags using pre-calculated rates
+    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    let dailyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_1") (LYT.NumberValue $ fromIntegral dailyCancellationRate)
+        weeklyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_7") (LYT.NumberValue $ fromIntegral weeklyCancellationRate)
+
+    mbDailyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) dailyTag) (\(_ :: SomeException) -> pure Nothing)
+    mbWeeklyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) weeklyTag) (\(_ :: SomeException) -> pure Nothing)
+
+    let dailyTagWithExpiry = Yudhishthira.addTagExpiry dailyTag (mbDailyTag >>= \tag -> tag.validity) now
+        weeklyTagWithExpiry = Yudhishthira.addTagExpiry weeklyTag (mbWeeklyTag >>= \tag -> tag.validity) now
+        updatedTags = Yudhishthira.replaceTagNameValue (Just $ Yudhishthira.replaceTagNameValue driver.driverTag dailyTagWithExpiry) weeklyTagWithExpiry
+
+    unless (Just (Yudhishthira.showRawTags updatedTags) == (Yudhishthira.showRawTags <$> driver.driverTag)) $ do
+      QPerson.updateDriverTag (Just updatedTags) driverId
+      -- Mark as updated today (expires at end of day)
+      let secondsUntilMidnight = diffUTCTime (addUTCTime (fromIntegral (24 * 60 * 60 :: Int)) (UTCTime today 0)) now
+      Redis.withCrossAppRedis $ Redis.set redisKey ("1" :: Text) >> Redis.expire redisKey (round secondsUntilMidnight)
+      logDebug $ "Updated cancellation percentage tags for driver " <> driverId.getId
+
 nudgeOrBlockDriver ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c) =>
   TransporterConfig ->
@@ -215,6 +257,12 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
             nudgeDriver weeklyCancellationRate FCM.CANCELLATION_RATE_NUDGE_WEEKLY "CANCELLATION_RATE_NUDGE_WEEKLY"
           when (canNudgeDriver cancellationRateThresholdDaily dailyMinRidesforNudging dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount) $ do
             nudgeDriver dailyCancellationRate FCM.CANCELLATION_RATE_NUDGE_DAILY "CANCELLATION_RATE_NUDGE_DAILY"
+
+      -- Update driver tags with cancellation percentages once per day (uses Redis to ensure once per day per driver)
+      -- Uses already-calculated rates to avoid redundant queries
+      fork "Update cancellation percentage tags daily" $ do
+        catch (updateDriverCancellationPercentageTagsDaily driver.merchantOperatingCityId driver.id dailyCancellationRate weeklyCancellationRate) $ \(err :: SomeException) -> do
+          logError $ "Failed to update cancellation percentage tags for driver " <> driver.id.getId <> ": " <> show err
     _ -> logInfo "cancellationRateWindow or cancellationRateBasedNudgingAndBlockingConfig not found in transporter config"
   where
     canNudgeDriver cancellationRateThreshold minAssignedRides maxAssignedRides cancellationRate rideAssignedCount =
