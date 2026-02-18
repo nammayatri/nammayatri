@@ -382,3 +382,14 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN schedule_book
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_enabled boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN allowed_areas text[]  default NULL;
+
+
+
+
+------- SQL updates -------
+
