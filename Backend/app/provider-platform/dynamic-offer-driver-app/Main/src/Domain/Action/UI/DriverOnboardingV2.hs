@@ -751,6 +751,7 @@ buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..}
         updatedAt = now,
         verificationStatus = verificationStatus,
         driverNameOnGovtDB = nameOnGovtDB,
+        panAadhaarLinkage = Nothing,
         ..
       }
 

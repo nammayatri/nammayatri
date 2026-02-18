@@ -17,7 +17,7 @@ import Storage.Queries.Transformers.DocumentVerificationConfig
 
 instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig where
   fromTType' (Beam.DocumentVerificationConfigT {..}) = do
-    supportedVehicleClasses' <- getConfigFromJSON documentType supportedVehicleClassesJSON
+    supportedVehicleClasses' <- (getConfigFromJSON documentType) supportedVehicleClassesJSON
     pure $
       Just
         Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig

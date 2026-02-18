@@ -43,9 +43,9 @@ data HyperVergeVerificationE e = HyperVergeVerification
   }
   deriving (Generic)
 
-type HyperVergeVerification = HyperVergeVerificationE 'AsEncrypted
+type HyperVergeVerification = HyperVergeVerificationE ('AsEncrypted)
 
-type DecryptedHyperVergeVerification = HyperVergeVerificationE 'AsUnencrypted
+type DecryptedHyperVergeVerification = HyperVergeVerificationE ('AsUnencrypted)
 
 instance EncryptedItem HyperVergeVerification where
   type Unencrypted HyperVergeVerification = (DecryptedHyperVergeVerification, HashSalt)

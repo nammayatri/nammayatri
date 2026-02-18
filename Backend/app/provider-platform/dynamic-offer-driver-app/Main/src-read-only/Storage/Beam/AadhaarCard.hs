@@ -13,24 +13,24 @@ import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data AadhaarCardT f = AadhaarCardT
-  { aadhaarBackImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    aadhaarFrontImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    aadhaarNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
-    address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    consent :: B.C f Kernel.Prelude.Bool,
-    consentTimestamp :: B.C f Kernel.Prelude.UTCTime,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    dateOfBirth :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    driverGender :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    driverId :: B.C f Kernel.Prelude.Text,
-    driverImage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    driverImagePath :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    maskedAadhaarNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    nameOnCard :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus
+  { aadhaarBackImageId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    aadhaarFrontImageId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    aadhaarNumberHash :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash)),
+    address :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    consent :: (B.C f Kernel.Prelude.Bool),
+    consentTimestamp :: (B.C f Kernel.Prelude.UTCTime),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    dateOfBirth :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    driverGender :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    driverId :: (B.C f Kernel.Prelude.Text),
+    driverImage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    driverImagePath :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    maskedAadhaarNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    nameOnCard :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    verificationStatus :: (B.C f Kernel.Types.Documents.VerificationStatus)
   }
   deriving (Generic, B.Beamable)
 
@@ -40,6 +40,6 @@ instance B.Table AadhaarCardT where
 
 type AadhaarCard = AadhaarCardT Identity
 
-$(enableKVPG ''AadhaarCardT ['driverId] [])
+$(enableKVPG (''AadhaarCardT) [('driverId)] [])
 
-$(mkTableInstances ''AadhaarCardT "aadhaar_card")
+$(mkTableInstances (''AadhaarCardT) "aadhaar_card")

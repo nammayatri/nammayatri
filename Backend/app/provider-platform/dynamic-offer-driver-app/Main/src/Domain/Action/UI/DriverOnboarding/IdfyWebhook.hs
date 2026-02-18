@@ -24,6 +24,7 @@ where
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as GstCard
+import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanCard
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UdyamCard
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
@@ -58,7 +59,6 @@ import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import Storage.Queries.Person as QP
 import qualified Tools.Verification as Verification
-import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanCard
 
 -- FIXME this is temprorary solution for backward compatibility
 oldIdfyWebhookHandler ::
@@ -196,7 +196,11 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             (Idfy.convertGstOutputToGstVerification resSrcOp.source_output)
             VT.Idfy
         Idfy.BankAccountResult _ -> pure Ack
-        Idfy.PanAadhaarLinkResult _ -> pure Ack
+        Idfy.PanAadhaarLinkResult resSrcOp ->
+          PanCard.onVerifyPanAadhaarLink
+            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            (Idfy.convertPanAadhaarLinkOutputToPanAadhaarLinkVerification resSrcOp.source_output)
+            VT.Idfy
         Idfy.UdyamAadhaarResult resSrcOp ->
           UdyamCard.onVerifyUdyam
             (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)

@@ -13,12 +13,12 @@ import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data DriverSSNT f = DriverSSNT
-  { driverId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    ssnEncrypted :: B.C f Kernel.Prelude.Text,
-    ssnHash :: B.C f Kernel.External.Encryption.DbHash,
-    verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus
+  { driverId :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    rejectReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    ssnEncrypted :: (B.C f Kernel.Prelude.Text),
+    ssnHash :: (B.C f Kernel.External.Encryption.DbHash),
+    verificationStatus :: (B.C f Kernel.Types.Documents.VerificationStatus)
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +28,6 @@ instance B.Table DriverSSNT where
 
 type DriverSSN = DriverSSNT Identity
 
-$(enableKVPG ''DriverSSNT ['id] [['driverId], ['ssnHash]])
+$(enableKVPG (''DriverSSNT) [('id)] [[('driverId)], [('ssnHash)]])
 
-$(mkTableInstances ''DriverSSNT "driver_ssn")
+$(mkTableInstances (''DriverSSNT) "driver_ssn")
