@@ -564,6 +564,8 @@ MerchantServiceUsageConfig:
     gstVerificationService: Maybe VerificationService
     dashboardPanVerificationService: Maybe VerificationService
     dashboardGstVerificationService: Maybe VerificationService
+    udyamVerificationService: Maybe VerificationService
+    dashboardUdyamVerificationService: Maybe VerificationService
     issueTicketService: IssueTicketService
     rectifyDistantPointsFailure: MapsService
     getExophone: CallService
@@ -1118,6 +1120,7 @@ TransporterConfig:
     allowDuplicatePan : Maybe Bool
     allowDuplicateGst: Maybe Bool
     allowDuplicateAadhaar : Maybe Bool
+    allowDuplicateUdyam: Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"

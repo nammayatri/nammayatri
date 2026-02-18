@@ -41,3 +41,18 @@ ALTER TABLE atlas_driver_offer_bpp.hyperverge_verification ADD PRIMARY KEY ( id)
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
