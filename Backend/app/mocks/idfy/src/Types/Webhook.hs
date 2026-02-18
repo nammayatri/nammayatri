@@ -94,7 +94,7 @@ buildSuccessRC IdfyRequest {..} request_id now = do
     VerificationResponse $
       IdfyResponse
         { action = "verify_with_source",
-          completed_at = now,
+          completed_at = Just now,
           created_at = now,
           group_id = group_id,
           request_id = request_id,
@@ -151,7 +151,7 @@ buildSuccessDL IdfyRequest {..} request_id now = do
     VerificationResponse $
       IdfyResponse
         { action = "verify_with_source",
-          completed_at = now,
+          completed_at = Just now,
           created_at = now,
           group_id = group_id,
           request_id = request_id,
