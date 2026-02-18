@@ -82,6 +82,7 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
+txnId :: Maybe Text,
     kafkaProducerForART :: Maybe Kafka.KafkaProducerTools,
     passettoContext :: PassettoContext,
     passwordExpiryDays :: Maybe Int,
@@ -153,6 +154,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let sessionId = Nothing
+      txnId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   hedisEnv <- connectHedis hedisCfg modifierFunc
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc

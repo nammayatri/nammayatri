@@ -21,13 +21,13 @@ import Tools.Error
 
 getConfigImpl ::
   forall configTypeDimensions b m r.
-  (ConfigDimensions configTypeDimensions, FromJSON b, ToJSON b, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (ConfigDimensions configTypeDimensions, FromJSON b, ToJSON b, MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "txnId" r (Maybe Text)) =>
   configTypeDimensions ->
   LYT.Config b ->
   Id LYT.MerchantOperatingCity ->
-  Maybe Text ->
   m b
-getConfigImpl domensions wrappedConfig merchantOpCityId mTxnId = do
+getConfigImpl domensions wrappedConfig merchantOpCityId = do
+  mTxnId <- asks (.txnId)
   let configType = getConfigType domensions
   activeElementVersions <-
     case mTxnId of

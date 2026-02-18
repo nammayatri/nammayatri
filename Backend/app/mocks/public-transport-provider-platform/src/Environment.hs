@@ -71,6 +71,7 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
+txnId :: Maybe Text,
     requestId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     url :: Maybe Text
@@ -83,6 +84,7 @@ buildAppEnv config@AppCfg {..} = do
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg ("mock_public_transport_provider_platform" <>)
   let requestId = Nothing
   let sessionId = Nothing
+      txnId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Nothing
   hedisNonCriticalClusterEnv <-

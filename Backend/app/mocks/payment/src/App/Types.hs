@@ -47,6 +47,7 @@ data AppEnv = AppEnv
     version :: Metrics.DeploymentVersion,
     requestId :: Maybe Text,
     sessionId :: Maybe Text,
+txnId :: Maybe Text,
     url :: Maybe Text,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
@@ -83,6 +84,7 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- Metrics.registerCoreMetricsContainer
   let requestId = Nothing
   let sessionId = Nothing
+      txnId = Nothing
   let url = Nothing
   let shouldLogRequestId = False
   let hedisMigrationStage = False

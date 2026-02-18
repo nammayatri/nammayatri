@@ -26,6 +26,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "feedback"
@@ -45,7 +46,7 @@ handler =
     :<|> submitFeedbackForm
 
 getFeedbackForm :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> FlowHandler FeedbackFormList
-getFeedbackForm (personId, _) rating = withFlowHandlerAPI $ DF.feedbackForm personId rating
+getFeedbackForm (personId, _) rating = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DF.feedbackForm personId rating
 
 submitFeedbackForm :: (Id Person.Person, Id Merchant.Merchant) -> FeedbackFormReq -> FlowHandler APISuccess
-submitFeedbackForm _ feedbackFormReq = withFlowHandlerAPI $ DF.submitFeedback feedbackFormReq
+submitFeedbackForm (personId, _) feedbackFormReq = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DF.submitFeedback feedbackFormReq

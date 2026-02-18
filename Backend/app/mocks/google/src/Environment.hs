@@ -51,6 +51,7 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
+txnId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     url :: Maybe Text
   }
@@ -67,6 +68,7 @@ buildAppEnv AppCfg {..} = do
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let sessionId = Nothing
+      txnId = Nothing
   let kafkaProducerForART = Nothing
   isShuttingDown <- mkShutdown
   let url = Nothing

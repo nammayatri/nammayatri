@@ -39,6 +39,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import Tools.Error
 
 -------- Feedback Flow and Know your Driver Flow----------
@@ -67,7 +68,7 @@ handler =
     :<|> knowYourFavDriver
 
 rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
-rating (personId, merchantId) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+rating (personId, merchantId) request = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
   processRating (personId, merchantId) request
 
 processRating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.Flow APISuccess
@@ -94,7 +95,7 @@ processRating (personId, merchantId) request = do
         }
 
 knowYourDriver :: (Id Person.Person, Id Merchant.Merchant) -> Id DRide.Ride -> Maybe Bool -> App.FlowHandler DFeedback.DriverProfileResponse
-knowYourDriver (personId, _merchantId) rideId withImages = withFlowHandlerAPI . withPersonIdLogTag personId $ DFeedback.knowYourDriver rideId withImages
+knowYourDriver (personId, _merchantId) rideId withImages = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DFeedback.knowYourDriver rideId withImages
 
 knowYourFavDriver :: (Id Person.Person, Id Merchant.Merchant) -> Text -> Maybe Bool -> App.FlowHandler DFeedback.DriverProfileResponse
-knowYourFavDriver (personId, merchantId) driverId withImages = withFlowHandlerAPI . withPersonIdLogTag personId $ DFeedback.knowYourFavDriver driverId merchantId withImages
+knowYourFavDriver (personId, merchantId) driverId withImages = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DFeedback.knowYourFavDriver driverId merchantId withImages

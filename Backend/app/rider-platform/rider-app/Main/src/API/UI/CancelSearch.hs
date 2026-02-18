@@ -16,6 +16,7 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
 import Tools.Constants
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import Tools.Error
 
 type API =
@@ -41,15 +42,15 @@ handler =
     :<|> rejectUpgrade
 
 cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler CancelAPIResponse
-cancelSearch (personId, merchantId) estimateId = withFlowHandlerAPI $ cancelSearch' (personId, merchantId) estimateId
+cancelSearch (personId, merchantId) estimateId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ cancelSearch' (personId, merchantId) estimateId
 
 cancelSearchV2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler APISuccess.APISuccess
-cancelSearchV2 (personId, merchantId) estimateId = withFlowHandlerAPI $ do
+cancelSearchV2 (personId, merchantId) estimateId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
   void $ cancelSearchUtil (personId, merchantId) estimateId
   return APISuccess.Success
 
 rejectUpgrade :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler CancelAPIResponse
-rejectUpgrade (personId, merchantId) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+rejectUpgrade (personId, merchantId) estimateId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let personTags = fromMaybe [] person.customerNammaTags
   unless (rejectUpgradeTag `Yudhishthira.elemTagNameValue` personTags) $ do

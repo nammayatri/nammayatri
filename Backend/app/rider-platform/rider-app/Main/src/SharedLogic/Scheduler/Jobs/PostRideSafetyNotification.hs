@@ -49,7 +49,7 @@ postRideSafetyNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   ride <- B.runInReplica $ QR.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   when (isNothing ride.wasRideSafe && isNothing ride.rideRating) $ do
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     let entityData = NotifReq {title = "Did you have a safe journey?", message = "Thank you for riding with us. Please share your ride experience."}
     logDebug "Triggering notification for post ride safety check"
     notifyPersonOnEvents person entityData POST_RIDE_SAFETY_CHECK
