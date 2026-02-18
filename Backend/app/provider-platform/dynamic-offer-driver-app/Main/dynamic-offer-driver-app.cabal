@@ -255,6 +255,7 @@ library
       Domain.Action.UI.DriverOnboarding.PullDocument
       Domain.Action.UI.DriverOnboarding.Referral
       Domain.Action.UI.DriverOnboarding.Status
+      Domain.Action.UI.DriverOnboarding.UdyamVerification
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
       Domain.Action.UI.DriverOnboardingV2
       Domain.Action.UI.DriverProfile
@@ -649,6 +650,7 @@ library
       Storage.Queries.DriverReferralExtra
       Storage.Queries.DriverSSNExtra
       Storage.Queries.DriverStatsExtra
+      Storage.Queries.DriverUdyamExtra
       Storage.Queries.EntityInfoExtra
       Storage.Queries.ExophoneExtra
       Storage.Queries.FareParameters
@@ -1024,6 +1026,7 @@ library
       Domain.Types.DriverRidePayoutBankAccount
       Domain.Types.DriverSSN
       Domain.Types.DriverStats
+      Domain.Types.DriverUdyam
       Domain.Types.EntityInfo
       Domain.Types.Estimate
       Domain.Types.Exophone
@@ -1190,6 +1193,7 @@ library
       Storage.Beam.DriverRidePayoutBankAccount
       Storage.Beam.DriverSSN
       Storage.Beam.DriverStats
+      Storage.Beam.DriverUdyam
       Storage.Beam.EntityInfo
       Storage.Beam.Estimate
       Storage.Beam.Exophone
@@ -1360,6 +1364,7 @@ library
       Storage.Queries.DriverRidePayoutBankAccount
       Storage.Queries.DriverSSN
       Storage.Queries.DriverStats
+      Storage.Queries.DriverUdyam
       Storage.Queries.EntityInfo
       Storage.Queries.Estimate
       Storage.Queries.Exophone

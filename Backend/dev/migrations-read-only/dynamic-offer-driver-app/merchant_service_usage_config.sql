@@ -84,3 +84,9 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN dash
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN toto_verification_priority_list text[]  default '{"Tten"}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN udyam_verification_service text ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN dashboard_udyam_verification_service text ;

@@ -17,6 +17,7 @@ module Tools.Verification
     verifyDLAsync,
     verifyBankAccountAsync,
     verifyGstAsync,
+    verifyUdyamAadhaarAsync,
     verifyRC,
     validateImage,
     extractRCImage,
@@ -67,6 +68,7 @@ import Kernel.External.Verification as Reexport hiding
     verifyGstAsync,
     verifyRC,
     verifySdkResp,
+    verifyUdyamAadhaarAsync,
   )
 import qualified Kernel.External.Verification as Verification
 import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
@@ -117,6 +119,18 @@ verifyGstAsync _ merchantOpCityId req = do
     CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyGstAsync req
+
+verifyUdyamAadhaarAsync ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  VerifyUdyamAadhaarAsyncReq ->
+  m VerifyUdyamAadhaarAsyncResp
+verifyUdyamAadhaarAsync _ merchantOpCityId req = do
+  merchantServiceUsageConfig <-
+    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyUdyamAadhaarAsync req
 
 verifyRC ::
   ( ServiceFlow m r,

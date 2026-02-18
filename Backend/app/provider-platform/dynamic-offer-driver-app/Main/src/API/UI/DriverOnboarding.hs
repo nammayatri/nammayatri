@@ -23,6 +23,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Status as DriverOnboarding
+import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UdyamVerification
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
@@ -57,6 +58,10 @@ type API =
            :<|> "gstin"
              :> TokenAuth
              :> ReqBody '[JSON] DriverOnboarding.DriverGstinReq
+             :> Post '[JSON] APISuccess
+           :<|> "udyam"
+             :> TokenAuth
+             :> ReqBody '[JSON] UdyamVerification.DriverUdyamReq
              :> Post '[JSON] APISuccess
            :<|> "aadhaar"
              :> TokenAuth
@@ -128,6 +133,7 @@ handler =
       :<|> verifyRC
       :<|> verifyPan
       :<|> verifyGstin
+      :<|> verifyUdyam
       :<|> verifyAadhaar
       :<|> statusHandler
       :<|> validateImage
@@ -161,6 +167,11 @@ verifyPan (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ do
 verifyGstin :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverGstinReq -> FlowHandler DriverOnboarding.DriverGstinRes
 verifyGstin (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ do
   _ <- DriverOnboarding.verifyGstin DPan.FRONTEND_SDK Nothing (personId, merchantId, merchantOpCityId) req Nothing False
+  pure Success
+
+verifyUdyam :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> UdyamVerification.DriverUdyamReq -> FlowHandler APISuccess
+verifyUdyam (personId, _merchantId, merchantOpCityId) req = withFlowHandlerAPI $ do
+  _ <- UdyamVerification.verifyUdyam (personId, merchantOpCityId) req
   pure Success
 
 verifyAadhaar :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverAadhaarReq -> FlowHandler DriverOnboarding.DriverAadhaarRes
