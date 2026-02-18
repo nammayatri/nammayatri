@@ -530,9 +530,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- rider_config
   mbRiderConfig <- do
-    getConfig (RiderDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, txnId = Nothing}) >>= \case
+    getConfig (RiderDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) >>= \case
       Nothing -> do
-        riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = baseOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (InvalidRequest "Rider Config not found")
+        riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) >>= fromMaybeM (InvalidRequest "Rider Config not found")
         let newRiderConfig = buildRiderConfig newMerchantId newMerchantOperatingCityId now riderConfig
         return $ Just newRiderConfig
       _ -> return Nothing
@@ -1702,9 +1702,8 @@ getMerchantRiderConfigEstimatesOrder merchantShortId city = do
     CQMOC.findByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
 
-  let versionMap = LYT.ConfigVersionMap {version = 1, config = LYT.RIDER_CONFIG LYT.RiderConfig}
   riderConfig <-
-    QRC.findByMerchantOperatingCityId merchantOperatingCity.id (Just [versionMap])
+    getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
       >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
 
   pure $
@@ -1724,9 +1723,8 @@ postMerchantRiderConfigEstimatesOrderUpdate merchantShortId city req = do
     CQMOC.findByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
 
-  let versionMap = LYT.ConfigVersionMap {version = 1, config = LYT.RIDER_CONFIG LYT.RiderConfig}
   riderConfig <-
-    QRC.findByMerchantOperatingCityId merchantOperatingCity.id (Just [versionMap])
+    getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
       >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
 
   let updatedConfig =

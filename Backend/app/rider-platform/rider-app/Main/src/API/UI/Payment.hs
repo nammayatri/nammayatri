@@ -40,6 +40,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   TokenAuth
@@ -61,13 +62,13 @@ handlerS2S :: FlowServer S2SAPI
 handlerS2S = getStatusS2S
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DRide.Ride -> FlowHandler Payment.CreateOrderResp
-createOrder tokenDetails rideId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails rideId
+createOrder (personId, merchantId) rideId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.createOrder (personId, merchantId) rideId
 
 getStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
-getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDetails orderId
+getStatus (personId, merchantId) orderId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.getStatus (personId, merchantId) orderId
 
 getOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
-getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDetails orderId
+getOrder (personId, merchantId) orderId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.getOrder (personId, merchantId) orderId
 
 getStatusS2S :: Id DOrder.PaymentOrder -> Id DP.Person -> Maybe Data.Text.Text -> FlowHandler DPayment.PaymentStatusResp
 getStatusS2S orderId personId mbApiKey = withFlowHandlerAPI $ do
@@ -75,7 +76,7 @@ getStatusS2S orderId personId mbApiKey = withFlowHandlerAPI $ do
   DPayment.getStatusS2S orderId personId person.merchantId mbApiKey
 
 postWalletRecharge :: (Id DP.Person, Id Merchant.Merchant) -> PaymentAPI.WalletRechargeReq -> FlowHandler APISuccess
-postWalletRecharge tokenDetails req = withFlowHandlerAPI $ DPayment.postWalletRecharge tokenDetails req
+postWalletRecharge (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.postWalletRecharge (personId, merchantId) req
 
 getWalletBalance :: (Id DP.Person, Id Merchant.Merchant) -> FlowHandler Wallet.WalletBalanceData
-getWalletBalance tokenDetails = withFlowHandlerAPI $ DPayment.getWalletBalance tokenDetails
+getWalletBalance (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPayment.getWalletBalance (personId, merchantId)

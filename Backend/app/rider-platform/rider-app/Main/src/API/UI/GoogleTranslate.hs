@@ -25,11 +25,12 @@ import EulerHS.Prelude
 import qualified Kernel.External.GoogleTranslate.Types as GoogleTranslate
 import Kernel.Types.App
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI, withPersonIdLogTag)
+import Kernel.Utils.Common (withPersonIdLogTag)
 import Servant
 import qualified SharedLogic.GoogleTranslate as GoogleTranslate
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import qualified Tools.Maps as Maps
 
 type API =
@@ -47,4 +48,4 @@ handler =
   translate
 
 translate :: (Id Person.Person, Id Merchant.Merchant) -> Maps.Language -> Maps.Language -> Text -> FlowHandler GoogleTranslate.TranslateResp
-translate (personId, _) source target = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleTranslate.translate source target
+translate (personId, _) source target = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . GoogleTranslate.translate source target

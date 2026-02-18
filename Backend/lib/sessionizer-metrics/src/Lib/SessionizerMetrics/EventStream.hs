@@ -54,6 +54,7 @@ createEvent personId merchantId eventType service triggredBy payload primaryId m
           { id = uid,
             traceId = Nothing,
             sessionId = Nothing,
+            txnId = Nothing,
             personId = personId,
             merchantId = merchantId,
             deploymentVersion = version.getDeploymentVersion,

@@ -40,6 +40,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QR
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import Tools.Error
 
 type API =
@@ -82,7 +83,7 @@ softCancel ::
   (Id Person.Person, Id Merchant.Merchant) ->
   FlowHandler APISuccess
 softCancel bookingId (personId, merchantId) =
-  withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
     dCancelRes <- DCancel.softCancel bookingId (personId, merchantId)
     cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes Nothing
     void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl cancelBecknReq
@@ -93,7 +94,7 @@ getCancellationDuesDetails ::
   (Id Person.Person, Id Merchant.Merchant) ->
   FlowHandler DCancel.CancellationDuesDetailsRes
 getCancellationDuesDetails mbBookingId (personId, merchantId) =
-  withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
     DCancel.getCancellationDuesDetails mbBookingId (personId, merchantId)
 
 cancel ::
@@ -102,7 +103,7 @@ cancel ::
   DCancel.CancelReq ->
   FlowHandler APISuccess
 cancel bookingId (personId, merchantId) req =
-  withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
     booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
     mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
     dCancelRes <- DCancel.cancel booking mRide req SBCR.ByUser

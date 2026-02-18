@@ -143,7 +143,7 @@ init ::
   m (Maybe (DJourney.Journey, [DJourneyLeg.JourneyLeg]))
 init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteTypes = do
   journeyId <- Common.generateGUID
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = journeyReq.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist journeyReq.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = journeyReq.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist journeyReq.merchantOperatingCityId.getId)
   searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
   let fromLocation = searchReq.fromLocation
   let toLocation = searchReq.toLocation
@@ -275,7 +275,7 @@ hasSignificantMovement (p1 : p2 : _) busTrackingConfig =
 hasSignificantMovement _ _ = False
 
 getRiderConfig :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJourney.Journey -> m Domain.Types.RiderConfig.RiderConfig
-getRiderConfig journey = getConfig (RiderDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
+getRiderConfig journey = getConfig (RiderDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
 
 defaultBusTrackingConfig :: Domain.Types.RiderConfig.BusTrackingConfig
 defaultBusTrackingConfig =
@@ -385,7 +385,7 @@ getMultiModalTransitOptions ::
   APITypes.MultimodalTransitOptionsReq ->
   m APITypes.MultimodalTransitOptionsResp
 getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId req = do
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   -- let permissibleModesToUse = fromMaybe [] riderConfig.permissibleModes
   let permissibleModesToUse =
         if null userPreferences.allowedTransitModes
@@ -1035,7 +1035,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           Just endLegOrder -> return $ filter (\leg -> leg.sequenceNumber >= startLegOrder && leg.sequenceNumber < endLegOrder) allLegs
           Nothing -> return $ filter (\leg -> leg.sequenceNumber >= startLegOrder) allLegs
       leg <- mkMultiModalTaxiLeg newDistance newDuration MultiModalTypes.Unspecified currentLeg.startLocation.latitude currentLeg.startLocation.longitude endLocation.lat endLocation.lon (fromMaybe now currentLeg.fromArrivalTime)
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = currentLeg.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = currentLeg.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
       journeyLeg <- JL.mkJourneyLeg startLegOrder (Nothing, leg, Nothing) journey.fromLocation journey.toLocation currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId (Id journey.searchRequestId) riderConfig.maximumWalkDistance (Just fare) Nothing Nothing Nothing []
       withJourneyUpdateInProgress journeyId $ do
         forM_ legsToCancel $ \currLeg -> deleteLeg currLeg (SCR.CancellationReasonCode "") False Nothing
@@ -1057,7 +1057,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
     extendWalkLeg journey startlocation endLocation currentLeg = do
       now <- getCurrentTime
       leg <- mkMultiModalTaxiLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = currentLeg.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = currentLeg.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
       journeyLeg <- JL.mkJourneyLeg currentLeg.sequenceNumber (Nothing, leg, Nothing) journey.fromLocation journey.toLocation currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId (Id journey.searchRequestId) riderConfig.maximumWalkDistance (Just fare) Nothing Nothing Nothing []
       withJourneyUpdateInProgress journeyId $ do
         -- fix it properly later

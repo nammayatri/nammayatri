@@ -78,7 +78,7 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
   cityRes <- getNearestOperatingAndCurrentCity (.origin) (personId, merchantId) False req.location
   let reqCity = cityRes.currentCity.city
   moc <- CQMOC.findByMerchantIdAndCity merchantId reqCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId:" <> merchantId.getId <> "city:" <> show reqCity)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
   case req.travelMode of
     Just DTrip.Bus -> do
       vehicleDataBuckets <- getNearbyBusesAsBuckets moc.id riderConfig req.location

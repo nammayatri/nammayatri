@@ -32,6 +32,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "frontend"
@@ -52,7 +53,7 @@ handler =
     :<|> notifyEvent
 
 getPersonFlowStatus :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
-getPersonFlowStatus (personId, merchantId) checkForActiveBooking = withFlowHandlerAPI . DFrontend.getPersonFlowStatus personId merchantId checkForActiveBooking
+getPersonFlowStatus (personId, merchantId) isPolling checkForActiveBooking = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DFrontend.getPersonFlowStatus personId merchantId isPolling checkForActiveBooking
 
 notifyEvent :: (Id Person.Person, Id Merchant.Merchant) -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
-notifyEvent (personId, merchantId) = withFlowHandlerAPI . DFrontend.notifyEvent personId merchantId
+notifyEvent (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DFrontend.notifyEvent personId merchantId req

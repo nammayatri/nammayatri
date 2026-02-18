@@ -28,6 +28,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "personStats"
@@ -40,4 +41,4 @@ handler =
   getPersonStats
 
 getPersonStats :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DPersonStats.PersonStatsRes
-getPersonStats = withFlowHandlerAPI . DPersonStats.getPersonStats
+getPersonStats (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DPersonStats.getPersonStats (personId, merchantId)

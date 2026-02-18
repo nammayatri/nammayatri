@@ -38,7 +38,7 @@ mkWayPointV2 lat lon =
 
 getMultiModalModes :: API.PlacesRequest -> LatLong -> Id.Id DMerchant.Merchant -> DPerson.Person -> Id.Id MerchantOperatingCity -> Env.Flow (Maybe MultiModal.MultiModalResponse)
 getMultiModalModes req toLatLong merchantId person merchantOperatingCityId = do
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   userPref <- DAUM.getMultimodalUserPreferences (Just person.id, merchantId)
   let transitRoutesReq =
         MultiModal.GetTransitRoutesReq

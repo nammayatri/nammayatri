@@ -46,6 +46,7 @@ data AppEnv = AppEnv
     version :: Metrics.DeploymentVersion,
     requestId :: Maybe Text,
     sessionId :: Maybe Text,
+txnId :: Maybe Text,
     url :: Maybe Text
   }
   deriving (Generic)
@@ -59,6 +60,7 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   let requestId = Nothing
   let sessionId = Nothing
+      txnId = Nothing
   let url = Nothing
   return $ AppEnv {..}
 

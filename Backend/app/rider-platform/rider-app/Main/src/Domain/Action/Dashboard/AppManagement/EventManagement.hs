@@ -92,7 +92,7 @@ postEventManagementTicketdashboardTicketplaceSubmitDraft _merchantShortId _opCit
       draftChange <- QDTC.findById ticketPlaceId >>= fromMaybeM (InvalidRequest "No draft found")
       m <- findMerchantByShortId _merchantShortId
       moCity <- CQMOC.findByMerchantIdAndCity m.id m.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moCity.id.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
+      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moCity.id.getId}) >>= fromMaybeM (RiderConfigNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
       let approvalRequired = case oldTicketDef of
             Just mo -> Permissions.needsApproval riderConfig.ticketingPermissionConfig mo ticketDef
             Nothing -> True

@@ -45,6 +45,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "profile"
@@ -110,28 +111,28 @@ handler =
     :<|> (triggerOTP :<|> verifyOTP)
 
 getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DProfile.ProfileRes
-getPersonDetails (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . getPersonDetails' (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
+getPersonDetails (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = withFlowHandlerAPIPersonId personId $ getPersonDetails' (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice
 
 getPersonDetails' :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Flow DProfile.ProfileRes
 getPersonDetails' (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = DProfile.getPersonDetails (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
 
 updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler APISuccess.APISuccess
-updatePerson (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . updatePerson' (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
+updatePerson (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = withFlowHandlerAPIPersonId personId $ updatePerson' (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice
 
 updatePerson' :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Flow APISuccess.APISuccess
 updatePerson' (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = withPersonIdLogTag personId . DProfile.updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion
 
 updateDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileDefaultEmergencyNumbersReq -> FlowHandler DProfile.UpdateProfileDefaultEmergencyNumbersResp
-updateDefaultEmergencyNumbers (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updateDefaultEmergencyNumbers personId merchantId
+updateDefaultEmergencyNumbers (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . DProfile.updateDefaultEmergencyNumbers personId merchantId
 
 getDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.GetProfileDefaultEmergencyNumbersResp
-getDefaultEmergencyNumbers = withFlowHandlerAPI . DProfile.getDefaultEmergencyNumbers
+getDefaultEmergencyNumbers (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DProfile.getDefaultEmergencyNumbers (personId, merchantId)
 
 updateEmergencySettings :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateEmergencySettingsReq -> FlowHandler DProfile.UpdateEmergencySettingsResp
-updateEmergencySettings (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updateEmergencySettings personId
+updateEmergencySettings (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . DProfile.updateEmergencySettings personId
 
 getEmergencySettings :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.EmergencySettingsRes
-getEmergencySettings (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DProfile.getEmergencySettings personId
+getEmergencySettings (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DProfile.getEmergencySettings personId
 
 marketingEvents' :: DProfile.MarketEventReq -> Flow APISuccess.APISuccess
 marketingEvents' req = DProfile.marketingEvents req
@@ -143,10 +144,10 @@ triggerOTP' :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.TriggerUpdat
 triggerOTP' (personId, merchantId) = DProfile.triggerUpdateAuthDataOtp (personId, merchantId)
 
 triggerOTP :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.TriggerUpdateAuthOTPReq -> FlowHandler APISuccess.APISuccess
-triggerOTP (personId, merchantId) req = withFlowHandlerAPI $ triggerOTP' (personId, merchantId) req
+triggerOTP (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ triggerOTP' (personId, merchantId) req
 
 verifyOTP' :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.VerifyUpdateAuthOTPReq -> Flow APISuccess.APISuccess
 verifyOTP' (personId, merchantId) = DProfile.verifyUpdateAuthDataOtp (personId, merchantId)
 
 verifyOTP :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.VerifyUpdateAuthOTPReq -> FlowHandler APISuccess.APISuccess
-verifyOTP (personId, merchantId) req = withFlowHandlerAPI $ verifyOTP' (personId, merchantId) req
+verifyOTP (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ verifyOTP' (personId, merchantId) req

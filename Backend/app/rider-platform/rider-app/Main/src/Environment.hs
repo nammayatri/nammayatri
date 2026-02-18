@@ -283,6 +283,7 @@ data AppEnv = AppEnv
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
     requestId :: Maybe Text,
+    txnId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
@@ -348,6 +349,7 @@ buildAppEnv cfg@AppCfg {..} = do
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
   let requestId = Nothing
   let sessionId = Nothing
+      txnId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
   let kafkaProducerForART = Just kafkaProducerTools

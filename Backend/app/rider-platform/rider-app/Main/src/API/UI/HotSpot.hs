@@ -36,6 +36,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import Storage.CachedQueries.Maps.LocationMapCache
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import qualified Tools.Maps as Maps
 
 type API =
@@ -48,7 +49,7 @@ handler =
   getHotSpot
 
 getHotSpot :: (Id Person.Person, Id Merchant.Merchant) -> Maps.LatLong -> FlowHandler HotSpotResponse
-getHotSpot (_, merchantId) latlong = withFlowHandlerAPI (getHotspot latlong merchantId)
+getHotSpot (personId, merchantId) latlong = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ getHotspot latlong merchantId
 
 allPreciseHotSpot :: Double -> Int -> Maps.LatLong -> [String] -> [String]
 allPreciseHotSpot hotSpotRadius maxLen currentCoordinate allPossibleGeoHashes =

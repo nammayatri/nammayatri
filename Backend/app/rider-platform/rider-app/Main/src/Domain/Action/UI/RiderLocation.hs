@@ -33,7 +33,7 @@ postIdentifyNearByBus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.
 postIdentifyNearByBus (_mbPersonId, merchantId) req = do
   _merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId req.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show req.city)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
   let riderLocation = Kernel.External.Maps.Types.LatLong req.riderLat req.riderLon
   nearbyBuses <- getNearbyBuses riderLocation riderConfig merchantOperatingCity.id
   busLocations <- mapMaybeM (convertToBusLocation riderLocation riderConfig) nearbyBuses

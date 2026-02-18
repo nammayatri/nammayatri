@@ -50,7 +50,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
 
   -- Circuit breaker check
   let ptMode = CB.vehicleCategoryToPTMode vehicleCategory
-  mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, txnId = Nothing})
+  mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
   let circuitOpen = CB.isCircuitOpen ptMode CB.FareAPI mRiderConfig
   let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
   let apiConfig = cbConfig.fare
@@ -200,7 +200,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
           CB.recordFailure ptMode CB.FareAPI merchantOperatingCityId
           CB.checkAndDisableIfNeeded ptMode CB.FareAPI merchantOperatingCityId cbConfig
           -- When circuit opens, clear cache
-          circuitNowOpen <- CB.isCircuitOpen ptMode CB.FareAPI <$> getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, txnId = Nothing})
+          circuitNowOpen <- CB.isCircuitOpen ptMode CB.FareAPI <$> getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
           when circuitNowOpen $ do
             CB.clearFareCache (fst <$> getCacheKeys)
             CB.resetProbeCounter ptMode CB.FareAPI merchantOperatingCityId

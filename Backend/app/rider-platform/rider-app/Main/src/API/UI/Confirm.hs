@@ -40,6 +40,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import qualified Tools.Metrics as Metrics
 
 type API =
@@ -73,7 +74,7 @@ confirm ::
   Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
   FlowHandler ConfirmRes
-confirm (personId, merchantId) quoteId mbPaymentMethodId mbPaymentInstrument = withFlowHandlerAPI . confirm' (personId, merchantId) quoteId Nothing mbPaymentMethodId mbPaymentInstrument
+confirm (personId, merchantId) quoteId mbPaymentMethodId mbPaymentInstrument mbIsAdvanced = withFlowHandlerAPIPersonId personId $ confirm' (personId, merchantId) quoteId Nothing mbPaymentMethodId mbPaymentInstrument mbIsAdvanced
 
 confirm' ::
   (Id SP.Person, Id Merchant.Merchant) ->

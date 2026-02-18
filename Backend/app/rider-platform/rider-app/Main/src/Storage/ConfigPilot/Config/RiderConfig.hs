@@ -17,8 +17,7 @@ import Storage.ConfigPilot.Interface.Getter
 
 
 data RiderDimensions = RiderDimensions
-  { merchantOperatingCityId :: Text,
-    txnId :: Maybe Text
+  { merchantOperatingCityId :: Text
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
@@ -34,4 +33,4 @@ instance ConfigDimensions RiderDimensions where
   getConfig a = do
     cfg <- QRC.findByMerchantOperatingCityId (Id (merchantOperatingCityId a))
     let configWrapper = LYT.Config { config = cfg, extraDimensions = Nothing, identifier = 0 }
-    getConfigImpl a configWrapper (Id (merchantOperatingCityId a)) (txnId a)
+    getConfigImpl a configWrapper (Id (merchantOperatingCityId a))

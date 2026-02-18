@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "sos"
@@ -43,4 +44,4 @@ handler :: FlowServer API
 handler = uploadMedia
 
 uploadMedia :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SOSVideoUploadReq -> FlowHandler DSos.AddSosVideoRes
-uploadMedia sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.uploadMedia sosId personId
+uploadMedia sosId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . DSos.uploadMedia sosId personId

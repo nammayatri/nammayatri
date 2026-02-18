@@ -32,6 +32,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.PickupRoute as CQPickupRoute
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "route"
@@ -53,10 +54,10 @@ handler :: FlowServer API
 handler = getRoute :<|> getPickupRoute :<|> getTripRoute
 
 getRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
-getRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getRoutes (personId, merchantId) (Just personId.getId)
+getRoute (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . DRoute.getRoutes (personId, merchantId) (Just personId.getId)
 
 getPickupRoute :: (Id Person.Person, Id Merchant.Merchant) -> DRoute.GetPickupRoutesReq -> FlowHandler Maps.GetRoutesResp
-getPickupRoute (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+getPickupRoute (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
   routeResp <- DRoute.getPickupRoutes (personId, merchantId) (Just personId.getId) req
   whenJust req.rideId $ \rid -> do
     case routeResp of
@@ -67,4 +68,4 @@ getPickupRoute (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLog
   return routeResp
 
 getTripRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
-getTripRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getTripRoutes (personId, merchantId) (Just personId.getId)
+getTripRoute (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId . DRoute.getTripRoutes (personId, merchantId) (Just personId.getId)

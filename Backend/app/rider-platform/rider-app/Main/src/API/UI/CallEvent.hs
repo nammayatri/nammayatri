@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "callEvent"
@@ -40,4 +41,4 @@ handler :: FlowServer API
 handler = logCallEvent
 
 logCallEvent :: (Id Person.Person, Id Merchant.Merchant) -> DCE.CallEventReq -> FlowHandler APISuccess.APISuccess
-logCallEvent (_, _) = withFlowHandlerAPI . DCE.logCallEvent
+logCallEvent (personId, _) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DCE.logCallEvent req

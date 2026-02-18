@@ -55,7 +55,7 @@ getBackfillPersonStatsData personId merchantOpCityid = do
   let maxBookingTimeCompleted = foldl' max person.createdAt completedBookingsCreatedAt
   let maxBookingTime = max maxBookingTimeCancelled maxBookingTimeCompleted
   Hedis.setExp (personRedisKey personId) maxBookingTime 43200
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityid.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityid.getId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityid.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityid.getId)
   let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
   now <- getCurrentTime
   let completedRidesCnt = length completedBookingsCreatedAt
@@ -143,7 +143,7 @@ checkSafetyCenterDisabled person safetySettings = do
         then return True
         else do
           now <- getCurrentTime
-          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
           let unblockAfterDays = (intToNominalDiffTime riderConfig.autoUnblockSafetyCenterAfterDays) * 24 * 60 * 60
           if diffUTCTime now safetyCenterDisabledOnDate > unblockAfterDays
             then do

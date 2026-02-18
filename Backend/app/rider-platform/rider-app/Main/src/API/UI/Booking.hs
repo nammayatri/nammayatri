@@ -1,16 +1,3 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
 
 module API.UI.Booking
   ( DBooking.BookingListRes,
@@ -40,6 +27,7 @@ import Servant
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "rideBooking"
@@ -118,25 +106,25 @@ handler =
     :<|> generateInvoice
 
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler BookingAPIEntity
-bookingStatus bookingId = withFlowHandlerAPI . DBooking.bookingStatus bookingId
+bookingStatus bookingId (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingStatus bookingId (personId, merchantId)
 
 bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler BookingStatusAPIEntity
-bookingStatusPolling bookingId = withFlowHandlerAPI . DBooking.bookingStatusPolling bookingId
+bookingStatusPolling bookingId (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingStatusPolling bookingId (personId, merchantId)
 
 addStop :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DBooking.StopReq -> FlowHandler APISuccess
-addStop bookingId (personId, merchantId) addStopReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DBooking.addStop (personId, merchantId) bookingId addStopReq
+addStop bookingId (personId, merchantId) addStopReq = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.addStop (personId, merchantId) bookingId addStopReq
 
 editStop :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DBooking.StopReq -> FlowHandler APISuccess
-editStop bookingId (personId, merchantId) editStopReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DBooking.editStop (personId, merchantId) bookingId editStopReq
+editStop bookingId (personId, merchantId) editStopReq = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.editStop (personId, merchantId) bookingId editStopReq
 
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> FlowHandler DBooking.BookingListRes
-bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId mbFromDate mbToDate mbBookingStatusList = withFlowHandlerAPI $ DBooking.bookingList (Just personId, merchantId) Nothing False mbLimit mbOffset mbOnlyActive mbStatus mbClientId mbFromDate mbToDate mbBookingStatusList Nothing
+bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId mbFromDate mbToDate mbBookingStatusList = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingList (Just personId, merchantId) Nothing False mbLimit mbOffset mbOnlyActive mbStatus mbClientId mbFromDate mbToDate mbBookingStatusList Nothing
 
 bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe BookingRequestType -> Maybe Bool -> [Domain.Types.PassType.PassEnum] -> FlowHandler DBooking.BookingListResV2
-bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable passTypes = withFlowHandlerAPI $ DBooking.bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable (Just passTypes)
+bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable passTypes = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable (Just passTypes)
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DBooking.DriverNo -> FlowHandler DBooking.FavouriteBookingListRes
-favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId driver = withFlowHandlerAPI . DBooking.favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId driver
+favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId driverNo = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId driverNo
 
 generateInvoice :: (Id Person.Person, Id Merchant.Merchant) -> DInvoice.GenerateInvoiceReq -> FlowHandler DInvoice.GenerateInvoiceRes
-generateInvoice (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLogTag personId $ DInvoice.generateInvoice (personId, merchantId) req
+generateInvoice (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DInvoice.generateInvoice (personId, merchantId) req

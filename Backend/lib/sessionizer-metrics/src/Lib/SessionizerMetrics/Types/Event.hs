@@ -28,7 +28,8 @@ import Prometheus
 data Event p = Event
   { id :: Text, -- id of the event
     traceId :: Maybe Text, -- id for tracing the transaction from customer to driver
-    sessionId :: Maybe Text, -- id for current session of customer/driver
+    sessionId :: Maybe Text,
+txnId :: Maybe Text, -- id for current session of customer/driver
     personId :: Maybe Text, -- id for customer or driver (whoever triggered the event)
     merchantId :: Text, -- id for merchant
     deploymentVersion :: Text, -- version of the current deployment

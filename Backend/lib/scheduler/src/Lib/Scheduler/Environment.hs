@@ -120,6 +120,7 @@ data SchedulerEnv = SchedulerEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
+txnId :: Maybe Text,
     cacConfig :: CacConfig,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     inMemEnv :: InMemEnv,

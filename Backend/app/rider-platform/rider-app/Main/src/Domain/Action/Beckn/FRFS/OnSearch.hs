@@ -229,7 +229,7 @@ filterQuotes integratedBPPConfig quotesWithCategories (Just journeyLeg) = do
     _ -> do
       case journeyLeg.mode of
         DTripTypes.Bus -> do
-          mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = journeyLeg.merchantOperatingCityId.getId, txnId = Nothing})
+          mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = journeyLeg.merchantOperatingCityId.getId})
           let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
           let serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)
           return $

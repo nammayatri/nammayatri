@@ -220,7 +220,7 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
     Just opCityId -> do
       -- Fetch RiderConfig to get the correct timeDiffFromUtc and execution time offset
       riderConfig <-
-        getConfig (RiderDimensions {merchantOperatingCityId = opCityId.getId, txnId = Nothing})
+        getConfig (RiderDimensions {merchantOperatingCityId = opCityId.getId})
           >>= fromMaybeM (RiderConfigDoesNotExist opCityId.getId)
 
       -- Use UTC for reference time; the offset is only for interpreting scheduledTimeOfDay
@@ -378,7 +378,7 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
       case finalUpdatedSubscription.merchantOperatingCityId of
         Nothing -> throwM $ InvalidRequest "Subscription is missing merchantOperatingCityId, cannot determine local time."
         Just opCityId ->
-          getConfig (RiderDimensions {merchantOperatingCityId = opCityId.getId, txnId = Nothing})
+          getConfig (RiderDimensions {merchantOperatingCityId = opCityId.getId})
             >>= fromMaybeM (RiderConfigDoesNotExist opCityId.getId)
 
     -- Use UTC for reference time; the offset is only for interpreting scheduledTimeOfDay
@@ -535,7 +535,7 @@ getNextRideTime subs = do
     case subs.merchantOperatingCityId of
       Nothing -> throwM $ InvalidRequest "Subscription is missing merchantOperatingCityId, cannot determine local time."
       Just opCityId ->
-        getConfig (RiderDimensions {merchantOperatingCityId = opCityId.getId, txnId = Nothing})
+        getConfig (RiderDimensions {merchantOperatingCityId = opCityId.getId})
           >>= fromMaybeM (RiderConfigDoesNotExist opCityId.getId)
   -- Use UTC for reference time; the offset is only for interpreting scheduledTimeOfDay
   currentTime <- getCurrentTime

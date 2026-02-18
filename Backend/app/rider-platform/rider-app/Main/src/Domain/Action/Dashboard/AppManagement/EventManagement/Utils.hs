@@ -30,7 +30,7 @@ uploadAssetHelper _merchantShortId _opCity ticketPlaceId file reqContentType = d
   uuid <- generateGUID
   m <- findMerchantByShortId _merchantShortId
   moCity <- CQMOC.findByMerchantIdAndCity m.id m.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moCity.id.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moCity.id.getId}) >>= fromMaybeM (RiderConfigNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
   filePath <- S3.createFilePublicPath "ticket-assets" ("ticket-place/" <> ticketPlaceId.getId) uuid fileExtension
   logDebug $ "filePath: " <> show filePath
   _ <- fork "S3 put file" $ S3.putPublicRaw (T.unpack filePath) documentFile (T.unpack reqContentType)
@@ -45,7 +45,7 @@ deleteAssetHelper _merchantShortId _opCity req = do
 
 deleteAsset :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> API.Types.Dashboard.AppManagement.TicketDashboard.DeletePublicFileRequest -> Environment.Flow ()
 deleteAsset moCityId req = do
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moCityId.getId, txnId = Nothing}) >>= fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId: " <> show moCityId)
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moCityId.getId}) >>= fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId: " <> show moCityId)
   let filePath = fromMaybe req.assetId $ T.stripPrefix (fromMaybe mempty (riderConfig.ticketAssetDomain)) req.assetId
   void $ fork "S3 delete file" $ S3.deletePublic (T.unpack filePath)
 

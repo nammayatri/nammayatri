@@ -43,6 +43,7 @@ data AppEnv = AppEnv
     version :: DeploymentVersion,
     requestId :: Maybe Text,
     sessionId :: Maybe Text,
+txnId :: Maybe Text,
     url :: Maybe Text
   }
   deriving (Generic)
@@ -58,6 +59,7 @@ buildAppEnv AppCfg {..} = do
   let requestId = Nothing
   let url = Nothing
   let sessionId = Nothing
+      txnId = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
