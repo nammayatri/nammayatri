@@ -23,7 +23,9 @@ where
 
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
+import qualified Domain.Action.UI.DriverOnboarding.GstVerification as GstCard
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
+import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UdyamCard
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.IdfyVerification as DIdfyVerification
@@ -56,8 +58,6 @@ import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import Storage.Queries.Person as QP
 import qualified Tools.Verification as Verification
-import qualified Domain.Action.UI.DriverOnboarding.GstVerification as GstCard
-
 
 -- FIXME this is temprorary solution for backward compatibility
 oldIdfyWebhookHandler ::
@@ -162,6 +162,7 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
         Just (Idfy.DLResult (Idfy.SourceOutput o)) -> o.status
         Just (Idfy.PanResult (Idfy.SourceOutput o)) -> o.status
         Just (Idfy.GstResult (Idfy.SourceOutput o)) -> o.status
+        Just (Idfy.UdyamAadhaarResult (Idfy.SourceOutput o)) -> o.status
         Just (Idfy.RCResult (Idfy.ExtractionOutput o)) -> o.status
         _ -> Nothing
     verifyDocument person verificationReq rslt mbRemPriorityList =
@@ -191,6 +192,11 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             VT.Idfy
         Idfy.BankAccountResult _ -> pure Ack
         Idfy.PanAadhaarLinkResult _ -> pure Ack
+        Idfy.UdyamAadhaarResult resSrcOp ->
+          UdyamCard.onVerifyUdyam
+            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            (Idfy.convertUdyamAadhaarOutputToUdyamAadhaarVerification resSrcOp.source_output)
+            VT.Idfy
         _ -> pure Ack
 
 handleIdfySourceDown :: DP.Person -> (IV.IdfyVerification -> Flow ()) -> DIdfyVerification.IdfyVerification -> Flow ()

@@ -762,3 +762,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_schedule
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_duplicate_udyam boolean ;
