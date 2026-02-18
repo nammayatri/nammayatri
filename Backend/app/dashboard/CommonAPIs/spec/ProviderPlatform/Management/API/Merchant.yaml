@@ -1071,6 +1071,7 @@ types:
     - stopFcmSuppressCount: Maybe Int
     - scheduleBookingListEligibilityTags: Maybe [Text]
     - isEnabled: Maybe Bool
+    - allowedAreas: Maybe [Text]
     - derive: "'HideSecrets"
   VehicleServiceTierConfigCreateReq:
     - serviceTierType: ServiceTierType
@@ -1099,6 +1100,7 @@ types:
     - scheduleBookingListEligibilityTags: Maybe [Text]
     - vehicleCategory: VehicleCategory
     - isEnabled: Bool
+    - allowedAreas: Maybe [Text]
     - derive: "'HideSecrets"
   VehicleServiceTierListRes:
     - recordType: Type
