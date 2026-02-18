@@ -1590,7 +1590,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             now <- getCurrentTime
             when (searchTry.validTill < now) $ throwError SearchRequestExpired
             when (sReqFD.isForwardRequest) $ do
-              mbGeohash <- Redis.runInMultiCloudRedis False $ Redis.withMasterRedis $ Redis.get (editDestinationUpdatedLocGeohashKey driverId)
+              mbGeohash <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get (editDestinationUpdatedLocGeohashKey driverId)
               when (maybe False (sReqFD.previousDropGeoHash /=) mbGeohash) $ throwError CustomerDestinationUpdated
             let expiryTimeWithBuffer = addUTCTime 10 sReqFD.searchRequestValidTill ------ added 10 secs buffer so that if driver is accepting at last second then because of api latency it sholuldn't fail.
             when (expiryTimeWithBuffer < now) $ throwError (InvalidRequest "Quote can't be responded. SearchReqForDriver is expired")

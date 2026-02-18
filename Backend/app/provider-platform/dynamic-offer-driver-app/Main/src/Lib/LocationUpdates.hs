@@ -147,11 +147,11 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
           key = multipleRouteKey booking.transactionId
           oldKey = multipleRouteKey rideId.getId
           shouldPerformSafetyCheck = safetyCheckEnabled && not safetyAlertAlreadyTriggered
-      oldMultipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedis False $ Redis.withMasterRedis $ Redis.get oldKey
+      oldMultipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get oldKey
       whenJust oldMultipleRoutes $ \allRoutes -> do
         Redis.setExp key allRoutes 3600
         Redis.del oldKey
-      multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedis False $ Redis.withMasterRedis $ Redis.get key
+      multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
       case multipleRoutes of
         Just routes -> do
           isRouteDeviated <- checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking shouldPerformSafetyCheck
@@ -224,7 +224,7 @@ checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafet
   let rideId = ride.id
   logInfo $ "Checking for deviation in single route for rideId: " <> getId rideId
   let key = searchRequestKey booking.transactionId
-  mbRouteInfo :: Maybe RI.RouteInfo <- Redis.runInMultiCloudRedis False $ Redis.withMasterRedis $ Redis.get key
+  mbRouteInfo :: Maybe RI.RouteInfo <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
   case mbRouteInfo of
     Just routeInfo -> do
       let multipleRoutesEntity =
@@ -257,7 +257,7 @@ getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDis
   let rideId = ride.id
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let key = multipleRouteKey booking.transactionId
-  multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedis False $ Redis.withMasterRedis $ Redis.get key
+  multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
   case multipleRoutes of
     Just routes -> do
       let undeviatedRoute = find (not . RI.deviation . RI.deviationInfo) routes

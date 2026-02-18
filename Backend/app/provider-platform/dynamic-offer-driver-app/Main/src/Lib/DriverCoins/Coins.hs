@@ -51,6 +51,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.App (lookupCloudType)
 import Kernel.Utils.Common
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
@@ -104,8 +105,10 @@ updateCoinsByDriverId driverId coinUpdateValue timeDiffFromUtc = do
 updateDriverCoins :: EventFlow m r => Id DP.Person -> Int -> Seconds -> m ()
 updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
   driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  cloudType <- liftIO $ lookupCloudType
+  let runQuery = if Just cloudType /= driver.cloudType then Hedis.runInMultiCloudRedisWrite else \x -> x
   void $ Person.updateTotalEarnedCoins (finalCoinsValue + driver.totalEarnedCoins) driverId
-  updateCoinsByDriverId driverId finalCoinsValue timeDiffFromUtc
+  void $ runQuery $ updateCoinsByDriverId driverId finalCoinsValue timeDiffFromUtc
 
 driverCoinsEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe [LYT.ConfigVersionMap] -> m ()
 driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVarient mbConfigVersionMap = do
