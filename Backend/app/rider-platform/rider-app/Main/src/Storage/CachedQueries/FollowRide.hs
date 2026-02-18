@@ -50,11 +50,7 @@ updateFollowRideList followerId userId shouldAdd = do
     else void $ Hedis.lrem key 0 userId.getId
 
 getFollowRideCounter :: CacheFlow m r => Id Person -> m [Text]
-getFollowRideCounter person = do
-  mbResult <- Hedis.runInMultiCloudRedis False $ do
-    result <- Hedis.getList $ makeFollowsRideListKey person
-    pure $ Just result
-  pure $ fromMaybe [] mbResult
+getFollowRideCounter person = Hedis.runInMultiCloudRedisForList $ Hedis.getList $ makeFollowsRideListKey person
 
 makeFollowsRideListKey :: Id Person -> Text
 makeFollowsRideListKey personId = "CachedQueries:FollowRide:List:PersonId:" <> personId.getId

@@ -31,4 +31,4 @@ rideRoute rideId (_, _, _) = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let key = searchRequestKey booking.transactionId
-  runInMultiCloudRedis False (safeGet key) >>= fromMaybeM (RideDoesNotExist $ getId rideId)
+  runInMultiCloudRedisMaybeResult (safeGet key) >>= fromMaybeM (RideDoesNotExist $ getId rideId)

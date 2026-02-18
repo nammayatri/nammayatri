@@ -57,7 +57,7 @@ getTripRoutes (personId, merchantId, merchantOpCityId) entityId req = do
       booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
       let entityId' = Just $ fromMaybe (getId ride.id) entityId
       let key = searchRequestKey booking.transactionId
-      mbRouteInfo :: Maybe RI.RouteInfo <- Redis.runInMultiCloudRedis False $ Redis.withMasterRedis $ Redis.get key
+      mbRouteInfo :: Maybe RI.RouteInfo <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
       case mbRouteInfo of
         Just routeInfo -> do
           let src = (NE.head req.waypoints) :: Maps.LatLong
