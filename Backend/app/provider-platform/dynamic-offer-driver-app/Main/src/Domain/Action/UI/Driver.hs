@@ -1091,8 +1091,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
   qrUrl <- forM person.qrImageId $ \mediaId -> do
     mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
     return mediaEntry.url
-  fareProductConfig <- CQFP.findAllFareProductByMerchantOpCityId person.merchantOperatingCityId
-  let supportedServiceTiers = nub $ map (.vehicleServiceTier) fareProductConfig
+  supportedServiceTiers <- CQFP.findSupportedServiceTiersByMerchantOpCityId person.merchantOperatingCityId
   (checkIfACWorking, mbDefaultServiceTier, isVehicleSupported) <-
     case vehicleMB of
       Nothing -> return (False, Nothing, False)
