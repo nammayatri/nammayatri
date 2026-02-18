@@ -17,6 +17,27 @@ data CallPoliceAPI = CallPoliceAPI {rideId :: Kernel.Types.Id.Id Domain.Types.Ri
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ErssStatusUpdateReq = ErssStatusUpdateReq
+  { idSource :: Kernel.Prelude.Maybe Data.Text.Text,
+    idErss :: Kernel.Prelude.Maybe Data.Text.Text,
+    currentStatus :: Data.Text.Text,
+    statusDesc :: Kernel.Prelude.Maybe Data.Text.Text,
+    comments :: Kernel.Prelude.Maybe Data.Text.Text,
+    lastUpdatedTime :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ErssStatusUpdateRes = ErssStatusUpdateRes
+  { resultCode :: Data.Text.Text,
+    resultString :: Kernel.Prelude.Maybe Data.Text.Text,
+    errorMsg :: Kernel.Prelude.Maybe Data.Text.Text,
+    message :: Kernel.Prelude.Maybe Data.Text.Text,
+    payLoad :: Kernel.Prelude.Maybe Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data MarkAsSafeReq = MarkAsSafeReq
   { contacts :: Kernel.Prelude.Maybe [Data.Text.Text],
     isEndLiveTracking :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

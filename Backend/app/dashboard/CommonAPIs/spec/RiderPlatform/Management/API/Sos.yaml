@@ -1,6 +1,11 @@
 imports:
   Sos: Dashboard.Common
+  Customer: Dashboard.Common
+  Ride: Dashboard.Common
+  Merchant: Dashboard.Common
+  MerchantOperatingCity: Dashboard.Common
   APISuccess: Kernel.Types.APISuccess
+  UTCTime: Kernel.Prelude
 
 module: Sos
 
@@ -13,6 +18,15 @@ apis:
         sosId: Id Sos
       response:
         type: SosTrackingRes
+
+  - GET:
+      endpoint: /{sosId}/details
+      name: GetSosDetails
+      auth: NoAuth
+      params:
+        sosId: Id Sos
+      response:
+        type: SosDetailsMaybeRes
 
   - POST:
       endpoint: /{sosId}/callExternalSOS
@@ -34,6 +48,35 @@ types:
 
   SosStatus:
     - enum: NotResolved, Pending, Resolved, MockPending, MockResolved
+
+  SosType:
+    - enum: Police, CustomerCare, SafetyFlow, CSAlertSosTicket, AudioRecording, KaptureDashboard
+
+  SosEntityType:
+    - enum: Ride, NonRide
+
+  SosDetailsMaybeRes:
+    - recordType: NewType
+    - details: Maybe SosDetailsRes
+
+  SosDetailsRes:
+    - id: Id Sos
+    - personId: Id Customer
+    - rideId: Id Ride
+    - flow: SosType
+    - status: SosStatus
+    - ticketId: Maybe Text
+    - mediaFiles: "[Text]"
+    - trackingExpiresAt: Maybe UTCTime
+    - sosState: Maybe SosState
+    - entityType: Maybe SosEntityType
+    - externalReferenceId: Maybe Text
+    - externalReferenceStatus: Maybe Text
+    - externalStatusHistory: Maybe Text
+    - merchantId: Maybe (Id Merchant)
+    - merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
 
   SosTrackingRes:
     - currentLocation: Maybe SosLocationRes
