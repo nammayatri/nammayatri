@@ -103,7 +103,7 @@ newtype FavouriteBookingListRes = FavouriteBookingListRes
 
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingAPIEntity
 bookingStatus bookingId (personId, _merchantId) = runInMultiCloud $ do
-  booking <- (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
   fork "creating cache for emergency contact SOS" $ emergencyContactSOSCache booking personId
   logInfo $ "booking: test " <> show booking
@@ -112,7 +112,7 @@ bookingStatus bookingId (personId, _merchantId) = runInMultiCloud $ do
 
 bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingStatusAPIEntity
 bookingStatusPolling bookingId _ = runInMultiCloud $ do
-  booking <- (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
   logInfo $ "booking: test " <> show booking
   handleConfirmTtlExpiry booking
@@ -574,7 +574,7 @@ processStop bookingId loc merchantId isEdit = do
             bppUrl = booking.providerUrl,
             transactionId = booking.transactionId,
             messageId = uuid,
-            city = merchant.defaultCity, -- TODO: Correct during interoperability
+            city = merchant.defaultCity,
             ..
           }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq

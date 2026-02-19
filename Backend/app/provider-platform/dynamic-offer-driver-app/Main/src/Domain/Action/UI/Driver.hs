@@ -204,6 +204,7 @@ import Kernel.Prelude (NominalDiffTime, handle, intToNominalDiffTime, roundToInt
 import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Clickhouse.Config as CH
+import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -889,8 +890,8 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                 let isEnableForVariant = maybe False (`elem` transporterConfig.variantsToEnableForSubscription) (mbVehicle <&> (.variant))
                 let planBasedChecks' = transporterConfig.isPlanMandatory && isNothing autoPayStatus && commonSubscriptionChecks && isEnableForVariant
                 pure (planBasedChecks', False)
-          let isVehicleVariantDisabledForSubscription = maybe False (`elem` (fromMaybe [] vehicleVariantsDisabledForSubscription)) (mbVehicle <&> (.variant))
-          when ((planBasedChecks || changeBasedChecks) && (not isVehicleVariantDisabledForSubscription)) $ throwError (NoPlanSelected personId.getId)
+          let isVehicleVariantDisabledForSubscription = maybe False (`elem` fromMaybe [] vehicleVariantsDisabledForSubscription) (mbVehicle <&> (.variant))
+          when ((planBasedChecks || changeBasedChecks) && not isVehicleVariantDisabledForSubscription) $ throwError (NoPlanSelected personId.getId)
           when merchant.onlinePayment $ do
             driverBankAccount <-
               QFDA.findByDriverId driverId True >>= \case
@@ -911,7 +912,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
           let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
           -- Track offline timestamp when driver goes offline
-          if (mode == Just DriverInfo.OFFLINE && driverInfo.mode /= Just DriverInfo.OFFLINE)
+          if mode == Just DriverInfo.OFFLINE && driverInfo.mode /= Just DriverInfo.OFFLINE
             then do
               now <- getCurrentTime
               logInfo $ "Driver going OFFLINE at: " <> show now <> " for driverId: " <> show driverId
@@ -1102,10 +1103,10 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
       Nothing -> return (False, Nothing, False)
       Just vehicle -> do
         cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
-        let allVehicleSupportedDefaultServiceTiers = sortOn (fmap Down . (.airConditionedThreshold)) $ (filter (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant && vst.serviceTierType `elem` supportedServiceTiers) cityServiceTiers)
+        let allVehicleSupportedDefaultServiceTiers = sortOn (fmap Down . (.airConditionedThreshold)) $ filter (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant && vst.serviceTierType `elem` supportedServiceTiers) cityServiceTiers
         let isVehicleSupported = not $ null allVehicleSupportedDefaultServiceTiers
         let mbDefaultServiceTierItem =
-              if (null allVehicleSupportedDefaultServiceTiers)
+              if null allVehicleSupportedDefaultServiceTiers
                 then find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
                 else listToMaybe allVehicleSupportedDefaultServiceTiers
         let checIfACWorking' =
@@ -1517,7 +1518,8 @@ getNearbySearchRequests ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe (Id DST.SearchTry) ->

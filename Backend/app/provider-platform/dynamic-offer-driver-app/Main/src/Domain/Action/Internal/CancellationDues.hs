@@ -9,7 +9,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -65,7 +65,7 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
       then do
         localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
         (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF localTime Nothing Nothing
-        response <- withTryCatch "runLogics:canWaiveOffResult" $ LYTU.runLogics allLogics logicInput
+        response <- withTryCatch "runLogics:canWaiveOffResult" $ LYDL.runLogicsWithDebugLog (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF allLogics logicInput
         case response of
           Left e -> do
             logError $ "Error in running UserCancellationDuesLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
