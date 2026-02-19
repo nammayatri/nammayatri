@@ -189,16 +189,17 @@ postMultimodalInitiate ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Maybe Spec.ServiceTierType ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyType = do
+postMultimodalInitiate (_personId, _merchantId) journeyId mbBusServiceTierType filterServiceAndJrnyType = do
   runAction journeyId $ do
     journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
     journey <- JM.getJourney journeyId
     let blacklistedServiceTiers = if filterServiceAndJrnyType == Just False then [] else [Spec.AC_EMU_FIRST_CLASS]
     let blacklistedFareQuoteTypes = if filterServiceAndJrnyType == Just False then [] else [DFRFSQuote.ReturnJourney]
-    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes) "addAllLegs"
+    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes mbBusServiceTierType) "addAllLegs"
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
@@ -211,7 +212,7 @@ postMultimodalInitiateSimpl ::
   Environment.Flow ApiTypes.JourneyInfoResp
 postMultimodalInitiateSimpl journeyLegs journey blacklistedServiceTiers blacklistedFareQuoteTypes = do
   runAction journey.id $ do
-    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes) "addAllLegs"
+    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes Nothing) "addAllLegs"
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"

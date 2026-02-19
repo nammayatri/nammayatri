@@ -548,8 +548,9 @@ addAllLegs ::
   [DJourneyLeg.JourneyLeg] ->
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
+  Maybe Spec.ServiceTierType ->
   m ()
-addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers blacklistedFareQuoteTypes = do
+addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers blacklistedFareQuoteTypes mbBusServiceTierType = do
   oldLegs <- maybe (QJourneyLeg.getJourneyLegs journey.id) pure mbOldJourneyLegs
   let filteredOldLegs = filter (\leg1 -> all (\leg2 -> leg1.sequenceNumber /= leg2.sequenceNumber) newJourneyLegs) oldLegs
   let allLegs = sortBy (comparing (.sequenceNumber)) (filteredOldLegs ++ newJourneyLegs)
@@ -570,7 +571,8 @@ addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers black
         DTrip.Walk ->
           upsertJourneyLegAction journeyLeg journeyLeg.id.getId
         DTrip.Bus -> do
-          void $ addBusLeg journey journeyLeg journeyLeg.userBookedBusServiceTierType (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes
+          let serviceTier = mbBusServiceTierType <|> journeyLeg.userBookedBusServiceTierType
+          void $ addBusLeg journey journeyLeg serviceTier (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes
   where
     upsertJourneyLegAction :: JL.SearchRequestFlow m r c => DJourneyLeg.JourneyLeg -> Text -> m ()
     upsertJourneyLegAction journeyLeg searchId = upsertJourneyLeg (journeyLeg {DJourneyLeg.legSearchId = Just searchId})
@@ -1044,7 +1046,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         forM_ legsToCancel $ \currLeg -> deleteLeg currLeg (SCR.CancellationReasonCode "") False Nothing
         QJourneyLeg.create journeyLeg
         updateJourneyChangeLogCounter journeyId
-        addAllLegs journey Nothing [journeyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes
+        addAllLegs journey Nothing [journeyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes Nothing
     -- check this code
     JL.StartLocation startlocation -> do
       currentLeg <- find (\leg -> leg.sequenceNumber == startlocation.legOrder) allLegs & fromMaybeM (InvalidRequest $ "Cannot find leg with order: " <> show startlocation.legOrder)
@@ -1304,7 +1306,7 @@ switchLeg journeyId _ req filterServiceAndJrnyType = do
     deleteLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
     newJourneyLeg <- updateJourneyLeg journeyLeg req.newMode startLocation newDistance newDuration
     journey <- getJourney journeyId
-    addAllLegs journey Nothing [newJourneyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes
+    addAllLegs journey Nothing [newJourneyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes Nothing
   where
     updateJourneyLeg ::
       ( CacheFlow m r,
