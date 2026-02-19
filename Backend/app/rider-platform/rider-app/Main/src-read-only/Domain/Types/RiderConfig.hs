@@ -79,6 +79,7 @@ data RiderConfig = RiderConfig
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping,
     exotelStatusCheckSchedulerDelay :: Kernel.Prelude.Int,
     externalSOSConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.ExternalSOSConfig,
+    externalSOSTracePollingIntervalSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fareCacheInterCitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
     fareCacheRentalsConfig :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig],
     feedbackAlertRatingThreshold :: Kernel.Prelude.Int,
@@ -200,7 +201,13 @@ data BusTrackingConfig = BusTrackingConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data ExternalSOSConfig = ExternalSOSConfig {flow :: Domain.Types.RiderConfig.ExternalSOSFlow, triggerSource :: Domain.Types.RiderConfig.ExternalSOSTriggerSource, latLonRequired :: Kernel.Prelude.Bool, mediaRequired :: Kernel.Prelude.Bool, trackingLinkRequired :: Kernel.Prelude.Bool}
+data ExternalSOSConfig = ExternalSOSConfig
+  { flow :: Domain.Types.RiderConfig.ExternalSOSFlow,
+    latLonRequired :: Kernel.Prelude.Bool,
+    mediaRequired :: Kernel.Prelude.Bool,
+    trackingLinkRequired :: Kernel.Prelude.Bool,
+    triggerSource :: Domain.Types.RiderConfig.ExternalSOSTriggerSource
+  }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data ExternalSOSFlow = ERSS | GJ112 deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -219,5 +226,7 @@ data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notifi
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)

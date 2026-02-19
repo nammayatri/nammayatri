@@ -10,6 +10,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List as List
 import Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Time.Format
 import qualified Domain.Action.UI.Call as DUCall
 import qualified Domain.Action.UI.FollowRide as DFR
@@ -198,6 +199,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
       return (sosDetailsWithEntityType.id, finalTrackLink, Nothing)
   whenJust mbExternalReferenceId $ \trackingId ->
     QSos.updateExternalReferenceId (Just trackingId) sosId
+    Redis.del (mkExternalSOSTraceKey sosId)
   buildSmsReq <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
       MessageBuilder.BuildSOSAlertMessageReq
@@ -603,34 +605,50 @@ postSosUpdateLocation (mbPersonId, _) sosId req = do
   let location = Maps.LatLong {lat = req.lat, lon = req.lon}
   SOSLocation.updateSosRiderLocation sosId location req.accuracy sosDetails.trackingExpiresAt
 
-  sendExternalSOSTrace sosDetails req
+  fork "sendExternalSOSTrace" $ sendExternalSOSTrace sosDetails req
   pure APISuccess.Success
+
+type ExternalSOSTraceCache = (Integer, Bool, Maybe SOSInterface.SOSServiceConfig)
 
 sendExternalSOSTrace :: DSos.Sos -> SosLocationUpdateReq -> Flow ()
 sendExternalSOSTrace sosDetails req = do
   let sosId = sosDetails.id
-  cached :: Maybe (Bool, Maybe SOSInterface.SOSServiceConfig) <- Redis.safeGet (mkExternalSOSTraceKey sosId)
+  pollingIntervalSec <- getExternalSOSTracePollingIntervalSec sosDetails.merchantOperatingCityId
+  cached :: Maybe ExternalSOSTraceCache <- Redis.safeGet (mkExternalSOSTraceKey sosId)
+  now <- getCurrentTime
+  let nowSec = round $ utcTimeToPOSIXSeconds now
+      ttl = 3600 :: Int -- TODO: Remove this once we have a proper config for ttl as per govt requirements
+        -- case sosDetails.trackingExpiresAt of
+        --   Just exp' -> max 60 (round (diffUTCTime exp' now))
+        --   Nothing -> 3600 :: Int
   case cached of
-    Just (False, _) -> pure ()
-    Just (True, Nothing) -> pure ()
-    Just (True, Just specificConfig) ->
-      whenJust sosDetails.externalReferenceId $ \_ -> do
-        mbMobile <- getPersonMobileNo sosDetails.personId
-        whenJust mbMobile $ \mobileNo ->
-          callSOSTraceAPI specificConfig mobileNo req
+    Just (_, False, _) -> pure ()
+    Just (_, True, Nothing) -> pure ()
+    Just (lastTraceSec, True, Just specificConfig) ->
+      when (nowSec - lastTraceSec >= fromIntegral pollingIntervalSec) $
+        whenJust sosDetails.externalReferenceId $ \_ -> do
+          mbMobile <- getPersonMobileNo sosDetails.personId
+          whenJust mbMobile $ \mobileNo -> do
+            callSOSTraceAPI sosId specificConfig mobileNo req
+            Redis.setExp (mkExternalSOSTraceKey sosId) (nowSec, True, Just specificConfig) ttl
     Nothing -> do
       mbConfig <- resolveExternalSOSTraceConfig sosDetails
       let shouldCall = isJust mbConfig
-      now <- getCurrentTime
-      let ttl = case sosDetails.trackingExpiresAt of
-            Just exp' -> max 60 (round (diffUTCTime exp' now))
-            Nothing -> 3600 :: Int
-      Redis.setExp (mkExternalSOSTraceKey sosId) (shouldCall, mbConfig) ttl
+      Redis.setExp (mkExternalSOSTraceKey sosId) (nowSec, shouldCall, mbConfig) ttl
       whenJust mbConfig $ \specificConfig ->
         whenJust sosDetails.externalReferenceId $ \_ -> do
           mbMobile <- getPersonMobileNo sosDetails.personId
           whenJust mbMobile $ \mobileNo ->
-            callSOSTraceAPI specificConfig mobileNo req
+            callSOSTraceAPI sosId specificConfig mobileNo req
+
+getExternalSOSTracePollingIntervalSec :: Maybe (Id DMOC.MerchantOperatingCity) -> Flow Int
+getExternalSOSTracePollingIntervalSec = \case
+  Nothing -> pure defaultExternalSOSTracePollingIntervalSec
+  Just merchantOpCityId -> do
+    mbRiderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing
+    pure $ maybe defaultExternalSOSTracePollingIntervalSec (\rc -> maybe defaultExternalSOSTracePollingIntervalSec (.getSeconds) rc.externalSOSTracePollingIntervalSeconds) mbRiderConfig
+  where
+    defaultExternalSOSTracePollingIntervalSec = 60
 
 resolveExternalSOSTraceConfig :: DSos.Sos -> Flow (Maybe SOSInterface.SOSServiceConfig)
 resolveExternalSOSTraceConfig sosDetails = do
@@ -655,8 +673,8 @@ getPersonMobileNo personId =
     QP.findById personId >>= \mbPerson ->
       maybe (pure Nothing) (\p -> mapM decrypt p.mobileNumber) mbPerson
 
-callSOSTraceAPI :: SOSInterface.SOSServiceConfig -> Text -> SosLocationUpdateReq -> Flow ()
-callSOSTraceAPI specificConfig mobileNo req = do
+callSOSTraceAPI :: Id DSos.Sos -> SOSInterface.SOSServiceConfig -> Text -> SosLocationUpdateReq -> Flow ()
+callSOSTraceAPI _ specificConfig mobileNo req = do
   now <- getCurrentTime
   let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" now
       traceReq =
@@ -927,12 +945,13 @@ buildExternalSOSDetails ::
   SosReq ->
   Person.Person ->
   DRC.ExternalSOSConfig ->
+  SOSInterface.SOSServiceConfig ->
   Maybe DRide.Ride ->
   [DPDEN.PersonDefaultEmergencyNumberAPIEntity] ->
   DMOC.MerchantOperatingCity ->
   DRC.RiderConfig ->
   Flow SOSInterface.InitialSOSReq
-buildExternalSOSDetails req person sosConfig mbRide emergencyContacts merchantOpCity riderConfig = do
+buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyContacts merchantOpCity riderConfig = do
   now <- getCurrentTime
   mobileNo <- fmap (fromMaybe "0000000000") $ traverse decrypt person.mobileNumber
   emailText <- traverse decrypt person.email
@@ -971,7 +990,7 @@ buildExternalSOSDetails req person sosConfig mbRide emergencyContacts merchantOp
         senderName = person.firstName,
         address = Nothing,
         gpsAccuracy = Nothing,
-        stateCode = Nothing,
+        stateCode = Just "07",
         silentCommunication = Nothing,
         specialNeeds = specialNeedsText,
         dob = dobStr,
@@ -999,6 +1018,10 @@ buildExternalSOSDetails req person sosConfig mbRide emergencyContacts merchantOp
         vendorName = Just merchantOpCity.merchantShortId.getShortId,
         deviceType = Just 2
       }
+
+extractStateCode :: SOSInterface.SOSServiceConfig -> Maybe Text
+extractStateCode (SOSInterface.ERSSConfig cfg) = cfg.stateCode
+extractStateCode _ = Nothing
 
 postSosErssStatusUpdate :: API.Types.UI.Sos.ErssStatusUpdateReq -> Flow API.Types.UI.Sos.ErssStatusUpdateRes
 postSosErssStatusUpdate req = do

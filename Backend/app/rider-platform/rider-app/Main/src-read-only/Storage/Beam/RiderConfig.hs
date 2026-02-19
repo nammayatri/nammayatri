@@ -78,6 +78,7 @@ data RiderConfigT f = RiderConfigT
     exotelAppIdMapping :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping),
     exotelStatusCheckSchedulerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     externalSOSConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    externalSOSTracePollingIntervalSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     fareCacheInterCitySearchLocations :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     fareCacheRentalsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     feedbackAlertRatingThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

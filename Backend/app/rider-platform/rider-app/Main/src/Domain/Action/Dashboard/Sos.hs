@@ -10,22 +10,23 @@ import qualified Domain.Action.UI.Profile as DP
 import qualified Domain.Action.UI.Sos as Sos
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Sos
 import qualified Domain.Types.Sos as DSos
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions as B
 import qualified Kernel.External.SOS as PoliceSOS
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Beam.Functions as B
 import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
@@ -134,12 +135,13 @@ callExternalSOS sosId = do
           mbRide <- QRide.findById sos.rideId
           emergencyContacts <- DP.getDefaultEmergencyNumbers (sos.personId, merchantId)
           merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos) person sosConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
+          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
           initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
           unless initialRes.success $
             throwError $ InternalError (fromMaybe "External SOS call failed" initialRes.errorMessage)
-          whenJust initialRes.trackingId $ \trackingId ->
+          whenJust initialRes.trackingId $ \trackingId -> do
             QSos.updateExternalReferenceId (Just trackingId) sosId
+            Redis.del (Sos.mkExternalSOSTraceKey sosId)
         _ -> throwError $ InternalError "Invalid SOS Service Config for provider"
   where
     mkSosReq :: DSos.Sos -> UISos.SosReq

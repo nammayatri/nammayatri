@@ -226,6 +226,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: Maybe Day
     invoiceLogoUrl: Maybe Text
     externalSOSConfig: Maybe ExternalSOSConfig
+    externalSOSTracePollingIntervalSeconds: Maybe Seconds
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -279,6 +280,7 @@ RiderConfig:
     kafkaTopicName: Maybe Text
     staticCustomerIdThresholdDay: Maybe Day
     externalSOSConfig: Maybe Value
+    externalSOSTracePollingIntervalSeconds: Maybe Seconds
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -340,6 +342,7 @@ RiderConfig:
     kafkaTopicName: fromMaybe "gps-data" kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    externalSOSTracePollingIntervalSeconds: externalSOSTracePollingIntervalSeconds|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -393,6 +396,7 @@ RiderConfig:
     kafkaTopicName: Just kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
+    externalSOSTracePollingIntervalSeconds: externalSOSTracePollingIntervalSeconds|E
 
 
   default:
@@ -490,6 +494,7 @@ RiderConfig:
     ptCircuitBreakerConfig: "json"
     staticCustomerIdThresholdDay: date
     externalSOSConfig: "json"
+    externalSOSTracePollingIntervalSeconds: int
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
