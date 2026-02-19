@@ -23,6 +23,7 @@ where
 import Control.Monad.Catch
 import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
+import Data.List (partition)
 import Data.Singletons (fromSing)
 import qualified Data.Time as T hiding (getCurrentTime)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
@@ -97,11 +98,26 @@ runnerIterationRedis SchedulerHandle {..} runTask = do
   groupName <- asks (.groupName)
   readyTasks <- getReadyTask
   logTagDebug "Available tasks - Count" . show $ length readyTasks
-  mapM_ (runTask . fst) readyTasks
-  let recordIds = map snd readyTasks
-  fork "removingFromStream" . unless (null recordIds) $ do
-    void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck key groupName recordIds
-    void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xDel key recordIds
+  blackListedJobs <- asks (.blackListedJobs)
+  (nonBlacklistedTasks, recordIdsToDelete) <-
+    if null blackListedJobs
+      then pure (readyTasks, map snd readyTasks) -- No blacklist: execute all, delete all
+      else do
+        let (blacklistedTasks, nonBlacklistedTasks') = partition (isBlacklisted blackListedJobs) readyTasks
+            blacklistedCount = length blacklistedTasks
+        when (blacklistedCount > 0) $ do
+          logInfo $ "Skipping " <> show blacklistedCount <> " blacklisted job(s)" <> " jobType: " <> show blackListedJobs
+          logDebug $ "Blacklisted job IDs: " <> show (map (\(AnyJob Job {..}, _) -> id.getId) blacklistedTasks)
+        pure (nonBlacklistedTasks', map snd readyTasks) -- Delete all (both blacklisted and non-blacklisted)
+  mapM_ (runTask . fst) nonBlacklistedTasks
+  fork "removingFromStream" . unless (null recordIdsToDelete) $ do
+    void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck key groupName recordIdsToDelete
+    void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xDel key recordIdsToDelete
+  where
+    isBlacklisted :: [Text] -> (AnyJob t, BS.ByteString) -> Bool
+    isBlacklisted blackList (AnyJob Job {..}, _) =
+      let jobType' = show (fromSing $ jobType jobInfo)
+       in jobType' `elem` blackList
 
 runnerIteration :: forall t. (JobProcessor t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 runnerIteration SchedulerHandle {..} runTask = do
@@ -109,13 +125,27 @@ runnerIteration SchedulerHandle {..} runTask = do
   let readyTasks = map fst readyJobs
   logTagDebug "All Tasks - Count" . show $ length readyTasks
   logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}) -> parentJobId) readyTasks
+  blackListedJobs <- asks (.blackListedJobs)
+  let (blacklistedTasks, nonBlacklistedTasks) =
+        if null blackListedJobs
+          then ([], readyTasks) -- No blacklist: process all
+          else partition (isBlacklistedDB blackListedJobs) readyTasks
+  let blacklistedCount = length blacklistedTasks
+  when (blacklistedCount > 0) $ do
+    logInfo $ "Skipping " <> show blacklistedCount <> " blacklisted job(s) in DB runner" <> " jobType: " <> show blackListedJobs
+    logDebug $ "Blacklisted job IDs: " <> show (map (\(AnyJob Job {..}) -> id.getId) blacklistedTasks)
   tasksPerIteration <- asks (.tasksPerIteration)
-  availableReadyTasksIds <- pickTasks tasksPerIteration $ map (\(AnyJob Job {..}) -> parentJobId) readyTasks
+  availableReadyTasksIds <- pickTasks tasksPerIteration $ map (\(AnyJob Job {..}) -> parentJobId) nonBlacklistedTasks
   logTagDebug "Available tasks - Count" . show $ length availableReadyTasksIds
   logTagDebug "Available tasks" . show $ availableReadyTasksIds
   takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
   mapConcurrently runTask takenTasksUpdatedInfo
   where
+    isBlacklistedDB :: [Text] -> AnyJob t -> Bool
+    isBlacklistedDB blackList (AnyJob Job {..}) =
+      let jobType' = show (fromSing $ jobType jobInfo)
+       in jobType' `elem` blackList
+
     pickTasks :: Int -> [Id AnyJob] -> SchedulerM [Id AnyJob]
     pickTasks _ [] = pure []
     pickTasks 0 _ = pure []
