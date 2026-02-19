@@ -672,6 +672,7 @@ in  { logger_cfg
         "http://127.0.0.1:8016/internal/driverInactiveFCM"
     , apns_url = "https://api.sandbox.push.apple.com:443"
     , pickup_notification_threshold = 40.0
+    , pickup_instruction_notification_threshold = 200.0
     , arriving_notification_threshold = 100.0
     , detection_callback_url =
         "http://127.0.0.1:8016/internal/violationDetection"
@@ -686,4 +687,5 @@ in  { logger_cfg
     , osrm_distance_matrix_base_url = "http://router.project-osrm.org"
     , duration_cache_time_slots =
       [ "06:00:00", "12:00:00", "18:00:00", "19:55:00" ]
+    , external_gps_api_key = ""
     }
