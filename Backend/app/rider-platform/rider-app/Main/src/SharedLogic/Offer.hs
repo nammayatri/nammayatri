@@ -8,6 +8,7 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.CacheFlow
@@ -17,7 +18,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
@@ -73,17 +74,17 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
         )
           =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion req
 
-mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> [JL.LegInfo] -> m (Maybe CumulativeOfferResp)
+mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> [JL.LegInfo] -> m (Maybe CumulativeOfferResp)
 mkCumulativeOfferResp merchantOperatingCityId offerListResp legInfos = do
   now <- getCurrentTime
-  (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.CUMULATIVE_OFFER_POLICY) now Nothing Nothing
+  (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY now Nothing Nothing
   if null logics
     then do
       logInfo "No cumulative offer logic found."
       pure Nothing
     else do
       logInfo $ "Running cumulative offer logic with " <> show (length logics) <> " rules"
-      result <- LYTU.runLogics logics (CumulativeOfferReq offerListResp legInfos)
+      result <- LYDL.runLogicsWithDebugLog (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY logics (CumulativeOfferReq offerListResp legInfos)
       case A.fromJSON result.result :: A.Result CumulativeOfferResp of
         A.Success logicResult -> do
           logInfo $ "Cumulative offer logic result: " <> show logicResult

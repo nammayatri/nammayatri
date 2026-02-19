@@ -59,6 +59,7 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantConfigSpecialLocationList,
     getMerchantConfigGeometryList,
     putMerchantConfigGeometryUpdate,
+    postMerchantConfigDebugLogUpdate,
   )
 where
 
@@ -151,6 +152,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
@@ -3941,3 +3943,15 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         createdAt = now,
         updatedAt = now
       }
+
+---------------------------------------------------------------------
+postMerchantConfigDebugLogUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  DebugLog.SetJsonLogicDebugReq ->
+  Flow APISuccess
+postMerchantConfigDebugLogUpdate merchantShortId city req = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
+  DebugLog.setJsonLogicDebugFlags (cast merchantOpCityId) req
+  pure Success

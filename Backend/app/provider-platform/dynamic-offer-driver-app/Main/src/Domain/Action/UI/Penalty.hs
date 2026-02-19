@@ -21,6 +21,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as YT
 import qualified Lib.Yudhishthira.Types.Application as YA
 import qualified Storage.Cac.TransporterConfig as CCT
@@ -54,7 +55,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
   (isApplicable, penaltyAmount) <- case booking.fareParams.driverCancellationPenaltyAmount of
     Just penaltyAmount -> do
       tagData <- CancelRideInternal.buildPenaltyCheckContext booking ride req.point
-      tagsE <- withTryCatch "computeNammaTags:PenaltyCheck" $ Yudhishthira.computeNammaTags (cast booking.merchantOperatingCityId) YA.PenaltyCheck tagData
+      tagsE <- withTryCatch "computeNammaTags:PenaltyCheck" $ LYDL.computeNammaTagsWithDebugLog (cast booking.merchantOperatingCityId) YA.PenaltyCheck tagData
       let tags = fromMaybe [] $ eitherToMaybe tagsE
           isPenaltyApplicable = validCancellationPenaltyApplicable `elem` tags
           existingTags = fromMaybe [] ride.rideTags
@@ -97,7 +98,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
               driverArrivalTime = driverArrivalTime,
               merchantOperatingCityId = booking.merchantOperatingCityId
             }
-    tagsE <- withTryCatch "computeNammaTags:RideCancel" $ Yudhishthira.computeNammaTags (cast booking.merchantOperatingCityId) YA.RideCancel tagData
+    tagsE <- withTryCatch "computeNammaTags:RideCancel" $ LYDL.computeNammaTagsWithDebugLog (cast booking.merchantOperatingCityId) YA.RideCancel tagData
     let tags = fromMaybe [] $ eitherToMaybe tagsE
         isValid = validDriverCancellation `elem` tags
         isInvalid = invalidDriverCancellation `elem` tags

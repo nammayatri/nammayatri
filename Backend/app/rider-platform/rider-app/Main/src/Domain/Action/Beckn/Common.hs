@@ -66,6 +66,7 @@ import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -84,7 +85,7 @@ import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
-import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
@@ -839,7 +840,8 @@ addOffersNammaTags ::
     EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
   ) =>
   DRide.Ride ->
   DPerson.Person ->
@@ -849,7 +851,7 @@ addOffersNammaTags ride person = do
   now <- getCurrentTime
   let rideData = mkRideData ride
       customerData = Y.CustomerData {mobileNumber = decryptedMobileNumber, gender = person.gender}
-  tags <- Yudhishthira.computeNammaTagsWithExpiry (cast person.merchantOperatingCityId) Yudhishthira.RideEndOffers (Y.EndRideOffersTagData customerData rideData)
+  tags <- LYDL.computeNammaTagsWithExpiryAndDebugLog (cast person.merchantOperatingCityId) Yudhishthira.RideEndOffers (Y.EndRideOffersTagData customerData rideData)
   newTags <- modifiedNewNammaTags tags (fromMaybe [] person.customerNammaTags) now
   when (not $ null newTags) $ do
     QP.updateCustomerTags (Just $ (fromMaybe [] person.customerNammaTags) <> newTags) person.id
@@ -1060,7 +1062,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
                     merchantOperatingCityId = booking.merchantOperatingCityId,
                     driverArrivalTime
                   }
-          nammaTags <- withTryCatch "computeNammaTags:RideCancel" (Yudhishthira.computeNammaTags (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel tagData)
+          nammaTags <- withTryCatch "computeNammaTags:RideCancel" (LYDL.computeNammaTagsWithDebugLog (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel tagData)
           logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags)
           let mbNammaTags = eitherToMaybe nammaTags
           tagsWithExpiry <- forM (fromMaybe [] mbNammaTags) $ \tag -> Yudhishthira.fetchNammaTagExpiry (cast booking.merchantOperatingCityId) tag

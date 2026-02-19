@@ -32,8 +32,8 @@ import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWCTypes
-import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.Yudhishthira.Event.KaalChakra.Parse as Parse
 import qualified Lib.Yudhishthira.Event.KaalChakra.Template as Template
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
@@ -220,7 +220,8 @@ fetchUserDataBatch req eventId chakraQueries batchNumber = do
   let redisQueries = filter (\q -> q.queryType == Just YT.REDIS) nonClickhouseQueries
   logInfo $
     "Chakra batch " <> show batchNumber <> ": ClickHouse queries=" <> show (length clickhouseQueries)
-      <> ", Redis queries=" <> show (length redisQueries)
+      <> ", Redis queries="
+      <> show (length redisQueries)
       <> if null redisQueries then " (no Redis queries; check query_type=REDIS in DB)" else ""
 
   -- 2. Execute ClickHouse queries first (to get userIds)
@@ -767,9 +768,12 @@ executeSlidingWindowCount config userIdMapping = do
   let opts = SWCTypes.SlidingWindowOptions period periodType
   logInfo $
     "SLIDING_WINDOW_COUNT: keyTemplate=" <> config.key
-      <> ", windowPeriod=" <> show period
-      <> ", windowPeriodType=" <> periodTypeText
-      <> ", usersCount=" <> show (length userIdMapping)
+      <> ", windowPeriod="
+      <> show period
+      <> ", windowPeriodType="
+      <> periodTypeText
+      <> ", usersCount="
+      <> show (length userIdMapping)
   results <- forM (zip [1 :: Int ..] userIdMapping) $ \(idx, (userId, baseKey)) -> do
     count <- Hedis.withCrossAppRedis $ SWC.getCurrentWindowCount baseKey opts
     when (idx <= 3) $

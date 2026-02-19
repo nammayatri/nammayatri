@@ -30,6 +30,7 @@ import Domain.Types.SearchTry (SearchTry)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Clickhouse.Config as CH
+import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
@@ -81,6 +82,7 @@ sendSearchRequestToDrivers ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -155,7 +157,10 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
         EsqDBFlow m r,
         EsqDBReplicaFlow m r,
         HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
-        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+        HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+        HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+        CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
       ) =>
       SearchTry ->
       DSR.SearchRequest ->
@@ -190,6 +195,7 @@ sendSearchRequestToDrivers' ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
