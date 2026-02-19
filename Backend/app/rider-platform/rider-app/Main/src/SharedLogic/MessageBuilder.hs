@@ -81,7 +81,6 @@ buildSendSmsReq merchantMessage vars = do
   let smsBody = foldl' (\msg (findKey, replaceVal) -> T.replace (templateText findKey) replaceVal msg) merchantMessage.message vars
       sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
       templateId = merchantMessage.templateId
-      messageType = merchantMessage.messageType
   return $ \phoneNumber -> Sms.SendSMSReq {..}
 
 data BuildSendOTPMessageReq = BuildSendOTPMessageReq
@@ -153,7 +152,7 @@ data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
   }
   deriving (Generic)
 
-buildSOSAlertMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig], Log m) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m SmsReqBuilder
+buildSOSAlertMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m SmsReqBuilder
 buildSOSAlertMessage merchantOperatingCityId req = do
   shortenedTrackingUrl <- shortenTrackingUrl req.rideLink
   let messageKey = if req.isRideEnded then DMM.POST_RIDE_SOS else DMM.SEND_SOS_ALERT
@@ -283,7 +282,7 @@ buildFRFSTicketCancelMessage merchantOperatingCityId pOrgId req = do
       logDebug $ "Generated short url: " <> url
       buildSendSmsReq merchantMessage [("URL", url), ("TICKET_PLURAL", ticketPlural)]
 
-shortenTrackingUrl :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig], Log m) => Text -> m Text
+shortenTrackingUrl :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Text -> m Text
 shortenTrackingUrl url = do
   let shortUrlReq =
         UrlShortner.GenerateShortUrlReq
@@ -293,10 +292,8 @@ shortenTrackingUrl url = do
             expiryInHours = Just 24,
             urlCategory = UrlShortner.RIDE_TRACKING
           }
-  result <- withTryCatch "shortenTrackingUrl:generateShortUrl" (UrlShortner.generateShortUrl shortUrlReq)
-  case result of
-    Left _ -> return url
-    Right res -> return res.shortUrl
+  res <- UrlShortner.generateShortUrl shortUrlReq
+  return res.shortUrl
 
 data DeliveryMessageRequestType = SenderReq | ReceiverReq
 

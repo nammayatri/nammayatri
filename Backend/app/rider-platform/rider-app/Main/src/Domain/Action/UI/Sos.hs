@@ -197,7 +197,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
         SOSLocation.updateSosRiderLocation sosDetailsWithEntityType.id location Nothing (Just trackingExpiresAt)
       let finalTrackLink = buildSosTrackingUrl sosDetailsWithEntityType.id riderConfig''.trackingShortUrlPattern
       return (sosDetailsWithEntityType.id, finalTrackLink, Nothing)
-  whenJust mbExternalReferenceId $ \trackingId ->
+  whenJust mbExternalReferenceId $ \trackingId -> do
     QSos.updateExternalReferenceId (Just trackingId) sosId
     Redis.del (mkExternalSOSTraceKey sosId)
   buildSmsReq <-
@@ -618,28 +618,28 @@ sendExternalSOSTrace sosDetails req = do
   now <- getCurrentTime
   let nowSec = round $ utcTimeToPOSIXSeconds now
       ttl = 3600 :: Int -- TODO: Remove this once we have a proper config for ttl as per govt requirements
-        -- case sosDetails.trackingExpiresAt of
-        --   Just exp' -> max 60 (round (diffUTCTime exp' now))
-        --   Nothing -> 3600 :: Int
+      -- case sosDetails.trackingExpiresAt of
+      --   Just exp' -> max 60 (round (diffUTCTime exp' now))
+      --   Nothing -> 3600 :: Int
   case cached of
     Just (_, False, _) -> pure ()
     Just (_, True, Nothing) -> pure ()
     Just (lastTraceSec, True, Just specificConfig) ->
       when (nowSec - lastTraceSec >= fromIntegral pollingIntervalSec) $
-        whenJust sosDetails.externalReferenceId $ \_ -> do
+        whenJust sosDetails.externalReferenceId $ \trackingId -> do
           mbMobile <- getPersonMobileNo sosDetails.personId
           whenJust mbMobile $ \mobileNo -> do
-            callSOSTraceAPI sosId specificConfig mobileNo req
+            callSOSTraceAPI trackingId specificConfig mobileNo req
             Redis.setExp (mkExternalSOSTraceKey sosId) (nowSec, True, Just specificConfig) ttl
     Nothing -> do
       mbConfig <- resolveExternalSOSTraceConfig sosDetails
       let shouldCall = isJust mbConfig
       Redis.setExp (mkExternalSOSTraceKey sosId) (nowSec, shouldCall, mbConfig) ttl
       whenJust mbConfig $ \specificConfig ->
-        whenJust sosDetails.externalReferenceId $ \_ -> do
+        whenJust sosDetails.externalReferenceId $ \trackingId -> do
           mbMobile <- getPersonMobileNo sosDetails.personId
           whenJust mbMobile $ \mobileNo ->
-            callSOSTraceAPI sosId specificConfig mobileNo req
+            callSOSTraceAPI trackingId specificConfig mobileNo req
 
 getExternalSOSTracePollingIntervalSec :: Maybe (Id DMOC.MerchantOperatingCity) -> Flow Int
 getExternalSOSTracePollingIntervalSec = \case
@@ -673,13 +673,14 @@ getPersonMobileNo personId =
     QP.findById personId >>= \mbPerson ->
       maybe (pure Nothing) (\p -> mapM decrypt p.mobileNumber) mbPerson
 
-callSOSTraceAPI :: Id DSos.Sos -> SOSInterface.SOSServiceConfig -> Text -> SosLocationUpdateReq -> Flow ()
-callSOSTraceAPI _ specificConfig mobileNo req = do
+callSOSTraceAPI :: Text -> SOSInterface.SOSServiceConfig -> Text -> SosLocationUpdateReq -> Flow ()
+callSOSTraceAPI trackingId specificConfig mobileNo req = do
   now <- getCurrentTime
   let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" now
       traceReq =
         SOSInterface.SOSTraceReq
-          { SOSInterface.mobileNo = mobileNo,
+          { SOSInterface.trackingId = trackingId,
+            SOSInterface.mobileNo = mobileNo,
             SOSInterface.dateTime = dateTimeStr,
             SOSInterface.latitude = req.lat,
             SOSInterface.longitude = req.lon,
@@ -904,42 +905,30 @@ postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
 
       pure APISuccess.Success
 
-handleExternalSOS :: Person.Person -> DRC.ExternalSOSConfig -> SosReq -> Id Person.Person -> DRC.RiderConfig -> Flow (Maybe Text, Maybe Bool)
+handleExternalSOS :: Person.Person -> DRC.ExternalSOSConfig -> SosReq -> Id Person.Person -> DRC.RiderConfig -> Flow (Maybe Text)
 handleExternalSOS person sosConfig req personId riderConfig = do
-  -- let sosServiceType = flowToSOSService sosConfig.flow
-  -- merchantSvcCfg <-
-  --   QMSC.findByMerchantOpCityIdAndService person.merchantId person.merchantOperatingCityId (DMSC.SOSService sosServiceType)
-  --     >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantOperatingCityId.getId "SOS" (show sosServiceType))
-  -- case merchantSvcCfg.serviceConfig of
-  --   DMSC.SOSServiceConfig specificConfig -> do
-  --     mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
-  --     emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-  --     merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-  --     externalSOSDetails <- buildExternalSOSDetails req person sosConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
-  --     response <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
-  --     pure $ if response.success then response.trackingId else Nothing
-  --   _ -> do
-  --     logError "handleExternalSOS: Invalid SOS Service Config for provider"
-  --     pure Nothing
-
   let sosServiceType = flowToSOSService sosConfig.flow
-  merchantSvcCfg <-
+  mbMerchantSvcCfg <-
     QMSC.findByMerchantOpCityIdAndService person.merchantId person.merchantOperatingCityId (DMSC.SOSService sosServiceType)
-      >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantOperatingCityId.getId "SOS" (show sosServiceType))
-  case merchantSvcCfg.serviceConfig of
-    DMSC.SOSServiceConfig specificConfig -> do
-      mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
-      emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-      merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-      externalSOSDetails <- buildExternalSOSDetails req person sosConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
-      initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
-      unless initialRes.success do 
-        logError "handleExternalSOS: External SOS API call failed with error: " <> fromMaybe "Unknown error" initialRes.errorMessage
-        return (Nothing, Nothing)
-      return (initialRes.trackingId, Just initialRes.success)
-    _ -> do
-      logError "handleExternalSOS: Invalid SOS Service Config for provider"
-      return (Nothing, Nothing)
+  case mbMerchantSvcCfg of
+    Nothing -> do
+      logError $ "handleExternalSOS: MerchantServiceConfig not found for SOS service " <> show sosServiceType
+      return Nothing
+    Just merchantSvcCfg -> case merchantSvcCfg.serviceConfig of
+      DMSC.SOSServiceConfig specificConfig -> do
+        mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
+        emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+        merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+        externalSOSDetails <- buildExternalSOSDetails req person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
+        initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
+        if initialRes.success
+          then return initialRes.trackingId
+          else do
+            logError $ "handleExternalSOS: External SOS call failed: " <> fromMaybe "Unknown error" initialRes.errorMessage
+            return Nothing
+      _ -> do
+        logError "handleExternalSOS: Invalid SOS Service Config for provider"
+        return Nothing
 
 buildExternalSOSDetails ::
   SosReq ->
