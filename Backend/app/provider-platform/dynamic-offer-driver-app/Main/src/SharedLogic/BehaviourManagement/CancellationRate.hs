@@ -160,7 +160,7 @@ updateDriverCancellationPercentageTagsDaily ::
   Int ->
   Int ->
   m ()
-updateDriverCancellationPercentageTagsDaily mocId driverId dailyCancellationRate weeklyCancellationRate = do
+updateDriverCancellationPercentageTagsDaily _mocId driverId dailyCancellationRate weeklyCancellationRate = do
   now <- getCurrentTime
   let today = utctDay now
       redisKey = "driver-cancellation-tags-updated:" <> driverId.getId <> ":" <> show today
@@ -173,8 +173,8 @@ updateDriverCancellationPercentageTagsDaily mocId driverId dailyCancellationRate
     let dailyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_1") (LYT.NumberValue $ fromIntegral dailyCancellationRate)
         weeklyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_7") (LYT.NumberValue $ fromIntegral weeklyCancellationRate)
 
-    mbDailyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) dailyTag) (\(_ :: SomeException) -> pure Nothing)
-    mbWeeklyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) weeklyTag) (\(_ :: SomeException) -> pure Nothing)
+    mbDailyTag <- catch (YudhishthiraFlow.verifyTag dailyTag) (\(_ :: SomeException) -> pure Nothing)
+    mbWeeklyTag <- catch (YudhishthiraFlow.verifyTag weeklyTag) (\(_ :: SomeException) -> pure Nothing)
 
     let dailyTagWithExpiry = Yudhishthira.addTagExpiry dailyTag (mbDailyTag >>= \tag -> tag.validity) now
         weeklyTagWithExpiry = Yudhishthira.addTagExpiry weeklyTag (mbWeeklyTag >>= \tag -> tag.validity) now
