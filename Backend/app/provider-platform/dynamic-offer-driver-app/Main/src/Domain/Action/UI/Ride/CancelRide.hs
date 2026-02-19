@@ -43,6 +43,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
+import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types
@@ -110,6 +111,7 @@ cancelRideHandle ::
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text]
   ) =>
   ServiceHandle m
@@ -183,6 +185,7 @@ cancelRideImpl ::
     EsqDBReplicaFlow m r,
     LT.HasLocationService m r,
     DC.EventFlow m r,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]

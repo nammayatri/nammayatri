@@ -29,6 +29,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.External.Maps
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -119,7 +120,8 @@ initiateDriverSearchBatch ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasShortDurationRetryCfg r c,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   DriverSearchBatchInput m ->
   m ()
@@ -288,7 +290,8 @@ buildTripQuoteDetail ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   DSR.SearchRequest ->
   DTC.TripCategory ->

@@ -35,6 +35,7 @@ import qualified Domain.Types.VehicleVariant as VecVarient
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -71,7 +72,8 @@ bulkUpdateByDriverId ::
   ( MonadFlow m,
     MonadReader r m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -141,7 +143,8 @@ bulkUpdateByDriverIdV2 ::
   ( MonadFlow m,
     MonadReader r m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

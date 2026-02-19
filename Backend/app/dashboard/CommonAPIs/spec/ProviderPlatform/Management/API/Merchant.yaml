@@ -42,6 +42,7 @@ imports:
   ServiceTierType: Dashboard.Common
   Centesimal: Kernel.Types.Common
   SpecialLocationType: Lib.Types.SpecialLocation
+  SetJsonLogicDebugReq: Lib.Yudhishthira.Tools.DebugLog
 
 module: Merchant
 
@@ -577,6 +578,13 @@ apis:
       auth: ApiAuthV2
       request:
         type: VehicleServiceTierConfigCreateReq
+      response:
+        type: APISuccess
+  - POST: # MerchantConfigDebugLogUpdateAPI
+      endpoint: /config/debugLog/update
+      auth: ApiAuthV2
+      request:
+        type: SetJsonLogicDebugReq
       response:
         type: APISuccess
 

@@ -64,6 +64,7 @@ import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..))
 import Kernel.External.MultiModal.Interface.Types (MultiModalAgency (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
@@ -117,7 +118,8 @@ type SelectFlow m r c =
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   )
 
 data DSelectReq = DSelectReq
@@ -223,7 +225,7 @@ select2 :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSe
 select2 personId estimateId req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  when ((not (fromMaybe False person.businessProfileVerified)) && billingCategory == Just BUSINESS) $ throwError (InvalidRequest "Business profile not verified for business billing category")
+  when (not (fromMaybe False person.businessProfileVerified) && billingCategory == Just BUSINESS) $ throwError (InvalidRequest "Business profile not verified for business billing category")
   merchant <- QM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)

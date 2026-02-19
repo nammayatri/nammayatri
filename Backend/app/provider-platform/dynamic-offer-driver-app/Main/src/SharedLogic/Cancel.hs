@@ -213,7 +213,9 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         EsqDBFlow m r,
         EsqDBReplicaFlow m r,
         HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
-        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+        HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+        HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
       ) =>
       DSR.SearchRequest ->
       DST.SearchTry ->
@@ -244,7 +246,9 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         EsqDBFlow m r,
         EsqDBReplicaFlow m r,
         HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
-        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+        HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+        HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
       ) =>
       DSR.SearchRequest ->
       DST.SearchTry ->

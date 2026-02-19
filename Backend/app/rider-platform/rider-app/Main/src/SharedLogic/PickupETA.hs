@@ -23,11 +23,12 @@ import qualified Data.Aeson as A
 import Data.Default.Class
 import Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.Yudhishthira ()
 import Tools.DynamicLogic
@@ -52,7 +53,8 @@ getPickupETAFromModel ::
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r
+    EsqDBReplicaFlow m r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
   ) =>
   Seconds ->
   Double ->
@@ -81,7 +83,7 @@ getPickupETAFromModel timeDiffFromUtc speedInMps distanceInMeters mbVersion merc
                 distanceToPickupInMeters = distanceInMeters
               }
 
-      response <- withTryCatch "runLogics:getPickupETAFromModel" $ LYTU.runLogics allLogics inputData
+      response <- withTryCatch "runLogics:getPickupETAFromModel" $ LYDL.runLogicsWithDebugLog (cast merchantOperatingCityId) LYT.PICKUP_ETA_CALCULATION allLogics inputData
       logInfo $ "PickupETA Req Logics: " <> show allLogics <> " and data is: " <> show inputData <> " and response is: " <> show response
 
       case response of
