@@ -35,6 +35,7 @@ module Domain.Action.RiderPlatform.Management.Merchant
     putMerchantConfigGeometryUpdate,
     getMerchantRiderConfigEstimatesOrder,
     postMerchantRiderConfigEstimatesOrderUpdate,
+    postMerchantConfigDebugLogUpdate,
   )
 where
 
@@ -57,6 +58,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Geometry (getGeomFromKML)
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as SQM
@@ -294,3 +296,15 @@ postMerchantRiderConfigEstimatesOrderUpdate merchantShortId opCity apiTokenInfo 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantRiderConfigEstimatesOrderUpdate) req
+
+postMerchantConfigDebugLogUpdate ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  DebugLog.SetJsonLogicDebugReq ->
+  Flow APISuccess
+postMerchantConfigDebugLogUpdate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigDebugLogUpdate) req

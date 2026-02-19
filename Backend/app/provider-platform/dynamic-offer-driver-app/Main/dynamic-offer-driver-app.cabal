@@ -598,6 +598,7 @@ library
       Storage.Clickhouse.FleetOperatorDailyStats
       Storage.Clickhouse.FleetOperatorStats
       Storage.Clickhouse.FleetRcDailyStats
+      Storage.Clickhouse.JsonLogicTransaction
       Storage.Clickhouse.Location
       Storage.Clickhouse.Person
       Storage.Clickhouse.Ride

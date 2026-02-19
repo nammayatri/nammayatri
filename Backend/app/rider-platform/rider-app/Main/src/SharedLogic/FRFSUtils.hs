@@ -302,7 +302,7 @@ getPossibleRoutesBetweenTwoParentStops startParentStopCode endParentStopCode int
                       )
                       (Just $ Seconds 0)
                       stops
-               in Just (startStop.routeCode, (Just totalStops), totalTravelTime, (Just intermediateStops), startStop.stopCode, endStop.stopCode)
+               in Just (startStop.routeCode, Just totalStops, totalTravelTime, Just intermediateStops, startStop.stopCode, endStop.stopCode)
             Nothing -> Nothing
 
 data FRFSTicketCategory = FRFSTicketCategory
@@ -1102,7 +1102,7 @@ createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCit
           then 1.0 * (HighPrecMoney $ toRational $ length allJourneyBookings)
           else
             foldl
-              (\accAmt item -> (accAmt + item.totalPrice.amount))
+              (\accAmt item -> accAmt + item.totalPrice.amount)
               0.0
               allJourneyBookings
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType

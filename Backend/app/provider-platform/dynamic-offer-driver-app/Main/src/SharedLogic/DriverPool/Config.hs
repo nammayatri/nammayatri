@@ -37,6 +37,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchTry
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Prelude as KP
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Cac (CACData (..))
@@ -49,8 +50,8 @@ import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Tools.Utils (convertTags)
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType (..))
 import Storage.Beam.SystemConfigs ()
@@ -153,7 +154,8 @@ instance Default DriverPoolConfig where
 getDriverPoolConfigFromDB ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
   ) =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
@@ -179,7 +181,7 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
   case dpc' of
     Just dpc -> do
       let config = Config dpc (Just otherDimensions)
-      resp <- LYTU.runLogics allLogics config
+      resp <- LYDL.runLogicsWithDebugLog (cast merchantOpCityId) (LYT.CONFIG LYT.DriverPoolConfig) allLogics config
       case (fromJSON resp.result :: Result Config) of
         Success dpc'' -> do
           when

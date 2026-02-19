@@ -79,6 +79,9 @@ import qualified Kernel.External.Types as Language
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
+-- import qualified Lib.Yudhishthira.Event as Yudhishthira
+
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -97,7 +100,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
-import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.OTP as SOTP
@@ -427,7 +430,8 @@ signatureAuth ::
     DB.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -479,7 +483,7 @@ setUserIdToTempAppSecretKey :: (CacheFlow m r, Redis.HedisFlow m r) => Text -> I
 setUserIdToTempAppSecretKey appSecretKey personId = Redis.setExp (mkUserIdFromTempAppSecretKey appSecretKey) (getId personId) 120 -- 2 minutes
 
 getUserIdFromTempAppSecretKey :: (CacheFlow m r, Redis.HedisFlow m r) => Text -> m (Maybe (Id SP.Person))
-getUserIdFromTempAppSecretKey appSecretKey = (fmap (\(a :: Text) -> Id a)) <$> Redis.safeGet (mkUserIdFromTempAppSecretKey appSecretKey)
+getUserIdFromTempAppSecretKey appSecretKey = fmap (\(a :: Text) -> Id a) <$> Redis.safeGet (mkUserIdFromTempAppSecretKey appSecretKey)
 
 generateTempAppCode ::
   ( CacheFlow m r,
@@ -872,7 +876,8 @@ createPerson ::
     EsqDBFlow m r,
     DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
   ) =>
   AuthReq ->
   SP.IdentifierType ->
@@ -904,6 +909,14 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
     whenJust req.mobileNumber $ \mobileNumber -> updatePersonIdForEmergencyContacts person.id mobileNumber merchant.id
   pure person
   where
+    addNammaTags ::
+      ( EsqDBFlow m r,
+        CacheFlow m r,
+        CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+      ) =>
+      SP.Person ->
+      Y.LoginTagData ->
+      m ()
     addNammaTags person tagData = do
       newPersonTags <- withTryCatch "computeNammaTagsWithExpiry:Login" (Yudhishthira.computeNammaTagsWithExpiry Yudhishthira.Login tagData)
       let tags = nub (fromMaybe [] person.customerNammaTags <> fromMaybe [] (eitherToMaybe newPersonTags))
@@ -1031,7 +1044,8 @@ createPersonWithPhoneNumber ::
     EsqDBFlow m r,
     DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
   ) =>
   Id DMerchant.Merchant ->
   Text ->

@@ -20,6 +20,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -52,7 +53,8 @@ getNextDriverPoolBatch ::
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
@@ -96,7 +98,8 @@ prepareDriverPoolBatch ::
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   [DVST.VehicleServiceTier] ->
   DM.Merchant ->

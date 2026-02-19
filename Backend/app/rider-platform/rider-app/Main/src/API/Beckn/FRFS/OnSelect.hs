@@ -8,6 +8,7 @@ import Data.Aeson (eitherDecodeStrict')
 import qualified Domain.Action.Beckn.FRFS.OnSelect as DOnSelect
 import Environment
 import EulerHS.Prelude (ByteString)
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
