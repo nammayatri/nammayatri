@@ -53,7 +53,7 @@ data SosReq = SosReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosRes = SosRes {sosId :: Kernel.Types.Id.Id Domain.Types.Sos.Sos}
+data SosRes = SosRes {externalSOSSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, sosId :: Kernel.Types.Id.Id Domain.Types.Sos.Sos}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

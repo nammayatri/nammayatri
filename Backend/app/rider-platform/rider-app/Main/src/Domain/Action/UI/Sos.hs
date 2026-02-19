@@ -66,6 +66,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
+import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.Sos as QSos
@@ -158,19 +159,16 @@ postSosCreate (mbPersonId, _merchantId) req = do
   mbExternalReferenceId <- case riderConfig.externalSOSConfig of
     Just sosConfig
       | sosConfig.triggerSource == DRC.FRONTEND -> do
-          let sosServiceType = flowToSOSService sosConfig.flow
-          merchantSvcCfg <-
-            QMSC.findByMerchantOpCityIdAndService person.merchantId person.merchantOperatingCityId (DMSC.SOSService sosServiceType)
-              >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantOperatingCityId.getId "SOS" (show sosServiceType))
-          case merchantSvcCfg.serviceConfig of
-            DMSC.SOSServiceConfig specificConfig -> do
-              mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
-              emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-              merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-              externalSOSDetails <- buildExternalSOSDetails req person sosConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
-              response <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
-              pure $ if response.success then response.trackingId else Nothing
-            _ -> throwError $ InternalError "Invalid SOS Service Config for provider"
+          result <- withTryCatch "externalSOSCall" $ handleExternalSOS person sosConfig req personId riderConfig
+          case result of
+            Right mbTrackingId -> do
+              logInfo "External SOS API call succeeded"
+              Redis.setExp (CQSos.externalSOSStatusKey personId) True 600
+              pure mbTrackingId
+            Left err -> do
+              logError $ "External SOS API call failed (non-blocking): " <> show err
+              Redis.setExp (CQSos.externalSOSStatusKey personId) False 600
+              pure Nothing
     _ -> pure Nothing
   (sosId, trackLink, mbRideEndTime) <- case req.rideId of
     Just rideId -> do
@@ -214,9 +212,11 @@ postSosCreate (mbPersonId, _merchantId) req = do
     Nothing -> do
       emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
       SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers (Just sosId)
+  mbExternalStatus <- Redis.get (CQSos.externalSOSStatusKey personId)
   return $
     SosRes
-      { sosId = sosId
+      { sosId = sosId,
+        externalSOSSuccess = mbExternalStatus
       }
   where
     triggerShareRideAndNotifyContacts safetySettings = (fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts) && req.flow == DSos.SafetyFlow
@@ -808,10 +808,25 @@ postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
 
       pure APISuccess.Success
 
+handleExternalSOS :: Person.Person -> DRC.ExternalSOSConfig -> SosReq -> Id Person.Person -> DRC.RiderConfig -> Flow (Maybe Text)
+handleExternalSOS person sosConfig req personId riderConfig = do
+  let sosServiceType = flowToSOSService sosConfig.flow
+  merchantSvcCfg <-
+    QMSC.findByMerchantOpCityIdAndService person.merchantId person.merchantOperatingCityId (DMSC.SOSService sosServiceType)
+      >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantOperatingCityId.getId "SOS" (show sosServiceType))
+  case merchantSvcCfg.serviceConfig of
+    DMSC.SOSServiceConfig specificConfig -> do
+      mbRide <- maybe (pure Nothing) (\rideId -> QRide.findById rideId) req.rideId
+      emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+      merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+      externalSOSDetails <- buildExternalSOSDetails req person sosConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
+      response <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
+      pure $ if response.success then response.trackingId else Nothing
+    _ -> do
+      logError "handleExternalSOS: Invalid SOS Service Config for provider"
+      pure Nothing
+
 buildExternalSOSDetails ::
-  ( EncFlow m r,
-    MonadFlow m
-  ) =>
   SosReq ->
   Person.Person ->
   DRC.ExternalSOSConfig ->
@@ -819,15 +834,18 @@ buildExternalSOSDetails ::
   [DPDEN.PersonDefaultEmergencyNumberAPIEntity] ->
   DMOC.MerchantOperatingCity ->
   DRC.RiderConfig ->
-  m SOSInterface.InitialSOSReq
+  Flow SOSInterface.InitialSOSReq
 buildExternalSOSDetails req person sosConfig mbRide emergencyContacts merchantOpCity riderConfig = do
   now <- getCurrentTime
   mobileNo <- fmap (fromMaybe "0000000000") $ traverse decrypt person.mobileNumber
+  emailText <- traverse decrypt person.email
+  imeiText <- traverse decrypt person.imeiNumber
+  customerDisability <- runInReplica $ PDisability.findByPersonId person.id
   let (lat, lon) =
         if sosConfig.latLonRequired
           then case req.customerLocation of
             Just loc -> (loc.lat, loc.lon)
-            Nothing -> (0.0, 0.0)
+            Nothing -> (fromMaybe 0.0 person.latestLat, fromMaybe 0.0 person.latestLon)
           else (0.0, 0.0)
   let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" now
   let trackLink = case mbRide of
@@ -837,6 +855,12 @@ buildExternalSOSDetails req person sosConfig mbRide emergencyContacts merchantOp
         (c1 : c2 : _) -> (Just c1.name, Just c1.mobileNumber, Just c2.name, Just c2.mobileNumber)
         (c1 : _) -> (Just c1.name, Just c1.mobileNumber, Nothing, Nothing)
         _ -> (Nothing, Nothing, Nothing, Nothing)
+  let dobStr = T.pack . formatTime defaultTimeLocale "%Y-%m-%d" <$> person.dateOfBirth
+  let specialNeedsText =
+        customerDisability <&> \d ->
+          case d.description of
+            Just desc -> d.tag <> " - " <> desc
+            Nothing -> d.tag
   return $
     SOSInterface.InitialSOSReq
       { sosId = Nothing,
@@ -845,18 +869,17 @@ buildExternalSOSDetails req person sosConfig mbRide emergencyContacts merchantOp
         longitude = lon,
         speed = Nothing,
         mobileNo = mobileNo,
-        imeiNo = Nothing,
+        imeiNo = imeiText,
         gpsProvider = Nothing,
         senderName = person.firstName,
         address = Nothing,
         gpsAccuracy = Nothing,
         stateCode = Nothing,
         silentCommunication = Nothing,
-        specialNeeds = Nothing,
-        dob = Nothing,
+        specialNeeds = specialNeedsText,
+        dob = dobStr,
         gender = Just $ T.pack $ show person.gender,
         attachmentFileName = Nothing,
-        -- Ride context
         driverName = (.driverName) <$> mbRide,
         driverContactNo = (.driverMobileNumber) <$> mbRide,
         vehicleNo = (.vehicleNumber) <$> mbRide,
@@ -869,16 +892,14 @@ buildExternalSOSDetails req person sosConfig mbRide emergencyContacts merchantOp
         vehicleLon = Nothing,
         vehicleLocationUrl = trackLink,
         videoPath = Nothing,
-        -- Emergency contacts
         emergencyContact1Name = ec1Name,
         emergencyContact1Phone = ec1Phone,
         emergencyContact2Name = ec2Name,
         emergencyContact2Phone = ec2Phone,
-        -- Additional context
         city = Just $ T.pack $ show merchantOpCity.city,
         emergencyMessage = Just "SOS Emergency",
-        email = Nothing,
-        vendorName = Just "Namma Yatri",
+        email = emailText,
+        vendorName = Just merchantOpCity.merchantShortId.getShortId,
         deviceType = Just 2
       }
 
