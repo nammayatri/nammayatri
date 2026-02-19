@@ -48,6 +48,7 @@ import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Types as L
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -55,7 +56,7 @@ import Kernel.Utils.App (lookupCloudType)
 import Kernel.Utils.Common
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CancellationCoins as CancellationCoins
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -75,7 +76,7 @@ import qualified Tools.Notifications as Notify
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
-type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m)
+type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m)
 
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
 getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withLockRedisAndReturnValue driverId.getId 60 $ do
@@ -294,7 +295,7 @@ validateCancellation rideId rideStartTime initialDisToPickup cancellationDisToPi
 runCancellationLogic :: EventFlow m r => Id DMOC.MerchantOperatingCity -> CancellationCoins.CancellationCoinData -> m Int
 runCancellationLogic merchantOpCityId logicInput = do
   now <- getCurrentTime
-  (logics, _) <- TDL.getAppDynamicLogic (cast merchantOpCityId) (LYT.CANCELLATION_COIN_POLICY) now Nothing Nothing
+  (logics, _) <- TDL.getAppDynamicLogic (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY now Nothing Nothing
 
   if null logics
     then do
@@ -302,7 +303,7 @@ runCancellationLogic merchantOpCityId logicInput = do
       pure 0
     else do
       logInfo $ "Running cancellation logic with " <> show (length logics) <> " rules"
-      result <- LYTU.runLogics logics logicInput
+      result <- LYDL.runLogicsWithDebugLog (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY logics logicInput
       case A.fromJSON result.result :: A.Result CancellationCoins.CancellationCoinResult of
         A.Success logicResult -> do
           logInfo $ "Cancellation logic result: " <> show logicResult
@@ -380,7 +381,7 @@ sendCoinsNotificationV3 :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id 
 sendCoinsNotificationV3 merchantOpCityId driverId coinsValue (DCT.MetroRideCompleted metroRideType _) =
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
-        entityData = Notify.CoinsNotificationData {coins = coinsValue, event = (DCT.MetroRideCompleted metroRideType Nothing)}
+        entityData = Notify.CoinsNotificationData {coins = coinsValue, event = DCT.MetroRideCompleted metroRideType Nothing}
      in MTQuery.findByErrorAndLanguage (T.pack (show metroRideType)) language >>= processMessage driver entityData
   where
     processMessage driver entityData mbCoinsMessage =

@@ -59,6 +59,7 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Randomizer (randomizeList)
+import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -69,6 +70,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowCounters
 import Lib.Queries.GateInfo
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
@@ -115,7 +117,8 @@ prepareDriverPoolBatch ::
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   [DVST.VehicleServiceTier] ->
   DM.Merchant ->
@@ -626,7 +629,8 @@ makeTaggedDriverPool ::
     EsqDBFlow m r,
     MonadFlow m,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   Id MerchantOperatingCity ->
   Seconds ->
@@ -646,7 +650,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   updateVersionInSearchReq mbVersion
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
   let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = onlyNewDriversWithCustomerInfo, needOnRideDrivers = isOnRidePool, batchNum}
-  resp <- withTimeAPI "driverPooling" "runLogics" $ LYTU.runLogics allLogics taggedDriverPoolInput
+  resp <- withTimeAPI "driverPooling" "runLogics" $ LYDL.runLogicsWithDebugLog (cast mOCityId) LYT.POOLING allLogics taggedDriverPoolInput
   sortedPool' <-
     case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
       A.Success sortedPoolData -> pure sortedPoolData.drivers
@@ -832,7 +836,8 @@ getNextDriverPoolBatch ::
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->

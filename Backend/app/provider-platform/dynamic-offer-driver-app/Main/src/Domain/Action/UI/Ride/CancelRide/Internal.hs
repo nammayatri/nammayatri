@@ -42,6 +42,7 @@ import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map, notElem)
 import qualified Kernel.Storage.Clickhouse.Config as CH
+import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -54,8 +55,9 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
-import qualified Lib.Yudhishthira.Event as Yudhishthira
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+-- import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
+-- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.Analytics as Analytics
@@ -129,6 +131,7 @@ cancelRideImpl ::
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text]
   ) =>
   Id DRide.Ride ->
@@ -260,7 +263,8 @@ updateNammaTagsForCancelledRide ::
     Esq.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -282,7 +286,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
             merchantOperatingCityId = booking.merchantOperatingCityId,
             ..
           }
-  nammaTags <- withTryCatch "computeNammaTags:RideCancel" (Yudhishthira.computeNammaTags (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel tagData)
+  nammaTags <- withTryCatch "computeNammaTags:RideCancel" (LYDL.computeNammaTagsWithDebugLog (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel tagData)
   logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags) <> "| tagdata: " <> show tagData
   let allTags = ride.rideTags <> eitherToMaybe nammaTags
   QRide.updateRideTags allTags ride.id
@@ -354,7 +358,10 @@ customerCancellationChargesCalculation ::
     HasKafkaProducer r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -413,7 +420,7 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
       (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES localTime Nothing Nothing
       logDebug $ "allLogics: for cancellation charges calculation" <> show allLogics
       logDebug $ "logicInput: for cancellation charges calculation" <> show logicInput
-      response <- withTryCatch "runLogics:UserCancellationDues" $ LYTU.runLogics allLogics logicInput
+      response <- withTryCatch "runLogics:UserCancellationDues" $ LYDL.runLogicsWithDebugLog (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES allLogics logicInput
       cancellationCharge <- case response of
         Left e -> do
           logError $ "Error in running UserCancellationDuesLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
@@ -441,7 +448,10 @@ getCancellationCharges ::
     HasKafkaProducer r,
     Esq.EsqDBReplicaFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
-    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   SRB.Booking ->
   DRide.Ride ->

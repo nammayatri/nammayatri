@@ -35,7 +35,8 @@ import Kernel.Prelude
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Yudhishthira.Event as Yudhishthira
+-- import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.DriverPool
@@ -155,6 +156,6 @@ validateRequest merchantId sReq = do
 
 addNammaTags :: Y.SelectTagData -> DSR.SearchRequest -> Flow ()
 addNammaTags tagData sReq = do
-  newSearchTags <- withTryCatch "computeNammaTags:Select" (Yudhishthira.computeNammaTags (cast sReq.merchantOperatingCityId) Yudhishthira.Select tagData)
+  newSearchTags <- withTryCatch "computeNammaTags:Select" (LYDL.computeNammaTagsWithDebugLog (cast sReq.merchantOperatingCityId) Yudhishthira.Select tagData)
   let tags = sReq.searchTags <> eitherToMaybe newSearchTags
   QSR.updateSearchTags tags sReq.id

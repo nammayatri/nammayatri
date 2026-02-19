@@ -253,7 +253,9 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
         Esq.EsqDBReplicaFlow m r,
         CacheFlow m r,
         HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
-        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+        HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+        HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
       ) =>
       DSR.SearchRequest ->
       HashMap.HashMap DVST.ServiceTierType SDP.TripQuoteDetail ->

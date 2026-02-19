@@ -30,6 +30,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude as KP
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.Cac
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -50,7 +51,7 @@ import Storage.Queries.DriverPoolConfig ()
 import Utils.Common.CacUtils as CCU
 
 getSearchDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
   Id MerchantOperatingCity ->
   Maybe Meters ->
   SL.Area ->
@@ -103,7 +104,7 @@ doubleToInt :: Double -> Int
 doubleToInt = floor
 
 getDriverPoolConfigCond ::
-  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
@@ -156,7 +157,7 @@ setConfigInMemory id mbvst tripCategory dist config = do
   CCU.setConfigInMemoryCommon (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist) isExp config
 
 getDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
   Id MerchantOperatingCity ->
   DVST.ServiceTierType ->
   DTC.TripCategory ->

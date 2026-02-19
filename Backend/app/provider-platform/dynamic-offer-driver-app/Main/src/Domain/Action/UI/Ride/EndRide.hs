@@ -60,6 +60,7 @@ import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude (roundToIntegral)
+import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
@@ -77,7 +78,8 @@ import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
 import qualified Lib.Types.SpecialLocation as SL
-import qualified Lib.Yudhishthira.Event as Yudhishthira
+-- import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.BehaviourManagement.GpsTollBehavior as GpsTollBehavior
@@ -232,7 +234,8 @@ type EndRideFlow m r =
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     LT.HasLocationService m r,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   )
 
 driverEndRide ::
@@ -550,7 +553,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                hasStops = Just (not $ null ride.stops),
                commission = finalCommission
               }
-    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (Yudhishthira.computeNammaTags (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do
@@ -598,7 +601,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         localTime <- getLocalCurrentTime thresholdConfig.timeDiffFromUtc
         (allLogics, _mbVersion) <- getAppDynamicLogic (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR localTime Nothing Nothing
         -- Evaluate behavior using App Dynamic Logic
-        output <- GpsTollBehavior.evaluateGpsTollBehavior allLogics gpsTollBehaviorData
+        output <- GpsTollBehavior.evaluateGpsTollBehavior (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR allLogics gpsTollBehaviorData
         logInfo $ "GPS Toll Behavior evaluation result: " <> show output
         -- Increment bad behavior counter if needed
         when output.shouldIncrementBadBehaviorTollCounter $ do

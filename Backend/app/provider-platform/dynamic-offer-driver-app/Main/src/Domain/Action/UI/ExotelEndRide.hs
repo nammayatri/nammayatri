@@ -25,6 +25,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
@@ -46,7 +47,8 @@ callBasedEndRide ::
     EncFlow m r,
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
   ) =>
   EndRide.ServiceHandle m ->
   Id Merchant ->

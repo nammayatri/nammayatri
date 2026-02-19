@@ -27,6 +27,7 @@ import qualified Data.Aeson as A
 import Data.Default.Class
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 -- import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
@@ -34,7 +35,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
-import qualified Lib.Yudhishthira.Tools.Utils as YUtils
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 
@@ -126,19 +127,28 @@ getGpsTollBadBehaviorCount windowDays driverId =
 -- | Evaluate GPS toll behavior using App Dynamic Logic rules
 -- Rules should be fetched from GPS_TOLL_BEHAVIOR domain by the caller
 evaluateGpsTollBehavior ::
-  (MonadFlow m) =>
+  ( MonadFlow m,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
+    CacheFlow m r
+  ) =>
+  Id LYT.MerchantOperatingCity ->
+  LYT.LogicDomain ->
   [A.Value] -> -- Rules from App Dynamic Logic (GPS_TOLL_BEHAVIOR domain)
   GpsTollBehaviorData ->
   m GpsTollBehaviorOutput
-evaluateGpsTollBehavior allLogics inputData = do
+evaluateGpsTollBehavior mocId domain allLogics inputData = do
   if null allLogics
     then do
       logInfo "No GPS toll behavior rules configured in App Dynamic Logic, using default output"
       return def
     else do
       logDebug $ "Evaluating GPS toll behavior with input: " <> show inputData
-      resp <- YUtils.runLogics allLogics inputData
-      parseLogicOutput resp
+      resp <- withTryCatch "runLogics:GpsTollBehavior" $ LYDL.runLogicsWithDebugLog mocId domain allLogics inputData
+      case resp of
+        Left err -> do
+          logError $ "Error in running GPS toll behavior logics - " <> show err <> " - " <> show inputData
+          return def
+        Right resp' -> parseLogicOutput resp'
 
 -- | Parse the logic output into GpsTollBehaviorOutput
 parseLogicOutput :: (MonadFlow m) => LYT.RunLogicResp -> m GpsTollBehaviorOutput
