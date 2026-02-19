@@ -1148,7 +1148,12 @@ data VerificationDocsStatus = VerificationDocsStatus
     odometer :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     driverLicense :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     panCard :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
-    aadhaarCard :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus
+    aadhaarCard :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    driverInspectionHub :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    inspectionHub :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    policeVerificationCertificate :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    localResidenceProof :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    drivingSchoolCertificate :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

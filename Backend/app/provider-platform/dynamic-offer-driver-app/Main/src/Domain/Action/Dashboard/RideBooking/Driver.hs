@@ -174,7 +174,7 @@ postDriverEnable merchantShortId opCity reqDriverId = do
   mVehicle <- QVehicle.findById personId
   linkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
 
-  when (isNothing mVehicle && null linkedRCs) $
+  when (transporterConfig.separateDriverVehicleEnablement /= Just True && isNothing mVehicle && null linkedRCs) $
     throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs are linked to them")
 
   enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False

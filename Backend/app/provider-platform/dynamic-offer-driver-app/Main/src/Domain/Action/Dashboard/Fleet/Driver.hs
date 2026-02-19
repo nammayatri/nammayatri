@@ -135,6 +135,7 @@ import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
@@ -166,6 +167,7 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LTST
 import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoMerchantBased)
@@ -299,6 +301,13 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
       logTagInfo logTag (show getEntityData.id)
       pure Success
     _ -> throwError (InvalidRequest "Invalid Data")
+
+mapInspectionHubRequestStatusToDashboard :: Maybe DOHR.RequestStatus -> Common.VerificationStatus
+mapInspectionHubRequestStatusToDashboard mbRequestStatus = case mbRequestStatus of
+  Just DOHR.APPROVED -> Common.VALID
+  Just DOHR.PENDING -> Common.VALID
+  Just DOHR.REJECTED -> Common.INVALID
+  Nothing -> Common.INVALID
 
 checkRCAssociationForDriver :: Id DP.Person -> Maybe DVRC.VehicleRegistrationCertificate -> Bool -> Flow Bool
 checkRCAssociationForDriver driverId mbVehicleRC checkFleet = maybe checkAssociationWithDriver checkAssociationWithDriverAndVehicle mbVehicleRC
@@ -1458,6 +1467,15 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
               let aadhaarStatus = DCommon.castVerificationStatus aadhaar.verificationStatus
               pure aadhaarStatus
             Nothing -> pure Common.PENDING
+        driverImages <- do
+          transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+          QImage.findAllByPersonId transporterConfig driver.id
+        driverInspectionHubStatus <- do
+          mbRequestStatus <- SStatus.checkInspectionHubRequestCreated DOHR.DRIVER_ONBOARDING_INSPECTION (Just driver.id) Nothing
+          pure $ mapInspectionHubRequestStatusToDashboard mbRequestStatus
+        let policeVerificationCertificateStatus = if any (\img -> img.imageType == DDoc.PoliceVerificationCertificate && img.verificationStatus == Just Documents.VALID) driverImages then Common.VALID else Common.PENDING
+        let localResidenceProofStatus = if any (\img -> img.imageType == DDoc.LocalResidenceProof && img.verificationStatus == Just Documents.VALID) driverImages then Common.VALID else Common.PENDING
+        let drivingSchoolCertificateStatus = if any (\img -> img.imageType == DDoc.DrivingSchoolCertificate && img.verificationStatus == Just Documents.VALID) driverImages then Common.VALID else Common.PENDING
         (completedRides, earning) <- case mbStats of
           Just True -> do
             rides <- CQRide.totalRidesByFleetOwnerPerDriver (Just fleetOwnerId) driver.id from to
@@ -1504,7 +1522,12 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
                           vehicleBack = Nothing,
                           vehicleFrontInterior = Nothing,
                           vehicleBackInterior = Nothing,
-                          odometer = Nothing
+                          odometer = Nothing,
+                          driverInspectionHub = Just driverInspectionHubStatus,
+                          inspectionHub = Nothing,
+                          policeVerificationCertificate = Just policeVerificationCertificateStatus,
+                          localResidenceProof = Just localResidenceProofStatus,
+                          drivingSchoolCertificate = Just drivingSchoolCertificateStatus
                         },
                   ..
                 }
@@ -1567,6 +1590,9 @@ getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehi
         let isDriverActive = isJust driverName -- Check if there is a current active driver
         let isRcAssociated = isJust rcActiveAssociation
         vehicleImages <- QImage.findAllByRcId (Just vrc.id.getId)
+        inspectionHubStatus <- do
+          mbRequestStatus <- SStatus.checkInspectionHubRequestCreated DOHR.ONBOARDING_INSPECTION Nothing (Just decryptedVehicleRC)
+          pure $ mapInspectionHubRequestStatusToDashboard mbRequestStatus
         let verificationDocs =
               Common.VerificationDocsStatus
                 { vehicleRegistrationCertificate = Just $ DCommon.castVerificationStatus vrc.verificationStatus,
@@ -1583,7 +1609,12 @@ getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehi
                   odometer = Just $ if any (\img -> img.imageType == DDoc.Odometer && img.verificationStatus == Just Documents.VALID) vehicleImages then Common.VALID else Common.PENDING,
                   driverLicense = Nothing,
                   panCard = Nothing,
-                  aadhaarCard = Nothing
+                  aadhaarCard = Nothing,
+                  driverInspectionHub = Nothing,
+                  inspectionHub = Just inspectionHubStatus,
+                  policeVerificationCertificate = Nothing,
+                  localResidenceProof = Nothing,
+                  drivingSchoolCertificate = Nothing
                 }
         let ls =
               Common.DriveVehicleAssociationListItemT

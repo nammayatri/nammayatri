@@ -201,7 +201,7 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   mobileNumberHash <- getDbHash req.mobileNumber
-  let enabled = Just True
+  let enabled = Just False
   fleetOwner <- do
     mbPerson <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR]
     mbFleetOwner <- forM mbPerson $ \person -> case person.role of
@@ -219,6 +219,8 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
         let personAuth = DRegistrationV2.buildFleetOwnerAuthReq merchant.id opCity createReq
         deploymentVersion <- asks (.version)
         personData <- DRegistrationV2.createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled
+        -- Fleet owner info is created with NORMAL_FLEET by default (can be overwritten in register)
+        void $ DRegistrationV2.enableFleetIfPossible personData.id Nothing (Just FOI.NORMAL_FLEET) merchantOpCityId
         pure personData
 
   transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
