@@ -230,6 +230,7 @@ castHubRequests (hubReq, creator, hub) = do
         rcId,
         creatorPhoneNo,
         driverPhoneNo,
+        driverId = fmap (cast @DP.Person @Common.Driver) hubReq.driverId,
         requestStatus = castReqStatus hubReq.requestStatus,
         requestTime = hubReq.createdAt,
         requestType = castReqType hubReq.requestType

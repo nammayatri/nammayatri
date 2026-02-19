@@ -1865,6 +1865,11 @@ types:
     - driverLicense: Maybe VerificationStatus
     - panCard: Maybe VerificationStatus
     - aadhaarCard: Maybe VerificationStatus
+    - driverInspectionHub: Maybe VerificationStatus
+    - inspectionHub: Maybe VerificationStatus
+    - policeVerificationCertificate: Maybe VerificationStatus
+    - localResidenceProof: Maybe VerificationStatus
+    - drivingSchoolCertificate: Maybe VerificationStatus
   FleetDashboardAnalyticsCacheReq:
     - fleetOwnerId: Text
     - activeDriverCount: Maybe Int

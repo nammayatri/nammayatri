@@ -190,6 +190,7 @@ types:
     operationHubName: Text
     driverPhoneNo: Maybe Text
     creatorPhoneNo: Maybe Text
+    driverId: Maybe (Id Driver)
     rcId: Maybe Text
     registrationNo: Maybe Text
     requestType: RequestType

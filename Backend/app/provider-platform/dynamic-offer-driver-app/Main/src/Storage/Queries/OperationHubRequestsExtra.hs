@@ -95,3 +95,29 @@ findPendingRequestByOperatorId operatorId = do
 deleteByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> m ()
 deleteByOperatorId operatorId = do
   deleteWithKV [Se.Is BeamOHR.operatorId $ Se.Eq (Just $ getId operatorId)]
+
+findLatestByDriverIdAndRequestType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> RequestType -> m (Maybe OperationHubRequests)
+findLatestByDriverIdAndRequestType driverId requestType = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamOHR.driverId $ Se.Eq (Just $ getId driverId),
+          Se.Is BeamOHR.requestType $ Se.Eq requestType
+        ]
+    ]
+    (Se.Desc BeamOHR.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
+
+findLatestByRegistrationNoAndRequestType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> RequestType -> m (Maybe OperationHubRequests)
+findLatestByRegistrationNoAndRequestType registrationNo requestType = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamOHR.registrationNo $ Se.Eq (Just registrationNo),
+          Se.Is BeamOHR.requestType $ Se.Eq requestType
+        ]
+    ]
+    (Se.Desc BeamOHR.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe

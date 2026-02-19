@@ -15,12 +15,12 @@
 
 module Storage.CachedQueries.FareProduct where
 
+import Data.List (nub)
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.FarePolicy
 import Domain.Types.FareProduct
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
-import Data.List (nub)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis

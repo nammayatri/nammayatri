@@ -16,6 +16,8 @@ module SharedLogic.DriverOnboarding.Status
     checkAllDriverDocsVerifiedForDriver,
     activateRCAutomatically,
     mkCommonDocumentItem,
+    checkInspectionHubRequestCreated,
+    getInspectionHubStatusForResponseStatus,
   )
 where
 
@@ -35,6 +37,7 @@ import qualified Domain.Types.HyperVergeVerification as HV
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.TransporterConfig as DTC
@@ -70,6 +73,7 @@ import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
+import qualified Storage.Queries.OperationHubRequestsExtra as QOHRE
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Translations as MTQuery
@@ -882,8 +886,8 @@ getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL = do
       let (status, reason, url) = checkImageValidity driverImagesInfo DVC.TrainingForm
       return (status, reason, url, Nothing, mbS3Path)
     DVC.DriverInspectionHub -> do
-      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.DriverInspectionHub
-      return (status, reason, url, Nothing, Nothing)
+      status <- getInspectionHubStatusForResponseStatus DOHR.DRIVER_ONBOARDING_INSPECTION (Just driverId) Nothing
+      return (status, Nothing, Nothing, Nothing, Nothing)
     _ -> return (Nothing, Nothing, Nothing, Nothing, mbS3Path)
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
@@ -921,11 +925,13 @@ getProcessedVehicleDocuments driverImagesInfo docType vehicleRC mbRcImagesInfo =
       mbDoc <- listToMaybe <$> VNOCQuery.findByRcIdAndDriverId vehicleRC.id driverId
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), mbS3Path)
     DVC.VehicleInspectionForm -> do
-      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.VehicleInspectionForm
-      return (status, reason, url, Nothing, Nothing)
+      -- Check all vehicle photos based on RC, not driver
+      (status, reason, url) <- checkVehiclePhotosStatusByRC mbRcImagesInfo
+      return (Just status, reason, url, Nothing, Nothing)
     DVC.InspectionHub -> do
-      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.InspectionHub
-      return (status, reason, url, Nothing, Nothing)
+      registrationNo <- decrypt vehicleRC.certificateNumber
+      status <- getInspectionHubStatusForResponseStatus DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
+      return (status, Nothing, Nothing, Nothing, Nothing)
     DVC.SubscriptionPlan -> do
       mbPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION driverId -- fix later on basis of vehicle category
       return (Just $ boolToStatus (isJust mbPlan), Nothing, Nothing, Nothing, Nothing)
@@ -963,6 +969,39 @@ checkImageValidity driverImagesInfo docType = do
       | any (\img -> img.verificationStatus == Just Documents.VALID) validImages = (Just VALID, Nothing, Nothing)
       | any (\img -> img.verificationStatus == Just Documents.MANUAL_VERIFICATION_REQUIRED) validImages = (Just MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
       | otherwise = (Nothing, Nothing, Nothing)
+
+checkVehiclePhotosStatusByRC :: Maybe IQuery.RcImagesInfo -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkVehiclePhotosStatusByRC mbRcImagesInfo = do
+  -- Check all vehicle photo types from RC images (6 types: VehicleLeft, VehicleRight, VehicleFrontInterior, VehicleBackInterior, VehicleFront, VehicleBack)
+  let vehiclePhotoTypes = vehicleDocsByRcIdList
+      photoStatuses = case mbRcImagesInfo of
+        Just rcImagesInfo ->
+          mapMaybe
+            ( \docType -> do
+                let images = IQuery.filterRecentByPersonRCAndImageType rcImagesInfo docType
+                case images of
+                  [] -> Nothing -- No image for this type
+                  img : _ -> Just img.verificationStatus -- Get status of most recent image for this type
+            )
+            vehiclePhotoTypes
+        Nothing -> []
+  case photoStatuses of
+    [] -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
+    statuses -> do
+      -- Check if all photos exist (must have all 6)
+      let allPhotosExist = length statuses == length vehiclePhotoTypes
+          allValid = allPhotosExist && all (== Just Documents.VALID) statuses
+          allManualVerification = allPhotosExist && all (== Just Documents.MANUAL_VERIFICATION_REQUIRED) statuses
+          -- Check if we have some VALID and all others are MANUAL_VERIFICATION_REQUIRED (no INVALID or missing)
+          hasValid = any (== Just Documents.VALID) statuses
+          onlyValidOrManual = all (\s -> s == Just Documents.VALID || s == Just Documents.MANUAL_VERIFICATION_REQUIRED) statuses
+          someValidAndRestManual = allPhotosExist && hasValid && onlyValidOrManual && not allValid
+      if allValid
+        then return (VALID, Nothing, Nothing)
+        else
+          if allManualVerification || someValidAndRestManual
+            then return (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
+            else return (INVALID, Nothing, Nothing)
 
 checkBackgroundVerificationStatus :: Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkBackgroundVerificationStatus driverId merchantId merchantOpCityId = do
@@ -1025,6 +1064,10 @@ getInProgressDriverDocuments driverImagesInfo docType = do
     DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.PoliceVerificationCertificate
     DDVC.LocalResidenceProof -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.LocalResidenceProof
     DDVC.TrainingForm -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.TrainingForm
+    DDVC.DriverInspectionHub -> do
+      mbStatus <- getInspectionHubStatusForResponseStatus DOHR.DRIVER_ONBOARDING_INSPECTION (Just driverId) Nothing
+      let status = fromMaybe INVALID mbStatus
+      return (status, Nothing, Nothing)
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
   return (status, mbReason, mbUrl, Nothing, mbS3Path)
 
@@ -1036,8 +1079,7 @@ vehicleDocsByRcIdList =
     DVC.VehicleBackInterior,
     DVC.VehicleFront,
     DVC.VehicleBack,
-    DVC.Odometer,
-    DVC.InspectionHub
+    DVC.Odometer
   ]
 
 getInProgressVehicleDocuments :: IQuery.DriverImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
@@ -1055,8 +1097,22 @@ getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType = do
     DVC.VehicleFitnessCertificate -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleFitnessCertificate
     DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleInsurance
     DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehiclePUC
-    DVC.VehicleInspectionForm -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleInspectionForm
+    DVC.VehicleInspectionForm -> checkVehiclePhotosStatusByRC mbRcImagesInfo
     DVC.VehicleNOC -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleNOC
+    DVC.InspectionHub -> do
+      mbRegistrationNo <- case mbRcImagesInfo of
+        Just rcImagesInfo -> do
+          mbRc <- runInReplica $ RCQuery.findById rcImagesInfo.rcId
+          case mbRc of
+            Just rc -> Just <$> decrypt rc.certificateNumber
+            Nothing -> return Nothing
+        Nothing -> return Nothing
+      case mbRegistrationNo of
+        Just registrationNo -> do
+          mbStatus <- getInspectionHubStatusForResponseStatus DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
+          let status = fromMaybe INVALID mbStatus
+          return (status, Nothing, Nothing)
+        Nothing -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
     _ | docType `elem` vehicleDocsByRcIdList -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
   return (status, mbReason, mbUrl, Nothing, mbS3Path)
@@ -1371,3 +1427,27 @@ mapDigilockerToResponseStatus DocStatus.DOC_FAILED = Just FAILED
 mapDigilockerToResponseStatus DocStatus.DOC_CONSENT_DENIED = Just CONSENT_DENIED
 mapDigilockerToResponseStatus DocStatus.DOC_PULL_REQUIRED = Just PULL_REQUIRED
 mapDigilockerToResponseStatus DocStatus.DOC_SUCCESS = Just VALID
+
+checkInspectionHubRequestCreated :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DOHR.RequestType -> Maybe (Id DP.Person) -> Maybe Text -> m (Maybe DOHR.RequestStatus)
+checkInspectionHubRequestCreated requestType mbDriverId mbRegistrationNo = do
+  mbInspectionReq <- case requestType of
+    DOHR.DRIVER_ONBOARDING_INSPECTION -> case mbDriverId of
+      Just driverId -> runInReplica $ QOHRE.findLatestByDriverIdAndRequestType driverId requestType
+      Nothing -> pure Nothing
+    DOHR.ONBOARDING_INSPECTION -> case mbRegistrationNo of
+      Just registrationNo -> runInReplica $ QOHRE.findLatestByRegistrationNoAndRequestType registrationNo requestType
+      Nothing -> pure Nothing
+    _ -> pure Nothing
+  pure $ (.requestStatus) <$> mbInspectionReq
+
+mapInspectionHubRequestStatusToResponseStatus :: Maybe DOHR.RequestStatus -> Maybe ResponseStatus
+mapInspectionHubRequestStatusToResponseStatus mbRequestStatus = case mbRequestStatus of
+  Just DOHR.APPROVED -> Just VALID
+  Just DOHR.PENDING -> Just VALID
+  Just DOHR.REJECTED -> Just INVALID
+  Nothing -> Just INVALID
+
+getInspectionHubStatusForResponseStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DOHR.RequestType -> Maybe (Id DP.Person) -> Maybe Text -> m (Maybe ResponseStatus)
+getInspectionHubStatusForResponseStatus requestType mbDriverId mbRegistrationNo = do
+  mbRequestStatus <- checkInspectionHubRequestCreated requestType mbDriverId mbRegistrationNo
+  pure $ mapInspectionHubRequestStatusToResponseStatus mbRequestStatus

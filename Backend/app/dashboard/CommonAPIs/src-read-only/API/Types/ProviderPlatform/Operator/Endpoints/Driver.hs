@@ -91,6 +91,7 @@ data OperationHub = OperationHub
 
 data OperationHubDriverRequest = OperationHubDriverRequest
   { creatorPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver),
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Prelude.Text,
     operationHubId :: Kernel.Types.Id.Id OperationHub,
