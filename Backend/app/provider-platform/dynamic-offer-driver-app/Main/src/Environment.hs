@@ -14,7 +14,7 @@
 
 module Environment where
 
-import AWS.S3
+import Storage
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map.Strict as M
@@ -94,6 +94,8 @@ data AppCfg = AppCfg
     signatureExpiry :: Seconds,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
+    storageServiceConfig :: StorageServiceConfig,
+    storagePublicServiceConfig :: StorageServiceConfig,
     migrationPath :: [FilePath],
     autoMigrate :: Bool,
     coreVersion :: Text,
@@ -356,9 +358,9 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
-      s3Env = buildS3Env cfg.s3Config
-      s3EnvPublic = buildS3Env cfg.s3PublicConfig
       searchRequestExpirationSecondsForMultimodal = fromIntegral cfg.searchRequestExpirationSecondsForMultimodal
+  s3Env <- buildStorageEnvIO loggerEnv cfg.storageServiceConfig
+  s3EnvPublic <- buildStorageEnvIO loggerEnv cfg.storagePublicServiceConfig
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
       serviceClickhouseCfg = driverClickhouseCfg

@@ -27,7 +27,7 @@ module Environment
   )
 where
 
-import AWS.S3
+import Storage
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified ConfigPilotFrontend.Types as CPT
@@ -136,6 +136,8 @@ data AppCfg = AppCfg
     searchLimitExceedNotificationTemplate :: Text,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
+    storageServiceConfig :: StorageServiceConfig,
+    storagePublicServiceConfig :: StorageServiceConfig,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
@@ -365,8 +367,8 @@ buildAppEnv cfg@AppCfg {..} = do
         putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
         pure Nothing
       Right env -> pure (Just env)
-  let s3Env = buildS3Env cfg.s3Config
-      s3EnvPublic = buildS3Env cfg.s3PublicConfig
+  s3Env <- buildStorageEnvIO loggerEnv cfg.storageServiceConfig
+  s3EnvPublic <- buildStorageEnvIO loggerEnv cfg.storagePublicServiceConfig
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg

@@ -411,6 +411,26 @@ let emailServiceConfig =
       , isForcedAWS = True
       }
 
+let storageServiceConfig =
+      { isForcedAWS = True
+      , awsConfig = Some common.s3Config
+      , gcsConfig = Some
+          { gcpProjectId = "ny-sandbox"
+          , bucketName = "testbucket-ny-master"
+          , pathPrefix = ""
+          }
+      }
+
+let storagePublicServiceConfig =
+      { isForcedAWS = True
+      , awsConfig = Some common.s3PublicConfig
+      , gcsConfig = Some
+          { gcpProjectId = "ny-sandbox"
+          , bucketName = "testbucket-ny-master"
+          , pathPrefix = ""
+          }
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -522,5 +542,7 @@ in  { esqDBCfg
     , bapHostRedirectMap
     , blackListedJobs = [] : List Text
     , emailServiceConfig
+    , storageServiceConfig
+    , storagePublicServiceConfig
     , ttenTokenCacheExpiry = +86390
     }
