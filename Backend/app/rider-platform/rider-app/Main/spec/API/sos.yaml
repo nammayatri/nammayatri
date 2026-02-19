@@ -12,6 +12,7 @@ module: Sos
 types:
   SosRes:
     sosId: Id Sos
+    externalSOSSuccess: Maybe Bool
 
   SosDetailsRes:
     sos: Maybe Sos
