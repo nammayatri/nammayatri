@@ -37,6 +37,7 @@ module Domain.Action.Dashboard.Merchant
     getMerchantRiderConfigEstimatesOrder,
     postMerchantRiderConfigEstimatesOrderUpdate,
     postMerchantConfigMerchantCreate,
+    postMerchantConfigDebugLogUpdate,
   )
 where
 
@@ -103,6 +104,7 @@ import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
@@ -1258,7 +1260,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
       priceAmount :: HighPrecMoney <- readCSVField idx row.priceAmount "Price Amount"
       pricingType :: PricingType <- readCSVField idx row.pricingType "Pricing Type"
       priceCurrency :: Currency <- readCSVField idx row.priceCurrency "Price Currency"
-      let vendorSplitDetails = (map Payment.roundVendorFee) <$> (cleanField row.vendorSplitDetails >>= JSON.decodeStrict . encodeUtf8)
+      let vendorSplitDetails = map Payment.roundVendorFee <$> (cleanField row.vendorSplitDetails >>= JSON.decodeStrict . encodeUtf8)
           pricePerUnit = Price (round priceAmount) priceAmount priceCurrency
           mbPeakTimings = cleanField row.peakTimings
           svcPeopleCategoryId = peopleCategoryName <> separator <> svcCategoryId
@@ -1550,7 +1552,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     runValidationOnSpecialLocationAndGatesGroup _ [] = throwError $ InvalidRequest "Empty Special Location Group"
     runValidationOnSpecialLocationAndGatesGroup _merchantOpCity (x : _) = do
       let (city, _locationName, (_specialLocation, _), _) = x
-      if (city /= opCity)
+      if city /= opCity
         then throwError $ InvalidRequest ("Can't process special location for different city: " <> show city <> ", please login with this city in dashboard")
         else do
           -- TODO :: Add Validation for Overlapping Geometries
@@ -1761,3 +1763,15 @@ toDomainVehicleServiceTierOrderConfig commonConfig =
     { orderArray = commonConfig.orderArray,
       vehicle = commonConfig.vehicle
     }
+
+---------------------------------------------------------------------
+postMerchantConfigDebugLogUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  DebugLog.SetJsonLogicDebugReq ->
+  Flow APISuccess
+postMerchantConfigDebugLogUpdate merchantShortId city req = do
+  _merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  DebugLog.setJsonLogicDebugFlags (cast merchantOperatingCity.id) req
+  pure Success

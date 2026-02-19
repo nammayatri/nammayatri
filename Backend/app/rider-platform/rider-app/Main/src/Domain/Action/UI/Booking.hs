@@ -104,7 +104,7 @@ newtype FavouriteBookingListRes = FavouriteBookingListRes
 
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingAPIEntity
 bookingStatus bookingId (personId, _merchantId) = runInMultiCloud $ do
-  booking <- (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
   fork "creating cache for emergency contact SOS" $ emergencyContactSOSCache booking personId
   logInfo $ "booking: test " <> show booking
@@ -113,7 +113,7 @@ bookingStatus bookingId (personId, _merchantId) = runInMultiCloud $ do
 
 bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingStatusAPIEntity
 bookingStatusPolling bookingId _ = runInMultiCloud $ do
-  booking <- (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
   logInfo $ "booking: test " <> show booking
   handleConfirmTtlExpiry booking
@@ -285,9 +285,9 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
         (rbList, allbookings) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
 
         -- Filter by ride type and billing category
-        let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if not (null rideTypeList) then ((filter (SB.matchesRideType rideTypeList) rbList), (filter (SB.matchesRideType rideTypeList) allbookings)) else (rbList, allbookings)
+        let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if not (null rideTypeList) then (filter (SB.matchesRideType rideTypeList) rbList, filter (SB.matchesRideType rideTypeList) allbookings) else (rbList, allbookings)
 
-            (rbFilteredList, filteredAllBookingsList) = if not (null billingCategoryList) then ((filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList), (filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList)) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
+            (rbFilteredList, filteredAllBookingsList) = if not (null billingCategoryList) then (filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList, filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
 
         clearStuckRides (Just filteredAllBookingsList) rbFilteredList
 
@@ -315,8 +315,9 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
         pure (entitiesWithSource, Nothing, Just finalJourneyOffset, Just finalPassOffset, hasMoreData)
       _ -> do
-        bookingListFork <- awaitableFork "bookingListV2->getBookingList" $
-          applyMasterDbIfGcp $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
+        bookingListFork <-
+          awaitableFork "bookingListV2->getBookingList" $
+            applyMasterDbIfGcp $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
 
         -- Journeys (NammaTransit) should only be included for PERSONAL billing category and NORMAL ride type
         let shouldIncludeJourneys = shouldIncludeJourneysForFilters billingCategoryList rideTypeList
@@ -333,9 +334,9 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
             Right result -> pure result
 
         -- Filter by ride type and billing category
-        let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if not (null rideTypeList) then ((filter (SB.matchesRideType rideTypeList) rbList), (filter (SB.matchesRideType rideTypeList) allbookings)) else (rbList, allbookings)
+        let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if not (null rideTypeList) then (filter (SB.matchesRideType rideTypeList) rbList, filter (SB.matchesRideType rideTypeList) allbookings) else (rbList, allbookings)
 
-            (rbFilteredList, filteredAllBookingsList) = if not (null billingCategoryList) then ((filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList), (filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList)) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
+            (rbFilteredList, filteredAllBookingsList) = if not (null billingCategoryList) then (filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList, filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
 
         logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialBookingOffset <> " BookingRequest rbList (id, startTime): " <> show (map (\b -> (b.id, b.startTime)) rbFilteredList)
 
@@ -388,10 +389,11 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
           fork "booking list status update" $ checkBookingsForStatus allbookings
           logInfo $ "rbList: test " <> show rbList
         Nothing -> do
-          fork "booking list status update" $ applyMasterDbIfGcp $ do
-            (rbList_, allbookings_) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
-            checkBookingsForStatus allbookings_
-            logInfo $ "rbList: test " <> show rbList_
+          fork "booking list status update" $
+            applyMasterDbIfGcp $ do
+              (rbList_, allbookings_) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
+              checkBookingsForStatus allbookings_
+              logInfo $ "rbList: test " <> show rbList_
 
 data MergedItem = MBooking SRB.Booking | MJourney DJ.Journey | MPass DPurchasedPass.PurchasedPass
 
@@ -590,7 +592,7 @@ processStop bookingId loc merchantId isEdit = do
             bppUrl = booking.providerUrl,
             transactionId = booking.transactionId,
             messageId = uuid,
-            city = merchant.defaultCity, -- TODO: Correct during interoperability
+            city = merchant.defaultCity,
             ..
           }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq

@@ -79,7 +79,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithoutGeoJson)
 import qualified Lib.Types.SpecialLocation as SL
-import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
@@ -446,7 +446,7 @@ handler ValidatedDSearchReq {..} sReq = do
 
     addNammaTags :: Y.TagData -> Flow ()
     addNammaTags tagData = do
-      newSearchTags <- withTryCatch "computeNammaTags:Search" (Yudhishthira.computeNammaTags (cast tagData.searchRequest.merchantOperatingCityId) Yudhishthira.Search tagData)
+      newSearchTags <- withTryCatch "computeNammaTags:Search" (LYDL.computeNammaTagsWithDebugLog (cast tagData.searchRequest.merchantOperatingCityId) Yudhishthira.Search tagData)
       let tags = tagData.searchRequest.searchTags <> eitherToMaybe newSearchTags
       QSR.updateSearchTags tags tagData.searchRequest.id
 

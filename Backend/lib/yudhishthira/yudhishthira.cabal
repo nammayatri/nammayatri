@@ -48,6 +48,7 @@ library
       Lib.Yudhishthira.Storage.Queries.Transformers.NammaTag
       Lib.Yudhishthira.Storage.Queries.Transformers.NammaTagV2
       Lib.Yudhishthira.Storage.Queries.UserDataExtra
+      Lib.Yudhishthira.Tools.DebugLog
       Lib.Yudhishthira.Tools.Error
       Lib.Yudhishthira.Tools.Utils
       Lib.Yudhishthira.Types

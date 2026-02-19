@@ -58,7 +58,6 @@ import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Station as Station
-
 import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
 import EulerHS.Prelude (comparing, concatMapM, (+||), (||+))
 import Kernel.Beam.Functions as B
@@ -314,7 +313,7 @@ getPossibleRoutesBetweenTwoParentStops startParentStopCode endParentStopCode int
                       )
                       (Just $ Seconds 0)
                       stops
-               in Just (startStop.routeCode, (Just totalStops), totalTravelTime, (Just intermediateStops), startStop.stopCode, endStop.stopCode)
+               in Just (startStop.routeCode, Just totalStops, totalTravelTime, Just intermediateStops, startStop.stopCode, endStop.stopCode)
             Nothing -> Nothing
 
 data FRFSTicketCategory = FRFSTicketCategory
@@ -433,7 +432,6 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
             },
         fareQuoteType = Nothing
       }
-
 
 getFareThroughGTFS :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
@@ -1117,7 +1115,7 @@ createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCit
           then 1.0 * (HighPrecMoney $ toRational $ length allJourneyBookings)
           else
             foldl
-              (\accAmt item -> (accAmt + item.totalPrice.amount))
+              (\accAmt item -> accAmt + item.totalPrice.amount)
               0.0
               allJourneyBookings
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType

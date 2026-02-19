@@ -428,7 +428,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   let routeStationsJSON = routeStations & map (castRouteStationToAPI integratedBPPConfig.id) & encodeToText
   uid <- generateGUID
   now <- getCurrentTime
-  let mbAdultPrice = (find (\category -> category.category == ADULT) categories) <&> (.price)
+  let mbAdultPrice = find (\category -> category.category == ADULT) categories <&> (.price)
       (discountedTickets, eventDiscountAmount) =
         case mbAdultPrice of
           Just adultPrice -> SFU.getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback adultPrice search.quantity ticketsBookedInEvent
@@ -678,7 +678,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote categories in
           }
   let serviceTierType =
         case quote.routeStations of
-          (routeStation:_) -> maybe Spec.ORDINARY (.serviceTierType) (routeStation.routeServiceTier)
+          (routeStation : _) -> maybe Spec.ORDINARY (.serviceTierType) (routeStation.routeServiceTier)
           [] -> Spec.ORDINARY
 
   (vehicleServiceTierId, vehicleServiceTier) <- do
