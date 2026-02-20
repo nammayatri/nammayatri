@@ -65,13 +65,13 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   driverImages <- IQuery.findAllByPersonId transporterConfig personId
   now <- getCurrentTime
-  let driverImagesInfo = IQuery.DriverImagesInfo {driverId = personId, merchantOperatingCity, driverImages, transporterConfig, now}
+  let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just personId, merchantOperatingCity, driverImages, transporterConfig, now}
       language = if useDriverLanguage == Just True then fromMaybe merchantOperatingCity.language person.language else merchantOperatingCity.language
-  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus driverImagesInfo language useHVSdkForDL
-  (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus driverImagesInfo language
+  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus personId driverImagesInfo language useHVSdkForDL
+  (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus personId driverImagesInfo language
   (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
   let shouldActivateRc = True
-  SStatus.StatusRes' {..} <- SStatus.statusHandler' (Just person) driverImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs
+  SStatus.StatusRes' {..} <- SStatus.statusHandler' person driverImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs
 
   -- Fetch common documents
   commonDocumentsData <- QCommonDoc.findByDriverId (Just personId)

@@ -169,7 +169,7 @@ findRecentLatestByPersonIdAndImagesType driverId imgType = do
         return $ filter ((== latestImg.workflowTransactionId) . (.workflowTransactionId)) images
 
 data DriverImagesInfo = DriverImagesInfo
-  { driverId :: Id Person,
+  { driverId :: Maybe (Id Person), -- Nothing for vehilce inspection, without driver linked to vehicle
     merchantOperatingCity :: DMOC.MerchantOperatingCity,
     driverImages :: [DImage.Image],
     transporterConfig :: DTC.TransporterConfig,

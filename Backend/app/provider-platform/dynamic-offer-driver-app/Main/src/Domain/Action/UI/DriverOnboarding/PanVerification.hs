@@ -136,10 +136,10 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalR
           CQMOC.findById merchantOpCityId
             >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
         driverImages <- IQuery.findAllByPersonId transporterConfig personId
-        let driverImagesInfo = IQuery.DriverImagesInfo {driverId = personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+        let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
         let onlyMandatoryDocs = Just True
             shouldActivateRc = False
-        void $ SStatus.statusHandler' (Just person) driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
+        void $ SStatus.statusHandler' person driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->

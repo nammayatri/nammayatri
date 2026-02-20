@@ -157,18 +157,20 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
     handleVehicleInspectionApproval mShortId city request opHubReq now = do
       creator <- runInReplica $ QPerson.findById opHubReq.creatorId >>= fromMaybeM (PersonNotFound opHubReq.creatorId.getId)
       registrationNo <- opHubReq.registrationNo & fromMaybeM (InvalidRequest "registrationNo is required for vehicle inspection")
+
       rc <- QVRCE.findLastVehicleRCWrapper registrationNo >>= fromMaybeM (RCNotFound registrationNo)
-      personId <- case creator.role of
-        DP.DRIVER -> pure creator.id
+      mbPersonId <- case creator.role of
+        DP.DRIVER -> pure $ Just creator.id
         _ -> do
           drc <- SQDRA.findAllActiveAssociationByRCId rc.id
           case drc of
-            [] -> throwError (InvalidRequest "No driver exist with this RC")
-            (assoc : _) -> pure assoc.driverId
-      (merchantOpCity, transporterConfig, person, language) <- getMerchantAndPersonInfo mShortId city personId
+            [] -> pure Nothing
+            (assoc : _) -> pure $ Just assoc.driverId
+      mbPerson <- forM mbPersonId $ \personId -> runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      (merchantOpCity, transporterConfig, language) <- getMerchantAndPersonInfo mShortId city mbPerson
       fork "enable driver after vehicle inspection" $ do
         -- Only check vehicle docs, not driver docs (vehicle and driver enablement are segregated)
-        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC person merchantOpCity transporterConfig language registrationNo
+        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC Nothing merchantOpCity transporterConfig language registrationNo
         when allVehicleDocsVerified $ do
           QVRC.updateApproved (Just True) rc.id
           -- Cancel pending vehicle inspection reminders for all drivers using this RC
@@ -177,13 +179,16 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
           recordDocumentCompletion DVC.VehicleInspectionForm rc.id.getId DRH.RC Nothing merchantOpCity.merchantId merchantOpCity.id
         let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
         void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
-        mbVehicle <- QVehicle.findById personId
-        when (isNothing mbVehicle && allVehicleDocsVerified) $
-          void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
+
+        whenJust mbPersonId $ \personId -> do
+          mbVehicle <- QVehicle.findById personId
+          when (isNothing mbVehicle && allVehicleDocsVerified) $
+            void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
 
     handleDriverInspectionApproval mShortId city request opHubReq now = do
       personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
-      (merchantOpCity, transporterConfig, person, language) <- getMerchantAndPersonInfo mShortId city personId
+      person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      (merchantOpCity, transporterConfig, language) <- getMerchantAndPersonInfo mShortId city (Just person)
       fork "enable driver after driver inspection" $ do
         -- Only check driver docs, not vehicle docs (vehicle and driver enablement are segregated)
         allDriverDocsVerified <- SStatus.checkAllDriverDocsVerifiedForDriver person merchantOpCity transporterConfig language
@@ -197,13 +202,12 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
         void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
-    getMerchantAndPersonInfo mShortId city personId = do
+    getMerchantAndPersonInfo mShortId city mbPerson = do
       merchant <- findMerchantByShortId mShortId
       merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> mShortId.getShortId <> " ,city: " <> show city)
       transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-      person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      let language = fromMaybe merchantOpCity.language person.language
-      pure (merchantOpCity, transporterConfig, person, language)
+      let language = fromMaybe merchantOpCity.language $ mbPerson >>= (.language)
+      pure (merchantOpCity, transporterConfig, language)
 
 opsHubRequestLockKey :: Text -> Text
 opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
@@ -335,12 +339,12 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
         CQMOC.findById merchantOpCityId
           >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
       driverImages <- IQuery.findAllByPersonId transporterConfig driverId
-      let driverImagesInfo = IQuery.DriverImagesInfo {driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+      let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
       driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
       let shouldActivateRc = False
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' (Just person) driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs -- FIXME: Need to change
+          <$> SStatus.statusHandler' person driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs -- FIXME: Need to change
       pure $
         API.Types.ProviderPlatform.Operator.Driver.DriverInfo
           { driverId = cast drvOpAsn.driverId,
