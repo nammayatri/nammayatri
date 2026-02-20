@@ -2,7 +2,6 @@
 
 module Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRolloutExtra where
 
-import Control.Lens ((^?), _head)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -37,7 +36,7 @@ findByCityAndDomainAndIsBase ::
     m (Maybe Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout)
   )
 findByCityAndDomainAndIsBase merchantOperatingCityId domain = do
-  (^? _head)
+  listToMaybe
     <$> findAllWithKV
       [ Se.And
           [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),

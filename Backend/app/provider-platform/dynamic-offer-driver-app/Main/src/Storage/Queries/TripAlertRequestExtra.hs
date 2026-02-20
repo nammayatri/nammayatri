@@ -8,7 +8,6 @@ import Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Control.Lens ((^?), (^..), _Just, _head, to)
 import Domain.Types.TripAlertRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -26,12 +25,12 @@ findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mb
     [ Se.And
         ( [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId]
             <> [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]
-            <> (mbFrom ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.GreaterThanOrEq v))
-            <> (mbTo ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.LessThanOrEq v))
-            <> (mbAlertRequestType ^.. _Just . to (\v -> Se.Is Beam.alertRequestType $ Se.Eq v))
+            <> foldMap (\v -> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq v]) mbFrom
+            <> foldMap (\v -> [Se.Is Beam.createdAt $ Se.LessThanOrEq v]) mbTo
+            <> foldMap (\v -> [Se.Is Beam.alertRequestType $ Se.Eq v]) mbAlertRequestType
             <> [Se.Is Beam.fleetBadgeId $ Se.Eq (mbFleetBadgeId <&> (.getId)) | isJust mbFleetBadgeId]
-            <> (mbDriverId ^.. _Just . to (\v -> Se.Is Beam.driverId $ Se.Eq v))
-            <> (mbRouteCode ^.. _Just . to (\v -> Se.Is Beam.routeCode $ Se.Eq v))
+            <> foldMap (\v -> [Se.Is Beam.driverId $ Se.Eq v]) mbDriverId
+            <> foldMap (\v -> [Se.Is Beam.routeCode $ Se.Eq v]) mbRouteCode
         )
     ]
     (Se.Desc Beam.createdAt)
@@ -43,7 +42,7 @@ findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mb
 
 findLatestTripAlertRequest :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> AlertRequestType -> Text -> Text -> m (Maybe TripAlertRequest)
 findLatestTripAlertRequest merchantOpCityId fleetOwnerId alertRequestType driverId routeCode = do
-  findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId Nothing Nothing (Just alertRequestType) (Just driverId) Nothing (Just routeCode) (Just 1) (Just 0) <&> (^? _head)
+  findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId Nothing Nothing (Just alertRequestType) (Just driverId) Nothing (Just routeCode) (Just 1) (Just 0) <&> listToMaybe
 
 ------------------------- multiple fleet owners -------------------------
 
@@ -53,12 +52,12 @@ findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo 
     [ Se.And
         ( [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId]
             <> [Se.Is Beam.fleetOwnerId $ Se.In fleetOwnerIds]
-            <> (mbFrom ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.GreaterThanOrEq v))
-            <> (mbTo ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.LessThanOrEq v))
-            <> (mbAlertRequestType ^.. _Just . to (\v -> Se.Is Beam.alertRequestType $ Se.Eq v))
+            <> foldMap (\v -> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq v]) mbFrom
+            <> foldMap (\v -> [Se.Is Beam.createdAt $ Se.LessThanOrEq v]) mbTo
+            <> foldMap (\v -> [Se.Is Beam.alertRequestType $ Se.Eq v]) mbAlertRequestType
             <> [Se.Is Beam.fleetBadgeId $ Se.In fleetBadgeIds | isJust mbFleetBadgeIds]
-            <> (mbDriverId ^.. _Just . to (\v -> Se.Is Beam.driverId $ Se.Eq v))
-            <> (mbRouteCode ^.. _Just . to (\v -> Se.Is Beam.routeCode $ Se.Eq v))
+            <> foldMap (\v -> [Se.Is Beam.driverId $ Se.Eq v]) mbDriverId
+            <> foldMap (\v -> [Se.Is Beam.routeCode $ Se.Eq v]) mbRouteCode
             <> [Se.Is Beam.alertStatus $ Se.Eq mbalertStatus | isJust mbalertStatus]
         )
     ]

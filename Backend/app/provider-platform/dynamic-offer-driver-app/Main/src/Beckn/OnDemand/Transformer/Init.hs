@@ -15,7 +15,7 @@ import Domain.Types
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.Location as Location
 import qualified Domain.Types.Trip as Trip
-import EulerHS.Prelude hiding (id, (^?), (^..))
+import EulerHS.Prelude hiding (id, (^?))
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Error

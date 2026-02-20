@@ -1,6 +1,5 @@
 module Storage.Queries.VehicleExtra where
 
-import Control.Lens ((^..), _Just, to)
 import Data.Either (fromRight)
 import qualified Database.Beam as B
 import Domain.Types.Merchant
@@ -88,7 +87,7 @@ findByAnyOf registrationNoM vehicleIdM =
   findOneWithKV
     [ Se.And
         ( maybe
-            (registrationNoM ^.. _Just . to (\r -> Se.Is BeamV.registrationNo $ Se.Eq r))
+            foldMap (\r -> [Se.Is BeamV.registrationNo $ Se.Eq r]) registrationNoM
             (\vid -> [Se.Is BeamV.driverId $ Se.Eq (getId vid)])
             vehicleIdM
         )

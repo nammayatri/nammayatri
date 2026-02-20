@@ -25,7 +25,7 @@ import Domain.Action.Beckn.Search
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import Domain.Types.Merchant as DM
-import EulerHS.Prelude hiding (id, view, (^?))
+import EulerHS.Prelude hiding (id, view)
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
 

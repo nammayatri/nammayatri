@@ -18,7 +18,7 @@ module Domain.Action.UI.Plan where
 import Data.List (intersect, nub, nubBy)
 import qualified Data.List as DL
 import qualified Data.Map as M
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Text as T
 import qualified Data.Time as DT
@@ -42,7 +42,7 @@ import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Environment
-import EulerHS.Prelude hiding (id, (^?), (^..))
+import EulerHS.Prelude hiding (id, (^?))
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -554,7 +554,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   latestManualPaymentDate <- case serviceName of
     PREPAID_SUBSCRIPTION -> do
       purchases <- QSP.findAllByOwnerAndStatus ownerId ownerType DSP.ACTIVE
-      pure $ (sortOn (Down . (.updatedAt)) purchases ^? _head) <&> (.updatedAt)
+      pure $ (sortOn (Down . (.updatedAt)) listToMaybe purchases) <&> (.updatedAt)
     _ -> do
       latestManualPayment <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId serviceName
       pure $ latestManualPayment <&> (.updatedAt)
@@ -570,14 +570,14 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
     case serviceName of
       PREPAID_SUBSCRIPTION -> do
         pendingPurchases <- QSP.findAllByOwnerAndStatus ownerId ownerType DSP.PENDING
-        let mbPendingPurchase = sortOn (Down . (.purchaseTimestamp)) pendingPurchases ^? _head
+        let mbPendingPurchase = sortOn (Down . (.purchaseTimestamp)) listToMaybe pendingPurchases
         case mbPendingPurchase of
           Just purchase -> do
             mbOrder <- SOrder.findById (cast purchase.paymentOrderId)
             maybe (pure (Nothing, Nothing)) orderBasedCheck mbOrder
           Nothing -> return (Nothing, Nothing)
       _ -> do
-        mbInvoice <- (^? _head) <$> QINV.findLatestNonAutopayActiveByDriverId driverId serviceName
+        mbInvoice <- listToMaybe <$> QINV.findLatestNonAutopayActiveByDriverId driverId serviceName
         case mbInvoice of
           Just invoice -> do
             mbOrder <- if invoice.invoiceStatus == INV.ACTIVE_INVOICE then SOrder.findById (cast invoice.id) else return Nothing
@@ -1367,7 +1367,7 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
   mapM
     ( \driverFee -> do
         driverFeesInWindow <- QDF.findFeeInRangeAndDriverIdAndServiceName driverFee.startTime driverFee.endTime driverFee.driverId serviceName
-        invoice <- (^? _head) <$> QINV.findActiveByDriverFeeIds [driverFee.id]
+        invoice <- listToMaybe <$> QINV.findActiveByDriverFeeIds [driverFee.id]
         mbPlan <- getPlanDataFromDriverFee driverFee
         let invoiceType = invoice <&> (.paymentMode)
             maxRidesEligibleForCharge = planMaxRides =<< mbPlan

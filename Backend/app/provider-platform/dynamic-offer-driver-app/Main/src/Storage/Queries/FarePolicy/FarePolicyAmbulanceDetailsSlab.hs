@@ -10,7 +10,6 @@
 
 module Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab where
 
-import Control.Lens ((^?), _head)
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.FarePolicy.FarePolicyAmbulanceDetails as FPASlab
 import Kernel.Beam.Functions
@@ -26,7 +25,7 @@ findById' (KTI.Id farePolicyId') = findAllWithOptionsKV [Se.Is BeamFPAD.farePoli
 getNextSlabId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m Int
 getNextSlabId = do
   rows <- findAllWithOptionsKV [Se.Is BeamFPAD.id $ Se.GreaterThanOrEq 0] (Se.Desc BeamFPAD.id) (Just 1) Nothing
-  pure $ case rows ^? _head of
+  pure $ case listToMaybe rows of
     Just (_, slab) -> FPASlab.id slab + 1
     Nothing -> 1
 

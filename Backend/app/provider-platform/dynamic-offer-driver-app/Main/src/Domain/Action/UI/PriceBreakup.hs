@@ -1,7 +1,7 @@
 module Domain.Action.UI.PriceBreakup (getPriceBreakup, postMeterRidePrice) where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import qualified API.Types.UI.PriceBreakup
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Action.Internal.BulkLocUpdate as BLoc
@@ -13,7 +13,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import qualified Environment
-import EulerHS.Prelude hiding (id, (^?), (^..))
+import EulerHS.Prelude hiding (id, (^?))
 import qualified EulerHS.Prelude as Prelude
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong (..))
@@ -74,7 +74,7 @@ postMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId req = do
     void $ BLoc.bulkLocUpdate (BLoc.BulkLocUpdateReq ride.id driverId locUpdates)
   traveledDistance <- LU.getTravelledDistance driverId
   fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide) (Just booking.vehicleServiceTier) booking.configInExperimentVersions
-  let mbMeterRideEstimate = fareEstimates.estimatedFares ^? _head
+  let mbMeterRideEstimate = listToMaybe fareEstimates.estimatedFares
   maybe
     (throwError . InternalError $ "Nahi aa rha hai fare :(" <> rideId.getId)
     ( \meterRideEstiamte -> do

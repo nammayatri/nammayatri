@@ -27,7 +27,6 @@ module API.UI.Ride
   )
 where
 
-import Control.Lens ((^?), _head)
 import Data.Aeson as DA
 import Data.Text as Text
 import Data.Time (Day)
@@ -223,7 +222,7 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
         case driverLocation of
           Left _ -> throwError DriverLocationOutOfRestictionBounds
           Right locations -> do
-            case locations ^? _head of
+            case listToMaybe locations of
               Just location -> do
                 let driverToPickupDistance = distanceBetweenInMeters (LatLong location.lat location.lon) (LatLong pickupLocation.lat pickupLocation.lon)
                 if Meters (round driverToPickupDistance) > otpRideStartRestrictionRadius

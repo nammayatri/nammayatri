@@ -14,7 +14,7 @@ import qualified Domain.Types.Coins.CoinsConfig as DTCC
 import qualified Domain.Types.Merchant
 import Domain.Types.Translations (Translations (..))
 import qualified Environment
-import EulerHS.Prelude hiding (id, (^..), (.~))
+import EulerHS.Prelude hiding (id, (.~))
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InvalidRequest))

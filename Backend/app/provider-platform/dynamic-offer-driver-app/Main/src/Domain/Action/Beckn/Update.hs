@@ -19,7 +19,7 @@ module Domain.Action.Beckn.Update where
 import qualified API.Types.UI.EditBooking as EditBooking
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified BecknV2.OnDemand.Enums as Enums
-import Control.Lens ((.~), (^?), _head)
+import Control.Lens ((.~), (^?))
 import Data.Generics.Labels ()
 import Data.List (last)
 import Data.List.Split (chunksOf)
@@ -43,7 +43,7 @@ import Domain.Types.OnUpdate
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRoute as RR
 import Environment
-import EulerHS.Prelude hiding (drop, id, state, (^?), (^..), (.~))
+import EulerHS.Prelude hiding (drop, id, state, (^?), (.~))
 import Kernel.Beam.Functions as B
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types
@@ -149,13 +149,13 @@ handler (UPaymentCompletedReq req@PaymentCompletedReq {}) = do
 handler (UAddStopReq AddStopReq {..}) = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   let stops = mkLocation booking.merchantOperatingCityId <$> stops'
-  case stops ^? _head of
+  case listToMaybe stops of
     Nothing -> throwError (InvalidRequest $ "No stop information received from rider side for booking " <> bookingId.getId)
     Just loc -> processStop booking loc False
 handler (UEditStopReq EditStopReq {..}) = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   let stops = mkLocation booking.merchantOperatingCityId <$> stops'
-  case stops ^? _head of
+  case listToMaybe stops of
     Nothing -> throwError (InvalidRequest $ "No stop information received from rider side for booking " <> bookingId.getId)
     Just loc -> processStop booking loc True
 handler (UEditLocationReq EditLocationReq {..}) = do

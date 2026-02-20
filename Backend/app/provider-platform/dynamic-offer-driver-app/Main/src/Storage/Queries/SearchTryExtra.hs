@@ -3,7 +3,6 @@ module Storage.Queries.SearchTryExtra where
 import qualified Database.Beam.Query ()
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry as Domain
-import Control.Lens ((^?), _head)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -18,7 +17,7 @@ findLastByRequestId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchRequest ->
   m (Maybe SearchTry)
-findLastByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> (^? _head)
+findLastByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
 
 findTryByRequestId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -30,7 +29,7 @@ findTryByRequestId (Id searchRequest) =
     (Se.Desc BeamST.searchRepeatCounter)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 findActiveTryByQuoteId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -46,7 +45,7 @@ findActiveTryByQuoteId quoteId =
     (Se.Desc BeamST.createdAt)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 getSearchTryStatusAndValidTill ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

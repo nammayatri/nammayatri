@@ -48,7 +48,7 @@ where
 import Control.Lens ((^?), _last)
 import qualified Control.Monad.Catch as C
 import qualified Data.List.NonEmpty as NE
-import EulerHS.Prelude hiding (id, state, (^?), (^..))
+import EulerHS.Prelude hiding (id, state, (^?))
 import GHC.Records.Extra
 import Kernel.External.Maps as Maps
 import Kernel.Prelude (roundToIntegral)

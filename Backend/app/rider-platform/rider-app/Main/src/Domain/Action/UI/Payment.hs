@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# LANGUAGE OverloadedLabels #-}
+
 module Domain.Action.UI.Payment
   ( DPayment.PaymentStatusResp (..),
     createOrder,
@@ -34,8 +36,10 @@ where
 import qualified API.Types.UI.Payment as PaymentAPI
 import qualified Beckn.ACL.Confirm as ACL
 import Control.Applicative ((<|>))
+import Control.Lens ((.~))
 -- import Data.Aeson (defaultOptions, withObject, (.:?))
 import Data.Aeson.Types ()
+import Data.Generics.Labels ()
 import Data.OpenApi ()
 import qualified Data.Text
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -783,7 +787,15 @@ getWalletBalance (personId, merchantId) = do
   case walletBalanceResp.success of
     True -> do
       now <- getCurrentTime
-      QPersonWallet.updateByPrimaryKey personWallet {DPersonWallet.pointsAmount = walletBalanceResp.walletData.pointsAmount, DPersonWallet.cashAmount = walletBalanceResp.walletData.cashAmount, DPersonWallet.expiredBalance = walletBalanceResp.walletData.expiredBalance, DPersonWallet.cashFromPointsRedemption = walletBalanceResp.walletData.cashFromPointsRedemption, DPersonWallet.usablePointsAmount = walletBalanceResp.walletData.usablePointsAmount, DPersonWallet.usableCashAmount = walletBalanceResp.walletData.usableCashAmount, DPersonWallet.updatedAt = now}
+      QPersonWallet.updateByPrimaryKey $
+        personWallet
+          & #pointsAmount .~ walletBalanceResp.walletData.pointsAmount
+          & #cashAmount .~ walletBalanceResp.walletData.cashAmount
+          & #expiredBalance .~ walletBalanceResp.walletData.expiredBalance
+          & #cashFromPointsRedemption .~ walletBalanceResp.walletData.cashFromPointsRedemption
+          & #usablePointsAmount .~ walletBalanceResp.walletData.usablePointsAmount
+          & #usableCashAmount .~ walletBalanceResp.walletData.usableCashAmount
+          & #updatedAt .~ now
       return walletBalanceResp.walletData
     False -> throwError (InternalError $ "Failed to get wallet balance for personId: " <> show personId.getId)
 

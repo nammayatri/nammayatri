@@ -18,7 +18,6 @@ import API.Utils
 import "public-transport-rider-platform" Beckn.Spec.Common
 import qualified "public-transport-rider-platform" Beckn.Spec.Confirm as Confirm
 import "public-transport-rider-platform" Beckn.Spec.OnCancel
-import Control.Lens ((^?), _head)
 import "public-transport-rider-platform" Beckn.Spec.OnConfirm
 import "public-transport-rider-platform" Beckn.Spec.OnStatus
 import Environment
@@ -67,7 +66,7 @@ trackPayment orderId = do
   logOutput INFO $ "waiting " <> show secondsToWait <> " seconds before changing payment status"
   threadDelaySec secondsToWait
   (context, order) <- Redis.readOrder orderId
-  let handlingWay = maybe FailedPayment (defineHandlingWay . (.route_code)) $ order.items ^? _head
+  let handlingWay = maybe FailedPayment (defineHandlingWay . (.route_code)) $ listToMaybe order.items
   logOutput INFO $ "handling orderId=" <> orderId <> " with handlingWay=" <> show handlingWay
   case handlingWay of
     Success -> transactionOk context order

@@ -43,7 +43,7 @@ where
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
-import Control.Lens ((^?), _Just, _head, filtered, has, traversed)
+import Control.Lens (_Just, filtered, has, traversed)
 import Data.Generics.Labels ()
 import Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
@@ -705,7 +705,7 @@ getEmergencySettings personId = do
   return $
     EmergencySettingsRes
       { shareTripWithEmergencyContacts = has (traversed . #shareTripWithEmergencyContactOption . _Just . filtered (/= Person.NEVER_SHARE)) personENList,
-        shareTripWithEmergencyContactOption = fromMaybe Person.NEVER_SHARE (personENList ^? _head . #shareTripWithEmergencyContactOption . _Just),
+        shareTripWithEmergencyContactOption = fromMaybe Person.NEVER_SHARE (listToMaybe personENList . #shareTripWithEmergencyContactOption . _Just),
         defaultEmergencyNumbers = DPDEN.makePersonDefaultEmergencyNumberAPIEntity False <$> decPersonENList,
         enablePoliceSupport = riderConfig.enableLocalPoliceSupport,
         localPoliceNumber = riderConfig.localPoliceNumber,

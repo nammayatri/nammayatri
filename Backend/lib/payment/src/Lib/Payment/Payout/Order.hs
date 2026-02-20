@@ -6,7 +6,6 @@ module Lib.Payment.Payout.Order
   )
 where
 
-import Control.Lens ((^?), _head)
 import Kernel.Prelude
 import Lib.Payment.Domain.Types.Common (EntityName)
 import Lib.Payment.Domain.Types.PayoutOrder (PayoutOrder)
@@ -20,7 +19,7 @@ findLatestPayoutOrderByEntity ::
   m (Maybe PayoutOrder)
 findLatestPayoutOrderByEntity entityName entityIds = do
   orders <- QPOE.findAllByEntityNameAndEntityIds (Just 1) (Just 0) (Just entityName) (map Just entityIds)
-  pure $ orders ^? _head
+  pure $ listToMaybe orders
 
 findLatestPayoutOrderByEntityId ::
   (BeamFlow m r) =>

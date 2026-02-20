@@ -10,7 +10,6 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
-import Control.Lens ((^?), _head)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
@@ -70,7 +69,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
   logDebug $ "CFRFS getState: searchId: " <> searchId.getId <> ", mode: " <> show mode
   mbBooking <- QTBooking.findBySearchId searchId
   now <- getCurrentTime
-  let userPosition = riderLastPoints ^? _head <&> (.latLong)
+  let userPosition = listToMaybe riderLastPoints <&> (.latLong)
   case mbBooking of
     Just booking -> do
       integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
@@ -80,7 +79,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           logDebug $ "CFRFS getState: Processing Bus leg for booking with searchId: " <> show searchId.getId
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
 
-          let bookedForRouteId = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (\x -> x.routeDetails ^? _head) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
+          let bookedForRouteId = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (\x -> listToMaybe x.routeDetails) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
 
           let routesToUseForTrackVehicles = concat (mapMaybe (.alternateRouteIds) journeyLeg.routeDetails) <> (fold $ bookedForRouteId <&> (: []))
 
@@ -95,7 +94,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           mbLegEndStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBppConfig
           logDebug $ "CFRFS getState: Processing Bus leg for booking with mbUserBoardingStation:" <> show mbUserBoardingStation <> "mbLegEndStation: " <> show mbLegEndStation
           let (trackingStatus, trackingStatusLastUpdatedAt) =
-                case trackingStatuses ^? _head of
+                case listToMaybe trackingStatuses of
                   Just (_, ts, tsupAt) -> (ts, tsupAt)
                   Nothing -> (JMStateTypes.InPlan, now)
           let baseStateData =
@@ -116,7 +115,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
             case mbQuote of
               Just quote -> do
                 let routeStations :: Maybe [API.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-                let mbServiceTier = mapMaybe (.vehicleServiceTier) (fold routeStations) ^? _head
+                let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fold routeStations)
                 case mbServiceTier of
                   Just serviceTier -> do
                     riderConfig <- QRiderConfig.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
@@ -175,7 +174,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
         DTrip.Bus -> do
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
 
-          let bookedForRouteId = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (\x -> x.routeDetails ^? _head) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
+          let bookedForRouteId = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (\x -> listToMaybe x.routeDetails) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
 
           let routesToUseForTrackVehicles = concat (mapMaybe (.alternateRouteIds) journeyLeg.routeDetails) <> (fold $ bookedForRouteId <&> (: []))
 
@@ -189,7 +188,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           mbUserBoardingStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.fromStationCode integratedBppConfig
           mbLegEndStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.toStationCode integratedBppConfig
           let (trackingStatus, trackingStatusLastUpdatedAt) =
-                case trackingStatuses ^? _head of
+                case listToMaybe trackingStatuses of
                   Just (_, ts, tsupAt) -> (ts, tsupAt)
                   Nothing -> (JMStateTypes.InPlan, now)
           let baseStateData =
@@ -407,8 +406,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
     buildFRFSSearchReq frfsRouteDetails = do
       fromStationCode <- ((journeyLeg.fromStopDetails >>= (.stopCode)) <|> ((journeyLeg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
       toStationCode <- ((journeyLeg.toStopDetails >>= (.stopCode)) <|> ((journeyLeg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
-      let routeCode = frfsRouteDetails ^? _head >>= (.routeCode)
-          serviceTier = frfsRouteDetails ^? _head >>= (.serviceTier)
+      let routeCode = listToMaybe frfsRouteDetails >>= (.routeCode)
+          serviceTier = listToMaybe frfsRouteDetails >>= (.serviceTier)
           searchAsParentStops = Nothing
           busLocationData = Just journeyLeg.busLocationData
       return $ API.FRFSSearchAPIReq {vehicleNumber = journeyLeg.finalBoardedBusNumber, platformType = Just DIBC.MULTIMODAL, ..}

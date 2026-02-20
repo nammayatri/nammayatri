@@ -1,7 +1,6 @@
 module Storage.Queries.BookingExtra where
 
 import Control.Applicative
-import Control.Lens ((^?), _head)
 import Data.List.Extra (notNull)
 import qualified Database.Beam as B
 import Domain.Types
@@ -117,7 +116,7 @@ findLatestSelfAndPartyBookingByRiderId (Id riderId) =
         limit' = Just 1
     res <-
       findAllWithOptionsKV options sortBy' limit' Nothing
-        <&> (^? _head)
+        <&> listToMaybe
     if isNothing res
       then do
         bookingParty <- QBPL.findOneActivePartyByRiderId (Id riderId)
@@ -138,7 +137,7 @@ findByTransactionId transactionId =
     [ Se.Is BeamB.riderTransactionId $ Se.Eq transactionId
     ]
     (Just (Se.Desc BeamB.createdAt))
-    <&> (^? _head)
+    <&> listToMaybe
 
 findByIdAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> Id Merchant -> m (Maybe Booking)
 findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
@@ -200,7 +199,7 @@ findByRiderId (Id personId) = do
               ]
           ]
       ]
-  return $ (Domain.id <$> bookings) ^? _head
+  return $ listToMaybe (Domain.id <$> bookings)
 
 findAssignedByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
 findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
@@ -212,7 +211,7 @@ findByTransactionIdAndStatus transactionId statusList =
       Se.Is BeamB.status $ Se.In statusList
     ]
     (Just (Se.Desc BeamB.createdAt))
-    <&> (^? _head)
+    <&> listToMaybe
 
 updateCommission :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe HighPrecMoney -> m ()
 updateCommission rbId mbCommission = do

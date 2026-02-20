@@ -31,7 +31,7 @@ where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
 import Control.Applicative ((<|>))
-import Control.Lens ((.~), (^?), _head)
+import Control.Lens ((.~))
 import Data.Generics.Labels ()
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Geohash as Geohash
@@ -385,9 +385,9 @@ handler ValidatedDSearchReq {..} sReq = do
     combineFarePoliciesProducts products =
       FarePoliciesProduct
         { farePolicies = concatMap farePolicies products,
-          area = maybe SL.Default (.area) $ products ^? _head,
-          specialLocationTag = products ^? _head >>= (.specialLocationTag),
-          specialLocationName = products ^? _head >>= (.specialLocationName)
+          area = maybe SL.Default (.area) $ listToMaybe products,
+          specialLocationTag = listToMaybe products >>= (.specialLocationTag),
+          specialLocationName = listToMaybe products >>= (.specialLocationName)
         }
 
     processPolicy ::
@@ -982,7 +982,7 @@ getNearestOperatingAndSourceCity merchant pickupLatLong = do
           find (\geom -> geom.city == Context.City "AnyCity") geoms & \case
             Just anyCityGeom -> do
               cities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters pickupLatLong m.location, m.city))
-              let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (sortBy (comparing fst) cities ^? _head)
+              let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (sortBy (comparing fst) listToMaybe cities)
               return $ NearestOperatingAndSourceCity {sourceCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity}
             Nothing -> do
               logError $ "No geometry found for pickupLatLong: " <> show pickupLatLong <> " for regions: " <> show regions
@@ -1008,10 +1008,10 @@ getDestinationCity merchant dropLatLong = do
                 if null interTravelCities
                   then do
                     operatingCities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters dropLatLong m.location, show m.city))
-                    return $ snd <$> (sortBy (comparing fst) operatingCities ^? _head)
+                    return $ snd <$> (sortBy (comparing fst) listToMaybe operatingCities)
                   else do
                     intercityTravelAreas <- CQITC.findInterCityAreasContainingGps dropLatLong
-                    return $ (.cityName) <$> (intercityTravelAreas ^? _head)
+                    return $ (.cityName) <$> (listToMaybe intercityTravelAreas)
               return (CityState {city = anyCityGeom.city, state = anyCityGeom.state}, mbNearestCity)
             Nothing -> do
               logError $ "No geometry found for dropLatLong: " <> show dropLatLong <> " for regions: " <> show regions

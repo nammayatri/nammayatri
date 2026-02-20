@@ -2,7 +2,6 @@
 
 module Lib.JourneyLeg.Walk where
 
-import Control.Lens ((^?), _head)
 import Domain.Types.Trip as DTrip
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -34,7 +33,7 @@ instance JT.JourneyLeg WalkLegRequest m where
             bookingStatus = JMStateTypes.Initial JMStateTypes.BOOKING_PENDING,
             trackingStatus = trackingStatus,
             trackingStatusLastUpdatedAt = fromMaybe now trackingStatusLastUpdatedAt,
-            userPosition = req.riderLastPoints ^? _head <&> (.latLong),
+            userPosition = listToMaybe req.riderLastPoints <&> (.latLong),
             vehiclePositions = [],
             legOrder = req.journeyLeg.sequenceNumber,
             subLegOrder = 1,

@@ -1,6 +1,5 @@
 module IssueManagement.Beckn.ACL.Issue where
 
-import Control.Lens ((^?), _head)
 import Data.Aeson
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec hiding (IssueSubCategory)
@@ -24,10 +23,10 @@ buildIssueReq req = do
   issueStatusText <- req.issueReqMessage.issueReqMessageIssue.issueStatus & fromMaybeM (InvalidRequest "IssueStatus not found")
   bookingId <- req.issueReqMessage.issueReqMessageIssue.issueOrderDetails >>= (.orderDetailsId) & fromMaybeM (InvalidRequest "BookingId not found")
   bapId <- req.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
-  let issueRaisedBy = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= (^? _head) >>= (.complainantActionUpdatedBy) >>= (.organizationOrg) >>= (.organizationOrgName)
+  let issueRaisedBy = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationOrg) >>= (.organizationOrgName)
       issueId = req.issueReqMessage.issueReqMessageIssue.issueId
-      customerContact = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= (^? _head) >>= (.complainantActionUpdatedBy) >>= (.organizationContact)
-      customerName = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= (^? _head) >>= (.complainantActionUpdatedBy) >>= (.organizationPerson) >>= (.complainantPersonName)
+      customerContact = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationContact)
+      customerName = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationPerson) >>= (.complainantPersonName)
       createdAt = req.issueReqMessage.issueReqMessageIssue.issueCreatedAt
   issueSubCategory <- maybe (throwError $ InvalidRequest "Invalid IssueSubCategory") pure $ decode $ encode req.issueReqMessage.issueReqMessageIssue.issueSubCategory
   pure $

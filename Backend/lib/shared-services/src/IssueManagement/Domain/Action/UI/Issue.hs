@@ -2,7 +2,6 @@ module IssueManagement.Domain.Action.UI.Issue where
 
 import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
-import Control.Lens ((^?), _head)
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
@@ -1082,7 +1081,7 @@ recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier =
     ( \item -> case item.chatType of
         IssueMessage -> do
           mbIssueMessageTranslation <- CQIM.findByIdAndLanguage (Id item.chatId) language identifier
-          let mbMessage = (\messageList -> mkIssueMessageList (Just messageList) language issueConfig mbRideInfoRes ^? _head) . (: []) =<< mbIssueMessageTranslation
+          let mbMessage = (\messageList -> mkIssueMessageList (Just messageList) language issueConfig listToMaybe mbRideInfoRes) . (: []) =<< mbIssueMessageTranslation
           let label = (.label) . fst_ =<< mbIssueMessageTranslation
           pure $ mkChatDetail item.chatId item.timestamp Text BOT (mbMessage <&> (.message)) (mbMessage >>= (.messageTitle)) (mbMessage >>= (.messageAction)) label
         IssueOption -> do

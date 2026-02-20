@@ -87,11 +87,11 @@ import Domain.Types.SearchRequest
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (find, id, length, (^?), (^..), (.~))
+import EulerHS.Prelude hiding (find, id, length, (^?), (.~))
 import qualified Kernel.Beam.Functions as B
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Types
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import Kernel.Prelude (head)
 import qualified Kernel.Prelude as KP
 import qualified Kernel.Randomizer as Rnd
@@ -629,7 +629,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           specialLocWarriorDriverInfo <- MaybeT $ return $ if driverInfo.isSpecialLocWarrior then Just driverInfo else Nothing
           preferredLocId <- MaybeT $ return specialLocWarriorDriverInfo.preferredPrimarySpecialLocId
           preferredLoc <- MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredLocId.getId)
-          preferredLocGate <- MaybeT $ return $ preferredLoc.gates ^? _head
+          preferredLocGate <- MaybeT $ return $ listToMaybe preferredLoc.gates
           let gHR =
                 DDGR.DriverGoHomeRequest
                   { createdAt = now,

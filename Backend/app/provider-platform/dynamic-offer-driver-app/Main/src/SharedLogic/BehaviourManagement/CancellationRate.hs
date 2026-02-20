@@ -14,7 +14,7 @@
 
 module SharedLogic.BehaviourManagement.CancellationRate where
 
-import Control.Lens ((^?), _head, _last)
+import Control.Lens ((^?), _last)
 import Data.Time (UTCTime (..), utctDay)
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -281,7 +281,7 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
             Nothing -> rule
 
     isDriverBlockableSlab cancellationRateThreshold rideAssignedThreshold cancellationRate assignedCount suspensionTimeInHours mbCooldown now =
-      let rule = maybe False (\minRides -> maybe False (\maxRides -> (cancellationRate >= cancellationRateThreshold) && (assignedCount >= minRides) && (assignedCount <= maxRides) && (suspensionTimeInHours > 0)) (rideAssignedThreshold ^? _last)) (rideAssignedThreshold ^? _head)
+      let rule = maybe False (\minRides -> maybe False (\maxRides -> (cancellationRate >= cancellationRateThreshold) && (assignedCount >= minRides) && (assignedCount <= maxRides) && (suspensionTimeInHours > 0)) (rideAssignedThreshold ^? _last)) (listToMaybe rideAssignedThreshold)
        in case mbCooldown of
             Just cooldown -> rule && (cooldown <= now)
             Nothing -> rule

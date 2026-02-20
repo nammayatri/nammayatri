@@ -16,7 +16,7 @@ module Domain.Action.Beckn.Rating where
 
 import qualified AWS.S3 as S3
 import Data.List.Extra ((!?))
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import qualified Data.Text as T
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
@@ -29,7 +29,7 @@ import qualified Domain.Types.RiderDriverCorrelation as RDCD
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, (^?), (^..))
+import EulerHS.Prelude hiding (id, (^?))
 import IssueManagement.Domain.Types.MediaFile as D
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions as B
@@ -71,7 +71,7 @@ handler merchantId req ride = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   let driverId = ride.driverId
   let ratingValue = req.ratingValue
-      feedbackDetails = join (req.feedbackDetails ^? _head)
+      feedbackDetails = join (listToMaybe req.feedbackDetails)
       wasOfferedAssistance = case fromMaybe Nothing (req.feedbackDetails !? 1) of
         Just "True" -> Just True
         Just "False" -> Just False

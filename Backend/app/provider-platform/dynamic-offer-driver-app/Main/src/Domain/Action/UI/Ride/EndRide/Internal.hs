@@ -43,7 +43,7 @@ module Domain.Action.UI.Ride.EndRide.Internal
   )
 where
 
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import qualified Data.List as DL
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -77,7 +77,7 @@ import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
 import qualified Domain.Types.VendorFee as DVF
-import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null, (^?), (^..))
+import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null, (^?))
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
 import Kernel.External.Maps
@@ -656,7 +656,7 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
       let isMaxReferralExceeded = maybe True ((<= transporterConfig.maxPayoutReferralForADay) . (.activatedValidRides)) mbDailyStats
           isMultipleDeviceIdExists = isJust riderDetails.payoutFlagReason
       let mbFlagReason =
-            case (availablePersonWithNumber ^? _head, validRide, isMaxReferralExceeded) of
+            case (listToMaybe availablePersonWithNumber, validRide, isMaxReferralExceeded) of
               (Just _, _, _) -> Just RD.CustomerExistAsDriver
               (_, False, _) -> Just RD.RideConstraintInvalid
               (_, _, False) -> Just RD.ExceededMaxReferral

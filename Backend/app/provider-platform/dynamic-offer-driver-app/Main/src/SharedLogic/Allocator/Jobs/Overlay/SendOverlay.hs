@@ -16,7 +16,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
-import EulerHS.Prelude hiding (id, (^..), (.~))
+import EulerHS.Prelude hiding (id, (.~))
 import Kernel.External.Types
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis.Queries as Hedis

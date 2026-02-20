@@ -1,7 +1,6 @@
 module Storage.Queries.BookingExtra where
 
 import Data.List.Extra (notNull)
-import Control.Lens ((^?), _head)
 import qualified Data.Time as DT -- (Day, UTCTime (UTCTime), DT.secondsToDiffTime, utctDay, DT.addDays)
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
@@ -63,7 +62,7 @@ findByTransactionId txnId =
     [ Se.Is BeamB.transactionId $ Se.Eq txnId
     ]
     (Just (Se.Desc BeamB.createdAt))
-    <&> (^? _head)
+    <&> listToMaybe
 
 findByTransactionIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> BookingStatus -> m (Maybe Booking)
 findByTransactionIdAndStatus txnId status =
@@ -76,7 +75,7 @@ findByTransactionIdAndStatuses transactionId statusList =
       Se.Is BeamB.status $ Se.In statusList
     ]
     (Just (Se.Desc BeamB.createdAt))
-    <&> (^? _head)
+    <&> listToMaybe
 
 findByStatusTripCatSchedulingAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> Maybe Integer -> Maybe DT.Day -> Maybe DT.Day -> BookingStatus -> Maybe DTC.TripCategory -> [DVST.ServiceTierType] -> Bool -> Id DMOC.MerchantOperatingCity -> Seconds -> m [Booking]
 findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay status mbTripCategory serviceTiers isScheduled (Id cityId) timeDiffFromUtc = do
@@ -213,7 +212,7 @@ findLastCancelledByRiderId riderDetailsId =
     (Se.Desc BeamB.createdAt)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 updatePaymentId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Text -> m ()
 updatePaymentId bookingId paymentId = do

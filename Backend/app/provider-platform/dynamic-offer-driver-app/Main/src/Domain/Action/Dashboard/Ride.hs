@@ -30,7 +30,6 @@ where
 
 import qualified API.Types.Dashboard.RideBooking.Ride as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
-import Control.Lens ((^?), _head)
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
@@ -374,7 +373,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
   mDriverLocation <- do
     driverLocations <- LF.driversLocation [driverId]
-    return $ driverLocations ^? _head
+    return $ listToMaybe driverLocations
 
   mbBCReason <-
     if ride.status == DRide.CANCELLED
@@ -395,7 +394,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
   let firstDate = addUTCTime (intToNominalDiffTime (-300)) ride.createdAt
       lastDate = addUTCTime (intToNominalDiffTime 300) ride.createdAt
   driverEdaKafkaList <- CHDriverEda.findAllTuple firstDate lastDate ride.driverId (Just ride.id)
-  let driverEdaKafka = driverEdaKafkaList ^? _head
+  let driverEdaKafka = listToMaybe driverEdaKafkaList
   let driverStartLocation = (\(lat, lon, _, _, _) -> KEMT.LatLong <$> lat <*> lon) =<< driverEdaKafka
   mbIsDestinationEdited <- case ride.isPickupOrDestinationEdited of
     Just True -> do
@@ -529,7 +528,7 @@ mkLocationFromLocationMapping ::
   Int ->
   m (Maybe DLoc.Location)
 mkLocationFromLocationMapping bookingId order = do
-  locMap <- (^? _head) <$> QLM.findByEntityIdOrderAndVersion bookingId order QLM.latestTag
+  locMap <- listToMaybe <$> QLM.findByEntityIdOrderAndVersion bookingId order QLM.latestTag
   case locMap of
     Nothing -> pure Nothing
     Just locMap_ -> QL.findById locMap_.locationId

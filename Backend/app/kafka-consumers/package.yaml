@@ -94,8 +94,6 @@ dependencies:
   - warp
   - uuid
   - beckn-spec
-  - lens
-  - generic-lens
 
 ghc-options:
   - -Wall

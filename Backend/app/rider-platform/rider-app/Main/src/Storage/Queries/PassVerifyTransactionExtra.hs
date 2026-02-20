@@ -2,7 +2,6 @@
 
 module Storage.Queries.PassVerifyTransactionExtra where
 
-import Control.Lens ((^?), _head)
 import qualified Domain.Types.PurchasedPass as PurchasedPass
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -29,6 +28,6 @@ findLastVerifiedVehicleNumberByPurchasePassId purchasePassId = do
       (Se.Desc Beam.verifiedAt)
       (Just 1)
       (Just 0)
-  case transactions ^? _head of
+  case listToMaybe transactions of
     Just transaction -> return (Just (transaction.fleetId, transaction.autoActivated))
     Nothing -> return Nothing

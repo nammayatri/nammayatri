@@ -30,7 +30,7 @@ where
 
 import qualified Beckn.OnDemand.Utils.Common as BODUC
 import Data.Either.Extra (eitherToMaybe)
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
 import qualified Domain.Action.Internal.ViolationDetection as VID
@@ -52,7 +52,7 @@ import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.Yudhishthira as Y
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, pi, (^?), (^..))
+import EulerHS.Prelude hiding (id, pi, (^?))
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption (decrypt)
@@ -882,7 +882,7 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
 shouldUpwardRecompute :: (MonadFlow m, MonadThrow m, Log m) => DTConf.TransporterConfig -> Meters -> Meters -> m Bool
 shouldUpwardRecompute thresholdConfig estimatedDistance distanceDiff = do
   let filteredThresholds = maybe [] (filter (\distanceThreshold -> distanceThreshold.estimatedDistanceUpper > estimatedDistance)) thresholdConfig.recomputeDistanceThresholds
-      recomputeDistanceThreshold = sortBy (comparing \distanceThreshold -> distanceThreshold.estimatedDistanceUpper - estimatedDistance) filteredThresholds ^? _head
+      recomputeDistanceThreshold = sortBy (comparing \distanceThreshold -> distanceThreshold.estimatedDistanceUpper - estimatedDistance) listToMaybe filteredThresholds
   case recomputeDistanceThreshold of
     Just distanceThreshold -> do
       let shouldRecompute = distanceDiff > distanceThreshold.minThresholdDistance && distanceDiff.getMeters > (estimatedDistance.getMeters * distanceThreshold.minThresholdPercentage) `div` 100

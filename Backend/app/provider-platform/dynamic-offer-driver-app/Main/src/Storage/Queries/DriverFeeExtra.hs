@@ -1,6 +1,5 @@
 module Storage.Queries.DriverFeeExtra where
 
-import Control.Lens ((^?), (^..), _Just, _head, to)
 import Data.Time (Day, UTCTime (UTCTime, utctDay), addDays, fromGregorian, toGregorian)
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.DriverFee
@@ -92,7 +91,7 @@ findLatestFeeByDriverIdAndServiceName (Id driverId) serviceName merchantOperatin
     (Se.Desc BeamDF.createdAt)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 findLatestRegisterationFeeByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> ServiceNames -> m (Maybe DriverFee)
 findLatestRegisterationFeeByDriverIdAndServiceName (Id driverId) serviceName =
@@ -107,7 +106,7 @@ findLatestRegisterationFeeByDriverIdAndServiceName (Id driverId) serviceName =
     (Se.Desc BeamDF.createdAt)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 findAllFeesInRangeWithStatusAndServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -130,7 +129,7 @@ findAllFeesInRangeWithStatusAndServiceName mbMerchantId merchantOperatingCityId 
           Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
           Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, RECURRING_INVOICE]
         ]
-          <> (mbMerchantId ^.. _Just . to (\mid -> Se.Is BeamDF.merchantId $ Se.Eq $ getId mid))
+          <> foldMap (\mid -> [Se.Is BeamDF.merchantId $ Se.Eq $ getId mid]) mbMerchantId
           <> [Se.Is BeamDF.siblingFeeId $ Se.Eq Nothing | enableCityBasedFeeSwitch]
     ]
     (Se.Desc BeamDF.endTime)
@@ -175,7 +174,7 @@ findWindowsWithStatusAndServiceName (Id driverId) from toTime mbStatus limitVal 
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
           Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
         ]
-          <> (mbStatus ^.. _Just . to (\s -> Se.Is BeamDF.status $ Se.Eq s))
+          <> foldMap (\s -> [Se.Is BeamDF.status $ Se.Eq s]) mbStatus
     ]
     (Se.Desc BeamDF.createdAt)
     (Just limitVal)
@@ -392,7 +391,7 @@ findOngoingCancellationPenaltyFeeByDriverIdAndServiceName (Id driverId) serviceN
     (Se.Desc BeamDF.createdAt)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 resetFee ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -578,7 +577,7 @@ findLatestByFeeTypeAndStatusWithServiceName feeType status driverId serviceName 
     (Se.Desc BeamDF.updatedAt)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 findLatestByFeeTypeAndStatusWithTotalEarnings ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -599,7 +598,7 @@ findLatestByFeeTypeAndStatusWithTotalEarnings feeType status driverId totalEarni
     (Se.Desc BeamDF.updatedAt)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 -- TODO : Merge relevant queries
 findAllByTimeMerchantAndStatusWithServiceName ::

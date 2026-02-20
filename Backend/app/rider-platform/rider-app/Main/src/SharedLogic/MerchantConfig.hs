@@ -31,7 +31,6 @@ module SharedLogic.MerchantConfig
   )
 where
 
-import Control.Lens ((^?), _head)
 import Data.Foldable.Extra
 import qualified Domain.Types.BookingStatus as BT
 import qualified Domain.Types.MerchantConfig as DMC
@@ -189,7 +188,7 @@ checkAuthFraudByIP mc clientIP = Redis.withNonCriticalCrossAppRedis $ do
     pure (fraudDetected, if fraudDetected then Just selectedMc.id else Nothing)
 
   let authFraudDetected = any fst results
-  let fraudMerchantConfigId = [mcId | (True, Just mcId) <- results] ^? _head
+  let fraudMerchantConfigId = listToMaybe $ [mcId | (True, Just mcId) <- results]
 
   pure (authFraudDetected, fraudMerchantConfigId)
 

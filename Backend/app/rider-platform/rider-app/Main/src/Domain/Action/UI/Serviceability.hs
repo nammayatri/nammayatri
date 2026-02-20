@@ -23,7 +23,6 @@ module Domain.Action.UI.Serviceability
 where
 
 import API.UI.HotSpot
-import Control.Lens ((^?), _head)
 import Data.List (sortBy)
 import Data.Ord
 import qualified Domain.Types.HotSpot as DHotSpot
@@ -203,7 +202,7 @@ getNearestOperatingCityHelper merchant geoRestriction latLong merchantCityState 
           find (\geom -> geom.city == Context.City "AnyCity") geoms & \case
             Just anyCityGeom -> do
               cities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters latLong (LatLong m.lat m.long), m.city))
-              let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (sortBy (comparing fst) cities ^? _head)
+              let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (sortBy (comparing fst) listToMaybe cities)
               return $ Just $ NearestOperatingAndCurrentCity {currentCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity}
             Nothing -> do
               logError $ "No geometry found for latLong: " <> show latLong <> " for regions: " <> show regions

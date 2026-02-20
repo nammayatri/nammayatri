@@ -2,7 +2,6 @@
 
 module IssueManagement.Storage.Queries.Issue.IssueMessage where
 
-import Control.Lens ((^?), _head)
 import Database.Beam.Postgres (Postgres)
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
 import IssueManagement.Domain.Types.Issue.IssueMessage as DomainIM
@@ -53,7 +52,7 @@ findByIdAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> m (Maybe (
 findByIdAndLanguage issueMessageId language = do
   iMessages <- findAllWithKV [Is BeamIM.id $ Eq (getId issueMessageId)]
   iTranslations <- findAllIssueTranslationWithSeCondition $ translationClause iMessages language
-  pure $ foldl' (getIssueMessagesWithTranslations iTranslations) [] iMessages ^? _head
+  pure $ foldl' (getIssueMessagesWithTranslations iTranslations) [] listToMaybe iMessages
   where
     getIssueMessagesWithTranslations iTranslations dInfosWithTranslations iMessage =
       let detailedTranslation = mkDetailedTranslation iTranslations iMessage

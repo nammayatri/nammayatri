@@ -27,7 +27,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 import Domain.Types.ServiceTierType
-import EulerHS.Prelude hiding (length, map, readMaybe, (.~), (^..))
+import EulerHS.Prelude hiding (length, map, readMaybe, (.~))
 import Kernel.Prelude
 import Kernel.Utils.GenericPretty
 import Servant

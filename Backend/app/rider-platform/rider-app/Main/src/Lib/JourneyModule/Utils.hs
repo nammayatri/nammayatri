@@ -6,7 +6,6 @@ import BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
-import Control.Lens ((^?), _head)
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
@@ -269,7 +268,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
         case vrMapping >>= (.schedule_no) of
           Just scheduleNo -> return $ Just ((vehicleNumber, etaData), scheduleNo)
           Nothing -> do
-            mbMapping <- (^? _head) <$> IM.withInMemCache [vehicleNumber] 3600 (QVehicleRouteMapping.findByVehicleNo vehicleNumber)
+            mbMapping <- listToMaybe <$> IM.withInMemCache [vehicleNumber] 3600 (QVehicleRouteMapping.findByVehicleNo vehicleNumber)
             case mbMapping of
               Just mapping -> return $ Just ((vehicleNumber, etaData), mapping.typeOfService)
               Nothing -> return Nothing
@@ -467,12 +466,12 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
                   else Seconds $ round $ 86400 + secondsValue
 
   let earliestArrival timings =
-        sort
-          [ s
-            | timing <- timings,
-              let Seconds s = normalizeEtaSeconds timing.timeOfArrival
-          ]
-          ^? _head
+        listToMaybe $
+          sort
+            [ s
+              | timing <- timings,
+                let Seconds s = normalizeEtaSeconds timing.timeOfArrival
+            ]
 
   let tierWithEarliest =
         [ (earliestArrival timings, timings)
@@ -596,7 +595,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
                   mapM buildFromTier tiersToUse
                 else do
                   -- For other vehicle categories, preserve existing behaviour: pick at most one tier
-                  let availableServiceTier = matchingTiers ^? _head
+                  let availableServiceTier = listToMaybe matchingTiers
                   oneResult <- buildFromTier availableServiceTier
                   return [oneResult]
             Nothing -> do
@@ -609,7 +608,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
   -- Only return service tiers that have available routes
   let filteredResults = filter (\r -> not (null $ r.availableRoutes) && (r.fare /= PriceAPIEntity 0.0 INR || sendWithoutFare)) results
-  return $ ((sortedTimings ^? _head) <&> (.routeCode), filteredResults, sortedTimings)
+  return $ ((listToMaybe sortedTimings) <&> (.routeCode), filteredResults, sortedTimings)
   where
     routeTripCountKey :: Text -> Text
     routeTripCountKey routeId = "gtfs_route_trip_count:" <> routeId
@@ -756,13 +755,13 @@ getBestOneWayRoute vehicleCategory routes mbOriginStopCode mbDestinationStopCode
   let selectedVehicleCategoryRoutes = filter (\r -> onlySelectedModeWithWalkLegs vehicleCategory r.legs) routes
   firstJust
     [ findConditionalRoute [correctToFromStops mbOriginStopCode mbDestinationStopCode] selectedVehicleCategoryRoutes,
-      selectedVehicleCategoryRoutes ^? _head
+      listToMaybe selectedVehicleCategoryRoutes
     ]
   where
     removeWalkLegs = filter (\l -> l.mode /= MultiModal.Walk)
     onlySelectedModeWithWalkLegs vc = all (\l -> l.mode == vc) . removeWalkLegs
     correctToFromStops (Just originStopCode) (Just destinationStopCode) legs =
-      case ((legs ^? _head) >>= (.fromStopDetails) >>= (.stopCode), (reverse legs ^? _head) >>= (.toStopDetails) >>= (.stopCode)) of
+      case ((listToMaybe legs) >>= (.fromStopDetails) >>= (.stopCode), (reverse listToMaybe legs) >>= (.toStopDetails) >>= (.stopCode)) of
         (Just journeyStartStopCode, Just journeyEndStopCode) -> journeyStartStopCode == originStopCode && journeyEndStopCode == destinationStopCode
         _ -> False
     correctToFromStops _ _ _ = True
@@ -844,7 +843,7 @@ buildOneWayBusScanRouteDetails routeCode originStopCode destinationStopCode (Jus
                         (acc + distance, Just routeStopMapping)
                       Nothing -> (acc, Nothing)
                 )
-                (0, routeStopMappings ^? _head)
+                (0, listToMaybe routeStopMappings)
                 routeStopMappings
       let estimatedDurationInSeconds = fromIntegral $ div (max 1 (highPrecMetersToMeters estimatedDistance).getMeters) 7 -- 7m/s (25 km/h)
       now <- getCurrentTime
@@ -945,13 +944,13 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
                               alsoValidServiceTypes = Nothing
                             }
                         ]
-                  return (validRoutes ^? _head, availableRoutesByTier, [])
+                  return (listToMaybe validRoutes, availableRoutesByTier, [])
               )
               (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True calledForSubwaySingleMode False)
               fetchTimings
           )
           "findPossibleRoutesMaybeFetchTimings"
-      let originStopTripId = originStopTimings ^? _head <&> (.tripId)
+      let originStopTripId = listToMaybe originStopTimings <&> (.tripId)
       let distance = distanceBetweenInMeters (LatLong fromStopLat fromStopLon) (LatLong toStopLat toStopLon)
       let routeCode = mbRouteCode <|> nextAvailableRouteCode
       mbRoute <-
@@ -1005,7 +1004,7 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
                 originTiming <- mbEarliestOriginTiming
                 findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
 
-          let mbFirstOriginTiming = originStopTimings ^? _head
+          let mbFirstOriginTiming = listToMaybe originStopTimings
           let mbFirstDestinationTiming = do
                 originTiming <- mbFirstOriginTiming
                 findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
@@ -1235,7 +1234,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
 buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ _ _ _ = return ([], [])
 
 findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
-findEarliestTiming currentTimeIST currentTime routeStopTimings = filter (\rst -> getISTArrivalTime rst.timeOfDeparture currentTime >= currentTimeIST) routeStopTimings ^? _head
+findEarliestTiming currentTimeIST currentTime routeStopTimings = filter (\rst -> getISTArrivalTime rst.timeOfDeparture currentTime >= currentTimeIST) listToMaybe routeStopTimings
 
 convertSortingType :: DMP.JourneyOptionsSortingType -> MultiModal.SortingType
 convertSortingType sortType = case sortType of
@@ -1271,11 +1270,11 @@ createRecentLocationForMultimodal journey = do
       onlyPublicTransportLegs
   now <- getCurrentTime
   let legs = sortBy (comparing (.sequenceNumber)) onlyPublicTransportLegs
-  let mbFirstLeg = legs ^? _head
-  let mbLastLeg = reverse legs ^? _head
+  let mbFirstLeg = listToMaybe legs
+  let mbLastLeg = reverse listToMaybe legs
   let mbFirstStopCode = mbFirstLeg >>= (.fromStopDetails) >>= (.stopCode)
   let mbLastStopCode = mbLastLeg >>= (.toStopDetails) >>= (.stopCode)
-  let mbRouteCode = mbFirstLeg <&> (.routeDetails) >>= (^? _head) >>= (.routeGtfsId)
+  let mbRouteCode = mbFirstLeg <&> (.routeDetails) >>= listToMaybe >>= (.routeGtfsId)
   let mbEndLocation = mbLastLeg <&> (.endLocation)
   case (mbFirstLeg, mbFirstStopCode, mbLastStopCode, mbEndLocation) of
     (Just firstLeg, Just firstStopCode, Just lastStopCode, Just endLocation) -> do
@@ -1326,7 +1325,7 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
   let splitDetailsAmount = TPayment.extractSplitSettlementDetailsAmount splitDetails
   if frfsConfig.canUpdateExistingPaymentOrder
     then do
-      case frfsBookingsPayments ^? _head of
+      case listToMaybe frfsBookingsPayments of
         Nothing -> return Nothing
         Just frfsBookingPayment -> do
           paymentOrder <- QOrder.findById frfsBookingPayment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound frfsBookingPayment.paymentOrderId.getId)
@@ -1537,8 +1536,8 @@ secondsToTime seconds =
 getServiceTierFromQuote :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> DFRFSQuote.FRFSQuote -> Maybe LegServiceTier
 getServiceTierFromQuote quoteCategories quote = do
   let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-      mbServiceTier = mapMaybe (.vehicleServiceTier) (fold routeStations) ^? _head
-      mbRouteCode = (.code) <$> (fold routeStations) ^? _head
+      mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fold routeStations)
+      mbRouteCode = (.code) <$> listToMaybe (fold routeStations)
       fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
   mbServiceTier <&> \serviceTier -> do
     LegServiceTier
@@ -1662,7 +1661,7 @@ getLegTierOptionsUtil journeyLeg enableSuburbanRoundTrip = do
       )
       quotes
   mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId journeyLeg.merchantOperatingCityId vehicleCategory DIntegratedBPPConfig.MULTIMODAL
-  let mbRouteDetail = journeyLeg.routeDetails ^? _head
+  let mbRouteDetail = listToMaybe journeyLeg.routeDetails
   let mbFomStopCode = mbRouteDetail >>= (.fromStopCode)
   let mbToStopCode = mbRouteDetail >>= (.toStopCode)
   let mbArrivalTime = mbRouteDetail >>= (.fromArrivalTime)

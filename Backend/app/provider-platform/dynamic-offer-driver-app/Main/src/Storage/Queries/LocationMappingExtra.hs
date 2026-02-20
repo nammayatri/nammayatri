@@ -1,6 +1,5 @@
 module Storage.Queries.LocationMappingExtra where
 
-import Control.Lens ((^?), _head)
 import qualified Data.Text as T
 import Domain.Types.LocationMapping
 import Kernel.Beam.Functions
@@ -50,7 +49,7 @@ getLatestStartByEntityId entityId =
         ]
     ]
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 getLatestStopsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
 getLatestStopsByEntityId entityId = do
@@ -78,7 +77,7 @@ getLatestEndByEntityId entityId =
         ]
     ]
     (Just (Se.Desc BeamLM.order))
-    <&> (^? _head)
+    <&> listToMaybe
 
 findAllByEntityIdAndOrder :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> m [LocationMapping]
 findAllByEntityIdAndOrder entityId order =

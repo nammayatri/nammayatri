@@ -2,7 +2,6 @@
 
 module Lib.Payment.Storage.Queries.PayoutOrderExtra where
 
-import Control.Lens ((^..), (^?), _Just, _head, to)
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash)
@@ -44,10 +43,10 @@ findAllWithOptions :: BeamFlow m r => Int -> Int -> Maybe Text -> Maybe DbHash -
 findAllWithOptions limit offset mbDriverId mbMobileNumberHash mbFrom mbTo isFailedOnly city = do
   findAllWithOptionsKV
     [ Se.And
-        ( (mbFrom ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.GreaterThanOrEq v))
-            <> (mbTo ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.LessThanOrEq v))
-            <> (mbMobileNumberHash ^.. _Just . to (\v -> Se.Is Beam.mobileNoHash $ Se.Eq v))
-            <> (mbDriverId ^.. _Just . to (\v -> Se.Is Beam.customerId $ Se.Eq v))
+        ( foldMap (\v -> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq v]) mbFrom
+            <> foldMap (\v -> [Se.Is Beam.createdAt $ Se.LessThanOrEq v]) mbTo
+            <> foldMap (\v -> [Se.Is Beam.mobileNoHash $ Se.Eq v]) mbMobileNumberHash
+            <> foldMap (\v -> [Se.Is Beam.customerId $ Se.Eq v]) mbDriverId
             <> [Se.Is Beam.status $ Se.Eq Payout.FULFILLMENTS_FAILURE | isFailedOnly]
             <> [Se.Is Beam.city $ Se.Eq (show city)]
         )
@@ -79,4 +78,4 @@ findLatestPaidPayoutByCustomerId customerId = do
     (Se.Desc Beam.createdAt)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe

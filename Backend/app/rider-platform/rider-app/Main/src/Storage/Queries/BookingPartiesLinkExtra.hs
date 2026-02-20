@@ -1,6 +1,5 @@
 module Storage.Queries.BookingPartiesLinkExtra where
 
-import Control.Lens ((^?), _head)
 import qualified Domain.Types.Booking
 import qualified Domain.Types.BookingPartiesLink
 import qualified Domain.Types.Person
@@ -25,7 +24,7 @@ findOneActiveByBookingIdAndTripParty bookingId partyType = do
         ]
     ]
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 findOneActivePartyByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.BookingPartiesLink.BookingPartiesLink))
-findOneActivePartyByRiderId partyId = do findAllWithKVAndConditionalDB [Se.And [Se.Is Beam.partyId $ Se.Eq (Kernel.Types.Id.getId partyId), Se.Is Beam.isActive $ Se.Eq True]] Nothing <&> (^? _head)
+findOneActivePartyByRiderId partyId = do findAllWithKVAndConditionalDB [Se.And [Se.Is Beam.partyId $ Se.Eq (Kernel.Types.Id.getId partyId), Se.Is Beam.isActive $ Se.Eq True]] Nothing <&> listToMaybe

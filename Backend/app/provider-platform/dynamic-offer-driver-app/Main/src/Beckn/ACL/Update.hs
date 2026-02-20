@@ -25,7 +25,7 @@ import Data.Text (toLower)
 import qualified Domain.Action.Beckn.Update as DUpdate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
-import EulerHS.Prelude hiding (state, (^?), (^..))
+import EulerHS.Prelude hiding (state, (^?))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber

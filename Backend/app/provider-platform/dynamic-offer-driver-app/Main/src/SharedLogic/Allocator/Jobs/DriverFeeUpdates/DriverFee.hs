@@ -22,7 +22,7 @@ module SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
   )
 where
 
-import Control.Lens ((.~), (^?), _head)
+import Control.Lens ((.~))
 import qualified Control.Monad.Catch as C
 import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed (mod')
@@ -215,7 +215,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 unless ((totalFee == 0 || coinCashLeft >= totalFee) && totalCancellationPenalty == 0) $ processDriverFee paymentMode driverFeeWithPenalties subscriptionConfigs transporterConfig
             updateSerialOrderForInvoicesInWindow driverFee.id merchantOpCityId startTime endTime serviceName
 
-    case driverFees ^? _head of
+    case listToMaybe driverFees of
       Nothing -> do
         Hedis.del (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
         duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "DriverFeeCalc") (3600 * 12) True -- 12 hours
@@ -553,7 +553,7 @@ updateSerialOrderForInvoicesInWindow driverFeeId merchantOpCityId startTime endT
     --- change lock based on mechantId --
     counter <- getDriverFeeBillNumberKey merchantOpCityId serviceName
     when (isNothing counter) $ do
-      count <- (^? _head) <$> QDF.findMaxBillNumberInRangeForServiceName merchantOpCityId startTime endTime serviceName
+      count <- listToMaybe <$> QDF.findMaxBillNumberInRangeForServiceName merchantOpCityId startTime endTime serviceName
       void $ Hedis.incrby (mkDriverFeeBillNumberKey merchantOpCityId serviceName) (maybe 0 toInteger (count >>= (.billNumber)))
     billNumber' <- Hedis.incr (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
     QDF.updateBillNumberById (Just (fromInteger billNumber')) driverFeeId

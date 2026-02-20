@@ -15,7 +15,6 @@
 module SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate where
 
 import qualified AWS.S3 as S3
-import Control.Lens ((^?), _head)
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
@@ -128,7 +127,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                 case driverLocations of
                   Left _err -> do
                     return Nothing
-                  Right locations -> return $ locations ^? _head
+                  Right locations -> return $ listToMaybe locations
               case mbCurrentDriverLocation of
                 (Just dloc) -> do
                   let currentDriverLocation = LatLong {lat = dloc.lat, lon = dloc.lon}
@@ -198,7 +197,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                 case driverLocations of
                   Left _err -> do
                     return Nothing
-                  Right locations -> return $ locations ^? _head
+                  Right locations -> return $ listToMaybe locations
               case mbCurrentDriverLocation of
                 Just dloc -> do
                   let req1 =

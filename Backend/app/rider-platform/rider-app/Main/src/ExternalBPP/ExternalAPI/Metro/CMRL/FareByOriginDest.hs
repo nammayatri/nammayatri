@@ -6,7 +6,6 @@ module ExternalBPP.ExternalAPI.Metro.CMRL.FareByOriginDest where
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Control.Applicative ((<|>))
-import Control.Lens ((^?), _head)
 import Data.Aeson
 import qualified Data.Text as T
 import Domain.Types.FRFSQuoteCategorySpec
@@ -110,4 +109,4 @@ getFareByOriginDest integrationBPPConfig config fareReq = do
   return fares
   where
     getStationCode :: Text -> Text
-    getStationCode stationCode = fromMaybe stationCode (T.splitOn "|" stationCode ^? _head)
+    getStationCode stationCode = fromMaybe stationCode (T.splitOn "|" listToMaybe stationCode)

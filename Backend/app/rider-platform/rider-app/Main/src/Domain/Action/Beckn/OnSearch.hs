@@ -43,7 +43,6 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson as A
 import qualified Data.Aeson
 import Data.List (sortBy)
-import Control.Lens ((^?), _head)
 import Data.Maybe ()
 import Data.Ord (comparing)
 import qualified Domain.Action.UI.Confirm as DConfirm
@@ -304,7 +303,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   mbNySubscription <- getNyRegularSubs isReservedSearch
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
   becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId searchRequest.merchantId (show Domain.MOBILITY) searchRequest.merchantOperatingCityId
-  becknConfig <- (becknConfigs ^? _head) & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
+  becknConfig <- (listToMaybe becknConfigs) & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   blackListedVehicles <- Utils.getBlackListedVehicles becknConfig.id providerInfo.providerId
   if not isValueAddNP && isJust searchRequest.disabilityTag
     then do
@@ -328,7 +327,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       estimates <- traverse (getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime searchRequest.merchantOperatingCityId) estimates'
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles mbNySubscription)
       updateRiderPreferredOption quotes
-      let mbRequiredEstimate = sortBy (comparing ((DEstimate.minFare . DEstimate.totalFareRange) <&> (.amount)) <> comparing ((DEstimate.maxFare . DEstimate.totalFareRange) <&> (.amount))) estimates ^? _head
+      let mbRequiredEstimate = sortBy (comparing ((DEstimate.minFare . DEstimate.totalFareRange) <&> (.amount)) <> comparing ((DEstimate.maxFare . DEstimate.totalFareRange) <&> (.amount))) listToMaybe estimates
       forM_ estimates $ \est -> do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
       let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId
@@ -338,7 +337,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         QPFS.clearCache searchRequest.riderId
 
       when (searchRequest.isMeterRideSearch == Just True) $ do
-        quoteForMeterRide <- (quotes ^? _head) & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")
+        quoteForMeterRide <- (listToMaybe quotes) & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")
         void $ DConfirm.confirm searchRequest.riderId quoteForMeterRide.id Nothing Nothing Nothing Nothing False
 
       whenJust mbRequiredEstimate $ \requiredEstimate -> do
@@ -446,7 +445,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     isNotBlackListed :: [Enums.VehicleCategory] -> Enums.VehicleCategory -> Bool
     isNotBlackListed blackListedVehicles vehicleCategory = vehicleCategory `notElem` blackListedVehicles
 
-    updateRiderPreferredOption quotes = case quotes ^? _head of
+    updateRiderPreferredOption quotes = case listToMaybe quotes of
       Just quote -> do
         let actualRiderPreferredOption = case quote.quoteDetails of
               DQuote.InterCityDetails _ -> DRPO.InterCity
@@ -751,22 +750,22 @@ getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime mocId e
 
 getAutoPrice :: [DEstimate.Estimate] -> Flow (Maybe HighPrecMoney)
 getAutoPrice estimates = do
-  let autoPrice = filter (\estimate -> estimate.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates ^? _head
+  let autoPrice = filter (\estimate -> estimate.vehicleServiceTierType == DVST.AUTO_RICKSHAW) listToMaybe estimates
   pure $ autoPrice <&> (.totalFareRange.maxFare.amount)
 
 getNonACPrice :: [DEstimate.Estimate] -> Flow (Maybe HighPrecMoney)
 getNonACPrice estimates = do
-  let nonACPrice = filter (\estimate -> estimate.vehicleServiceTierType == DVST.TAXI) estimates ^? _head
+  let nonACPrice = filter (\estimate -> estimate.vehicleServiceTierType == DVST.TAXI) listToMaybe estimates
   pure $ nonACPrice <&> (.totalFareRange.maxFare.amount)
 
 getAutoQar :: [DEstimate.Estimate] -> Flow (Maybe Double)
 getAutoQar estimates = do
-  let autoQar = filter (\estimate -> estimate.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates ^? _head
+  let autoQar = filter (\estimate -> estimate.vehicleServiceTierType == DVST.AUTO_RICKSHAW) listToMaybe estimates
   pure $ autoQar >>= (.qar)
 
 getCabQar :: [DEstimate.Estimate] -> Flow (Maybe Double)
 getCabQar estimates = do
-  let cabQar = filter (\estimate -> estimate.vehicleServiceTierType == DVST.TAXI) estimates ^? _head
+  let cabQar = filter (\estimate -> estimate.vehicleServiceTierType == DVST.TAXI) listToMaybe estimates
   pure $ cabQar >>= (.qar)
 
 personVehicleCategory :: Person.Person -> Maybe Enums.VehicleCategory

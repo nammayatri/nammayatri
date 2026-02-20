@@ -19,7 +19,6 @@ where
 
 import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
 import Control.Applicative ((<|>))
-import Control.Lens ((^?), _head)
 import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HashMap
@@ -387,7 +386,7 @@ buildTranslatedSearchReqLocation DLoc.Location {..} mbLanguage = do
     Nothing -> return address.area
     Just lang -> do
       mAreaObj <- translate ENGLISH lang `mapM` address.area
-      let translation = mAreaObj >>= \areaObj -> areaObj._data.translations ^? _head
+      let translation = mAreaObj >>= \areaObj -> listToMaybe areaObj._data.translations
       return $ (.translatedText) <$> translation
   pure
     DLoc.Location

@@ -59,7 +59,6 @@ default-extensions:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - lens
   - mobility-core
   - beckn-spec
   - beckn-services

@@ -19,13 +19,13 @@ module Domain.Action.Beckn.Track
   )
 where
 
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding ((^?), (^..))
+import EulerHS.Prelude hiding ((^?))
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -71,7 +71,7 @@ track transporterId req = do
     if not isValueAddNP
       then do
         driverLocations <- callMultiCloudDriverLocation ride
-        let resLoc = sortBy (comparing (Down . (.coordinatesCalculatedAt))) driverLocations ^? _head
+        let resLoc = sortBy (comparing (Down . (.coordinatesCalculatedAt))) listToMaybe driverLocations
         logTagDebug ("rideId:-" <> show ride.id) $ "track driverLocation:-" <> show resLoc
         return resLoc
       else return Nothing

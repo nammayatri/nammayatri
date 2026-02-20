@@ -1,6 +1,6 @@
 module Storage.Queries.DriverInformationExtra where
 
-import Control.Lens ((^..), _Just, to)
+import Control.Lens ((^..))
 import qualified Data.Either as Either
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
@@ -114,7 +114,7 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
     ( [ Se.Set BeamDI.enabled isEnabled,
         Se.Set BeamDI.updatedAt now
       ]
-        <> (isVerified ^.. _Just . to (Se.Set BeamDI.verified))
+        <> foldMap (\v -> [Se.Set BeamDI.verified v]) isVerified
         <> ([Se.Set BeamDI.lastEnabledOn (Just now) | isEnabled])
         <> ([Se.Set BeamDI.enabledAt (Just now) | isEnabled && isNothing enabledAt])
     )
@@ -417,7 +417,7 @@ findByIdAndVerified (Id driverInformationId) mbVerified =
   findOneWithKV
     [ Se.And $
         [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
-          <> (mbVerified ^.. _Just . to (\v -> Se.Is BeamDI.verified $ Se.Eq v))
+          <> foldMap (\v -> [Se.Is BeamDI.verified $ Se.Eq v]) mbVerified
     ]
 
 updateAadhaarNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe (EncryptedHashed Text) -> Id Person.Driver -> m ()

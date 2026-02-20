@@ -84,7 +84,6 @@ dependencies:
   - servant-openapi3
   - openapi3
   - lens
-  - generic-lens
   - persistent
   - persistent-postgresql
   - esqueleto

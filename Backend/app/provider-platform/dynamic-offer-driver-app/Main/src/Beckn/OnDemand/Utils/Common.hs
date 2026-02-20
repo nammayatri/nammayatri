@@ -53,7 +53,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Variant
-import EulerHS.Prelude hiding (id, state, view, whenM, (%~), (^?), (^..))
+import EulerHS.Prelude hiding (id, state, view, whenM, (%~))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
 import qualified Kernel.External.Maps as Maps
@@ -1382,7 +1382,7 @@ convertEstimateToPricing _specialLocationName (DEst.Estimate {..}, serviceTier, 
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (serviceTier.defaultForVehicleVariant ^? _head), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
@@ -1402,7 +1402,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (serviceTier.defaultForVehicleVariant ^? _head), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
@@ -1428,7 +1428,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (serviceTier.defaultForVehicleVariant ^? _head), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = Nothing,
       isCustomerPrefferedSearchRoute = Nothing,
       isBlockedRoute = Nothing,

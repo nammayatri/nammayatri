@@ -14,7 +14,7 @@
 
 module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare where
 
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import Data.List (nub)
@@ -25,7 +25,7 @@ import qualified Domain.Types.FRFSQuote as DQuote
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.MerchantOperatingCity
-import EulerHS.Prelude hiding (concatMap, find, length, map, null, readMaybe, whenJust, (^?), (^..))
+import EulerHS.Prelude hiding (concatMap, find, length, map, null, readMaybe, whenJust, (^?))
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
@@ -132,7 +132,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
         classCode <- pure fare.classCode & fromMaybeM (CRISError $ "Failed to parse class code: " <> show fare.classCode)
         serviceTiers <- QFRFSVehicleServiceTier.findByProviderCodeAndTrainType classCode (Just fare.trainTypeCode) merchantOperatingCityId
         let fareQuoteType = if fare.ticketTypeCode == "R" then DQuote.ReturnJourney else DQuote.SingleJourney
-        serviceTier <- serviceTiers & (^? _head) & fromMaybeM (CRISError $ "Failed to find service tier: " <> show classCode <> " " <> show fare.trainTypeCode)
+        serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "Failed to find service tier: " <> show classCode <> " " <> show fare.trainTypeCode)
         return $
           FRFSUtils.FRFSFare
             { categories =

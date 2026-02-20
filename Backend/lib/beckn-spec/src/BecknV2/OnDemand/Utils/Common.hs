@@ -25,7 +25,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as DTV
 import Control.Lens ((^?), _Just, _head)
-import EulerHS.Prelude hiding ((^?), (^..))
+import EulerHS.Prelude hiding ((^?))
 import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Error

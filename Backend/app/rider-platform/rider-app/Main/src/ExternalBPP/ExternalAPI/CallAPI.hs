@@ -1,7 +1,6 @@
 module ExternalBPP.ExternalAPI.CallAPI where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import Control.Lens ((^?), _head)
 import Data.List (nub, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
@@ -199,7 +198,7 @@ getRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints perso
           }
 
 extractStationCode :: Text -> Text
-extractStationCode code = fromMaybe code $ drop 1 (T.splitOn "|" code) ^? _head
+extractStationCode code = fromMaybe code $ listToMaybe $ drop 1 (T.splitOn "|" code)
 
 createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quoteCategories = do

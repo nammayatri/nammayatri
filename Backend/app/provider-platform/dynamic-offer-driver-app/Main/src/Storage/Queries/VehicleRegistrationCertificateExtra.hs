@@ -1,6 +1,5 @@
 module Storage.Queries.VehicleRegistrationCertificateExtra where
 
-import Control.Lens ((^?), _head)
 import Data.Text (toLower)
 import qualified Database.Beam as B
 import Domain.Types.Image hiding (id)
@@ -62,11 +61,11 @@ upsert a@VehicleRegistrationCertificate {..} = do
 
 findLastVehicleRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRC certNumberHash = do
-  findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> (^? _head)
+  findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
 
 findLastVehicleRCWithApproved :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Maybe Bool -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCWithApproved certNumberHash mbApproved = do
-  findAllWithOptionsKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.approved $ Se.Eq mbApproved]] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> (^? _head)
+  findAllWithOptionsKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.approved $ Se.Eq mbApproved]] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
 
 updateVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Maybe Vehicle.VehicleVariant -> Maybe Bool -> Maybe Bool -> m ()
 updateVehicleVariant (Id vehicleRegistrationCertificateId) variant reviewDone reviewRequired = do
@@ -108,7 +107,7 @@ findLastVehicleRCWrapperWithApproved certNumber mbApproved = do
 
 findLastVehicleRCFleet :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCFleet certNumberHash fleetOwnerId = do
-  findAllWithOptionsKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.fleetOwnerId $ Se.Eq $ Just fleetOwnerId]] (Se.Desc BeamVRC.updatedAt) Nothing Nothing <&> (^? _head)
+  findAllWithOptionsKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.fleetOwnerId $ Se.Eq $ Just fleetOwnerId]] (Se.Desc BeamVRC.updatedAt) Nothing Nothing <&> listToMaybe
 
 findLastVehicleRCFleet' :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCFleet' certNumber fleetOwnerId = do

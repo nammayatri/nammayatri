@@ -14,7 +14,6 @@
 
 module Storage.Clickhouse.Ride where
 
-import Control.Lens ((^?), _head)
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
@@ -76,4 +75,4 @@ findRideByBookingId bookingId createdAt = do
                 CH.&&. ride.createdAt >=. createdAt
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
-  return $ ride ^? _head
+  return $ listToMaybe ride

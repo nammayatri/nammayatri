@@ -1,6 +1,5 @@
 module SharedLogic.Allocator.Jobs.Mandate.Execution where
 
-import Control.Lens ((^?), _head)
 import qualified Control.Monad.Catch as C
 import Data.List (nubBy)
 import qualified Data.Map.Strict as Map
@@ -117,7 +116,7 @@ buildExecutionRequestAndInvoice ::
   (DP.DriverPlan, Id Mandate) ->
   m (Maybe ExecutionData)
 buildExecutionRequestAndInvoice driverFee notification executionDate subscriptionConfig (driverPlan, mandateId) = do
-  invoice' <- (^? _head) <$> QINV.findLatestAutopayActiveByDriverFeeId driverFee.id
+  invoice' <- listToMaybe <$> QINV.findLatestAutopayActiveByDriverFeeId driverFee.id
   case invoice' of
     Just invoice -> do
       let splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True

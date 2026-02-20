@@ -17,7 +17,6 @@
 module Storage.Cac.DriverPoolConfig (module Storage.Cac.DriverPoolConfig, module Reexport) where
 
 import qualified Client.Main as CM
-import Control.Lens ((^..), _Just, to)
 import Data.Aeson as DA
 import Data.Text as Text hiding (find)
 import Data.Time
@@ -87,9 +86,9 @@ getDriverPoolConfigFromCAC merchantOpCityId st tc dist area stickyKey currTimeOf
           (TripCategory, toJSON tc),
           (Area, show area)
         ]
-          <> (st ^.. _Just . to (\s -> (VehicleVariant, show s)))
-          <> (currTimeOfDay ^.. _Just . to (\t -> (CCU.TimeOfDay, show t)))
-          <> (currentDayOfWeek ^.. _Just . to (\d -> (DayOfWeek, show d)))
+          <> foldMap (\s -> [(VehicleVariant, show s)]) st
+          <> foldMap (\t -> [(CCU.TimeOfDay, show t)]) currTimeOfDay
+          <> foldMap (\d -> [(DayOfWeek, show d)]) currentDayOfWeek
   inMemConfig <- getConfigFromInMemory merchantOpCityId st tc dist
   config <- CCU.getConfigFromCacOrDB inMemConfig dpcCond stickyKey (KBF.fromCacType @SBMDPC.DriverPoolConfig) CCU.DriverPoolConfig
   whenJust config $ pure $ void $ setConfigInMemory merchantOpCityId st tc dist config

@@ -1,6 +1,5 @@
 module IssueManagement.Beckn.ACL.OnIssue where
 
-import Control.Lens ((^?), _head)
 import Data.List (sortBy)
 import Data.Ord (Down (..), comparing)
 import qualified IGM.Enums as Spec
@@ -24,7 +23,7 @@ buildOnIssueReq req = do
   bppSubscriberUrl <- context.contextBppUri & fromMaybeM (InvalidRequest "BppSubscriberUrl not found")
   message <- req.onIssueReqMessage & fromMaybeM (InvalidRequest "Message not found")
   let issue = message.onIssueReqMessageIssue
-  respondentAction <- fromMaybeM (InvalidRequest "RespondentActions Missing") $ (^? _head) <$> sortBy (comparing (Down . (.respondentActionUpdatedAt))) =<< (.issueActionsRespondentActions) =<< issue.issueIssueActions
+  respondentAction <- fromMaybeM (InvalidRequest "RespondentActions Missing") $ listToMaybe <$> sortBy (comparing (Down . (.respondentActionUpdatedAt))) =<< (.issueActionsRespondentActions) =<< issue.issueIssueActions
   respondentInfo <- respondentAction.respondentActionUpdatedBy & fromMaybeM (InvalidRequest "RespondentActionUpdatedBy Missing")
   let respondentContact = respondentInfo.organizationContact
       respondentPerson = respondentInfo.organizationPerson

@@ -17,7 +17,6 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
 import qualified API.Types.UI.OperationHub as DomainT
-import Control.Lens ((^?), _head)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
 import Domain.Action.Dashboard.Fleet.Onboarding (castStatusRes)
@@ -288,7 +287,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
         pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive)
     Just vehicleNo -> (toList <$>) . runMaybeT $ do
       (vehicleModel, registrationNo, isRcActive, driverId) <- fetchVehicleDetailsByVehicleNo now vehicleNo
-      (drvOpAsn, person) <- MaybeT $ (^? _head) <$> QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString (Just driverId)
+      (drvOpAsn, person) <- MaybeT $ listToMaybe <$> QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString (Just driverId)
       pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive)
 
   listItem <- mapM (buildDriverInfo now) driverOperatorInfoList

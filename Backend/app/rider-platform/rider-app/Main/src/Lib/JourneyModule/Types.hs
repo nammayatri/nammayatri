@@ -6,7 +6,6 @@ import qualified API.Types.UI.RiderLocation as RL
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import Control.Applicative ((<|>))
-import Control.Lens ((^?), _head)
 import Control.Monad.Extra (mapMaybeM)
 import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
@@ -657,8 +656,8 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
                 bppRideId = mRide <&> (.bppRideId),
                 driverMobileNumber = (\item -> Just $ item.driverMobileNumber) =<< mRide,
                 exoPhoneNumber = Just booking.primaryExophone,
-                legStartTime = journeyLeg.routeDetails ^? _head >>= (.legStartTime),
-                legEndTime = journeyLeg.routeDetails ^? _head >>= (.legEndTime),
+                legStartTime = listToMaybe journeyLeg.routeDetails >>= (.legStartTime),
+                legEndTime = listToMaybe journeyLeg.routeDetails >>= (.legEndTime),
                 trackingStatus = trackingStatus,
                 trackingStatusLastUpdatedAt
               },
@@ -780,8 +779,8 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
               { origin = mkLocation now startLocation (fromStopDetails >>= (.name)),
                 destination = mkLocation now endLocation (toStopDetails >>= (.name)),
                 id = id,
-                legStartTime = legData.routeDetails ^? _head >>= (.legStartTime),
-                legEndTime = legData.routeDetails ^? _head >>= (.legEndTime),
+                legStartTime = listToMaybe legData.routeDetails >>= (.legStartTime),
+                legEndTime = listToMaybe legData.routeDetails >>= (.legEndTime),
                 trackingStatus,
                 trackingStatusLastUpdatedAt = fromMaybe now trackingStatusLastUpdatedAt
               },
@@ -847,7 +846,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
           DIBC.ONDC config -> do
             if fromMaybe False config.singleTicketForMultiplePassengers
               then tickets
-              else toList $ tickets ^? _head
+              else toList $ listToMaybe tickets
           _ -> tickets
   let ticketsCreatedAt = ticketsData <&> (.createdAt)
   let qrDataList = ticketsData <&> (.qrData)
@@ -903,7 +902,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
       let orderShortIds = map (.shortId) paymentOrders
       refunds <- concat <$> mapM QRefunds.findAllByOrderId orderShortIds
       let refunds' = map (\refundEntry -> LegRefundInfo {id = refundEntry.id, amount = totalBookingAmount.amount, status = refundEntry.status, arn = refundEntry.arn, completedAt = refundEntry.completedAt, updatedAt = refundEntry.updatedAt, createdAt = refundEntry.createdAt}) refunds
-      let refundBloc = refunds' ^? _head
+      let refundBloc = listToMaybe refunds'
       let adultTicketQuantity = find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
           childTicketQuantity = find (\priceItem -> priceItem.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
       case booking.vehicleType of
@@ -926,8 +925,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   categoryBookingDetails = Just categoryBookingDetails
                 }
         Spec.BUS -> do
-          journeyLegDetail <- journeyLegInfo' ^? _head & fromMaybeM (InternalError "Journey Leg Detail not found")
-          journeyRouteDetail <- journeyRouteDetails ^? _head & fromMaybeM (InternalError "Journey Route Detail not found")
+          journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
+          journeyRouteDetail <- listToMaybe journeyRouteDetails & fromMaybeM (InternalError "Journey Route Detail not found")
 
           let fromStation = journeyLegDetail.originStop
           let toStation = journeyLegDetail.destinationStop
@@ -1189,8 +1188,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                   categoryBookingDetails = Nothing
                 }
         Spec.BUS -> do
-          journeyLegDetail <- journeyLegInfo' ^? _head & fromMaybeM (InternalError "Journey Leg Detail not found")
-          journeyRouteDetail <- journeyLeg.routeDetails ^? _head & fromMaybeM (InternalError "Journey Route Detail not found")
+          journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
+          journeyRouteDetail <- listToMaybe journeyLeg.routeDetails & fromMaybeM (InternalError "Journey Route Detail not found")
           let fromStation = journeyLegDetail.originStop
           let toStation = journeyLegDetail.destinationStop
           let routeCode' = journeyLegDetail.routeCode
