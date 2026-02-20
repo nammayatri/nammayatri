@@ -200,7 +200,8 @@ data ShareTicketInfoResp = ShareTicketInfoResp
     bookingPrice :: HighPrecMoney,
     paymentStatus :: FRFSTypes.FRFSBookingPaymentStatusAPI,
     partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction),
-    googleWalletJWTUrl :: Maybe Text
+    googleWalletJWTUrl :: Maybe Text,
+    providerId :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -437,6 +438,10 @@ shareTicketInfo ticketBookingId = do
   toStation <- Utils.mkPOrgStationAPIRes toStation' (Just pOrgId)
 
   void $ bppStatusSync fromStation'.merchantId pOrgId city ticketBooking
+
+  let providerId = case integratedBPPConfig.providerConfig of
+        DIBC.ONDC DIBC.ONDCBecknConfig {providerInfo} -> providerInfo <&> (.providerId)
+        _ -> Nothing
 
   pure $
     ShareTicketInfoResp
