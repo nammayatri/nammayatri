@@ -647,15 +647,19 @@ updateAutoPayToManual driverFeeId = do
         ]
     ]
 
-updateDriverFeeToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m ()
-updateDriverFeeToManual driverFeeId = do
+updateDriverFeeToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> m ()
+updateDriverFeeToManual driverFeeIds = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamDF.feeType RECURRING_INVOICE,
       Se.Set BeamDF.status PAYMENT_OVERDUE,
       Se.Set BeamDF.updatedAt now
     ]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+    [ Se.And
+        [ Se.Is BeamDF.id (Se.In (getId <$> driverFeeIds)),
+          Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE, MANUAL_REVIEW_NEEDED, ONGOING]
+        ]
+    ]
 
 updateManualToAutoPay :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m ()
 updateManualToAutoPay driverFeeId = do
