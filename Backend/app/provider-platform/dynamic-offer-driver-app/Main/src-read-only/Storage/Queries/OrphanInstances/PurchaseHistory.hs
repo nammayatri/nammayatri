@@ -20,6 +20,7 @@ instance FromTType' Beam.PurchaseHistory Domain.Types.PurchaseHistory.PurchaseHi
       Just
         Domain.Types.PurchaseHistory.PurchaseHistory
           { cash = cash,
+            coinRedemptionType = Kernel.Prelude.fromMaybe Domain.Types.PurchaseHistory.SubscriptionUse coinRedemptionType,
             createdAt = createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             driverId = driverId,
@@ -27,6 +28,7 @@ instance FromTType' Beam.PurchaseHistory Domain.Types.PurchaseHistory.PurchaseHi
             merchantId = merchantId,
             merchantOptCityId = merchantOptCityId,
             numCoins = numCoins,
+            payoutOrderIdForDirectPayout = Kernel.Types.Id.Id <$> payoutOrderIdForDirectPayout,
             title = title,
             updatedAt = updatedAt,
             vehicleCategory = vehicleCategory
@@ -36,6 +38,7 @@ instance ToTType' Beam.PurchaseHistory Domain.Types.PurchaseHistory.PurchaseHist
   toTType' (Domain.Types.PurchaseHistory.PurchaseHistory {..}) = do
     Beam.PurchaseHistoryT
       { Beam.cash = cash,
+        Beam.coinRedemptionType = Kernel.Prelude.Just coinRedemptionType,
         Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.driverId = driverId,
@@ -43,6 +46,7 @@ instance ToTType' Beam.PurchaseHistory Domain.Types.PurchaseHistory.PurchaseHist
         Beam.merchantId = merchantId,
         Beam.merchantOptCityId = merchantOptCityId,
         Beam.numCoins = numCoins,
+        Beam.payoutOrderIdForDirectPayout = Kernel.Types.Id.getId <$> payoutOrderIdForDirectPayout,
         Beam.title = title,
         Beam.updatedAt = updatedAt,
         Beam.vehicleCategory = vehicleCategory

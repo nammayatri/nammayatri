@@ -63,7 +63,8 @@ createInitialDriverStats currency distanceUnit driverId = do
             safetyPlusEarnings = 0.0,
             safetyPlusRideCount = 0,
             onlineDuration = Seconds 0,
-            blacklistCoinEvents = Nothing
+            blacklistCoinEvents = Nothing,
+            coinsConvertedToDirectPayoutCash = 0.0
           }
   createWithKV dStats
 
@@ -189,6 +190,20 @@ updateCoinFieldsByDriverId driverId amount = do
       updateWithKV
         [ Se.Set BeamDS.coinCovertedToCashLeft $ Just (driverStat.coinCovertedToCashLeft + amount),
           Se.Set BeamDS.totalCoinsConvertedCash $ Just (driverStat.totalCoinsConvertedCash + amount),
+          Se.Set BeamDS.updatedAt now
+        ]
+        [Se.Is BeamDS.driverId (Se.Eq (getId driverId))]
+    Nothing -> pure ()
+
+updateCoinsFieldsForDirectPayout :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> m ()
+updateCoinsFieldsForDirectPayout driverId amount = do
+  now <- getCurrentTime
+  mbDriverStat <- findById driverId
+  case mbDriverStat of
+    Just driverStat -> do
+      updateWithKV
+        [ Se.Set BeamDS.totalCoinsConvertedCash $ Just (driverStat.totalCoinsConvertedCash + amount),
+          Se.Set BeamDS.coinsConvertedToDirectPayoutCash $ Just (driverStat.coinsConvertedToDirectPayoutCash + amount),
           Se.Set BeamDS.updatedAt now
         ]
         [Se.Is BeamDS.driverId (Se.Eq (getId driverId))]
