@@ -253,7 +253,19 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
         return (flattenedLiveRouteStopTimes, nub $ routesWithoutLiveTimings ++ routesWithoutBuses)
       else do
         return ([], routeCodes)
-  staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode False False) "fetch route stop timing through graphql"
+  staticRouteStopTimes <-
+    measureLatency
+      ( fmap concat $
+          forM routesWithoutBuses $ \routeId -> do
+            busScheduleDetails <- OTPRest.getRouteBusSchedule routeId integratedBppConfig
+            -- Build serviceTier -> shortName map for all tiers present in this schedule
+            serviceTierToShortNameMapping <- getServiceTierToShortNameMapping (map (\detail -> show detail.service_tier) busScheduleDetails)
+            fmap concat $
+              forM busScheduleDetails $ \detail -> do
+                let matchingEtas = filter (\eta -> eta.stopCode == stopCode) detail.eta
+                return $ map (\eta -> createRouteStopTimeTable serviceTierToShortNameMapping routeId detail.vehicle_no eta GTFS (show detail.service_tier)) matchingEtas
+      )
+      "fetch route stop timing through OTPRest bus schedule"
   return $ flattenedLiveRouteStopTimes ++ staticRouteStopTimes
   where
     processRoute now routeWithBuses = do
@@ -276,27 +288,22 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
 
       let validBuses = catMaybes vehicleRouteMappings
       logDebug $ "validBuses: " <> show validBuses
-      serviceTierToShortNameMapping :: HM.HashMap Text (Maybe Text) <- -- HashMap SeriveTier ServiceTierNameForUI
-        HM.fromList
-          <$> mapM
-            ( \serviceTierTypeString -> do
-                let serviceTierType = mapToServiceTierType serviceTierTypeString
-                frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType mocid integratedBppConfig.id
-                return (serviceTierTypeString, frfsServiceTier <&> (.shortName))
-            )
-            (nub $ map (\(_, mapping) -> mapping) validBuses)
+      serviceTierToShortNameMapping <- getServiceTierToShortNameMapping (map (\(_, mapping) -> mapping) validBuses)
       let baseStopTimes = map (createStopTime serviceTierToShortNameMapping) validBuses
       return baseStopTimes
       where
-        createStopTime serviceTierToShortNameMapping ((vehicleNumber, eta), mapping) = createRouteStopTimeTable serviceTierToShortNameMapping routeWithBuses vehicleNumber eta mapping
+        createStopTime serviceTierToShortNameMapping ((vehicleNumber, eta), mapping) = createRouteStopTimeTable serviceTierToShortNameMapping routeWithBuses.routeId vehicleNumber eta LIVE mapping
 
-    createRouteStopTimeTable serviceTierToShortNameMapping routeWithBuses vehicleNumber eta mapping =
+    -- Shared helper: builds a RouteStopTimeTable from a service-tier name map, routeId,
+    -- vehicle number, ETA, source type, and service-tier mapping string.
+    -- Used for both LIVE (from live bus data) and GTFS (from OTPRest schedule) entries.
+    createRouteStopTimeTable serviceTierToShortNameMapping routeId vehicleNumber eta src mapping =
       let timeOfDay = timeToTimeOfDay $ utctDayTime eta.arrivalTime
           serviceTierName = fromMaybe Nothing $ HM.lookup mapping serviceTierToShortNameMapping
           serviceTierType = mapToServiceTierType mapping
        in RouteStopTimeTable
             { integratedBppConfigId = integratedBppConfig.id,
-              routeCode = routeWithBuses.routeId,
+              routeCode = routeId,
               stopCode = stopCode,
               timeOfArrival = timeOfDay,
               timeOfDeparture = timeOfDay, -- Using arrival time as departure time since we don't have separate departure time
@@ -308,12 +315,22 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
               serviceTierType = serviceTierType,
               serviceTierName = serviceTierName,
               delay = Nothing,
-              source = LIVE,
+              source = src,
               stage = Nothing,
               platformCode = Nothing,
               providerStopCode = Nothing,
               isStageStop = Nothing
             }
+
+    getServiceTierToShortNameMapping serviceTierStrings =
+      HM.fromList
+        <$> mapM
+          ( \serviceTierTypeString -> do
+              let serviceTierType = mapToServiceTierType serviceTierTypeString
+              frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType mocid integratedBppConfig.id
+              return (serviceTierTypeString, frfsServiceTier <&> (.shortName))
+          )
+          (nub serviceTierStrings)
 
 fetchLiveSubwayTimings ::
   ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
