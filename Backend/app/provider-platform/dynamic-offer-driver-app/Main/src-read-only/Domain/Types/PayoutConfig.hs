@@ -15,6 +15,7 @@ import qualified Tools.Beam.UtilsTH
 
 data PayoutConfig = PayoutConfig
   { batchLimit :: Kernel.Prelude.Int,
+    coinRedemptionMinimumLimit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     expand :: Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand,
     isPayoutEnabled :: Kernel.Prelude.Bool,
     maxPayoutReferralForADay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

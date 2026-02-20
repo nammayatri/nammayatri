@@ -45,6 +45,7 @@ DriverStats:
     safetyPlusEarnings : HighPrecMoney
     onlineDuration : Seconds
     blacklistCoinEvents: Maybe [DriverCoinsFunctionType]
+    coinsConvertedToDirectPayoutCash: HighPrecMoney
 
   beamFields:
     totalEarnings:
@@ -79,6 +80,7 @@ DriverStats:
     safetyPlusRideCount: Maybe Int
     safetyPlusEarnings:  Maybe HighPrecMoney
     onlineDuration: Maybe Seconds
+    coinsConvertedToDirectPayoutCash: Maybe HighPrecMoney
 
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
@@ -100,6 +102,7 @@ DriverStats:
     safetyPlusRideCount: Kernel.Prelude.fromMaybe 0|I
     safetyPlusEarnings: Kernel.Prelude.fromMaybe 0|I
     onlineDuration: Kernel.Prelude.fromMaybe 0|I
+    coinsConvertedToDirectPayoutCash: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     totalDistance: getTotalDistance
@@ -124,6 +127,7 @@ DriverStats:
     safetyPlusRideCount: Kernel.Prelude.Just|I
     safetyPlusEarnings: Kernel.Prelude.Just|I
     onlineDuration: Kernel.Prelude.Just|I
+    coinsConvertedToDirectPayoutCash: Kernel.Prelude.Just|I
 
   constraints:
     driverId: PrimaryKey
@@ -207,6 +211,7 @@ DriverStats:
     validDriverCancellationTagCount: "0"
     validCustomerCancellationTagCount: "0"
     onlineDuration: "0"
+    coinsConvertedToDirectPayoutCash: "0"
     blacklistCoinEvents: "'{}'"
 
   extraOperations:

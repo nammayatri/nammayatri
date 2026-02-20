@@ -99,6 +99,7 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.bonusEarned (Kernel.Prelude.roundToIntegral bonusEarned),
       Se.Set Beam.bonusEarnedAmount (Kernel.Prelude.Just bonusEarned),
       Se.Set Beam.coinCovertedToCashLeft (Kernel.Prelude.Just coinCovertedToCashLeft),
+      Se.Set Beam.coinsConvertedToDirectPayoutCash (Kernel.Prelude.Just coinsConvertedToDirectPayoutCash),
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.earningsMissed (Kernel.Prelude.roundToIntegral earningsMissed),

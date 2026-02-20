@@ -18,6 +18,7 @@ import qualified Domain.Action.UI.DriverCoin as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.PurchaseHistory as DPH
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
 import Kernel.Types.APISuccess
@@ -37,6 +38,7 @@ type API =
              :> TokenAuth
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
+             :> QueryParam "coinRedemptionType" DPH.CoinRedemptionType
              :> Get '[JSON] Domain.CoinsUsageRes
            :<|> "convertCoinToCash"
              :> TokenAuth
@@ -61,8 +63,9 @@ handler =
 getCoinEventSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> UTCTime -> FlowHandler Domain.CoinTransactionRes
 getCoinEventSummary (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.getCoinEventSummary (personId, merchantId, merchantOpCityId)
 
-getCoinUsageSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> FlowHandler Domain.CoinsUsageRes
-getCoinUsageSummary mbLimit mbOffset = withFlowHandlerAPI . Domain.getCoinUsageSummary mbLimit mbOffset
+getCoinUsageSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Maybe DPH.CoinRedemptionType -> FlowHandler Domain.CoinsUsageRes
+getCoinUsageSummary (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbCoinRedemptionType =
+  withFlowHandlerAPI $ Domain.getCoinUsageSummary (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbCoinRedemptionType
 
 useCoinsHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Domain.ConvertCoinToCashReq -> FlowHandler APISuccess
 useCoinsHandler (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.useCoinsHandler (personId, merchantId, merchantOpCityId)

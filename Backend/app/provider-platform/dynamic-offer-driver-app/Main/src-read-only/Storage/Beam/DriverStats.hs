@@ -17,6 +17,7 @@ data DriverStatsT f = DriverStatsT
     bonusEarned :: B.C f Kernel.Types.Common.Money,
     bonusEarnedAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     coinCovertedToCashLeft :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    coinsConvertedToDirectPayoutCash :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverId :: B.C f Kernel.Prelude.Text,

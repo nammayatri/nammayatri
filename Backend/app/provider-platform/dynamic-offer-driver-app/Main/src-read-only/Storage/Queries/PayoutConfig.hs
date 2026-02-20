@@ -57,6 +57,7 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.batchLimit batchLimit,
+      Se.Set Beam.coinRedemptionMinimumLimit coinRedemptionMinimumLimit,
       Se.Set Beam.expand expand,
       Se.Set Beam.isPayoutEnabled isPayoutEnabled,
       Se.Set Beam.maxPayoutReferralForADay maxPayoutReferralForADay,
