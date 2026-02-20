@@ -144,10 +144,19 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.Sos.SosTrackingDetailsRes
+      :<|> "sos"
+      :> "erss"
+      :> "statusUpdate"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.Sos.ErssStatusUpdateReq
+      :> Post
+           '[JSON]
+           API.Types.UI.Sos.ErssStatusUpdateRes
   )
 
 handler :: Environment.FlowServer API
-handler = getSosGetDetails :<|> getSosIvrOutcome :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos :<|> postSosCallPolice :<|> postSosUpdateLocation :<|> getSosTracking :<|> postSosStartTracking :<|> postSosUpdateState :<|> getSosTrackingDetails
+handler = getSosGetDetails :<|> getSosIvrOutcome :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos :<|> postSosCallPolice :<|> postSosUpdateLocation :<|> getSosTracking :<|> postSosStartTracking :<|> postSosUpdateState :<|> getSosTrackingDetails :<|> postSosErssStatusUpdate
 
 getSosGetDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -242,3 +251,6 @@ getSosTrackingDetails ::
     Environment.FlowHandler API.Types.UI.Sos.SosTrackingDetailsRes
   )
 getSosTrackingDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosTrackingDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postSosErssStatusUpdate :: (API.Types.UI.Sos.ErssStatusUpdateReq -> Environment.FlowHandler API.Types.UI.Sos.ErssStatusUpdateRes)
+postSosErssStatusUpdate a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosErssStatusUpdate a1

@@ -587,3 +587,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_logo_url text ;
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN external_sos_config json;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN external_sos_trace_polling_interval_seconds int ;
