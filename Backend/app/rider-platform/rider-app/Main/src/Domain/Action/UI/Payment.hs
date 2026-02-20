@@ -236,6 +236,7 @@ createRideBookingPaymentOrder booking = do
 
 -- | Background polling for Paytm EDC payment status.
 -- Reuses orderStatusHandler (via syncOrderStatus): one status fetch + fulfillment handling per attempt.
+-- Starts first poll after initialDelaySec, then polls every pollIntervalSec.
 -- Stops when a terminal status is reached or max attempts / consecutive failures exhausted.
 pollPaytmEdcPaymentStatus ::
   Id DM.Merchant ->
@@ -244,16 +245,18 @@ pollPaytmEdcPaymentStatus ::
   Id DOrder.PaymentOrder ->
   Flow ()
 pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId = do
-  let maxAttempts = 20 :: Int -- ~5 minutes total (15s * 20)
-      pollIntervalSec = 15 :: Int
+  let initialDelaySec = 10 :: Int -- wait 10s after create order before first poll
+      pollIntervalSec = 10 :: Int -- poll every 10s
+      maxAttempts = 20 :: Int
       pollKey = "PaytmEDC:StatusPoll:" <> orderId.getId
       maxConsecutiveFailures = 3 :: Int
-  Redis.setExp pollKey ("polling" :: Text) (maxAttempts * pollIntervalSec + 60)
+  Redis.setExp pollKey ("polling" :: Text) (initialDelaySec + maxAttempts * pollIntervalSec + 60)
+  liftIO $ threadDelay (initialDelaySec * 1000000)
   go pollKey 1 maxAttempts pollIntervalSec maxConsecutiveFailures 0
   where
     go pollKey attempt maxAttempts pollIntervalSec maxConsecutiveFailures consecutiveFailures = do
       when (attempt <= maxAttempts) $ do
-        liftIO $ threadDelay (pollIntervalSec * 1000000)
+        when (attempt > 1) $ liftIO (threadDelay (pollIntervalSec * 1000000))
         mbOrder <- QOrder.findById orderId
         case mbOrder of
           Nothing -> logError $ "PaytmEDC poll: Order not found " <> orderId.getId
