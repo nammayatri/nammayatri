@@ -615,7 +615,7 @@ type ExternalSOSTraceCache = (Integer, Bool, Maybe SOSInterface.SOSServiceConfig
 sendExternalSOSTrace :: DSos.Sos -> SosLocationUpdateReq -> Flow ()
 sendExternalSOSTrace sosDetails req = do
   let sosId = sosDetails.id
-  pollingIntervalSec <- getExternalSOSTracePollingIntervalSec sosDetails.merchantOperatingCityId
+  (pollingIntervalSec, timeDiff) <- getExternalSOSTracePollingConfig sosDetails.merchantOperatingCityId
   cached :: Maybe ExternalSOSTraceCache <- Redis.safeGet (mkExternalSOSTraceKey sosId)
   now <- getCurrentTime
   let nowSec = round $ utcTimeToPOSIXSeconds now
@@ -631,7 +631,7 @@ sendExternalSOSTrace sosDetails req = do
         whenJust sosDetails.externalReferenceId $ \trackingId -> do
           mbMobile <- getPersonMobileNo sosDetails.personId
           whenJust mbMobile $ \mobileNo -> do
-            callSOSTraceAPI trackingId specificConfig mobileNo req
+            callSOSTraceAPI trackingId specificConfig mobileNo req timeDiff
             Redis.setExp (mkExternalSOSTraceKey sosId) (nowSec, True, Just specificConfig) ttl
     Nothing -> do
       mbConfig <- resolveExternalSOSTraceConfig sosDetails
@@ -641,16 +641,21 @@ sendExternalSOSTrace sosDetails req = do
         whenJust sosDetails.externalReferenceId $ \trackingId -> do
           mbMobile <- getPersonMobileNo sosDetails.personId
           whenJust mbMobile $ \mobileNo ->
-            callSOSTraceAPI trackingId specificConfig mobileNo req
+            callSOSTraceAPI trackingId specificConfig mobileNo req timeDiff
 
-getExternalSOSTracePollingIntervalSec :: Maybe (Id DMOC.MerchantOperatingCity) -> Flow Int
-getExternalSOSTracePollingIntervalSec = \case
-  Nothing -> pure defaultExternalSOSTracePollingIntervalSec
+getExternalSOSTracePollingConfig :: Maybe (Id DMOC.MerchantOperatingCity) -> Flow (Int, Seconds)
+getExternalSOSTracePollingConfig = \case
+  Nothing -> pure (defaultExternalSOSTracePollingIntervalSec, defaultTimeDiff)
   Just merchantOpCityId -> do
     mbRiderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing
-    pure $ maybe defaultExternalSOSTracePollingIntervalSec (\rc -> maybe defaultExternalSOSTracePollingIntervalSec (.getSeconds) rc.externalSOSTracePollingIntervalSeconds) mbRiderConfig
+    case mbRiderConfig of
+      Nothing -> pure (defaultExternalSOSTracePollingIntervalSec, defaultTimeDiff)
+      Just rc ->
+        let interval = maybe defaultExternalSOSTracePollingIntervalSec (.getSeconds) rc.externalSOSTracePollingIntervalSeconds
+        in pure (interval, rc.timeDiffFromUtc)
   where
     defaultExternalSOSTracePollingIntervalSec = 60
+    defaultTimeDiff = 19800 -- IST: 5h 30m
 
 resolveExternalSOSTraceConfig :: DSos.Sos -> Flow (Maybe SOSInterface.SOSServiceConfig)
 resolveExternalSOSTraceConfig sosDetails = do
@@ -675,10 +680,11 @@ getPersonMobileNo personId =
     QP.findById personId >>= \mbPerson ->
       maybe (pure Nothing) (\p -> mapM decrypt p.mobileNumber) mbPerson
 
-callSOSTraceAPI :: Text -> SOSInterface.SOSServiceConfig -> Text -> SosLocationUpdateReq -> Flow ()
-callSOSTraceAPI trackingId specificConfig mobileNo req = do
+callSOSTraceAPI :: Text -> SOSInterface.SOSServiceConfig -> Text -> SosLocationUpdateReq -> Seconds -> Flow ()
+callSOSTraceAPI trackingId specificConfig mobileNo req timeDiff = do
   now <- getCurrentTime
-  let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" now
+  let localNow = addUTCTime (secondsToNominalDiffTime timeDiff) now
+  let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" localNow
       traceReq =
         SOSInterface.SOSTraceReq
           { SOSInterface.trackingId = trackingId,
@@ -949,7 +955,8 @@ buildExternalSOSDetails req person _sosConfig _serviceConfig mbRide emergencyCon
   imeiText <- traverse decrypt person.imeiNumber
   customerDisability <- runInReplica $ PDisability.findByPersonId person.id
   (lat, lon) <- resolveLocation req.customerLocation person mbRide
-  let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" now
+  let localNow = addUTCTime (secondsToNominalDiffTime riderConfig.timeDiffFromUtc) now
+  let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" localNow
   let trackLink = case mbRide of
         Just ride -> Just $ Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
         Nothing -> Nothing
