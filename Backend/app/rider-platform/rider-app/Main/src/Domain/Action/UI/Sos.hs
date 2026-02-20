@@ -54,6 +54,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
+import qualified SharedLogic.Ride as SRide
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import SharedLogic.Scheduler.Jobs.CallPoliceApi
 import SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
@@ -941,18 +942,13 @@ buildExternalSOSDetails ::
   DMOC.MerchantOperatingCity ->
   DRC.RiderConfig ->
   Flow SOSInterface.InitialSOSReq
-buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyContacts merchantOpCity riderConfig = do
+buildExternalSOSDetails req person _sosConfig _serviceConfig mbRide emergencyContacts merchantOpCity riderConfig = do
   now <- getCurrentTime
   mobileNo <- fmap (fromMaybe "0000000000") $ traverse decrypt person.mobileNumber
   emailText <- traverse decrypt person.email
   imeiText <- traverse decrypt person.imeiNumber
   customerDisability <- runInReplica $ PDisability.findByPersonId person.id
-  let (lat, lon) =
-        if sosConfig.latLonRequired
-          then case req.customerLocation of
-            Just loc -> (loc.lat, loc.lon)
-            Nothing -> (fromMaybe 0.0 person.latestLat, fromMaybe 0.0 person.latestLon)
-          else (0.0, 0.0)
+  (lat, lon) <- resolveLocation req.customerLocation person mbRide
   let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" now
   let trackLink = case mbRide of
         Just ride -> Just $ Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
@@ -1008,6 +1004,26 @@ buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyCont
         vendorName = Just merchantOpCity.merchantShortId.getShortId,
         deviceType = Just 2
       }
+
+resolveLocation :: Maybe Maps.LatLong -> Person.Person -> Maybe DRide.Ride -> Flow (Double, Double)
+resolveLocation mbCustomerLoc person mbRide =
+  case mbCustomerLoc of
+    Just loc -> pure (loc.lat, loc.lon)
+    Nothing -> case (person.latestLat, person.latestLon) of
+      (Just pLat, Just pLon) -> pure (pLat, pLon)
+      _ -> do
+        mbDriverLoc <- case mbRide of
+          Just ride -> do
+            resp <- withTryCatch "getDriverLoc:buildExternalSOSDetails" $ SRide.getDriverLoc ride.id
+            case resp of
+              Right driverLoc -> pure $ Just (driverLoc.lat, driverLoc.lon)
+              Left err -> do
+                logError $ "Driver location fetch failed, falling back to ride fromLocation: " <> show err
+                pure Nothing
+          Nothing -> pure Nothing
+        case mbDriverLoc of
+          Just (dLat, dLon) -> pure (dLat, dLon)
+          Nothing -> pure $ maybe (0.0, 0.0) (\ride -> (ride.fromLocation.lat, ride.fromLocation.lon)) mbRide
 
 extractStateCode :: SOSInterface.SOSServiceConfig -> Maybe Text
 extractStateCode (SOSInterface.ERSSConfig cfg) = cfg.stateCode

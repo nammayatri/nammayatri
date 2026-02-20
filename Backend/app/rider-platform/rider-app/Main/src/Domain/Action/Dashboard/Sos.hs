@@ -19,6 +19,7 @@ import qualified Domain.Types.Sos as DSos
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
+import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.SOS as PoliceSOS
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
@@ -32,6 +33,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Person as QP
+import qualified SharedLogic.Ride as SRide
+import qualified SharedLogic.SosLocationTracking as SOSLocation
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Sos as QSos
 import Tools.Auth
@@ -133,9 +136,10 @@ callExternalSOS sosId = do
       case merchantSvcCfg.serviceConfig of
         DMSC.SOSServiceConfig specificConfig -> do
           mbRide <- QRide.findById sos.rideId
+          customerLocation <- getCustomerLocation sos.rideId mbRide
           emergencyContacts <- DP.getDefaultEmergencyNumbers (sos.personId, merchantId)
           merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
+          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
           initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
           unless initialRes.success $
             throwError $ InternalError (fromMaybe "External SOS call failed" initialRes.errorMessage)
@@ -144,15 +148,30 @@ callExternalSOS sosId = do
             Redis.del (Sos.mkExternalSOSTraceKey sosId)
         _ -> throwError $ InternalError "Invalid SOS Service Config for provider"
   where
-    mkSosReq :: DSos.Sos -> UISos.SosReq
-    mkSosReq sos =
+    getCustomerLocation rideId mbRide = do
+      mbSosLoc <- SOSLocation.getSosRiderLocation sosId
+      case mbSosLoc of
+        Just sosLoc -> do
+          logInfo $ "Using SOS rider location from Redis for sosId: " <> sosId.getId
+          pure $ Just $ LatLong sosLoc.lat sosLoc.lon
+        Nothing -> do
+          logInfo $ "SOS rider location not found, trying driver location for sosId: " <> sosId.getId
+          driverLocResp <- withTryCatch "getDriverLoc:callExternalSOS" $ SRide.getDriverLoc rideId
+          case driverLocResp of
+            Right driverLoc -> pure $ Just $ LatLong driverLoc.lat driverLoc.lon
+            Left err -> do
+              logError $ "Driver location fetch failed, falling back to ride fromLocation: " <> show err
+              pure $ (\ride -> LatLong ride.fromLocation.lat ride.fromLocation.lon) <$> mbRide
+
+    mkSosReq :: DSos.Sos -> Maybe LatLong -> UISos.SosReq
+    mkSosReq sos customerLoc =
       UISos.SosReq
         { flow = sos.flow,
           rideId = Just sos.rideId,
           isRideEnded = Nothing,
           sendPNOnPostRideSOS = Nothing,
           notifyAllContacts = Nothing,
-          customerLocation = Nothing
+          customerLocation = customerLoc
         }
 
 flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
