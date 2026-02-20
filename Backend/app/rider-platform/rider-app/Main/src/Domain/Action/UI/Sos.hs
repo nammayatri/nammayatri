@@ -435,9 +435,10 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               case merchantSvcCfg.serviceConfig of
                 DMSC.SOSServiceConfig specificConfig -> do
                   let fileName = "sos-" <> getId sosId <> "." <> fileExtension
-                  void $
-                    withTryCatch "PoliceSOS:uploadMedia" $
-                      PoliceSOS.uploadMedia specificConfig phoneNo fileName payload
+                  uploadMediaRes <- PoliceSOS.uploadMedia specificConfig phoneNo fileName payload
+                  if uploadMediaRes.success
+                    then logInfo $ "PoliceSOS:uploadMedia success; sosId=" <> getId sosId <> ", fileName=" <> fileName
+                    else logError $ "PoliceSOS:uploadMedia failure; sosId=" <> getId sosId <> ", fileName=" <> fileName <> ", errorMessage=" <> show uploadMediaRes.errorMessage
                 _ -> pure ()
       return $ AddSosVideoRes {fileUrl = fileUrl}
 
