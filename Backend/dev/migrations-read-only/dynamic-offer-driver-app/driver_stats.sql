@@ -69,6 +69,38 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN safety_plus_ride_coun
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN safety_plus_earnings double precision ;
 
 
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN coins_converted_to_direct_payout_cash double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ALTER COLUMN coins_converted_to_direct_payout_cash SET DEFAULT 0;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN online_duration integer  default 0;

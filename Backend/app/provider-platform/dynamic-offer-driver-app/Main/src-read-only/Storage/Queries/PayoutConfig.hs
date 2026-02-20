@@ -27,12 +27,12 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.PayoutConfig.PayoutConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.PayoutConfig.PayoutConfig])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOpCityIdAndIsPayoutEnabled ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.PayoutConfig.PayoutConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.PayoutConfig.PayoutConfig])
 findByMerchantOpCityIdAndIsPayoutEnabled merchantOperatingCityId isPayoutEnabled = do
   findAllWithKV
     [ Se.And
@@ -57,6 +57,7 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.batchLimit batchLimit,
+      Se.Set Beam.coinRedemptionMinimumLimit coinRedemptionMinimumLimit,
       Se.Set Beam.expand expand,
       Se.Set Beam.isPayoutEnabled isPayoutEnabled,
       Se.Set Beam.maxPayoutReferralForADay maxPayoutReferralForADay,
