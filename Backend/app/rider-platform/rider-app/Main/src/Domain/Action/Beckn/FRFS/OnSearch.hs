@@ -337,7 +337,7 @@ upsertFareCache onSearchReq validatedReq = do
                       let farePolicyIds = map (.farePolicyId) fareProducts
                       whenJust ((,) <$> mbStartStopCode <*> mbEndStopCode) $ \(startStopCode, endStopCode) ->
                         forM_ quote.categories $ \quoteCategory ->
-                          traverse_ (\farePolicyId -> createStopFare farePolicyId startStopCode endStopCode quoteCategory validatedReq.search.merchantId validatedReq.search.merchantOperatingCityId integratedBPPConfig.id) farePolicyIds
+                          traverse_ (\farePolicyId -> upsertStopFare farePolicyId startStopCode endStopCode quoteCategory validatedReq.search.merchantId validatedReq.search.merchantOperatingCityId integratedBPPConfig.id) farePolicyIds
                     [] ->
                       createEntriesInFareTables validatedReq.search.merchantId validatedReq.search.merchantOperatingCityId quote quote.categories integratedBPPConfig.id
 
