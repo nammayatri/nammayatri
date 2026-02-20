@@ -654,6 +654,9 @@ VehiclePermit:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+    findByRcId:
+      kvFunction: findAllWithKV
+      where: rcId
     updateVerificationStatusByImageId:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
@@ -685,6 +688,9 @@ VehicleInsurance:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+    findByRcId:
+      kvFunction: findAllWithKV
+      where: rcId
     updateVerificationStatus:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
@@ -715,6 +721,9 @@ VehicleFitnessCertificate:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+    findByRcId:
+      kvFunction: findAllWithKV
+      where: rcId
     updateVerificationStatus:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
@@ -746,6 +755,9 @@ VehicleNOC:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+    findByRcId:
+      kvFunction: findAllWithKV
+      where: rcId
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId
@@ -797,6 +809,9 @@ VehiclePUC:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+    findByRcId:
+      kvFunction: findAllWithKV
+      where: rcId
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId

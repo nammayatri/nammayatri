@@ -135,9 +135,10 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   mDL <- DLQuery.findByDriverId (Id personId)
   driverImages <- IQuery.findAllByPersonId transporterConfig (Id personId)
   now <- getCurrentTime
-  let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Id personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+  let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just $ Id personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
   let shouldActivateRc = True
-  castStatusRes <$> SStatus.statusHandler' Nothing driverImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs
+  person <- runInReplica $ PersonQuery.findById (Id personId) >>= fromMaybeM (PersonNotFound personId)
+  castStatusRes <$> SStatus.statusHandler' person driverImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs
 
 postOnboardingVerify ::
   ShortId DM.Merchant ->
