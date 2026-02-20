@@ -189,3 +189,9 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN rider_preferred_opt
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pickup_gate_id Maybe Text ;

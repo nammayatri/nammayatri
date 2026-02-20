@@ -69,6 +69,7 @@ SearchRequest:
     driverDefaultExtraFee: Maybe HighPrecMoney
     currency: Currency
     pickupZoneGateId: Maybe Text
+    pickupGateId: Maybe Text
     isCustomerPrefferedSearchRoute: Maybe Bool
     isBlockedRoute: Maybe Bool
     returnTime: Maybe UTCTime
@@ -213,6 +214,7 @@ SearchRequest:
     customerLanguage: character varying(36)
     messageId: character varying(36)
     pickupZoneGateId: character varying(36)
+    pickupGateId: Maybe Text
     transactionId: character varying(36)
     configInExperimentVersions: "json"
     userOsType: character varying(255)
