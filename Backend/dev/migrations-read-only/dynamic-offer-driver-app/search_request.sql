@@ -163,3 +163,4 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN special_location_na
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pickup_gate_id character varying(36);
