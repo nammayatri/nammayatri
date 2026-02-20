@@ -4,6 +4,7 @@
 module Storage.Queries.FleetBadgeAssociationExtra where
 
 import Control.Applicative (liftA2)
+import Control.Lens ((^?), _head)
 import qualified Data.Text as T
 import qualified Database.Beam as B
 import Domain.Types.FleetBadge
@@ -54,7 +55,7 @@ findActiveFleetBadgeAssociationById (Id fleetBadge) badgeType = do
     (Se.Desc BeamFBA.associatedTill)
     (Just 1)
     Nothing
-    <&> listToMaybe
+    <&> (^? _head)
 
 findAllActiveFleetBadgeAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Maybe Int -> Maybe Text -> Maybe DFBT.FleetBadgeType -> m [(FleetBadgeAssociation, FleetBadge)]
 findAllActiveFleetBadgeAssociation Nothing Nothing mbSearchString mbBadgeType = do

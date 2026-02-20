@@ -29,7 +29,7 @@ import Utils.Common.CacUtils
 findFarePolicyProgressiveDetailsPerMinRateSectionFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [Domain.FullFarePolicyProgressiveDetailsPerMinRateSection]
 findFarePolicyProgressiveDetailsPerMinRateSectionFromCAC context tenant id toss = do
   mbRes :: (Maybe [BeamFPPDPM.FullFarePolicyProgressiveDetailsPerMinRateSection]) <- getConfigListFromCac context tenant toss FullFarePolicyProgressiveDetailsPerMinRateSection (Text.unpack id.getId)
-  let configs = KP.mapM fromCacType (fromMaybe [] mbRes)
+  let configs = KP.mapM fromCacType (fold mbRes)
   catMaybes <$> configs
 
 instance FromCacType BeamFPPDPM.FullFarePolicyProgressiveDetailsPerMinRateSection Domain.FullFarePolicyProgressiveDetailsPerMinRateSection where

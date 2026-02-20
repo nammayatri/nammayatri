@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# LANGUAGE OverloadedLabels #-}
+
 module Domain.Action.Beckn.Search
   ( DSearchReq (..),
     DSearchRes (..),
@@ -29,6 +31,8 @@ where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
 import Control.Applicative ((<|>))
+import Control.Lens ((.~), (^?), _head)
+import Data.Generics.Labels ()
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Geohash as Geohash
 import Data.List (sortBy)
@@ -245,7 +249,7 @@ getRouteServiceability merchantId merchantOpCityId _distanceUnit fromLocation to
           (mbShortestRoute, index) = Maps.getEfficientRouteInfo responses distanceWeightage durationWeightage
           routeDistance = fromMaybe 0 (mbShortestRoute >>= (.distance))
           routeDuration = fromMaybe 0 (mbShortestRoute >>= (.duration))
-          routePoints = maybe [] (.points) mbShortestRoute
+          routePoints = foldMap (.points) mbShortestRoute
       when (isNothing mbShortestRoute) $ do
         -- this case should never happen as we filter out null responses
         logWarning $ "Efficient route selection returned Nothing for transactionId: " <> transactionId
@@ -355,9 +359,9 @@ handler ValidatedDSearchReq {..} sReq = do
   estimates <-
     if isNothing reserveRideEstimate
       then do
-        return $ maybe estimates' (\_ -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = False, ..}) estimates') mbAutoMaxFare
+        return $ maybe estimates' (\_ -> map (\est -> est & #eligibleForUpgrade .~ False) estimates') mbAutoMaxFare
       else do
-        est <- transformReserveRideEsttoEst (fromJust reserveRideEstimate)
+        est <- maybe (throwError $ InternalError "reserveRideEstimate is Nothing") transformReserveRideEsttoEst reserveRideEstimate
         return [est]
 
   QEst.createMany estimates
@@ -381,9 +385,9 @@ handler ValidatedDSearchReq {..} sReq = do
     combineFarePoliciesProducts products =
       FarePoliciesProduct
         { farePolicies = concatMap farePolicies products,
-          area = maybe SL.Default (.area) $ listToMaybe products,
-          specialLocationTag = listToMaybe products >>= (.specialLocationTag),
-          specialLocationName = listToMaybe products >>= (.specialLocationName)
+          area = maybe SL.Default (.area) $ products ^? _head,
+          specialLocationTag = products ^? _head >>= (.specialLocationTag),
+          specialLocationName = products ^? _head >>= (.specialLocationName)
         }
 
     processPolicy ::
@@ -398,7 +402,7 @@ handler ValidatedDSearchReq {..} sReq = do
       -- Resolve domain discount using the correct email domain per billing category
       mbBusinessDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.businessEmailDomain SLT.BUSINESS fp.vehicleServiceTier
       mbPersonalDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.emailDomain SLT.PERSONAL fp.vehicleServiceTier
-      let fp' = fp{DFP.businessDiscountPercentage = mbBusinessDiscount <|> fp.businessDiscountPercentage, DFP.personalDiscountPercentage = mbPersonalDiscount <|> fp.personalDiscountPercentage} :: DFP.FullFarePolicy
+      let fp' = fp & #businessDiscountPercentage .~ (mbBusinessDiscount <|> fp.businessDiscountPercentage) & #personalDiscountPercentage .~ (mbPersonalDiscount <|> fp.personalDiscountPercentage) :: DFP.FullFarePolicy
       case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem ->
           case tripCategoryToPricingPolicy fp'.tripCategory of
@@ -506,12 +510,13 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes configInExp
 
 selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> UTCTime -> Bool -> DSR.SearchRequest -> Maybe DMPM.PaymentMode -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
 selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies now isValueAddNP sreq paymentMode = do
-  driverPoolCfg <- CDP.getSearchDriverPoolConfig merchantOpCityId mbDistance area sreq
+  driverPoolCfg' <- CDP.getSearchDriverPoolConfig merchantOpCityId mbDistance area sreq
+  driverPoolCfg <- driverPoolCfg' & fromMaybeM (InternalError "DriverPoolConfig not found")
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow merchantOpCityId sreq.configInExperimentVersions
   let calculateDriverPoolReq =
         CalculateDriverPoolReq
           { poolStage = Estimate,
-            driverPoolCfg = fromJust driverPoolCfg,
+            driverPoolCfg = driverPoolCfg,
             serviceTiers = [],
             pickup = fromLocation,
             merchantOperatingCityId = merchantOpCityId,
@@ -529,7 +534,7 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
   driverPoolCurrentlyOnRide <-
     if null driverPoolNotOnRide
       then do
-        if transporterConfig.includeDriverCurrentlyOnRide && (fromJust driverPoolCfg).enableForwardBatching
+        if transporterConfig.includeDriverCurrentlyOnRide && driverPoolCfg.enableForwardBatching
           then snd <$> calculateDriverPoolCurrentlyOnRide calculateDriverPoolReq Nothing
           else pure []
       else pure []
@@ -977,7 +982,7 @@ getNearestOperatingAndSourceCity merchant pickupLatLong = do
           find (\geom -> geom.city == Context.City "AnyCity") geoms & \case
             Just anyCityGeom -> do
               cities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters pickupLatLong m.location, m.city))
-              let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (listToMaybe $ sortBy (comparing fst) cities)
+              let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (sortBy (comparing fst) cities ^? _head)
               return $ NearestOperatingAndSourceCity {sourceCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity}
             Nothing -> do
               logError $ "No geometry found for pickupLatLong: " <> show pickupLatLong <> " for regions: " <> show regions
@@ -1003,10 +1008,10 @@ getDestinationCity merchant dropLatLong = do
                 if null interTravelCities
                   then do
                     operatingCities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters dropLatLong m.location, show m.city))
-                    return $ snd <$> listToMaybe (sortBy (comparing fst) operatingCities)
+                    return $ snd <$> (sortBy (comparing fst) operatingCities ^? _head)
                   else do
                     intercityTravelAreas <- CQITC.findInterCityAreasContainingGps dropLatLong
-                    return $ (.cityName) <$> listToMaybe intercityTravelAreas
+                    return $ (.cityName) <$> (intercityTravelAreas ^? _head)
               return (CityState {city = anyCityGeom.city, state = anyCityGeom.state}, mbNearestCity)
             Nothing -> do
               logError $ "No geometry found for dropLatLong: " <> show dropLatLong <> " for regions: " <> show regions

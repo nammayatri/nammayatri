@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Domain.Action.Dashboard.Management.CoinsConfig
   ( putCoinsConfigUpdate,
     postCoinsConfigCreate,
@@ -5,12 +7,14 @@ module Domain.Action.Dashboard.Management.CoinsConfig
 where
 
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig as Common
+import Control.Lens ((.~))
+import Data.Generics.Labels ()
 import qualified Data.Text as Text
 import qualified Domain.Types.Coins.CoinsConfig as DTCC
 import qualified Domain.Types.Merchant
 import Domain.Types.Translations (Translations (..))
 import qualified Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, (^..), (.~))
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InvalidRequest))
@@ -47,7 +51,7 @@ postCoinsConfigCreate _merchantShortId _opCity req = do
     Common.DuplicateCoinsConfig (Common.DuplicateCoinsConfigsReq {..}) -> do
       let findCoinsConfig = QConfig.findById $ ID.cast entriesId
       coinsConfig <- findCoinsConfig >>= UC.fromMaybeM (InvalidRequest "Coins config does not exist")
-      let duplicatedConfig = coinsConfig {DTCC.id = ID.Id uuid, DTCC.eventFunction = eventFunction}
+      let duplicatedConfig = coinsConfig & #id .~ ID.Id uuid & #eventFunction .~ eventFunction
       pure (duplicatedConfig, eventMessages)
   QConfig.createCoinEntries newCoinsConfig
   clearCache newCoinsConfig

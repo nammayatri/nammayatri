@@ -17,7 +17,6 @@ module Beckn.ACL.Cancel where
 import Beckn.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import Data.Maybe (fromJust)
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import EulerHS.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -31,10 +30,9 @@ buildCancelReqV2 ::
   m DCancel.CancelReq
 buildCancelReqV2 req = do
   ContextV2.validateContext Context.CANCEL req.cancelReqContext
-  if isJust (req.cancelReqMessage.cancelReqMessageDescriptor)
-    then do
+  case req.cancelReqMessage.cancelReqMessageDescriptor of
+    Just descriptor -> do
       let bookingId = Id $ req.cancelReqMessage.cancelReqMessageOrderId
-      let descriptor = fromJust $ req.cancelReqMessage.cancelReqMessageDescriptor
       let userReallocationEnabled = req.cancelReqMessage.cancelReqMessageReallocate
       let cancellationReason = getCancellationReason req
       return $
@@ -43,7 +41,7 @@ buildCancelReqV2 req = do
             { cancelStatus = descriptor.descriptorCode,
               ..
             }
-    else do
+    Nothing -> do
       let transactionId = req.cancelReqMessage.cancelReqMessageOrderId
       return $
         DCancel.CancelSearch $

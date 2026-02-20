@@ -1,5 +1,6 @@
 module Domain.Action.WebhookHandler where
 
+import Control.Lens ((^?), _head)
 import Domain.Action.Flow as WFlow
 import qualified Domain.Types.WebhookExtra as WT
 import Kernel.External.Encryption
@@ -68,7 +69,7 @@ sendWebhookWithRetry WebhookJobInfo {..} = do
       case webhookId of
         Just _ -> do
           webhookToDeliver <- findAllWithStatusModeWithinRetryThreshold statusToCheck mode retryCount' event webhookId Nothing limit'
-          let mbWebhookData = listToMaybe webhookToDeliver
+          let mbWebhookData = webhookToDeliver ^? _head
           status <- maybe (pure WT.NO_CONFIG) processWebhookData mbWebhookData
           case status of
             WT.DELIVERED -> pure BATCH_PROCCESSING_COMPLETED

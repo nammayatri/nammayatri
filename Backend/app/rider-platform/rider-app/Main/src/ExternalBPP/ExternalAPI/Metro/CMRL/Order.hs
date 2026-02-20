@@ -3,6 +3,7 @@
 
 module ExternalBPP.ExternalAPI.Metro.CMRL.Order where
 
+import Control.Lens ((^?), _head)
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Data.UUID as UU
@@ -137,4 +138,4 @@ generateQRTickets config qrReq = do
     Right qrResponse -> return qrResponse.result
   where
     getStationCode :: Text -> Text
-    getStationCode stationCode = fromMaybe stationCode (listToMaybe $ T.splitOn "|" stationCode)
+    getStationCode stationCode = fromMaybe stationCode (T.splitOn "|" stationCode ^? _head)

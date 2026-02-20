@@ -1,5 +1,6 @@
 module Storage.Queries.DriverInformationExtra where
 
+import Control.Lens ((^..), _Just, to)
 import qualified Data.Either as Either
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
@@ -13,7 +14,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import Domain.Types.Plan as P
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (find, foldl, foldl', id, map)
+import EulerHS.Prelude hiding (find, foldl, foldl', id, map, (^..))
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types as Maps
@@ -65,11 +66,11 @@ findAllDriverIdExceptProvided merchant opCity driverIdsToBeExcluded = do
     Left _ -> pure []
 
 findAllByEnabledAtInWindow :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe UTCTime -> Maybe UTCTime -> m [DriverInformation]
-findAllByEnabledAtInWindow merchantOpCityId from to = do
+findAllByEnabledAtInWindow merchantOpCityId from toTime = do
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDI.enabledAt $ Se.GreaterThanOrEq from,
-          Se.Is BeamDI.enabledAt $ Se.LessThanOrEq to,
+          Se.Is BeamDI.enabledAt $ Se.LessThanOrEq toTime,
           Se.Is BeamDI.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId)
         ]
     ]
@@ -113,7 +114,7 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
     ( [ Se.Set BeamDI.enabled isEnabled,
         Se.Set BeamDI.updatedAt now
       ]
-        <> ([Se.Set BeamDI.verified (fromJust isVerified) | isJust isVerified])
+        <> (isVerified ^.. _Just . to (Se.Set BeamDI.verified))
         <> ([Se.Set BeamDI.lastEnabledOn (Just now) | isEnabled])
         <> ([Se.Set BeamDI.enabledAt (Just now) | isEnabled && isNothing enabledAt])
     )
@@ -416,7 +417,7 @@ findByIdAndVerified (Id driverInformationId) mbVerified =
   findOneWithKV
     [ Se.And $
         [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
-          <> [Se.Is BeamDI.verified $ Se.Eq (fromJust mbVerified) | isJust mbVerified]
+          <> (mbVerified ^.. _Just . to (\v -> Se.Is BeamDI.verified $ Se.Eq v))
     ]
 
 updateAadhaarNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe (EncryptedHashed Text) -> Id Person.Driver -> m ()

@@ -31,6 +31,7 @@ module SharedLogic.MerchantConfig
   )
 where
 
+import Control.Lens ((^?), _head)
 import Data.Foldable.Extra
 import qualified Domain.Types.BookingStatus as BT
 import qualified Domain.Types.MerchantConfig as DMC
@@ -188,7 +189,7 @@ checkAuthFraudByIP mc clientIP = Redis.withNonCriticalCrossAppRedis $ do
     pure (fraudDetected, if fraudDetected then Just selectedMc.id else Nothing)
 
   let authFraudDetected = any fst results
-  let fraudMerchantConfigId = listToMaybe [mcId | (True, Just mcId) <- results]
+  let fraudMerchantConfigId = [mcId | (True, Just mcId) <- results] ^? _head
 
   pure (authFraudDetected, fraudMerchantConfigId)
 
@@ -217,11 +218,9 @@ customerAuthBlock riderId mcId blockDurationMinutes = do
 blockCustomerByIP :: (CacheFlow m r, MonadFlow m) => Text -> Maybe (Id DMC.MerchantConfig) -> Maybe Minutes -> m ()
 blockCustomerByIP clientIP _mcId blockDurationMinutes = Redis.withNonCriticalCrossAppRedis $ do
   let blockKey = "Customer:IPBlocked:" <> clientIP
-  case blockDurationMinutes of
-    Nothing -> return ()
-    Just mins -> do
-      let ttlSeconds = fromIntegral mins * 60
-      void $ Redis.setExp blockKey ("true" :: Text) ttlSeconds
+  whenJust blockDurationMinutes $ \mins -> do
+    let ttlSeconds = fromIntegral mins * 60
+    void $ Redis.setExp blockKey ("true" :: Text) ttlSeconds
   logInfo $ "IP " <> clientIP <> " has been blocked for " <> show blockDurationMinutes <> " minutes"
 
 isIPBlocked :: (CacheFlow m r, MonadFlow m) => Text -> m Bool

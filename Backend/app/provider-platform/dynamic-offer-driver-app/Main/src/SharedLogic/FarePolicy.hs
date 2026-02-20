@@ -7,11 +7,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 module SharedLogic.FarePolicy where
 
 import BecknV2.OnDemand.Tags as Tags
 import Control.Applicative ((<|>))
+import Control.Lens ((.~))
+import Data.Generics.Labels ()
 import Data.Aeson as A
 import Data.Coerce (coerce)
 import qualified Data.Geohash as Geohash
@@ -204,8 +207,8 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
   transporterConfig <- CTC.findByMerchantOpCityId fareProduct.merchantOperatingCityId txnId >>= fromMaybeM (TransporterConfigNotFound fareProduct.merchantOperatingCityId.getId)
   mbVehicleServiceTierItem <-
     CQVST.findByServiceTierTypeAndCityIdInRideFlow fareProduct.vehicleServiceTier fareProduct.merchantOperatingCityId configsInExperimentVersions
-  let whiteListedGeohashes = fromMaybe [] transporterConfig.dpWhiteListedGeohash
-      blackListedGeohashes = fromMaybe [] transporterConfig.dpBlackListedGeohash
+  let whiteListedGeohashes = fold transporterConfig.dpWhiteListedGeohash
+      blackListedGeohashes = fold transporterConfig.dpBlackListedGeohash
   now <- getCurrentTime
   let _bookingStartTime = fromMaybe now mbBookingStartTime
   let localTimeZoneSeconds = transporterConfig.timeDiffFromUtc
@@ -246,7 +249,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
           if fareWithAddition > estimatedFare
             then do
               logWarning $ "Fare with addition: " <> show fareWithAddition <> " is greater than estimated fare: " <> show estimatedFare
-              let fullFarePolicy' = fullFarePolicy{additionalCongestionCharge = fareWithAddition - estimatedFare}
+              let fullFarePolicy' = fullFarePolicy & #additionalCongestionCharge .~ (fareWithAddition - estimatedFare)
               return fullFarePolicy'
             else return fullFarePolicy
         else return fullFarePolicy
@@ -285,10 +288,9 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
           let baseFare = parameters.baseFare
               distanceFare = extraKmFare
               pickupFare = deadKmFare
-              maxDAFare = case fullFarePolicy.driverExtraFeeBounds of
-                Just nonEmptydriverExtraFeeBounds -> do
-                  Just (DDriverExtraFeeBounds.findDriverExtraFeeBoundsByDistance distance nonEmptydriverExtraFeeBounds).maxFee
-                Nothing -> Nothing
+              maxDAFare =
+                fullFarePolicy.driverExtraFeeBounds <&> \nonEmptydriverExtraFeeBounds ->
+                  (DDriverExtraFeeBounds.findDriverExtraFeeBoundsByDistance distance nonEmptydriverExtraFeeBounds).maxFee
           mlPricingInternal <- asks (.mlPricingInternal)
           let req =
                 ML.GetCongestionChargeReq
@@ -315,7 +317,9 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
     calculateCongestionChargeViaML _ _ _ _ _ = return Nothing
 
 updateCongestionChargeMultiplier :: FarePolicyD.FarePolicy -> Maybe FarePolicyD.CongestionChargeMultiplier -> Maybe DDriverExtraFeeBounds.DriverExtraFeeBounds -> FarePolicyD.FarePolicy
-updateCongestionChargeMultiplier FarePolicyD.FarePolicy {..} congestionMultiplier driverExtraFeeBounds' = FarePolicyD.FarePolicy {congestionChargeMultiplier = congestionMultiplier, driverExtraFeeBounds = maybe driverExtraFeeBounds (NE.nonEmpty . pure) driverExtraFeeBounds', ..}
+updateCongestionChargeMultiplier fp congestionMultiplier driverExtraFeeBounds' =
+  fp & #congestionChargeMultiplier .~ congestionMultiplier
+     & #driverExtraFeeBounds .~ maybe fp.driverExtraFeeBounds (NE.nonEmpty . pure) driverExtraFeeBounds'
 
 calculateFareParametersForFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => FarePolicyD.FullFarePolicy -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> m DFareParameters.FareParameters
 calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration merchantOperatingCityId = do
@@ -422,8 +426,8 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       governmentChargeItem = mkBreakupItem governmentChargeCaption . (mkValue . show) <$> farePolicy.govtCharges
 
       mbDriverExtraFeeBoundSections = farePolicy.driverExtraFeeBounds <&> \driverExtraFeeBound -> NE.sortBy (comparing (.startDistance)) driverExtraFeeBound
-      driverExtraFeeBoundsMinFeeItems = maybe [] (\driverExtraFeeBoundSections -> mkDriverExtraFeeBoundsMinFeeItem [] (toList driverExtraFeeBoundSections) 0) mbDriverExtraFeeBoundSections
-      driverExtraFeeBoundsMaxFeeItems = maybe [] (\driverExtraFeeBoundSections -> mkDriverExtraFeeBoundsMaxFeeItem [] (toList driverExtraFeeBoundSections) 0) mbDriverExtraFeeBoundSections
+      driverExtraFeeBoundsMinFeeItems = foldMap (\driverExtraFeeBoundSections -> mkDriverExtraFeeBoundsMinFeeItem [] (toList driverExtraFeeBoundSections) 0) mbDriverExtraFeeBoundSections
+      driverExtraFeeBoundsMaxFeeItems = foldMap (\driverExtraFeeBoundSections -> mkDriverExtraFeeBoundsMaxFeeItem [] (toList driverExtraFeeBoundSections) 0) mbDriverExtraFeeBoundSections
 
       driverMinExtraFee = driverExtraFeeBounds <&> (.minFee)
       driverMinExtraFeeCaption = show Tags.DRIVER_MIN_EXTRA_FEE
@@ -571,7 +575,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
 
       [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
-        <> catMaybes [perDayMaxAllowanceInMinutesItem]
+        <> toList perDayMaxAllowanceInMinutesItem
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
 
@@ -585,7 +589,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
 
           perExtraKmStepFareItems = mkPerExtraKmStepFareItem [] (toList perExtraKmFareSections) det.baseDistance.getMeters
 
-          perMinRateSections = List.sortBy (comparing (.rideDurationInMin)) $ maybe [] toList det.perMinRateSections
+          perMinRateSections = List.sortBy (comparing (.rideDurationInMin)) $ foldMap toList det.perMinRateSections
           perMinStepFareItems = mkPerMinStepFareItem [] perMinRateSections
 
           baseDistanceCaption = show Tags.BASE_DISTANCE
@@ -802,7 +806,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           oldNightShiftChargeCaption = show Tags.NIGHT_SHIFT_CHARGE
           oldNightShiftChargeItem = mkBreakupItem oldNightShiftChargeCaption . mkValue <$> oldNightShiftCharge
 
-      catMaybes [oldNightShiftChargeItem]
+      toList oldNightShiftChargeItem
 
     newNightShiftChargeBreakups Nothing = []
     newNightShiftChargeBreakups (Just nightShiftChargeInfo) = do

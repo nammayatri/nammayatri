@@ -6,6 +6,7 @@ import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.Utils as Utils
+import Control.Lens ((^?), _Just, _head)
 import qualified Data.Aeson as A
 import qualified Data.Maybe
 import qualified Data.Text as T
@@ -14,7 +15,7 @@ import Domain.Types
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.Location as Location
 import qualified Domain.Types.Trip as Trip
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, (^?), (^..))
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Error
@@ -33,23 +34,23 @@ buildDInitReq subscriber req isValueAddNP = do
   bapCity_ <- A.decode (A.encode bapCityText) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't parse City")
   bapCountryText <- req.initReqContext.contextLocation >>= (.locationCountry) >>= (.countryCode) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't find Country")
   bapCountry_ <- A.decode (A.encode bapCountryText) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't parse Country")
-  fulfillmentId__ <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentId) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
-  tripCategory <- if isValueAddNP then req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) >>= (Just . BecknV2.OnDemand.Utils.Common.fulfillmentTypeToTripCategory) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentType not found") else pure (req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) >>= (Just . BecknV2.OnDemand.Utils.Common.fulfillmentTypeToTripCategory) & Data.Maybe.fromMaybe (OneWay OneWayOnDemandDynamicOffer))
+  fulfillmentId__ <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments ^? _Just . _head >>= (.fulfillmentId) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
+  tripCategory <- if isValueAddNP then req.initReqMessage.confirmReqMessageOrder.orderFulfillments ^? _Just . _head >>= (.fulfillmentType) >>= (Just . BecknV2.OnDemand.Utils.Common.fulfillmentTypeToTripCategory) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentType not found") else pure (req.initReqMessage.confirmReqMessageOrder.orderFulfillments ^? _Just . _head >>= (.fulfillmentType) >>= (Just . BecknV2.OnDemand.Utils.Common.fulfillmentTypeToTripCategory) & Data.Maybe.fromMaybe (OneWay OneWayOnDemandDynamicOffer))
   let fulfillmentId_ =
         case tripCategoryToPricingPolicy tripCategory of
           EstimateBased _ -> Domain.Action.Beckn.Init.DriverQuoteId (Kernel.Types.Id.Id fulfillmentId__)
           QuoteBased _ -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
-  let maxEstimatedDistance_ = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentTags) >>= Beckn.OnDemand.Utils.Init.getMaxEstimateDistance
-  paymentMethodInfo_ <- req.initReqMessage.confirmReqMessageOrder.orderPayments >>= Kernel.Prelude.listToMaybe & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join
-  let paymentMode = req.initReqMessage.confirmReqMessageOrder.orderPayments >>= Kernel.Prelude.listToMaybe <&> Beckn.OnDemand.Utils.Init.mkPaymentMode & Kernel.Prelude.join
-  let vehCategory = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleCategory)
-      vehVariant = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleVariant)
+  let maxEstimatedDistance_ = req.initReqMessage.confirmReqMessageOrder.orderFulfillments ^? _Just . _head >>= (.fulfillmentTags) >>= Beckn.OnDemand.Utils.Init.getMaxEstimateDistance
+  paymentMethodInfo_ <- req.initReqMessage.confirmReqMessageOrder.orderPayments ^? _Just . _head & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join
+  let paymentMode = req.initReqMessage.confirmReqMessageOrder.orderPayments ^? _Just . _head <&> Beckn.OnDemand.Utils.Init.mkPaymentMode & Kernel.Prelude.join
+  let vehCategory = req.initReqMessage.confirmReqMessageOrder.orderFulfillments ^? _Just . _head >>= (.fulfillmentVehicle) >>= (.vehicleCategory)
+      vehVariant = req.initReqMessage.confirmReqMessageOrder.orderFulfillments ^? _Just . _head >>= (.fulfillmentVehicle) >>= (.vehicleVariant)
   vehicleVariant_ <- Beckn.OnDemand.Utils.Init.castVehicleVariant vehCategory vehVariant & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest $ "Unable to parse vehicle variant:-" <> show vehVariant <> ",vehicle category:-" <> show vehCategory)
   let bppSubscriberId_ = req.initReqContext.contextBppId
-  riderPhoneNumber <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentCustomer) >>= (.customerContact) >>= (.contactPhone) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Customer Phone not found.")
-  let mbRiderName = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personName)
-  estimateId <- req.initReqMessage.confirmReqMessageOrder.orderItems >>= Kernel.Prelude.listToMaybe >>= (.itemId) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Item Id not found.")
-  orderItem <- req.initReqMessage.confirmReqMessageOrder.orderItems >>= Kernel.Prelude.listToMaybe & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Order Item not found.")
+  riderPhoneNumber <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments ^? _Just . _head >>= (.fulfillmentCustomer) >>= (.customerContact) >>= (.contactPhone) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Customer Phone not found.")
+  let mbRiderName = req.initReqMessage.confirmReqMessageOrder.orderFulfillments ^? _Just . _head >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personName)
+  estimateId <- req.initReqMessage.confirmReqMessageOrder.orderItems ^? _Just . _head >>= (.itemId) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Item Id not found.")
+  orderItem <- req.initReqMessage.confirmReqMessageOrder.orderItems ^? _Just . _head & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Order Item not found.")
   let initReqDetails = case tripCategory of
         Delivery _ -> getDeliveryDetails orderItem.itemTags
         _ -> Nothing

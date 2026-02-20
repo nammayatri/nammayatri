@@ -123,7 +123,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
   previousRideInprogress <- bool (QDI.findByPrimaryKey driver.id) (pure Nothing) (booking.isScheduled)
-  let isDriverOnRide = bool (Just False) (previousRideInprogress >>= Just . isJust <$> (.driverTripEndLocation)) (isJust previousRideInprogress)
+  let isDriverOnRide = Just $ maybe False (isJust . (.driverTripEndLocation)) previousRideInprogress
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
@@ -443,12 +443,10 @@ throwErrorOnRide includeDriverCurrentlyOnRide driverInfo isForwardRequest = do
 
 calculateEstimatedEndTimeRange :: UTCTime -> Seconds -> Maybe DTC.ArrivalTimeBufferOfVehicle -> DST.ServiceTierType -> Maybe DRide.EstimatedEndTimeRange
 calculateEstimatedEndTimeRange currTime tripEstimatedDuration bufferJson serviceTier =
-  case getArrivalTimeBufferOfVehicle bufferJson serviceTier of
-    Nothing -> Nothing
-    Just timebufferOfVehicle ->
-      let start = addUTCTime (secondsToNominalDiffTime (tripEstimatedDuration + div timebufferOfVehicle 2)) currTime
-          end = addUTCTime (secondsToNominalDiffTime timebufferOfVehicle) start
-       in Just $ DRide.EstimatedEndTimeRange {start = start, end = end}
+  getArrivalTimeBufferOfVehicle bufferJson serviceTier <&> \timebufferOfVehicle ->
+    let start = addUTCTime (secondsToNominalDiffTime (tripEstimatedDuration + div timebufferOfVehicle 2)) currTime
+        end = addUTCTime (secondsToNominalDiffTime timebufferOfVehicle) start
+     in DRide.EstimatedEndTimeRange {start = start, end = end}
 
 getArrivalTimeBufferOfVehicle :: Maybe DTC.ArrivalTimeBufferOfVehicle -> DST.ServiceTierType -> Maybe Seconds
 getArrivalTimeBufferOfVehicle bufferJson serviceTier =

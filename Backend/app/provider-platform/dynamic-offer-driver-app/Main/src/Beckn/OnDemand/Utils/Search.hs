@@ -24,7 +24,7 @@ import qualified Data.Text as T
 import qualified Data.Time
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RefereeLink as DRL
-import EulerHS.Prelude hiding (id, view, (^?))
+import EulerHS.Prelude hiding (id, view, (^?), (^..))
 import Kernel.External.Maps as Maps
 import Kernel.Types.Common
 import qualified Kernel.Types.Version as KTV

@@ -20,7 +20,7 @@ import Data.Aeson
 import Data.Aeson.Types (parseFail)
 import Data.OpenApi as OpenAPI hiding (Example)
 import qualified Data.Text as T
-import EulerHS.Prelude hiding (many, try, (<|>))
+import EulerHS.Prelude hiding (many, try, (<|>), (^..))
 import Kernel.Utils.Error.Throwing (fromEitherM')
 import Text.Parsec
 import Text.Parsec.Language (emptyDef)

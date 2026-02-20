@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# LANGUAGE OverloadedLabels #-}
+
 module SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
   ( calculateDriverFeeForDrivers,
     sendManualPaymentLink,
@@ -20,9 +22,11 @@ module SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
   )
 where
 
+import Control.Lens ((.~), (^?), _head)
 import qualified Control.Monad.Catch as C
 import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed (mod')
+import Data.Generics.Labels ()
 import Data.List (nubBy)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
@@ -136,9 +140,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
         let maxCreditLimitLinkedToDPlan = mbPlan <&> (.maxCreditLimit)
             isPlanToggleAllowedAtPlanLevel = mbPlan <&> (.subscribedFlagToggleAllowed)
         mbDriverStat <- QDS.findById (cast driverFee.driverId)
-        case mbPlan of
-          Nothing -> pure ()
-          Just plan -> do
+        whenJust mbPlan $ \plan -> do
             let (planBaseFrequcency, baseAmount) = getFreqAndBaseAmountcase plan.planBaseAmount
                 (mandateSetupDate, mandateId, waiveOffMode, waiveOffPercentage, waiveOffValidTill) = case mbDriverPlan of
                   Nothing -> (now, Nothing, DPlan.NO_WAIVE_OFF, 0.0, Nothing) -- if there is no driverplan in that case we pass Nothing to avoid waiveoff in getFinalOrderAmount function
@@ -213,7 +215,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 unless ((totalFee == 0 || coinCashLeft >= totalFee) && totalCancellationPenalty == 0) $ processDriverFee paymentMode driverFeeWithPenalties subscriptionConfigs transporterConfig
             updateSerialOrderForInvoicesInWindow driverFee.id merchantOpCityId startTime endTime serviceName
 
-    case listToMaybe driverFees of
+    case driverFees ^? _head of
       Nothing -> do
         Hedis.del (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
         duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "DriverFeeCalc") (3600 * 12) True -- 12 hours
@@ -384,17 +386,15 @@ processRestFee ::
   HighPrecMoney ->
   TransporterConfig ->
   m ()
-processRestFee paymentMode DriverFee {..} vendorFees subscriptionConfig _ _ transporterConfig = do
+processRestFee paymentMode driverFee' vendorFees subscriptionConfig _ _ transporterConfig = do
   let driverFee =
-        DriverFee
-          { status = if paymentMode == MANUAL && not (subscriptionConfig.allowManualPaymentLinks) then PAYMENT_OVERDUE else PAYMENT_PENDING,
-            feeType = if paymentMode == MANUAL then RECURRING_INVOICE else RECURRING_EXECUTION_INVOICE,
-            ..
-          }
+        driverFee'
+          & #status .~ (if paymentMode == MANUAL && not (subscriptionConfig.allowManualPaymentLinks) then PAYMENT_OVERDUE else PAYMENT_PENDING)
+          & #feeType .~ (if paymentMode == MANUAL then RECURRING_INVOICE else RECURRING_EXECUTION_INVOICE)
   QDF.create driverFee
   when (fromMaybe False subscriptionConfig.isVendorSplitEnabled) $ mapM_ (QVF.create) vendorFees
   processDriverFee paymentMode driverFee subscriptionConfig transporterConfig
-  updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName
+  updateSerialOrderForInvoicesInWindow driverFee.id driverFee'.merchantOperatingCityId driverFee'.startTime driverFee'.endTime driverFee.serviceName
 
 makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Payment.OfferListReq
 makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig = do
@@ -553,7 +553,7 @@ updateSerialOrderForInvoicesInWindow driverFeeId merchantOpCityId startTime endT
     --- change lock based on mechantId --
     counter <- getDriverFeeBillNumberKey merchantOpCityId serviceName
     when (isNothing counter) $ do
-      count <- listToMaybe <$> QDF.findMaxBillNumberInRangeForServiceName merchantOpCityId startTime endTime serviceName
+      count <- (^? _head) <$> QDF.findMaxBillNumberInRangeForServiceName merchantOpCityId startTime endTime serviceName
       void $ Hedis.incrby (mkDriverFeeBillNumberKey merchantOpCityId serviceName) (maybe 0 toInteger (count >>= (.billNumber)))
     billNumber' <- Hedis.incr (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
     QDF.updateBillNumberById (Just (fromInteger billNumber')) driverFeeId
@@ -725,10 +725,8 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
     let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay endTime) (secondsToDiffTime 0))
         startTime' = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
         endTime' = addUTCTime transporterConfig.driverPaymentCycleDuration startTime'
-    case transporterConfig.driverFeeCalculationTime of
-      Nothing -> pure ()
-      Just dfCalcTime ->
-        Redis.runInMasterCloudRedisCell $ do
+    whenJust transporterConfig.driverFeeCalculationTime $ \dfCalcTime ->
+      Redis.runInMasterCloudRedisCell $ do
           isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache startTime' endTime' merchantOpCityId serviceName
           let dfCalculationJobTs' = diffUTCTime (addUTCTime dfCalcTime endTime') now
           case isDfCaclculationJobScheduled of

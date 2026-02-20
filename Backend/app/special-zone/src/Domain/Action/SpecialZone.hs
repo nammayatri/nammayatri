@@ -14,9 +14,9 @@
 
 module Domain.Action.SpecialZone where
 
-import Data.Maybe (listToMaybe)
+import Control.Lens ((^?), _head)
 import qualified Domain.Types.SpecialZone as Domain
-import EulerHS.Prelude hiding (id, state)
+import EulerHS.Prelude hiding (id, state, (^?), (^..))
 import Kernel.External.Maps (LatLong)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Transactionable as Esq
@@ -75,7 +75,7 @@ mkPolygonWithGates :: [Domain.LocationFeature] -> (Maybe Domain.LocationFeature,
 mkPolygonWithGates features = do
   let multiPolygons = filter (\feats -> feats.geometry._type == Domain.MultiPolygon || feats.geometry._type == Domain.Polygon) features
       points = filter (\feats -> feats.geometry._type == Domain.Point) features
-  (listToMaybe multiPolygons, points)
+  (multiPolygons ^? _head, points)
 
 mkSzWithGates :: MonadFlow m => Domain.SpecialZoneAPIEntity -> m (Maybe Domain.LocationFeature, [Domain.LocationFeature])
 mkSzWithGates specialZoneReq = do

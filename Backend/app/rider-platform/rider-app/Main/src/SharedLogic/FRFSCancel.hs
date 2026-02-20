@@ -139,8 +139,6 @@ handleGoogleWalletStatusUpdate booking =
           let resourceId = serviceAccount.saIssuerId <> "." <> ticket.id.getId
           let obj = TC.TransitObjectPatch {TC.state = show googleStatus}
           resp <- GWSA.getObjectGoogleWallet serviceAccount resourceId
-          case resp of
-            Nothing -> return ()
-            Just _ -> do
-              void $ GWSA.updateTicketStatusForGoogleWallet obj serviceAccount resourceId
-              return ()
+          whenJust resp $ \_ -> do
+            void $ GWSA.updateTicketStatusForGoogleWallet obj serviceAccount resourceId
+            return ()

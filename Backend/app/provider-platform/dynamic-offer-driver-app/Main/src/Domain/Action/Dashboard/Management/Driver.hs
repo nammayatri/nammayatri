@@ -68,6 +68,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
 import Control.Applicative ((<|>))
+import Control.Lens ((^?), _head)
 import qualified "dashboard-helper-api" Dashboard.Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -389,14 +390,12 @@ postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName r
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
   QDriverInfo.updateDynamicBlockedStateWithActivity driverId req.blockReason req.blockTimeInHours dashboardUserName merchantId req.reasonCode driver.merchantOperatingCityId DTDBT.Dashboard True Nothing Nothing ByDashboard
-  case req.blockTimeInHours of
-    Just hrs -> do
-      let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
-      JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOpCityId) unblockDriverJobTs $
-        UnblockDriverRequestJobData
-          { driverId = driverId
-          }
-    Nothing -> return ()
+  whenJust req.blockTimeInHours $ \hrs -> do
+    let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
+    JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOpCityId) unblockDriverJobTs $
+      UnblockDriverRequestJobData
+        { driverId = driverId
+        }
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -806,10 +805,9 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
     else do
       when (isJust driverPlan) $ do
         QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName toToggle driverId serviceName
-        fork "track service toggle" $ do
-          case driverPlan of
-            Just dp -> SEVT.trackServiceUsageChargeToggle dp Nothing
-            Nothing -> pure ()
+        fork "track service toggle" $
+          whenJust driverPlan $ \dp ->
+            SEVT.trackServiceUsageChargeToggle dp Nothing
         fork "notify rental event" $ do
           DCommon.notifyYatriRentalEventsToDriver mbVehicleNo WHATSAPP_VEHICLE_UNLINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
   where
@@ -1032,7 +1030,7 @@ postDriverSyncDocAadharPan merchantShortId _opCity Common.AadharPanSyncReq {..} 
             then throwError DocumentAlreadyInSync
             else void $ mapM (maybe (return ()) (QImage.deleteById . (.id))) imgs
     Common.Pan -> do
-      image <- fromMaybeM UnsyncedImageNotFound (listToMaybe images)
+      image <- fromMaybeM UnsyncedImageNotFound (images ^? _head)
       when (isNothing image.workflowTransactionId) $ throwError NotValidatedUisngFrontendSDK
       when (length images > 1) $ throwError (InternalError "More than one Image found for document type PAN which is not possible using frontend sdk flow!!!!!!!!!")
 

@@ -1,5 +1,6 @@
 module Storage.Queries.PaymentInvoiceExtra where
 
+import Control.Lens ((^?), _head)
 import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions
@@ -17,7 +18,7 @@ findLatestGlobal ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   m (Maybe DPI.PaymentInvoice)
 findLatestGlobal =
-  findAllWithOptionsKV [] (Se.Desc BeamPI.createdAt) (Just 1) Nothing <&> listToMaybe
+  findAllWithOptionsKV [] (Se.Desc BeamPI.createdAt) (Just 1) Nothing <&> (^? _head)
 
 -- | Find payment invoice by rideId, invoiceType, and paymentPurpose.
 -- Used to lookup specific invoice to handle cases with multiple purposes (RIDE, TIP, CANCELLATION_FEE).

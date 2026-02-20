@@ -1,5 +1,6 @@
 module Storage.Queries.FleetOwnerInformationExtra where
 
+import Control.Lens ((^..), _Just, to)
 import qualified Domain.Types.FleetOwnerInformation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -45,8 +46,8 @@ findByPersonIdAndEnabledAndVerified mbEnabled mbVerified fleetOwnerPersonId = do
   findOneWithKV
     [ Se.And $
         [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
-          <> [Se.Is Beam.enabled $ Se.Eq (fromJust mbEnabled) | isJust mbEnabled]
-          <> [Se.Is Beam.verified $ Se.Eq (fromJust mbVerified) | isJust mbVerified]
+          <> (mbEnabled ^.. _Just . to (\e -> Se.Is Beam.enabled $ Se.Eq e))
+          <> (mbVerified ^.. _Just . to (\v -> Se.Is Beam.verified $ Se.Eq v))
     ]
 
 updateAadhaarImage ::

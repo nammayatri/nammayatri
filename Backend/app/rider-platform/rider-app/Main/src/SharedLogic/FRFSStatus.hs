@@ -1,10 +1,14 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module SharedLogic.FRFSStatus where
 
 import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
+import Control.Lens ((.~))
 import Control.Monad.Extra hiding (fromMaybeM)
+import Data.Generics.Labels ()
 import qualified Data.Text as Text
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as FRFSQuoteCategory
@@ -22,7 +26,7 @@ import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
-import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust)
+import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust, (^..), (.~))
 import qualified ExternalBPP.CallAPI.Confirm as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Status as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
@@ -402,10 +406,11 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
 
     commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId_
 
-    makeUpdatedBooking DFRFSTicketBooking.FRFSTicketBooking {..} updatedStatus mTTL transactionId =
-      let validTill' = mTTL & fromMaybe validTill
-          newPaymentTxnId = transactionId <|> paymentTxnId
-       in DFRFSTicketBooking.FRFSTicketBooking {status = updatedStatus, validTill = validTill', paymentTxnId = newPaymentTxnId, ..}
+    makeUpdatedBooking booking updatedStatus mTTL transactionId =
+      booking
+        & #status .~ updatedStatus
+        & #validTill .~ fromMaybe booking.validTill mTTL
+        & #paymentTxnId .~ (transactionId <|> booking.paymentTxnId)
     getSuccessTransactionId transactions = do
       let successTransactions = filter (\transaction -> transaction.status == Payment.CHARGED) transactions
       case successTransactions of

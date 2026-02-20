@@ -61,6 +61,8 @@ default-extensions:
 
 dependencies:
   - base >= 4.7 && < 5
+  - generic-lens
+  - lens
   - record-dot-preprocessor
   - record-hasfield
   - uri-encode

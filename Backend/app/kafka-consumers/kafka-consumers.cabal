@@ -97,8 +97,10 @@ library
     , errors
     , esqueleto
     , euler-hs
+    , generic-lens
     , hedis
     , hw-kafka-client
+    , lens
     , mobility-core
     , monad-control
     , openapi3
@@ -182,9 +184,11 @@ executable kafka-consumers-exe
     , errors
     , esqueleto
     , euler-hs
+    , generic-lens
     , hedis
     , hw-kafka-client
     , kafka-consumers
+    , lens
     , mobility-core
     , monad-control
     , openapi3

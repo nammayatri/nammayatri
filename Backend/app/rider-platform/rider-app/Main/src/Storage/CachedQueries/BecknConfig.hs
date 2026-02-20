@@ -56,7 +56,8 @@ findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOper
 cacheMerchantIdDomainAndVehicle :: (CacheFlow m r) => BecknConfig -> m ()
 cacheMerchantIdDomainAndVehicle config = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeMerchantIdDomainKey (fromJust config.merchantId) config.domain config.vehicleCategory) config expTime
+  let merchantId = fromMaybe (error "BecknConfig.merchantId is Nothing in cacheMerchantIdDomainAndVehicle") config.merchantId
+  Hedis.setExp (makeMerchantIdDomainKey merchantId config.domain config.vehicleCategory) config expTime
 
 cacheMerchantIdDomainVehicleAndMerchantOperatingCityId :: (CacheFlow m r) => Id MerchantOperatingCity -> Id Merchant -> Text -> Enums.VehicleCategory -> BecknConfig -> m ()
 cacheMerchantIdDomainVehicleAndMerchantOperatingCityId merchantOperatingCityId merchantId domain vehicle config = do

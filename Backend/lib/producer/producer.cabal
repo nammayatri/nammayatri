@@ -81,7 +81,9 @@ library
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
+    , generic-lens
     , hedis
+    , lens
     , mobility-core
     , monad-control
     , persistent
@@ -160,7 +162,9 @@ executable producer-exe
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
+    , generic-lens
     , hedis
+    , lens
     , mobility-core
     , monad-control
     , persistent

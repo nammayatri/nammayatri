@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.InvoiceGeneration where
 
+import Control.Lens ((^?), _head)
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import Data.Time.Calendar (toGregorian)
@@ -87,7 +88,7 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
   allBookings <- case bookingId of
     Just bookingId' -> do
       booking <- QBE.findCompletedBookingById (Id bookingId')
-      return (maybeToList booking)
+      return (toList booking)
     Nothing -> do
       QBE.findBookingsForInvoice personId startDate endDate Nothing Nothing
 
@@ -195,7 +196,7 @@ calculateTotalFromRides bookings =
     getRideComputedPrice :: DBAPI.BookingAPIEntity -> Maybe Rational
     getRideComputedPrice booking = do
       let completedRide = filter (\ride -> ride.status == DRide.COMPLETED) booking.rideList
-      ride <- listToMaybe completedRide
+      ride <- completedRide ^? _head
       computedPrice <- ride.computedPrice
       return $ fromIntegral computedPrice
 

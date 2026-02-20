@@ -582,10 +582,9 @@ rideStartedReqHandler ::
   m ()
 rideStartedReqHandler ValidatedRideStartedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  fork "ride start geohash frequencyUpdater" $ do
-    case tripStartLocation of
-      Just location -> frequencyUpdator booking.merchantId location Nothing TripStart Nothing
-      Nothing -> return ()
+  fork "ride start geohash frequencyUpdater" $
+    whenJust tripStartLocation $ \location ->
+      frequencyUpdator booking.merchantId location Nothing TripStart Nothing
   let updRideForStartReq =
         ride{status = DRide.INPROGRESS,
              rideStartTime,
@@ -699,10 +698,9 @@ rideCompletedReqHandler ::
   m ()
 rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  fork "ride end geohash frequencyUpdater" $ do
-    case tripEndLocation of
-      Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd Nothing
-      Nothing -> return ()
+  fork "ride end geohash frequencyUpdater" $
+    whenJust tripEndLocation $ \location ->
+      frequencyUpdator booking.merchantId location Nothing TripEnd Nothing
   fork "updating total rides count" $ SMC.updateTotalRidesCounters person
   merchantConfigs <- CMC.findAllByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
@@ -795,7 +793,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.END_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRide (fromMaybe now rideEndTime))
-  when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
+  whenJust paymentStatus $ \ps -> when (booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id ps
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
   QFareBreakup.createMany breakups
@@ -852,9 +850,9 @@ addOffersNammaTags ride person = do
   let rideData = mkRideData ride
       customerData = Y.CustomerData {mobileNumber = decryptedMobileNumber, gender = person.gender}
   tags <- LYDL.computeNammaTagsWithExpiryAndDebugLog (cast person.merchantOperatingCityId) Yudhishthira.RideEndOffers (Y.EndRideOffersTagData customerData rideData)
-  newTags <- modifiedNewNammaTags tags (fromMaybe [] person.customerNammaTags) now
+  newTags <- modifiedNewNammaTags tags (fold person.customerNammaTags) now
   when (not $ null newTags) $ do
-    QP.updateCustomerTags (Just $ (fromMaybe [] person.customerNammaTags) <> newTags) person.id
+    QP.updateCustomerTags (Just $ (fold person.customerNammaTags) <> newTags) person.id
     pushToKafka (RideEndOffersKafkaData ride.id person.id newTags now) "customer-ride-end-offers" person.id.getId
     Notify.notifyOnRideEndOffer person
   where
@@ -1065,12 +1063,12 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
           nammaTags <- withTryCatch "computeNammaTags:RideCancel" (LYDL.computeNammaTagsWithDebugLog (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel tagData)
           logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags)
           let mbNammaTags = eitherToMaybe nammaTags
-          tagsWithExpiry <- forM (fromMaybe [] mbNammaTags) $ \tag -> Yudhishthira.fetchNammaTagExpiry (cast booking.merchantOperatingCityId) tag
+          tagsWithExpiry <- forM (fold mbNammaTags) $ \tag -> Yudhishthira.fetchNammaTagExpiry (cast booking.merchantOperatingCityId) tag
           person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-          let existingTags = fromMaybe [] person.customerNammaTags
+          let existingTags = fold person.customerNammaTags
           let updatedTags = existingTags <> tagsWithExpiry
           QP.updateCustomerTags (Just updatedTags) booking.riderId
-          let tags = fromMaybe [] mbNammaTags
+          let tags = fold mbNammaTags
           when (validCustomerCancellation `elem` tags) $ do
             windowSize <- CCR.getWindowSize booking.merchantOperatingCityId
             void $ CCR.incrementCancelledCount booking.riderId windowSize
@@ -1100,7 +1098,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
         DRB.OneWayDetails details ->
           when (details.isUpgradedToCab == Just True) $ do
             person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-            let personTags = fromMaybe [] person.customerNammaTags
+            let personTags = fold person.customerNammaTags
             unless (rejectUpgradeTag `Yudhishthira.elemTagNameValue` personTags) $ do
               rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry (cast booking.merchantOperatingCityId) rejectUpgradeTag
               QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
@@ -1242,7 +1240,8 @@ validateRideCompletedReq RideCompletedReq {..} = do
         throwError . InvalidRequest $ "payment_status is already PAID for bookingId:-" <> show booking.id.getId
       when (paymentStatus /= Just DRB.PAID) $ do
         throwError . InvalidRequest $ "Invalid payment status change:-" <> show paymentStatus <> " for bookingId:-" <> show booking.id.getId <> ", which is already completed."
-      return . Right $ ValidatedFarePaidReq {booking, paymentStatus = fromJust paymentStatus} -- fromJust is safe here because of above check.
+      ps <- paymentStatus & fromMaybeM (InvalidRequest "paymentStatus is Nothing in validateFarePaidReq")
+      return . Right $ ValidatedFarePaidReq {booking, paymentStatus = ps}
 
 validateBookingCancelledReq ::
   ( CacheFlow m r,

@@ -13,6 +13,7 @@
 -}
 module IssueManagement.Storage.CachedQueries.Issue.IssueMessage where
 
+import Control.Lens ((^?), _head)
 import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueMessage
@@ -41,7 +42,7 @@ findByIdAndLanguage issueMessageId language identifier =
       result <-
         maybe (return []) (appendMediaFiles identifier . (: []))
           =<< Queries.findByIdAndLanguage issueMessageId language
-      cacheIssueMessageByIdAndLanguage issueMessageId language identifier /=<< pure (listToMaybe result)
+      cacheIssueMessageByIdAndLanguage issueMessageId language identifier /=<< pure (result ^? _head)
 
 findAllActiveByCategoryIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> Identifier -> m [(IssueMessage, DetailedTranslation, [Text])]
 findAllActiveByCategoryIdAndLanguage issueCategoryId language identifier =

@@ -22,6 +22,7 @@ module Domain.Action.UI.Maps
   )
 where
 
+import Control.Lens ((^?), _head)
 import qualified Data.Geohash as DG
 import Data.Text (pack)
 import qualified Data.Time as DT
@@ -89,19 +90,17 @@ getPlaceName merchantId merchantOpCityId entityId req = do
 callMapsApi :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> Int -> Maybe Text -> m Maps.GetPlaceNameResp
 callMapsApi merchantId merchantOpCityId req geoHashPrecisionValue entityId = do
   res <- Maps.getPlaceName merchantId merchantOpCityId entityId req
-  let firstElement = listToMaybe res
-  case firstElement of
-    Just element -> do
-      let (latitude, longitude) = case req.getBy of
-            MIT.ByLatLong (Maps.LatLong lat lon) -> (lat, lon)
-            _ -> (element.location.lat, element.location.lon)
-      placeNameCache <- convertResultsRespToPlaceNameCache element latitude longitude geoHashPrecisionValue
-      _ <- CM.create placeNameCache
-      whenJust placeNameCache.placeId $ \placeid -> do
-        CM.cachedPlaceByPlaceId placeid [placeNameCache]
-      whenJust placeNameCache.geoHash $ \geohash -> do
-        CM.cachedPlaceByGeoHash geohash [placeNameCache]
-    Nothing -> pure ()
+  let firstElement = res ^? _head
+  whenJust firstElement $ \element -> do
+    let (latitude, longitude) = case req.getBy of
+          MIT.ByLatLong (Maps.LatLong lat lon) -> (lat, lon)
+          _ -> (element.location.lat, element.location.lon)
+    placeNameCache <- convertResultsRespToPlaceNameCache element latitude longitude geoHashPrecisionValue
+    _ <- CM.create placeNameCache
+    whenJust placeNameCache.placeId $ \placeid -> do
+      CM.cachedPlaceByPlaceId placeid [placeNameCache]
+    whenJust placeNameCache.geoHash $ \geohash -> do
+      CM.cachedPlaceByGeoHash geohash [placeNameCache]
   return res
 
 convertToGetPlaceNameResp :: PlaceNameCache -> Maps.PlaceName

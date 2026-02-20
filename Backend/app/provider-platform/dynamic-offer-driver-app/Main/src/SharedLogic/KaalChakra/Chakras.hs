@@ -50,7 +50,7 @@ mkKaalChakraHandle merchantId merchantOperatingCityId =
   Event.Handle
     { getUserTags = \userId -> do
         mbDriver <- QPerson.findById $ cast @LYT.User @DPerson.Person userId
-        pure $ mbDriver <&> (\driver -> fromMaybe [] driver.driverTag),
+        pure $ mbDriver <&> (\driver -> fold driver.driverTag),
       updateUserTags = \userId driverTags -> QPerson.updateDriverTag (Just driverTags) (cast @LYT.User @DPerson.Person userId),
       action = Actions.kaalChakraAction merchantOperatingCityId . cast @LYT.User @DPerson.Person,
       createFetchUserDataJob = createFetchUserDataJob merchantId merchantOperatingCityId,

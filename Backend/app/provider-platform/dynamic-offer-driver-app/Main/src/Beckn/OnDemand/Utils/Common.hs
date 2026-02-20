@@ -53,7 +53,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Variant
-import EulerHS.Prelude hiding (id, state, view, whenM, (%~), (^?))
+import EulerHS.Prelude hiding (id, state, view, whenM, (%~), (^?), (^..))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
 import qualified Kernel.External.Maps as Maps
@@ -193,9 +193,7 @@ getContextBapUri context = do
 getContextBppUri :: MonadFlow m => Spec.Context -> m (Maybe BaseUrl)
 getContextBppUri context = do
   let mbBppUriText = context.contextBppUri
-  case mbBppUriText of
-    Nothing -> pure Nothing
-    Just bppUriText -> Just <$> A.decode (A.encode bppUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBppUri: " <> bppUriText)
+  traverse (\bppUriText -> A.decode (A.encode bppUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBppUri: " <> bppUriText)) mbBppUriText
 
 withTransactionIdLogTag :: (Log m) => Text -> m a -> m a
 withTransactionIdLogTag = withTransactionIdLogTag'
@@ -1384,7 +1382,7 @@ convertEstimateToPricing _specialLocationName (DEst.Estimate {..}, serviceTier, 
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (serviceTier.defaultForVehicleVariant ^? _head), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
@@ -1404,7 +1402,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (serviceTier.defaultForVehicleVariant ^? _head), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
@@ -1430,7 +1428,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (serviceTier.defaultForVehicleVariant ^? _head), -- ideally this should not be empty
       distanceToNearestDriver = Nothing,
       isCustomerPrefferedSearchRoute = Nothing,
       isBlockedRoute = Nothing,
@@ -1712,35 +1710,32 @@ mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare c
 
 mkVehicleIconTag :: Maybe BaseUrl -> Maybe [Spec.TagGroup]
 mkVehicleIconTag mbBaseUrl =
-  case mbBaseUrl of
-    Just baseUrl ->
-      Just $
-        [ Spec.TagGroup
-            { tagGroupDisplay = Just False,
-              tagGroupDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.VEHICLE_INFO,
-                      descriptorName = Just "Vehicle Icon",
-                      descriptorShortDesc = Nothing
-                    },
-              tagGroupList =
-                Just
-                  [ Spec.Tag
-                      { tagDisplay = Just False,
-                        tagDescriptor =
-                          Just
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.VEHICLE_ICON_URL,
-                                descriptorName = Just "Vehicle Icon URL",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagValue = Just $ showBaseUrl baseUrl
-                      }
-                  ]
-            }
-        ]
-    Nothing -> Nothing
+  mbBaseUrl <&> \baseUrl ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.VEHICLE_INFO,
+                  descriptorName = Just "Vehicle Icon",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.VEHICLE_ICON_URL,
+                            descriptorName = Just "Vehicle Icon URL",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ showBaseUrl baseUrl
+                  }
+              ]
+        }
+    ]
 
 mkRateCardBreakupItem :: Text -> Text -> RateCardBreakupItem
 mkRateCardBreakupItem = RateCardBreakupItem

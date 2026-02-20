@@ -20,6 +20,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
+import Control.Lens ((^?), _Just, _head)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (Id (Id))
@@ -44,7 +45,7 @@ buildOnStatusReqV2 req txnId = do
     orderStatus <- order.orderStatus & fromMaybeM (InvalidRequest "order.status is not present in on_status request.")
     eventType <-
       order.orderFulfillments
-        >>= listToMaybe
+        ^? _Just . _head
         >>= (.fulfillmentState)
         >>= (.fulfillmentStateDescriptor)
         >>= (.descriptorCode)

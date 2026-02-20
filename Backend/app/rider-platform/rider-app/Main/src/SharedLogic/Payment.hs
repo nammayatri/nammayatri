@@ -2,6 +2,7 @@ module SharedLogic.Payment where
 
 import qualified Beckn.ACL.Cancel as ACL
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Lens ((^?), _head)
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -101,9 +102,8 @@ orderStatusHandler fulfillmentHandler paymentService paymentOrder orderStatusCal
     60
     100
     ( do
-        let walletPostingCall = case paymentOrder.merchantOperatingCityId of
-              Just merchantOperatingCityId -> Just $ TWallet.walletPosting (cast paymentOrder.merchantId) (cast merchantOperatingCityId)
-              Nothing -> Nothing
+        let walletPostingCall = paymentOrder.merchantOperatingCityId <&> \merchantOperatingCityId ->
+              TWallet.walletPosting (cast paymentOrder.merchantId) (cast merchantOperatingCityId)
         orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall walletPostingCall
         mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
         let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
@@ -323,11 +323,9 @@ refundStatusHandler paymentOrder paymentServiceType = do
             let bookingPaymentId = bookingPayment.id
                 bookingId = bookingPayment.frfsTicketBookingId
             mbBooking <- QFRFSTicketBooking.findById bookingId
-            case mbBooking of
-              Nothing -> pure ()
-              Just booking -> do
-                when (booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]) $ do
-                  QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
+            whenJust mbBooking $ \booking ->
+              when (booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]) $ do
+                QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
             case refund.status of
               Payment.REFUND_SUCCESS -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUNDED bookingPaymentId
               Payment.REFUND_FAILURE -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED bookingPaymentId
@@ -444,7 +442,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
       let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
       mbRefundResp <- DPayment.createRefundService paymentOrder.shortId refundsOrderCall
       whenJust mbRefundResp $ \refundResp -> do
-        let refundRequestId = (listToMaybe refundResp.refunds) <&> (.requestId) -- TODO :: When will refunds be more than one ? even if more than 1 there requestId would be same right ?
+        let refundRequestId = (refundResp.refunds ^? _head) <&> (.requestId) -- TODO :: When will refunds be more than one ? even if more than 1 there requestId would be same right ?
         whenJust refundRequestId $ \refundId -> do
           let scheduleAfter = riderConfig.refundStatusUpdateInterval -- Schedule for 24 hours later
               jobData =

@@ -74,7 +74,7 @@ getMetroOffers ::
   Id SearchRequest ->
   m [a]
 getMetroOffers searchReqId =
-  fromMaybe [] <$> Redis.get (metroOfferKey searchReqId)
+  fold <$> Redis.get (metroOfferKey searchReqId)
 
 metroOfferKey :: Id SearchRequest -> Text
 metroOfferKey (Id id') = "BAP:Metro:" <> id'

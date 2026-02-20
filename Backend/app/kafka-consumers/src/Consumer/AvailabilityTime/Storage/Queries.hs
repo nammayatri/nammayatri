@@ -15,6 +15,7 @@
 
 module Consumer.AvailabilityTime.Storage.Queries where
 
+import Control.Lens ((^?), _head)
 import qualified Consumer.AvailabilityTime.Storage.Beam.Tables as BeamDA
 import qualified Consumer.AvailabilityTime.Types as Domain
 import Kernel.Beam.Functions
@@ -37,7 +38,7 @@ findLatestByDriverIdAndMerchantId driverId merchantId =
     (Se.Desc BeamDA.lastAvailableTime)
     (Just 1)
     Nothing
-    <&> listToMaybe
+    <&> (^? _head)
 
 findAvailableTimeInBucketByDriverIdAndMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.DriverId -> Domain.MerchantId -> UTCTime -> UTCTime -> m (Maybe Domain.DriverAvailability)
 findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStartTime bucketEndTime =
@@ -52,7 +53,7 @@ findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStart
     (Se.Desc BeamDA.lastAvailableTime)
     (Just 1)
     Nothing
-    <&> listToMaybe
+    <&> (^? _head)
 
 createOrUpdateDriverAvailability :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.DriverAvailability -> m ()
 createOrUpdateDriverAvailability d@Domain.DriverAvailability {..} = do

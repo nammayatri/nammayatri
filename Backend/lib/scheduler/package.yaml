@@ -40,6 +40,7 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
+  - OverloadedLabels
   - OverloadedStrings
   - PatternSynonyms
   - PolyKinds
@@ -89,6 +90,8 @@ dependencies:
   - postgresql-simple
   - random
   - unordered-containers
+  - lens
+  - generic-lens
 
 ghc-options:
   - -fwrite-ide-info

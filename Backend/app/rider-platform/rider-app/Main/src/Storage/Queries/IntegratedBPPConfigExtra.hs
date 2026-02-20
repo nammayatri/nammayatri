@@ -4,6 +4,7 @@
 module Storage.Queries.IntegratedBPPConfigExtra where
 
 import qualified BecknV2.OnDemand.Enums
+import Control.Lens ((^?), _head)
 import Data.List (sortBy)
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.MerchantOperatingCity
@@ -42,7 +43,7 @@ findByDomainAndCityAndVehicleCategory ::
   Domain.Types.IntegratedBPPConfig.PlatformType ->
   m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
 findByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType =
-  fmap (listToMaybe . sortBy (\a b -> compare b.createdAt a.createdAt)) (findAllByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType)
+  fmap ((^? _head) . sortBy (\a b -> compare b.createdAt a.createdAt)) (findAllByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType)
 
 findAllByPlatformAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

@@ -343,7 +343,7 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
     Spec.Order
       { orderId = Just $ booking.id.getId,
         orderStatus = Just $ show EventEnum.CANCELLED,
-        orderFulfillments = Just $ maybeToList fulfillment,
+        orderFulfillments = Just $ toList fulfillment,
         orderCancellation =
           Just $
             Spec.Cancellation

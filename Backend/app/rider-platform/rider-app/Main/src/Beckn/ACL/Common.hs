@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.ACL.Common where
 
@@ -21,6 +22,8 @@ import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import Control.Lens ((^?), _Just, _head)
+import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Domain.Action.Beckn.Common as Common
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -109,40 +112,35 @@ castCancellationSource = \case
 
 getTagV2' :: Tag.BecknTagGroup -> Tag.BecknTag -> Maybe [Spec.TagGroup] -> Maybe Text
 getTagV2' tagGroupCode tagCode mbTagGroups =
-  case mbTagGroups of
-    Just tagGroups -> getTagV2 tagGroupCode tagCode tagGroups
-    Nothing -> Nothing
+  mbTagGroups >>= getTagV2 tagGroupCode tagCode
 
 getTagV2 :: Tag.BecknTagGroup -> Tag.BecknTag -> [Spec.TagGroup] -> Maybe Text
 getTagV2 tagGroupCode tagCode tagGroups = do
   tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just (show tagGroupCode)) tagGroups
-  case tagGroup.tagGroupList of
-    Nothing -> Nothing
-    Just tagGroupList -> do
-      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just (show tagCode)) tagGroupList
-      tag.tagValue
+  tagGroupList <- tagGroup.tagGroupList
+  tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just (show tagCode)) tagGroupList
+  tag.tagValue
   where
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
-    descriptorCode (Just desc) = desc.descriptorCode
-    descriptorCode Nothing = Nothing
+    descriptorCode = (>>= (.descriptorCode))
 
 parseBookingDetails :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.BookingDetails
 parseBookingDetails order msgId = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
   isInitiatedByCronJob <- (\(val :: Maybe Bool) -> isJust val) <$> Hedis.safeGet (makeContextMessageIdStatusSyncKey msgId)
-  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideAssigned Event.")
-  stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideAssigned Event.")
+  bppRideId <- order.orderFulfillments ^? _Just . _head . #fulfillmentId . _Just & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideAssigned Event.")
+  stops <- order.orderFulfillments ^? _Just . _head . #fulfillmentStops . _Just & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideAssigned Event.")
   start <- Utils.getStartLocation stops & fromMaybeM (InvalidRequest "pickup stop is not present in RideAssigned Event.")
   otp <- start.stopAuthorization >>= (.authorizationToken) & fromMaybeM (InvalidRequest "authorization_token is not present in RideAssigned Event.")
-  driverName <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personName) & fromMaybeM (InvalidRequest "driverName is not present in RideAssigned Event.")
-  driverMobileNumber <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "driverMobileNumber is not present in RideAssigned Event.")
-  let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
+  driverName <- order.orderFulfillments ^? _Just . _head . #fulfillmentAgent . _Just . #agentPerson . _Just . #personName . _Just & fromMaybeM (InvalidRequest "driverName is not present in RideAssigned Event.")
+  driverMobileNumber <- order.orderFulfillments ^? _Just . _head . #fulfillmentAgent . _Just . #agentContact . _Just . #contactPhone . _Just & fromMaybeM (InvalidRequest "driverMobileNumber is not present in RideAssigned Event.")
+  let tagGroups = order.orderFulfillments ^? _Just . _head . #fulfillmentAgent . _Just . #agentPerson . _Just . #personTags . _Just
   let rating :: Maybe HighPrecMeters = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.RATING tagGroups
       registeredAt :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.REGISTERED_AT tagGroups
-  let driverImage = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personImage) >>= (.imageUrl)
-  let vehicleColor = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleColor)
-      vehicleModel = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleModel)
-      vehicleNumber = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleRegistration)
+  let driverImage = order.orderFulfillments ^? _Just . _head . #fulfillmentAgent . _Just . #agentPerson . _Just . #personImage . _Just . #imageUrl . _Just
+  let vehicleColor = order.orderFulfillments ^? _Just . _head . #fulfillmentVehicle . _Just . #vehicleColor . _Just
+      vehicleModel = order.orderFulfillments ^? _Just . _head . #fulfillmentVehicle . _Just . #vehicleModel . _Just
+      vehicleNumber = order.orderFulfillments ^? _Just . _head . #fulfillmentVehicle . _Just . #vehicleRegistration . _Just
   pure $
     Common.BookingDetails
       { bppBookingId = Id bppBookingId,
@@ -158,8 +156,8 @@ parseBookingDetails order msgId = do
 
 parseRideAssignedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> m Common.RideAssignedReq
 parseRideAssignedEvent order msgId txnId = do
-  let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
-  let tagGroupsFullfillment = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+  let tagGroups = order.orderFulfillments ^? _Just . _head . #fulfillmentAgent . _Just . #agentPerson . _Just . #personTags . _Just
+  let tagGroupsFullfillment = order.orderFulfillments ^? _Just . _head . #fulfillmentTags . _Just
   let isDriverBirthDay = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
       isFreeRide = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
       vehicleAge :: Maybe Months = readMaybe . T.unpack =<< getTagV2' Tag.VEHICLE_AGE_INFO Tag.VEHICLE_AGE tagGroupsFullfillment
@@ -183,11 +181,11 @@ parseRideAssignedEvent order msgId txnId = do
 parseRideStartedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> m Common.RideStartedReq
 parseRideStartedEvent order msgId txnId = do
   bookingDetails <- parseBookingDetails order msgId
-  stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideStarted Event.")
+  stops <- order.orderFulfillments ^? _Just . _head . #fulfillmentStops . _Just & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideStarted Event.")
   start <- Utils.getStartLocation stops & fromMaybeM (InvalidRequest "pickup stop is not present in RideStarted Event.")
   let rideStartTime = start.stopTime >>= (.timeTimestamp)
-      personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
-      tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+      personTagsGroup = order.orderFulfillments ^? _Just . _head . #fulfillmentAgent . _Just . #agentPerson . _Just . #personTags . _Just
+      tagGroups = order.orderFulfillments ^? _Just . _head . #fulfillmentTags . _Just
       startOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_ODOMETER_DETAILS Tag.START_ODOMETER_READING tagGroups
       tripStartLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
       driverArrivalTime :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
@@ -211,7 +209,7 @@ getLocationFromTagV2 tagGroup key latKey lonKey =
 parseDriverArrivedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> m Common.DriverArrivedReq
 parseDriverArrivedEvent order msgId txnId = do
   bookingDetails <- parseBookingDetails order msgId
-  let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+  let tagGroups = order.orderFulfillments ^? _Just . _head . #fulfillmentTags . _Just
       arrivalTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
   return $
     Common.DriverArrivedReq
@@ -227,7 +225,7 @@ parseRideCompletedEvent order msgId txnId = do
   fare' <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= decodeFromText & fromMaybeM (InvalidRequest "quote.price.value is not present in RideCompleted Event.")
   let fare = DecimalValue.DecimalValue fare'
   let totalFare = fare
-      tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+      tagGroups = order.orderFulfillments ^? _Just . _head . #fulfillmentTags . _Just
       chargeableDistance :: Maybe HighPrecMeters = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.CHARGEABLE_DISTANCE tagGroups
       traveledDistance :: Maybe HighPrecMeters = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.TRAVELED_DISTANCE tagGroups
       endOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.END_ODOMETER_READING tagGroups
@@ -235,10 +233,10 @@ parseRideCompletedEvent order msgId txnId = do
       isValidRide :: Maybe Bool = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DETAILS_INFO Tag.IS_VALID_RIDE tagGroups
   fareBreakupsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideCompleted Event.")
   let fareBreakups = mapMaybe mkDFareBreakup fareBreakupsQuotationBreakup
-  let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
+  let personTagsGroup = order.orderFulfillments ^? _Just . _head . #fulfillmentAgent . _Just . #agentPerson . _Just . #personTags . _Just
       tripEndLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
-      rideEndTime = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) >>= Utils.getDropLocation >>= (.stopTime) >>= (.timeTimestamp)
-      paymentStatus = order.orderPayments >>= listToMaybe >>= (.paymentStatus) >>= readMaybe . T.unpack
+      rideEndTime = (order.orderFulfillments ^? _Just . _head . #fulfillmentStops . _Just) >>= Utils.getDropLocation >>= (.stopTime) >>= (.timeTimestamp)
+      paymentStatus = (order.orderPayments ^? _Just . _head . #paymentStatus . _Just) >>= readMaybe . T.unpack
   pure $
     Common.RideCompletedReq
       { bookingDetails,
@@ -268,9 +266,7 @@ parseBookingCancelledEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text
 parseBookingCancelledEvent order msgId txnId = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in BookingCancelled Event.")
   bookingDetails <-
-    case order.orderFulfillments of
-      Just _ -> Just <$> parseBookingDetails order msgId
-      Nothing -> pure Nothing
+    traverse (\_ -> parseBookingDetails order msgId) order.orderFulfillments
   cancellationSource <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "cancellationSource is not present in BookingCancelled Event.")
   return $
     Common.BookingCancelledReq

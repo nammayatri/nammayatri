@@ -167,9 +167,8 @@ confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelection
       confirmReq :: MetroLegRequest <- mkMetroLegConfirmReq
       JL.confirm confirmReq
     DTrip.Subway -> do
-      case crisSdkResponse >>= (.latency) of
-        Just latency -> fork "Push UTS SDK Latencies" $ addGenericLatency "Uts_Sdk_Request_Booking_Latency" (Milliseconds latency)
-        Nothing -> pure ()
+      whenJust (crisSdkResponse >>= (.latency)) $ \latency ->
+        fork "Push UTS SDK Latencies" $ addGenericLatency "Uts_Sdk_Request_Booking_Latency" (Milliseconds latency)
       confirmReq :: SubwayLegRequest <- mkSubwayLegConfirmReq
       JL.confirm confirmReq
     DTrip.Walk -> do

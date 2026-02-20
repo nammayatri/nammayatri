@@ -18,6 +18,7 @@ import qualified Kernel.External.Payout.Interface.Juspay as Juspay
 import qualified Kernel.External.Payout.Interface.Types as IPayout
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import qualified Kernel.External.Payout.Types as TPayout
+import Control.Lens ((^?), _Just, _head)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
@@ -78,7 +79,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
         person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
         case payoutOrder.entityName of
           Just DPayment.METRO_BOOKING_CASHBACK -> do
-            forM_ (listToMaybe =<< payoutOrder.entityIds) $ \bookingId -> do
+            forM_ (payoutOrder.entityIds ^? _Just . _head) $ \bookingId -> do
               when (isPayoutStatusSuccess payoutStatus) do
                 QFTB.updatePayoutStatusById (Just $ castPayoutOrderStatus payoutStatus) (Id bookingId)
               fork "Update Payout Status and Transactions for MetroBooking" $ do

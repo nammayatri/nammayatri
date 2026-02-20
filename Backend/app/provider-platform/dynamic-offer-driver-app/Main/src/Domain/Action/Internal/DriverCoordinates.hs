@@ -14,6 +14,7 @@
 
 module Domain.Action.Internal.DriverCoordinates where
 
+import Control.Lens ((^?), _head)
 import Domain.Types.Ride
 import Environment
 import Kernel.Beam.Functions
@@ -38,4 +39,4 @@ getDriverCoordinates rideId apiKey = do
     throwError $ AuthBlocked "Invalid BPP internal api key"
 
   driverLocations <- LF.driversLocation [ride.driverId]
-  pure $ fmap HC.getCoordinates (listToMaybe driverLocations)
+  pure $ fmap HC.getCoordinates (driverLocations ^? _head)

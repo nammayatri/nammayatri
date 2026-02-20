@@ -2,6 +2,7 @@
 
 module IssueManagement.Storage.Queries.Issue.IssueCategory where
 
+import Control.Lens ((^?), _head)
 import Database.Beam.Postgres (Postgres)
 import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
@@ -60,14 +61,12 @@ findByIdAndLanguage (Id issueCategoryId) language = do
   iCategory <- findAllIssueCategoryWithSeCondition [Is BeamIC.id $ Eq issueCategoryId] (Asc BeamIC.priority) Nothing Nothing
   iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIC.category <$> iCategory)]]
   let dInfosWithTranslations' = foldl' (getIssueOptionsWithTranslations iTranslations) [] iCategory
-      dInfosWithTranslations = headMaybe dInfosWithTranslations'
+      dInfosWithTranslations = dInfosWithTranslations' ^? _head
   pure dInfosWithTranslations
   where
     getIssueOptionsWithTranslations iTranslations dInfosWithTranslations iCategory =
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iCategory.category) iTranslations
        in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iCategory, Just iTranslation'')) <$> iTranslations' else [(iCategory, Nothing)]
-
-    headMaybe dInfosWithTranslations' = if null dInfosWithTranslations' then Nothing else Just (head dInfosWithTranslations')
 
 findCategoriesByMinPriority :: BeamFlow m r => Int -> m [IssueCategory]
 findCategoriesByMinPriority priority =

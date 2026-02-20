@@ -37,7 +37,5 @@ rideSearchExpired apiKey RideSearchExpiredReq {..} = do
   unless (Just internalAPIKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   searchReq <- B.runInReplica $ SQ.findById transactionId
-  case searchReq of
-    Just searchReqObj -> notifyOnRideSearchExpired searchReqObj
-    Nothing -> pure ()
+  whenJust searchReq notifyOnRideSearchExpired
   pure Success

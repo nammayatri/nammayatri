@@ -92,6 +92,7 @@ library
     , exceptions
     , http-client
     , http-types
+    , lens
     , mobility-core
     , postgresql-simple
     , record-dot-preprocessor

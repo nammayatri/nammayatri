@@ -13,6 +13,7 @@ import Data.List (zip7)
 import Data.List.Extra (notNull)
 import Data.Maybe
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import Control.Lens ((^?), (^..), _Just, _head, to)
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
@@ -33,7 +34,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (all, elem, forM_, id, length, null, sum, traverse_, whenJust)
+import EulerHS.Prelude hiding (all, elem, forM_, id, length, null, sum, traverse_, whenJust, (^?), (^..))
 import IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -106,10 +107,10 @@ findAllRidesByDriverId ::
 findAllRidesByDriverId (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId]
 
 findCompletedRideByGHRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DDGR.DriverGoHomeRequest -> m (Maybe Ride)
-findCompletedRideByGHRId (Id ghrId) = findAllWithOptionsKV [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.Eq DRide.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+findCompletedRideByGHRId (Id ghrId) = findAllWithOptionsKV [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.Eq DRide.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> (^? _head)
 
 findNewOrInProgressRideByGHRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DDGR.DriverGoHomeRequest -> m (Maybe Ride)
-findNewOrInProgressRideByGHRId (Id ghrId) = findAllWithOptionsKV [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.In [DRide.NEW, DRide.INPROGRESS]]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+findNewOrInProgressRideByGHRId (Id ghrId) = findAllWithOptionsKV [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.In [DRide.NEW, DRide.INPROGRESS]]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> (^? _head)
 
 findActiveByRBId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
@@ -147,7 +148,7 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
        in acc <> ((ride',) <$> bookings')
 
 findOneByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
-findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> (^? _head)
 
 findAllByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> Maybe Int -> m [(Ride, Booking)]
 findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays = do
@@ -178,7 +179,7 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
                 then [Se.Is BeamR.status $ Se.Not $ Se.In [Ride.COMPLETED, Ride.CANCELLED]]
                 else
                   []
-                    <> ([Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus])
+                    <> (mbRideStatus ^.. _Just . to (\v -> Se.Is BeamR.status $ Se.Eq v))
                     <> (dateFilters)
           )
       ]
@@ -197,12 +198,12 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
     maxDayTime date = UTCTime date 66600
 
 findOneByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
-findOneByDriverId (Id personId) = findAllWithOptionsKV [Se.Is BeamR.driverId $ Se.Eq personId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+findOneByDriverId (Id personId) = findAllWithOptionsKV [Se.Is BeamR.driverId $ Se.Eq personId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> (^? _head)
 
 findOneCompletedOrInProgressANdCreatedWithinByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> m (Maybe Ride)
 findOneCompletedOrInProgressANdCreatedWithinByDriverId (Id personId) now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
-  listToMaybe
+  (^? _head)
     <$> findAllWithOptionsKV
       [ Se.And
           [ Se.Is BeamR.driverId $ Se.Eq personId,
@@ -531,7 +532,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
       booking <- findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId ride.bookingId] >>= fromMaybeM (BookingNotFound $ "for ride id: " <> ride.id.getId)
       rideDetails <- findOneWithKV [Se.Is BeamRD.id $ Se.Eq $ getId ride.id] >>= fromMaybeM (RideNotFound $ "for ride id: " <> ride.id.getId)
-      riderDetails <- findOneWithKV [Se.Is BeamRDR.id $ Se.Eq $ getId $ fromJust booking.riderId | isJust booking.riderId] >>= fromMaybeM (RiderDetailsNotFound $ "for booking id: " <> booking.id.getId)
+      riderDetails <- findOneWithKV (booking.riderId ^.. _Just . to (\v -> Se.Is BeamRDR.id $ Se.Eq $ getId v)) >>= fromMaybeM (RiderDetailsNotFound $ "for booking id: " <> booking.id.getId)
       let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
       pure $ mkRideItem <$> [(rideShortId, ride.createdAt, rideDetails, riderDetails, booking, fareDiff, mkBookingStatus now ride)]
     Nothing -> do
@@ -545,7 +546,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                       ( [Se.Is BeamRD.driverNumberHash $ Se.Eq $ Just driverPhoneDBHash, Se.Is BeamRD.merchantId $ Se.Eq $ Just $ getId merchant.id]
                           <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
                           <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
-                          <> [Se.Is BeamRD.vehicleNumber $ Se.Eq (fromJust mbVehicleNo) | isJust mbVehicleNo]
+                          <> (mbVehicleNo ^.. _Just . to (\v -> Se.Is BeamRD.vehicleNumber $ Se.Eq v))
                       )
                   ]
                   Nothing
@@ -581,8 +582,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                 findAllFromKvRedis
                   [ Se.And
                       ( [Se.Is BeamB.riderId $ Se.In (Just . getId . RiderDetails.id <$> riderDetails)]
-                          <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC $ fromJust mbFrom | isJust mbFrom]
-                          <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate $ fromJust mbTo | isJust mbTo]
+                          <> (mbFrom ^.. _Just . to (\v -> Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC v))
+                          <> (mbTo ^.. _Just . to (\v -> Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate v))
                           <> [Se.Is BeamB.isDashboardRequest $ Se.Eq isDashboardRequest | isJust isDashboardRequest]
                       )
                   ]
@@ -736,10 +737,10 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
             rides <-
               findAllWithOptionsKV
                 [ Se.And
-                    ( [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
-                        <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq $ (roundToMidnightUTC $ fromJust mbFrom) | isJust mbFrom]
-                        <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq $ (roundToMidnightUTCToDate $ fromJust mbTo) | isJust mbTo]
-                        <> [Se.Is BeamR.driverId $ Se.Eq $ (fromJust mbDriverId) | isJust mbDriverId]
+                    ( (mbRideStatus ^.. _Just . to (\v -> Se.Is BeamR.status $ Se.Eq v))
+                        <> (mbFrom ^.. _Just . to (\v -> Se.Is BeamR.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC v))
+                        <> (mbTo ^.. _Just . to (\v -> Se.Is BeamR.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate v))
+                        <> (mbDriverId ^.. _Just . to (\v -> Se.Is BeamR.driverId $ Se.Eq v))
                     )
                 ]
                 (Se.Desc BeamR.createdAt)
@@ -754,8 +755,8 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
                   findAllFromKvRedis
                     [ Se.And
                         ( [Se.Is BeamB.riderId $ Se.In (Just . getId . RiderDetails.id <$> riderDetails)]
-                            <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC $ fromJust mbFrom | isJust mbFrom]
-                            <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate $ fromJust mbTo | isJust mbTo]
+                            <> (mbFrom ^.. _Just . to (\v -> Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC v))
+                            <> (mbTo ^.. _Just . to (\v -> Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate v))
                         )
                     ]
                     Nothing
@@ -763,7 +764,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
                   findAllFromKvRedis
                     [ Se.And
                         ( [Se.Is BeamR.bookingId $ Se.In (getId . Booking.id <$> bookings)]
-                            <> [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
+                            <> (mbRideStatus ^.. _Just . to (\v -> Se.Is BeamR.status $ Se.Eq v))
                         )
                     ]
                     Nothing
@@ -827,9 +828,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
       let driverName = case mbDriver of
             Just driver -> driver.firstName
             Nothing -> ""
-          driverPhoneNo = case mbDriver of
-            Just driver -> driver.mobileNumber
-            Nothing -> Nothing
+          driverPhoneNo = mbDriver >>= (.mobileNumber)
        in mapMaybe
             ( \ride -> do
                 Just (mkRideItemV2 (ride.shortId, ride.id, ride.createdAt, driverName, driverPhoneNo, ride.status))
@@ -902,7 +901,7 @@ findStuckRideItems merchant opCity bookingIds now = do
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
 
 findLastRideAssigned :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
-findLastRideAssigned (Id driverId) = findAllWithOptionsKV [Se.Is BeamR.driverId $ Se.Eq driverId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+findLastRideAssigned (Id driverId) = findAllWithOptionsKV [Se.Is BeamR.driverId $ Se.Eq driverId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> (^? _head)
 
 findRideBookingsById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> m (HashMap.HashMap Text (Booking, Maybe DRide.Ride))
 findRideBookingsById merchant moCity bookingIds = do
@@ -983,7 +982,7 @@ updatePassedThroughDestination rideId passedThroughDrop = do
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 findLatestRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
-findLatestRideByDriverId (Id driverId) = findAllWithKVAndConditionalDB [Se.Is BeamR.driverId $ Se.Eq driverId] (Just (Se.Desc BeamR.createdAt)) <&> listToMaybe
+findLatestRideByDriverId (Id driverId) = findAllWithKVAndConditionalDB [Se.Is BeamR.driverId $ Se.Eq driverId] (Just (Se.Desc BeamR.createdAt)) <&> (^? _head)
 
 findByIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

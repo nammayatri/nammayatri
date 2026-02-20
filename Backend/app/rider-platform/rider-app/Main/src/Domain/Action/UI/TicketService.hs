@@ -288,9 +288,7 @@ getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
     findSpecialOccasion service = QSO.findAllSpecialOccasionByEntityId service.id.getId Nothing
 
     calcAllowedSeats serC mSeatM =
-      case serC.availableSeats of
-        Nothing -> Nothing
-        Just availableSeats -> Just $ availableSeats - (maybe 0 (.booked) mSeatM) - (maybe 0 (.blocked) mSeatM)
+      serC.availableSeats <&> \availableSeats -> availableSeats - (maybe 0 (.booked) mSeatM) - (maybe 0 (.blocked) mSeatM)
 
 postTicketPlacesBook :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.TicketBookingReq -> Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
 postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
@@ -495,10 +493,8 @@ createTicketBookingService merchantOperatingCityId ticketBookingId visitDate tic
         Domain.Types.BusinessHour.Slot time -> time
         Domain.Types.BusinessHour.Duration _ endTime' -> endTime'
   let visitDateTime = UTCTime visitDate (timeOfDayToTime businessHourTime)
-  case businessHour.bookingClosingTime of
-    Just closingTime ->
-      when (UTCTime visitDate (timeOfDayToTime closingTime) < now) $ throwError $ InvalidRequest "Booking is Closed Now"
-    Nothing -> return ()
+  whenJust businessHour.bookingClosingTime $ \closingTime ->
+    when (UTCTime visitDate (timeOfDayToTime closingTime) < now) $ throwError $ InvalidRequest "Booking is Closed Now"
   when (visitDateTime < now) $ throwError $ InvalidRequest "Cannot book for past date"
 
   tBookingSCatsWithPeopleTicketQuantity <- mapM (createTicketBookingServiceCategory merchantOperatingCityId id visitDate businessHour merchantId) categories
@@ -1013,13 +1009,11 @@ postTicketBookingsVerify _ = processBookingService
 
     findStartTime :: Kernel.Prelude.Maybe ConvertedTime -> Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay
     findStartTime maybeConvertedTime =
-      case maybeConvertedTime of
-        Just convertedTime ->
-          case (convertedTime.slot, convertedTime.startTime) of
-            (Nothing, Just st) -> Just st
-            (st, Nothing) -> st
-            _ -> Nothing
-        Nothing -> Nothing
+      maybeConvertedTime >>= \convertedTime ->
+        case (convertedTime.slot, convertedTime.startTime) of
+          (Nothing, Just st) -> Just st
+          (st, Nothing) -> st
+          _ -> Nothing
 
     verificationMsg :: TicketVerificationStatus -> T.Text
     verificationMsg BookingSuccess = "Validated successfully!"
@@ -1187,13 +1181,11 @@ postTicketBookingsVerifyV2 _ = processBookingService
 
     findStartTime :: Kernel.Prelude.Maybe ConvertedTime -> Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay
     findStartTime maybeConvertedTime =
-      case maybeConvertedTime of
-        Just convertedTime ->
-          case (convertedTime.slot, convertedTime.startTime) of
-            (Nothing, Just st) -> Just st
-            (st, Nothing) -> st
-            _ -> Nothing
-        Nothing -> Nothing
+      maybeConvertedTime >>= \convertedTime ->
+        case (convertedTime.slot, convertedTime.startTime) of
+          (Nothing, Just st) -> Just st
+          (st, Nothing) -> st
+          _ -> Nothing
 
     verificationMsg :: TicketVerificationStatus -> T.Text
     verificationMsg BookingSuccess = "Validated successfully!"

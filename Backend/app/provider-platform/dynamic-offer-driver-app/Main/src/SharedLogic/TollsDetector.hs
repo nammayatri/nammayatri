@@ -155,7 +155,7 @@ getAggregatedTollChargesAndNamesOnRoute mbDriverId route@(p1 : p2 : ps) tolls (t
           -- Option 1: Accumulate in cache (don't overwrite existing pending tolls)
           whenJust mbDriverId $ \driverId -> do
             mbExistingPendingTolls :: Maybe [Toll] <- Hedis.safeGet (tollStartGateTrackingKey driverId)
-            let allPendingTolls = fromMaybe [] mbExistingPendingTolls <> allTollCombinationsWithStartGates
+            let allPendingTolls = fold mbExistingPendingTolls <> allTollCombinationsWithStartGates
                 -- Remove duplicates by ID
                 uniquePendingTolls = nubBy (\toll1 toll2 -> getId toll1.id == getId toll2.id) allPendingTolls
             Hedis.setExp (tollStartGateTrackingKey driverId) uniquePendingTolls 21600 -- 6 hours

@@ -3,6 +3,7 @@
 module Domain.Action.Dashboard.FRFSAlerts (getFRFSAlertsFrfsLiveMetrics) where
 
 import qualified API.Types.RiderPlatform.Management.FRFSAlerts as Common
+import Data.Maybe (maybeToList)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Action.UI.GetFRFSLiveAlerts as LiveMetrics
@@ -29,7 +30,7 @@ getFRFSAlertsFrfsLiveMetrics ::
 getFRFSAlertsFrfsLiveMetrics merchantShortId opCity mbFrom mbTo mbModes = do
   merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
 
-  let modes = maybe [] (\m -> [m]) mbModes -- Convert single mode to list
+  let modes = maybeToList mbModes -- Convert single mode to list
 
   -- Call the existing UI logic
   liveMetrics <- LiveMetrics.getLiveMetrics merchantOpCity.id mbFrom mbTo modes

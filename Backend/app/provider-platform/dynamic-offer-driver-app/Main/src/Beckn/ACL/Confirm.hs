@@ -20,6 +20,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as Utils
 import qualified BecknV2.Utils as Utils
+import Control.Lens ((^?), _Just, _head)
 import qualified Data.Text as T
 import Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types.Booking (BookingStatus (NEW))
@@ -48,7 +49,7 @@ buildConfirmReqV2 req isValueAddNP = do
       Just bookingId -> QB.findById bookingId |<|>| QB.findByTransactionIdAndStatus transactionId NEW >>= fromMaybeM (InvalidRequest "Booking not found")
       Nothing -> QB.findByTransactionIdAndStatus transactionId NEW >>= fromMaybeM (InvalidRequest "Booking not found")
   let bookingId = booking.id
-  fulfillment <- req.confirmReqMessage.confirmReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
+  fulfillment <- req.confirmReqMessage.confirmReqMessageOrder.orderFulfillments ^? _Just . _head & fromMaybeM (InvalidRequest "Fulfillment not found")
   customerPhoneNumber <- fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "Customer Phone not found")
   let customerMobileCountryCode = "+91" -- TODO: check how to get countrycode via ONDC
   fromAddress' <- fulfillment.fulfillmentStops >>= Utils.getStartLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
@@ -61,7 +62,7 @@ buildConfirmReqV2 req isValueAddNP = do
       enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
       enableOtpLessRide = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableOtpLessRideTag
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
-  let paymentId = req.confirmReqMessage.confirmReqMessageOrder.orderPayments >>= listToMaybe >>= (.paymentId)
+  let paymentId = req.confirmReqMessage.confirmReqMessageOrder.orderPayments ^? _Just . _head >>= (.paymentId)
   return $
     DConfirm.DConfirmReq
       { ..

@@ -41,6 +41,7 @@ import qualified Domain.Types.StationType as Station
 import qualified Domain.Types.StopFare as StopFare
 import qualified Domain.Types.Trip as DTripTypes
 import EulerHS.Prelude (comparing, toStrict)
+import Control.Lens ((^?), _head)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -414,7 +415,7 @@ filterQuotes integratedBPPConfig quotesWithCategories (Just journeyLeg) = do
               ( \(routeStationsJson :: [API.FRFSRouteStationsAPI], firstRouteDetail) ->
                   any (\route -> Just route.code == firstRouteDetail.routeCode) routeStationsJson
               )
-              ((,) <$> (decodeFromText =<< quote.routeStationsJson) <*> (listToMaybe journeyLeg.routeDetails))
+              ((,) <$> (decodeFromText =<< quote.routeStationsJson) <*> (journeyLeg.routeDetails ^? _head))
         _ -> True
 
 mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m (Quote.FRFSQuote, [FRFSQuoteCategory])

@@ -209,15 +209,13 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
 
     fetchLegacyProfileImage driverId =
       ImageQuery.findByPersonIdImageTypeAndValidationStatus driverId DTO.ProfilePhoto DImage.APPROVED
-        >>= maybe (pure Nothing) (\image -> Just <$> S3.get (T.unpack image.s3Path))
+        >>= traverse (\image -> S3.get (T.unpack image.s3Path))
 
     fetchVehicleImage mbVehicleImageId = case mbVehicleImageId of
       Just mediaId -> do
         mbMediaEntry <- runInReplica $ QMF.findById mediaId
         case mbMediaEntry of
           Just mediaEntry -> do
-            case mediaEntry.s3FilePath of
-              Just s3Path -> Just <$> S3.get (T.unpack s3Path)
-              _ -> return Nothing
+            traverse (\s3Path -> S3.get (T.unpack s3Path)) mediaEntry.s3FilePath
           Nothing -> return Nothing
       Nothing -> return Nothing

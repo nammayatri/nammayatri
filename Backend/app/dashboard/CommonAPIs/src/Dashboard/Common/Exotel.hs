@@ -74,8 +74,8 @@ instance FromJSON ExotelHeartbeatReq where
   parseJSON (Object obj) = do
     timestamp <- obj .: "timestamp"
     statusType <- obj .: "status_type"
-    incomingAffectedSids <- fromMaybe [] <$> (obj .:? "incoming_affected")
-    outgoingAffectedSids <- fromMaybe [] <$> (obj .:? "outgoing_affected")
+    incomingAffectedSids <- fold <$> (obj .:? "incoming_affected")
+    outgoingAffectedSids <- fold <$> (obj .:? "outgoing_affected")
     dataObj <- obj .: "data"
     incomingAffected <- for incomingAffectedSids $ \phoneNumberSid -> do
       phoneNumber <- (dataObj .: AesonKey.fromText phoneNumberSid) >>= (.: "phone_number")

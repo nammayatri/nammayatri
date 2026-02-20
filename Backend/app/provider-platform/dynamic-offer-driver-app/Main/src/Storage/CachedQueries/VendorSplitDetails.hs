@@ -50,7 +50,7 @@ findAllByAreaIncludingDefaultAndCityAndVariant mbArea merchantOperatingCityId ve
           expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
           Hedis.setExp (makeAreaIncludingDefaultAndCityAndVariantKey mbArea merchantOperatingCityId vehicleVariant) dataToBeCached expTime
       )
-        /=<< Queries.findAllByAreasCityAndVariant (nub $ SpecialLocation.Default : maybeToList mbArea) merchantOperatingCityId vehicleVariant
+        /=<< Queries.findAllByAreasCityAndVariant (nub $ SpecialLocation.Default : toList mbArea) merchantOperatingCityId vehicleVariant
 
 makeAreaIncludingDefaultAndCityAndVariantKey ::
   Maybe SpecialLocation.Area ->

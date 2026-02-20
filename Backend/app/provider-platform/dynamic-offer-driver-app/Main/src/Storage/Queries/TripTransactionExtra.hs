@@ -3,6 +3,7 @@
 
 module Storage.Queries.TripTransactionExtra where
 
+import Control.Lens ((.~), (?~), (^?), (^..), _Just, _head, _last, to)
 import Domain.Types.Person
 import Domain.Types.TripTransaction
 import Kernel.Beam.Functions
@@ -106,9 +107,9 @@ findAllTripTransactionByDriverIdWithinCreationRange fleetOwnerId limit offset dr
   findAllWithOptionsKV
     [ Se.And
         ( [Se.Is BeamT.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is BeamT.fleetOwnerId $ Se.Eq fleetOwnerId.getId]
-            <> [Se.Is BeamT.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
-            <> [Se.Is BeamT.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
-            <> [Se.Is BeamT.vehicleNumber $ Se.Eq (fromJust mbVehicleNumber) | isJust mbVehicleNumber]
+            <> (mbFrom ^.. _Just . to (\v -> Se.Is BeamT.createdAt $ Se.GreaterThanOrEq v))
+            <> (mbTo ^.. _Just . to (\v -> Se.Is BeamT.createdAt $ Se.LessThanOrEq v))
+            <> (mbVehicleNumber ^.. _Just . to (\v -> Se.Is BeamT.vehicleNumber $ Se.Eq v))
         )
     ]
     (Se.Desc BeamT.createdAt)
@@ -122,9 +123,9 @@ findAllTripTransactionByDriverIdWithinCreationRangeMultiFleetOwner fleetOwnerIds
   findAllWithOptionsKV
     [ Se.And
         ( [Se.Is BeamT.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is BeamT.fleetOwnerId $ Se.In fleetOwnerIds]
-            <> [Se.Is BeamT.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
-            <> [Se.Is BeamT.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
-            <> [Se.Is BeamT.vehicleNumber $ Se.Eq (fromJust mbVehicleNumber) | isJust mbVehicleNumber]
+            <> (mbFrom ^.. _Just . to (\v -> Se.Is BeamT.createdAt $ Se.GreaterThanOrEq v))
+            <> (mbTo ^.. _Just . to (\v -> Se.Is BeamT.createdAt $ Se.LessThanOrEq v))
+            <> (mbVehicleNumber ^.. _Just . to (\v -> Se.Is BeamT.vehicleNumber $ Se.Eq v))
         )
     ]
     (Se.Desc BeamT.createdAt)
@@ -138,12 +139,12 @@ findAllTripTransactionByFleetOwnerIdAndTripType fleetOwnerIds tripType limit off
   findAllWithOptionsKV
     [ Se.And
         ( [Se.Is BeamT.fleetOwnerId $ Se.In fleetOwnerIds, Se.Is BeamT.tripType $ Se.Eq (Just tripType)]
-            <> [Se.Is BeamT.driverId $ Se.Eq (Kernel.Types.Id.getId (fromJust mbDriverId)) | isJust mbDriverId]
-            <> [Se.Is BeamT.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
-            <> [Se.Is BeamT.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
-            <> [Se.Is BeamT.status $ Se.Eq (fromJust mbStatus) | isJust mbStatus]
-            <> [Se.Is BeamT.vehicleNumber $ Se.Eq (fromJust mbVehicleNumber) | isJust mbVehicleNumber]
-            <> [Se.Is BeamT.dutyType $ Se.Eq (Just (fromJust mbDutyType)) | isJust mbDutyType]
+            <> (mbDriverId ^.. _Just . to (\v -> Se.Is BeamT.driverId $ Se.Eq (Kernel.Types.Id.getId v)))
+            <> (mbFrom ^.. _Just . to (\v -> Se.Is BeamT.createdAt $ Se.GreaterThanOrEq v))
+            <> (mbTo ^.. _Just . to (\v -> Se.Is BeamT.createdAt $ Se.LessThanOrEq v))
+            <> (mbStatus ^.. _Just . to (\v -> Se.Is BeamT.status $ Se.Eq v))
+            <> (mbVehicleNumber ^.. _Just . to (\v -> Se.Is BeamT.vehicleNumber $ Se.Eq v))
+            <> (mbDutyType ^.. _Just . to (\v -> Se.Is BeamT.dutyType $ Se.Eq (Just v)))
         )
     ]
     (Se.Desc BeamT.createdAt)

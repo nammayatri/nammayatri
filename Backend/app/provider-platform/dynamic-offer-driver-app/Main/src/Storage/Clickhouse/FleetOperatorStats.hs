@@ -1,5 +1,6 @@
 module Storage.Clickhouse.FleetOperatorStats where
 
+import Control.Lens ((^?), _head)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
@@ -89,4 +90,4 @@ sumStatsByFleetOperatorId fleetOperatorId = do
           ( \fos -> fos.fleetOperatorId CH.==. fleetOperatorId
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorStatsTTable)
-  pure $ maybe (OperatorStatsAggregated Nothing Nothing Nothing Nothing Nothing Nothing) mkOperatorStatsAggregated (listToMaybe res)
+  pure $ maybe (OperatorStatsAggregated Nothing Nothing Nothing Nothing Nothing Nothing) mkOperatorStatsAggregated (res ^? _head)

@@ -54,12 +54,10 @@ findRecentLocations personId mocId = do
 increaceFrequencyById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id RecentLocation -> m ()
 increaceFrequencyById id = do
   recentLoc <- findOneWithKV [Se.Is Beam.id $ Se.Eq (Id.getId id)]
-  case recentLoc of
-    Nothing -> pure ()
-    Just rl ->
-      updateOneWithKV
-        [Se.Set Beam.frequency ((rl.frequency :: Int) + 1)]
-        [Se.Is Beam.id $ Se.Eq (Id.getId id)]
+  whenJust recentLoc $ \rl ->
+    updateOneWithKV
+      [Se.Set Beam.frequency ((rl.frequency :: Int) + 1)]
+      [Se.Is Beam.id $ Se.Eq (Id.getId id)]
 
 findByRiderIdAndGeohashAndEntityType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id Person.Person -> Maybe Text -> Maybe Text -> DRecentLocation.EntityType -> m (Maybe RecentLocation)
 findByRiderIdAndGeohashAndEntityType riderId toGeohash fromGeohash entityType = do

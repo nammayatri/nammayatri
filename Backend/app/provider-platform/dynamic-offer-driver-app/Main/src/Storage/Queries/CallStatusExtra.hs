@@ -1,5 +1,6 @@
 module Storage.Queries.CallStatusExtra where
 
+import Control.Lens ((^?), _head)
 import qualified Database.Beam as B
 import Domain.Types.CallStatus
 import Domain.Types.Ride
@@ -54,4 +55,4 @@ countCallsByEntityId entityID = do
   pure $ either (const 0) (fromMaybe 0) resp
 
 findOneByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe CallStatus)
-findOneByEntityId rideId = findAllWithOptionsKV [Se.Is BeamCT.entityId $ Se.Eq rideId] (Se.Desc BeamCT.createdAt) (Just 1) Nothing <&> listToMaybe
+findOneByEntityId rideId = findAllWithOptionsKV [Se.Is BeamCT.entityId $ Se.Eq rideId] (Se.Desc BeamCT.createdAt) (Just 1) Nothing <&> (^? _head)

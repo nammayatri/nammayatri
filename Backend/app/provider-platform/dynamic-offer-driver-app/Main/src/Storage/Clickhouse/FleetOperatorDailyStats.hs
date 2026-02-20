@@ -4,6 +4,7 @@ module Storage.Clickhouse.FleetOperatorDailyStats where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import Data.Time.Calendar (Day)
+import Control.Lens ((^?), _head)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.Internal.Types as CH
@@ -115,7 +116,7 @@ sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
           }
       )
       FODSE.mkDailyFleetMetricsAggregated
-      (listToMaybe res)
+      (res ^? _head)
 
 sumFleetEarningsByFleetOwnerIdAndDateRange ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
@@ -144,7 +145,7 @@ sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
                 CH.&&. fos.merchantLocalDate CH.<=. toDay
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
-  pure $ maybe (FODSE.DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing) FODSE.mkDailyFleetEarningsAggregated (listToMaybe res)
+  pure $ maybe (FODSE.DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing) FODSE.mkDailyFleetEarningsAggregated (res ^? _head)
 
 sumDriverEarningsByFleetOwnerIdAndDriverIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

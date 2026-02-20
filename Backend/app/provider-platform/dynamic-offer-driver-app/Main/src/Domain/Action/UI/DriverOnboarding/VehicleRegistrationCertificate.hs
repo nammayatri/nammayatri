@@ -479,7 +479,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     Nothing -> pure []
     Just rules -> validateRCResponse rcValidationReq rules
   let mbReqStatus = if null failures then mbReqStatus' else Just "failed"
-      isExcludedVehicleCategoryFromVerification = maybe False (`elem` (map show $ fromMaybe [] transporterConfig.vehicleCategoryExcludedFromVerification)) rcVerificationResponse.vehicleCategory
+      isExcludedVehicleCategoryFromVerification = maybe False (`elem` (map show $ fold transporterConfig.vehicleCategoryExcludedFromVerification)) rcVerificationResponse.vehicleCategory
       vehicleCategory' = if isExcludedVehicleCategoryFromVerification then mapTextToVehicle rcVerificationResponse.vehicleCategory else mbVehicleCategory
       rcInput = createRCInput vehicleCategory' mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
       checks =
@@ -717,8 +717,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
 validateRCResponse :: MonadFlow m => RCValidationReq -> RCValidationRules -> m [Text]
 validateRCResponse rc rule = do
   now <- getCurrentTime
-  let fuelValid = maybe True (\ft -> isNothing rule.fuelType || Kernel.Prelude.any (\ftRule -> ftRule `isInfixOf` ft) (map T.toLower $ fromMaybe [] rule.fuelType)) (T.toLower <$> rc.fuelType)
-      vehicleClassValid = maybe True (\vc -> isNothing rule.vehicleClass || Kernel.Prelude.any (\vcRule -> vcRule `isInfixOf` vc) (map T.toLower $ fromMaybe [] rule.vehicleClass)) (T.toLower <$> rc.vehicleClass)
+  let fuelValid = maybe True (\ft -> isNothing rule.fuelType || Kernel.Prelude.any (\ftRule -> ftRule `isInfixOf` ft) (map T.toLower $ fold rule.fuelType)) (T.toLower <$> rc.fuelType)
+      vehicleClassValid = maybe True (\vc -> isNothing rule.vehicleClass || Kernel.Prelude.any (\vcRule -> vcRule `isInfixOf` vc) (map T.toLower $ fold rule.vehicleClass)) (T.toLower <$> rc.vehicleClass)
 
       manufacturerValid = case rule.vehicleOEM of
         Nothing -> True
@@ -807,12 +807,10 @@ validateRCActivation driverId transporterConfig rc = do
     Nothing -> do
       -- check if vehicle of that rc number is already with other driver
       mVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
-      case mVehicle of
-        Just vehicle -> do
-          if vehicle.driverId /= driverId
-            then deactivateIfWeCanDeactivate vehicle.driverId now removeVehicle
-            else removeVehicle driverId
-        Nothing -> return ()
+      whenJust mVehicle $ \vehicle ->
+        if vehicle.driverId /= driverId
+          then deactivateIfWeCanDeactivate vehicle.driverId now removeVehicle
+          else removeVehicle driverId
       return True
   where
     deactivateIfWeCanDeactivate :: Id Person.Person -> UTCTime -> (Id Person.Person -> Flow ()) -> Flow ()

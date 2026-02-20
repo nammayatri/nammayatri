@@ -376,7 +376,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
             merchantOperatingCityId = Just merchantOperatingCityId,
-            linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
+            linkedLocationsIds = foldMap (.linkedLocationsIds) mbExistingSpLoc,
             locationType = SL.Closed,
             priority = 0,
             merchantId = Just merchantId,
@@ -1381,11 +1381,9 @@ cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
 
 parseGateTags :: Text -> Maybe [Text]
 parseGateTags fieldValue =
-  case cleanField fieldValue of
-    Nothing -> Nothing
-    Just tags ->
-      let tagList = filter (not . T.null) $ map T.strip $ T.splitOn "," tags
-       in if null tagList then Nothing else Just tagList
+  cleanField fieldValue >>= \tags ->
+    let tagList = filter (not . T.null) $ map T.strip $ T.splitOn "," tags
+     in if null tagList then Nothing else Just tagList
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -1588,7 +1586,7 @@ getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset mbS
 
   -- Fetch driver special locations via internal API
   mbDriverLocations <- CallBPPInternal.getSpecialLocationList merchant opCity mbLimit mbOffset mbSpecialLocationType
-  let driverLocationsWithPlatform = maybe [] (map (\loc -> Common.SpecialLocationWithPlatform {location = loc, platform = Common.Driver})) mbDriverLocations
+  let driverLocationsWithPlatform = foldMap (map (\loc -> Common.SpecialLocationWithPlatform {location = loc, platform = Common.Driver})) mbDriverLocations
 
   return $ riderLocationsWithPlatform <> driverLocationsWithPlatform
 
@@ -1658,7 +1656,7 @@ getMerchantConfigGeometryList merchantShortId opCity mbLimit mbOffset mbAllCitie
 
   -- Fetch driver geometries via internal API
   mbDriverGeoms <- CallBPPInternal.getGeometryList merchant opCity mbLimit mbOffset mbAllCities
-  let driverResponse = maybe [] (map (toResponseFromInternal Common.Driver)) mbDriverGeoms
+  let driverResponse = foldMap (map (toResponseFromInternal Common.Driver)) mbDriverGeoms
 
   return $ riderResponse <> driverResponse
   where

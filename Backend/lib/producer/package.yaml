@@ -89,6 +89,8 @@ dependencies:
   - rider-app
   - yudhishthira
   - unordered-containers
+  - lens
+  - generic-lens
 
 ghc-options:
   - -Wall

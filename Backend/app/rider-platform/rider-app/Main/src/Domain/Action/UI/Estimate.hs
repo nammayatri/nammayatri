@@ -103,13 +103,13 @@ mkEstimateAPIEntity isReferredRide (Estimate {..}) = do
   valueAddNPRes <- QNP.isValueAddNP providerId
   (bppDetails :: BppDetails) <- CQBppDetails.findBySubscriberIdAndDomain providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found " <> providerId)
   let mbBaseFareEB = find (\x -> x.title == show Enums.BASE_FARE) estimateBreakupList
-      mbBaseDistanceFareEB = maybeToList $ addBaseDisatanceFareEB mbBaseFareEB -- TODO::Remove it after UI stops consuming it,
+      mbBaseDistanceFareEB = toList $ addBaseDisatanceFareEB mbBaseFareEB -- TODO::Remove it after UI stops consuming it,
   return
     EstimateAPIEntity
       { agencyName = providerName,
         agencyNumber = providerMobileNumber,
         agencyCompletedRidesCount = providerCompletedRidesCount,
-        tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
+        tripTerms = fold $ tripTerms <&> (.descriptions),
         estimateFareBreakup = mkEstimateBreakupAPIEntity <$> (estimateBreakupList <> mbBaseDistanceFareEB),
         driversLatLong = driversLocation,
         nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,

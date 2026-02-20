@@ -49,9 +49,7 @@ createCurrentContext utcTime tzMinutes mbVisitDate (mbMaxCapacity, mbBookedCount
       today = localDay localTime
       currentTimeOfDay = localTimeOfDay localTime
       todayWeekday = dayOfWeek today
-      daysBeforeBooking = case mbVisitDate of
-        Just visitDate -> Just $ fromIntegral $ diffDays visitDate today
-        Nothing -> Nothing
+      daysBeforeBooking = mbVisitDate <&> \visitDate -> fromIntegral $ diffDays visitDate today
       isWeekdayVal = todayWeekday `elem` [Time.Monday, Time.Tuesday, Time.Wednesday, Time.Thursday, Time.Friday]
    in CurrentContext
         { currentTime = utcTime,
@@ -132,7 +130,7 @@ processEntity :: Applicable a => CurrentContext -> a -> a
 processEntity ctx entity = applyRules ctx (getRules entity) entity
 
 instance HasRules TicketPlace where
-  getRules place = fromMaybe [] $ place.rules
+  getRules place = fold $ place.rules
 
 instance Applicable TicketPlace where
   applyRule = applyRuleGeneric
@@ -146,7 +144,7 @@ instance Applicable TicketPlace where
     _ -> place
 
 instance HasRules TicketService where
-  getRules service = fromMaybe [] $ service.rules
+  getRules service = fold $ service.rules
 
 instance Applicable TicketService where
   applyRule = applyRuleGeneric
@@ -156,14 +154,14 @@ instance Applicable TicketService where
     _ -> service
 
 instance HasRules ServiceCategory where
-  getRules category = fromMaybe [] $ category.rules
+  getRules category = fold $ category.rules
 
 instance Applicable ServiceCategory where
   applyRule = applyRuleGeneric
   applyAction = applyActionToCategory
 
 instance HasRules ServicePeopleCategory where
-  getRules category = fromMaybe [] $ category.rules
+  getRules category = fold $ category.rules
 
 instance Applicable ServicePeopleCategory where
   applyRule = applyRuleGeneric
@@ -173,7 +171,7 @@ applyActionToCategory :: ActionType -> ServiceCategory -> ServiceCategory
 applyActionToCategory actionType category = case actionType of
   Open -> category {isClosed = False}
   Closed -> category {isClosed = True}
-  OverrideBusinessHours _ -> category {remainingActions = pure $ (fromMaybe [] category.remainingActions) ++ [actionType]}
+  OverrideBusinessHours _ -> category {remainingActions = pure $ (fold category.remainingActions) ++ [actionType]}
   _ -> category
 
 applyActionToPeopleCategory :: ActionType -> ServicePeopleCategory -> ServicePeopleCategory

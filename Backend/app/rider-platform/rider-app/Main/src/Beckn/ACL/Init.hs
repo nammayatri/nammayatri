@@ -18,7 +18,7 @@ module Beckn.ACL.Init (buildInitReqV2) where
 import qualified Beckn.OnDemand.Transformer.Init as TF
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
-import Control.Lens ((%~))
+import Control.Lens ((%~), (^?), _head)
 import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Types.App
@@ -41,7 +41,7 @@ buildInitReqV2 res = do
   moc <- CQMOC.findByMerchantIdAndCity res.merchant.id res.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> res.merchant.id.getId <> "-city-" <> show res.city)
   riderConfig <- QRC.findByMerchantOperatingCityId moc.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
   bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId res.merchant.id "MOBILITY" moc.id
-  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
+  bapConfig <- bapConfigs ^? _head & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   let action = Context.INIT
   let domain = Context.MOBILITY
   isValueAddNP <- VNP.isValueAddNP res.providerId

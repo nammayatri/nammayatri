@@ -66,23 +66,21 @@ findAllWithLimitOffset mbLimit mbOffset merchantParam moCity = do
 
 updateMessageLikeCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Message -> Int -> m ()
 updateMessageLikeCount messageId value = do
-  findById messageId >>= \case
-    Nothing -> pure ()
-    Just msg -> do
-      let likeCount = msg.likeCount
-      updateOneWithKV
-        [Se.Set BeamM.likeCount $ likeCount + value]
-        [Se.Is BeamM.id (Se.Eq $ getId messageId)]
+  mbMsg <- findById messageId
+  whenJust mbMsg $ \msg -> do
+    let likeCount = msg.likeCount
+    updateOneWithKV
+      [Se.Set BeamM.likeCount $ likeCount + value]
+      [Se.Is BeamM.id (Se.Eq $ getId messageId)]
 
 updateMessageViewCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Message -> Int -> m ()
 updateMessageViewCount messageId value = do
-  findById messageId >>= \case
-    Just msg -> do
-      let viewCount = msg.viewCount
-      updateOneWithKV
-        [Se.Set BeamM.viewCount $ viewCount + value]
-        [Se.Is BeamM.id (Se.Eq $ getId messageId)]
-    Nothing -> pure ()
+  mbMsg <- findById messageId
+  whenJust mbMsg $ \msg -> do
+    let viewCount = msg.viewCount
+    updateOneWithKV
+      [Se.Set BeamM.viewCount $ viewCount + value]
+      [Se.Is BeamM.id (Se.Eq $ getId messageId)]
 
 updateMessage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => EditMessageRequest -> m (Either Text ())
 updateMessage EditMessageRequest {..} = do

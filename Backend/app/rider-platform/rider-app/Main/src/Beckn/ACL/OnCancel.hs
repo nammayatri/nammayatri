@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.ACL.OnCancel
   ( buildOnCancelReq,
@@ -20,9 +21,10 @@ where
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import Data.Maybe (listToMaybe)
+import Control.Lens ((^?), _Just, _head)
+import Data.Generics.Labels ()
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
-import EulerHS.Prelude hiding (state)
+import EulerHS.Prelude hiding (state, (^?), (^..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -57,7 +59,7 @@ bookingCancelledEvent :: (MonadFlow m) => Spec.Order -> m DOnCancel.OnCancelReq
 bookingCancelledEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in BookingCancelled Event.")
   let cancellationSource = order.orderCancellation >>= (.cancellationCancelledBy)
-  let mbCancellationFee = order.orderCancellationTerms >>= listToMaybe >>= (.cancellationTermCancellationFee) >>= (.feeAmount)
+  let mbCancellationFee = order.orderCancellationTerms ^? _Just . _head . #cancellationTermCancellationFee . _Just . #feeAmount . _Just
   let cancellationFeeAmount = mbCancellationFee >>= (.priceValue) >>= highPrecMoneyFromText
   let cancellationFeeCurrency :: Maybe Currency = mbCancellationFee >>= (.priceCurrency) >>= readMaybe @Currency
   return $

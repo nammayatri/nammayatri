@@ -89,6 +89,7 @@ library
     , exceptions
     , http-client
     , http-types
+    , lens
     , mobility-core
     , record-dot-preprocessor
     , record-hasfield
@@ -158,6 +159,7 @@ executable special-zone-exe
     , exceptions
     , http-client
     , http-types
+    , lens
     , mobility-core
     , record-dot-preprocessor
     , record-hasfield

@@ -3,6 +3,7 @@
 
 module Storage.Queries.PurchasedPassExtra where
 
+import Control.Lens ((^?), _head)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Extra.PurchasedPass ()
 import qualified Domain.Types.Merchant as DM
@@ -72,7 +73,7 @@ findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId passTypeId device
       (Se.Desc Beam.createdAt)
       (Just 1)
       (Just 0)
-    <&> listToMaybe
+    <&> (^? _head)
 
 findPendingPassByPersonIdAndPassTypeId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -170,7 +171,7 @@ getLastPassNumber ::
   m Int
 getLastPassNumber = do
   pass <- findAllWithOptionsDb [Se.Is Beam.id $ Se.Not $ Se.Eq ""] (Se.Desc Beam.passNumber) (Just 1) (Just 0)
-  return $ case listToMaybe pass of
+  return $ case pass ^? _head of
     Just p -> p.passNumber
     Nothing -> 0
 
@@ -213,8 +214,8 @@ findAllActiveByPersonIdWithFiltersV2 personId merchantId mbPassTypeIds mbFromDat
         case mbPassTypeIds of
           Just ids | not (null ids) -> [Se.Is Beam.passTypeId $ Se.In (map getId ids)]
           _ -> []
-      fromDateCond = maybe [] (\d -> [Se.Is Beam.startDate $ Se.GreaterThanOrEq d]) mbFromDate
-      toDateCond = maybe [] (\d -> [Se.Is Beam.startDate $ Se.LessThanOrEq d]) mbToDate
+      fromDateCond = foldMap (\d -> [Se.Is Beam.startDate $ Se.GreaterThanOrEq d]) mbFromDate
+      toDateCond = foldMap (\d -> [Se.Is Beam.startDate $ Se.LessThanOrEq d]) mbToDate
       conds = baseConds ++ passTypeConds ++ fromDateCond ++ toDateCond
 
   findAllWithOptionsKV conds (Se.Desc Beam.createdAt) mbLimit mbOffset

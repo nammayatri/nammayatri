@@ -22,6 +22,7 @@ module Domain.Action.UI.Frontend
   )
 where
 
+import Control.Lens ((^?), _head)
 import Data.List (partition)
 import Domain.Action.UI.Booking
 import qualified Domain.Action.UI.MultimodalConfirm as DMultimodal
@@ -110,7 +111,7 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
   where
     isNormalRideJourney :: DJ.Journey -> Bool
     isNormalRideJourney journey =
-      case listToMaybe journey.modes of
+      case journey.modes ^? _head of
         Just firstMode -> length journey.modes == 1 && (firstMode == DTrip.Taxi)
         Nothing -> False
     checkForActiveBooking :: Flow GetPersonFlowStatusRes
@@ -124,8 +125,8 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
               pendingFeedbackBookings <- bookingList (Just personId, merchantId) Nothing False (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing Nothing Nothing [] Nothing
               case pendingFeedbackBookings.list of
                 [booking] -> do
-                  let isRated = isJust $ booking.rideList & listToMaybe >>= (.rideRating)
-                  let isSkipped = fromMaybe True (booking.rideList & listToMaybe <&> (.feedbackSkipped))
+                  let isRated = isJust $ (booking.rideList ^? _head) >>= (.rideRating)
+                  let isSkipped = fromMaybe True ((booking.rideList ^? _head) <&> (.feedbackSkipped))
                   if isRated || isSkipped
                     then return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
                     else return $ GetPersonFlowStatusRes Nothing (DPFS.FEEDBACK_PENDING booking) Nothing
@@ -151,7 +152,7 @@ notifyEvent personId merchantId req = do
       pendingFeedbackBookings <- bookingList (Just personId, merchantId) Nothing False (Just 1) Nothing (Just False) (Just DB.COMPLETED) Nothing Nothing Nothing [] Nothing
       case pendingFeedbackBookings.list of
         [booking] -> do
-          let mbRideId = booking.rideList & listToMaybe <&> (.id)
+          let mbRideId = (booking.rideList ^? _head) <&> (.id)
           whenJust mbRideId $ \rideId -> QR.updateFeedbackSkipped True rideId
         _ -> pure ()
       case req.journeyId of

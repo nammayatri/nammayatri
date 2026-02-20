@@ -107,9 +107,7 @@ getGroupIndices = nub . mapMaybe (extractInteger . AesonKey.toText) . AKM.keys
   where
     extractInteger :: T.Text -> Maybe Int
     extractInteger key =
-      case T.stripPrefix "groups/" key of
-        Just rest -> readMaybe (T.unpack $ T.takeWhile isDigit rest)
-        Nothing -> Nothing
+      T.stripPrefix "groups/" key >>= readMaybe . T.unpack . T.takeWhile isDigit
 
 extractTagGroup :: Object -> Int -> TagGroup
 extractTagGroup obj groupIndex =
@@ -140,9 +138,7 @@ getTagListIndices obj groupIndex =
     extractInteger :: T.Text -> Maybe Int
     extractInteger key = do
       let listKey = T.pack $ "groups/" ++ show groupIndex ++ "/list"
-      case T.stripPrefix listKey key >>= T.stripPrefix "/" of
-        Just rest -> readMaybe (T.unpack $ T.takeWhile isDigit rest)
-        Nothing -> Nothing
+      T.stripPrefix listKey key >>= T.stripPrefix "/" >>= readMaybe . T.unpack . T.takeWhile isDigit
 
 isTagListIndex :: Object -> T.Text -> Int -> Bool
 isTagListIndex obj listKey idx =

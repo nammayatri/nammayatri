@@ -70,8 +70,8 @@ computeEligibleUpgradeTiers ride transporterConfig =
                 vehicleVariant = vehicle.variant
               }
       nammaTags <- withTryCatch "computeNammaTags:UpgradeTier" (LYDL.computeNammaTagsWithDebugLog (Id.cast ride.merchantOperatingCityId) Yudhishthira.UpgradeTier upgradeTierTagData)
-      let newEligibleTiers = eligibleTiersFromTags $ fromMaybe [] $ eitherToMaybe nammaTags
-          newUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] driverInfo.ruleBasedUpgradeTiers) newEligibleTiers
-          vehicleNewUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] vehicle.ruleBasedUpgradeTiers) newEligibleTiers
+      let newEligibleTiers = eligibleTiersFromTags $ fold $ eitherToMaybe nammaTags
+          newUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fold driverInfo.ruleBasedUpgradeTiers) newEligibleTiers
+          vehicleNewUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fold vehicle.ruleBasedUpgradeTiers) newEligibleTiers
       QDriverInformation.updateUpgradedTiers (Just newUpgrades) driverInfo.driverId
       QVehicle.updateRuleBasedUpgradeTiers (Just vehicleNewUpgrades) vehicle.driverId

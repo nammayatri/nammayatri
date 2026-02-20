@@ -68,7 +68,7 @@ instance ToMultipart Tmp SendMessageRequest where
         ]
           <> [Input "scheduledTime" $ (TE.decodeUtf8 . BLC.toStrict . A.encode) form.scheduledTime | isMaybe form.scheduledTime]
       )
-      (maybe [] (\file -> [FileData "csvFile" (T.pack file) "text/csv" file]) form.csvFile)
+      (foldMap (\file -> [FileData "csvFile" (T.pack file) "text/csv" file]) form.csvFile)
     where
       isMaybe :: Maybe a -> Bool
       isMaybe Nothing = False

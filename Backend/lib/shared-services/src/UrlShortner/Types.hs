@@ -53,7 +53,7 @@ toString RIDE_TRACKING = rideTracking
 toString METER_RIDE_REFERRAL_LINK = meterRideReferralLink
 
 instance Read UrlCategory where
-  readsPrec _ = maybe [] (\x -> [(x, "")]) . fromString
+  readsPrec _ = foldMap (\x -> [(x, "")]) . fromString
 
 instance Show UrlCategory where
   show = toString

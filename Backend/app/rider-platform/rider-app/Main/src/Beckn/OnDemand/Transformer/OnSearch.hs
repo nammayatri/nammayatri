@@ -1,12 +1,16 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Beckn.OnDemand.Transformer.OnSearch where
 
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.OnSearch
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
+import Control.Lens ((^?), _Just, _head)
+import Data.Generics.Labels ()
 import qualified Domain.Action.Beckn.OnSearch
 import Domain.Types
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, (^?), (^..))
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import Kernel.Types.Common
@@ -27,7 +31,7 @@ tfProviderInfo req = do
   let mobileNumber_ = ""
   name_ <- Beckn.OnDemand.Utils.OnSearch.getProviderName req
   let ridesCompleted_ = 0
-  providerId_ <- req.onSearchReqMessage >>= (.onSearchReqMessageCatalog.catalogProviders) >>= Kernel.Prelude.listToMaybe >>= (.providerId) & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing provider_id")
+  providerId_ <- req.onSearchReqMessage ^? _Just . #onSearchReqMessageCatalog . #catalogProviders . _Just . _head . #providerId . _Just & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing provider_id")
   url_ <- Beckn.OnDemand.Utils.Common.getContextBppUri req.onSearchReqContext >>= Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing bpp_uri")
   pure $ Domain.Action.Beckn.OnSearch.ProviderInfo {mobileNumber = mobileNumber_, name = name_, providerId = providerId_, ridesCompleted = ridesCompleted_, url = url_}
 

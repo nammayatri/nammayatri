@@ -25,6 +25,7 @@ import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Types as PT
+import Control.Lens ((^?), _head)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -81,7 +82,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       schedulePayoutForDay = jobData.schedulePayoutForDay
   payoutConfigList <- CPC.findByMerchantOpCityIdAndIsPayoutEnabled merchantOpCityId True Nothing
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let reschuleTimeDiff = listToMaybe payoutConfigList <&> (.timeDiff)
+  let reschuleTimeDiff = (payoutConfigList ^? _head) <&> (.timeDiff)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let lastNthDay = addDays (fromMaybe (-1) schedulePayoutForDay) (utctDay localTime)
   dailyStatsForEveryDriverList <- QDSE.findAllByDateAndPayoutStatus (Just transporterConfig.payoutBatchLimit) (Just 0) lastNthDay statusForRetry merchantOpCityId
@@ -91,21 +92,19 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   let dailyStatsWithVpaList = filter (\dsv -> (isJust dsv.payoutVpa && dsv.dInfo.payoutVpaStatus /= Just DI.MANUALLY_ADDED) && (dsv.dInfo.isBlockedForReferralPayout /= Just True)) statsWithVpaList -- filter blocked drivers
   if null dailyStatsForEveryDriverList
     then do
-      when toScheduleNextPayout $ do
-        case reschuleTimeDiff of
-          Just timeDiff' -> do
-            logDebug $ "Rescheduling the Job for Next Day"
-            now <- getCurrentTime
-            Redis.runInMasterCloudRedisCell $
-              createJobInWithCheck @_ @'DriverReferralPayout (Just merchantId) (Just merchantOpCityId) timeDiff' (addUTCTime timeDiff' now) (addUTCTime (timeDiff' + 3600) now) "DriverReferralPayout" (Just 1) $
-                DriverReferralPayoutJobData
-                  { merchantId = merchantId,
-                    merchantOperatingCityId = merchantOpCityId,
-                    toScheduleNextPayout = toScheduleNextPayout,
-                    statusForRetry = statusForRetry,
-                    schedulePayoutForDay = Nothing
-                  }
-          Nothing -> pure ()
+      when toScheduleNextPayout $
+        whenJust reschuleTimeDiff $ \timeDiff' -> do
+          logDebug $ "Rescheduling the Job for Next Day"
+          now <- getCurrentTime
+          Redis.runInMasterCloudRedisCell $
+            createJobInWithCheck @_ @'DriverReferralPayout (Just merchantId) (Just merchantOpCityId) timeDiff' (addUTCTime timeDiff' now) (addUTCTime (timeDiff' + 3600) now) "DriverReferralPayout" (Just 1) $
+              DriverReferralPayoutJobData
+                { merchantId = merchantId,
+                  merchantOperatingCityId = merchantOpCityId,
+                  toScheduleNextPayout = toScheduleNextPayout,
+                  statusForRetry = statusForRetry,
+                  schedulePayoutForDay = Nothing
+                }
       return Complete
     else do
       for_ dailyStatsWithVpaList $ \executionData -> do
@@ -182,51 +181,47 @@ callPayoutHandler DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statu
   mbVehicle <- QV.findById driverId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   let payoutConfig' = find (\payoutConfig -> payoutConfig.vehicleCategory == vehicleCategory) payoutConfigList
-  case payoutConfig' of
-    Just payoutConfig -> do
-      uid <- generateGUID
-      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      merchantOperatingCity <- CQMOC.findById (cast person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-      case payoutVpa of
-        Just vpa -> do
-          dailyStat <- QDailyStats.findByPrimaryKey id >>= fromMaybeM (InternalError "DailyStats Not Found")
-          if dailyStat.payoutStatus /= statusForRetry
-            then pure ()
+  whenJust payoutConfig' $ \payoutConfig -> do
+    uid <- generateGUID
+    person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    merchantOperatingCity <- CQMOC.findById (cast person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+    whenJust payoutVpa $ \vpa -> do
+      dailyStat <- QDailyStats.findByPrimaryKey id >>= fromMaybeM (InternalError "DailyStats Not Found")
+      if dailyStat.payoutStatus /= statusForRetry
+        then pure ()
+        else do
+          Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 6 $ do
+            QDailyStats.updatePayoutStatusById DS.Processing id
+            QDailyStats.updatePayoutOrderId (Just uid) id
+          phoneNo <- mapM decrypt person.mobileNumber
+          refundRegistrationAmt <-
+            if driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isNothing driverInfo.payoutRegAmountRefunded
+              then do
+                mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.PAYOUT_REGISTRATION [DF.CLEARED] driverId DPlan.YATRI_SUBSCRIPTION
+                case mbDriverFee of
+                  Just driverFee -> do
+                    now <- getCurrentTime
+                    let registrationFee = driverFee.platformFee
+                        registrationAmount = sum [registrationFee.cgst, registrationFee.sgst, registrationFee.fee]
+                    QDF.updateStatus DF.REFUND_PENDING driverFee.id now
+                    QDI.updatePayoutRegAmountRefunded (Just registrationAmount) driverId
+                    pure registrationAmount
+                  _ -> pure 0.0
+              else pure 0.0
+          let entityName = DLP.DRIVER_DAILY_STATS
+              amount = referralEarnings + refundRegistrationAmt
+              createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
+          if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
+            then do
+              logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid
+              payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+              let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
+              mbPayoutOrderResp <- withTryCatch "createPayoutService:callPayout" $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+              errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
             else do
-              Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 6 $ do
-                QDailyStats.updatePayoutStatusById DS.Processing id
-                QDailyStats.updatePayoutOrderId (Just uid) id
-              phoneNo <- mapM decrypt person.mobileNumber
-              refundRegistrationAmt <-
-                if driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isNothing driverInfo.payoutRegAmountRefunded
-                  then do
-                    mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.PAYOUT_REGISTRATION [DF.CLEARED] driverId DPlan.YATRI_SUBSCRIPTION
-                    case mbDriverFee of
-                      Just driverFee -> do
-                        now <- getCurrentTime
-                        let registrationFee = driverFee.platformFee
-                            registrationAmount = sum [registrationFee.cgst, registrationFee.sgst, registrationFee.fee]
-                        QDF.updateStatus DF.REFUND_PENDING driverFee.id now
-                        QDI.updatePayoutRegAmountRefunded (Just registrationAmount) driverId
-                        pure registrationAmount
-                      _ -> pure 0.0
-                  else pure 0.0
-              let entityName = DLP.DRIVER_DAILY_STATS
-                  amount = referralEarnings + refundRegistrationAmt
-                  createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
-              if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
-                then do
-                  logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid
-                  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
-                  let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
-                  mbPayoutOrderResp <- withTryCatch "createPayoutService:callPayout" $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
-                  errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
-                else do
-                  Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
-                    QDailyStats.updatePayoutStatusById DS.ManualReview id
-              pure ()
-        Nothing -> pure ()
-    Nothing -> pure ()
+              Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
+                QDailyStats.updatePayoutStatusById DS.ManualReview id
+          pure ()
 
 errorCatchAndHandle ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>

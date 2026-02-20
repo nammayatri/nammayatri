@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# LANGUAGE OverloadedLabels #-}
+
 module Domain.Action.UI.Driver
   ( DriverInformationRes (..),
     GetHomeLocationsRes (..),
@@ -99,6 +101,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Me
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import API.UI.Issue (driverIssueHandle)
 import AWS.S3 as S3
+import Control.Lens ((^?), _Just, _head)
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
@@ -106,11 +109,11 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Digest.Pure.MD5 as MD5
 import Data.Either.Extra (eitherToMaybe)
+import Data.Generics.Labels ()
 import qualified Data.HashMap.Strict as HM
 import Data.List (intersect, nub, (\\))
 import qualified Data.List as DL
 import qualified Data.Map as M
-import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
@@ -182,7 +185,7 @@ import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (decodeUtf8, id, state)
+import EulerHS.Prelude hiding (decodeUtf8, id, state, (^?), (^..))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Records.Extra
 import qualified IssueManagement.Common.UI.Issue as Issue
@@ -1114,7 +1117,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         let mbDefaultServiceTierItem =
               if null allVehicleSupportedDefaultServiceTiers
                 then find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
-                else listToMaybe allVehicleSupportedDefaultServiceTiers
+                else allVehicleSupportedDefaultServiceTiers ^? _head
         let checIfACWorking' =
               case mbDefaultServiceTierItem >>= (.airConditionedThreshold) of
                 Nothing -> False
@@ -1461,16 +1464,12 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
 
         activeFleetInfo <- case mbActiveFda of
           Just activeFda ->
-            case find (\p -> p.id.getId == activeFda.fleetOwnerId) fleetOwners of
-              Just person -> Just <$> buildFleetInfo person activeFda
-              Nothing -> return Nothing
+            traverse (\person -> buildFleetInfo person activeFda) (find (\p -> p.id.getId == activeFda.fleetOwnerId) fleetOwners)
           Nothing -> return Nothing
 
         fleetRequestInfo <- case mbInactiveFda of
           Just inactiveFda ->
-            case find (\p -> p.id.getId == inactiveFda.fleetOwnerId) fleetOwners of
-              Just person -> Just <$> buildFleetInfo person inactiveFda
-              Nothing -> return Nothing
+            traverse (\person -> buildFleetInfo person inactiveFda) (find (\p -> p.id.getId == inactiveFda.fleetOwnerId) fleetOwners)
           Nothing -> return Nothing
 
         return (activeFleetInfo, fleetRequestInfo)
@@ -2487,7 +2486,7 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig
           ManualInvoiceHistory
             { invoiceId = manualInvoice.invoiceShortId,
               rideDays = length allDriverFeeForInvoice,
-              rideTakenOn = if length allDriverFeeForInvoice == 1 then addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) . (.createdAt) <$> listToMaybe allDriverFeeForInvoice else Nothing,
+              rideTakenOn = if length allDriverFeeForInvoice == 1 then addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) <$> (allDriverFeeForInvoice ^? _head . #createdAt) else Nothing,
               amount,
               amountWithCurrency = PriceAPIEntity amount dfee.currency,
               createdAt = manualInvoice.createdAt,
@@ -2586,15 +2585,15 @@ getHistoryEntryDetailsEntityV2 (driverId, _, merchantOpCityId) invoiceShortId se
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   let amount = sum $ mapToAmount allDriverFeeForInvoice
-      invoiceType = listToMaybe allEntiresByInvoiceId <&> (.paymentMode)
-      createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Just INV.MANDATE_SETUP_INVOICE, Nothing] then listToMaybe allEntiresByInvoiceId <&> (.createdAt) else Nothing
-      mbAutoPayStage = listToMaybe allDriverFeeForInvoice >>= (.autopayPaymentStage)
-      mbStageUpdatedAt = listToMaybe allDriverFeeForInvoice >>= (.stageUpdatedAt)
+      invoiceType = allEntiresByInvoiceId ^? _head . #paymentMode
+      createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Just INV.MANDATE_SETUP_INVOICE, Nothing] then allEntiresByInvoiceId ^? _head . #createdAt else Nothing
+      mbAutoPayStage = allDriverFeeForInvoice ^? _head . #autopayPaymentStage . _Just
+      mbStageUpdatedAt = allDriverFeeForInvoice ^? _head . #stageUpdatedAt . _Just
       executionAt =
         if invoiceType == Just INV.AUTOPAY_INVOICE
           then
-            if ((.invoiceStatus) <$> listToMaybe allEntiresByInvoiceId) == Just INV.CLEARED_BY_YATRI_COINS
-              then (.createdAt) <$> listToMaybe allEntiresByInvoiceId
+            if (allEntiresByInvoiceId ^? _head . #invoiceStatus) == Just INV.CLEARED_BY_YATRI_COINS
+              then allEntiresByInvoiceId ^? _head . #createdAt
               else Just $ maybe now (DAPlan.calcExecutionTime transporterConfig mbAutoPayStage) mbStageUpdatedAt
           else Nothing
       feeType
@@ -2605,7 +2604,7 @@ getHistoryEntryDetailsEntityV2 (driverId, _, merchantOpCityId) invoiceShortId se
     [] -> SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
     (fee : _) -> pure fee.currency
 
-  driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus)) transporterConfig serviceName
+  driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (allEntiresByInvoiceId ^? _head . #invoiceStatus) transporterConfig serviceName
   return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceShortId, amount, amountWithCurrency = PriceAPIEntity amount currency, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
   where
     mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
@@ -2791,7 +2790,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
               cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
               let availableServiceTierItems = map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers)
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
-              let mbScheduleBookingListEligibilityTags = listToMaybe availableServiceTierItems >>= (.scheduleBookingListEligibilityTags)
+              let mbScheduleBookingListEligibilityTags = availableServiceTierItems ^? _head . #scheduleBookingListEligibilityTags . _Just
               let scheduleEnabled = maybe True (not . null . intersect (maybe [] ((LYT.getTagNameValue . Yudhishthira.removeTagExpiry) <$>) driver.driverTag)) mbScheduleBookingListEligibilityTags
               if scheduleEnabled
                 then do
@@ -2811,7 +2810,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
       result <- withTryCatch "driversLocation:getCurrentDriverLocUsingLTS" $ LTF.driversLocation [driverId]
       return $ case result of
         Left _ -> Nothing
-        Right locations -> listToMaybe locations >>= \x -> Just LatLong {lat = x.lat, lon = x.lon}
+        Right locations -> locations ^? _head >>= \x -> Just LatLong {lat = x.lat, lon = x.lon}
 
     possibleScheduledTripCategories :: [DTC.TripCategory]
     possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]

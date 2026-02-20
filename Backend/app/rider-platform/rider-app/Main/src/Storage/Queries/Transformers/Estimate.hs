@@ -55,7 +55,7 @@ mkFareRange currency maxTotalFare minTotalFare =
     }
 
 mKTripTerms :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms)
-mKTripTerms tripTermsId = if isJust tripTermsId then QTT.findById'' (Kernel.Types.Id.Id (fromJust tripTermsId)) else pure Nothing
+mKTripTerms tripTermsId = maybe (pure Nothing) (QTT.findById'' . Kernel.Types.Id.Id) tripTermsId
 
 mknightShiftCharge :: Maybe NightShiftInfo -> Maybe Money
 mknightShiftCharge nightShiftInfo = nightShiftInfo <&> (.nightShiftCharge.amountInt)

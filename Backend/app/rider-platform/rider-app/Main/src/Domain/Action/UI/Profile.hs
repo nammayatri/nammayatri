@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Domain.Action.UI.Profile
   ( ProfileRes,
@@ -42,6 +43,8 @@ where
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
+import Control.Lens ((^?), _Just, _head, filtered, has, traversed)
+import Data.Generics.Labels ()
 import Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
 import qualified Data.ByteString.Lazy.Char8 as BSL
@@ -279,7 +282,7 @@ getIsMultimodalRider enableMultiModalForAllUsers mbTags integratedBPPConfigs =
     Just True -> not (null integratedBPPConfigs)
     _ ->
       let multimodalTagName = LYT.TagName "MultimodalRider"
-          currentTags = fromMaybe [] mbTags
+          currentTags = fold mbTags
           isMultimodalRiderTag targetTagName customerTag =
             case YUtils.parseTagName customerTag of
               Just tagName -> tagName == targetTagName
@@ -371,13 +374,11 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   -- Check if customer is temporarily blocked and should be unblocked
   fork "Check and unblock customer if temporary block expired" $ do
     when person.blocked $ do
-      case person.blockedUntil of
-        Just blockedUntilTime -> do
-          now <- getCurrentTime
-          when (now > blockedUntilTime) $ do
-            void $ QPerson.updatingEnabledAndBlockedState personId Nothing False
-            logInfo $ "Unblocked customer in profile API, customerId: " <> personId.getId <> " blockedUntil was: " <> show blockedUntilTime
-        Nothing -> pure ()
+      whenJust person.blockedUntil $ \blockedUntilTime -> do
+        now <- getCurrentTime
+        when (now > blockedUntilTime) $ do
+          void $ QPerson.updatingEnabledAndBlockedState personId Nothing False
+          logInfo $ "Unblocked customer in profile API, customerId: " <> personId.getId <> " blockedUntil was: " <> show blockedUntilTime
   fork "Check customer cancellation rate blocking" $ CCR.nudgeOrBlockCustomer riderConfig person
   makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage
   where
@@ -413,7 +414,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
             isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
             cancellationRate = cancellationPerc,
             publicTransportVersion = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) riderConfig.domainPublicTransportDataVersion)),
-            customerTags = YUtils.convertTags $ fromMaybe [] customerNammaTags,
+            customerTags = YUtils.convertTags $ fold customerNammaTags,
             profilePicture = if includeProfileImageParam == Just True then profilePicture else Nothing,
             ..
           }
@@ -442,12 +443,10 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
   cloudType <- asks (.cloudType)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   fork "Triggering kafka marketing params event for person" $
-    case req.marketingParams of
-      Just params -> do
-        now <- getCurrentTime
-        let marketingParams = MarketingParamsEventData person.id params.gclId params.utmCampaign params.utmContent params.utmCreativeFormat params.utmMedium params.utmSource params.utmTerm params.appName merchantId person.merchantOperatingCityId params.userType now now
-        triggerMarketingParamEvent marketingParams
-      Nothing -> pure ()
+    whenJust req.marketingParams $ \params -> do
+      now <- getCurrentTime
+      let marketingParams = MarketingParamsEventData person.id params.gclId params.utmCampaign params.utmContent params.utmCreativeFormat params.utmMedium params.utmSource params.utmTerm params.appName merchantId person.merchantOperatingCityId params.userType now now
+      triggerMarketingParamEvent marketingParams
   -- TODO: Remove this part from here once UI stops using updatePerson api to apply referral code
   void $ mapM (\refCode -> Referral.applyReferralCode person False refCode Nothing) req.referralCode
   void $
@@ -500,11 +499,12 @@ updateDisability hasDisability mbDisability personId = do
       let disabilityId = getId $ selectedDisability.id
       disability <- runInReplica $ QD.findByDisabilityId disabilityId >>= fromMaybeM (DisabilityDoesNotExist disabilityId)
       let mbDescription = (selectedDisability.description) <|> (Just disability.description)
-      when (isNothing customerDisability) $ do
-        newDisability <- makeDisability selectedDisability disability.tag mbDescription
-        PDisability.create newDisability
-      when (isJust customerDisability) $ do
-        PDisability.updateDisabilityByPersonId disabilityId disability.tag mbDescription personId
+      case customerDisability of
+        Nothing -> do
+          newDisability <- makeDisability selectedDisability disability.tag mbDescription
+          PDisability.create newDisability
+        Just _ ->
+          PDisability.updateDisabilityByPersonId disabilityId disability.tag mbDescription personId
       where
         makeDisability personDisability tag mbDescription = do
           now <- getCurrentTime
@@ -658,7 +658,7 @@ updateEmergencySettings personId req = do
     updateSafetySettings :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UpdateEmergencySettingsReq -> m ()
     updateSafetySettings UpdateEmergencySettingsReq {..} = do
       let shareContacts = fromMaybe False shareEmergencyContacts
-          setContactField field = bool (Just shareContacts) field (isJust field)
+          setContactField field = field <|> Just shareContacts
           emergencyInfo =
             QSafety.UpdateEmergencyInfo
               { autoCallDefaultContact = setContactField autoCallDefaultContact,
@@ -704,8 +704,8 @@ getEmergencySettings personId = do
   decPersonENList <- decrypt `mapM` personENList
   return $
     EmergencySettingsRes
-      { shareTripWithEmergencyContacts = any (\x -> (x.shareTripWithEmergencyContactOption /= Just Person.NEVER_SHARE) && isJust x.shareTripWithEmergencyContactOption) personENList,
-        shareTripWithEmergencyContactOption = fromMaybe Person.NEVER_SHARE (listToMaybe personENList >>= (.shareTripWithEmergencyContactOption)),
+      { shareTripWithEmergencyContacts = has (traversed . #shareTripWithEmergencyContactOption . _Just . filtered (/= Person.NEVER_SHARE)) personENList,
+        shareTripWithEmergencyContactOption = fromMaybe Person.NEVER_SHARE (personENList ^? _head . #shareTripWithEmergencyContactOption . _Just),
         defaultEmergencyNumbers = DPDEN.makePersonDefaultEmergencyNumberAPIEntity False <$> decPersonENList,
         enablePoliceSupport = riderConfig.enableLocalPoliceSupport,
         localPoliceNumber = riderConfig.localPoliceNumber,

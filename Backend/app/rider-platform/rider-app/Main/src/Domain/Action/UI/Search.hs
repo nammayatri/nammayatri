@@ -12,13 +12,17 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# LANGUAGE OverloadedLabels #-}
+
 module Domain.Action.UI.Search where
 
 import API.Types.UI.RiderLocation (BusLocation)
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Control.Applicative ((<|>))
+import Control.Lens ((.~), (?~), (^..), (^?), _Just, _last)
 import Control.Monad
+import Data.Generics.Labels ()
 import Data.Aeson
 import qualified Data.Aeson.Text as AT
 import Data.Default.Class
@@ -140,9 +144,8 @@ updateForSpecialLocation merchantId origin mbIsSpecialLocation mbHotSpotConfig =
       when isSpecialLocation $ frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation mbHotSpotConfig
     Nothing -> do
       specialLocationBody <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLong origin.gps
-      case specialLocationBody of
-        Just _ -> frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation mbHotSpotConfig
-        Nothing -> return ()
+      whenJust specialLocationBody $ \_ ->
+        frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation mbHotSpotConfig
 
 extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
 extractSearchDetails now = \case
@@ -150,7 +153,7 @@ extractSearchDetails now = \case
     SearchDetails
       { riderPreferredOption = DRPO.OneWay,
         roundTrip = False,
-        stops = fromMaybe [] stops <> fromMaybe [] (fmap (: []) destination),
+        stops = fold stops <> (destination ^.. _Just),
         startTime = fromMaybe now startTime,
         returnTime = Nothing,
         hasStops = reqDetails.stops >>= \s -> Just $ not (null s),
@@ -170,7 +173,7 @@ extractSearchDetails now = \case
     SearchDetails
       { riderPreferredOption = DRPO.Rental,
         roundTrip = False,
-        stops = fromMaybe [] stops,
+        stops = fold stops,
         hasStops = Nothing,
         returnTime = Nothing,
         driverIdentifier_ = Nothing,
@@ -189,7 +192,7 @@ extractSearchDetails now = \case
   InterCitySearch InterCitySearchReq {..} ->
     SearchDetails
       { riderPreferredOption = DRPO.InterCity,
-        stops = fromMaybe [] stops,
+        stops = fold stops,
         hasStops = Nothing,
         driverIdentifier_ = Nothing,
         routeCode = Nothing,
@@ -207,7 +210,7 @@ extractSearchDetails now = \case
     SearchDetails
       { riderPreferredOption = DRPO.Ambulance,
         roundTrip = False,
-        stops = maybe [] pure destination,
+        stops = destination ^.. _Just,
         startTime = fromMaybe now startTime,
         returnTime = Nothing,
         hasStops = Nothing,
@@ -228,7 +231,7 @@ extractSearchDetails now = \case
     SearchDetails
       { riderPreferredOption = DRPO.Delivery,
         roundTrip = False,
-        stops = maybe [] pure destination,
+        stops = destination ^.. _Just,
         startTime = fromMaybe now startTime,
         returnTime = Nothing,
         hasStops = Nothing,
@@ -248,7 +251,7 @@ extractSearchDetails now = \case
   PTSearch PublicTransportSearchReq {..} ->
     SearchDetails
       { riderPreferredOption = DRPO.PublicTransport,
-        stops = maybe [] pure destination,
+        stops = destination ^.. _Just,
         hasStops = Nothing,
         driverIdentifier_ = Nothing,
         roundTrip = False,
@@ -262,7 +265,7 @@ extractSearchDetails now = \case
         placeNameSource = Nothing,
         destinationStopCode = Just destinationStopCode,
         originStopCode = Just originStopCode,
-        busLocationData = fromMaybe [] busLocationData,
+        busLocationData = fold busLocationData,
         numberOfLuggages = Nothing,
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
@@ -377,7 +380,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       person
       fromLocation
       merchantOperatingCity
-      (lastMaybe stopLocations) ---(Now - As it's drop which would be last element of stops list) --------------- (Earlier - Take first stop, handle multiple stops later)
+      (stopLocations ^? _last) ---(Now - As it's drop which would be last element of stops list) --------------- (Earlier - Take first stop, handle multiple stops later)
       (convertMetersToDistance merchantOperatingCity.distanceUnit <$> longestRouteDistance)
       (convertMetersToDistance merchantOperatingCity.distanceUnit <$> shortestRouteDistance)
       startTime
@@ -428,9 +431,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           OneWaySearch OneWaySearchReq {subscriptionId} -> do
             nyRegularSubscription <- QNyRegularSubscription.findById (fromMaybe "" subscriptionId)
             let metadata = (.metadata) <$> nyRegularSubscription
-            if isJust metadata
-              then return [(Beckn.RESERVED_PRICING_TAG, Just (encodeToText (fromJust metadata)))]
-              else return []
+            return $ foldMap (\m -> [(Beckn.RESERVED_PRICING_TAG, Just (encodeToText m))]) metadata
           _ -> return []
       else return []
   gatewayUrl <-
@@ -466,12 +467,12 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     personVehicleCategory person = SLS.mostFrequent person.lastUsedVehicleCategories
 
     backfillCustomerNammaTags :: Person.Person -> Person.Person
-    backfillCustomerNammaTags Person.Person {..} =
-      if isNothing customerNammaTags
-        then do
-          let genderTag = LYT.TagNameValueExpiry $ "Gender#" <> show gender -- handle it properly later
-          Person.Person {customerNammaTags = Just [genderTag], ..}
-        else Person.Person {..}
+    backfillCustomerNammaTags person =
+      if isNothing person.customerNammaTags
+        then person & #customerNammaTags ?~ [genderTag] -- handle it properly later
+        else person
+      where
+        genderTag = LYT.TagNameValueExpiry $ "Gender#" <> show person.gender
 
     getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber numberOfLuggages mbFromSpecialLocationId mbToSpecialLocationId mbEmailDomain mbBusinessEmailDomain = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
@@ -523,11 +524,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 (Beckn.EMAIL_DOMAIN, mbEmailDomain),
                 (Beckn.BUSINESS_EMAIL_DOMAIN, mbBusinessEmailDomain)
               ]
-                ++ maybe [] (\pn -> [(Beckn.CUSTOMER_PHONE_NUMBER, Just pn)]) phoneNumber
+                ++ foldMap (\pn -> [(Beckn.CUSTOMER_PHONE_NUMBER, Just pn)]) phoneNumber
            }
-
-    lastMaybe [] = Nothing
-    lastMaybe xs = Just $ last xs
 
     validateStartAndReturnTime :: SearchRequestFlow m r => UTCTime -> UTCTime -> Maybe UTCTime -> m ()
     validateStartAndReturnTime now startTime returnTime = do
@@ -594,12 +592,12 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       m RouteDetails
     processOneWaySearch person merchant merchantOperatingCity searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderConfig isMeterRide = do
       autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved now
-      destinationLatLong <- case lastMaybe stopsLatLong of
+      destinationLatLong <- case stopsLatLong ^? _last of
         Just latLong -> return (Just latLong)
         Nothing -> do
           case isMeterRide of
             Just True -> return Nothing
-            _ -> throwError (InvalidRequest "Destination is required for Non-Meter Ride  OneWay Search ")
+            _ -> throwError (InvalidRequest "Destination is required for Non-Meter Ride  OneWay Search.")
       latLongs <-
         if roundTrip
           then case destinationLatLong of
@@ -827,10 +825,16 @@ autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved
         pickupRecord :: Maybe AutoCompleteEventData <- Redis.safeGet pickUpKey
         dropRecord :: Maybe AutoCompleteEventData <- Redis.safeGet dropKey
         whenJust pickupRecord $ \record -> do
-          let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id isSourceManuallyMoved (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
-          -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = isSourceManuallyMoved, DTA.updatedAt = now}
+          let updatedRecord =
+                record
+                  & #isLocationSelectedOnMap .~ isSourceManuallyMoved
+                  & #searchRequestId ?~ searchRequestId
+                  & #updatedAt .~ now
           triggerAutoCompleteEvent updatedRecord
         whenJust dropRecord $ \record -> do
-          let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id isDestinationManuallyMoved (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
-          -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = isDestinationManuallyMoved, DTA.updatedAt = now}
+          let updatedRecord =
+                record
+                  & #isLocationSelectedOnMap .~ isDestinationManuallyMoved
+                  & #searchRequestId ?~ searchRequestId
+                  & #updatedAt .~ now
           triggerAutoCompleteEvent updatedRecord

@@ -19,6 +19,7 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import Control.Lens ((^?), _Just, _head)
 import qualified Domain.Action.Beckn.FRFS.OnInit as Domain
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -51,7 +52,7 @@ buildOnInitReq onInitReq = do
 
   selectedCategories <- mapM mkDCategorySelect itemsWithPrice
 
-  orderPayment <- order.orderPayments >>= listToMaybe & fromMaybeM (InvalidRequest "OrderPayment not found")
+  orderPayment <- order.orderPayments ^? _Just . _head & fromMaybeM (InvalidRequest "OrderPayment not found")
   orderPaymentParams <- orderPayment.paymentParams & fromMaybeM (InvalidRequest "PaymentParams not found")
   bankAccNum <- orderPaymentParams.paymentParamsBankAccountNumber & fromMaybeM (InvalidRequest "PaymentParamsBankAccountNumber not found")
   bankCode <- orderPaymentParams.paymentParamsBankCode & fromMaybeM (InvalidRequest "PaymentParamsBankCode not found")

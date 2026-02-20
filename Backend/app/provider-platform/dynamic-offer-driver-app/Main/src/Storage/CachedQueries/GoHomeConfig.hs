@@ -56,7 +56,7 @@ getConfigsFromMemory id = do
   getConfigFromMemoryCommon (DTC.GoHomeConfig id.getId) isExpired CM.isExperimentsRunning
 
 findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
-findByMerchantOpCityId id = getGoHomeConfigFromDB id <&> fromJust
+findByMerchantOpCityId id = getGoHomeConfigFromDB id >>= fromMaybeM (InternalError $ "GoHome Config not found for MerchantOperatingCity: " <> id.getId)
 
 makeGoHomeKey :: Id MerchantOperatingCity -> Text
 makeGoHomeKey id = "driver-offer:CachedQueries:GoHomeConfig:MerchantOpCityId-" <> id.getId

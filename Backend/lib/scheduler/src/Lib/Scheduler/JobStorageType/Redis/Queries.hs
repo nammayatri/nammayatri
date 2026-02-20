@@ -125,8 +125,8 @@ getReadyTasks _ = do
   -- unless isGroupExist $ do
   --   Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
   result' <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xReadGroup groupName consumerName [(key, nextId)]
-  let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
-  let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
+  let result = foldMap (concatMap (Hedis.extractKeyValuePairs . records)) result'
+  let recordIds = foldMap (concatMap (Hedis.extractRecordIds . records)) result'
   let textJob = map snd result
   let parsedJobs = map (A.eitherDecode . BL.fromStrict . DT.encodeUtf8) textJob
   case sequence parsedJobs of
@@ -159,8 +159,8 @@ getReadyTask = do
   -- unless isGroupExist $ do
   --   Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
   result' <- Hedis.withMasterRedis $ Hedis.xReadGroupOpts groupName consumerName [(key, nextId)] (Just block) (Just readCount)
-  let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
-  let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
+  let result = foldMap (concatMap (Hedis.extractKeyValuePairs . records)) result'
+  let recordIds = foldMap (concatMap (Hedis.extractRecordIds . records)) result'
   let textJob = map snd result
   let parsedJobs = map (A.eitherDecode . BL.fromStrict . DT.encodeUtf8) textJob
   case sequence parsedJobs of

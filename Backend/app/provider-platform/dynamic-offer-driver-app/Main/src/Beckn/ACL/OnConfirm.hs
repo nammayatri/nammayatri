@@ -40,9 +40,7 @@ buildOnConfirmMessageV2 res pricing becknConfig mbFarePolicy =
 
 tfOrder :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.Order
 tfOrder res pricing bppConfig mbFarePolicy = do
-  let farePolicy = case mbFarePolicy of
-        Nothing -> Nothing
-        Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
+  let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,

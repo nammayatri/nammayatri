@@ -1,6 +1,7 @@
 module Storage.Queries.DriverOperatorAssociationExtra where
 
 import Control.Applicative (liftA2)
+import Control.Lens ((^?), _head)
 import Data.Text (toLower)
 import qualified Database.Beam as B
 import Domain.Types.DriverOperatorAssociation
@@ -118,7 +119,7 @@ findByDriverId ::
   m (Maybe DriverOperatorAssociation)
 findByDriverId driverId isActive = do
   now <- getCurrentTime
-  listToMaybe
+  (^? _head)
     <$> findAllWithOptionsKV
       [ Se.And
           [ Se.Is BeamDOA.driverId $ Se.Eq (driverId.getId),
@@ -168,7 +169,7 @@ findByDriverIdAndOperatorId ::
   m (Maybe DriverOperatorAssociation)
 findByDriverIdAndOperatorId driverId operatorId isActive = do
   now <- getCurrentTime
-  listToMaybe
+  (^? _head)
     <$> findAllWithOptionsKV
       [ Se.And
           [ Se.Is BeamDOA.driverId $ Se.Eq (driverId.getId),
@@ -194,7 +195,7 @@ findActiveAssociationByOperatorId ::
   m (Maybe DriverOperatorAssociation)
 findActiveAssociationByOperatorId operatorId = do
   now <- getCurrentTime
-  listToMaybe
+  (^? _head)
     <$> findAllWithOptionsKV'
       [ Se.And
           [ Se.Is BeamDOA.operatorId $ Se.Eq operatorId.getId,

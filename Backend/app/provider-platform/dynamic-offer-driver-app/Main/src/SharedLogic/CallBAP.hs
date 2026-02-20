@@ -58,7 +58,8 @@ import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import Control.Lens ((%~))
+import Control.Lens ((%~), (.~))
+import Data.Generics.Labels ()
 import qualified Data.Aeson as A
 import Data.Default.Class
 import qualified Data.HashMap.Strict as HMS
@@ -384,7 +385,7 @@ rideAssignedCommon booking ride driver veh = do
         _ -> Nothing
 
     refillKey = "REFILLED_" <> ride.driverId.getId
-    updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
+    updateVehicle veh' newModel = veh' & #model .~ newModel
     refillVehicleModel = try @_ @SomeException do
       -- TODO: remove later
       mbIsRefilledToday :: Maybe Bool <- Hedis.get refillKey
@@ -457,7 +458,7 @@ buildOnConfirmMessage booking ride driver veh = do
   onConfirmMessage <- TFOU.mkOnUpdateMessageV2 rideAssignedBuildReq farePolicy becknConfig
   let generatedMsg = A.encode onConfirmMessage
   logDebug $ "ride assigned on_confirm request bppv2: " <> T.pack (show generatedMsg)
-  pure . fromJust $ onConfirmMessage
+  onConfirmMessage & fromMaybeM (InternalError "Failed to build on_confirm message")
 
 sendOnConfirmToBAP ::
   ( MonadFlow m,

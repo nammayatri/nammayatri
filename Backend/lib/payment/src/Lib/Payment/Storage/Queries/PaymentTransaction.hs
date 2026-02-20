@@ -15,6 +15,7 @@
 
 module Lib.Payment.Storage.Queries.PaymentTransaction where
 
+import Control.Lens ((^?), _head)
 import qualified Data.Aeson as A
 import Kernel.Beam.Functions
 import qualified Kernel.External.Payment.Interface.Types as KPayment
@@ -85,7 +86,7 @@ findNewTransactionByOrderId (Id orderId) =
     (Se.Desc BeamPT.createdAt)
     (Just 1)
     Nothing
-    <&> listToMaybe
+    <&> (^? _head)
 
 findEarliestChargedTransactionByOrderId :: BeamFlow m r => Id PaymentOrder -> m (Maybe PaymentTransaction)
 findEarliestChargedTransactionByOrderId (Id orderId) =
@@ -98,7 +99,7 @@ findEarliestChargedTransactionByOrderId (Id orderId) =
     (Se.Asc BeamPT.createdAt)
     (Just 1)
     Nothing
-    <&> listToMaybe
+    <&> (^? _head)
 
 updateStatusAndError :: BeamFlow m r => Id PaymentTransaction -> TransactionStatus -> Maybe Text -> Maybe Text -> m ()
 updateStatusAndError transactionId status errorCode errorMessage = do

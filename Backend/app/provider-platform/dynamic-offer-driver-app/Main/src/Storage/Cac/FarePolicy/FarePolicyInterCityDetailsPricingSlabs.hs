@@ -23,7 +23,7 @@ import Utils.Common.CacUtils
 findFarePolicyInterCityDetailsPricingSlabsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [BeamFPRDPS.FullFarePolicyInterCityDetailsPricingSlabs]
 findFarePolicyInterCityDetailsPricingSlabsFromCAC context tenant id toss = do
   res :: (Maybe [BeamFPRDPS.FarePolicyInterCityDetailsPricingSlabs]) <- getConfigListFromCac context tenant toss FarePolicyInterCityDetailsPricingSlabs (Text.unpack id.getId)
-  let config = mapM fromCacType (fromMaybe [] res)
+  let config = mapM fromCacType (fold res)
   catMaybes <$> config
 
 instance FromCacType BeamFPRDPS.FarePolicyInterCityDetailsPricingSlabs BeamFPRDPS.FullFarePolicyInterCityDetailsPricingSlabs where

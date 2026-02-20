@@ -19,6 +19,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.Aeson as A
+import Control.Lens ((^?), _Just, _head)
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Kernel.Prelude
 import Kernel.Utils.Common
@@ -61,7 +62,7 @@ buildOnConfirmReq fromStationCode toStationCode onConfirmReq = do
       let order = message.confirmReqMessageOrder
       providerId <- order.orderProvider >>= (.providerId) & maybe (Left "Provider not found") Right
 
-      item <- order.orderItems >>= listToMaybe & maybe (Left "Item not found") Right
+      item <- order.orderItems ^? _Just . _head & maybe (Left "Item not found") Right
       bppItemId <- item.itemId & maybe (Left "BppItemId not found") Right
       bppOrderId <- order.orderId & maybe (Left "BppOrderId not found") Right
 

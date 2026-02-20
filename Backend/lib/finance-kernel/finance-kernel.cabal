@@ -121,6 +121,7 @@ library
     , beam-postgres
     , containers
     , exceptions
+    , lens
     , mobility-core
     , postgresql-simple
     , record-dot-preprocessor

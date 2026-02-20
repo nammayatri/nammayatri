@@ -903,7 +903,7 @@ instance FromMultipart Tmp UpsertSpecialLocationCsvReq where
 instance ToMultipart Tmp UpsertSpecialLocationCsvReq where
   toMultipart form =
     MultipartData
-      (maybe [] (\val -> [Input "upsertInDriverApp" (T.pack $ show val)]) form.upsertInDriverApp)
+      (foldMap (\val -> [Input "upsertInDriverApp" (T.pack $ show val)]) form.upsertInDriverApp)
       ( [FileData "file" (T.pack form.file) "" (form.file)]
           <> (map (\(fileName, file) -> FileData "locationGeoms" fileName (T.pack file) file) form.locationGeoms)
           <> (map (\(fileName, file) -> FileData "gateGeoms" fileName (T.pack file) file) form.gateGeoms)
@@ -949,7 +949,7 @@ instance ToMultipart Tmp UpdateGeometryReq where
   toMultipart form =
     MultipartData
       ( [Input "region" form.region]
-          <> maybe [] (\val -> [Input "updateInDriver" (T.pack $ show val)]) form.updateInDriver
+          <> foldMap (\val -> [Input "updateInDriver" (T.pack $ show val)]) form.updateInDriver
       )
       [FileData "file" (T.pack form.file) "" (form.file)]
 

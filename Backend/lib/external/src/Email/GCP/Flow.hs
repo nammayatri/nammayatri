@@ -72,7 +72,7 @@ instance ToJSON EmailAddress where
   toJSON addr =
     object $
       ["email" .= addr.email]
-        <> maybe [] (\n -> ["name" .= n]) addr.name
+        <> foldMap (\n -> ["name" .= n]) addr.name
 
 data Content = Content
   { contentType :: Text,

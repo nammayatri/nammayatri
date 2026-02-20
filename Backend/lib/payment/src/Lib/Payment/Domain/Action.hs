@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 {-# OPTIONS_GHC -Wwarn=ambiguous-fields #-}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
@@ -57,6 +58,8 @@ module Lib.Payment.Domain.Action
 where
 
 import Control.Applicative ((<|>))
+import Control.Lens ((.~), (^?), _Just, _head)
+import Data.Generics.Labels ()
 import Data.List (sortBy)
 import Data.Ord (comparing)
 import qualified Data.Text as T
@@ -751,7 +754,7 @@ offerProccessingLockKey paymentOrderId = "Offer:Processing:PaymentOrderId:" <> p
 buildOrderOffer :: (EncFlow m r, BeamFlow m r) => Id DOrder.PaymentOrder -> Maybe [PInterface.Offer] -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m ()
 buildOrderOffer paymentOrderId mbOffers merchantId merchantOperatingCityId = do
   let poIdTxt = paymentOrderId.getId
-  logDebug $ "buildOrderOffer called for paymentOrderId: " <> poIdTxt <> " with " <> show (length (fromMaybe [] mbOffers)) <> " offers"
+  logDebug $ "buildOrderOffer called for paymentOrderId: " <> poIdTxt <> " with " <> show (length (fold mbOffers)) <> " offers"
   case mbOffers of
     Nothing -> do
       logInfo $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
@@ -975,32 +978,34 @@ updateOrderTransaction order resp respDump = do
           QTransaction.create transaction
         return mbTxn
       Nothing -> QTransaction.findNewTransactionByOrderId order.id
-  let updOrder = order{status = resp.transactionStatus, isRetargeted = fromMaybe order.isRetargeted resp.isRetargeted, isRetried = fromMaybe order.isRetried resp.isRetried, retargetLink = resp.retargetLink}
+  let updOrder = order & #status .~ resp.transactionStatus
+                       & #isRetargeted .~ fromMaybe order.isRetargeted resp.isRetargeted
+                       & #isRetried .~ fromMaybe order.isRetried resp.isRetried
+                       & #retargetLink .~ resp.retargetLink
   case mbTransaction of
     Nothing -> when (order.status /= updOrder.status && order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QOrder.updateStatusAndError updOrder errorMessage errorCode
     -- Nothing -> runInReplica $ QTransaction.findNewTransactionByOrderId order.id
     Just transaction -> do
       let updTransaction =
-            transaction{statusId = resp.transactionStatusId,
-                        status = resp.transactionStatus,
-                        paymentMethodType = resp.paymentMethod, -- why paymentMethod and paymentMethodType confused?
-                        paymentMethod = resp.paymentMethodType,
-                        respMessage = resp.respMessage,
-                        respCode = resp.respCode,
-                        gatewayReferenceId = resp.gatewayReferenceId,
-                        amount = resp.amount,
-                        applicationFeeAmount = fromMaybe transaction.applicationFeeAmount resp.applicationFeeAmount,
-                        currency = resp.currency,
-                        mandateStatus = resp.mandateStatus,
-                        mandateStartDate = resp.mandateStartDate,
-                        mandateEndDate = resp.mandateEndDate,
-                        mandateId = resp.mandateId,
-                        mandateFrequency = resp.mandateFrequency,
-                        mandateMaxAmount = resp.mandateMaxAmount,
-                        juspayResponse = respDump,
-                        txnId = resp.txnId,
-                        splitSettlementResponse = resp.splitSettlementResponse
-                       }
+            transaction & #statusId .~ resp.transactionStatusId
+                        & #status .~ resp.transactionStatus
+                        & #paymentMethodType .~ resp.paymentMethod -- why paymentMethod and paymentMethodType confused?
+                        & #paymentMethod .~ resp.paymentMethodType
+                        & #respMessage .~ resp.respMessage
+                        & #respCode .~ resp.respCode
+                        & #gatewayReferenceId .~ resp.gatewayReferenceId
+                        & #amount .~ resp.amount
+                        & #applicationFeeAmount .~ fromMaybe transaction.applicationFeeAmount resp.applicationFeeAmount
+                        & #currency .~ resp.currency
+                        & #mandateStatus .~ resp.mandateStatus
+                        & #mandateStartDate .~ resp.mandateStartDate
+                        & #mandateEndDate .~ resp.mandateEndDate
+                        & #mandateId .~ resp.mandateId
+                        & #mandateFrequency .~ resp.mandateFrequency
+                        & #mandateMaxAmount .~ resp.mandateMaxAmount
+                        & #juspayResponse .~ respDump
+                        & #txnId .~ resp.txnId
+                        & #splitSettlementResponse .~ resp.splitSettlementResponse
 
       -- Avoid updating status if already in CHARGED state to handle race conditions
       when (transaction.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QTransaction.updateMultiple updTransaction
@@ -1192,12 +1197,13 @@ mkPaymentIntentOrderTxn PEInterface.PaymentIntent {..} = do
   let transactionStatus = Payment.castToTransactionStatus status
       defaultOrderTxn = mkDefaultStripeOrderTxn transactionStatus amount currency
       orderTxn =
-        defaultOrderTxn{txnId = Just paymentIntentId,
-                        transactionUUID = Just paymentIntentId,
-                        paymentMethod = paymentMethod,
-                        dateCreated = Just createdAt,
-                        applicationFeeAmount = applicationFeeAmount
-                       }
+        defaultOrderTxn
+          { txnId = Just paymentIntentId,
+            transactionUUID = Just paymentIntentId,
+            paymentMethod = paymentMethod,
+            dateCreated = Just createdAt,
+            applicationFeeAmount = applicationFeeAmount
+          }
   (orderShortId, orderTxn)
 
 mkChargeOrderTxn :: PEInterface.Charge -> (Maybe Text, OrderTxn)
@@ -1205,14 +1211,15 @@ mkChargeOrderTxn PEInterface.Charge {..} = do
   let transactionStatus = PInterface.castChargeToTransactionStatus status
       defaultOrderTxn = mkDefaultStripeOrderTxn transactionStatus amount currency
       orderTxn =
-        defaultOrderTxn{txnId = paymentIntentId,
-                        transactionUUID = paymentIntentId,
-                        paymentMethod = paymentMethod,
-                        dateCreated = Just createdAt,
-                        applicationFeeAmount = applicationFeeAmount,
-                        bankErrorMessage = failureMessage,
-                        bankErrorCode = failureCode
-                       }
+        defaultOrderTxn
+          { txnId = paymentIntentId,
+            transactionUUID = paymentIntentId,
+            paymentMethod = paymentMethod,
+            dateCreated = Just createdAt,
+            applicationFeeAmount = applicationFeeAmount,
+            bankErrorMessage = failureMessage,
+            bankErrorCode = failureCode
+          }
   (orderShortId, orderTxn)
 
 updateRefundsByWebhook ::
@@ -1577,11 +1584,11 @@ fetchRefundInfo driverAccountId latestRefunds getRefundsCall = do
       QRefunds.updateRefundsEntryByStripeResponse (Just response.id.getRefundId) response.errorCode response.status latestRefunds.isApiCallSuccess newCompletedAt latestRefunds.id
 
       let updRefunds =
-            latestRefunds{idAssignedByServiceProvider = Just response.id.getRefundId,
-                          errorCode = response.errorCode,
-                          status = response.status,
-                          completedAt = newCompletedAt
-                         }
+            latestRefunds
+              & #idAssignedByServiceProvider .~ Just response.id.getRefundId
+              & #errorCode .~ response.errorCode
+              & #status .~ response.status
+              & #completedAt .~ newCompletedAt
       pure (mkRefreshInitiateStripeRefundResp latestRefunds.id response, updRefunds)
     Left err -> do
       logError $ "Get Refund API Call Failure with Error: " <> show err
@@ -1648,7 +1655,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
       shortId <- generateShortId
       customerEmail <- encrypt req.customerEmail
       mobileNo <- encrypt req.customerPhone
-      let txn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< ((.transactions) =<< listToMaybe =<< resp.fulfillments)
+      let txn = (^? _head) <$> sortBy (comparing (.updatedAt)) =<< ((.transactions) =<< (resp.fulfillments ^? _Just . _head))
       pure $
         Payment.PayoutOrder
           { id = uuid,
@@ -1665,7 +1672,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             responseMessage = (.responseMessage) =<< txn,
             responseCode = (.responseCode) =<< txn,
             retriedOrderId = Nothing,
-            accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< resp.fulfillments, --- for now only one fullfillment supported
+            accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< (resp.fulfillments ^? _Just . _head), --- for now only one fullfillment supported
             vpa = Just req.customerVpa,
             customerEmail = customerEmail,
             lastStatusCheckedAt = Nothing,
@@ -1688,7 +1695,7 @@ payoutStatusService _merchantId _personId createPayoutOrderStatusReq createPayou
   let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = createPayoutOrderStatusReq.orderId, mbExpand = createPayoutOrderStatusReq.mbExpand}
   statusResp <- createPayoutOrderStatusCall payoutOrderStatusReq -- api call
   payoutStatusUpdates statusResp.status createPayoutOrderStatusReq.orderId (Just statusResp)
-  pure $ PayoutPaymentStatus {status = statusResp.status, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< statusResp.fulfillments)}
+  pure $ PayoutPaymentStatus {status = statusResp.status, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< (statusResp.fulfillments ^? _Just . _head))}
 
 payoutStatusUpdates :: (EncFlow m r, BeamFlow m r) => Payout.PayoutOrderStatus -> Text -> Maybe PT.PayoutOrderStatusResp -> m ()
 payoutStatusUpdates status_ orderId statusResp = do
@@ -1697,8 +1704,8 @@ payoutStatusUpdates status_ orderId statusResp = do
   logDebug $ "Payout order Status: " <> show statusResp
   case statusResp of
     Just Payout.CreatePayoutOrderResp {orderId = _orderPayoutId, status = _status, ..} -> do
-      let txns = (.transactions) =<< listToMaybe =<< fulfillments
-          mbTxn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< txns
+      let txns = (.transactions) =<< (fulfillments ^? _Just . _head)
+          mbTxn = (^? _head) <$> sortBy (comparing (.updatedAt)) =<< txns
       QPayoutOrder.updatePayoutOrderTxnRespInfo ((.responseCode) =<< mbTxn) ((.responseMessage) =<< mbTxn) orderId
       case mbTxn of
         Just Payout.Transaction {amount = amount_txn, ..} -> do

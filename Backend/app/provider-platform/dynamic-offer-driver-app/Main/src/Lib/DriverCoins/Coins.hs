@@ -129,9 +129,9 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
   logDebug $ "Fleet config present: " <> show (maybe False isJust mbFleetConfig)
   -- extract blacklists
   let blacklistedEventsByFleet = case mbFleetConfig of
-        Just (Just fc) -> fromMaybe [] (DFC.blacklistCoinEvents fc)
+        Just (Just fc) -> fold (DFC.blacklistCoinEvents fc)
         _ -> []
-      blacklistedEventsByDriver = fromMaybe [] (DDS.blacklistCoinEvents =<< mbDriverStats)
+      blacklistedEventsByDriver = fold (DDS.blacklistCoinEvents =<< mbDriverStats)
       combinedBlacklist = blacklistedEventsByDriver <> blacklistedEventsByFleet
       filteredConfigAll = filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) coinConfiguration
   logDebug $ "Coin config count: total=" <> show (length coinConfiguration) <> ", filtered=" <> show (length filteredConfigAll)
@@ -269,14 +269,10 @@ validateCancellation rideId rideStartTime initialDisToPickup cancellationDisToPi
         (Just initial, Just cancellation) -> Just (initial - cancellation)
         _ -> Nothing
       expectedCoveredDistance =
-        if isJust initialDisToPickup
-          then
-            let initialDistance = fromJust initialDisToPickup
-                progressRatio = fromIntegral timeOfCancellation / max 1 estimatedTimeToPickup
-                expectedDistance = round $ fromIntegral initialDistance * progressRatio
-             in Just expectedDistance
-          else Nothing
-      driverWaitingTime = if isJust ride.driverArrivalTime then Just (round $ diffUTCTime now (fromJust ride.driverArrivalTime)) else Nothing
+        initialDisToPickup <&> \initialDistance ->
+          let progressRatio = fromIntegral timeOfCancellation / max 1 estimatedTimeToPickup
+           in round $ fromIntegral initialDistance * progressRatio
+      driverWaitingTime = fmap (\arrivalTime -> round $ diffUTCTime now arrivalTime) ride.driverArrivalTime
 
   let logicInput =
         CancellationCoins.CancellationCoinData

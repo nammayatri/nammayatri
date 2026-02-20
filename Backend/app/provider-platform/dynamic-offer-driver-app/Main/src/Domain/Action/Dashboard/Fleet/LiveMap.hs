@@ -11,7 +11,8 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleVariant as DV
 import qualified Environment
-import EulerHS.Prelude hiding (id)
+import Control.Lens ((^?), _head)
+import EulerHS.Prelude hiding (id, (^?), (^..))
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
@@ -110,7 +111,7 @@ getDriverCurrentLocation driverId = do
           return Nothing
         Right locations -> do
           when (null locations) $ logWarning $ "Location was not found for current driver: " <> driverId.getId
-          return $ Kernel.Prelude.listToMaybe locations
+          return $ locations ^? _head
   currentDriverLocation <- mbCurrentDriverLocation & fromMaybeM LocationNotFound
   pure $ LatLong currentDriverLocation.lat currentDriverLocation.lon
 

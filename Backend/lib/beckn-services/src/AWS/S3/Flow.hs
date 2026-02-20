@@ -49,7 +49,7 @@ import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Text.Encoding as T
 import qualified Data.Text.IO as T
-import EulerHS.Prelude hiding (decodeUtf8, get, put, show, (^.))
+import EulerHS.Prelude hiding (decodeUtf8, get, put, show, (^.), (^..))
 import qualified EulerHS.Types as ET
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error

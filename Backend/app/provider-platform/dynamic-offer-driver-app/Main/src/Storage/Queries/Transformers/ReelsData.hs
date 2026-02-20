@@ -12,7 +12,7 @@ convertSideButtonConfigToTable :: [Domain.Types.ReelsData.ReelRowButtonConfig] -
 convertSideButtonConfigToTable = Data.Aeson.toJSON
 
 getBottomButtonConfigFromTable :: Data.Aeson.Value -> [Domain.Types.ReelsData.ReelRowButtonConfig]
-getBottomButtonConfigFromTable bottomButtonConfig = fromMaybe [] (valueToMaybe @[Domain.Types.ReelsData.ReelRowButtonConfig] bottomButtonConfig)
+getBottomButtonConfigFromTable bottomButtonConfig = fold (valueToMaybe @[Domain.Types.ReelsData.ReelRowButtonConfig] bottomButtonConfig)
 
 getSideButtonConfigFromTable :: Data.Aeson.Value -> [Domain.Types.ReelsData.ReelRowButtonConfig]
-getSideButtonConfigFromTable sideButtonConfig = fromMaybe [] (valueToMaybe @[Domain.Types.ReelsData.ReelRowButtonConfig] sideButtonConfig)
+getSideButtonConfigFromTable sideButtonConfig = fold (valueToMaybe @[Domain.Types.ReelsData.ReelRowButtonConfig] sideButtonConfig)

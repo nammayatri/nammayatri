@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 module SharedLogic.DriverPool
   ( calculateDriverPool,
@@ -58,7 +59,9 @@ module SharedLogic.DriverPool
   )
 where
 
+import Control.Lens ((.~))
 import Control.Monad.Extra (mapMaybeM)
+import Data.Generics.Labels ()
 import Data.Fixed
 import qualified Data.Geohash as DG
 import Data.List (find, length)
@@ -84,11 +87,12 @@ import Domain.Types.SearchRequest
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (find, id, length)
+import EulerHS.Prelude hiding (find, id, length, (^?), (^..), (.~))
 import qualified Kernel.Beam.Functions as B
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Types
-import Kernel.Prelude (head, listToMaybe)
+import Control.Lens ((^?), _head)
+import Kernel.Prelude (head)
 import qualified Kernel.Prelude as KP
 import qualified Kernel.Randomizer as Rnd
 import Kernel.Storage.Esqueleto
@@ -625,7 +629,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           specialLocWarriorDriverInfo <- MaybeT $ return $ if driverInfo.isSpecialLocWarrior then Just driverInfo else Nothing
           preferredLocId <- MaybeT $ return specialLocWarriorDriverInfo.preferredPrimarySpecialLocId
           preferredLoc <- MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredLocId.getId)
-          preferredLocGate <- MaybeT $ return $ listToMaybe preferredLoc.gates
+          preferredLocGate <- MaybeT $ return $ preferredLoc.gates ^? _head
           let gHR =
                 DDGR.DriverGoHomeRequest
                   { createdAt = now,
@@ -1286,15 +1290,7 @@ refactorRoutesResp :: GoHomeConfig -> (QP.NearestGoHomeDriversResult, Maps.Route
 refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWithActualDistance) = (nearestDriverRes, newRoute route, ghrId, driverGoHomePoolWithActualDistance)
   where
     newRoute route' =
-      RouteInfo
-        { distance = route'.distance,
-          distanceWithUnit = route'.distanceWithUnit,
-          duration = route'.duration,
-          staticDuration = route'.staticDuration,
-          points = getStartPoint $ filterInitPoints (refactor [] route'.points),
-          snappedWaypoints = route'.snappedWaypoints,
-          boundingBox = route'.boundingBox
-        }
+      route' & #points .~ (getStartPoint $ filterInitPoints (refactor [] route'.points))
 
     filterInitPoints (x1 : x2 : xs) = if highPrecMetersToMeters (distanceBetweenInMeters x1 x2) <= goHomeCfg.ignoreWaypointsTill then filterInitPoints (x1 : xs) else x1 : x2 : xs
     filterInitPoints [x] = [x]

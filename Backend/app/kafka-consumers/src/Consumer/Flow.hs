@@ -124,7 +124,7 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
 locationUpdateConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 locationUpdateConsumer flowRt appEnv kafkaConsumer = do
   let batchSize = maybe 100 (\healthCheckAppCfg -> fromIntegral healthCheckAppCfg.batchSize) appEnv.healthCheckAppCfg
-  let enabledMerchantCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
+  let enabledMerchantCityIds = foldMap (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
   readMessages kafkaConsumer
     & S.chunksOf batchSize addToList
     & S.mapM (processRealtimeLocationUpdates' enabledMerchantCityIds)

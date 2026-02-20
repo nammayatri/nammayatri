@@ -24,6 +24,7 @@ module Domain.Action.UI.Ride.CancelRide
   )
 where
 
+import Control.Lens ((^?), _head)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
@@ -232,7 +233,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           mbLocation <- do
             driverLocations <- LF.driversLocation [driverId]
-            return $ listToMaybe driverLocations
+            return $ driverLocations ^? _head
           disToPickup <- forM mbLocation $ \location -> do
             pickUpDistance booking (getCoordinates location) (getCoordinates booking.fromLocation)
           -- Temporary for debug issue with huge values

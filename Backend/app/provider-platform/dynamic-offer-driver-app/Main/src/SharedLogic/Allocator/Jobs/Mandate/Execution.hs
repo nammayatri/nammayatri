@@ -1,5 +1,6 @@
 module SharedLogic.Allocator.Jobs.Mandate.Execution where
 
+import Control.Lens ((^?), _head)
 import qualified Control.Monad.Catch as C
 import Data.List (nubBy)
 import qualified Data.Map.Strict as Map
@@ -94,18 +95,14 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
     driverIdAndDriverPlanTuple =
       mapMaybe
         ( \dplan ->
-            case dplan.mandateId of
-              Just mandateId -> Just (dplan.driverId, (dplan, mandateId))
-              Nothing -> Nothing
+            dplan.mandateId <&> \mandateId -> (dplan.driverId, (dplan, mandateId))
         )
     mapExecutionRequestAndInvoice mapDriverFeeById mapDriverPlanByDriverId_ executionDate subscriptionConfig = do
       mapMaybe
         ( \notification -> do
-            case mapDriverFeeById Map.!? NTF.driverFeeId notification of
-              Just driverFee -> do
-                let dplan = mapDriverPlanByDriverId_ Map.!? cast @P.Driver @P.Person (DF.driverId driverFee)
-                buildExecutionRequestAndInvoice driverFee notification executionDate subscriptionConfig <$> dplan
-              Nothing -> Nothing
+            (mapDriverFeeById Map.!? NTF.driverFeeId notification) >>= \driverFee -> do
+              let dplan = mapDriverPlanByDriverId_ Map.!? cast @P.Driver @P.Person (DF.driverId driverFee)
+              buildExecutionRequestAndInvoice driverFee notification executionDate subscriptionConfig <$> dplan
         )
 
 buildExecutionRequestAndInvoice ::
@@ -120,7 +117,7 @@ buildExecutionRequestAndInvoice ::
   (DP.DriverPlan, Id Mandate) ->
   m (Maybe ExecutionData)
 buildExecutionRequestAndInvoice driverFee notification executionDate subscriptionConfig (driverPlan, mandateId) = do
-  invoice' <- listToMaybe <$> QINV.findLatestAutopayActiveByDriverFeeId driverFee.id
+  invoice' <- (^? _head) <$> QINV.findLatestAutopayActiveByDriverFeeId driverFee.id
   case invoice' of
     Just invoice -> do
       let splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
@@ -132,10 +129,9 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
           logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
           return Nothing
         Right splitSettlementDetails -> do
-          let splitSettlementDetailsAmount = case splitSettlementDetails of
-                Nothing -> Nothing
-                Just (AmountBased details) -> Just details
-                Just (PercentageBased _) -> Nothing
+          let splitSettlementDetailsAmount = splitSettlementDetails >>= \case
+                AmountBased details -> Just details
+                PercentageBased _ -> Nothing
           let executionRequest =
                 PaymentInterface.MandateExecutionReq
                   { orderId = invoice.invoiceShortId,

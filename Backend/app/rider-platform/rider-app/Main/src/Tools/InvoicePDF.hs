@@ -15,6 +15,7 @@
 module Tools.InvoicePDF where
 
 import Control.Exception (try)
+import Control.Lens ((^?), _head)
 import qualified Data.ByteString as BS
 -- import qualified Data.List as List
 import qualified Data.Text as T
@@ -193,7 +194,7 @@ calculateTotalAmount bookings =
     getRideComputedPrice :: DBAPI.BookingAPIEntity -> Maybe Rational
     getRideComputedPrice booking = do
       let completedRide = filter (\ride -> ride.status == DRide.COMPLETED) booking.rideList
-      ride <- listToMaybe completedRide
+      ride <- completedRide ^? _head
       computedPrice <- ride.computedPrice
       return $ fromIntegral computedPrice
 

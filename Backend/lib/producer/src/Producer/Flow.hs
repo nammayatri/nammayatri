@@ -106,7 +106,7 @@ runReviver' producerType = do
           maxShards <- asks (.maxShards)
           let newid :: (Id AnyJob) = Id uuid
           (AnyJobInfo jobInfo) :: AnyJobInfo AllocatorJobType <- fromMaybeM (InvalidRequest "driver side jobInfo could not be parsed") (restoreAnyJobInfoMain $ storeJobInfo x.jobInfo)
-          let shardId :: Int = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords (fromJust $ UU.fromText uuid))) `mod` maxShards
+          let shardId :: Int = maybe 0 (\u -> fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords u)) `mod` maxShards) (UU.fromText uuid)
           let newJob =
                 Job
                   { id = newid,
@@ -142,7 +142,7 @@ runReviver' producerType = do
           maxShards <- asks (.maxShards)
           let newid :: (Id AnyJob) = Id uuid
           (AnyJobInfo jobInfo) :: AnyJobInfo RiderJobType <- fromMaybeM (InvalidRequest "rider side jobInfo could not be parsed") (restoreAnyJobInfoMain $ storeJobInfo x.jobInfo)
-          let shardId :: Int = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords (fromJust $ UU.fromText uuid))) `mod` maxShards
+          let shardId :: Int = maybe 0 (\u -> fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords u)) `mod` maxShards) (UU.fromText uuid)
           let newJob =
                 Job
                   { id = newid,

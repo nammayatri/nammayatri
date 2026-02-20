@@ -28,7 +28,7 @@ getCityConfigs (_, _, merchantOpCityId) = do
   transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   pure $
     API.Types.UI.Merchant.CityConfigs
-      { localPoliceNumbers = fromMaybe [] transporterConfig.localPoliceNumbers,
-        localAmbulanceNumbers = fromMaybe [] transporterConfig.localAmbulanceNumbers,
-        safetyTeamNumbers = fromMaybe [] transporterConfig.safetyTeamNumbers
+      { localPoliceNumbers = fold transporterConfig.localPoliceNumbers,
+        localAmbulanceNumbers = fold transporterConfig.localAmbulanceNumbers,
+        safetyTeamNumbers = fold transporterConfig.safetyTeamNumbers
       }

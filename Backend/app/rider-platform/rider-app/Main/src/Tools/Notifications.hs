@@ -308,9 +308,7 @@ notifyOnRideAssigned booking ride = do
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
 
   -- Check if vehicle number matches any special vehicle notification config
-  let matchedSpecialVehicleConfig = case riderConfig.specialVehicleNotificationConfigs of
-        Just configs -> L.find (\config -> config.vehicleNo == ride.vehicleNumber) configs
-        Nothing -> Nothing
+  let matchedSpecialVehicleConfig = riderConfig.specialVehicleNotificationConfigs >>= L.find (\config -> config.vehicleNo == ride.vehicleNumber)
 
   let entity = Notification.Entity Notification.Product rideId.getId (RideAssignedParam driverName booking.startTime booking.id booking.isScheduled)
       dynamicParams = RideAssignedParam driverName booking.startTime booking.id booking.isScheduled

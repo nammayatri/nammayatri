@@ -3,6 +3,7 @@
 
 module ExternalBPP.ExternalAPI.Metro.CMRL.V2.Order where
 
+import Control.Lens ((^?), _head)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
@@ -200,7 +201,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
             fareQuoteId = fareQuoteIdValue
           }
 
-      extractStationCode stationCode = fromMaybe stationCode $ listToMaybe $ drop 1 $ T.splitOn "|" stationCode
+      extractStationCode stationCode = fromMaybe stationCode $ drop 1 (T.splitOn "|" stationCode) ^? _head
 
       ticketInfoPayload =
         TicketInfoPayload

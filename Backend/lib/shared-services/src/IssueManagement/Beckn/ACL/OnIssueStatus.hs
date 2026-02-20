@@ -1,5 +1,6 @@
 module IssueManagement.Beckn.ACL.OnIssueStatus where
 
+import Control.Lens ((^?), _head)
 import Data.List (sortBy)
 import Data.Ord (Down (..), comparing)
 import qualified IGM.Enums as Spec
@@ -24,10 +25,10 @@ buildOnIssueStatusReq req = do
   message <- req.onIssueStatusReqMessage & fromMaybeM (InvalidRequest "Message not found")
   let issue = message.issueReqMessageIssue
       mbResolution = issue.issueResolution
-      gro = issue.issueResolutionProvider >>= (.resolutionProviderRespondentInfo.resolutionProviderRespondentInfoResolutionSupport) >>= (.resolutionSupportGros) >>= listToMaybe
+      gro = issue.issueResolutionProvider >>= (.resolutionProviderRespondentInfo.resolutionProviderRespondentInfoResolutionSupport) >>= (.resolutionSupportGros) >>= (^? _head)
       groContact = gro >>= (.gROContact)
       groPerson = gro >>= (.gROPerson)
-  respondentAction <- fromMaybeM (InvalidRequest "RespondentActions Missing") $ listToMaybe <$> sortBy (comparing (Down . (.respondentActionUpdatedAt))) =<< (.issueActionsRespondentActions) =<< issue.issueIssueActions
+  respondentAction <- fromMaybeM (InvalidRequest "RespondentActions Missing") $ (^? _head) <$> sortBy (comparing (Down . (.respondentActionUpdatedAt))) =<< (.issueActionsRespondentActions) =<< issue.issueIssueActions
   pure $
     DOnIssueStatus.DOnIssueStatus
       { id = issue.issueId,

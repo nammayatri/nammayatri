@@ -499,9 +499,7 @@ getRiderMobileNumber booking option = do
         Nothing -> pure Nothing
         Just riderId -> do
           mbRider <- QRID.findById riderId
-          case mbRider of
-            Nothing -> pure Nothing
-            Just rider -> Just <$> decrypt rider.mobileNumber
+          traverse (\rider -> decrypt rider.mobileNumber) mbRider
       else pure Nothing
   pure mbRiderNumber
 

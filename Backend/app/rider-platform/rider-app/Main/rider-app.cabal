@@ -1469,6 +1469,7 @@ library
     , extra
     , filepath
     , finance-kernel
+    , generic-lens
     , geohash ==1.0.1
     , hashable
     , haskell-cac
@@ -1610,6 +1611,7 @@ executable rider-app-exe
     , euler-hs
     , extra
     , filepath
+    , generic-lens
     , geohash ==1.0.1
     , hashable
     , http-api-data
@@ -1746,6 +1748,7 @@ test-suite rider-app-test
     , euler-hs
     , extra
     , filepath
+    , generic-lens
     , geohash ==1.0.1
     , hashable
     , http-api-data

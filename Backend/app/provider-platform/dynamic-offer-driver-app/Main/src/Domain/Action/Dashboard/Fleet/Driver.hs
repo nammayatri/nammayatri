@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# LANGUAGE OverloadedLabels #-}
+
 module Domain.Action.Dashboard.Fleet.Driver
   ( getDriverFleetAccessList,
     postDriverFleetAccessSelect,
@@ -88,9 +90,11 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.En
 import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode (..))
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import Control.Applicative (liftA2, optional)
+import Control.Lens ((.~), (^?), _head)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Char (isDigit)
 import Data.Coerce (coerce)
+import Data.Generics.Labels ()
 import Data.Csv
 import Data.List (groupBy, nub, sortOn)
 import Data.List.NonEmpty (fromList, toList)
@@ -676,9 +680,7 @@ getDriverFleetGetAllDriver merchantShortId _opCity mblimit mboffset mbMobileNumb
       offset = fromMaybe 0 mboffset
   mobileNumberHash <- case mbSearchString of
     Just _ -> pure Nothing
-    Nothing -> case mbMobileNumber of
-      Just phNo -> Just <$> getDbHash phNo
-      Nothing -> pure Nothing
+    Nothing -> traverse getDbHash mbMobileNumber
   case mbIsActive of
     Just True -> do
       pairs <- FDV.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just True)
@@ -784,7 +786,7 @@ postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequest
   FRAE.endAssociationForRC (Id fleetOwnerId_ :: Id DP.Person) vehicleRC.id
   pure Success
   where
-    updatedVehicleRegistrationCertificate DVRC.VehicleRegistrationCertificate {..} = DVRC.VehicleRegistrationCertificate {fleetOwnerId = Nothing, ..}
+    updatedVehicleRegistrationCertificate rc = rc & #fleetOwnerId .~ Nothing
 
 postDriverAddRidePayoutAccountNumber ::
   ShortId DM.Merchant ->
@@ -1388,9 +1390,7 @@ getListOfDrivers _ mbDriverPhNo fleetOwnerId _ mbIsActive mbLimit mbOffset mbMod
 
   mobileNumberHash <- case mbSearchString of
     Just _ -> pure Nothing
-    Nothing -> case mbDriverPhNo of
-      Just phNo -> Just <$> getDbHash phNo
-      Nothing -> pure Nothing
+    Nothing -> traverse getDbHash mbDriverPhNo
 
   let mode = castDashboardDriverStatus <$> mbMode
   driverAssociationAndInfo <- FDV.findAllActiveDriverByFleetOwnerIdWithDriverInfo fleetOwnerId limit offset mobileNumberHash mbName mbSearchString mbIsActive mode
@@ -1672,7 +1672,7 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
       then QFDAExtra.getActiveDriverIdsByFleetOwnerId fleetOwnerId
       else do
         maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId fleetOwnerId
-        pure $ fromMaybe [] maybeDriverIds
+        pure $ fold maybeDriverIds
   let driverIdTexts = map (.getId) driverIdObjs
       mbSearchTerm = do
         raw <- mbSearch
@@ -2307,7 +2307,7 @@ postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId mbTerminat
           logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
           return Nothing
         Right locations -> do
-          let location = listToMaybe locations
+          let location = locations ^? _head
           when (isNothing location) $ logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
           return location
   void $ WMB.cancelTripTransaction fleetConfig tripTransaction (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation) (castActionSource mbTerminationSource)
@@ -2580,7 +2580,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
         QTT.createMany allTransactions
       Nothing -> do
         QTT.createMany allTransactions
-        whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
+        whenJust (allTransactions ^? _head) $ \tripTransaction -> do
           case tripTransaction.tripType of
             Just DTT.PILOT -> do
               psource <- maybe (throwError (InternalError "Pilot source not found")) pure tripTransaction.pilotSource
@@ -2831,13 +2831,9 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
       routeCode <- Csv.cleanCSVField idx row.routeCode "Route code"
       let roundTripFreq = Csv.readMaybeCSVField idx row.roundTripFreq "Round trip freq"
       driverBadgeName <-
-        case row.driverBadgeName of
-          Just driverBadgeName -> Just <$> Csv.cleanCSVField idx driverBadgeName "Driver Badge name"
-          Nothing -> pure Nothing
+        traverse (\name -> Csv.cleanCSVField idx name "Driver Badge name") row.driverBadgeName
       conductorBadgeName <-
-        case row.conductorBadgeName of
-          Just conductorBadgeName -> Just <$> Csv.cleanCSVField idx conductorBadgeName "Conductor Badge name"
-          Nothing -> pure Nothing
+        traverse (\name -> Csv.cleanCSVField idx name "Conductor Badge name") row.conductorBadgeName
       pure $ DriverBusRouteDetails driverPhoneNo vehicleNumber routeCode roundTripFreq driverBadgeName conductorBadgeName
 
     makeTripPlannerReq driverGroup =
@@ -3271,9 +3267,7 @@ getListOfDriversMultiFleet _ mbDriverPhNo fleetOwnerIds _ mbIsActive mbLimit mbO
 
   mobileNumberHash <- case mbSearchString of
     Just _ -> pure Nothing
-    Nothing -> case mbDriverPhNo of
-      Just phNo -> Just <$> getDbHash phNo
-      Nothing -> pure Nothing
+    Nothing -> traverse getDbHash mbDriverPhNo
 
   let mode = castDashboardDriverStatus <$> mbMode
   driverAssociationAndInfo <- FDV.findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds limit offset mobileNumberHash mbName mbSearchString mbIsActive mode mbHasRequestReason

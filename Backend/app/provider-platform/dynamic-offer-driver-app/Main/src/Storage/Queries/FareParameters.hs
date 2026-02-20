@@ -123,7 +123,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
             Just (_, fPAD) -> return (Just $ AmbulanceDetails fPAD)
             Nothing -> return Nothing
     now <- getCurrentTime
-    let conditionalCharges' = fromMaybe [] $ (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< conditionalCharges
+    let conditionalCharges' = fold $ (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< conditionalCharges
     case mFareParametersDetails of
       Just fareParametersDetails -> do
         return $

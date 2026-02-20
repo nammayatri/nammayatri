@@ -15,6 +15,7 @@
 
 module Lib.Payment.Storage.Queries.PaymentOrder where
 
+import Control.Lens ((^?), _head)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
@@ -40,7 +41,7 @@ findLatestByPersonId personId =
     (Se.Desc BeamPO.createdAt)
     (Just 1)
     Nothing
-    <&> listToMaybe
+    <&> (^? _head)
 
 findByDomainEntityId :: BeamFlow m r => Text -> m (Maybe DOrder.PaymentOrder)
 findByDomainEntityId domainEntityId =
@@ -49,7 +50,7 @@ findByDomainEntityId domainEntityId =
     (Se.Desc BeamPO.createdAt)
     (Just 1)
     Nothing
-    <&> listToMaybe
+    <&> (^? _head)
 
 create :: BeamFlow m r => DOrder.PaymentOrder -> m ()
 create = createWithKV

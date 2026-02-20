@@ -131,15 +131,12 @@ buildMininumIntercityFareArray req mbSourceLatLong merchant merchanOperatingCity
           let estimatedFares = fareData.estimatedFares
               mbFilteredResponse = filter (\item -> not (item.vehicleServiceTier `elem` excludedVehicleVariants)) estimatedFares
               mbMinFareResp = if null mbFilteredResponse then Nothing else Just $ minimumBy (comparing (.minFare)) mbFilteredResponse
-              interCitySearchResp = case mbMinFareResp of
-                Just minFareResp ->
-                  Just $
-                    IntercitySearchResp
-                      { minimumFare =
-                          Just $ minFareResp.maxFare,
-                        destinationItem = Just $ destinationItem
-                      }
-                Nothing -> Nothing
+              interCitySearchResp = mbMinFareResp <&> \minFareResp ->
+                IntercitySearchResp
+                  { minimumFare =
+                      Just $ minFareResp.maxFare,
+                    destinationItem = Just $ destinationItem
+                  }
           pure interCitySearchResp
       )
       interCitySearchLocations_
@@ -172,15 +169,11 @@ buildMininumRentalsFareArray req mbSourceLatLong merchant merchantOperatingCity 
           fareData <- CallBPPInternal.getFare merchant merchantOperatingCity calculateFareReq
           let mbFilteredResponse = filter (\f -> not (f.vehicleServiceTier `elem` excludedVehicleVariants)) fareData.estimatedFares
               mbMinFareResp = if null mbFilteredResponse then Nothing else Just $ minimumBy (comparing (.minFare)) mbFilteredResponse
-              rentalsSearchres =
-                case mbMinFareResp of
-                  Just minFareResp ->
-                    Just $
-                      RentalsSearchResp
-                        { minimumFare = Just $ minFareResp.minFare,
-                          rentalElement = rentalElem
-                        }
-                  Nothing -> Nothing
+              rentalsSearchres = mbMinFareResp <&> \minFareResp ->
+                RentalsSearchResp
+                  { minimumFare = Just $ minFareResp.minFare,
+                    rentalElement = rentalElem
+                  }
           pure rentalsSearchres
       )
       rentalsConfigList_

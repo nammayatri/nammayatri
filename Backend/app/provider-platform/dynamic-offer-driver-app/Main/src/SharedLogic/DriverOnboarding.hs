@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module SharedLogic.DriverOnboarding
   ( module SharedLogic.DriverOnboarding,
@@ -22,6 +23,8 @@ import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding
 import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
 import Control.Applicative ((<|>))
+import Control.Lens ((.~))
+import Data.Generics.Labels ()
 import qualified Data.List as DL
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
@@ -318,7 +321,7 @@ makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certific
   addSelectedServiceTiers availableServiceTiersForDriver vehicle
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
-    addSelectedServiceTiers serviceTiers Vehicle {..} = Vehicle {selectedServiceTiers = serviceTiers, ..}
+    addSelectedServiceTiers serviceTiers veh = veh & #selectedServiceTiers .~ serviceTiers
 
 makeVehicleFromRC :: Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
 makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now vehicleTag = do

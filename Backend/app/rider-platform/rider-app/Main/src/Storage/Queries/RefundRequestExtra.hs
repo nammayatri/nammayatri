@@ -28,12 +28,12 @@ findAllRefundRequestItem merchantOpCityId limit offset mbStatus mbCode mbPersonI
   findAllWithOptionsKV
     [ Se.And $
         [Se.Is BeamRR.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId]
-          <> maybe [] (\status -> [Se.Is BeamRR.status $ Se.Eq status]) mbStatus
-          <> maybe [] (\code -> [Se.Is BeamRR.code $ Se.Eq code]) mbCode
-          <> maybe [] (\personId -> [Se.Is BeamRR.personId $ Se.Eq personId.getId]) mbPersonId
-          <> maybe [] (\orderId -> [Se.Is BeamRR.orderId $ Se.Eq orderId.getId]) mbOrderId
-          <> maybe [] (\from -> [Se.Is BeamRR.createdAt $ Se.GreaterThanOrEq from]) mbFrom
-          <> maybe [] (\to -> [Se.Is BeamRR.createdAt $ Se.LessThanOrEq to]) mbTo
+          <> foldMap (\status -> [Se.Is BeamRR.status $ Se.Eq status]) mbStatus
+          <> foldMap (\code -> [Se.Is BeamRR.code $ Se.Eq code]) mbCode
+          <> foldMap (\personId -> [Se.Is BeamRR.personId $ Se.Eq personId.getId]) mbPersonId
+          <> foldMap (\orderId -> [Se.Is BeamRR.orderId $ Se.Eq orderId.getId]) mbOrderId
+          <> foldMap (\from -> [Se.Is BeamRR.createdAt $ Se.GreaterThanOrEq from]) mbFrom
+          <> foldMap (\to -> [Se.Is BeamRR.createdAt $ Se.LessThanOrEq to]) mbTo
     ]
     (Se.Desc BeamRR.createdAt)
     (Just limit)

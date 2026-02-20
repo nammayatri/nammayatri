@@ -203,11 +203,9 @@ enableFollowRideInSos :: [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Flow (
 enableFollowRideInSos emergencyContacts = do
   mapM_
     ( \contact -> do
-        case contact.contactPersonId of
-          Nothing -> pure ()
-          Just id -> do
-            contactPersonEntity <- QP.findById id >>= fromMaybeM (PersonDoesNotExist id.getId)
-            DFR.updateFollowDetails contactPersonEntity contact
+        whenJust contact.contactPersonId $ \id -> do
+          contactPersonEntity <- QP.findById id >>= fromMaybeM (PersonDoesNotExist id.getId)
+          DFR.updateFollowDetails contactPersonEntity contact
     )
     emergencyContacts
 
@@ -270,10 +268,8 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
   case isMock of
     Just True -> do
       mockSos :: Maybe DSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
-      case mockSos of
-        Nothing -> pure ()
-        Just _ -> do
-          Redis.setExp (CQSos.mockSosKey personId) (DSos.SosMockDrill {personId, status = DSos.MockResolved}) 13400
+      whenJust mockSos $ \_ ->
+        Redis.setExp (CQSos.mockSosKey personId) (DSos.SosMockDrill {personId, status = DSos.MockResolved}) 13400
       SPDEN.notifyEmergencyContactsWithKey person "SOS_RESOLVED_SAFE" Notification.SOS_RESOLVED [("userName", SLP.getName person)] Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
       return APISuccess.Success
     _ -> do
@@ -505,7 +501,7 @@ sendUnattendedSosTicketAlert ticketId = do
       merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
       riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
       let maybeAppId = (HM.lookup DRC.UnattendedTicketAppletID . DRC.exotelMap) =<< riderConfig.exotelAppIdMapping
-      mapM_ (sendAlert merchantOperatingCity sos maybeAppId) (fromMaybe [] riderConfig.cxAgentDetails)
+      mapM_ (sendAlert merchantOperatingCity sos maybeAppId) (fold riderConfig.cxAgentDetails)
   where
     sendAlert :: DMOC.MerchantOperatingCity -> DSos.Sos -> Maybe Text -> IC.CxAgentDetails -> Flow ()
     sendAlert merchantOpCity sos maybeAppId cxAgentDetails =

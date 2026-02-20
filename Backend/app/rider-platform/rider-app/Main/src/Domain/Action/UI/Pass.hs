@@ -21,6 +21,7 @@ where
 import qualified API.Types.UI.Pass as PassAPI
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
+import Control.Lens ((^?), _head)
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -589,9 +590,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
   passCategory <- B.runInReplica $ QPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
   futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PreBooked purchasedPass.endDate
 
-  let tripsLeft = case purchasedPass.maxValidTrips of
-        Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
-        Nothing -> Nothing
+  let tripsLeft = purchasedPass.maxValidTrips <&> \maxTrips -> max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
 
   passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage person.id purchasedPass
   let passDetailsEntity =
@@ -729,10 +728,9 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbDeviceId <- if isDashboard then return Nothing else Just <$> getDeviceId person mbDeviceIdParam mbImeiParam
 
-  let mbStatus = case mbStatusParam of
-        Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired, DPurchasedPass.PhotoPending]
-        Just s -> Just [s]
-        Nothing -> Nothing
+  let mbStatus = mbStatusParam <&> \case
+        DPurchasedPass.Active -> [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired, DPurchasedPass.PhotoPending]
+        s -> [s]
 
   passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
   istTime <- getLocalCurrentTime (19800 :: Seconds)
@@ -744,7 +742,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
     when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired] && purchasedPass.endDate < today) $ do
       -- check if user has already renewed the pass
       allPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] today
-      let mbFirstPreBookedPayment = listToMaybe allPreBookedPayments
+      let mbFirstPreBookedPayment = allPreBookedPayments ^? _head
       case mbFirstPreBookedPayment of
         Just firstPreBookedPayment -> do
           let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
@@ -836,7 +834,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
       Nothing -> return []
   let sourceStop =
         getNearestStop routeStopMapping passVerifyReq.currentLat passVerifyReq.currentLon
-          <|> ((listToMaybe routeStopMapping) <&> (.stopCode))
+          <|> ((routeStopMapping ^? _head) <&> (.stopCode))
       destinationStop = (safeTail routeStopMapping) <&> (.stopCode)
   id <- generateGUID
   now <- getCurrentTime
@@ -1055,7 +1053,7 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
 
   QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
   allPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusAndStartDate (Just 1) Nothing purchasedPass.id [DPurchasedPass.Active, DPurchasedPass.PreBooked] purchasedPass.startDate
-  whenJust (listToMaybe allPayments) $ \payment -> do
+  whenJust (allPayments ^? _head) $ \payment -> do
     QPurchasedPassPayment.updateStatusAndDatesById newStartDate newEndDate newStatus payment.id
   return APISuccess.Success
 

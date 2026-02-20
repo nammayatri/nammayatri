@@ -103,7 +103,7 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
       maybe (pure Nothing) (pure . Just . DQ.DeliveryDetails) res
 
 getTripTerms :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms)
-getTripTerms tripTermsId = if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
+getTripTerms tripTermsId = maybe (pure Nothing) (QTT.findById'' . Id) tripTermsId
 
 backfillMOCId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Text -> Text -> m (Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
 backfillMOCId mocId merchantId =

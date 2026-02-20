@@ -1,5 +1,6 @@
 module Storage.Queries.DriverPanCardExtra where
 
+import Control.Lens ((^?), _head)
 import Domain.Types.DriverPanCard
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
@@ -17,7 +18,7 @@ import Storage.Queries.OrphanInstances.DriverPanCard ()
 findUnInvalidByPanNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> m (Maybe DriverPanCard)
 findUnInvalidByPanNumber panNumber = do
   panNumberHash <- getDbHash panNumber
-  listToMaybe
+  (^? _head)
     <$> findAllWithKV
       [ Se.And
           [ Se.Is Beam.panCardNumberHash $ Se.Eq panNumberHash,

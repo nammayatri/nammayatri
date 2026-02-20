@@ -3,6 +3,7 @@
 
 module Storage.Queries.RideDetailsExtra where
 
+import Control.Lens ((^?), _head)
 import qualified Database.Beam as B
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RideDetails
@@ -40,7 +41,7 @@ findByCreatedAtAndVehicleNumber fromDate vehicleNumber = do
   case res of
     Right res' -> do
       rides <- catMaybes <$> mapM fromTType' res'
-      pure $ listToMaybe rides
+      pure $ rides ^? _head
     Left _ -> pure Nothing
 
 findByCreatedAtAndVehicleNumber' :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (UTCTime -> Text -> m [Domain.Types.RideDetails.RideDetails])

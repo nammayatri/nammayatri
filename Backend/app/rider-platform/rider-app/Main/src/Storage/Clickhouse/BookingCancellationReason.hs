@@ -2,6 +2,7 @@
 
 module Storage.Clickhouse.BookingCancellationReason where
 
+import Control.Lens ((^?), _head)
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationReason as CR
@@ -77,6 +78,6 @@ countCancelledBookingsByRiderIdGroupByByUserAndDriver riderId createdAt = do
                   CH.&&. bookingCancellationReason.riderId CH.==. Just riderId
             )
             (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingCancellationReasonTTable)
-  let userCount = fromMaybe 0 $ listToMaybe $ map (\(_, a, _) -> a) $ filter (\(a, _, _) -> a == DBCR.ByUser) res
-  let driverCount = fromMaybe 0 $ listToMaybe $ map (\(_, _, a) -> a) $ filter (\(a, _, _) -> a == DBCR.ByDriver) res
+  let userCount = fromMaybe 0 $ (map (\(_, a, _) -> a) $ filter (\(a, _, _) -> a == DBCR.ByUser) res) ^? _head
+  let driverCount = fromMaybe 0 $ (map (\(_, _, a) -> a) $ filter (\(a, _, _) -> a == DBCR.ByDriver) res) ^? _head
   pure (userCount, driverCount)

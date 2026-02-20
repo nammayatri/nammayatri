@@ -266,9 +266,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
 
   logInfo $ "PullDocument - Retrieved DocumentVerificationConfig for category: " <> show vehicleCategory
 
-  let covDetails = case dlFlow.classOfVehicles of
-        Just covs -> Just (createCovDetails covs)
-        Nothing -> Nothing
+  let covDetails = createCovDetails <$> dlFlow.classOfVehicles
   let dlExpiryText = dlExpiry
   let dobText = dlFlow.dob
 

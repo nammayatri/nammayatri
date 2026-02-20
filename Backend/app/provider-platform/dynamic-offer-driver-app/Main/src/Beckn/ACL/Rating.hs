@@ -66,7 +66,7 @@ buildRatingReqV2 subscriber req = do
 tfFeedbackDetails :: Spec.Rating -> [Maybe Text]
 tfFeedbackDetails rating = do
   let feedbackForms = rating.ratingFeedbackForm
-      feedbackFormList = fromMaybe [] feedbackForms
+      feedbackFormList = fold feedbackForms
       feedback_form = find (\form -> form.feedbackFormQuestion == "Evaluate your ride experience.") feedbackFormList
       wasOfferedAssistance = find (\form -> form.feedbackFormQuestion == "Was Assistance Offered?") feedbackFormList
       mbIssueId = find (\form -> form.feedbackFormQuestion == "Get IssueId.") feedbackFormList

@@ -14,6 +14,7 @@
 
 module Domain.Action.Internal.FeedbackForm where
 
+import Control.Lens ((^?), _head)
 import Data.Foldable ()
 import qualified Domain.Types.Feedback as DFeedback
 import Domain.Types.Feedback.FeedbackForm (BadgeMetadata (..), FeedbackAnswer (FeedbackAnswer), FeedbackFormReq (..))
@@ -25,9 +26,8 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, (^?), (^..))
 import qualified Kernel.Beam.Functions as B
-import qualified Kernel.Prelude as P
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -222,9 +222,7 @@ scheduleFeedbackPN :: DRide.Ride -> Int -> Maybe [BadgeMetadata] -> Maybe DTC.Fe
 scheduleFeedbackPN ride rating mbBadgeMetadataList mbFeedbackConfig = do
   whenJust mbFeedbackConfig $ \feedbackConfig -> do
     now <- getCurrentTime
-    let selectedBadgeKey = case mbBadgeMetadataList of
-          Just badgeList -> selectPNBadge badgeList
-          Nothing -> Nothing
+    let selectedBadgeKey = mbBadgeMetadataList >>= selectPNBadge
         tripEndTime = fromMaybe now ride.tripEndTime
         targetTime = addUTCTime (fromIntegral feedbackConfig.feedbackNotificationDelayInSec) tripEndTime
         delaySeconds = diffUTCTime targetTime now
@@ -259,4 +257,4 @@ selectPNBadge :: [BadgeMetadata] -> Maybe Text
 selectPNBadge badges =
   let sendPNBadges = filter (.sendPN) badges
       sortedBadges = sortOn (\b -> (fromMaybe 999 b.priority, b.badgeKey)) sendPNBadges
-   in (.badgeKey) <$> P.listToMaybe sortedBadges
+   in (.badgeKey) <$> (sortedBadges ^? _head)

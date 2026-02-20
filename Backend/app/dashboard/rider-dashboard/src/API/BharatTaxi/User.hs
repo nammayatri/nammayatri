@@ -20,6 +20,7 @@ module API.BharatTaxi.User
   )
 where
 
+import Control.Lens ((^?), _head)
 import qualified Dashboard.Common as Common
 import Data.Aeson (Value)
 import qualified Data.Text as T
@@ -365,7 +366,7 @@ invoice apiTokenInfo bookingId riderId =
     -- Get customer information from rider-app using getCustomerList
     customerListRes <- Customer.getCustomerList apiTokenInfo.merchant.shortId apiTokenInfo.city apiTokenInfo Nothing Nothing Nothing Nothing Nothing (Just customerId)
     -- Extract the first customer from the list
-    customer <- fromMaybeM (PersonDoesNotExist riderId) (listToMaybe customerListRes.customers)
+    customer <- fromMaybeM (PersonDoesNotExist riderId) (customerListRes.customers ^? _head)
     -- Extract phone number and name from customer
     riderPhoneNumber <- fromMaybeM (PersonFieldNotPresent $ "phoneNo (riderId: " <> riderId <> ")") customer.phoneNo
     let nameParts = filter (not . T.null) (catMaybes [customer.firstName, customer.middleName, customer.lastName])

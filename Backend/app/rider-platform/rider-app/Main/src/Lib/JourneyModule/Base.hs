@@ -5,6 +5,7 @@ import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified BecknV2.OnDemand.Enums as Enums
+import Control.Lens ((^?), _head)
 import Control.Monad.Extra (mapMaybeM)
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.Location as DLoc
@@ -38,7 +39,7 @@ import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.RouteDetails as DRouteDetails
 import qualified Domain.Types.Trip as DTrip
 import Environment
-import EulerHS.Prelude hiding (id, state)
+import EulerHS.Prelude hiding (id, state, (^?), (^..))
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
@@ -299,7 +300,7 @@ checkAndMarkTerminalJourneyStatus ::
   m ()
 checkAndMarkTerminalJourneyStatus journey allLegStates = do
   let flattenedLegStates = concatLegStates allLegStates
-      isSingleTaxiJourneyLeg = length flattenedLegStates == 1 && (KP.listToMaybe flattenedLegStates <&> (.mode)) == Just DTrip.Taxi -- This Would Be A Single Leg Journey With Only A Taxi Leg.
+      isSingleTaxiJourneyLeg = length flattenedLegStates == 1 && (flattenedLegStates ^? _head <&> (.mode)) == Just DTrip.Taxi -- This Would Be A Single Leg Journey With Only A Taxi Leg.
   go flattenedLegStates isSingleTaxiJourneyLeg
   where
     concatLegStates =
@@ -1374,7 +1375,7 @@ generateJourneyInfoResponse journey legs = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
   let unifiedQR = getUnifiedQR journey legs
-  let mbCurrency = KP.listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
+  let mbCurrency = legs ^? _head >>= (\leg -> leg.estimatedMinFare <&> (.currency))
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
   let unifiedQRV2 = getUnifiedQRV2 unifiedQR
@@ -1467,23 +1468,22 @@ markLegStatus mbStatus trackingStatus journeyLeg mbSubLegOrder trackingStatusUpd
         JMStateUtils.setJourneyLegTrackingStatus journeyLeg (Just 1) status trackingStatusUpdateTime
   where
     castJourneyLegStatusToTrackingStatus :: Maybe JL.JourneyLegStatus -> Maybe JMState.TrackingStatus
-    castJourneyLegStatusToTrackingStatus = \case
-      Just JL.InPlan -> Just JMState.InPlan
-      Just JL.Assigning -> Just JMState.InPlan
-      Just JL.Booked -> Just JMState.InPlan
-      Just JL.AtRiskOfMissing -> Just JMState.InPlan
-      Just JL.Missed -> Just JMState.InPlan
-      Just JL.Delayed -> Just JMState.InPlan
-      Just JL.OnTheWay -> Just JMState.Arriving
-      Just JL.Arriving -> Just JMState.AlmostArrived
-      Just JL.Arrived -> Just JMState.Arrived
-      Just JL.Ongoing -> Just JMState.Ongoing
-      Just JL.Finishing -> Just JMState.Finishing
-      Just JL.Skipped -> Just JMState.InPlan
-      Just JL.Cancelled -> Just JMState.Finished
-      Just JL.Completed -> Just JMState.Finished
-      Just JL.Failed -> Just JMState.Finished
-      Nothing -> Nothing
+    castJourneyLegStatusToTrackingStatus = fmap $ \case
+      JL.InPlan -> JMState.InPlan
+      JL.Assigning -> JMState.InPlan
+      JL.Booked -> JMState.InPlan
+      JL.AtRiskOfMissing -> JMState.InPlan
+      JL.Missed -> JMState.InPlan
+      JL.Delayed -> JMState.InPlan
+      JL.OnTheWay -> JMState.Arriving
+      JL.Arriving -> JMState.AlmostArrived
+      JL.Arrived -> JMState.Arrived
+      JL.Ongoing -> JMState.Ongoing
+      JL.Finishing -> JMState.Finishing
+      JL.Skipped -> JMState.InPlan
+      JL.Cancelled -> JMState.Finished
+      JL.Completed -> JMState.Finished
+      JL.Failed -> JMState.Finished
 
 -- Constants for walk duration calculation
 averageSpeedMPSForWalk :: Double

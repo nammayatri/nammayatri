@@ -81,7 +81,7 @@ getIssueBreachCount breachType windowSize driverId = Redis.withCrossAppRedis $ S
 
 getIssueBreachConfig :: IssueBreachType -> TransporterConfig -> Maybe IssueBreachConfig
 getIssueBreachConfig breachType transportConfig =
-  find (\issueBreachConfig -> issueBreachConfig.ibIssueBreachType == breachType) (fromMaybe [] (transportConfig.issueBreachConfig))
+  find (\issueBreachConfig -> issueBreachConfig.ibIssueBreachType == breachType) (fold (transportConfig.issueBreachConfig))
 
 getIssueBreachCooldownTime :: IssueBreachType -> DI.DriverInformation -> Maybe IssueBreachCooldownTime
 getIssueBreachCooldownTime issueType driverInfo = do
@@ -91,7 +91,7 @@ getIssueBreachCooldownTime issueType driverInfo = do
 updateIssueBreachCooldownTimes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DI.DriverInformation -> IssueBreachCooldownTime -> m ()
 updateIssueBreachCooldownTimes driverInfo cooldownTime = do
   let cooldownTimeType = ibType cooldownTime
-      updateCooldownTimes = (fromMaybe [] driverInfo.issueBreachCooldownTimes) & filter (\issueBreachCooldownTime -> ibType issueBreachCooldownTime /= cooldownTimeType) & (cooldownTime :)
+      updateCooldownTimes = (fold driverInfo.issueBreachCooldownTimes) & filter (\issueBreachCooldownTime -> ibType issueBreachCooldownTime /= cooldownTimeType) & (cooldownTime :)
   QDriverInformation.updateIssueBreachCooldownTimes (pure updateCooldownTimes) driverInfo.driverId
 
 issueBreachMitigation ::

@@ -15,6 +15,7 @@
 
 module Storage.Queries.FarePolicy.DriverExtraFeeBounds where
 
+import Control.Lens ((^?), _head)
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Beam.Functions
@@ -29,7 +30,7 @@ create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFP.FullDriverExtraFeeB
 create = createWithKV
 
 findByFarePolicyIdAndStartDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
-findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findAllWithKV [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]] <&> listToMaybe
+findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findAllWithKV [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]] <&> (^? _head)
 
 update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> Meters -> HighPrecMoney -> HighPrecMoney -> m ()
 update (Id farePolicyId) startDistance minFee maxFee =

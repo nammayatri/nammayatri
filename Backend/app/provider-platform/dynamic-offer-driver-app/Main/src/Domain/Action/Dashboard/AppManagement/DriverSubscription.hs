@@ -197,15 +197,15 @@ postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo merchantShortId opCity drive
   transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   dueDriverFees <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE]
-  let invoicesDataToUpdate = maybe [] mapToInvoiceInfoToUpdateAfterParse invoices
+  let invoicesDataToUpdate = foldMap mapToInvoiceInfoToUpdateAfterParse invoices
   mapM_ (\inv -> QINV.updateStatusAndTypeByMbdriverFeeIdAndInvoiceId inv.invoiceId inv.invoiceStatus Nothing inv.driverFeeId) invoicesDataToUpdate
-  allDriverFeeByIds <- QDF.findAllByDriverFeeIds (maybe [] (map (\df -> cast (Id df.driverFeeId))) driverFees)
+  allDriverFeeByIds <- QDF.findAllByDriverFeeIds (foldMap (map (\df -> cast (Id df.driverFeeId))) driverFees)
   -- Process vendor fees if provided
   vendorFeeExistingData <- upsertVendorFees localTime vendorFees merchantOpCityId
   let reqMkDuesToAmount = (mkDuesToAmountWithCurrency <&> (.amount)) <|> mkDuesToAmount
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   SMerchant.checkCurrencies currency $ do
-    let driverFeesFields = flip (maybe []) driverFees $
+    let driverFeesFields = flip foldMap driverFees $
           concatMap $ \driverFees' ->
             [ driverFees'.platformFeeWithCurrency,
               driverFees'.sgstWithCurrency,

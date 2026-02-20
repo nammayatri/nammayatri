@@ -142,7 +142,7 @@ renderSegment segm = Element "trkseg" Map.empty $ map (NodeElement . renderTrack
 renderTrackPoint :: GpxTrackPoint -> Element
 renderTrackPoint tp = Element "trkpt" (renderGpsAttrs tp.lat tp.lon) $ map NodeElement tags
   where
-    tags = catMaybes [dataElement "time" . show <$> tp.time]
+    tags = toList (dataElement "time" . show <$> tp.time)
 
 data CsvWaypoint = CsvWaypoint
   { timestamp :: Maybe UTCTime,

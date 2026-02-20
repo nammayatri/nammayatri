@@ -54,9 +54,7 @@ updateVpa req = do
     defaultStatus shouldVerify =
       if shouldVerify then DI.VERIFIED_BY_USER else DI.MANUALLY_ADDED
 
-    parseVpaStatus = \case
-      Nothing -> Nothing
-      Just statusText -> readMaybe (T.unpack statusText)
+    parseVpaStatus = (>>= readMaybe . T.unpack)
 
 instance VerifyVpaFlow Environment.Flow where
   verifyVpaForUpdate = verifyVpaForUpdateImpl

@@ -440,7 +440,7 @@ getMerchantConfigDriverPool merchantShortId opCity reqTripDistance reqTripDistan
           <|> reqTripDistance
   configs <- case mbTripDistance of
     Nothing -> CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
-    Just tripDistance -> maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance (Just []) Nothing
+    Just tripDistance -> toList <$> CQDPC.findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance (Just []) Nothing
   pure $ mkDriverPoolConfigRes <$> configs
 
 mkDriverPoolConfigRes :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigItem
@@ -897,7 +897,7 @@ getMerchantConfigOnboardingDocument merchantShortId opCity mbReqDocumentType mbC
     (Nothing, Nothing) -> CQDVC.findAllByMerchantOpCityId merchantOpCityId (Just [])
     (Just reqDocumentType, Nothing) -> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId (castDocumentType reqDocumentType) (Just [])
     (Nothing, Just category) -> CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId category (Just [])
-    (Just reqDocumentType, Just category) -> maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (castDocumentType reqDocumentType) category (Just [])
+    (Just reqDocumentType, Just category) -> toList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (castDocumentType reqDocumentType) category (Just [])
 
   pure $ mkDocumentVerificationConfigRes <$> configs
 
@@ -1128,7 +1128,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         merchantOperatingCityId = merchantOpCityId,
         vehicleClassCheckType = castVehicleClassCheckType vehicleClassCheckType,
         supportedVehicleClasses = castSupportedVehicleClasses supportedVehicleClasses,
-        rcNumberPrefixList = fromMaybe [] rcNumberPrefixList,
+        rcNumberPrefixList = fold rcNumberPrefixList,
         dependencyDocumentType = [],
         description = Nothing,
         disableWarning = Nothing,
@@ -1359,9 +1359,9 @@ postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
       req.baseFareWithCurrency,
       req.deadKmFareWithCurrency
     ]
-      <> maybe [] FarePolicy.getWaitingChargeFields req.waitingCharge
-      <> maybe [] FarePolicy.getWaitingChargeInfoFields req.waitingChargeInfo
-      <> maybe [] FarePolicy.getNightShiftChargeFields req.nightShiftCharge
+      <> foldMap FarePolicy.getWaitingChargeFields req.waitingCharge
+      <> foldMap FarePolicy.getWaitingChargeInfoFields req.waitingChargeInfo
+      <> foldMap FarePolicy.getNightShiftChargeFields req.nightShiftCharge
   updatedFarePolicy <- mkUpdatedFarePolicy farePolicy
   CQFP.update' updatedFarePolicy
   CQFP.clearCacheById farePolicyId
@@ -2184,7 +2184,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
         else do
           let mergeFarePolicy newId FarePolicy.FarePolicy {..} = do
                 let remainingfarePolicies = map (\(_, _, _, _, _, _, _, _, fp) -> fp) xs
-                let driverExtraFeeBounds' = NE.nonEmpty $ maybe [] NE.toList driverExtraFeeBounds <> concatMap (maybe [] NE.toList . (.driverExtraFeeBounds)) remainingfarePolicies
+                let driverExtraFeeBounds' = NE.nonEmpty $ foldMap NE.toList driverExtraFeeBounds <> concatMap (foldMap NE.toList . (.driverExtraFeeBounds)) remainingfarePolicies
                 let driverExtraFeeBoundsDuplicateRemoved = NE.nubBy (\a b -> a.startDistance == b.startDistance) <$> driverExtraFeeBounds'
                 farePolicyDetails' <-
                   case farePolicyDetails of
@@ -2206,7 +2206,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                         mapM
                           ( \f ->
                               case f.farePolicyDetails of
-                                FarePolicy.ProgressiveDetails details -> return $ maybe [] NE.toList details.perMinRateSections
+                                FarePolicy.ProgressiveDetails details -> return $ foldMap NE.toList details.perMinRateSections
                                 _ -> return []
                           )
                           remainingfarePolicies
@@ -2382,13 +2382,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       description <- cleanCSVField idx row.description "Description"
       let mbCongestionChargeMultiplierValue :: (Maybe Centesimal) = readMaybeCSVField idx row.congestionChargeMultiplier "Congestion Charge Multiplier"
       let congestionChargeMultiplier =
-            case mbCongestionChargeMultiplierValue of
-              Nothing -> Nothing
-              Just congestionChargeMultiplierValue -> do
-                let congestionChargeMultiplierIncludeBaseFare :: Bool = (mapToBool . T.toLower) row.congestionChargeMultiplierIncludeBaseFare
-                if congestionChargeMultiplierIncludeBaseFare
-                  then Just $ FarePolicy.BaseFareAndExtraDistanceFare congestionChargeMultiplierValue
-                  else Just $ FarePolicy.ExtraDistanceFare congestionChargeMultiplierValue
+            mbCongestionChargeMultiplierValue <&> \congestionChargeMultiplierValue ->
+              let congestionChargeMultiplierIncludeBaseFare :: Bool = (mapToBool . T.toLower) row.congestionChargeMultiplierIncludeBaseFare
+               in if congestionChargeMultiplierIncludeBaseFare
+                    then FarePolicy.BaseFareAndExtraDistanceFare congestionChargeMultiplierValue
+                    else FarePolicy.ExtraDistanceFare congestionChargeMultiplierValue
       let parkingCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.parkingCharge "Parking Charge"
       let perStopCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perStopCharge "Per Stop Charge"
       let perLuggageCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perLuggageCharge "Per Luggage Charge"
@@ -2705,7 +2703,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
             merchantOperatingCityId = Just merchantOperatingCityId,
-            linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
+            linkedLocationsIds = foldMap (.linkedLocationsIds) mbExistingSpLoc,
             locationType = SL.Closed,
             merchantId = Just merchantId,
             priority = 0,
@@ -3706,7 +3704,7 @@ getMerchantConfigVehicleServiceTier merchantShortId opCity mbServiceTierType = d
   configs <- case mbServiceTierType of
     Nothing -> CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
     Just serviceTierType ->
-      maybeToList <$> CQVST.findByServiceTierTypeAndCityId serviceTierType merchantOpCityId Nothing
+      toList <$> CQVST.findByServiceTierTypeAndCityId serviceTierType merchantOpCityId Nothing
   pure $ mkVehicleServiceTierItem <$> configs
 
 mkVehicleServiceTierItem :: DVST.VehicleServiceTier -> Common.VehicleServiceTierItem

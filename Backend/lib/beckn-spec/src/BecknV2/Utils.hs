@@ -24,19 +24,14 @@ import Text.Regex.Posix ((=~))
 
 getTagV2 :: BecknTagGroup -> BecknTag -> Maybe [Spec.TagGroup] -> Maybe Text
 getTagV2 tagGroupCode tagCode mbTagGroups = do
-  case mbTagGroups of
-    Nothing -> Nothing
-    Just tagGroups -> do
-      tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just (show tagGroupCode)) tagGroups
-      case tagGroup.tagGroupList of
-        Nothing -> Nothing
-        Just tagGroupList -> do
-          tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just (show tagCode)) tagGroupList
-          tag.tagValue
+  tagGroups <- mbTagGroups
+  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just (show tagGroupCode)) tagGroups
+  tagGroupList <- tagGroup.tagGroupList
+  tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just (show tagCode)) tagGroupList
+  tag.tagValue
   where
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
-    descriptorCode (Just desc) = desc.descriptorCode
-    descriptorCode Nothing = Nothing
+    descriptorCode = (>>= (.descriptorCode))
 
 parseISO8601Duration :: Text -> Maybe NominalDiffTime
 parseISO8601Duration durationStr = do

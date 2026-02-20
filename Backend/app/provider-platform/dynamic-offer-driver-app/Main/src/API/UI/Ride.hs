@@ -27,6 +27,7 @@ module API.UI.Ride
   )
 where
 
+import Control.Lens ((^?), _head)
 import Data.Aeson as DA
 import Data.Text as Text
 import Data.Time (Day)
@@ -217,20 +218,18 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
   return ride
   where
     validateOtpRideStartRestriction driverInfo mbOtpRideStartRestrictionRadius pickupLocation = do
-      case mbOtpRideStartRestrictionRadius of
-        Just otpRideStartRestrictionRadius -> do
-          driverLocation <- withTryCatch "driversLocation:validateOtpRideStartRestriction" $ LTF.driversLocation [driverInfo.driverId]
-          case driverLocation of
-            Left _ -> throwError DriverLocationOutOfRestictionBounds
-            Right locations -> do
-              case listToMaybe locations of
-                Just location -> do
-                  let driverToPickupDistance = distanceBetweenInMeters (LatLong location.lat location.lon) (LatLong pickupLocation.lat pickupLocation.lon)
-                  if Meters (round driverToPickupDistance) > otpRideStartRestrictionRadius
-                    then throwError DriverLocationOutOfRestictionBounds
-                    else return ()
-                Nothing -> throwError DriverLocationOutOfRestictionBounds
-        Nothing -> return ()
+      whenJust mbOtpRideStartRestrictionRadius $ \otpRideStartRestrictionRadius -> do
+        driverLocation <- withTryCatch "driversLocation:validateOtpRideStartRestriction" $ LTF.driversLocation [driverInfo.driverId]
+        case driverLocation of
+          Left _ -> throwError DriverLocationOutOfRestictionBounds
+          Right locations -> do
+            case locations ^? _head of
+              Just location -> do
+                let driverToPickupDistance = distanceBetweenInMeters (LatLong location.lat location.lon) (LatLong pickupLocation.lat pickupLocation.lon)
+                if Meters (round driverToPickupDistance) > otpRideStartRestrictionRadius
+                  then throwError DriverLocationOutOfRestictionBounds
+                  else return ()
+              Nothing -> throwError DriverLocationOutOfRestictionBounds
 
 endRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
 endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = withFlowHandlerAPI $ do

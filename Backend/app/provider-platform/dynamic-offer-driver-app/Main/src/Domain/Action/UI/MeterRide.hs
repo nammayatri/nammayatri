@@ -1,6 +1,7 @@
 module Domain.Action.UI.MeterRide (postMeterRideAddDestination, postMeterRideShareReceipt) where
 
 import qualified API.Types.UI.MeterRide
+import Control.Lens ((^?), _head)
 import qualified Domain.Action.UI.FareCalculator as AUF
 import Domain.Types
 import Domain.Types.Location (Location (..), LocationAddress)
@@ -10,7 +11,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import qualified Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, (^?), (^..))
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
@@ -47,8 +48,8 @@ postMeterRideAddDestination (_mbPersonId, merchantId, merchantOpCityId) rideId m
   fareTillNow <- AUF.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters ride.traveledDistance) Nothing Nothing (OneWay MeterRide) (Just booking.vehicleServiceTier) booking.configInExperimentVersions
   (_, mbDistance, mbDuration, mbRoute, _) <- AUF.calculateDistanceAndRoutes merchantId merchantOpCityId 100 [meterRideRequest.currentLatLong, meterRideRequest.destinationLatLong]
   fare <- AUF.calculateFareUtil merchantId merchantOpCityId (Just meterRideRequest.destinationLatLong) meterRideRequest.currentLatLong mbDistance mbDuration mbRoute (OneWay MeterRide) (Just booking.vehicleServiceTier) booking.configInExperimentVersions
-  fareTillNow' <- Kernel.Prelude.listToMaybe fareTillNow.estimatedFares & fromMaybeM (InternalError ("Failed to calculate fareTillNow for given request: " <> ride.id.getId <> " RequestBody: " <> show meterRideRequest.destinationLatLong))
-  fare' <- Kernel.Prelude.listToMaybe fare.estimatedFares & fromMaybeM (InternalError ("Failed to calculate fare for given request: " <> ride.id.getId <> " RequestBody: " <> show meterRideRequest.destinationLatLong))
+  fareTillNow' <- fareTillNow.estimatedFares ^? _head & fromMaybeM (InternalError ("Failed to calculate fareTillNow for given request: " <> ride.id.getId <> " RequestBody: " <> show meterRideRequest.destinationLatLong))
+  fare' <- fare.estimatedFares ^? _head & fromMaybeM (InternalError ("Failed to calculate fare for given request: " <> ride.id.getId <> " RequestBody: " <> show meterRideRequest.destinationLatLong))
   let estimatedFare = fareTillNow'.minFare + fare'.minFare
       estimatedDistance = highPrecMetersToMeters ride.traveledDistance + fromMaybe 0 mbDistance
 

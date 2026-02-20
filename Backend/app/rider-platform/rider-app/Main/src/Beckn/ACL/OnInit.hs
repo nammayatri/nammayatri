@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.ACL.OnInit (buildOnInitReqV2) where
 
@@ -19,6 +20,8 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import Control.Lens ((^?), _Just, _head)
+import Data.Generics.Labels ()
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -79,8 +82,7 @@ buildOnInitReqV2 req = do
 
       paymentId <-
         order.orderPayments
-          >>= listToMaybe
-          >>= (.paymentId)
+          ^? _Just . _head . #paymentId . _Just
           & Right
 
       currency <-
@@ -97,9 +99,7 @@ buildOnInitReqV2 req = do
 
     extractCommissionFromPaymentTags :: Maybe [Spec.Payment] -> Maybe Common.HighPrecMoney
     extractCommissionFromPaymentTags mbPayments = do
-      payments <- mbPayments
-      payment <- listToMaybe payments
-      paymentTags <- payment.paymentTags
+      paymentTags <- mbPayments ^? _Just . _head . #paymentTags . _Just
       commissionText <- ACL.getTagV2' Tags.SETTLEMENT_DETAILS Tags.COMMISSION (Just paymentTags)
       Common.highPrecMoneyFromText commissionText
 

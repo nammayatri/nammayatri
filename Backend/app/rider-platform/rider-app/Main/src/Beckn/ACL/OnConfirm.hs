@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.ACL.OnConfirm (buildOnConfirmReqV2) where
 
@@ -20,6 +21,8 @@ import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import Control.Lens ((^?), _Just, _head)
+import Data.Generics.Labels ()
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
@@ -48,7 +51,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
         case dReq of
           DOnConfirm.BookingConfirmed _ | not isValueAddNP -> do
             -- when its not a value-add-np ride flow, we need on_confirm to have DELIVERY fulfillmentType.
-            let fulfType = message.confirmReqMessageOrder.orderFulfillments >>= listToMaybe >>= (.fulfillmentType) >>= readMaybe . T.unpack
+            let fulfType = (message.confirmReqMessageOrder.orderFulfillments ^? _Just . _head . #fulfillmentType . _Just) >>= readMaybe . T.unpack
             when (fulfType /= Just Enums.DELIVERY) $ do
               throwError . InvalidBecknSchema $ "Invalid fulfillment type in on_confirm:-" <> show fulfType <> ",expected:-" <> show Enums.DELIVERY
           _ -> pure ()
@@ -60,7 +63,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
       let order = message.confirmReqMessageOrder
       bppBookingIdText <- order.orderId & maybe (Left "Missing OrderId") Right
       let bppBookingId = Id bppBookingIdText
-          fulf = order.orderFulfillments >>= listToMaybe
+          fulf = order.orderFulfillments ^? _Just . _head
           mbRideOtp =
             fulf >>= (.fulfillmentStops) >>= Utils.getStartLocation >>= (.stopAuthorization)
               >>= \auth -> if auth.authorizationType == Just (show Enums.OTP) then auth.authorizationToken else Nothing
@@ -71,7 +74,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
         then do
           let agentPerson = fulf >>= (.fulfillmentAgent) >>= (.agentPerson)
               tagGroups = agentPerson >>= (.personTags)
-              tagGroupsFullfillment = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+              tagGroupsFullfillment = order.orderFulfillments ^? _Just . _head . #fulfillmentTags . _Just
               driverImage = agentPerson >>= (.personImage) >>= (.imageUrl)
               driverMobileCountryCode = Just "+91" -- TODO: check how to get countrycode via ONDC
               driverRating :: Maybe Centesimal = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.RATING tagGroups

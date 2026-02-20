@@ -1,5 +1,6 @@
 module Storage.Queries.SubscriptionPurchaseExtra where
 
+import Control.Lens ((^?), _head)
 import Data.List (partition)
 import Domain.Types.Extra.Plan (ServiceNames)
 import Domain.Types.SubscriptionPurchase
@@ -48,7 +49,7 @@ findLatestActiveByOwnerAndServiceName handleExpiry ownerId ownerType serviceName
   -- Handle expired subscriptions (fallback for failed scheduler jobs)
   mapM_ handleExpiry expired
   -- Return latest non-expired (last in ASC-sorted list)
-  pure $ listToMaybe $ reverse valid
+  pure $ reverse valid ^? _head
   where
     isExpired now purchase = case purchase.expiryDate of
       Just expiry -> expiry <= now

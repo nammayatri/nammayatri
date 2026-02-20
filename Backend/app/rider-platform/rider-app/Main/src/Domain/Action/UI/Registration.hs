@@ -52,7 +52,7 @@ import qualified Data.Aeson as A
 import Data.Aeson.Types ((.:), (.:?))
 import Data.Either.Extra (eitherToMaybe)
 import Data.List (nub)
-import Data.Maybe (listToMaybe)
+import Control.Lens ((^?), _head)
 import Data.OpenApi hiding (email, info, tags)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -71,7 +71,7 @@ import qualified Domain.Types.Yudhishthira as Y
 import qualified Email.Flow as Email
 import Email.Types (EmailServiceConfig)
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, (^?), (^..))
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Kernel.External.Maps as Maps
@@ -269,7 +269,7 @@ findReusableToken personId = do
           return (not isExpiredBool)
       )
       verifiedTokens
-  return $ listToMaybe $ sortOn (Down . (.updatedAt)) validTokens
+  return $ sortOn (Down . (.updatedAt)) validTokens ^? _head
 
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "kafkaProducerTools" ::: KafkaProducerTools],
@@ -295,7 +295,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
   let mbClientIP =
         mbXForwardedFor
           >>= \headerValue ->
-            (listToMaybe $ T.splitOn "," headerValue) >>= \firstIP ->
+            (T.splitOn "," headerValue ^? _head) >>= \firstIP ->
               let ipWithoutPort = T.takeWhile (/= ':') $ T.strip firstIP
                in if T.null ipWithoutPort then Nothing else Just ipWithoutPort
   whenJust mbClientIP $ \clientIP -> do
@@ -559,7 +559,7 @@ getToken req = do
       case mbPersonId of
         Just personId -> do
           person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
-          registrationToken <- (listToMaybe <$> RegistrationToken.findAllByPersonId personId) >>= fromMaybeM (InternalError $ "Registration token not found for person id: " <> getId personId)
+          registrationToken <- ((^? _head) <$> RegistrationToken.findAllByPersonId personId) >>= fromMaybeM (InternalError $ "Registration token not found for person id: " <> getId personId)
           return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked Nothing Nothing
         Nothing -> do
           throwError $ GetUserIdError appSecretKey
@@ -637,7 +637,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
   let useFakeOtp =
         (req.mobileNumber >>= (\n -> if n `elem` merchant.fakeOtpMobileNumbers then Just "7891" else Nothing))
           <|> (req.email >>= (\n -> if n `elem` merchant.fakeOtpEmails then Just "7891" else Nothing))
-  personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
+  personWithSameDeviceToken <- (^? _head) <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   useFraudDetection <- do
     if isBlockedBySameDeviceToken
@@ -826,7 +826,7 @@ verify tokenId req = do
   person <- checkPersonExists entityId
   let merchantOperatingCityId = person.merchantOperatingCityId
   let deviceToken = Just req.deviceToken
-  personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken deviceToken)
+  personWithSameDeviceToken <- (^? _head) <$> runInReplica (Person.findBlockedByDeviceToken deviceToken)
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do

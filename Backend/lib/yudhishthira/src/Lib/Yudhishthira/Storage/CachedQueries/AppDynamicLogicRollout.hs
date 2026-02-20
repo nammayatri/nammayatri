@@ -1,5 +1,6 @@
 module Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout where
 
+import Control.Lens ((^?), _head)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -45,8 +46,8 @@ findBaseRolloutByMerchantOpCityAndDomain ::
 findBaseRolloutByMerchantOpCityAndDomain merchantOperatingCityId domain = do
   mbRollouts :: (Maybe [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout]) <- Hedis.safeGet (baseRolloutCacheKey merchantOperatingCityId domain)
   case mbRollouts of
-    Just rollouts -> pure $ listToMaybe rollouts
-    _ -> listToMaybe <$> fetchAndCase
+    Just rollouts -> pure $ rollouts ^? _head
+    _ -> (^? _head) <$> fetchAndCase
   where
     fetchAndCase =
       ( \dataToBeCached -> do

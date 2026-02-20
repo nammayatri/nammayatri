@@ -1,5 +1,6 @@
 module Storage.Queries.FleetRCAssociationExtra where
 
+import Control.Lens ((^?), _head)
 import Domain.Types.FleetRCAssociation
 import Domain.Types.Person (Person)
 import Domain.Types.VehicleRegistrationCertificate
@@ -17,7 +18,7 @@ findLinkedByRCIdAndFleetOwnerId (Id fleetOwnerId) (Id rcId) now = findOneWithKV 
 
 findLatestByRCIdAndFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Id Person -> m (Maybe FleetRCAssociation)
 findLatestByRCIdAndFleetOwnerId (Id rcId) (Id fleetOwnerId) =
-  findAllWithOptionsKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]] (Se.Desc Beam.associatedTill) (Just 1) Nothing <&> listToMaybe
+  findAllWithOptionsKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]] (Se.Desc Beam.associatedTill) (Just 1) Nothing <&> (^? _head)
 
 endAssociationForRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> m ()
 endAssociationForRC (Id fleetOwnerId) (Id rcId) = do
@@ -40,7 +41,7 @@ findActiveAssociationByFleetOwnerId ::
   m (Maybe FleetRCAssociation)
 findActiveAssociationByFleetOwnerId (Id fleetOwnerId) = do
   now <- getCurrentTime
-  listToMaybe
+  (^? _head)
     <$> findAllWithOptionsKV'
       [Se.And [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is Beam.associatedTill $ Se.GreaterThan $ Just now]]
       (Just 1)

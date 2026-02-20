@@ -1,15 +1,15 @@
 module Domain.Action.Dashboard.RideBooking.MeterRide (getMeterRidePrice) where
 
 import qualified API.Types.UI.PriceBreakup
+import Control.Lens ((^?), _head)
 import qualified Domain.Action.UI.FareCalculator as FC
 import Domain.Types
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Ride
 import qualified Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, (^?), (^..))
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong (..))
-import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -29,7 +29,7 @@ getMeterRidePrice _merchantShortId _opCity rideId = do
   let merchantOpCityId = ride.merchantOperatingCityId
   traveledDistance <- LU.getTravelledDistance driverId
   fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide) (Just booking.vehicleServiceTier) booking.configInExperimentVersions
-  let mbMeterRideEstimate = Kernel.Prelude.listToMaybe fareEstimates.estimatedFares
+  let mbMeterRideEstimate = fareEstimates.estimatedFares ^? _head
   maybe
     (throwError . InternalError $ "Nahi aa rha hai fare :(" <> rideId.getId)
     ( \meterRideEstimate -> do

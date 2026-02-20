@@ -137,11 +137,10 @@ startSearchMetrics' bmContainer merchantName version txnId = do
   fork "Gateway Search Metrics" $ do
     liftIO $ threadDelay $ searchRedisExTime * 1000000
     Redis.whenWithLockRedis (searchDurationLockKey txnId) searchRedisExTime $ do
-      Redis.get (searchDurationKey txnId) >>= \case
-        Just (_ :: UTCTime) -> do
-          void $ Redis.del (searchDurationKey txnId)
-          liftIO $ P.withLabel failureCounter (merchantName, version.getDeploymentVersion) P.incCounter
-        Nothing -> return ()
+      mbStartTime <- Redis.get (searchDurationKey txnId)
+      whenJust mbStartTime $ \(_ :: UTCTime) -> do
+        void $ Redis.del (searchDurationKey txnId)
+        liftIO $ P.withLabel failureCounter (merchantName, version.getDeploymentVersion) P.incCounter
 
 finishSearchMetrics' :: (Redis.HedisFlow m r, MonadTime m, MonadMask m) => BAPMetricsContainer -> Text -> DeploymentVersion -> Text -> m ()
 finishSearchMetrics' bmContainer merchantName version txnId = do
@@ -149,11 +148,10 @@ finishSearchMetrics' bmContainer merchantName version txnId = do
       searchRedisExTime = getSeconds bmContainer.searchDurationTimeout
   endTime <- getCurrentTime
   Redis.whenWithLockRedis (searchDurationLockKey txnId) searchRedisExTime $ do
-    Redis.get (searchDurationKey txnId) >>= \case
-      Just startTime -> do
-        void $ Redis.del (searchDurationKey txnId)
-        putSearchDuration searchDurationHistogram merchantName version . realToFrac . diffUTCTime endTime $ startTime
-      Nothing -> return ()
+    mbStartTime <- Redis.get (searchDurationKey txnId)
+    whenJust mbStartTime $ \startTime -> do
+      void $ Redis.del (searchDurationKey txnId)
+      putSearchDuration searchDurationHistogram merchantName version . realToFrac . diffUTCTime endTime $ startTime
 
 startMetrics' :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => BAPMetricsContainer -> MetricsAction -> Text -> DeploymentVersion -> Text -> Text -> m ()
 startMetrics' bmContainer action merchantName version txnId merchantOperatingCityId = do
@@ -173,11 +171,10 @@ startMetrics' bmContainer action merchantName version txnId merchantOperatingCit
   fork "Gateway Search Metrics" $ do
     liftIO $ threadDelay $ redisExTime * 1000000
     Redis.whenWithLockRedis (durationLockKey txnId action) redisExTime $ do
-      Redis.get (durationKey txnId action) >>= \case
-        Just (_ :: UTCTime) -> do
-          void $ Redis.del (durationKey txnId action)
-          liftIO $ P.withLabel failureCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
-        Nothing -> return ()
+      mbStartTime <- Redis.get (durationKey txnId action)
+      whenJust mbStartTime $ \(_ :: UTCTime) -> do
+        void $ Redis.del (durationKey txnId action)
+        liftIO $ P.withLabel failureCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
 
 finishMetrics' :: (Redis.HedisFlow m r, MonadTime m, MonadMask m) => BAPMetricsContainer -> MetricsAction -> Text -> DeploymentVersion -> Text -> Text -> m ()
 finishMetrics' bmContainer action merchantName version txnId merchantOperatingCityId = do
@@ -193,8 +190,7 @@ finishMetrics' bmContainer action merchantName version txnId merchantOperatingCi
       redisExTime = getSeconds bmContainer.searchDurationTimeout
   endTime <- getCurrentTime
   Redis.whenWithLockRedis (durationLockKey txnId action) redisExTime $ do
-    Redis.get (durationKey txnId action) >>= \case
-      Just startTime -> do
-        void $ Redis.del (durationKey txnId action)
-        putDuration durationHistogram merchantName version merchantOperatingCityId . realToFrac . diffUTCTime endTime $ startTime
-      Nothing -> return ()
+    mbStartTime <- Redis.get (durationKey txnId action)
+    whenJust mbStartTime $ \startTime -> do
+      void $ Redis.del (durationKey txnId action)
+      putDuration durationHistogram merchantName version merchantOperatingCityId . realToFrac . diffUTCTime endTime $ startTime

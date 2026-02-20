@@ -66,7 +66,7 @@ fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCityId mbServiceName 
     ( [ Se.Is BeamP.id $ Se.Not $ Se.Eq $ getId "",
         Se.Is BeamP.merchantOpCityId $ Se.Eq merchantOpCityId.getId
       ]
-        <> maybe [] (\serviceName -> [Se.Is BeamP.serviceName $ Se.Eq serviceName]) mbServiceName
+        <> foldMap (\serviceName -> [Se.Is BeamP.serviceName $ Se.Eq serviceName]) mbServiceName
     )
 
 updateByPrimaryKeyP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Plan.Plan -> m ())

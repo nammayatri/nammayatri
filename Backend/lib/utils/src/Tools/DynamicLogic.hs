@@ -35,7 +35,7 @@ findOneConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimen
     fetchAndCacheConfig mbVersion extraDimensionsWithTime = do
       allLogics <- getConfigLogic merchantOpCityId mbVersion cfgDomain
       mbConfig <- getConfigFromDBFunc
-      config <- maybe (return Nothing) (\cfg -> Just <$> processConfig allLogics mbVersion extraDimensionsWithTime cfg) mbConfig
+      config <- traverse (processConfig allLogics mbVersion extraDimensionsWithTime) mbConfig
       cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfig mbVersion) config
       return config
 
@@ -69,7 +69,7 @@ findOneConfigWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersion
     fetchAndCacheConfig mbVersion extraDimensionsWithTime = do
       allLogics <- getConfigLogic merchantOpCityId mbVersion cfgDomain
       mbConfig <- getConfigFromDBFunc
-      config <- maybe (return Nothing) (\cfg -> Just <$> processConfig allLogics mbVersion extraDimensionsWithTime cfg) mbConfig
+      config <- traverse (processConfig allLogics mbVersion extraDimensionsWithTime) mbConfig
       cacheConfig (makeRedisHashKeyForConfig merchantOpCityId cfgDomain) (makeCacheKeyForConfigWithPrefix cacheKey mbVersion) config
       return config
 
@@ -298,7 +298,7 @@ findOneUiConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDim
             getConfigLogic merchantOpCityId Nothing cfgDomain
           else getConfigLogic merchantOpCityId mbVersion cfgDomain
       mbConfig :: Maybe a <- getConfigFromDBFunc
-      config :: Maybe Value <- maybe (return Nothing) (\cfg -> Just <$> processConfig allLogics mbVersion extraDimensionsWithTime (getField @"config" cfg :: Value)) mbConfig
+      config :: Maybe Value <- traverse (\cfg -> processConfig allLogics mbVersion extraDimensionsWithTime (getField @"config" cfg :: Value)) mbConfig
       -- apply the updated json to the old config and return the updated config
       finalConfig :: Maybe a <- case (mbConfig, config) of
         (Just oldCfg, Just newValue) -> do

@@ -1,5 +1,9 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module SharedLogic.Allocator.Jobs.Overlay.SendOverlay where
 
+import Control.Lens ((.~))
+import Data.Generics.Labels ()
 import Data.List (nub)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
@@ -12,7 +16,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, (^..), (.~))
 import Kernel.External.Types
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -153,7 +157,7 @@ sendOverlay driver overlayKey udf1 amount mbVehicle = do
   whenJust mOverlay $ \overlay -> do
     let okButtonText = T.replace (templateText "dueAmount") (show amount) <$> overlay.okButtonText
     let description = T.replace (templateText "dueAmount") (show amount) <$> overlay.description
-    let overlay' :: DOverlay.Overlay = overlay {DOverlay.okButtonText = okButtonText, DOverlay.description = description}
+    let overlay' :: DOverlay.Overlay = overlay & #okButtonText .~ okButtonText & #description .~ description
     fork ("sending overlay to driver with driverId " <> (show driver.id)) $ do
       TN.sendOverlay driver.merchantOperatingCityId driver $ TN.mkOverlayReq overlay'
 

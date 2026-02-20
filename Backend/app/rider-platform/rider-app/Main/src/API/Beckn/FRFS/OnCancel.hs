@@ -52,9 +52,8 @@ onCancel _ req = withFlowHandlerAPI $ do
         when (errorCode == "50001") $ QTBooking.updateIsBookingCancellableByBookingId (Just False) ticketBooking.id -- TODO: Add Error Code Properly
       Nothing -> do
         dOnCancelReq <- ACL.buildOnCancelReq req
-        if isJust dOnCancelReq
-          then do
-            let onCancelReq = fromJust dOnCancelReq
+        case dOnCancelReq of
+          Just onCancelReq -> do
             Redis.whenWithLockRedis (onCancelLockKey onCancelReq.bppOrderId) 60 $ do
               (merchant, booking) <- DOnCancel.validateRequest onCancelReq
               fork "onCancel request processing" $
@@ -62,7 +61,7 @@ onCancel _ req = withFlowHandlerAPI $ do
                   DOnCancel.onCancel merchant booking onCancelReq
               fork "FRFS onCancel received pushing ondc logs" do
                 void $ pushLogs "on_cancel" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
-          else do
+          Nothing -> do
             void $ Redis.del (FRFSUtils.makecancelledTtlKey ticketBooking.id)
     pure Utils.ack
 

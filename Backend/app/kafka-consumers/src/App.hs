@@ -95,7 +95,7 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
 runDriverHealthcheck :: AppCfg -> AppEnv -> IO ()
 runDriverHealthcheck appCfg appEnv = do
   Metrics.serve appCfg.metricsPort
-  let heathCheckConfig = fromJust appCfg.healthCheckAppCfg
+  heathCheckConfig <- maybe (error "healthCheckAppCfg is required for driver healthcheck") pure appCfg.healthCheckAppCfg
   let loggerRt = L.getEulerLoggerRuntime appEnv.hostname heathCheckConfig.loggerConfig
 
   R.withFlowRuntime (Just loggerRt) \flowRt -> do

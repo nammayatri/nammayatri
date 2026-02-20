@@ -207,14 +207,13 @@ handler merchant req validatedQuote = do
 
     mkDConfirmResp mbRideInfo uBooking riderDetails = do
       mDriverStats <-
-        if isNothing mbRideInfo
-          then pure Nothing
-          else QDriverStats.findById (fromJust mbRideInfo).driver.id
+        case mbRideInfo of
+          Nothing -> pure Nothing
+          Just rideInfo -> QDriverStats.findById rideInfo.driver.id
       isFav <-
-        if isNothing mbRideInfo
-          then pure Nothing
-          else do
-            let rideInfo = fromJust mbRideInfo
+        case mbRideInfo of
+          Nothing -> pure Nothing
+          Just rideInfo -> do
             isAlreadyFav' <- SQR.checkRiderFavDriver (fromMaybe "" uBooking.riderId) rideInfo.driver.id True
             case isAlreadyFav' of
               Just _ -> pure $ Just True

@@ -18,14 +18,14 @@ import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import Control.Lens ((^?), _Just, _head)
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Data.Text (toLower)
 import qualified Domain.Action.Beckn.Update as DUpdate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
-import EulerHS.Prelude hiding (state)
-import Kernel.Prelude
+import EulerHS.Prelude hiding (state, (^?), (^..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
@@ -47,7 +47,7 @@ buildUpdateReq merchantId subscriber req = do
 parseEvent :: (MonadFlow m) => Id DM.Merchant -> Spec.UpdateReqMessage -> Spec.Context -> m DUpdate.DUpdateReq
 parseEvent merchantId reqMsg context = do
   bookingId <- fmap Id reqMsg.updateReqMessageOrder.orderId & fromMaybeM (InvalidRequest "orderId not found")
-  fulfillment <- reqMsg.updateReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
+  fulfillment <- reqMsg.updateReqMessageOrder.orderFulfillments ^? _Just . _head & fromMaybeM (InvalidRequest "Fulfillment not found")
   eventType <-
     fulfillment.fulfillmentState
       >>= (.fulfillmentStateDescriptor)
@@ -57,7 +57,7 @@ parseEvent merchantId reqMsg context = do
   case eventType of
     "PAYMENT_COMPLETED" -> do
       rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
-      payment <- reqMsg.updateReqMessageOrder.orderPayments >>= listToMaybe & fromMaybeM (InvalidRequest "Payment not present")
+      payment <- reqMsg.updateReqMessageOrder.orderPayments ^? _Just . _head & fromMaybeM (InvalidRequest "Payment not present")
       paymentMethodInfo <- mkPaymentMethodInfo payment
       pure $
         DUpdate.UPaymentCompletedReq $

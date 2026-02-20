@@ -66,7 +66,7 @@ makePersonAPIEntity Person {..} disability isSafetyCenterDisabled safetySettings
       clientVersion = clientSdkVersion,
       hasCompletedMockSafetyDrill = safetySettings.hasCompletedMockSafetyDrill,
       hasCompletedSafetySetup = safetySettings.hasCompletedSafetySetup,
-      customerTags = YUtils.convertTags $ fromMaybe [] customerNammaTags,
+      customerTags = YUtils.convertTags $ fold customerNammaTags,
       ..
     }
 

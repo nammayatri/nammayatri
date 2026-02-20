@@ -1,6 +1,7 @@
 module Lib.JourneyLeg.Common.FRFSJourneyUtils where
 
 import qualified API.Types.UI.MultimodalConfirm as APITypes
+import Control.Lens ((^?), _head)
 import qualified Data.HashMap.Strict as HM
 import Data.List (partition)
 import qualified Data.Text.Encoding as TE
@@ -102,7 +103,7 @@ processBusLegState
         let filteredBusData = case (mbUserBoardingStation, mbLegEndStation) of
               (_, Just destStation) -> filter (isYetToReachStop destStation.code now) allBusDataForRoute
               _ -> allBusDataForRoute
-        case (mbCurrentLegDetails, routeCodeToUseForTrackVehicles, listToMaybe riderLastPoints) of
+        case (mbCurrentLegDetails, routeCodeToUseForTrackVehicles, riderLastPoints ^? _head) of
           (Just legDetails, Just rc, Just userPos) -> do
             riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
             let busTrackingConfig = fromMaybe defaultBusTrackingConfigFRFS riderConfig.busTrackingConfig
@@ -114,7 +115,7 @@ processBusLegState
 
             topCandidatesRaw <- Hedis.zRangeWithScores (topVehicleCandidatesKeyFRFS (legDetails.id.getId)) 0 (-1)
             logDebug $ "topCandidatesRaw: " <> show topCandidatesRaw
-            let mbTopCandidateId = listToMaybe [TE.decodeUtf8 bs | (bs, _) <- topCandidatesRaw]
+            let mbTopCandidateId = [TE.decodeUtf8 bs | (bs, _) <- topCandidatesRaw] ^? _head
             logDebug $ "mbTopCandidateId: " <> show mbTopCandidateId
             case mbTopCandidateId of
               Just topCandVehId -> do
@@ -151,7 +152,7 @@ processBusLegState
             logDebug $ "No current leg details available" <> show journeyLegTrackingStatus
             case mbCurrentLegDetails of
               Just legDetails -> do
-                let changedBuses = fromMaybe [] legDetails.changedBusesInSequence
+                let changedBuses = fold legDetails.changedBusesInSequence
                 logDebug $ "changedBuses: " <> show changedBuses
                 if null changedBuses
                   then do
@@ -266,7 +267,7 @@ getVehicleMetadata vehicleNumbers integratedBppConfig = do
       _ -> "bus_metadata_v2"
 
 getBusLiveInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => Text -> DIBC.IntegratedBPPConfig -> m (Maybe BusDataWithRoutesInfo)
-getBusLiveInfo vehicleNumber integratedBppConfig = listToMaybe . catMaybes <$> getVehicleMetadata [vehicleNumber] integratedBppConfig
+getBusLiveInfo vehicleNumber integratedBppConfig = (^? _head) . catMaybes <$> getVehicleMetadata [vehicleNumber] integratedBppConfig
 
 getNearbyBusesFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => LatLong -> DomainRiderConfig.RiderConfig -> DIBC.IntegratedBPPConfig -> m [BusDataWithRoutesInfo]
 getNearbyBusesFRFS userPos' riderConfig integratedBppConfig = do

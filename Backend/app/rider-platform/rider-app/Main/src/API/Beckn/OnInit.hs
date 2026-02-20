@@ -52,9 +52,8 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
   transactionId <- Common.getTransactionId reqV2.onInitReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     mbDOnInitReq <- TaxiACL.buildOnInitReqV2 reqV2
-    if isJust mbDOnInitReq
-      then do
-        let onInitReq = fromJust mbDOnInitReq -- safe to use here, because of above check
+    case mbDOnInitReq of
+      Just onInitReq -> do
         Redis.whenWithLockRedis (onInitLockKey onInitReq.bookingId.getId) 60 $
           fork "on_init request processing" $ do
             (onInitRes, booking) <- DOnInit.onInit onInitReq
@@ -72,7 +71,7 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
                 confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
                 Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId
                 CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
-      else do
+      Nothing -> do
         let cancellationReason = "on_init API failure"
             cancelReq = buildCancelReq cancellationReason OnInit
         booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound $ "transactionId:-" <> transactionId)

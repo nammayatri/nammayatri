@@ -432,7 +432,7 @@ instance ToMultipart Tmp UpsertIssueMessageReq where
             fmap (Input "isActive" . T.pack . show) req.isActive,
             fmap (Input "deleteExistingFiles" . T.pack . show) req.deleteExistingFiles
           ]
-      files = maybe [] (map mkFileData) req.mediaFiles
+      files = foldMap (map mkFileData) req.mediaFiles
       mkFileData (IssueMessageMediaFileUploadReq filePath contType) =
         FileData "file" (T.pack filePath) contType filePath
 

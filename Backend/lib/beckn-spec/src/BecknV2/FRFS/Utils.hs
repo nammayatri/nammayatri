@@ -110,15 +110,12 @@ type TagCode = Text
 getTag :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text
 getTag tagGroupCode tagCode tagGroups = do
   tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just tagGroupCode) tagGroups
-  case tagGroup.tagGroupList of
-    Nothing -> Nothing
-    Just tagGroupList -> do
-      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just tagCode) tagGroupList
-      tag.tagValue
+  tagGroupList <- tagGroup.tagGroupList
+  tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just tagCode) tagGroupList
+  tag.tagValue
   where
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
-    descriptorCode (Just desc) = desc.descriptorCode
-    descriptorCode Nothing = Nothing
+    descriptorCode = (>>= (.descriptorCode))
 
 type Lat = Double
 
@@ -187,9 +184,7 @@ getAndValidateCancellationParams quoteBreakup _ = do
   where
     findCancellationParams :: Spec.CancellationParams -> Maybe HighPrecMoney
     findCancellationParams titleToFind =
-      case find (\qb -> qb.quotationBreakupInnerTitle == Just (show titleToFind)) quoteBreakup of
-        Just qb -> qb.quotationBreakupInnerPrice >>= parseMoney
-        Nothing -> Nothing
+      find (\qb -> qb.quotationBreakupInnerTitle == Just (show titleToFind)) quoteBreakup >>= (.quotationBreakupInnerPrice) >>= parseMoney
 
 -- use below with care with care
 defaultBusBoardingRelationshitCfg :: Spec.ServiceTierType -> [Spec.ServiceTierType]

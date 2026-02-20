@@ -1,6 +1,7 @@
 module ExternalBPP.ExternalAPI.CallAPI where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Lens ((^?), _head)
 import Data.List (nub, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
@@ -198,7 +199,7 @@ getRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints perso
           }
 
 extractStationCode :: Text -> Text
-extractStationCode code = fromMaybe code $ listToMaybe $ drop 1 $ T.splitOn "|" code
+extractStationCode code = fromMaybe code $ drop 1 (T.splitOn "|" code) ^? _head
 
 createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quoteCategories = do
@@ -331,7 +332,7 @@ getChangeOverAndViaPoints fareRouteDetails integrationBPPConfig = do
         [_] -> []
         xs -> nub $ drop 1 (take (length xs - 1) xs)
       configuredChangeOverStations = case integrationBPPConfig.providerConfig of
-        CRIS config -> fromMaybe [] (changeOverIndirectStations config) <> fromMaybe [] (changeOverDirectStations config)
+        CRIS config -> fold (changeOverIndirectStations config) <> fold (changeOverDirectStations config)
         _ -> []
       changeOverStations = filter (`elem` configuredChangeOverStations) changeOverPoints
       viaPoints = if null viaStations then " " else T.intercalate "-" viaStations
@@ -350,7 +351,7 @@ buildStations basicRouteDetails integratedBPPConfig = do
           fromStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.startStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.startStopCode)
           toStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.endStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.endStopCode)
           stops <- OTPRest.getRouteStopMappingByRouteCode routeDetail.routeCode integratedBPPConfig
-          return $ fromMaybe [] (mkStations fromStation toStation stops startStopType endStopType)
+          return $ fold (mkStations fromStation toStation stops startStopType endStopType)
       )
       basicRouteDetails
   return $ concat stationsArray

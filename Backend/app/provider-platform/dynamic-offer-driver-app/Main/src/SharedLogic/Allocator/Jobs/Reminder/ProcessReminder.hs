@@ -18,6 +18,7 @@ module SharedLogic.Allocator.Jobs.Reminder.ProcessReminder
 where
 
 import Control.Applicative (liftA2)
+import Control.Lens ((^?), _head)
 import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
 import qualified Data.Time as Time
@@ -274,7 +275,7 @@ processDocumentExpiryReminder ::
 processDocumentExpiryReminder reminder driver reminderConfig merchantId merchantOpCityId = do
   now <- getCurrentTime
   let intervals = reminderConfig.reminderIntervals
-      mbCurrentIntervalMinutes = listToMaybe (drop reminder.currentIntervalIndex intervals)
+      mbCurrentIntervalMinutes = drop reminder.currentIntervalIndex intervals ^? _head
       documentTypeName = show reminder.documentType
 
   case mbCurrentIntervalMinutes of
@@ -541,7 +542,7 @@ sendInspectionOrTrainingNotification reminder driver merchantOpCityId notificati
   let intervals = reminderConfig.reminderIntervals
       -- currentIntervalIndex: Index in the reminderIntervals array (0 = first interval, 1 = second, etc.)
       -- This represents which reminder interval this entry corresponds to (e.g., T-30, T-15, T-1)
-      mbCurrentIntervalMinutes = listToMaybe (drop reminder.currentIntervalIndex intervals)
+      mbCurrentIntervalMinutes = drop reminder.currentIntervalIndex intervals ^? _head
       isOverdue = reminder.dueDate <= now
 
   case mbCurrentIntervalMinutes of

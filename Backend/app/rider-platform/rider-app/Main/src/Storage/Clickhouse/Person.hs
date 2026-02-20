@@ -14,6 +14,7 @@
 
 module Storage.Clickhouse.Person where
 
+import Control.Lens ((^?), _head)
 import Data.Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMC
@@ -71,7 +72,7 @@ findTotalRidesCountByPersonId personId = do
         CH.filter_
           (\person -> person.id CH.==. personId)
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE personTTable)
-  return $ listToMaybe (catMaybes personRideCount)
+  return $ catMaybes personRideCount ^? _head
 
 -- Aggregated registration metrics result
 data RegistrationMetrics = RegistrationMetrics

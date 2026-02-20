@@ -5,6 +5,7 @@ module Lib.JourneyLeg.Taxi where
 import qualified API.UI.Select as DSelect
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
+import Control.Lens ((^?), _head)
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
@@ -171,15 +172,13 @@ instance JT.JourneyLeg TaxiLegRequest m where
           legData.cancelEstimateId
       Nothing -> do
         searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
-        case legData.journeyLeg.legPricingId of
-          Just pricingId -> do
-            withTryCatch "cancelSearch:TaxiCancel" (cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId))
-              >>= \case
-                Left err -> do
-                  logTagInfo "Failed to cancel estimate search: " $ show err
-                  pure ()
-                Right _ -> pure ()
-          Nothing -> return ()
+        whenJust legData.journeyLeg.legPricingId $ \pricingId -> do
+          withTryCatch "cancelSearch:TaxiCancel" (cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId))
+            >>= \case
+              Left err -> do
+                logTagInfo "Failed to cancel estimate search: " $ show err
+                pure ()
+              Right _ -> pure ()
   cancel _ = throwError (InternalError "Not Supported")
 
   getState (TaxiLegRequestGetState req) = do
@@ -200,8 +199,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
             bookingStatus = bookingStatus,
             trackingStatus,
             trackingStatusLastUpdatedAt,
-            userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-            vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = Just latLong, vehicleId = "taxi", upcomingStops = [], route_state = Nothing}]) vehiclePosition,
+            userPosition = req.riderLastPoints ^? _head <&> (.latLong),
+            vehiclePositions = foldMap (\latLong -> [JT.VehiclePosition {position = Just latLong, vehicleId = "taxi", upcomingStops = [], route_state = Nothing}]) vehiclePosition,
             legOrder = req.journeyLeg.sequenceNumber,
             subLegOrder = 1,
             mode = DTrip.Taxi,
@@ -217,9 +216,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         Just <$> JT.mkLegInfoFromBookingAndRide booking mRide req.journeyLeg
       Nothing -> do
         QSearchRequest.findById req.searchId
-          >>= \case
-            Just searchReq -> Just <$> JT.mkLegInfoFromSearchRequest searchReq req.journeyLeg
-            Nothing -> return Nothing
+          >>= traverse (\searchReq -> JT.mkLegInfoFromSearchRequest searchReq req.journeyLeg)
   getInfo _ = throwError (InternalError "Not Supported")
 
   getFare (TaxiLegRequestGetFare taxiGetFareData) = do
@@ -232,7 +229,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
               mbTripCategory = Nothing
             }
     fareData <- CallBPPInternal.getFare taxiGetFareData.merchant taxiGetFareData.merchantOpCity.city calculateFareReq
-    let mbFare = listToMaybe $ sortBy (comparing CallBPPInternal.minFare <> comparing CallBPPInternal.maxFare) (CallBPPInternal.estimatedFares fareData)
+    let mbFare = sortBy (comparing CallBPPInternal.minFare <> comparing CallBPPInternal.maxFare) (CallBPPInternal.estimatedFares fareData) ^? _head
     return (True, mbFare <&> \taxi -> JT.GetFareResponse {estimatedMinFare = taxi.minFare, estimatedMaxFare = taxi.maxFare, liveVehicleAvailableServiceTypes = Nothing, possibleRoutes = Nothing})
   getFare _ = throwError (InternalError "Not Supported")
 

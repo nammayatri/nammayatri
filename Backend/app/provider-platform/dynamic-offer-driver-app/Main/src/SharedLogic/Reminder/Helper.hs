@@ -441,32 +441,27 @@ recordDocumentCompletion documentType entityIdText entityType mbDriverId merchan
           pure Nothing
         (rcAssoc : _) -> pure $ Just rcAssoc.driverId
 
-  case mbDriverIdForReminder of
-    Just driverId -> do
-      mbConfig <- getReminderConfigIfEnabled driverId merchantOpCityId documentType
-      case mbConfig of
-        Just config -> case config.daysThreshold of
-          Just daysThreshold -> do
-            -- Calculate the reminder date: completionDate + daysThreshold
-            let thresholdDate = Time.addUTCTime (fromIntegral daysThreshold * 24 * 60 * 60) now
-            logInfo $
-              "Creating proactive reminder for "
-                <> show documentType
-                <> " (driver: "
-                <> driverId.getId
-                <> ", entity: "
-                <> entityIdText
-                <> ", thresholdDate: "
-                <> show thresholdDate
-                <> ", daysThreshold: "
-                <> show daysThreshold
-                <> ")"
-            -- Create reminder scheduled for the threshold date
-            -- This will automatically schedule ProcessReminder job for that date
-            createReminder documentType driverId merchantId merchantOpCityId Nothing (Just thresholdDate) Nothing
-          Nothing -> pure () -- No daysThreshold configured, skip proactive reminder
-        Nothing -> pure () -- Reminder system disabled or config not found
-    Nothing -> pure () -- Could not determine driverId, skip proactive reminder
+  whenJust mbDriverIdForReminder $ \driverId -> do -- Could not determine driverId, skip proactive reminder
+    mbConfig <- getReminderConfigIfEnabled driverId merchantOpCityId documentType
+    whenJust mbConfig $ \config -> -- Reminder system disabled or config not found
+      whenJust config.daysThreshold $ \daysThreshold -> do -- No daysThreshold configured, skip proactive reminder
+        -- Calculate the reminder date: completionDate + daysThreshold
+        let thresholdDate = Time.addUTCTime (fromIntegral daysThreshold * 24 * 60 * 60) now
+        logInfo $
+          "Creating proactive reminder for "
+            <> show documentType
+            <> " (driver: "
+            <> driverId.getId
+            <> ", entity: "
+            <> entityIdText
+            <> ", thresholdDate: "
+            <> show thresholdDate
+            <> ", daysThreshold: "
+            <> show daysThreshold
+            <> ")"
+        -- Create reminder scheduled for the threshold date
+        -- This will automatically schedule ProcessReminder job for that date
+        createReminder documentType driverId merchantId merchantOpCityId Nothing (Just thresholdDate) Nothing
 
 -- | Precomputed data for threshold checks
 data ThresholdCheckData = ThresholdCheckData
@@ -495,9 +490,7 @@ precomputeThresholdCheckData driverId documentTypes = do
   let mbRCAssocData = (\rcAssoc -> (rcAssoc.rcId.getId, DRH.RC)) <$> mbRCAssoc
 
   -- Get RC ride count once (if RC exists)
-  mbRCRideCount <- case mbRCAssoc of
-    Just rcAssoc -> Just <$> QRCStats.findTotalRides rcAssoc.rcId
-    Nothing -> pure Nothing
+  mbRCRideCount <- traverse (\rcAssoc -> QRCStats.findTotalRides rcAssoc.rcId) mbRCAssoc
 
   -- Get completion histories for all document types and entities
   -- Only process document types that have valid entities (skip RC types without RC association)
@@ -551,8 +544,7 @@ checkAndCreateReminderIfNeeded documentType driverId merchantId merchantOpCityId
     pure ()
   unless (isDocumentExpiryType documentType) $ do
     mbConfig <- getReminderConfigIfEnabled driverId merchantOpCityId documentType
-    case mbConfig of
-      Just config -> do
+    whenJust mbConfig $ \config -> do
         -- Only check ridesThreshold here - daysThreshold is handled proactively by recordDocumentCompletion
         when (isJust config.ridesThreshold) $ do
           -- Determine entity based on document type
@@ -598,4 +590,3 @@ checkAndCreateReminderIfNeeded documentType driverId merchantId merchantOpCityId
                     createReminder documentType driverId merchantId merchantOpCityId Nothing (Just now) Nothing
                 Nothing -> logInfo $ "No completion history found for " <> show documentType <> " (entity: " <> entityIdText <> "), skipping rides threshold check"
             Nothing -> logInfo $ "No active entity found for driver " <> driverId.getId <> " and document type " <> show documentType <> ", skipping rides threshold check"
-      Nothing -> pure () -- Reminder system disabled or config not found

@@ -8,6 +8,7 @@ import Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Control.Lens ((^?), (^..), _Just, _head, to)
 import Domain.Types.TripAlertRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -25,12 +26,12 @@ findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mb
     [ Se.And
         ( [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId]
             <> [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId]
-            <> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
-            <> [Se.Is Beam.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
-            <> [Se.Is Beam.alertRequestType $ Se.Eq (fromJust mbAlertRequestType) | isJust mbAlertRequestType]
+            <> (mbFrom ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.GreaterThanOrEq v))
+            <> (mbTo ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.LessThanOrEq v))
+            <> (mbAlertRequestType ^.. _Just . to (\v -> Se.Is Beam.alertRequestType $ Se.Eq v))
             <> [Se.Is Beam.fleetBadgeId $ Se.Eq (mbFleetBadgeId <&> (.getId)) | isJust mbFleetBadgeId]
-            <> [Se.Is Beam.driverId $ Se.Eq (fromJust mbDriverId) | isJust mbDriverId]
-            <> [Se.Is Beam.routeCode $ Se.Eq (fromJust mbRouteCode) | isJust mbRouteCode]
+            <> (mbDriverId ^.. _Just . to (\v -> Se.Is Beam.driverId $ Se.Eq v))
+            <> (mbRouteCode ^.. _Just . to (\v -> Se.Is Beam.routeCode $ Se.Eq v))
         )
     ]
     (Se.Desc Beam.createdAt)
@@ -42,7 +43,7 @@ findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mb
 
 findLatestTripAlertRequest :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> AlertRequestType -> Text -> Text -> m (Maybe TripAlertRequest)
 findLatestTripAlertRequest merchantOpCityId fleetOwnerId alertRequestType driverId routeCode = do
-  findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId Nothing Nothing (Just alertRequestType) (Just driverId) Nothing (Just routeCode) (Just 1) (Just 0) <&> listToMaybe
+  findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId Nothing Nothing (Just alertRequestType) (Just driverId) Nothing (Just routeCode) (Just 1) (Just 0) <&> (^? _head)
 
 ------------------------- multiple fleet owners -------------------------
 
@@ -52,12 +53,12 @@ findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo 
     [ Se.And
         ( [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId]
             <> [Se.Is Beam.fleetOwnerId $ Se.In fleetOwnerIds]
-            <> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
-            <> [Se.Is Beam.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
-            <> [Se.Is Beam.alertRequestType $ Se.Eq (fromJust mbAlertRequestType) | isJust mbAlertRequestType]
+            <> (mbFrom ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.GreaterThanOrEq v))
+            <> (mbTo ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.LessThanOrEq v))
+            <> (mbAlertRequestType ^.. _Just . to (\v -> Se.Is Beam.alertRequestType $ Se.Eq v))
             <> [Se.Is Beam.fleetBadgeId $ Se.In fleetBadgeIds | isJust mbFleetBadgeIds]
-            <> [Se.Is Beam.driverId $ Se.Eq (fromJust mbDriverId) | isJust mbDriverId]
-            <> [Se.Is Beam.routeCode $ Se.Eq (fromJust mbRouteCode) | isJust mbRouteCode]
+            <> (mbDriverId ^.. _Just . to (\v -> Se.Is Beam.driverId $ Se.Eq v))
+            <> (mbRouteCode ^.. _Just . to (\v -> Se.Is Beam.routeCode $ Se.Eq v))
             <> [Se.Is Beam.alertStatus $ Se.Eq mbalertStatus | isJust mbalertStatus]
         )
     ]
@@ -65,7 +66,7 @@ findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo 
     (Just limitVal)
     (Just offsetVal)
   where
-    fleetBadgeIds = maybe [] (map (pure . (.getId))) mbFleetBadgeIds
+    fleetBadgeIds = foldMap (map (pure . (.getId))) mbFleetBadgeIds
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
 

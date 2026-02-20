@@ -1,6 +1,7 @@
 module ExternalBPP.Flow.Fare where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Lens ((^?), _head)
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.IntegratedBPPConfig
@@ -56,7 +57,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
 
   -- Extract route details using pattern matching (safe for NonEmpty)
   let (firstRoute NE.:| restRoutes) = fareRouteDetails
-  let lastRoute = fromMaybe firstRoute (listToMaybe $ reverse restRoutes)
+  let lastRoute = fromMaybe firstRoute (reverse restRoutes ^? _head)
 
       baseCacheKey =
         CB.makeFareCacheKey

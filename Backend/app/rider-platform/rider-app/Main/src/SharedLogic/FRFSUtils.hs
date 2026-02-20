@@ -20,6 +20,7 @@ where
 
 import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Lens ((^?), _Just, _head)
 import BecknV2.FRFS.Utils
 import Control.Monad.Extra (mapMaybeM)
 import Data.Aeson as A
@@ -295,26 +296,24 @@ getPossibleRoutesBetweenTwoParentStops startParentStopCode endParentStopCode int
 
           -- Find the best start-end combination
           bestCombination = do
-            startStop <- listToMaybe startStopsInRoute -- Get earliest start stop
+            startStop <- startStopsInRoute ^? _head -- Get earliest start stop
             endStop <- find (\endStop -> endStop.sequenceNum > startStop.sequenceNum) endStopsInRoute -- Get first valid end stop
             return (startStop, endStop)
-       in case bestCombination of
-            Just (startStop, endStop) ->
-              let intermediateStops = filter (\stop -> stop.sequenceNum >= startStop.sequenceNum && stop.sequenceNum <= endStop.sequenceNum) stopsSortedBySequenceNumber
-                  totalStops = endStop.sequenceNum - startStop.sequenceNum
-                  totalTravelTime =
-                    foldr
-                      ( \stop acc ->
-                          if stop.sequenceNum > startStop.sequenceNum && stop.sequenceNum <= endStop.sequenceNum
-                            then case (acc, stop.estimatedTravelTimeFromPreviousStop) of
-                              (Just acc', Just travelTime) -> Just (acc' + travelTime)
-                              _ -> Nothing
-                            else acc
-                      )
-                      (Just $ Seconds 0)
-                      stops
-               in Just (startStop.routeCode, Just totalStops, totalTravelTime, Just intermediateStops, startStop.stopCode, endStop.stopCode)
-            Nothing -> Nothing
+       in bestCombination <&> \(startStop, endStop) ->
+            let intermediateStops = filter (\stop -> stop.sequenceNum >= startStop.sequenceNum && stop.sequenceNum <= endStop.sequenceNum) stopsSortedBySequenceNumber
+                totalStops = endStop.sequenceNum - startStop.sequenceNum
+                totalTravelTime =
+                  foldr
+                    ( \stop acc ->
+                        if stop.sequenceNum > startStop.sequenceNum && stop.sequenceNum <= endStop.sequenceNum
+                          then case (acc, stop.estimatedTravelTimeFromPreviousStop) of
+                            (Just acc', Just travelTime) -> Just (acc' + travelTime)
+                            _ -> Nothing
+                          else acc
+                    )
+                    (Just $ Seconds 0)
+                    stops
+             in (startStop.routeCode, Just totalStops, totalTravelTime, Just intermediateStops, startStop.stopCode, endStop.stopCode)
 
 data FRFSTicketCategory = FRFSTicketCategory
   { category :: FRFSQuoteCategoryType,
@@ -353,7 +352,7 @@ getFare riderId vehicleType serviceTier integratedBPPConfigId merchantId merchan
   fareProducts <- case serviceTier of
     Just serviceTier' -> do
       vehicleServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier' merchantOperatingCityId integratedBPPConfigId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> show serviceTier')
-      maybeToList <$> QFRFSRouteFareProduct.findByRouteCodeAndVehicleServiceTierId routeCode vehicleServiceTier.id
+      toList <$> QFRFSRouteFareProduct.findByRouteCodeAndVehicleServiceTierId routeCode vehicleServiceTier.id
     Nothing -> QFRFSRouteFareProduct.findByRouteCode routeCode integratedBPPConfigId
   let serviceableFareProducts = DTB.findBoundedDomain fareProducts now ++ filter (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded) fareProducts
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigById integratedBPPConfigId
@@ -457,7 +456,7 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
               fares <- case serviceTier of
                 Just serviceTier' -> do
                   vehicleServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier' merchantOperatingCityId integratedBPPConfig.id >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> show serviceTier')
-                  maybeToList <$> QQFRFSGtfsStageFare.findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType (max 0 adjustedStage) merchantOperatingCityId vehicleServiceTier.id
+                  toList <$> QQFRFSGtfsStageFare.findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType (max 0 adjustedStage) merchantOperatingCityId vehicleServiceTier.id
                 Nothing -> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
               forM fares $ \fare -> do
                 vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
@@ -566,7 +565,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       case mbUpcomingStop of
                         Just upcomingStop' -> do
                           upcomingStopNew <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode upcomingStop'.stop.stopCode routeCode integratedBPPConfig
-                          return $ listToMaybe upcomingStopNew
+                          return $ upcomingStopNew ^? _head
                         Nothing -> return Nothing
                     Nothing -> return Nothing
                 pure $
@@ -587,7 +586,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
           routeStopMapping <- HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
           nearbyBuses.buses `forM` \bus -> do
             let busData = bus.busData
-            let mbNextStop = busData.eta_data >>= listToMaybe
+            let mbNextStop = busData.eta_data ^? _Just . _head
             let mbNextStopMapping = mbNextStop >>= (\stop -> HM.lookup stop.stopCode routeStopMapping)
             let (_, upcomingStops) =
                   foldr'
@@ -608,7 +607,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                           Nothing -> (lastPoint, acc)
                     )
                     (mbRiderPosition, [])
-                    (fromMaybe [] busData.eta_data)
+                    (fold busData.eta_data)
             logDebug $ "Got bus data for route " <> routeCode <> ": next stop" <> show mbNextStopMapping
             return $
               VehicleTracking
@@ -638,16 +637,14 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
       route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
       routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
 
-      let waypointsForRoute' = case route.polyline of
-            Just polyline -> Just $ KEPP.decode polyline
-            Nothing -> Nothing
+      let waypointsForRoute' = KEPP.decode <$> route.polyline
 
       case waypointsForRoute' of
         Just waypointsForRoute -> do
           let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) routeStops
               stopPairs = pairWithNext sortedStops
           stopPairsWithWaypoints <- getStopPairsWithWaypointsForMetroAndSubway stopPairs waypointsForRoute
-          let riderPosition = maybe [] (\latLong -> [(latLong.lat, latLong.lon)]) mbRiderPosition
+          let riderPosition = foldMap (\latLong -> [(latLong.lat, latLong.lon)]) mbRiderPosition
           forM riderPosition $ \(vehicleLat, vehicleLon) -> do
             minDistancesWithWaypoints <-
               forM stopPairsWithWaypoints $ \((_currStop, nextStop), (waypoints, _duration)) -> do
@@ -683,7 +680,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
   where
     getStopPairsWithWaypointsForMetroAndSubway stopPairs waypoints =
       forM stopPairs $ \(currStop, nextStop) -> do
-        let waypointsBetweenStops = fromMaybe [] (getWaypointsBetweenStops currStop.stopPoint nextStop.stopPoint waypoints)
+        let waypointsBetweenStops = fold (getWaypointsBetweenStops currStop.stopPoint nextStop.stopPoint waypoints)
         pure ((currStop, nextStop), (waypointsBetweenStops, Nothing :: Maybe Seconds))
 
     epochToUTCTime epoch = posixSecondsToUTCTime (fromIntegral epoch)
@@ -696,7 +693,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
           Just $ takeUntil wpB $ dropWhile (/= wpA) waypoints
         _ -> Just []
     findNearestWaypoint point waypoints =
-      listToMaybe $ sortBy (comparing $ distanceBetweenInMeters point) waypoints
+      sortBy (comparing $ distanceBetweenInMeters point) waypoints ^? _head
 
     takeUntil y = foldr (\x acc -> x : if x == y then [] else acc) []
 
@@ -872,7 +869,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
-      groupId = listToMaybe $ sort (bookings <&> (.id.getId))
+      groupId = sort (bookings <&> (.id.getId)) ^? _head
   orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment groupId
   mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId) orderResp
   where

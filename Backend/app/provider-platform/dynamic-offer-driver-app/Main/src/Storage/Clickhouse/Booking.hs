@@ -2,6 +2,7 @@ module Storage.Clickhouse.Booking where
 
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Location as DL
+import Control.Lens ((^?), _head)
 import Kernel.Prelude as P
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
@@ -44,4 +45,4 @@ findById bookingId = do
               booking.id CH.==. bookingId
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
-  pure $ listToMaybe res
+  pure $ res ^? _head

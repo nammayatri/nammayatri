@@ -2,6 +2,7 @@ module ExternalBPP.CallAPI.Search where
 
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified Beckn.ACL.FRFS.Search as ACL
+import Control.Lens ((^?), _head)
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
@@ -78,8 +79,8 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
       toStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound searchReq.toStationCode)
       routeStopMappingFromStation <- OTPRest.getRouteStopMappingByStopCode searchReq.fromStationCode integratedBPPConfig
       routeStopMappingToStation <- OTPRest.getRouteStopMappingByStopCode searchReq.toStationCode integratedBPPConfig
-      let fromStationProviderCode = fromMaybe searchReq.fromStationCode (listToMaybe routeStopMappingFromStation <&> (.providerCode))
-          toStationProviderCode = fromMaybe searchReq.toStationCode (listToMaybe routeStopMappingToStation <&> (.providerCode))
+      let fromStationProviderCode = fromMaybe searchReq.fromStationCode (routeStopMappingFromStation ^? _head <&> (.providerCode))
+          toStationProviderCode = fromMaybe searchReq.toStationCode (routeStopMappingToStation ^? _head <&> (.providerCode))
       bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just $ fromStation {DStation.code = fromStationProviderCode}) (Just $ toStation {DStation.code = toStationProviderCode}) cityForOndc
       logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
       void $ CallFRFSBPP.search providerUrl bknSearchReq merchant.id

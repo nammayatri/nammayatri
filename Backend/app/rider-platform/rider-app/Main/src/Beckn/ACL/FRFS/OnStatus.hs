@@ -19,6 +19,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.Aeson as A
+import Control.Lens ((^?), _Just, _head)
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -37,7 +38,7 @@ buildOnStatusReq onStatusReq = do
 
   providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
 
-  item <- order.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found")
+  item <- order.orderItems ^? _Just . _head & fromMaybeM (InvalidRequest "Item not found")
   bppItemId <- item.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
   bppOrderId <- order.orderId & fromMaybeM (InvalidRequest "BppOrderId not found")
 

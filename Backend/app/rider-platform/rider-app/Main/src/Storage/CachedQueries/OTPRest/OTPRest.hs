@@ -2,6 +2,7 @@ module Storage.CachedQueries.OTPRest.OTPRest (module OTPRestCommon, module Stora
 
 import BecknV2.FRFS.Enums
 import qualified BecknV2.FRFS.Utils as BecknFRFSUtils
+import Control.Lens ((^?), _head)
 import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy)
 import Data.Text (splitOn)
@@ -190,7 +191,7 @@ getStationByGtfsIdAndStopCode ::
 getStationByGtfsIdAndStopCode stopCode integratedBPPConfig = IM.withInMemCache ["SBSC", stopCode, integratedBPPConfig.id.getId] 3600 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   stations <- Flow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
-  listToMaybe <$> parseStationsFromInMemoryServer [stations] integratedBPPConfig False
+  (^? _head) <$> parseStationsFromInMemoryServer [stations] integratedBPPConfig False
 
 findAllStationsByVehicleType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
 findAllStationsByVehicleType limit offset vehicleType integratedBPPConfig = do

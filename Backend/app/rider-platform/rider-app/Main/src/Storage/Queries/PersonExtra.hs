@@ -1,6 +1,7 @@
 module Storage.Queries.PersonExtra where
 
 import Control.Applicative ((<|>))
+import Control.Lens ((^..), (^?), _Just, _head, to)
 import qualified Data.Time as T
 import Domain.Action.UI.Person
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
@@ -57,7 +58,7 @@ findByMobileNumberHashAndCountryCode countryCode mobileNumberHash =
     (Se.Desc BeamP.id)
     (Just 1)
     Nothing
-    <&> listToMaybe
+    <&> (^? _head)
 
 findByMobileNumberAndMerchantAndRole :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Id Merchant -> [Role] -> m (Maybe Person)
 findByMobileNumberAndMerchantAndRole mobileNumberHash (Id merchantId) role = findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In role]]
@@ -181,7 +182,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.deviceToken mbDeviceToken | isJust mbDeviceToken]
         <> [Se.Set BeamP.notificationToken mbNotificationToken | isJust mbNotificationToken]
         <> [Se.Set BeamP.language mbLanguage | isJust mbLanguage]
-        <> [Se.Set BeamP.gender (fromJust mbGender) | isJust mbGender]
+        <> (mbGender ^.. _Just . to (\v -> Se.Set BeamP.gender v))
         <> [Se.Set BeamP.clientReactNativeVersion mbRnVersion | isJust mbRnVersion]
         <> [Se.Set BeamP.businessEmailEncrypted mbBusinessEmailEncrypted | isJust mbBusinessEmailEncrypted]
         <> [Se.Set BeamP.businessEmailHash mbBusinessEmailHash | isJust mbBusinessEmailHash]
@@ -243,68 +244,62 @@ findBlockedByDeviceToken deviceToken = findAllWithKV [Se.And [Se.Is BeamP.device
 updatingEnabledAndBlockedState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m ()
 updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
   person <- findByPId (Id personId)
-  case person of
-    Nothing -> pure ()
-    Just driverP -> do
-      now <- getCurrentTime
-      updateOneWithKV
-        ( [ Se.Set BeamP.enabled (not isBlocked),
-            Se.Set BeamP.blocked isBlocked,
-            Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
-            Se.Set BeamP.updatedAt now,
-            Se.Set BeamP.blockedCount $
-              if isBlocked
-                then Just $ (fromMaybe 0 driverP.blockedCount) + 1
-                else driverP.blockedCount
-          ]
-            <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
-        )
-        [Se.Is BeamP.id (Se.Eq personId)]
+  whenJust person $ \driverP -> do
+    now <- getCurrentTime
+    updateOneWithKV
+      ( [ Se.Set BeamP.enabled (not isBlocked),
+          Se.Set BeamP.blocked isBlocked,
+          Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
+          Se.Set BeamP.updatedAt now,
+          Se.Set BeamP.blockedCount $
+            if isBlocked
+              then Just $ (fromMaybe 0 driverP.blockedCount) + 1
+              else driverP.blockedCount
+        ]
+          <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
+      )
+      [Se.Is BeamP.id (Se.Eq personId)]
 
 updatingAuthEnabledAndBlockedState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Bool -> Maybe UTCTime -> m ()
 updatingAuthEnabledAndBlockedState (Id personId) blockedByRule isAuthBlocked blockedUntil = do
   person <- findByPId (Id personId)
-  case person of
-    Nothing -> pure ()
-    Just driverP -> do
-      now <- getCurrentTime
-      let authBlocked = fromMaybe False isAuthBlocked
-      updateOneWithKV
-        ( [ Se.Set BeamP.enabled (not authBlocked),
-            Se.Set BeamP.authBlocked isAuthBlocked,
-            Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
-            Se.Set BeamP.updatedAt now,
-            Se.Set BeamP.blockedUntil blockedUntil,
-            Se.Set BeamP.blockedCount $
-              if fromMaybe False isAuthBlocked
-                then Just $ (fromMaybe 0 driverP.blockedCount) + 1
-                else driverP.blockedCount
-          ]
-            <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | authBlocked]
-        )
-        [Se.Is BeamP.id (Se.Eq personId)]
+  whenJust person $ \driverP -> do
+    now <- getCurrentTime
+    let authBlocked = fromMaybe False isAuthBlocked
+    updateOneWithKV
+      ( [ Se.Set BeamP.enabled (not authBlocked),
+          Se.Set BeamP.authBlocked isAuthBlocked,
+          Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
+          Se.Set BeamP.updatedAt now,
+          Se.Set BeamP.blockedUntil blockedUntil,
+          Se.Set BeamP.blockedCount $
+            if fromMaybe False isAuthBlocked
+              then Just $ (fromMaybe 0 driverP.blockedCount) + 1
+              else driverP.blockedCount
+        ]
+          <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | authBlocked]
+      )
+      [Se.Is BeamP.id (Se.Eq personId)]
 
 updatingBlockedStateWithUntil :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> Maybe UTCTime -> m ()
 updatingBlockedStateWithUntil (Id personId) blockedByRule isBlocked blockedUntil = do
   person <- findByPId (Id personId)
-  case person of
-    Nothing -> pure ()
-    Just driverP -> do
-      now <- getCurrentTime
-      updateOneWithKV
-        ( [ Se.Set BeamP.enabled (not isBlocked),
-            Se.Set BeamP.blocked isBlocked,
-            Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
-            Se.Set BeamP.updatedAt now,
-            Se.Set BeamP.blockedUntil blockedUntil,
-            Se.Set BeamP.blockedCount $
-              if isBlocked
-                then Just $ (fromMaybe 0 driverP.blockedCount) + 1
-                else driverP.blockedCount
-          ]
-            <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
-        )
-        [Se.Is BeamP.id (Se.Eq personId)]
+  whenJust person $ \driverP -> do
+    now <- getCurrentTime
+    updateOneWithKV
+      ( [ Se.Set BeamP.enabled (not isBlocked),
+          Se.Set BeamP.blocked isBlocked,
+          Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
+          Se.Set BeamP.updatedAt now,
+          Se.Set BeamP.blockedUntil blockedUntil,
+          Se.Set BeamP.blockedCount $
+            if isBlocked
+              then Just $ (fromMaybe 0 driverP.blockedCount) + 1
+              else driverP.blockedCount
+        ]
+          <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
+      )
+      [Se.Is BeamP.id (Se.Eq personId)]
 
 findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> Maybe (Id Person) -> m [Person]
 findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash mbPersonId = do
@@ -313,15 +308,15 @@ findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearch
         ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchant.id)),
             Se.Is BeamP.role (Se.Eq USER)
           ]
-            <> [Se.Is BeamP.enabled $ Se.Eq (fromJust mbEnabled) | isJust mbEnabled]
-            <> [Se.Is BeamP.blocked $ Se.Eq (fromJust mbBlocked) | isJust mbBlocked]
+            <> (mbEnabled ^.. _Just . to (\v -> Se.Is BeamP.enabled $ Se.Eq v))
+            <> (mbBlocked ^.. _Just . to (\v -> Se.Is BeamP.blocked $ Se.Eq v))
             <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq mbSearchPhoneDBHash | isJust mbSearchPhoneDBHash])
             <> [ Se.Or
                    ( [Se.Is BeamP.merchantOperatingCityId $ Se.Eq $ Just (getId moCity.id)]
                        <> [Se.Is BeamP.merchantOperatingCityId $ Se.Eq Nothing | moCity.city == merchant.defaultCity]
                    )
                ]
-            <> [Se.Is BeamP.id $ Se.Eq (getId $ fromJust mbPersonId) | isJust mbPersonId]
+            <> (mbPersonId ^.. _Just . to (\v -> Se.Is BeamP.id $ Se.Eq (getId v)))
         )
     ]
     (Se.Asc BeamP.firstName)
@@ -348,10 +343,10 @@ updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyC
   now <- getCurrentTime
   updateOneWithKV
     ( [Se.Set BeamP.updatedAt now]
-        <> [Se.Set BeamP.shareEmergencyContacts (fromJust shareEmergencyContacts) | isJust shareEmergencyContacts]
+        <> (shareEmergencyContacts ^.. _Just . to (\v -> Se.Set BeamP.shareEmergencyContacts v))
         <> [Se.Set BeamP.shareTripWithEmergencyContactOption shareTripWithEmergencyContactOption | isJust shareTripWithEmergencyContactOption]
-        <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
-        <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup]
+        <> (nightSafetyChecks ^.. _Just . to (\v -> Se.Set BeamP.nightSafetyChecks v))
+        <> (hasCompletedSafetySetup ^.. _Just . to (\v -> Se.Set BeamP.hasCompletedSafetySetup v))
         <> [Se.Set BeamP.informPoliceSos informPoliceSosFlag | isJust informPoliceSosFlag]
     )
     [Se.Is BeamP.id (Se.Eq personId)]

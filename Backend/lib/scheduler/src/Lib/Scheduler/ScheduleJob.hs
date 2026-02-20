@@ -112,7 +112,7 @@ createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt 
   when (maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
   now <- getCurrentTime
   let id = Id uuid
-  let shardId :: Int = idToShardNumber . fromJust $ UU.fromText uuid -- using fromJust because its never going to fail
+  let shardId :: Int = maybe 0 idToShardNumber $ UU.fromText uuid
   let job = makeJob shardId id now
   createJobFunc $ AnyJob job
   pure id
@@ -147,7 +147,7 @@ createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt 
 --   now <- getCurrentTime
 --   uuid <- generateGUIDText
 --   let id = Id uuid
---   let shardId :: Int = idToShardNumber . fromJust $ UU.fromText uuid -- using fromJust because its never going to fail
+--   let shardId :: Int = maybe 0 idToShardNumber $ UU.fromText uuid
 --   let job = makeJob shardId id now
 --   createJobFunc $ AnyJob job
 --   pure id

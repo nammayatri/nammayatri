@@ -16,6 +16,7 @@ module Beckn.ACL.Select (buildSelectReqV2) where
 
 import Beckn.OnDemand.Utils.Init
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
+import Control.Lens ((^?), _Just, _head)
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -77,7 +78,7 @@ buildSelectReqV2 subscriber req = do
     _ -> pure Nothing
   estimateIdText <- getEstimateId fulfillment item & fromMaybeM (InvalidRequest "Missing item_id")
   let customerPhoneNum = getCustomerPhoneNumber fulfillment
-  paymentMethodInfo <- order.orderPayments >>= Kernel.Prelude.listToMaybe & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join
+  paymentMethodInfo <- order.orderPayments ^? _Just . _head & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join
   -- Use contextBapUri if present, otherwise fall back to subscriber.subscriber_url
   bapUri <- case context.contextBapUri of
     Just bapUriText -> parseBaseUrl bapUriText
@@ -91,7 +92,7 @@ buildSelectReqV2 subscriber req = do
         pickupTime = now,
         autoAssignEnabled = autoAssignEnabled,
         customerExtraFee = customerExtraFee,
-        estimateIds = [Id estimateIdText] <> maybe [] (map Id) bookAnyEstimates,
+        estimateIds = [Id estimateIdText] <> foldMap (map Id) bookAnyEstimates,
         customerPhoneNum = customerPhoneNum,
         isAdvancedBookingEnabled = isAdvancedBoookingEnabled,
         isMultipleOrNoDeviceIdExist = isMultipleOrNoDeviceIdExist,

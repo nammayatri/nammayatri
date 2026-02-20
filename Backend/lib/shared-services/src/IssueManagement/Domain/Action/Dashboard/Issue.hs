@@ -329,7 +329,8 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
   where
     mkIssueReport :: (Esq.EsqDBReplicaFlow m r, BeamFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
     mkIssueReport issueReport = do
-      category <- CQIC.findById (fromJust issueReport.categoryId) identifier >>= fromMaybeM (IssueCategoryNotFound (fromJust issueReport.categoryId).getId)
+      catId <- issueReport.categoryId & fromMaybeM (IssueCategoryNotFound "unknown")
+      category <- CQIC.findById catId identifier >>= fromMaybeM (IssueCategoryNotFound catId.getId)
       pure $
         Common.IssueReportListItem
           { issueReportId = cast issueReport.id,
@@ -822,8 +823,8 @@ updateIssueOption merchantShortId city issueOptionId req issueHandle identifier 
             isActive = fromMaybe isActive req.isActive,
             issueMessageId = (req.issueMessageId <&> (.getId)) <|> issueMessageId,
             issueCategoryId = req.issueCategoryId <|> issueCategoryId,
-            restrictedVariants = fromMaybe [] $ req.restrictedVariants <|> Just restrictedVariants,
-            restrictedRideStatuses = fromMaybe [] $ req.restrictedRideStatuses <|> Just restrictedRideStatuses,
+            restrictedVariants = fold $ req.restrictedVariants <|> Just restrictedVariants,
+            restrictedRideStatuses = fold $ req.restrictedRideStatuses <|> Just restrictedRideStatuses,
             showOnlyWhenUserBlocked = fromMaybe False $ req.showOnlyWhenUserBlocked <|> Just showOnlyWhenUserBlocked,
             label = req.label <|> label,
             updatedAt = now,
@@ -877,7 +878,7 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
       message <- fromMaybeM (InvalidRequest "Message is required field for creating a new issue message") $ req.message <|> ((.message) <$> mbIssueMessage)
       priority <- fromMaybeM (InvalidRequest "Priority is required field for creating a new issue message") $ req.priority <|> ((.priority) <$> mbIssueMessage)
       let messageType = findIssueMessageType mbIssueMessage mbParentCategory
-      mediaFiles <- uploadMessageMediaFiles id (maybe [] (.mediaFiles) mbIssueMessage) merchantOperatingCity messageType iHandle
+      mediaFiles <- uploadMessageMediaFiles id (foldMap (.mediaFiles) mbIssueMessage) merchantOperatingCity messageType iHandle
       return $
         DIM.IssueMessage
           { label = req.label <|> ((.label) =<< mbIssueMessage),
@@ -1054,9 +1055,7 @@ handleCategoryPrioriyUpdates merchantOpCityId priority identifier = do
 
 handleOptionPriorityUpdates :: BeamFlow m r => Maybe Text -> Int -> Identifier -> m ()
 handleOptionPriorityUpdates mbIssueMessageId priority identifier = do
-  case mbIssueMessageId of
-    Nothing -> return ()
-    Just issueMessageId -> do
+  whenJust mbIssueMessageId $ \issueMessageId -> do
       allOptions <- CQIO.findAllActiveByMessageAndLanguage (Id issueMessageId) ENGLISH identifier
       let matchingPriority = find (\(option, _) -> option.priority == priority) allOptions
       whenJust matchingPriority $ \_ ->

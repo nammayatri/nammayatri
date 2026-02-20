@@ -26,10 +26,7 @@ getAllBBPSOrders limit offset mbActive bbpsStatus personId merchantId =
             Se.Is BeamT.merchantId $ Se.Eq merchantId.getId
           ]
       ]
-        <> ( if isJust bbpsStatus
-               then [Se.Is BeamT.status $ Se.Eq (fromJust bbpsStatus)]
-               else activeConditionCheck
-           )
+        <> maybe activeConditionCheck (\s -> [Se.Is BeamT.status $ Se.Eq s]) bbpsStatus
     )
     (Se.Desc BeamT.createdAt)
     (Just limit)

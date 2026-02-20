@@ -2,6 +2,7 @@ module IssueManagement.Domain.Action.UI.Issue where
 
 import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
+import Control.Lens ((^?), _head)
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
@@ -257,7 +258,8 @@ issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifie
       Language ->
       m Common.IssueReportListItem
     mkIssueReport issueReport issueStatus language = do
-      (issueCategory, issueCategoryTranslation) <- CQIC.findByIdAndLanguage (fromJust issueReport.categoryId) language identifier >>= fromMaybeM (IssueCategoryNotFound (fromJust issueReport.categoryId).getId)
+      catId <- issueReport.categoryId & fromMaybeM (IssueCategoryNotFound "unknown")
+      (issueCategory, issueCategoryTranslation) <- CQIC.findByIdAndLanguage catId language identifier >>= fromMaybeM (IssueCategoryNotFound catId.getId)
       mbIssueOption <- maybe (return Nothing) (`CQIO.findById` identifier) issueReport.optionId
       return $
         Common.IssueReportListItem
@@ -402,7 +404,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show mocId)
   language <- getLanguage personId mbLanguage issueHandle
   issueConfig <- CQI.findByMerchantOpCityId mocId identifier >>= fromMaybeM (IssueConfigNotFound mocId.getId)
-  let shouldCreateTicket = isNothing createTicket || fromJust createTicket
+  let shouldCreateTicket = fromMaybe True createTicket
       onCreateIssueMsgs = if shouldCreateTicket then issueConfig.onCreateIssueMsgs else []
   issueMessageTranslationList <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) onCreateIssueMsgs
   now <- getCurrentTime
@@ -608,7 +610,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               driverName = (.driverName) <$> mbRideInfoRes,
               driverPhoneNo = (.driverPhoneNo) =<< mbRideInfoRes,
               vehicleNo = maybe "" (.vehicleNo) mbRideInfoRes,
-              vehicleCategory = show . fromJust . vehicleVariant <$> mbRideInfoRes,
+              vehicleCategory = show <$> ((.vehicleVariant) =<< mbRideInfoRes),
               vehicleServiceTier = (.vehicleServiceTierName) =<< mbRideInfoRes,
               status = maybe "" (show . (.bookingStatus)) mbRideInfoRes,
               rideCreatedAt = maybe now (.createdAt) mbRide,
@@ -828,16 +830,14 @@ updateTicketStatus ::
   Text ->
   m ()
 updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHandle comment =
-  case issueReport.ticketId of
-    Nothing -> return ()
-    Just ticketId -> do
-      ticketResponse <-
-        withTryCatch
-          "updateTicket:updateIssue"
-          (issueHandle.updateTicket merchantId merchantOperatingCityId (TIT.UpdateTicketReq comment ticketId status))
-      case ticketResponse of
-        Left err -> logTagInfo "Update Ticket API failed - " $ show err
-        Right _ -> return ()
+  whenJust issueReport.ticketId $ \ticketId -> do
+    ticketResponse <-
+      withTryCatch
+        "updateTicket:updateIssue"
+        (issueHandle.updateTicket merchantId merchantOperatingCityId (TIT.UpdateTicketReq comment ticketId status))
+    case ticketResponse of
+      Left err -> logTagInfo "Update Ticket API failed - " $ show err
+      Right _ -> return ()
 
 processIssueReportTypeActions ::
   BeamFlow m r =>
@@ -993,7 +993,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       estimatedFare = maybe (HighPrecMoney 0.0) (.estimatedFare) mbRideInfoRes
       finalFare = fromMaybe 0.0 $ (.computedPrice) =<< mbRideInfoRes
       fareDifference = estimatedFare - finalFare
-      fareBreakup = maybe [] (.fareBreakup) mbRideInfoRes
+      fareBreakup = foldMap (.fareBreakup) mbRideInfoRes
       driverPickupCharges = maybe 0.0 (.amount.amount) (getFareFromArray "DEAD_KILOMETER_FARE" fareBreakup)
       tollCharges = maybe 0.0 (.amount.amount) (getFareFromArray "TOLL_CHARGES" fareBreakup)
       petCharges = maybe 0.0 (.amount.amount) (getFareFromArray "PET_CHARGES" fareBreakup)
@@ -1082,7 +1082,7 @@ recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier =
     ( \item -> case item.chatType of
         IssueMessage -> do
           mbIssueMessageTranslation <- CQIM.findByIdAndLanguage (Id item.chatId) language identifier
-          let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageList (Just messageList) language issueConfig mbRideInfoRes) . (: []) =<< mbIssueMessageTranslation
+          let mbMessage = (\messageList -> mkIssueMessageList (Just messageList) language issueConfig mbRideInfoRes ^? _head) . (: []) =<< mbIssueMessageTranslation
           let label = (.label) . fst_ =<< mbIssueMessageTranslation
           pure $ mkChatDetail item.chatId item.timestamp Text BOT (mbMessage <&> (.message)) (mbMessage >>= (.messageTitle)) (mbMessage >>= (.messageAction)) label
         IssueOption -> do

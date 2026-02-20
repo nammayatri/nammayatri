@@ -2,6 +2,7 @@ module SharedLogic.WMB where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
 import API.Types.UI.WMB
+import Control.Lens ((^?), _head)
 import Data.List (sortBy)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text
@@ -245,9 +246,8 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
                 pdestination <- maybe (throwError (InternalError "Pilot destination not found")) pure tripTransaction.pilotDestination
                 postAssignTripTransaction advancedTripTransaction Nothing False currentLocation psource pdestination True
               Nothing -> do
-                findNextEligibleTripTransactionByDriverIdStatusForPilot tripTransaction.fleetOwnerId.getId tripTransaction.driverId UPCOMING >>= \case
-                  Just advancedTripTransaction -> void $ assignUpcomingTripTransaction advancedTripTransaction currentLocation
-                  Nothing -> pure ()
+                findNextEligibleTripTransactionByDriverIdStatusForPilot tripTransaction.fleetOwnerId.getId tripTransaction.driverId UPCOMING
+                  >>= \mbAdvancedTripTransaction -> whenJust mbAdvancedTripTransaction $ \advancedTripTransaction -> void $ assignUpcomingTripTransaction advancedTripTransaction currentLocation
           _ -> do
             -- Existing WIMB logic for finding next trip
             findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
@@ -285,9 +285,7 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
     ( do
         unless (tripTransaction.status `elem` [IN_PROGRESS, TRIP_ASSIGNED, UPCOMING]) $ throwError (InvalidTripStatus $ show tripTransaction.status)
         findNextActiveTripTransaction tripTransaction.fleetOwnerId.getId tripTransaction.driverId
-          >>= \case
-            Nothing -> pure ()
-            Just currentTripTransaction -> do
+          >>= \mbCurrentTripTransaction -> whenJust mbCurrentTripTransaction $ \currentTripTransaction -> do
               let isCurrentlyOngoingTrip = currentTripTransaction.id == tripTransaction.id
               if isCurrentlyOngoingTrip
                 then do
@@ -308,9 +306,8 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
                                 pdestination <- maybe (throwError (InternalError "Pilot destination not found")) pure tripTransaction.pilotDestination
                                 postAssignTripTransaction advancedTripTransaction Nothing False currentLocation psource pdestination True
                               Nothing -> do
-                                findNextEligibleTripTransactionByDriverIdStatusForPilot tripTransaction.fleetOwnerId.getId tripTransaction.driverId UPCOMING >>= \case
-                                  Just advancedTripTransaction -> void $ assignUpcomingTripTransaction advancedTripTransaction currentLocation
-                                  Nothing -> pure ()
+                                findNextEligibleTripTransactionByDriverIdStatusForPilot tripTransaction.fleetOwnerId.getId tripTransaction.driverId UPCOMING
+                                  >>= \mbAdvancedTripTransaction -> whenJust mbAdvancedTripTransaction $ \advancedTripTransaction -> void $ assignUpcomingTripTransaction advancedTripTransaction currentLocation
                           _ -> do
                             findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
                               Just advancedTripTransaction -> do
@@ -453,26 +450,22 @@ validateVehicleAssignment driverId vehicleNumber _ _ fleetOwnerId = do
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
   unless (vehicleRC.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
   findNextActiveTripTransaction fleetOwnerId driverId
-    >>= \case
-      Nothing -> pure ()
-      Just tripTransaction ->
-        if tripTransaction.vehicleNumber /= vehicleNumber
-          then throwError $ AlreadyOnActiveTripWithAnotherVehicle tripTransaction.vehicleNumber
-          else pure ()
-  QV.findByRegistrationNo vehicleNumber >>= \case
-    Just vehicle -> do
-      when (vehicle.driverId /= driverId) $ throwError (VehicleLinkedToAnotherDriver vehicleNumber)
-      pure ()
-    Nothing -> pure ()
+    >>= \mbTripTransaction ->
+      whenJust mbTripTransaction $ \tripTransaction ->
+        when (tripTransaction.vehicleNumber /= vehicleNumber) $
+          throwError $ AlreadyOnActiveTripWithAnotherVehicle tripTransaction.vehicleNumber
+  QV.findByRegistrationNo vehicleNumber
+    >>= \mbVehicle ->
+      whenJust mbVehicle $ \vehicle ->
+        when (vehicle.driverId /= driverId) $ throwError (VehicleLinkedToAnotherDriver vehicleNumber)
   return vehicleRC
 
 validateBadgeAssignment :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> Text -> DFBT.FleetBadgeType -> Flow (FleetBadge)
 validateBadgeAssignment driverId merchantId merchantOperatingCityId fleetOwnerId badgeName badgeType = do
   unless (badgeType `elem` [DFBT.OFFICER, DFBT.PILOT]) $
     findNextActiveTripTransaction fleetOwnerId driverId
-      >>= \case
-        Nothing -> pure ()
-        Just tripTransaction ->
+      >>= \mbTripTransaction ->
+        whenJust mbTripTransaction $ \tripTransaction ->
           whenJust tripTransaction.driverName $ \driverName ->
             when (driverName /= badgeName) $ throwError (AlreadyOnActiveTripWithAnotherBadge driverName)
   badge <-
@@ -481,9 +474,8 @@ validateBadgeAssignment driverId merchantId merchantOperatingCityId fleetOwnerId
         Just a -> return a
         Nothing -> createNewBadge
   driverBadge <- QFBA.findActiveFleetBadgeAssociationById badge.id badgeType
-  case driverBadge of
-    Just dBadge -> when (dBadge.driverId.getId /= driverId.getId) $ throwError (FleetBadgeAlreadyLinked dBadge.driverId.getId)
-    Nothing -> pure ()
+  whenJust driverBadge $ \dBadge ->
+    when (dBadge.driverId.getId /= driverId.getId) $ throwError (FleetBadgeAlreadyLinked dBadge.driverId.getId)
   return badge
   where
     createNewBadge = do
@@ -583,16 +575,12 @@ unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber 
           }
   void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) rcStatusReq
   RCQuery.findLastVehicleRCWrapper vehicleNumber
-    >>= \case
-      Just rc -> DAQuery.endAssociationForRC driverId rc.id
-      Nothing -> pure ()
+    >>= \mbRc -> whenJust mbRc $ \rc -> DAQuery.endAssociationForRC driverId rc.id
 
 getRouteDetails :: Text -> Flow Common.RouteDetails
 getRouteDetails routeCode = do
   route <- QR.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)
-  let waypoints = case route.polyline of
-        Just polyline -> Just (KEPP.decode polyline)
-        Nothing -> Nothing
+  let waypoints = KEPP.decode <$> route.polyline
   now <- getCurrentTime
   stops <- QRTS.findAllByRouteCodeForStops routeCode 1 (utctTimeToDayOfWeek now)
   let stopInfos = map (\stop -> StopInfo (stop.stopCode) (stop.stopName) (stop.stopPoint)) (sortBy (EHS.comparing (.stopSequenceNum)) stops)
@@ -628,7 +616,7 @@ findNextActiveTripTransaction fleetOwnerId driverId = do
                         logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
                         return Nothing
                       Right locations -> do
-                        let location = listToMaybe locations
+                        let location = locations ^? _head
                         when (isNothing location) $ logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
                         return location
                 assignedTripTransaction <- assignUpcomingTripTransaction tripTransaction (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation)

@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# LANGUAGE OverloadedLabels #-}
+
 module Beckn.ACL.OnSelect where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -22,6 +24,8 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.Utils
 import qualified BecknV2.Utils as Utils
+import Control.Lens ((^?), _Just, _head)
+import Data.Generics.Labels ()
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Kernel.Prelude
@@ -48,11 +52,11 @@ buildOnSelectReqV2 req = do
     order <- message.onSelectReqMessageOrder & fromMaybeM (InvalidRequest "Missing order")
     items <- order.orderItems & fromMaybeM (InvalidRequest "Missing orderItems")
     fulfillments <- order.orderFulfillments & fromMaybeM (InvalidRequest "Missing orderFulfillments")
-    fulfillment <- listToMaybe fulfillments & fromMaybeM (InvalidRequest "Missing fulfillment")
+    fulfillment <- fulfillments ^? _head & fromMaybeM (InvalidRequest "Missing fulfillment")
     quote <- order.orderQuote & fromMaybeM (InvalidRequest "Missing orderQuote")
     (timestamp, validTill) <- Utils.getTimestampAndValidTill context
     quotesInfo <- traverse (buildQuoteInfoV2 fulfillment quote timestamp order validTill) items
-    itemId <- listToMaybe items >>= (.itemId) & fromMaybeM (InvalidRequest "Missing itemId")
+    itemId <- items ^? _head . #itemId . _Just & fromMaybeM (InvalidRequest "Missing itemId")
     let bppEstimateId = Id itemId
         providerInfo =
           DOnSelect.ProviderInfo

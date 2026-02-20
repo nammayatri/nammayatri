@@ -15,6 +15,7 @@
 
 module Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
 
+import Control.Lens ((^?), _head)
 import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -38,7 +39,7 @@ findById'' ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DFP.FarePolicy ->
   m (Maybe BeamFPSS.FullFarePolicySlabsDetailsSlab)
-findById'' (Id farePolicyId) = findAllWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId] <&> listToMaybe
+findById'' (Id farePolicyId) = findAllWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId] <&> (^? _head)
 
 deleteAll' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> m ()
 deleteAll' (Id farePolicyId) = deleteWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]

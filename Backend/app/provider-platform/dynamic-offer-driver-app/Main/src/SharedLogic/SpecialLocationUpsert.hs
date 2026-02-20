@@ -130,11 +130,9 @@ cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
 
 parseGateTags :: Text -> Maybe [Text]
 parseGateTags fieldValue =
-  case cleanField fieldValue of
-    Nothing -> Nothing
-    Just tags ->
-      let tagList = filter (not . T.null) $ map T.strip $ T.splitOn "," tags
-       in if null tagList then Nothing else Just tagList
+  cleanField fieldValue >>= \tags ->
+    let tagList = filter (not . T.null) $ map T.strip $ T.splitOn "," tags
+     in if null tagList then Nothing else Just tagList
 
 ---------------------------------------------------------------------
 -- Main Upsert Function
@@ -329,15 +327,13 @@ processSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGate
               Nothing -> generateGUID
   -- When specialLocationId is provided from CSV or parameter, still check and delete existing
   when (isJust mbSpecialLocationIdFromCsv) $ do
-    QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId
+    mbSpl <- QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId
       |<|>| QSL.findByLocationName locationName
-        >>= \case
-          Just spl -> do
-            void $
-              runTransaction $ do
-                QSL.deleteById spl.id
-                QGI.deleteAll spl.id
-          Nothing -> return ()
+    whenJust mbSpl $ \spl ->
+      void $
+        runTransaction $ do
+          QSL.deleteById spl.id
+          QGI.deleteAll spl.id
   void $ runTransaction $ QSLG.create $ specialLocation {DSL.id = specialLocationId}
   mapM_
     (\(_, _, (_, gateInfo), _, _, _) -> runTransaction $ QGIG.create $ gateInfo {DGI.specialLocationId = specialLocationId})

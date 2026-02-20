@@ -242,10 +242,10 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalR
         formatUTCToDateString = formatTime defaultTimeLocale "%d-%m-%Y"
 
     castTextToDomainType :: Maybe Text -> Maybe DPan.PanType
-    castTextToDomainType panType = case panType of
-      Just "Individual" -> Just DPan.INDIVIDUAL
-      Just _ -> Just DPan.BUSINESS
-      Nothing -> Nothing
+    castTextToDomainType panType =
+      panType <&> \case
+        "Individual" -> DPan.INDIVIDUAL
+        _ -> DPan.BUSINESS
 
     makeVerifyPanHitsCountKey :: Text -> Text
     makeVerifyPanHitsCountKey panNumber = "VerifyPan:panNumberHits:" <> panNumber <> ":hitsCount"

@@ -66,7 +66,7 @@ postOverlayCreate merchantShortId opCity req = do
           { id = guid,
             merchantId,
             merchantOperatingCityId = merchantOpCityId,
-            actions2 = fromMaybe [] actions2,
+            actions2 = fold actions2,
             vehicleCategory = vehicleCategory,
             ..
           }

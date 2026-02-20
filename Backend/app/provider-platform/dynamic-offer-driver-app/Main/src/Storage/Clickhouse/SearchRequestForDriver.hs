@@ -26,6 +26,7 @@ import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DServiceTierType
 import qualified Domain.Types.VehicleCategory as DVC
+import Control.Lens ((^?), _head)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
@@ -299,7 +300,7 @@ findSreqCountByDriverId driverId from to status = do
                   Nothing -> CH.isNotNull srfd.response
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
-  pure $ fromMaybe 0 (listToMaybe res)
+  pure $ fromMaybe 0 (res ^? _head)
 
 concatFun :: [(Maybe Text, Int, Int, Maybe DVC.VehicleCategory)] -> [(Maybe Text, Int, Maybe DVC.VehicleCategory)] -> [(Maybe Text, Int, Int, Int, Maybe DVC.VehicleCategory)]
 concatFun [] _ = []

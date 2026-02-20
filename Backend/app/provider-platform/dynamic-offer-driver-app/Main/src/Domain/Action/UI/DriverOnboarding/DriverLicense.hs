@@ -353,30 +353,26 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
   let mLicenseExpiry = convertTextToUTC dlExpiry
   let mDriverLicense = createDL person.merchantId documentVerificationConfig person.id covDetails name dob id imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory now <$> mEncryptedDL <*> mLicenseExpiry
 
-  case mDriverLicense of
-    Just driverLicense -> do
-      Query.upsert driverLicense
-      case person.role of
-        Person.DRIVER -> do
-          DriverInfo.updateDlNumber mEncryptedDL person.id
-        _ -> pure ()
-      (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
-      when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
-        mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
-      case driverLicense.driverName of
-        Just name_ -> void $ Person.updateName name_ person.id
-        Nothing -> pure ()
-      -- Create reminders for DL when it's updated
-      createReminder
-        DVC.DriverLicense
-        person.id
-        person.merchantId
-        person.merchantOperatingCityId
-        (Just $ driverLicense.id.getId)
-        (Just driverLicense.licenseExpiry)
-        Nothing
-      pure ()
-    Nothing -> pure ()
+  whenJust mDriverLicense $ \driverLicense -> do
+    Query.upsert driverLicense
+    case person.role of
+      Person.DRIVER -> do
+        DriverInfo.updateDlNumber mEncryptedDL person.id
+      _ -> pure ()
+    (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
+    when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
+      mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
+    whenJust driverLicense.driverName $ \name_ ->
+      void $ Person.updateName name_ person.id
+    -- Create reminders for DL when it's updated
+    createReminder
+      DVC.DriverLicense
+      person.id
+      person.merchantId
+      person.merchantOperatingCityId
+      (Just $ driverLicense.id.getId)
+      (Just driverLicense.licenseExpiry)
+      Nothing
 
 dlCacheKey :: Id Person.Person -> Text
 dlCacheKey personId =
@@ -400,7 +396,7 @@ createDL ::
   UTCTime ->
   Domain.DriverLicense
 createDL merchantId configs driverId covDetails name dob id imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory now edl expiry = do
-  let classOfVehicles = maybe [] (map (.cov)) covDetails
+  let classOfVehicles = foldMap (map (.cov)) covDetails
   let verificationStatus =
         if configs.doStrictVerifcation
           then validateDLStatus configs expiry classOfVehicles now

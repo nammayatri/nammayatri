@@ -23,7 +23,7 @@ import Utils.Common.CacUtils
 getFarePolicyAmbulanceDetailsSlabFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id Domain.FarePolicy -> Int -> m [BeamFPAD.FullFarePolicyAmbulanceDetailsSlab]
 getFarePolicyAmbulanceDetailsSlabFromCAC context tenant id toss = do
   res :: (Maybe [BeamFPAD.FarePolicyAmbulanceDetailsSlab]) <- getConfigListFromCac context tenant toss FarePolicyAmbulanceDetailsSlab (Text.unpack id.getId)
-  let config = mapM fromCacType (fromMaybe [] res)
+  let config = mapM fromCacType (fold res)
   catMaybes <$> config
 
 instance FromCacType BeamFPAD.FarePolicyAmbulanceDetailsSlab BeamFPAD.FullFarePolicyAmbulanceDetailsSlab where

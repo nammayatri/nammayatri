@@ -1,5 +1,6 @@
 module Storage.Queries.VehicleExtra where
 
+import Control.Lens ((^..), _Just, to)
 import Data.Either (fromRight)
 import qualified Database.Beam as B
 import Domain.Types.Merchant
@@ -86,12 +87,10 @@ findByAnyOf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Mayb
 findByAnyOf registrationNoM vehicleIdM =
   findOneWithKV
     [ Se.And
-        ( []
-            <> if isJust vehicleIdM
-              then [Se.Is BeamV.driverId $ Se.Eq (getId (fromJust vehicleIdM))]
-              else
-                []
-                  <> ([Se.Is BeamV.registrationNo $ Se.Eq (fromJust registrationNoM) | isJust registrationNoM])
+        ( maybe
+            (registrationNoM ^.. _Just . to (\r -> Se.Is BeamV.registrationNo $ Se.Eq r))
+            (\vid -> [Se.Is BeamV.driverId $ Se.Eq (getId vid)])
+            vehicleIdM
         )
     ]
 

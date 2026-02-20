@@ -38,7 +38,8 @@ findByMerchantIdDomainAndVehicle merchantId domain vehicle = do
 cacheMerchantIdDomainAndVehicle :: (CacheFlow m r) => BecknConfig -> m ()
 cacheMerchantIdDomainAndVehicle config = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeMerchantIdDomainKey (fromJust config.merchantId) config.domain config.vehicleCategory) config expTime
+  whenJust config.merchantId $ \mid ->
+    Hedis.setExp (makeMerchantIdDomainKey mid config.domain config.vehicleCategory) config expTime
 
 makeMerchantIdDomainKey :: Id Merchant -> Text -> VehicleCategory -> Text
 makeMerchantIdDomainKey merchantId domain vehicle = "CachedQueries:BecknConfig:MerchantId:" <> merchantId.getId <> ":Domain:" <> domain <> ":Vehicle:" <> show vehicle

@@ -135,6 +135,7 @@ library
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
+    , generic-lens
     , http-types
     , lens
     , mobility-core

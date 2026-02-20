@@ -18,7 +18,8 @@ where
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor ((<&>))
 import Data.List (find)
-import Data.Maybe (fromMaybe, listToMaybe)
+import Control.Lens ((^?), _head)
+import Data.Maybe (fromMaybe)
 import Data.OpenApi (ToSchema)
 import Data.Text (Text)
 import Data.Time (UTCTime, diffUTCTime)
@@ -322,7 +323,7 @@ mkLocationFromLocationMapping ::
   Int ->
   m (Maybe DLoc.Location)
 mkLocationFromLocationMapping bookingId order = do
-  locMap <- listToMaybe <$> QLM.findByEntityIdOrderAndVersion (bookingId.getId) order QLM.latestTag
+  locMap <- (^? _head) <$> QLM.findByEntityIdOrderAndVersion (bookingId.getId) order QLM.latestTag
   case locMap of
     Nothing -> pure Nothing
     Just locMap_ -> QLoc.findById locMap_.locationId

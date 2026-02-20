@@ -160,11 +160,9 @@ onStatus _merchant booking (Booking dOrder) = do
       let resourceId = serviceAccount.saIssuerId <> "." <> ticket.id.getId
       let obj = TC.TransitObjectPatch {TC.state = show state'}
       resp <- GWSA.getObjectGoogleWallet serviceAccount resourceId
-      case resp of
-        Nothing -> return ()
-        Just _ -> do
-          void $ GWSA.updateTicketStatusForGoogleWallet obj serviceAccount resourceId
-          return ()
+      whenJust resp $ \_ -> do
+        void $ GWSA.updateTicketStatusForGoogleWallet obj serviceAccount resourceId
+        return ()
       return ()
     refreshTicket ticket =
       whenJust ticket.qrRefreshAt $ \qrRefreshAt ->

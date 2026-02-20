@@ -2,6 +2,7 @@ module ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import BecknV2.FRFS.Enums as Enums
+import Control.Lens ((^?), _head)
 import Data.Aeson
 import Data.Bits (shiftL, (.|.))
 import qualified Data.ByteString.Lazy as LBS
@@ -16,7 +17,7 @@ import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
-import EulerHS.Prelude hiding (readMaybe)
+import EulerHS.Prelude hiding (readMaybe, (^?), (^..))
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
@@ -392,7 +393,7 @@ getFRFSVehicleServiceTier ::
   m Text
 getFRFSVehicleServiceTier quote = do
   let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-  let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
+  let mbServiceTier = mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations) ^? _head
   serviceTier <- mbServiceTier & fromMaybeM (CRISError "serviceTier not found")
   -- serviceTierType <- mbServiceTier._type & fromMaybeM (InternalError "serviceTierType not found")
   case serviceTier._type of

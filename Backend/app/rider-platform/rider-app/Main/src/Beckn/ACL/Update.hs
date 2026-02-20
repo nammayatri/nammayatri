@@ -185,7 +185,7 @@ mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
               Just
                 [ Spec.Fulfillment
                     { fulfillmentId = Just details.bppRideId.getId,
-                      fulfillmentStops = CommonUtils.mkStops' details.origin (fromMaybe [] details.stops) details.destination,
+                      fulfillmentStops = CommonUtils.mkStops' details.origin (fold details.stops) details.destination,
                       fulfillmentAgent = Nothing,
                       fulfillmentCustomer = Nothing,
                       fulfillmentState =

@@ -127,7 +127,7 @@ getDriverProfile withImages person = do
     Nothing -> do
       fetchLegacyProfileImage person.id
   topFeedbacks <- getTopFeedBackForDriver person.id
-  let driverTagsJson = convertTags $ fromMaybe [] person.driverTag
+  let driverTagsJson = convertTags $ fold person.driverTag
   let mbSafetyScoreFromTag = accessTagKey (TagName "SafetyScore") driverTagsJson
   let mbSafetyCohort = accessTagKey (TagName "SafetyCohort") driverTagsJson
   let driverSafetyScore = mbSafetyScoreFromTag <|> getSafetyScoreFromSafetyCohort mbSafetyCohort
@@ -137,15 +137,15 @@ getDriverProfile withImages person = do
         homeTown = Nothing,
         driverName = person.firstName,
         onboardedAt = person.createdAt,
-        pledges = maybe [] (.pledges) driverProfile,
-        languages = fromMaybe [] ((map getLanguages) <$> person.languagesSpoken),
+        pledges = foldMap (.pledges) driverProfile,
+        languages = fold ((map getLanguages) <$> person.languagesSpoken),
         aboutMe = (.aboutMe) =<< driverProfile,
         drivingSince = (.drivingSince) =<< driverProfile,
         driverStats = getDriverStatsSummary driverStats,
-        aspirations = fromMaybe [] ((.aspirations) =<< driverProfile),
+        aspirations = fold ((.aspirations) =<< driverProfile),
         vehicleNum = (.registrationNo) <$> vehicle,
         vechicleVariant = (.variant) <$> vehicle,
-        vehicleTags = fromMaybe [] ((.vehicleTags) =<< driverProfile),
+        vehicleTags = fold ((.vehicleTags) =<< driverProfile),
         images = images,
         profileImage = profileImage,
         topReviews = topFeedbacks,

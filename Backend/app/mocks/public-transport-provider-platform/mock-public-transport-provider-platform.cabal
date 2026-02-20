@@ -95,6 +95,7 @@ library
     , extra
     , hedis
     , http-client
+    , lens
     , mobility-core
     , openapi3
     , public-transport-rider-platform
@@ -179,6 +180,7 @@ executable mock-public-transport-provider-platform-exe
     , extra
     , hedis
     , http-client
+    , lens
     , mobility-core
     , mock-public-transport-provider-platform
     , openapi3

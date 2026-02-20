@@ -31,7 +31,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as VehVar
-import EulerHS.Prelude hiding (id, state, (%~))
+import EulerHS.Prelude hiding (id, state, (%~), (^..))
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Prelude as KP
 import Kernel.Types.App
@@ -313,9 +313,7 @@ parseLatLong a =
 getContextBppUri :: MonadFlow m => Spec.Context -> m (Maybe BaseUrl)
 getContextBppUri context = do
   let mbBppUriText = context.contextBppUri
-  case mbBppUriText of
-    Nothing -> pure Nothing
-    Just bppUriText -> Just <$> A.decode (A.encode bppUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBppUri: " <> bppUriText)
+  traverse (\bppUriText -> A.decode (A.encode bppUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBppUri: " <> bppUriText)) mbBppUriText
 
 withTransactionIdLogTag :: (Log m) => Text -> m a -> m a
 withTransactionIdLogTag = withTransactionIdLogTag'

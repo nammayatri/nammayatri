@@ -10,6 +10,7 @@ import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified BecknV2.FRFS.Enums
 import BecknV2.FRFS.Utils
 import qualified Dashboard.Common as Common
+import Control.Lens ((^?), _head)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
@@ -21,7 +22,7 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (find, groupBy, id, length, map, null)
+import EulerHS.Prelude hiding (find, groupBy, id, length, map, null, (^?), (^..))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
@@ -82,7 +83,7 @@ getFRFSTicketFrfsRouteFareList merchantShortId opCity routeCode integratedBPPCon
   let groupedFares = groupBy (\a b -> a.startStopCode == b.startStopCode) routeFares -- TODO: Sort the fares by startStopCode
   let sortedGroupedFares = sortBy (comparing (negate . length)) groupedFares
   stopFares <- forM sortedGroupedFares $ \fares -> do
-    let maybeFirstFare = listToMaybe fares
+    let maybeFirstFare = fares ^? _head
     case maybeFirstFare of
       Nothing -> throwError (InvalidRequest "No fares found for the start stop")
       Just firstFare -> do

@@ -15,6 +15,7 @@
 module API.Beckn.FRFS.OnConfirm where
 
 import qualified Beckn.ACL.FRFS.OnConfirm as ACL
+import Control.Lens ((^?), _head)
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
@@ -53,8 +54,8 @@ onConfirm _ reqBS = withFlowHandlerAPI $ do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity ticketBooking
   routeStopMappingFromStation <- OTPRest.getRouteStopMappingByStopCode ticketBooking.fromStationCode integratedBppConfig
   routeStopMappingToStation <- OTPRest.getRouteStopMappingByStopCode ticketBooking.toStationCode integratedBppConfig
-  let fromStationProviderCode = fromMaybe ticketBooking.fromStationCode (listToMaybe routeStopMappingFromStation <&> (.providerCode))
-      toStationProviderCode = fromMaybe ticketBooking.toStationCode (listToMaybe routeStopMappingToStation <&> (.providerCode))
+  let fromStationProviderCode = fromMaybe ticketBooking.fromStationCode (routeStopMappingFromStation ^? _head <&> (.providerCode))
+      toStationProviderCode = fromMaybe ticketBooking.toStationCode (routeStopMappingToStation ^? _head <&> (.providerCode))
   logDebug $ "Received OnConfirm request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
     dOnConfirmReq <- ACL.buildOnConfirmReq fromStationProviderCode toStationProviderCode req

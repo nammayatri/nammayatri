@@ -117,7 +117,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       then QDBA.getDriverOrFleetBankAccounts paymentMode (driverLocs <&> (.driverId))
       else return []
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
-  let driversCurrentlyOnRideForForwardBatch = filter (\di -> (isJust di.onRideTripCategory && show (fromJust di.onRideTripCategory) `elem` currentRideTripCategoryValidForForwardBatching) && (isJust di.driverTripEndLocation) && (di.hasRideStarted == Just True)) driverInfos
+  let driversCurrentlyOnRideForForwardBatch = filter (\di -> maybe False (\tc -> show tc `elem` currentRideTripCategoryValidForForwardBatching) di.onRideTripCategory && isJust di.driverTripEndLocation && di.hasRideStarted == Just True) driverInfos
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> "driversCurrentlyOnRideForForwardBatch: " <> show (DIAPI.convertToDriverInfoAPIEntity <$> driversCurrentlyOnRideForForwardBatch)
   let res = linkArrayListForOnRide driverLocs driversCurrentlyOnRideForForwardBatch vehicles drivers driverBankAccounts (fromIntegral onRideRadius :: Double)
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
@@ -150,9 +150,9 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
       let availableTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction False info vehicle cityServiceTiers
       let ifUsageRestricted = any (\(_, usageRestricted) -> usageRestricted) availableTiersWithUsageRestriction
-      let softBlockedTiers = fromMaybe [] info.softBlockStiers
+      let softBlockedTiers = fold info.softBlockStiers
       let removeSoftBlockedTiers = filter (\stier -> stier `notElem` softBlockedTiers)
-      let upgradedTiers = DL.intersect ((.tier) <$> fromMaybe [] vehicle.ruleBasedUpgradeTiers) ((.tier) <$> fromMaybe [] info.ruleBasedUpgradeTiers)
+      let upgradedTiers = DL.intersect ((.tier) <$> fold vehicle.ruleBasedUpgradeTiers) ((.tier) <$> fold info.ruleBasedUpgradeTiers)
       let addRuleBasedUpgradeTiers existing = DL.nub $ (filter (\tier -> maybe False (\tierInfo -> vehicle.variant `elem` tierInfo.allowedVehicleVariant) (HashMap.lookup tier cityServiceTiersHashMap)) upgradedTiers) <> existing
       let selectedDriverServiceTiers =
             removeSoftBlockedTiers $
@@ -210,7 +210,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
                 backendAppVersion = person.backendAppVersion,
                 latestScheduledBooking = info.latestScheduledBooking,
                 latestScheduledPickup = info.latestScheduledPickup,
-                driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "OnRideDriver#true" : fromMaybe [] person.driverTag,
+                driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "OnRideDriver#true" : fold person.driverTag,
                 score = Nothing,
                 tripDistanceMinThreshold = info.tripDistanceMinThreshold,
                 tripDistanceMaxThreshold = info.tripDistanceMaxThreshold,

@@ -42,6 +42,7 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Data.OpenApi hiding (description, email, info, name, title)
+import Control.Lens ((^?), _head)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Registration as DReg
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
@@ -63,7 +64,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import Domain.Types.Station
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, (^?), (^..))
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
@@ -259,7 +260,7 @@ getRegToken :: Id SP.Person -> Id PartnerOrganization -> DPOC.RegistrationConfig
 getRegToken personId pOrgId regPOCfg mId isApiKeyAuth = do
   let entityId = personId
   RegistrationToken.findAllByPersonId entityId
-    <&> KP.listToMaybe . sortOn (.updatedAt) . filter (isJust . (.createdViaPartnerOrgId))
+    <&> (^? _head) . sortOn (.updatedAt) . filter (isJust . (.createdViaPartnerOrgId))
     >>= validateToken pOrgId
     >>= maybe (makeSessionViaPartner regPOCfg.sessionConfig entityId.getId mId.getId regPOCfg.fakeOtp pOrgId isApiKeyAuth) return
 

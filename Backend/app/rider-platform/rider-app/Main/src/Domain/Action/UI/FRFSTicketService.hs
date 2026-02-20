@@ -5,6 +5,7 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import BecknV2.FRFS.Enums hiding (END, START)
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
+import Control.Lens ((^?), _head)
 import Control.Monad.Extra hiding (fromMaybeM)
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (groupBy, nub, nubBy)
@@ -36,7 +37,7 @@ import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import Domain.Types.Station
 import Domain.Types.StationType
 import qualified Environment
-import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust)
+import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust, (^?), (^..))
 import qualified ExternalBPP.CallAPI.Cancel as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Search as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Select as CallExternalBPP
@@ -190,7 +191,7 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
   currentTime <- getCurrentTime
   let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
       stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
-      firstStop = listToMaybe stopsSortedBySequenceNumber
+      firstStop = stopsSortedBySequenceNumber ^? _head
   stops <-
     if isJust firstStop
       then do
@@ -730,7 +731,7 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
       )
       bookingPayments
   let (bookingsStatus, _, journeyIds) = unzip3 bookingsStatusWithBooking
-      journeyId = listToMaybe $ catMaybes journeyIds
+      journeyId = catMaybes journeyIds ^? _head
   return $
     ( evaluateConditions
         [ (Nothing, Just FRFSTicketService.REFUND_PENDING, DPayment.FulfillmentRefundPending, all), -- Paid But Refund Pending (Could be due to Booking Cancellation/Failure/Async Ticket Generation Failure)
@@ -868,11 +869,10 @@ getFrfsBookingCancelStatus _ bookingId = do
       }
 
 getAbsoluteValue :: Maybe HighPrecMoney -> Maybe HighPrecMoney
-getAbsoluteValue mbRefundAmount = case mbRefundAmount of
-  Nothing -> Nothing
-  Just rfValue -> do
+getAbsoluteValue mbRefundAmount =
+  mbRefundAmount <&> \rfValue ->
     let HighPrecMoney value = rfValue
-    Just (HighPrecMoney $ abs value)
+     in HighPrecMoney $ abs value
 
 getFrfsConfig :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Context.City -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
 getFrfsConfig (pId, mId) opCity = do

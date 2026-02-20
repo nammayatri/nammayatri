@@ -51,6 +51,7 @@ library
       MultiWayIf
       NamedFieldPuns
       NoImplicitPrelude
+      OverloadedLabels
       OverloadedStrings
       PackageImports
       PatternSynonyms
@@ -76,8 +77,10 @@ library
     , cryptohash
     , euler-hs
     , exceptions
+    , generic-lens
     , http-client
     , http-types
+    , lens
     , mobility-core
     , record-dot-preprocessor
     , record-hasfield
@@ -125,6 +128,7 @@ test-suite location-updates-tests
       MultiWayIf
       NamedFieldPuns
       NoImplicitPrelude
+      OverloadedLabels
       OverloadedStrings
       PackageImports
       PatternSynonyms
@@ -152,6 +156,7 @@ test-suite location-updates-tests
     , cryptohash
     , euler-hs
     , exceptions
+    , generic-lens
     , hspec
     , http-client
     , http-types

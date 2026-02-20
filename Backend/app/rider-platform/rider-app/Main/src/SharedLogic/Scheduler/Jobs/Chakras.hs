@@ -45,7 +45,7 @@ mkKaalChakraHandle merchantId merchantOperatingCityId =
   Event.Handle
     { getUserTags = \userId -> do
         mbRider <- QPerson.findById $ cast @LYT.User @DPerson.Person userId
-        pure $ mbRider <&> (\rider -> fromMaybe [] rider.customerNammaTags),
+        pure $ mbRider <&> (\rider -> fold rider.customerNammaTags),
       updateUserTags = \userId customerTags -> QPerson.updateCustomerTags (Just customerTags) (cast @LYT.User @DPerson.Person userId),
       action = Actions.kaalChakraAction merchantOperatingCityId . cast @LYT.User @DPerson.Person,
       createFetchUserDataJob = createFetchUserDataJob merchantId merchantOperatingCityId,

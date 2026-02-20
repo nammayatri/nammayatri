@@ -109,7 +109,7 @@ upsertLocationForOldData locationId bookingId = do
 
 getSenderAndReceiverDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe TripCategory -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> m (Maybe (DPD.DeliveryPersonDetails, DPD.DeliveryPersonDetails))
 getSenderAndReceiverDetails tripCategory senderId senderName senderPrimaryExophone receiverId receiverName receiverPrimaryExophone
-  | isJust tripCategory && (isDeliveryTrip $ fromJust tripCategory) = do
+  | maybe False isDeliveryTrip tripCategory = do
     (,,,,,)
       <$> senderId
       <*> receiverId

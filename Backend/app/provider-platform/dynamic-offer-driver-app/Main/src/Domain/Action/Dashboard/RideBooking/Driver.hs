@@ -33,6 +33,7 @@ where
 
 import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import Control.Lens ((^?), _head)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -703,7 +704,7 @@ postDriverEndRCAssociation merchantShortId opCity reqDriverId = do
 
   associations <- QRCAssociation.findAllLinkedByDriverId personId
   mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
-  let mVehicleRC = listToMaybe (catMaybes mVehicleRCs)
+  let mVehicleRC = catMaybes mVehicleRCs ^? _head
 
   case mVehicleRC of
     Just vehicleRC -> do

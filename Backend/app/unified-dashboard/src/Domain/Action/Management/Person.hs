@@ -21,7 +21,8 @@ where
 
 import qualified API.Types.Management.Person
 import Data.List (groupBy, nub, sortOn)
-import Data.Maybe (listToMaybe, mapMaybe)
+import Control.Lens ((^?), _head)
+import Data.Maybe (mapMaybe)
 import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -31,7 +32,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName
 import qualified Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, (^?), (^..))
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..), decrypt, encrypt, getDbHash, unEncrypted)
 import qualified Kernel.External.Verification.SafetyPortal.Types
@@ -274,7 +275,7 @@ getUserProfile _ _ apiTokenInfo = do
       let merchantAccesslistWithCity =
             mapMaybe
               ( \groupItems -> do
-                  firstItem <- listToMaybe groupItems
+                  firstItem <- groupItems ^? _head
                   pure $ DMerchant.AvailableCitiesForMerchant firstItem.merchantShortId (map (.operatingCity) groupItems)
               )
               groupedByMerchant
@@ -370,7 +371,7 @@ makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList = do
   let groupedByMerchant = Data.List.groupBy (\(x, _) (y, _) -> x == y) merchantCityList
   mapMaybe
     ( \groupItems -> do
-        (merchantShortId, _) <- listToMaybe groupItems
+        (merchantShortId, _) <- groupItems ^? _head
         pure $ DMerchant.AvailableCitiesForMerchant merchantShortId (map (\(_, y) -> y) groupItems)
     )
     groupedByMerchant

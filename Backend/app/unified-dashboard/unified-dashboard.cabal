@@ -185,6 +185,7 @@ library
     , http-client
     , http-client-tls
     , http-types
+    , lens
     , mobility-core
     , openapi3
     , passetto-client
@@ -275,6 +276,7 @@ executable unified-dashboard-exe
     , http-client
     , http-client-tls
     , http-types
+    , lens
     , mobility-core
     , openapi3
     , passetto-client

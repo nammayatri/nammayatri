@@ -17,6 +17,7 @@
 module Storage.Cac.DriverPoolConfig (module Storage.Cac.DriverPoolConfig, module Reexport) where
 
 import qualified Client.Main as CM
+import Control.Lens ((^..), _Just, to)
 import Data.Aeson as DA
 import Data.Text as Text hiding (find)
 import Data.Time
@@ -86,9 +87,9 @@ getDriverPoolConfigFromCAC merchantOpCityId st tc dist area stickyKey currTimeOf
           (TripCategory, toJSON tc),
           (Area, show area)
         ]
-          <> [(VehicleVariant, show (fromJust st)) | isJust st]
-          <> [(CCU.TimeOfDay, show (fromJust currTimeOfDay)) | isJust currTimeOfDay]
-          <> [(DayOfWeek, show (fromJust currentDayOfWeek)) | isJust currentDayOfWeek]
+          <> (st ^.. _Just . to (\s -> (VehicleVariant, show s)))
+          <> (currTimeOfDay ^.. _Just . to (\t -> (CCU.TimeOfDay, show t)))
+          <> (currentDayOfWeek ^.. _Just . to (\d -> (DayOfWeek, show d)))
   inMemConfig <- getConfigFromInMemory merchantOpCityId st tc dist
   config <- CCU.getConfigFromCacOrDB inMemConfig dpcCond stickyKey (KBF.fromCacType @SBMDPC.DriverPoolConfig) CCU.DriverPoolConfig
   whenJust config $ pure $ void $ setConfigInMemory merchantOpCityId st tc dist config
@@ -177,11 +178,12 @@ getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance 
   config <-
     getDriverPoolConfigCond merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance area searchRepeatType searchRepeatCounter srId (Just currTimeOfDay) (Just currentDayOfWeek) sreq
       |<|>| getDriverPoolConfigCond merchantOpCityId (Just serviceTier) "All" tripDistance area searchRepeatType searchRepeatCounter srId Nothing Nothing sreq
-  when (isNothing config) do
-    logError $ "Could not find the config for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance
-    throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId
   logDebug $ "driverPoolConfig we recieved for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance <> " is:" <> show config
-  pure (fromJust config)
+  case config of
+    Nothing -> do
+      logError $ "Could not find the config for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance
+      throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId
+    Just cfg -> pure cfg
 
 ----------------------------------------------- Cached Queries Can't be handled by cac ------------------------------------------
 

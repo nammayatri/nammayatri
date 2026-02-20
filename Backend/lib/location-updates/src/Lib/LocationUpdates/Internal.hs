@@ -45,12 +45,13 @@ module Lib.LocationUpdates.Internal
   )
 where
 
+import Control.Lens ((^?), _last)
 import qualified Control.Monad.Catch as C
 import qualified Data.List.NonEmpty as NE
-import EulerHS.Prelude hiding (id, state)
+import EulerHS.Prelude hiding (id, state, (^?), (^..))
 import GHC.Records.Extra
 import Kernel.External.Maps as Maps
-import Kernel.Prelude (last, roundToIntegral)
+import Kernel.Prelude (roundToIntegral)
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
@@ -300,11 +301,8 @@ recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcRe
       tollNames :: [Text] <- Redis.lRange (onRideTollNamesKey driverId) 0 (-1)
       tollIds :: [Text] <- Redis.lRange (onRideTollIdsKey driverId) 0 (-1)
       whenJust mbTollCharges $ \tollCharges -> updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds
-  let newReferencePoint = if snapToRoadFailed then Nothing else lastMaybe interpolatedWps
+  let newReferencePoint = if snapToRoadFailed then Nothing else interpolatedWps ^? _last
   pure (distance, newReferencePoint, startPatching, servicesUsed, snapToRoadFailed)
-  where
-    lastMaybe [] = Nothing
-    lastMaybe xs = Just $ last xs
 
 redisOnRideKeysCleanup :: (HedisFlow m env) => Id person -> m ()
 redisOnRideKeysCleanup driverId = do

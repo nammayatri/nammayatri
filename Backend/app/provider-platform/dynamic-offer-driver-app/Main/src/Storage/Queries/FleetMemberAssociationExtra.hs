@@ -3,6 +3,7 @@
 
 module Storage.Queries.FleetMemberAssociationExtra where
 
+import Control.Lens ((^?), _head)
 import qualified Domain.Types.FleetMemberAssociation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -16,4 +17,4 @@ import Storage.Queries.OrphanInstances.FleetMemberAssociation
 -- Extra code goes here --
 
 findOneByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.FleetMemberAssociation.FleetMemberAssociation))
-findOneByFleetOwnerId fleetOwnerId isFleetOwner = do findAllWithKV [Se.And [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is Beam.isFleetOwner $ Se.Eq isFleetOwner]] <&> listToMaybe
+findOneByFleetOwnerId fleetOwnerId isFleetOwner = do findAllWithKV [Se.And [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is Beam.isFleetOwner $ Se.Eq isFleetOwner]] <&> (^? _head)

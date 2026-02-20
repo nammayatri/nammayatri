@@ -52,11 +52,10 @@ getTextValue = \case
 pushCacDataToKafka :: (MonadFlow m, EsqDBFlow m r) => Maybe CacKey -> [(CacContext, Value)] -> Int -> (String -> [(Text, Value)] -> Int -> IO Value) -> String -> CacPrefix -> m ()
 pushCacDataToKafka stickeyKey context toss getVariants tenant key' = do
   enableKafka <- liftIO $ Se.lookupEnv "CAC_PUSH_TO_KAFKA"
-  when (isJust stickeyKey && enableKafka == Just "True") do
+  when (enableKafka == Just "True") $ for_ stickeyKey $ \key -> do
     let context' = DBF.first show <$> context
     let context'' = DBF.second getTextValue <$> context
     variantIds <- liftIO $ getVariants tenant context' toss
-    let key = fromJust stickeyKey
     let cacData = CACData (getKeyValue key) (getKeyName key) (Text.pack (show context'')) (Text.pack (show key')) (getTextValue variantIds)
     fork "push cac data to kafka" $ pushToKafka cacData "cac-data" ""
 
@@ -160,7 +159,7 @@ getConfigFromCacOrDB ::
 getConfigFromCacOrDB cachedConfig context stickyKey fromCacTyp cpf = do
   systemConfigs' <- L.getOption KBT.Tables
   systemConfigs <- maybe (KSQS.findById "kv_configs" >>= pure . decodeFromText' @Tables) (pure . Just) systemConfigs'
-  let useCACConfig = maybe [] (.useCAC) systemConfigs
+  let useCACConfig = foldMap (.useCAC) systemConfigs
   maybe
     ( do
         if getTableName cpf `GL.elem` useCACConfig
@@ -180,6 +179,5 @@ getConfigFromCacOrDB cachedConfig context stickyKey fromCacTyp cpf = do
 
 setConfigInMemoryCommon :: (CacheFlow m r, T.OptionEntity k v, MonadFlow m) => k -> Bool -> Maybe v -> m (Maybe v)
 setConfigInMemoryCommon key isExp val = do
-  when (isJust val && isExp) do
-    L.setOption key (fromJust val)
+  when isExp $ for_ val $ L.setOption key
   pure val

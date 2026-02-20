@@ -59,9 +59,9 @@ notifyEmergencyContactsInternal person notificationType mbNotificationKey mbBuil
       )
       emergencyContacts
   where
-    sendMessageToContact emergencyContact = when useSmsAsBackup $ case mbBuildSmsReq of
-      Just buildSmsReq -> sendMessageToEmergencyContact person emergencyContact buildSmsReq
-      Nothing -> pure ()
+    sendMessageToContact emergencyContact = when useSmsAsBackup $
+      whenJust mbBuildSmsReq $ \buildSmsReq ->
+        sendMessageToEmergencyContact person emergencyContact buildSmsReq
 
 notifyEmergencyContacts :: Person.Person -> Text -> Text -> Notification.Category -> Maybe (Text -> Sms.SendSMSReq) -> Bool -> [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Maybe (Id DSos.Sos) -> Flow ()
 notifyEmergencyContacts person body title notificationType mbBuildSmsReq useSmsAsBackup emergencyContacts mbSosId =

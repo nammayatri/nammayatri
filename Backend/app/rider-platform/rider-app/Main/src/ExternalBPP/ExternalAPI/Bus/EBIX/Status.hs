@@ -1,5 +1,6 @@
 module ExternalBPP.ExternalAPI.Bus.EBIX.Status where
 
+import Control.Lens ((^?), _head)
 import Data.Aeson
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as Ticket
@@ -89,7 +90,7 @@ getTicketStatus config booking = do
                 Just $
                   ProviderTicket
                     { ticketNumber = ticket.ticketNumber,
-                      vehicleNumber = (listToMaybe ticketStatus._data.ticketDetails) >>= (.vehRtoNo),
+                      vehicleNumber = (ticketStatus._data.ticketDetails ^? _head) >>= (.vehRtoNo),
                       qrData = ticket.qrData,
                       qrStatus,
                       qrValidity = ticket.validTill,
@@ -103,6 +104,6 @@ getTicketStatus config booking = do
   return $ catMaybes updatedTickets
   where
     mkTicketStatus ticket =
-      case (listToMaybe ticket._data.ticketDetails) >>= (.wbId) of
+      case (ticket._data.ticketDetails ^? _head) >>= (.wbId) of
         Just _wbId -> "CLAIMED"
         Nothing -> "UNCLAIMED"

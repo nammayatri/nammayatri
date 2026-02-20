@@ -151,16 +151,15 @@ getMessageCountByReadStatus (Id messageID) = do
 
 updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Msg.Message -> Id P.Driver -> m ()
 updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
-  findByMessageIdAndDriverId messageId driverId >>= \case
-    Just report -> do
-      let likeStatus = not report.likeStatus
-      now <- getCurrentTime
-      updateOneWithKV
-        [ Se.Set BeamMR.likeStatus likeStatus,
-          Se.Set BeamMR.updatedAt $ T.utcToLocalTime T.utc now
-        ]
-        [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId, Se.Is BeamMR.readStatus $ Se.Eq True]]
-    Nothing -> pure ()
+  mbReport <- findByMessageIdAndDriverId messageId driverId
+  whenJust mbReport $ \report -> do
+    let likeStatus = not report.likeStatus
+    now <- getCurrentTime
+    updateOneWithKV
+      [ Se.Set BeamMR.likeStatus likeStatus,
+        Se.Set BeamMR.updatedAt $ T.utcToLocalTime T.utc now
+      ]
+      [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId, Se.Is BeamMR.readStatus $ Se.Eq True]]
 
 findByMessageIdAndDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
 findByMessageIdAndDriverId (Id messageId) (Id driverId) = findOneWithKV [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]

@@ -49,7 +49,7 @@ getDriverGoHomeRequestInfo driverId merchantOpCityId goHomeCfg = do
         mbDghr <- QDGR.findActive driverId
         whenJust mbDghr $ \dghr -> do
           succRide <- Ride.findCompletedRideByGHRId dghr.id
-          finishWithStatus (bool DDGR.FAILED DDGR.SUCCESS (isJust succRide)) (bool Nothing (Just False) (isJust succRide)) dghr.id
+          finishWithStatus (maybe DDGR.FAILED (const DDGR.SUCCESS) succRide) (False <$ succRide) dghr.id
         withCrossAppRedis $ Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
         return $ templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime
 
@@ -74,7 +74,7 @@ checkInvalidReqData ghrData currTime ghkey driverId merchantOpCityId goHomeCfg e
       logDebug $ "Setting new CachedGoHomeRequest data as old data is expired for driverId :" <> show driverId
       whenJust (ghrData.driverGoHomeRequestId) $ \id -> do
         succRide <- Ride.findCompletedRideByGHRId id
-        QDGR.finishWithStatus (bool DDGR.FAILED DDGR.SUCCESS (isJust succRide)) (bool Nothing (Just False) (isJust succRide)) id
+        QDGR.finishWithStatus (maybe DDGR.FAILED (const DDGR.SUCCESS) succRide) (False <$ succRide) id
       withCrossAppRedis $ Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
       return $ templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime
 

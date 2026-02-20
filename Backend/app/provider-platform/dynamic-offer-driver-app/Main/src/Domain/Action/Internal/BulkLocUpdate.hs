@@ -15,7 +15,6 @@
 module Domain.Action.Internal.BulkLocUpdate where
 
 import qualified Data.List.NonEmpty as NE
-import Data.Maybe (fromJust)
 import Data.OpenApi (ToSchema)
 import Domain.Action.UI.Ride.EndRide.Internal (getRouteInfoWithShortestDuration)
 import qualified Domain.Types as DC
@@ -67,29 +66,28 @@ bulkLocUpdate req = do
   _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId passedThroughDrop (booking.tripCategory == DC.OneWay DC.MeterRide) loc
 
   let buffertime' = getArrivalTimeBufferOfVehicle transportConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
-  when (isJust buffertime' && ride.status == DRide.INPROGRESS && isJust ride.estimatedEndTimeRange && isJust ride.toLocation) $ do
-    now <- getCurrentTime
-    let buffertime = fromJust buffertime'
-    let endTimeRange = fromJust ride.estimatedEndTimeRange
-    when (now > addUTCTime (secondsToNominalDiffTime (div buffertime 2)) endTimeRange.start && not passedThroughDrop) $
-      fork "update estimated end time" $ do
-        logDebug $ "Updating estimated end time for ride " <> show rideId
-        let toLocation = fromJust ride.toLocation
-            currentLatLong = NE.last loc
-            dropLatLong = TM.LatLong {lat = toLocation.lat, lon = toLocation.lon}
-        routeResponse <-
-          TM.getRoutes merchantId booking.merchantOperatingCityId (Just rideId.getId) $
-            TM.GetRoutesReq
-              { waypoints = NE.fromList [currentLatLong, dropLatLong],
-                mode = Just TM.CAR,
-                calcPoints = True
-              }
-        shortestRoute <- getRouteInfoWithShortestDuration routeResponse & fromMaybeM (InternalError "No route found for latlongs")
-        (duration :: Seconds) <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new route")
-        let newEstimatedEndTimeRange = SRide.calculateEstimatedEndTimeRange now duration transportConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
-        let updatedRide = ride {DRide.estimatedEndTimeRange = newEstimatedEndTimeRange}
-        QRide.updateEstimatedEndTimeRange newEstimatedEndTimeRange rideId
-        CallBAP.sendRideEstimatedEndTimeRangeUpdateToBAP booking updatedRide
+  case (buffertime', ride.estimatedEndTimeRange, ride.toLocation) of
+    (Just buffertime, Just endTimeRange, Just toLocation) | ride.status == DRide.INPROGRESS -> do
+      now <- getCurrentTime
+      when (now > addUTCTime (secondsToNominalDiffTime (div buffertime 2)) endTimeRange.start && not passedThroughDrop) $
+        fork "update estimated end time" $ do
+          logDebug $ "Updating estimated end time for ride " <> show rideId
+          let currentLatLong = NE.last loc
+              dropLatLong = TM.LatLong {lat = toLocation.lat, lon = toLocation.lon}
+          routeResponse <-
+            TM.getRoutes merchantId booking.merchantOperatingCityId (Just rideId.getId) $
+              TM.GetRoutesReq
+                { waypoints = NE.fromList [currentLatLong, dropLatLong],
+                  mode = Just TM.CAR,
+                  calcPoints = True
+                }
+          shortestRoute <- getRouteInfoWithShortestDuration routeResponse & fromMaybeM (InternalError "No route found for latlongs")
+          (duration :: Seconds) <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new route")
+          let newEstimatedEndTimeRange = SRide.calculateEstimatedEndTimeRange now duration transportConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
+          let updatedRide = ride {DRide.estimatedEndTimeRange = newEstimatedEndTimeRange}
+          QRide.updateEstimatedEndTimeRange newEstimatedEndTimeRange rideId
+          CallBAP.sendRideEstimatedEndTimeRangeUpdateToBAP booking updatedRide
+    _ -> pure ()
   pure Success
   where
     getMinLocUpdateCountForDistanceCalculation transporterConfig tripCategory =

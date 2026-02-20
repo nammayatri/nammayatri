@@ -40,6 +40,7 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
+  - OverloadedLabels
   - OverloadedStrings
   - PackageImports
   - PatternSynonyms
@@ -58,6 +59,8 @@ default-extensions:
 
 dependencies:
   - base >= 4.7 && < 5
+  - lens
+  - generic-lens
   - record-dot-preprocessor
   - record-hasfield
   - uri-encode

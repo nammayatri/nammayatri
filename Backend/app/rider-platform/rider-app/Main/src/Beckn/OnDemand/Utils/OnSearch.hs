@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.OnDemand.Utils.OnSearch where
 
@@ -21,7 +22,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Context as ContextUtils
 import qualified BecknV2.Utils as Utils
 import Control.Lens
-import Data.Maybe (listToMaybe)
+import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Data.Time (TimeOfDay (..))
 import Domain.Action.Beckn.OnSearch as OnSearch
@@ -29,7 +30,7 @@ import Domain.Types.Estimate as Estimate
 import Domain.Types.SearchRequest
 import Domain.Types.ServiceTierType as DVST
 import Domain.Types.VehicleVariant as VehicleVariant
-import EulerHS.Prelude hiding (id, view, (^?))
+import EulerHS.Prelude hiding (id, view, (^?), (^..))
 import Kernel.External.Maps as Maps
 import Kernel.Prelude (parseBaseUrl, roundToIntegral)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -41,22 +42,19 @@ import Tools.Error
 getProviderName :: MonadFlow m => Spec.OnSearchReq -> m Text
 getProviderName req =
   req.onSearchReqMessage
-    >>= (.onSearchReqMessageCatalog.catalogProviders)
-    >>= safeHead
-    >>= (.providerDescriptor)
-    >>= (.descriptorName)
+    ^? _Just . #onSearchReqMessageCatalog . #catalogProviders . _Just . _head . #providerDescriptor . _Just . #descriptorName . _Just
     & fromMaybeM (InvalidRequest "Missing Provider Name")
 
 getQuoteFulfillmentId :: MonadFlow m => Spec.Item -> m Text
 getQuoteFulfillmentId item =
   item.itemFulfillmentIds
-    >>= listToMaybe
+    ^? _Just . _head
     & fromMaybeM (InvalidRequest "Missing Fulfillment Ids")
 
 getVehicleVariant :: MonadFlow m => Spec.Provider -> Spec.Item -> m (VehicleVariant.VehicleVariant, Maybe Int)
 getVehicleVariant provider item = do
   let vehicle =
-        item.itemFulfillmentIds >>= listToMaybe
+        (item.itemFulfillmentIds ^? _Just . _head)
           >>= (\fulfillmentId -> provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId))
           >>= (.fulfillmentVehicle)
       variant' = vehicle >>= (.vehicleVariant)
@@ -79,7 +77,7 @@ isValidVehVariant fulfillment = do
 
 isValidItem :: [Spec.Fulfillment] -> Spec.Item -> Bool
 isValidItem fulfillments item =
-  let fulfId = item.itemFulfillmentIds >>= listToMaybe
+  let fulfId = item.itemFulfillmentIds ^? _Just . _head
    in any (\f -> f.fulfillmentId == fulfId) fulfillments
 
 getServiceTierType :: Spec.Item -> Maybe DVST.ServiceTierType
@@ -94,7 +92,7 @@ getServiceTierShortDesc item = item.itemDescriptor >>= (.descriptorShortDesc)
 getVehicleServiceTierAirConditioned :: MonadFlow m => Spec.Provider -> Spec.Item -> m (Maybe Double)
 getVehicleServiceTierAirConditioned provider item = do
   let vehicleServiceTierAirConditioned = do
-        fulfillmentId <- item.itemFulfillmentIds >>= listToMaybe
+        fulfillmentId <- item.itemFulfillmentIds ^? _Just . _head
         fulfillment <- provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId)
         getTagV2' Tag.VEHICLE_INFO Tag.IS_AIR_CONDITIONED (fulfillment.fulfillmentTags)
   return $ castToDouble vehicleServiceTierAirConditioned
@@ -107,7 +105,7 @@ getVehicleServiceTierAirConditioned provider item = do
 getIsAirConditioned :: MonadFlow m => Spec.Provider -> Spec.Item -> m (Maybe Bool)
 getIsAirConditioned provider item = do
   let vehicleServiceTierAirConditioned = do
-        fulfillmentId <- item.itemFulfillmentIds >>= listToMaybe
+        fulfillmentId <- item.itemFulfillmentIds ^? _Just . _head
         fulfillment <- provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId)
         getTagV2' Tag.VEHICLE_INFO Tag.IS_AIR_CONDITIONED_VEHICLE (fulfillment.fulfillmentTags)
   case vehicleServiceTierAirConditioned of
@@ -421,7 +419,7 @@ makeLatLong provider vehicleVariant location = do
     parseLatLongHelper locId gps providerItems = do
       let providerItem = filter (\item -> maybe False (\locIds -> locId `elem` locIds) item.itemLocationIds) providerItems
           vehicleVariants = traverse extractVehicleVariants providerItem
-      if maybe False (\vehVars -> Just vehicleVariant `elem` vehVars) (listToMaybe vehicleVariants)
+      if maybe False (\vehVars -> Just vehicleVariant `elem` vehVars) (vehicleVariants ^? _head)
         then Just <$> Common.parseLatLong gps
         else return Nothing
 

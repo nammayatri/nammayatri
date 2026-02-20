@@ -85,7 +85,7 @@ isCustomerReferralCode = T.isPrefixOf "C"
 getReferrerInfo :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Person.Person -> Bool -> Maybe LatLong -> ValidatedRefCode -> m (Either APISuccess.APISuccess APITypes.ReferrerInfo)
 getReferrerInfo person shouldShareReferrerInfo mbCustomerLocation = \case
   Rider _ referrer referrerStats -> do
-    let avgRating = bool Nothing (Just . toCentesimal $ div' referrer.totalRatingScore referrer.totalRatings) (referrer.totalRatings > 0)
+    let avgRating = if referrer.totalRatings > 0 then Just (toCentesimal $ div' referrer.totalRatingScore referrer.totalRatings) else Nothing
         referrerInfo =
           APITypes.ReferrerInfo
             { firstName = referrer.firstName,
@@ -117,7 +117,7 @@ getReferrerInfo person shouldShareReferrerInfo mbCustomerLocation = \case
                 personsWithSameDeviceId <- QPerson.findAllByDeviceId (Just deviceId)
                 return $ Just (length personsWithSameDeviceId > 1)
             )
-            (bool person.deviceId Nothing alreadyReferred)
+            (if alreadyReferred then Nothing else person.deviceId)
         mOpCityId <- merchantOpCity.driverOfferMerchantOperatingCityId & fromMaybeM (MerchantOperatingCityNotFound $ "Need driver offer merchant operating city id to be congifured in rider side merchant operating city table.")
         DReferral.LinkRefereeRes res <- CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mOpCityId refCode mobileNumber countryCode isMultipleDeviceIdExist (Just alreadyReferred) (Just shouldShareReferrerInfo) mbCustomerLocation
         return $

@@ -15,7 +15,6 @@ import API.Types.UI.NyRegularSubscription (NyRegularSubscriptionApiEntity)
 import qualified API.Types.UI.NyRegularSubscription
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson (encode)
-import Data.Maybe (fromJust)
 import qualified Data.Text
 import qualified Data.Text as T
 import qualified Data.Time as Time
@@ -433,7 +432,7 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
                     { nyRegularSubscriptionId = finalUpdatedSubscription.id,
                       userId = finalUpdatedSubscription.userId,
                       scheduledTime = jobScheduledTime,
-                      expectedSchedulingHash = fromJust finalUpdatedSubscription.schedulingHash -- Safe due to logic above
+                      expectedSchedulingHash = fromMaybe (error "schedulingHash unexpectedly Nothing after update") finalUpdatedSubscription.schedulingHash
                     }
 
             -- Log before creating job

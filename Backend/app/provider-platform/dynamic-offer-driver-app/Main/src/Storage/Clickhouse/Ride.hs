@@ -20,6 +20,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
+import Control.Lens ((^?), _head)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
@@ -97,7 +98,7 @@ getCompletedRidesByDriver rideIds driverId from to = do
                 CH.&&. ride.id `in_` rideIds
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
-  pure $ fromMaybe 0 (listToMaybe res)
+  pure $ fromMaybe 0 (res ^? _head)
 
 getRidesByIdAndStatus ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
@@ -118,7 +119,7 @@ getRidesByIdAndStatus rideIds status from to = do
                 CH.&&. ride.id `in_` rideIds
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
-  pure $ fromMaybe 0 (listToMaybe res)
+  pure $ fromMaybe 0 (res ^? _head)
 
 getEarningsByDriver ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

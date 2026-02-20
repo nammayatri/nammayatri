@@ -175,7 +175,7 @@ updateBookingInformation req = do
   where
     createAssignments :: DFBI.FleetBookingInformation -> Maybe [BookingAssignment] -> Flow ()
     createAssignments mainAssignment mbAssignments = do
-      let assignments = fromMaybe [] mbAssignments
+      let assignments = fold mbAssignments
       now <- getCurrentTime
       let individualAmount = maybe Nothing (\amt -> Just (amt / (fromIntegral (max 1 (fromMaybe 1 mainAssignment.bookedSeats))))) mainAssignment.amount
       forM_ assignments $ \assignment -> do

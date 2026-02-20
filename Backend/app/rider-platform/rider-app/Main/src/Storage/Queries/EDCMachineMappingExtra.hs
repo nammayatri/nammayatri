@@ -106,5 +106,5 @@ findAllByMerchantAndCityWithFilters merchantId merchantOperatingCityId mbPersonI
             Se.Is BeamT.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId,
             Se.Is BeamT.isActive $ Se.Eq isActiveVal
           ]
-            <> maybe [] (\p -> [Se.Is BeamT.personId $ Se.Eq p.getId]) mbPersonId
+            <> foldMap (\p -> [Se.Is BeamT.personId $ Se.Eq p.getId]) mbPersonId
       ]

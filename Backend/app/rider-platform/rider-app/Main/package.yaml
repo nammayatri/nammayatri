@@ -69,6 +69,7 @@ dependencies:
   - x509
   - euler-hs
   - lens
+  - generic-lens
   - memory
   - prometheus-client
   - wai-middleware-prometheus

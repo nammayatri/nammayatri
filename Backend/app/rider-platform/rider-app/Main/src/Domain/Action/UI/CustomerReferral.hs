@@ -46,8 +46,8 @@ postPersonApplyReferral (mbPersonId, _) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   res <- Referral.applyReferralCode person shouldShareReferrerInfo req.code req.gps
-  let mbAndroidId = bool req.androidId Nothing (isJust person.androidId)
-      mbDeviceId = bool req.deviceId Nothing (isJust person.deviceId)
+  let mbAndroidId = if isJust person.androidId then Nothing else req.androidId
+      mbDeviceId = if isJust person.deviceId then Nothing else req.deviceId
   void $ QPerson.updateAndroidIdAndDeviceId personId mbAndroidId mbDeviceId
   case res of
     Left success ->

@@ -26,6 +26,7 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
+import Control.Lens ((^?), _head)
 import qualified Data.Aeson as A
 import qualified Data.Tuple.Extra as Tuple
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -121,7 +122,7 @@ createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> 
 createOrder (driverId, merchantId, opCityId) invoiceId = do
   invoices <- B.runInReplica $ QIN.findAllByInvoiceId invoiceId
   driverFees <- (B.runInReplica . QDF.findById . (.driverFeeId)) `mapM` invoices
-  let mbServiceName = listToMaybe invoices <&> (.serviceName)
+  let mbServiceName = (invoices ^? _head) <&> (.serviceName)
   let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
@@ -130,7 +131,7 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
   vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . Domain.Types.DriverFee.id) (catMaybes driverFees) else pure []
   let vendorFees = map SPayment.roundVendorFee vendorFees'
-  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices) vendorFees Nothing splitEnabled Nothing
+  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> (invoices ^? _head)) vendorFees Nothing splitEnabled Nothing
   return createOrderResp
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)
@@ -171,7 +172,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
   now <- getCurrentTime
   invoices <- QIN.findById (cast paymentOrderId)
   mbSubscriptionPurchase <- QSP.findByPaymentOrderId (cast paymentOrderId)
-  let firstInvoice = listToMaybe invoices
+  let firstInvoice = invoices ^? _head
   let mbServiceName = firstInvoice <&> (.serviceName)
   let serviceName =
         fromMaybe
@@ -408,7 +409,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       m ([INV.Invoice], DP.ServiceNames, DSC.SubscriptionConfig, DP.Driver)
     getInvoicesAndServiceWithServiceConfigByOrderId order = do
       invoices' <- QIN.findById (cast order.id)
-      let firstInvoice = listToMaybe invoices'
+      let firstInvoice = invoices' ^? _head
       let mbServiceName' = firstInvoice <&> (.serviceName)
       let serviceName' = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName'
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
@@ -433,7 +434,7 @@ processPayment ::
 processPayment merchantId driver orderId sendNotification (serviceName, subsConfig) invoices = do
   transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  let invoice = listToMaybe invoices
+  let invoice = invoices ^? _head
   let driverFeeIds = (.driverFeeId) <$> invoices
   Redis.whenWithLockRedis (paymentProcessingLockKey driver.id.getId) 60 $ do
     when ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (invoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do

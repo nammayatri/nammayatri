@@ -31,7 +31,7 @@ import Utils.Common.CacUtils
 getDriverExtraFeeBoundsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [DFP.FullDriverExtraFeeBounds]
 getDriverExtraFeeBoundsFromCAC context tenant id toss = do
   res :: (Maybe [BeamDEFB.DriverExtraFeeBounds]) <- getConfigListFromCac context tenant toss FarePolicyDriverExtraFeeBounds (Text.unpack id.getId)
-  config <- mapM KBF.fromCacType (fromMaybe [] res)
+  config <- mapM KBF.fromCacType (fold res)
   pure $ catMaybes config
 
 instance FromCacType BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds where

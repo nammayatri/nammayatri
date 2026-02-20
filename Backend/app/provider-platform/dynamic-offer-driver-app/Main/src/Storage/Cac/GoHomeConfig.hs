@@ -17,7 +17,6 @@
 module Storage.Cac.GoHomeConfig where
 
 import qualified Client.Main as CM
-import Control.Monad
 import Data.Aeson as DA
 import qualified Domain.Types.Cac as DTC
 import Domain.Types.GoHomeConfig
@@ -61,9 +60,9 @@ findByMerchantOpCityId id stickyId = do
                 GHC.getGoHomeConfigFromDB id
             )
   config <- setConfigInMemory id config'
-  when (isNothing config) do
-    throwError $ InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> id.getId
-  pure $ fromJust config
+  case config of
+    Nothing -> throwError $ InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> id.getId
+    Just cfg -> pure cfg
 
 instance FromCacType BeamGHC.GoHomeConfig GoHomeConfig where
   fromCacType = fromTType'

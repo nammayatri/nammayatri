@@ -157,6 +157,7 @@ library
     , dashboard-helper-api
     , esqueleto
     , euler-hs
+    , lens
     , lib-dashboard
     , mobility-core
     , openapi3
@@ -233,6 +234,7 @@ executable rider-dashboard-exe
     , dashboard-helper-api
     , esqueleto
     , euler-hs
+    , lens
     , mobility-core
     , openapi3
     , persistent

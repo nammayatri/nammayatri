@@ -1,5 +1,6 @@
 module Domain.Action.UI.LmsModule where
 
+import Control.Lens ((^?), _head)
 import API.Types.UI.LmsModule
 import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -18,7 +19,7 @@ import qualified Domain.Types.ReelsData as DTRD
 import qualified Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DTVeh
 import qualified Environment
-import EulerHS.Prelude hiding (id, length)
+import EulerHS.Prelude hiding (id, length, (^?), (^..))
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow)
 import Kernel.Prelude hiding (all, elem, find, foldl', map, notElem, null, whenJust)
@@ -159,7 +160,7 @@ getLmsListAllVideos (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage
           $ find ((== language) . (.language)) translations
       videoUrl <- getVideoUrlAccordingToConditionSet merchantOperatingCity translations translation
       now <- getCurrentTime
-      mbVideoCompletionInfo <- listToMaybe <$> maybe (pure []) (SQMCI.findByCompletionIdAndEntityAndEntityId (Just 1) Nothing DTMCI.VIDEO video.id.getId . (.completionId)) mbDriverModuleCompletion
+      mbVideoCompletionInfo <- (^? _head) <$> maybe (pure []) (SQMCI.findByCompletionIdAndEntityAndEntityId (Just 1) Nothing DTMCI.VIDEO video.id.getId . (.completionId)) mbDriverModuleCompletion
       return $
         API.Types.UI.LmsModule.LmsVideoRes
           { videoId = video.id,
@@ -239,7 +240,7 @@ getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage =
             Just translation -> return translation
           )
           $ find ((== language) . (.language)) translations
-      mbLastQuizAttempt <- listToMaybe <$> maybe (pure []) (SQMCI.findByCompletionIdAndEntityAndEntityId (Just 1) Nothing DTMCI.QUIZ question.questionId.getId . (.completionId)) mbDriverModuleCompletion
+      mbLastQuizAttempt <- (^? _head) <$> maybe (pure []) (SQMCI.findByCompletionIdAndEntityAndEntityId (Just 1) Nothing DTMCI.QUIZ question.questionId.getId . (.completionId)) mbDriverModuleCompletion
 
       quizCoinsEarnedVal <- do
         allDriverModuleCompletion <- SQDMC.findAllByDriverIdAndModuleId personId modId
@@ -306,7 +307,7 @@ markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
               Nothing -> (createModuleCompletionInformation driverModuleCompletion.completionId 1) >>= SQMCI.create
               Just attempt -> when (attempt.entityStatus /= DTMCI.ENTITY_PASSED) $ do (createModuleCompletionInformation driverModuleCompletion.completionId (attempt.attempt + 1)) >>= SQMCI.create
           )
-        . listToMaybe
+        . (^? _head)
 
   void $ case status of
     DTMCI.ENTITY_ONGOING -> SQLVT.updateViewCount (currentVideo.viewCount + 1) currentVideo.videoId currentVideo.language
@@ -348,9 +349,8 @@ markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
             -- Handle training completion: cancel reminders, record completion, and restore approved flag if needed
             handleTrainingCompletion personId merchantIdParam merchantOpCityIdParam
 
-            case moduleInfo.certificationEnabled of
-              Nothing -> pure ()
-              Just whetherEnabled -> when whetherEnabled $ do
+            whenJust moduleInfo.certificationEnabled $ \whetherEnabled ->
+              when whetherEnabled $ do
                 void $ generateLmsCertificate personId moduleInfo.id dmc.completionId
           else when allVideosCompleted $ do SQDMC.updateEntitiesCompleted (Just now) (dmc.entitiesCompleted <> [DTDMC.VIDEO]) dmc.completionId
 
@@ -406,7 +406,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
                       else do return Nothing
                   _ -> pure Nothing
               )
-            . listToMaybe
+            . (^? _head)
       Just _ -> pure Nothing
 
   void $
@@ -415,7 +415,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
               Nothing -> (createModuleCompletionInformation driverModuleCompletion.completionId 1 isCorrect selectedOptions) >>= SQMCI.create
               Just attempt -> when (attempt.entityStatus /= DTMCI.ENTITY_PASSED) $ do (createModuleCompletionInformation driverModuleCompletion.completionId (attempt.attempt + 1) isCorrect selectedOptions) >>= SQMCI.create
           )
-        . listToMaybe
+        . (^? _head)
 
   isbonusEarned <- updateModuleInformationIfQuizCompletedCriteriaIsPassed personId driverModuleCompletion driverStats moduleInfo questions (length allModulesCompletionInfo)
 
@@ -463,9 +463,8 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
 
                   -- adding certificate
                   _ <- do
-                    case moduleInfo.certificationEnabled of
-                      Nothing -> pure ()
-                      Just whetherEnabled -> when whetherEnabled $ do
+                    whenJust moduleInfo.certificationEnabled $ \whetherEnabled ->
+                      when whetherEnabled $ do
                         void $ generateLmsCertificate personId moduleInfo.id dmc.completionId
 
                   -- adding bonus coins

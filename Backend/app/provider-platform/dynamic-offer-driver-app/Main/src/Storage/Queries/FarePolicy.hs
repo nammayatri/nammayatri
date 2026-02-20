@@ -98,9 +98,8 @@ update' farePolicy = do
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
 create farePolicy = do
-  case farePolicy.driverExtraFeeBounds of
-    Just driverExtraFeeBounds -> mapM_ (\defb -> QueriesDEFB.create (farePolicy.id, defb)) (toList driverExtraFeeBounds)
-    Nothing -> pure ()
+  whenJust farePolicy.driverExtraFeeBounds $ \driverExtraFeeBounds ->
+    mapM_ (\defb -> QueriesDEFB.create (farePolicy.id, defb)) (toList driverExtraFeeBounds)
   case farePolicy.farePolicyDetails of
     ProgressiveDetails fPPD ->
       QueriesFPPD.create (farePolicy.id, fPPD)

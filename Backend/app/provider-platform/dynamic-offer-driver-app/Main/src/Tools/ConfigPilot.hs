@@ -3,6 +3,7 @@
 module Tools.ConfigPilot where
 
 import qualified ConfigPilotFrontend.Types as CPT
+import Control.Lens ((^?), _head)
 import qualified Data.Aeson as A
 import Data.List (sortOn)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
@@ -46,7 +47,7 @@ returnConfigs logicDomain merchantOpCityId merchantId opCity = do
       return LYT.TableDataResp {configs = map A.toJSON driverPoolCfg}
     LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
       transporterCfg <- SCMTC.getTransporterConfigFromDB (cast merchantOpCityId)
-      return LYT.TableDataResp {configs = map A.toJSON (maybeToList transporterCfg)}
+      return LYT.TableDataResp {configs = map A.toJSON (toList transporterCfg)}
     LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
       payoutCfg <- SCMP.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
       return LYT.TableDataResp {configs = map A.toJSON payoutCfg}
@@ -62,7 +63,7 @@ returnConfigs logicDomain merchantOpCityId merchantId opCity = do
     LYT.UI_DRIVER dt pt -> do
       let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       mbConfigInfo <- SCU.findUIConfig uiConfigReq (cast merchantOpCityId) True
-      return LYT.TableDataResp {configs = map A.toJSON (maybeToList (fst <$> mbConfigInfo))}
+      return LYT.TableDataResp {configs = map A.toJSON (toList (fst <$> mbConfigInfo))}
     _ -> throwError $ InvalidRequest "Unsupported config type."
 
 handleConfigDBUpdate :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Id LYT.MerchantOperatingCity -> LYT.ConcludeReq -> [A.Value] -> Maybe (Id LYT.Merchant) -> Kernel.Types.Beckn.Context.City -> m ()
@@ -163,7 +164,7 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       patchedConfigs <- applyPatchToConfig configWrapper
       let extractedPatchedConfigElement :: [Value] = fmap LYTC.config patchedConfigs
       appDynamicLogicElement <- LTSQADLE.findByPrimaryKey domain 0 version >>= fromMaybeM (InvalidRequest $ "No AppDynamicLogicElement found for domain " <> show domain <> " and version " <> show version)
-      let updatedAppDynamicLogicElement :: LYTADLE.AppDynamicLogicElement = appDynamicLogicElement {LYTADLE.patchedElement = listToMaybe extractedPatchedConfigElement}
+      let updatedAppDynamicLogicElement :: LYTADLE.AppDynamicLogicElement = appDynamicLogicElement {LYTADLE.patchedElement = extractedPatchedConfigElement ^? _head}
       configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
       let configsToUpdate' :: [DTU.UiDriverConfig] = zipWith (\cfg newConfig -> cfg {DTU.config = newConfig}) [uiConfig] configsToUpdate
       LTSQADLE.updateByPrimaryKey updatedAppDynamicLogicElement
@@ -174,7 +175,7 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
     normalizeMaybeFetch :: (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) => (Id MerchantOperatingCity -> m (Maybe a)) -> Id MerchantOperatingCity -> m [a]
     normalizeMaybeFetch fetchFunc merchantOpCityId' = do
       result <- fetchFunc merchantOpCityId'
-      pure $ maybeToList result
+      pure $ toList result
 
 getTSServiceUrl :: (CoreMetrics m, MonadFlow m, CPT.HasTSServiceConfig m r) => m BaseUrl
 getTSServiceUrl = do

@@ -220,11 +220,9 @@ checkAndDisableIfNeeded mode apiType mocId config = do
   let apiConfig = case apiType of
         FareAPI -> config.fare
         BookingAPI -> config.booking
-  case apiConfig of
-    Nothing -> return ()
-    Just cfg -> do
-      (shouldDisable, failureCount) <- checkThresholdsWithCount mocId mode apiType cfg.thresholds
-      when shouldDisable $ disableCircuit mode apiType mocId failureCount
+  whenJust apiConfig $ \cfg -> do
+    (shouldDisable, failureCount) <- checkThresholdsWithCount mocId mode apiType cfg.thresholds
+    when shouldDisable $ disableCircuit mode apiType mocId failureCount
 
 -- | Check if any threshold is exceeded and return the failure count
 checkThresholdsWithCount ::

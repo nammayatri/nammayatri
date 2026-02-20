@@ -140,7 +140,7 @@ fetchPickupRoute ::
   MapSearch.LatLong ->
   m (Maybe [MapSearch.LatLong])
 fetchPickupRoute ride booking driverLoc pickupLoc = do
-  let middleStops = maybe [] (\prevDropLoc -> [prevDropLoc]) ride.driversPreviousRideDropLoc
+  let middleStops = toList ride.driversPreviousRideDropLoc
       waypointsList = driverLoc : (middleStops <> [pickupLoc])
       waypoints = NE.fromList waypointsList
       pickupRouteReq =

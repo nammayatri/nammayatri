@@ -61,7 +61,7 @@ getTripRoutes (personId, merchantId, merchantOpCityId) entityId req = do
       case mbRouteInfo of
         Just routeInfo -> do
           let src = (NE.head req.waypoints) :: Maps.LatLong
-          let points = fromMaybe [] routeInfo.points
+          let points = fold routeInfo.points
           selectedWaypoints <- getSelectedWaypoints src points
           let req' :: Maps.GetRoutesReq =
                 Maps.GetRoutesReq

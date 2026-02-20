@@ -42,7 +42,7 @@ findUIConfig YType.UiConfigRequest {..} merchantOperatingCityId isBaseLogic = do
   version <- TDL.selectAppDynamicLogicVersion (cast merchantOperatingCityId) config localTime toss
   let mbConfigInExperimentVersions =
         Just $
-          maybe [] (\v -> [YType.ConfigVersionMap {config = config, version = v}]) version
+          foldMap (\v -> [YType.ConfigVersionMap {config = config, version = v}]) version
   TDL.findOneUiConfig
     (cast merchantOperatingCityId)
     config

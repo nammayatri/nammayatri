@@ -37,9 +37,7 @@ mkOnInitMessageV2 res becknConfig mbFarePolicy =
 
 tfOrder :: DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.Order
 tfOrder res becknConfig mbFarePolicy = do
-  let farePolicy = case mbFarePolicy of
-        Nothing -> Nothing
-        Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
+  let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,

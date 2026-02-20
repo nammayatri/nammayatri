@@ -184,12 +184,10 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
       resp <- LYDL.runLogicsWithDebugLog (cast merchantOpCityId) (LYT.CONFIG LYT.DriverPoolConfig) allLogics config
       case (fromJSON resp.result :: Result Config) of
         Success dpc'' -> do
-          when
-            (isJust version && isNothing oldVersion)
-            ( do
-                QSR.updatePoolingConfigVersion version sreq.id
-                cacheConfigVersion (getKeyValue <$> stickeyKey) (fromJust version)
-            )
+          whenJust version $ \ver ->
+            when (isNothing oldVersion) $ do
+              QSR.updatePoolingConfigVersion (Just ver) sreq.id
+              cacheConfigVersion (getKeyValue <$> stickeyKey) ver
           whenJust
             stickeyKey
             ( \stickeyKey' -> do
@@ -215,6 +213,5 @@ getConfigVersion mbStickyKey = do
 cacheConfigVersion :: (CacheFlow m r) => Maybe Text -> Int -> m ()
 cacheConfigVersion mbStickyKey version = do
   expTime <- fromIntegral <$> asks (.cacConfig.cacExpTime)
-  case mbStickyKey of
-    Nothing -> pure ()
-    Just stId' -> Hedis.withCrossAppRedis (Hedis.setExp (makeConfigVersionKey stId') version expTime)
+  whenJust mbStickyKey $ \stId' ->
+    Hedis.withCrossAppRedis (Hedis.setExp (makeConfigVersionKey stId') version expTime)

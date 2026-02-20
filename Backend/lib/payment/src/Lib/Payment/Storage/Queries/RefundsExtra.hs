@@ -1,5 +1,6 @@
 module Lib.Payment.Storage.Queries.RefundsExtra where
 
+import Control.Lens ((^?), _head)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -22,4 +23,4 @@ findLatestByOrderId orderId =
     (Se.Desc BeamR.createdAt)
     (Just 1)
     Nothing
-    <&> listToMaybe
+    <&> (^? _head)

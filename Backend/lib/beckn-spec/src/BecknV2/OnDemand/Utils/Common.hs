@@ -24,8 +24,9 @@ import Domain.Types
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as DTV
-import EulerHS.Prelude
-import Kernel.Prelude (intToNominalDiffTime, listToMaybe)
+import Control.Lens ((^?), _Just, _head)
+import EulerHS.Prelude hiding ((^?), (^..))
+import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
@@ -45,7 +46,7 @@ getTransactionId :: (MonadFlow m) => Spec.Context -> m Text
 getTransactionId context = context.contextTransactionId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")
 
 getDriverNumber :: (MonadFlow m) => Spec.Order -> m Text
-getDriverNumber message = message.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "driverMobileNumber is not present in RideAssigned Event.")
+getDriverNumber message = message.orderFulfillments ^? _Just . _head >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "driverMobileNumber is not present in RideAssigned Event.")
 
 getMessageId :: (MonadFlow m) => Spec.Context -> m Text
 getMessageId context = context.contextMessageId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")

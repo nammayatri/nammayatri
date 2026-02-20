@@ -71,18 +71,16 @@ sendCustomerRefund Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   logDebug $ "Bookings eligible for cashback: " <> show eligibleBookingsList
   if null eligibleBookingsList
     then do
-      when toScheduleNextPayout $ do
-        case rescheduleTimeDiff of
-          Just timeDiff' -> do
-            logDebug "Rescheduling the Job for Next Day"
-            createJobIn @_ @'MetroIncentivePayout (Just merchantId) (Just merchantOpCityId) timeDiff' $
-              MetroIncentivePayoutJobData
-                { merchantOperatingCityId = merchantOpCityId,
-                  toScheduleNextPayout = toScheduleNextPayout,
-                  schedulePayoutForDay = Nothing,
-                  ..
-                }
-          Nothing -> pure ()
+      when toScheduleNextPayout $
+        whenJust rescheduleTimeDiff $ \timeDiff' -> do
+          logDebug "Rescheduling the Job for Next Day"
+          createJobIn @_ @'MetroIncentivePayout (Just merchantId) (Just merchantOpCityId) timeDiff' $
+            MetroIncentivePayoutJobData
+              { merchantOperatingCityId = merchantOpCityId,
+                toScheduleNextPayout = toScheduleNextPayout,
+                schedulePayoutForDay = Nothing,
+                ..
+              }
       return Complete
     else do
       for_ eligibleBookingsList $ \booking -> do
@@ -111,32 +109,30 @@ callPayout ::
   CashbackStatus ->
   m ()
 callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
-  case payoutConfig of
-    Just config -> do
-      uid <- generateGUID
-      person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-      merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-      case booking.payerVpa of
-        Just payoutVpa -> do
-          Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey booking.id.getId) 3 3 $ do
-            QFTB.updatePayoutStatusById (Just PROCESSING) booking.id
-            QFTB.updatePayoutOrderId (Just uid) booking.id
-            phoneNo <- mapM decrypt person.mobileNumber
-            emailId <- mapM decrypt person.email
-            let amount = fromMaybe 0 booking.eventDiscountAmount
-                entityName = DLP.METRO_BOOKING_CASHBACK
-                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId config.remark person.firstName payoutVpa config.orderType True
-            logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
-            payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
-            let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
-            mbPayoutOrderResp <- withTryCatch "createPayoutService:metroIncentivePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
-            errorCatchAndHandle booking.id person.id.getId uid mbPayoutOrderResp config statusForRetry (\_ -> pure ())
-            pure ()
-        Nothing -> do
-          Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey booking.id.getId) 3 3 $ do
-            QFTB.updatePayoutStatusById (Just MANUAL_VERIFICATION) booking.id
+  whenJust payoutConfig $ \config -> do
+    uid <- generateGUID
+    person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+    case booking.payerVpa of
+      Just payoutVpa -> do
+        Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey booking.id.getId) 3 3 $ do
+          QFTB.updatePayoutStatusById (Just PROCESSING) booking.id
+          QFTB.updatePayoutOrderId (Just uid) booking.id
+          phoneNo <- mapM decrypt person.mobileNumber
+          emailId <- mapM decrypt person.email
+          let amount = fromMaybe 0 booking.eventDiscountAmount
+              entityName = DLP.METRO_BOOKING_CASHBACK
+              createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId config.remark person.firstName payoutVpa config.orderType True
+          logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
+          payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
+          let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
+          mbPayoutOrderResp <- withTryCatch "createPayoutService:metroIncentivePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+          errorCatchAndHandle booking.id person.id.getId uid mbPayoutOrderResp config statusForRetry (\_ -> pure ())
           pure ()
-    Nothing -> pure ()
+      Nothing -> do
+        Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey booking.id.getId) 3 3 $ do
+          QFTB.updatePayoutStatusById (Just MANUAL_VERIFICATION) booking.id
+        pure ()
 
 errorCatchAndHandle ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>

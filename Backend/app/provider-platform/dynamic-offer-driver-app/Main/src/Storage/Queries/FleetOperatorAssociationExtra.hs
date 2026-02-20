@@ -1,6 +1,7 @@
 module Storage.Queries.FleetOperatorAssociationExtra where
 
 import Control.Applicative (liftA3)
+import Control.Lens ((^?), _head)
 import Data.Text (toLower)
 import qualified Database.Beam as B
 import Domain.Types.FleetOperatorAssociation
@@ -105,7 +106,7 @@ findActiveByFleetOwnerId ::
   m (Maybe FleetOperatorAssociation)
 findActiveByFleetOwnerId fleetOwnerId = do
   now <- getCurrentTime
-  listToMaybe
+  (^? _head)
     <$> findAllWithOptionsKV'
       [ Se.And
           [ Se.Is BeamFOA.fleetOwnerId $ Se.Eq fleetOwnerId.getId,
@@ -123,7 +124,7 @@ findByFleetOwnerIdAndIsActive ::
   m (Maybe FleetOperatorAssociation)
 findByFleetOwnerIdAndIsActive fleetOwnerId isActive = do
   now <- getCurrentTime
-  listToMaybe
+  (^? _head)
     <$> findAllWithOptionsKV
       [ Se.And
           [ Se.Is BeamFOA.fleetOwnerId $ Se.Eq fleetOwnerId.getId,
@@ -174,7 +175,7 @@ findByFleetOwnerIdAndOperatorId ::
   m (Maybe FleetOperatorAssociation)
 findByFleetOwnerIdAndOperatorId fleetOwnerId operatorId isActive = do
   now <- getCurrentTime
-  listToMaybe
+  (^? _head)
     <$> findAllWithOptionsKV
       [ Se.And
           [ Se.Is BeamFOA.fleetOwnerId $ Se.Eq fleetOwnerId.getId,
@@ -207,7 +208,7 @@ findActiveAssociationByOperatorId ::
   m (Maybe FleetOperatorAssociation)
 findActiveAssociationByOperatorId (Id operatorId) = do
   now <- getCurrentTime
-  listToMaybe
+  (^? _head)
     <$> findAllWithOptionsKV'
       [ Se.And
           [ Se.Is BeamFOA.operatorId $ Se.Eq operatorId,

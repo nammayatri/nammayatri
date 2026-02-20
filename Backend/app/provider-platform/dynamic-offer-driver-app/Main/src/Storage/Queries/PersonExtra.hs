@@ -7,6 +7,7 @@ where
 -- Extra code goes here --
 
 import Control.Applicative ((<|>))
+import Control.Lens ((^?), (^..), _Just, _head, to)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as T
 import qualified Database.Beam as B
@@ -333,7 +334,7 @@ fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbD
       v <- mapM (maybe (pure Nothing) fromTType') vehicles
       pure $ zip3 p di v
     Left _ -> pure []
-  pure $ listToMaybe res'
+  pure $ res' ^? _head
   where
     fst' (x, _, _, _, _, _) = x
     snd' (_, x, _, _, _, _) = x
@@ -378,7 +379,7 @@ updatePersonName (Id personId) mbFirstName mbLastName = do
   now <- getCurrentTime
   updateOneWithKV
     ( [Se.Set BeamP.updatedAt now]
-        <> [Se.Set BeamP.firstName $ (fromJust mbFirstName) | isJust mbFirstName]
+        <> (mbFirstName ^.. _Just . to (Se.Set BeamP.firstName))
         <> [Se.Set BeamP.lastName $ mbLastName | isJust mbLastName]
     )
     [Se.Is BeamP.id (Se.Eq personId)]

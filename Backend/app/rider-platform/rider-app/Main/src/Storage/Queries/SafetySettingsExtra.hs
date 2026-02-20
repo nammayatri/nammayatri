@@ -46,16 +46,16 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = Hedis.withLockRe
     then
       updateWithKV
         ( [Se.Set BeamP.updatedAt now]
-            <> [Se.Set BeamP.autoCallDefaultContact (fromJust autoCallDefaultContact) | isJust autoCallDefaultContact]
-            <> [Se.Set BeamP.enablePostRideSafetyCheck (fromJust enablePostRideSafetyCheck) | isJust enablePostRideSafetyCheck]
-            <> [Se.Set BeamP.enableUnexpectedEventsCheck (fromJust enableUnexpectedEventsCheck) | isJust enableUnexpectedEventsCheck]
+            <> toList (Se.Set BeamP.autoCallDefaultContact <$> autoCallDefaultContact)
+            <> toList (Se.Set BeamP.enablePostRideSafetyCheck <$> enablePostRideSafetyCheck)
+            <> toList (Se.Set BeamP.enableUnexpectedEventsCheck <$> enableUnexpectedEventsCheck)
             <> [Se.Set BeamP.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill | isJust hasCompletedMockSafetyDrill]
-            <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup && hasCompletedSafetySetup == Just True]
-            <> [Se.Set BeamP.informPoliceSos (fromJust informPoliceSos) | isJust informPoliceSos]
-            <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
-            <> [Se.Set BeamP.notifySafetyTeamForSafetyCheckFailure (fromJust notifySafetyTeamForSafetyCheckFailure) | isJust notifySafetyTeamForSafetyCheckFailure]
-            <> [Se.Set BeamP.notifySosWithEmergencyContacts (fromJust notifySosWithEmergencyContacts) | isJust notifySosWithEmergencyContacts]
-            <> [Se.Set BeamP.shakeToActivate (fromJust shakeToActivate) | isJust shakeToActivate]
+            <> [Se.Set BeamP.hasCompletedSafetySetup True | hasCompletedSafetySetup == Just True]
+            <> toList (Se.Set BeamP.informPoliceSos <$> informPoliceSos)
+            <> toList (Se.Set BeamP.nightSafetyChecks <$> nightSafetyChecks)
+            <> toList (Se.Set BeamP.notifySafetyTeamForSafetyCheckFailure <$> notifySafetyTeamForSafetyCheckFailure)
+            <> toList (Se.Set BeamP.notifySosWithEmergencyContacts <$> notifySosWithEmergencyContacts)
+            <> toList (Se.Set BeamP.shakeToActivate <$> shakeToActivate)
             <> [Se.Set BeamP.enableOtpLessRide enableOtpLessRide | isJust enableOtpLessRide]
             <> [Se.Set BeamP.aggregatedRideShareSetting aggregatedRideShare | isJust aggregatedRideShare]
         )
@@ -69,7 +69,7 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = Hedis.withLockRe
                 enablePostRideSafetyCheck = fromMaybe NEVER_SHARE enablePostRideSafetyCheck,
                 enableUnexpectedEventsCheck = enableUnexpectedEventsCheckValue,
                 falseSafetyAlarmCount = person.falseSafetyAlarmCount,
-                hasCompletedMockSafetyDrill = bool person.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill (isJust hasCompletedMockSafetyDrill),
+                hasCompletedMockSafetyDrill = hasCompletedMockSafetyDrill <|> person.hasCompletedMockSafetyDrill,
                 hasCompletedSafetySetup = fromMaybe person.hasCompletedSafetySetup hasCompletedSafetySetup,
                 informPoliceSos = fromMaybe person.informPoliceSos informPoliceSos,
                 nightSafetyChecks = fromMaybe person.nightSafetyChecks nightSafetyChecks,

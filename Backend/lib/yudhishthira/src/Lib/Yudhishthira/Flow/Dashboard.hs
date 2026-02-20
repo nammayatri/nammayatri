@@ -4,6 +4,7 @@ import qualified ConfigPilotFrontend.Common as CPFC
 import qualified ConfigPilotFrontend.Flow as CPF
 import qualified ConfigPilotFrontend.Types as CPT
 import Control.Applicative ((<|>))
+import Control.Lens ((^?), _head)
 import Data.Aeson
 import qualified Data.Aeson as A
 import Data.List (groupBy, nub, sortBy)
@@ -434,7 +435,7 @@ verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = 
       now <- getCurrentTime
       version <- do
         latestElement <- QADLE.findLatestVersion (Just 1) Nothing domain
-        return (maybe 1 ((+ 1) . (.version)) (listToMaybe latestElement))
+        return (maybe 1 ((+ 1) . (.version)) (latestElement ^? _head))
       let appDynamicLogics = zip rules [0 ..] <&> (\(rule, order) -> mkAppDynamicLogicElement version rule order now)
       CADLE.createMany appDynamicLogics
       CADLE.clearCache domain
@@ -486,7 +487,7 @@ getAppDynamicLogicForDomain mbVersion domain = do
     Just version -> do
       logicsObject <- CADLE.findByDomainAndVersion domain version
       let logics = map (.logic) logicsObject
-      let description = (listToMaybe logicsObject) >>= (.description)
+      let description = (logicsObject ^? _head) >>= (.description)
       return $ [Lib.Yudhishthira.Types.GetLogicsResp domain version description logics]
     Nothing -> do
       allDomainLogics <- CADLE.findByDomain domain
@@ -611,8 +612,8 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity =
     then do
       version <- handleDriverOrRiderConfigOrUiConfig domain merchantOpCityId now rolloutReq
       fork "Pushing Config History" $ do
-        when (isNothing mbMerchantId) $ throwError $ InternalError "Merchant not found"
-        configsJson <- (.configs) <$> giveConfigs domain (cast merchantOpCityId) (fromJust mbMerchantId) opCity
+        merchantId <- mbMerchantId & fromMaybeM (InternalError "Merchant not found")
+        configsJson <- (.configs) <$> giveConfigs domain (cast merchantOpCityId) merchantId opCity
         pushConfigHistory domain version merchantOpCityId configsJson
       when (isUIConfig domain) $ do
         void $ callTheFrontEndHook opCity domain -- will update ongoing release in ts service
@@ -620,7 +621,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity =
     else handleOtherDomain merchantOpCityId now rolloutReq domain
   where
     getDomain :: Maybe Lib.Yudhishthira.Types.LogicDomain
-    getDomain = listToMaybe $ map (.domain) rolloutReq
+    getDomain = map (.domain) rolloutReq ^? _head
 
     -- Driver or Rider Config Domain Handling
     handleDriverOrRiderConfigOrUiConfig :: BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> Id Lib.Yudhishthira.Types.MerchantOperatingCity -> UTCTime -> [Lib.Yudhishthira.Types.LogicRolloutObject] -> m Int
@@ -628,16 +629,14 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity =
       configRolloutObjectsArr <- mapM (mkAppDynamicLogicRolloutDomain merchantOpCityId' now) rolloutReq'
       let configRolloutObjects = concat configRolloutObjectsArr
       when (length configRolloutObjects > 1) $ throwError $ InvalidRequest "Only one version can be set to experiment at a time"
-      let mbConfigRolloutObject = listToMaybe configRolloutObjects
-      when (isNothing mbConfigRolloutObject) $ throwError $ InvalidRequest $ "No rollout config found for " <> show domain
-      let configRolloutObject = fromJust mbConfigRolloutObject
+      configRolloutObject <- configRolloutObjects ^? _head & fromMaybeM (InvalidRequest $ "No rollout config found for " <> show domain)
       mbBaseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain merchantOpCityId' configRolloutObject.domain
       baseRollout <- case mbBaseRollout of
         Just baseRollout -> return baseRollout
         Nothing -> do
           newVersion <- do
             latestElement <- QADLE.findLatestVersion (Just 1) Nothing domain
-            return (maybe 1 ((+ 1) . (.version)) (listToMaybe latestElement))
+            return (maybe 1 ((+ 1) . (.version)) (latestElement ^? _head))
           CADLE.create $ mkBaseAppDynamicLogicElement newVersion baseElementPatch 0 now domain
           CADLE.clearCache domain
           let baseRollout = mkBaseAppDynamicLogicRollout newVersion now domain 100
@@ -708,7 +707,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq giveConfigs opCity =
       m AppDynamicLogicRollout
     mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds mbStatus mbModifiedBy Lib.Yudhishthira.Types.RolloutVersion {..} = do
       logicsObject <- CADLE.findByDomainAndVersion domain version
-      let _versionDescription = listToMaybe logicsObject >>= (.description)
+      let _versionDescription = (logicsObject ^? _head) >>= (.description)
       when (null logicsObject) $ throwError $ InvalidRequest $ "Logic not found for version: " <> show version
       return $
         AppDynamicLogicRollout
@@ -902,10 +901,8 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
       makeConfigHistory concludeReq.domain concludeReq.version
     LYT.Abort abortReq -> do
       expRollout <- LYSQADLR.findByPrimaryKey abortReq.domain merchantOpCityId "Unbounded" abortReq.version >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show abortReq.domain <> " City: " <> show merchantOpCityId <> " TimeBounds: " <> "Unbounded" <> " Version: " <> show abortReq.version)
-      mbBaseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain merchantOpCityId abortReq.domain
-      when (isNothing mbBaseRollout) $ throwError $ InvalidRequest $ "No Base version rollout found for " <> show abortReq.domain
-      let baseRollout = fromJust mbBaseRollout
-          updatedBaseRollout =
+      baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain merchantOpCityId abortReq.domain >>= fromMaybeM (InvalidRequest $ "No Base version rollout found for " <> show abortReq.domain)
+      let updatedBaseRollout =
             baseRollout
               { percentageRollout = baseRollout.percentageRollout + expRollout.percentageRollout
               }
@@ -925,7 +922,7 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
       now <- getCurrentTime
       newVersion <- do
         latestElement <- QADLE.findLatestVersion (Just 1) Nothing revertReq.domain
-        return (maybe 1 ((+ 1) . (.version)) (listToMaybe latestElement))
+        return (maybe 1 ((+ 1) . (.version)) (latestElement ^? _head))
       let newBaseElement = mkBaseAppDynamicLogicElement newVersion baseElementPatch 0 now revertReq.domain
           newBaseRollout = mkBaseAppDynamicLogicRollout newVersion baseRollout now revertReq.domain
           revertedBaseRollout =
@@ -944,8 +941,8 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
   where
     makeConfigHistory domain version = do
       fork "pushing config history" $ do
-        when (isNothing mbMerchantId) $ throwError $ InternalError "Merchant not found"
-        configsJson <- (.configs) <$> giveConfigs domain (cast merchantOpCityId) (fromJust mbMerchantId) opCity
+        merchantId <- mbMerchantId & fromMaybeM (InternalError "Merchant not found")
+        configsJson <- (.configs) <$> giveConfigs domain (cast merchantOpCityId) merchantId opCity
         case req of
           LYT.Abort _ -> do
             pushConfigHistory domain version merchantOpCityId configsJson

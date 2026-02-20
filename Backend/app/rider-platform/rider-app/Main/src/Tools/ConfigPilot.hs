@@ -40,7 +40,7 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
   case cfgType of
     LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
       riderCfg <- QRC.findByMerchantOperatingCityId (cast merchantOpCityId) (Just [])
-      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList riderCfg)}
+      return LYTU.TableDataResp {configs = map A.toJSON (toList riderCfg)}
     LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
       payoutCfg <- SCMPC.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
       return LYTU.TableDataResp {configs = map A.toJSON payoutCfg}
@@ -55,11 +55,11 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       return LYTU.TableDataResp {configs = map A.toJSON merchantPushNotification}
     LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
       frfsConfig <- SCFRFS.findByMerchantOperatingCityId (cast merchantOpCityId) (Just [])
-      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList frfsConfig)}
+      return LYTU.TableDataResp {configs = map A.toJSON (toList frfsConfig)}
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       mbUiConfigInfo <- SCU.findUiConfig uiConfigReq (cast merchantOpCityId) True
-      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList (fst <$> mbUiConfigInfo))}
+      return LYTU.TableDataResp {configs = map A.toJSON (toList (fst <$> mbUiConfigInfo))}
     _ -> throwError $ InvalidRequest "Unsupported config type."
 
 handleConfigDBUpdate :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Id LYTU.MerchantOperatingCity -> LYTU.ConcludeReq -> [A.Value] -> Maybe (Id LYTU.Merchant) -> Kernel.Types.Beckn.Context.City -> m ()
@@ -164,7 +164,7 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
     normalizeMaybeFetch :: (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) => (Id MerchantOperatingCity -> m (Maybe a)) -> Id MerchantOperatingCity -> m [a]
     normalizeMaybeFetch fetchFunc merchantOpCityId' = do
       result <- fetchFunc merchantOpCityId'
-      pure $ maybeToList result
+      pure $ toList result
 
 getTSServiceUrl :: (CoreMetrics m, MonadFlow m, CPT.HasTSServiceConfig m r) => m BaseUrl
 getTSServiceUrl = do

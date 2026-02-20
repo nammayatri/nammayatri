@@ -1,5 +1,6 @@
 module SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver) where
 
+import Control.Lens ((^?), _head)
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Map as M
 import qualified Data.Map.Strict as Map
@@ -112,7 +113,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         driverFeeToBeNotified <-
           mapMaybeM
             ( \pdnNoticationEntity -> do
-                invoice' <- listToMaybe <$> QINV.findLatestAutopayActiveByDriverFeeId pdnNoticationEntity.driverFeeId
+                invoice' <- (^? _head) <$> QINV.findLatestAutopayActiveByDriverFeeId pdnNoticationEntity.driverFeeId
                 case invoice' of
                   Just _ -> return $ Just pdnNoticationEntity
                   Nothing -> do
@@ -133,9 +134,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
     mandateIdAndDriverId =
       mapMaybe
         ( \dplan ->
-            case DPlan.mandateId dplan of
-              Just mandateId_ -> Just (dplan.driverId, mandateId_)
-              Nothing -> Nothing
+            DPlan.mandateId dplan <&> (dplan.driverId,)
         )
     mapDriverInfoForPDNNotification mapMandateByDriverId =
       mapMaybe

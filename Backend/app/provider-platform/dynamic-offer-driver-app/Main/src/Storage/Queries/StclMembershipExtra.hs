@@ -3,6 +3,7 @@
 
 module Storage.Queries.StclMembershipExtra where
 
+import Control.Lens ((^?), _head)
 import qualified Domain.Types.StclMembership as Domain
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -35,7 +36,7 @@ findLatestSubmittedMembership =
     (Se.Desc Beam.updatedAt)
     (Just 1)
     Nothing
-    <&> listToMaybe
+    <&> (^? _head)
 
 -- | Update application count, share start count, and share end count for a membership
 updateApplicationShareCounts ::

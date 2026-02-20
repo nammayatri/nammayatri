@@ -2,6 +2,7 @@
 
 module Domain.Types.Yudhishthira where
 
+import Control.Lens ((^?), _head)
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DRB
@@ -202,7 +203,7 @@ $(YTH.generateGenericDefault ''EndRideOffersTagData)
 instance YTC.LogicInputLink YA.ApplicationEvent where
   getLogicInputDef a =
     case a of
-      YA.Login -> fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @LoginTagData)
-      YA.RideEndOffers -> fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @EndRideOffersTagData)
+      YA.Login -> fmap A.toJSON $ YTH.genDef (Proxy @LoginTagData) ^? _head
+      YA.RideEndOffers -> fmap A.toJSON $ YTH.genDef (Proxy @EndRideOffersTagData) ^? _head
       YA.RideCancel -> Nothing
       _ -> Nothing

@@ -18,6 +18,7 @@ import qualified BecknV2.FRFS.Enums as Enums
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import Control.Lens ((^?), _Just, _head)
 import Data.List (groupBy, sortBy)
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
@@ -53,7 +54,7 @@ buildOnSearchReq onSearchReq = do
   let ttl = context.contextTtl >>= Utils.getQuoteValidTill (convertRFC3339ToUTC timeStamp)
 
   message <- onSearchReq.onSearchReqMessage & fromMaybeM (InvalidRequest "Message not found")
-  provider <- message.onSearchReqMessageCatalog.catalogProviders >>= listToMaybe & fromMaybeM (InvalidRequest "Provider not found")
+  provider <- message.onSearchReqMessageCatalog.catalogProviders ^? _Just . _head & fromMaybeM (InvalidRequest "Provider not found")
 
   let providerDescription = Nothing -- TODO: Fix this in types
   providerId <- provider.providerId & fromMaybeM (InvalidRequest "ProviderId not found")
@@ -72,7 +73,7 @@ buildOnSearchReq onSearchReq = do
         )
         payments
 
-  let bppDelayedInterest = listToMaybe interestTags
+  let bppDelayedInterest = interestTags ^? _head
 
   -- Get IntegratedBPPConfig to check mergeQuoteCriteria
   integratedBPPConfig <- QIBC.findById frfsSearch.integratedBppConfigId >>= fromMaybeM (InvalidRequest "IntegratedBPPConfig not found")
@@ -129,9 +130,9 @@ mergeQuotesByQuoteType quotes =
 
 mergeReturnJourneyQuotes :: [Domain.DQuote] -> [Domain.DQuote] -> [Domain.DQuote]
 mergeReturnJourneyQuotes sjtQuotes rjtQuotes =
-  case (listToMaybe sjtQuotes, rjtQuotes) of
+  case (sjtQuotes ^? _head, rjtQuotes) of
     (Just sjtQuote, rjts@(_ : _)) ->
-      let sjtStartStation = listToMaybe $ filter (\s -> s.stationType == Station.START) sjtQuote.stations
+      let sjtStartStation = filter (\s -> s.stationType == Station.START) sjtQuote.stations ^? _head
        in case sjtStartStation of
             Just refStart ->
               let forwardRjt = find (\rjt -> any (\s -> s.stationType == Station.START && s.stationCode == refStart.stationCode) rjt.stations) rjts
@@ -168,7 +169,7 @@ parseFulfillments item fulfillments fulfillmentId = do
   let vehicleVariant = fulfillment.fulfillmentVehicle >>= (.vehicleVariant)
   routeStations <-
     case vehicleVariant of
-      Just _ -> pure $ fromMaybe [] (mkDRouteStations fulfillment stations price fulfillmentId)
+      Just _ -> pure $ fold (mkDRouteStations fulfillment stations price fulfillmentId)
       Nothing -> return []
 
   let category = createCategory price offerPrice itemCode itemId
@@ -376,11 +377,11 @@ buildDiscoveryOnSearchReq req discoveryCounter = do
   bppSubscriberId <- req.onSearchReqContext.contextBppId & fromMaybeM (InvalidRequest "BppSubscriberId not found")
   bppSubscriberUrl <- req.onSearchReqContext.contextBppUri & fromMaybeM (InvalidRequest "BppSubscriberUrl not found")
 
-  let providers = fromMaybe [] msg.onSearchReqMessageCatalog.catalogProviders
-      fulfillments = providers >>= (fromMaybe [] . (.providerFulfillments))
+  let providers = fold msg.onSearchReqMessageCatalog.catalogProviders
+      fulfillments = providers >>= (fold . (.providerFulfillments))
       stopsWithIdx =
         fulfillments >>= \f ->
-          let fs = fromMaybe [] f.fulfillmentStops
+          let fs = fold f.fulfillmentStops
               len = length fs
            in zipWith (\stop idx -> (stop, idx, len)) fs [0 ..]
       stations = mapMaybe castStation stopsWithIdx

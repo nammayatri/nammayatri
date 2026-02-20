@@ -288,15 +288,13 @@ voidPrepaidHold ::
   m ()
 voidPrepaidHold counterpartyType ownerId referenceId reason = do
   mbOwnerAccount <- getPrepaidAccountByOwner counterpartyType ownerId
-  case mbOwnerAccount of
-    Nothing -> pure ()
-    Just ownerAccount -> do
-      entries <- getEntriesByReference prepaidRideDebitReferenceType referenceId
-      let pendingEntries =
-            filter
-              (\entry -> entry.fromAccountId == ownerAccount.id && entry.status == PENDING)
-              entries
-      forM_ pendingEntries $ \entry -> voidEntry entry.id reason
+  whenJust mbOwnerAccount $ \ownerAccount -> do
+    entries <- getEntriesByReference prepaidRideDebitReferenceType referenceId
+    let pendingEntries =
+          filter
+            (\entry -> entry.fromAccountId == ownerAccount.id && entry.status == PENDING)
+            entries
+    forM_ pendingEntries $ \entry -> voidEntry entry.id reason
 
 settlePrepaidHoldByReference ::
   (BeamFlow m r) =>
