@@ -15,6 +15,7 @@ data DriverStats = DriverStats
   { blacklistCoinEvents :: Kernel.Prelude.Maybe [Lib.DriverCoins.Types.DriverCoinsFunctionType],
     bonusEarned :: Kernel.Types.Common.HighPrecMoney,
     coinCovertedToCashLeft :: Kernel.Types.Common.HighPrecMoney,
+    coinsConvertedToDirectPayoutCash :: Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Types.Common.Currency,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Driver,

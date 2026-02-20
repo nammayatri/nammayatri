@@ -33,3 +33,8 @@ ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN max_payout_referral_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN referral_program_start_date timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN coin_redemption_minimum_limit double precision ;

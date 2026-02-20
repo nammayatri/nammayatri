@@ -19,6 +19,7 @@ instance FromTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig whe
       Just
         Domain.Types.PayoutConfig.PayoutConfig
           { batchLimit = batchLimit,
+            coinRedemptionMinimumLimit = coinRedemptionMinimumLimit,
             expand = expand,
             isPayoutEnabled = isPayoutEnabled,
             maxPayoutReferralForADay = maxPayoutReferralForADay,
@@ -43,6 +44,7 @@ instance ToTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig where
   toTType' (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
     Beam.PayoutConfigT
       { Beam.batchLimit = batchLimit,
+        Beam.coinRedemptionMinimumLimit = coinRedemptionMinimumLimit,
         Beam.expand = expand,
         Beam.isPayoutEnabled = isPayoutEnabled,
         Beam.maxPayoutReferralForADay = maxPayoutReferralForADay,
