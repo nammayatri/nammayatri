@@ -214,7 +214,7 @@ SearchRequest:
     customerLanguage: character varying(36)
     messageId: character varying(36)
     pickupZoneGateId: character varying(36)
-    pickupGateId: Maybe Text
+    pickupGateId: character varying(36)
     transactionId: character varying(36)
     configInExperimentVersions: "json"
     userOsType: character varying(255)
