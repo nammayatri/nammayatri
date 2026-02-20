@@ -529,7 +529,7 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
   driverPoolCurrentlyOnRide <-
     if null driverPoolNotOnRide
       then do
-        if transporterConfig.includeDriverCurrentlyOnRide && fromJust driverPoolCfg.enableForwardBatching
+        if transporterConfig.includeDriverCurrentlyOnRide && (fromJust driverPoolCfg).enableForwardBatching
           then snd <$> calculateDriverPoolCurrentlyOnRide calculateDriverPoolReq Nothing
           else pure []
       else pure []
