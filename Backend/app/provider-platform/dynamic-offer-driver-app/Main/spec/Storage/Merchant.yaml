@@ -1802,6 +1802,8 @@ PayoutConfig:
     expand: Maybe Expand
     maxPayoutReferralForADay: Maybe Int
     referralProgramStartDate: Maybe UTCTime
+    coinRedemptionMinimumLimit: Maybe HighPrecMoney
+
   beamType:
     timeDiff: Seconds
   toTType:

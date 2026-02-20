@@ -5,6 +5,7 @@ module Storage.Beam.PurchaseHistory where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.PurchaseHistory
 import qualified Domain.Types.VehicleCategory
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
@@ -15,6 +16,7 @@ import Tools.Beam.UtilsTH
 
 data PurchaseHistoryT f = PurchaseHistoryT
   { cash :: B.C f Kernel.Types.Common.HighPrecMoney,
+    coinRedemptionType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PurchaseHistory.CoinRedemptionType),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     driverId :: B.C f Kernel.Prelude.Text,
@@ -22,6 +24,7 @@ data PurchaseHistoryT f = PurchaseHistoryT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOptCityId :: B.C f Kernel.Prelude.Text,
     numCoins :: B.C f Kernel.Prelude.Int,
+    payoutOrderIdForDirectPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     title :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)

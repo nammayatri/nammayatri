@@ -20,3 +20,13 @@ ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD COLUMN currency characte
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD COLUMN vehicle_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD COLUMN coin_redemption_type text  default 'SubscriptionUse';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD COLUMN payout_order_id_for_direct_payout character varying(36) ;

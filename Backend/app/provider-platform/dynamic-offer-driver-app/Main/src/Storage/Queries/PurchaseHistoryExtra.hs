@@ -22,5 +22,17 @@ getPurchasedHistory (Id driverId) mbLimit mbOffset = do
     (Just limitVal)
     (Just offsetVal)
 
+getPurchasedHistoryByCoinRedemptionType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Maybe Integer -> Maybe Integer -> CoinRedemptionType -> m [PurchaseHistory]
+getPurchasedHistoryByCoinRedemptionType (Id driverId) mbLimit mbOffset coinRedemptionType = do
+  let limitVal = maybe 10 fromInteger mbLimit
+      offsetVal = maybe 0 fromInteger mbOffset
+  findAllWithOptionsKV
+    [ Se.Is BeamDC.driverId $ Se.Eq driverId,
+      Se.Is BeamDC.coinRedemptionType $ Se.Eq (Just coinRedemptionType)
+    ]
+    (Se.Desc BeamDC.createdAt)
+    (Just limitVal)
+    (Just offsetVal)
+
 createPurchaseHistory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => PurchaseHistory -> m ()
 createPurchaseHistory = createWithKV

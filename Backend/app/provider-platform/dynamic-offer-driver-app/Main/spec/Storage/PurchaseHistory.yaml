@@ -2,10 +2,19 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   VehicleCategory: Domain.Types.VehicleCategory
+  PayoutOrder: Lib.Payment.Domain.Types.PayoutOrder
 
 PurchaseHistory:
   tableName: purchase_history
   beamInstance: Custom Kernel.Beam.Lib.UtilsTH.mkTableInstances "coin_purchase_history" "atlas_driver_offer_bpp"
+  types:
+    CoinRedemptionType:
+      enum: "SubscriptionUse | DirectPayout"
+      derive': "Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CoinRedemptionType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <CoinRedemptionType>
 
   fields:
     id : Id PurchaseHistory
@@ -19,16 +28,26 @@ PurchaseHistory:
     createdAt : UTCTime
     updatedAt : UTCTime
     vehicleCategory : Maybe VehicleCategory
+    coinRedemptionType : CoinRedemptionType
+    payoutOrderIdForDirectPayout : Maybe (Id PayoutOrder)
+
+  default:
+    coinRedemptionType: "'SubscriptionUse'"
 
   beamFields:
     currency:
       currency: Maybe Currency
 
+  beamType:
+    coinRedemptionType: Maybe CoinRedemptionType
+
   fromTType:
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    coinRedemptionType: Kernel.Prelude.fromMaybe Domain.Types.PurchaseHistory.SubscriptionUse|I
 
   toTType:
     currency: Kernel.Prelude.Just|I
+    coinRedemptionType: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey

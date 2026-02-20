@@ -678,7 +678,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote categories in
           }
   let serviceTierType =
         case quote.routeStations of
-          (routeStation:_) -> maybe Spec.ORDINARY (.serviceTierType) (routeStation.routeServiceTier)
+          (routeStation : _) -> maybe Spec.ORDINARY (.serviceTierType) (routeStation.routeServiceTier)
           [] -> Spec.ORDINARY
 
   (vehicleServiceTierId, vehicleServiceTier) <- do

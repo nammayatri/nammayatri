@@ -737,3 +737,18 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN send_sms_on_ena
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
