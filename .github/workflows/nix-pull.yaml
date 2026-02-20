@@ -10,6 +10,11 @@ on:
       - "prodHotPush-BPP"
   workflow_dispatch:
 
+# Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
