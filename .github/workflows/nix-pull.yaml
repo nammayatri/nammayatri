@@ -23,6 +23,7 @@ permissions:
 
 jobs:
   check-conditions:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
     runs-on: ubuntu-latest
     outputs:
       should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
@@ -79,7 +80,7 @@ jobs:
     name: ${{ matrix.name }}
     needs: [check-conditions]
     continue-on-error: ${{ matrix.continue-on-error }}
-    if: needs.check-conditions.outputs.should-proceed == 'true' && needs.check-conditions.outputs.has-backend == 'true'
+    if: needs.check-conditions.outputs.should-proceed == 'true' && needs.check-conditions.outputs.has-backend == 'true' && github.event_name == 'pull_request' && github.event.action != 'closed'
     strategy:
       matrix:
         include:
