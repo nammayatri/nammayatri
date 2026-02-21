@@ -23,6 +23,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSwitchFRFSTier,
     getPublicTransportData,
     getPublicTransportVehicleData,
+    getPublicTransportVehicleDataV2,
     getMultimodalOrderGetLegTierOptions,
     postMultimodalPaymentUpdateOrder,
     postMultimodalOrderSublegSetStatus,
@@ -173,6 +174,13 @@ $(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.TransportRoute)
 $(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.TransportStation)
 $(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.TransportRouteStopMapping)
 $(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.PublicTransportData)
+$(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.IncompleteTransportRoute)
+$(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.PublicTransportDataV2)
+
+-- Sum type needs standard JSON derivation
+deriving instance ToJSON API.Types.UI.MultimodalConfirm.RouteStopsData
+
+deriving instance FromJSON API.Types.UI.MultimodalConfirm.RouteStopsData
 
 runAction :: Id Domain.Types.Journey.Journey -> Environment.Flow ApiTypes.JourneyInfoResp -> Environment.Flow ApiTypes.JourneyInfoResp
 runAction journeyId action = do
@@ -774,6 +782,55 @@ getPublicTransportVehicleData ::
 getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber = do
   case vehicleType of
     BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True
+    _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
+
+getPublicTransportVehicleDataV2 ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    VehicleCategory ->
+    Kernel.Prelude.Text ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportDataV2
+  )
+getPublicTransportVehicleDataV2 (mbPersonId, merchantId) vehicleType vehicleNumber = do
+  case vehicleType of
+    BUS -> do
+      catch
+        ( do
+            publicTransportData <- getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True
+            return $ ApiTypes.PublicTransportDataV2 {rs = ApiTypes.CompleteRouteStops (publicTransportData.rs), ss = publicTransportData.ss, rsm = publicTransportData.rsm, ptcv = publicTransportData.ptcv, eligiblePassIds = publicTransportData.eligiblePassIds}
+        )
+        ( \ex -> case fromException ex of
+            Just (FleetRouteMapMissing _) -> do
+              -- Handle FleetRouteMapMissing by creating incomplete route with error details
+              personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+              person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+              let merchantOperatingCityId = person.merchantOperatingCityId
+              integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+              case (integratedBPPConfigs, vehicleNumber) of
+                (bppConfig : _, vehicleNumber') -> do
+                  -- Get vehicle info to extract service type
+                  mbVehicleLiveRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber' Nothing
+                  case mbVehicleLiveRouteInfo of
+                    Just (_, vehicleLiveInfo) -> do
+                      gtfsVersion <-
+                        withTryCatch "getGtfsVersion:V2" (OTPRest.getGtfsVersion bppConfig) >>= \case
+                          Left _ -> return bppConfig.feedKey
+                          Right version -> return version
+                      let incompleteRoute =
+                            ApiTypes.IncompleteTransportRoute
+                              { vt = show bppConfig.vehicleCategory,
+                                st = Just vehicleLiveInfo.serviceType,
+                                sst = vehicleLiveInfo.serviceSubTypes,
+                                ibc = bppConfig.id,
+                                ec = Just "FLEET_ROUTE_MAP_MISSING",
+                                en = Just "Vehicle is not found on any route"
+                              }
+                      return $ ApiTypes.PublicTransportDataV2 {rs = ApiTypes.IncompleteRouteStops [incompleteRoute], ss = [], rsm = [], ptcv = gtfsVersion, eligiblePassIds = vehicleLiveInfo.eligiblePassIds}
+                    Nothing -> throwM ex -- Re-throw if we can't get vehicle info
+                _ -> throwM ex -- Re-throw if missing required data
+            _ -> throwM ex -- Re-throw all other exceptions
+        )
     _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
 type CacheKey = (Text, Maybe Text, Maybe Bool, Maybe Text, Maybe Text, Bool)

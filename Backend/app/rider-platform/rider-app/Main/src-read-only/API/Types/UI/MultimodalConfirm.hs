@@ -105,6 +105,17 @@ data ExtendLegReq = ExtendLegReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data IncompleteTransportRoute = IncompleteTransportRoute
+  { ec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    en :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
+    sst :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
+    st :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    vt :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToSchema)
+
 data IntegratedQRReq = IntegratedQRReq {integratedQR :: Lib.JourneyModule.Types.UnifiedTicketQRV2, provider :: Lib.JourneyModule.Types.Provider}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -291,6 +302,10 @@ data PublicTransportData = PublicTransportData {eligiblePassIds :: Kernel.Prelud
   deriving stock (Generic)
   deriving anyclass (ToSchema)
 
+data PublicTransportDataV2 = PublicTransportDataV2 {eligiblePassIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text], ptcv :: Kernel.Prelude.Text, rs :: RouteStopsData, rsm :: [TransportRouteStopMapping], ss :: [TransportStation]}
+  deriving stock (Generic)
+  deriving anyclass (ToSchema)
+
 data RateMultiModelTravelModes = RateMultiModelTravelModes
   { isExperienceGood :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     legOrder :: Kernel.Prelude.Int,
@@ -337,6 +352,12 @@ data RouteServiceabilityResp = RouteServiceabilityResp {effectiveStops :: Kernel
 data RouteStopMapping = RouteStopMapping {code :: Kernel.Prelude.Text, lat :: Kernel.Prelude.Double, lon :: Kernel.Prelude.Double, name :: Kernel.Prelude.Text, seqNo :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RouteStopsData
+  = CompleteRouteStops [TransportRoute]
+  | IncompleteRouteStops [IncompleteTransportRoute]
+  deriving stock (Generic)
+  deriving anyclass (ToSchema)
 
 data RouteWithLiveVehicle = RouteWithLiveVehicle {liveVehicles :: [LiveVehicleInfo], routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text, schedules :: [ScheduledVehicleInfo]}
   deriving stock (Generic)
