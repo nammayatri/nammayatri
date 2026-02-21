@@ -418,3 +418,89 @@ data DepotVehicle = DepotVehicle
     vehicle_no :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data RowsAffectedResp = RowsAffectedResp
+  { message :: Maybe Text,
+    rows_affected :: Maybe Int64
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data ServiceType = ServiceType
+  { service_type_id :: Int64,
+    service_type_code :: Maybe Text,
+    service_type_name :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data NandiRoute = NandiRoute
+  { route_id :: Int64,
+    route_number :: Maybe Text,
+    route_direction :: Maybe Text,
+    start_point_id :: Int64,
+    end_point_id :: Int64
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data Depot = Depot
+  { entity_id :: Int64,
+    entity_name :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data ScheduleNumber = ScheduleNumber
+  { schedule_id :: Int64,
+    schedule_number :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data Fleet = Fleet
+  { vehicle_id :: Int64,
+    vehicle_no :: Maybe Text,
+    fleet_no :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data Employee = Employee
+  { emp_id :: Int64,
+    first_name :: Text,
+    last_name :: Maybe Text,
+    token_no :: Maybe Text,
+    mobile_no :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data NandiTripDetail = NandiTripDetail
+  { schedule_trip_detail_id :: Int64,
+    trip_number :: Int,
+    trip_order :: Int,
+    trip_type :: Maybe Text,
+    start_time :: Maybe Text,
+    end_time :: Maybe Text,
+    break_time :: Maybe Text,
+    break_type :: Maybe Text,
+    shift_type :: Maybe Text,
+    distance :: Maybe Double,
+    route_id :: Int64,
+    schedule_trip_id :: Int64,
+    is_active_trip :: Bool,
+    entity_name :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data UpdateWaybillStatusReq = UpdateWaybillStatusReq
+  { waybill_id :: Int64,
+    status :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data UpdateWaybillFleetReq = UpdateWaybillFleetReq
+  { waybill_id :: Int64,
+    fleet_no :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data UpdateWaybillTabletReq = UpdateWaybillTabletReq
+  { waybill_id :: Int64,
+    tablet_id :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

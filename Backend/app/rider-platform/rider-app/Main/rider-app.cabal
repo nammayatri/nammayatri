@@ -296,6 +296,7 @@ library
       Domain.Action.UI.TicketKapture
       Domain.Action.UI.TicketService
       Domain.Action.UI.TrackRoute
+      Domain.Action.UI.TransitOperator
       Domain.Action.UI.TriggerFCM
       Domain.Action.UI.Whatsapp
       Domain.Action.UnifiedDashboard.Management.HealthCheck

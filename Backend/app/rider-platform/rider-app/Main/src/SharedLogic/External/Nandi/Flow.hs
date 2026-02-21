@@ -164,3 +164,95 @@ getDepotNameById baseUrl depotId = do
 getAlternateStationsByGtfsIdAndStopCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m [RouteStopMappingInMemoryServer]
 getAlternateStationsByGtfsIdAndStopCode baseUrl gtfsId stopCode = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiAlternateStopsByGtfsIdAndStopCode gtfsId stopCode) "getNandiAlternateStopsByGtfsIdAndStopCode" NandiAPI.nandiAlternateStopsByGtfsIdAndStopCodeAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ALTERNATE_STATIONS_BY_GTFS_ID_AND_STOP_CODE_API") baseUrl)
+
+operatorGetRow :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Maybe Text -> m Value
+operatorGetRow baseUrl gtfsId table column =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorRow gtfsId table column) "operatorGetRow" NandiAPI.operatorGetRowAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_GET_ROW_API") baseUrl)
+
+operatorGetAllRows :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Maybe Int -> Maybe Int -> m [Value]
+operatorGetAllRows baseUrl gtfsId table limit offset =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorAllRows gtfsId table limit offset) "operatorGetAllRows" NandiAPI.operatorGetAllRowsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_GET_ALL_ROWS_API") baseUrl)
+
+operatorDeleteRow :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Value -> m RowsAffectedResp
+operatorDeleteRow baseUrl gtfsId table pkValue =
+  withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorDeleteRow gtfsId table pkValue) "operatorDeleteRow" NandiAPI.operatorDeleteRowAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_DELETE_ROW_API") baseUrl)
+
+operatorUpsertRow :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Value -> m Value
+operatorUpsertRow baseUrl gtfsId table body =
+  withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorUpsertRow gtfsId table body) "operatorUpsertRow" NandiAPI.operatorUpsertRowAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_UPSERT_ROW_API") baseUrl)
+
+operatorServiceTypes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [ServiceType]
+operatorServiceTypes baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorServiceTypes gtfsId) "operatorServiceTypes" NandiAPI.operatorServiceTypesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_SERVICE_TYPES_API") baseUrl)
+
+operatorRoutes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [NandiRoute]
+operatorRoutes baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorRoutes gtfsId) "operatorRoutes" NandiAPI.operatorRoutesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_ROUTES_API") baseUrl)
+
+operatorDepots :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [Depot]
+operatorDepots baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorDepots gtfsId) "operatorDepots" NandiAPI.operatorDepotsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_DEPOTS_API") baseUrl)
+
+operatorShiftTypes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [Text]
+operatorShiftTypes baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorShiftTypes gtfsId) "operatorShiftTypes" NandiAPI.operatorShiftTypesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_SHIFT_TYPES_API") baseUrl)
+
+operatorScheduleNumbers :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [ScheduleNumber]
+operatorScheduleNumbers baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorScheduleNumbers gtfsId) "operatorScheduleNumbers" NandiAPI.operatorScheduleNumbersAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_SCHEDULE_NUMBERS_API") baseUrl)
+
+operatorDayTypes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [Text]
+operatorDayTypes baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorDayTypes gtfsId) "operatorDayTypes" NandiAPI.operatorDayTypesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_DAY_TYPES_API") baseUrl)
+
+operatorTripTypes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [Text]
+operatorTripTypes baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorTripTypes gtfsId) "operatorTripTypes" NandiAPI.operatorTripTypesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_TRIP_TYPES_API") baseUrl)
+
+operatorBreakTypes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [Text]
+operatorBreakTypes baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorBreakTypes gtfsId) "operatorBreakTypes" NandiAPI.operatorBreakTypesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_BREAK_TYPES_API") baseUrl)
+
+operatorTripDetails :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m [NandiTripDetail]
+operatorTripDetails baseUrl gtfsId scheduleNumber =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorTripDetails gtfsId (Just scheduleNumber)) "operatorTripDetails" NandiAPI.operatorTripDetailsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_TRIP_DETAILS_API") baseUrl)
+
+operatorFleets :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [Fleet]
+operatorFleets baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorFleets gtfsId) "operatorFleets" NandiAPI.operatorFleetsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_FLEETS_API") baseUrl)
+
+operatorConductors :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m Employee
+operatorConductors baseUrl gtfsId token =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorConductors gtfsId (Just token)) "operatorConductors" NandiAPI.operatorConductorsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_CONDUCTORS_API") baseUrl)
+
+operatorDrivers :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m Employee
+operatorDrivers baseUrl gtfsId token =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorDrivers gtfsId (Just token)) "operatorDrivers" NandiAPI.operatorDriversAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_DRIVERS_API") baseUrl)
+
+operatorDeviceIds :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [Text]
+operatorDeviceIds baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorDeviceIds gtfsId) "operatorDeviceIds" NandiAPI.operatorDeviceIdsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_DEVICE_IDS_API") baseUrl)
+
+operatorTabletIds :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [Text]
+operatorTabletIds baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorTabletIds gtfsId) "operatorTabletIds" NandiAPI.operatorTabletIdsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_TABLET_IDS_API") baseUrl)
+
+operatorOperators :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m [Employee]
+operatorOperators baseUrl gtfsId role =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorOperators gtfsId (Just role)) "operatorOperators" NandiAPI.operatorOperatorsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_OPERATORS_API") baseUrl)
+
+operatorWaybillStatus :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> UpdateWaybillStatusReq -> m RowsAffectedResp
+operatorWaybillStatus baseUrl gtfsId req =
+  withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorWaybillStatus gtfsId req) "operatorWaybillStatus" NandiAPI.operatorWaybillStatusAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_WAYBILL_STATUS_API") baseUrl)
+
+operatorWaybillFleet :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> UpdateWaybillFleetReq -> m RowsAffectedResp
+operatorWaybillFleet baseUrl gtfsId req =
+  withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorWaybillFleet gtfsId req) "operatorWaybillFleet" NandiAPI.operatorWaybillFleetAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_WAYBILL_FLEET_API") baseUrl)
+
+operatorWaybillTablet :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> UpdateWaybillTabletReq -> m RowsAffectedResp
+operatorWaybillTablet baseUrl gtfsId req =
+  withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorWaybillTablet gtfsId req) "operatorWaybillTablet" NandiAPI.operatorWaybillTabletAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_WAYBILL_TABLET_API") baseUrl)
+
+operatorWaybills :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Maybe Int -> Maybe Int -> m [Value]
+operatorWaybills baseUrl gtfsId limit offset =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorWaybills gtfsId limit offset) "operatorWaybills" NandiAPI.operatorWaybillsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_WAYBILLS_API") baseUrl)
