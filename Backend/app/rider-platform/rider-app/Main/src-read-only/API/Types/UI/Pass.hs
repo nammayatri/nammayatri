@@ -11,6 +11,7 @@ import qualified Domain.Types.Pass
 import qualified Domain.Types.PassCategory
 import qualified Domain.Types.PassType
 import qualified Domain.Types.PurchasedPass
+import qualified Domain.Types.PurchasedPassPayment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.Prelude
@@ -117,6 +118,7 @@ data PurchasedPassTransactionAPIEntity = PurchasedPassTransactionAPIEntity
   { amount :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     endDate :: Data.Time.Day,
+    id :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     passCode :: Data.Text.Text,
     passName :: Data.Maybe.Maybe Data.Text.Text,
     passType :: Data.Maybe.Maybe Domain.Types.PassType.PassEnum,
