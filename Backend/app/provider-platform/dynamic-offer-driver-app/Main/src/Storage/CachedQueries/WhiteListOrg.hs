@@ -66,15 +66,9 @@ findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId :: (CacheFlow m r, 
 findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId subscriberId domain merchantId merchantOperatingCityId =
   Hedis.safeGet (makeConfigKey subscriberId domain merchantId merchantOperatingCityId) >>= \case
     Just a -> return . Just $ coerce @(WhiteListOrgD 'Unsafe) @WhiteListOrg a
-    Nothing ->
-      findAndCacheWithMerchantAndCityId >>= \case
-        Just a' -> return $ Just a'
-        Nothing -> do
-          Hedis.safeGet (makeShortIdKey subscriberId domain) >>= \case
-            Just a'' -> return . Just $ coerce @(WhiteListOrgD 'Unsafe) @WhiteListOrg a''
-            Nothing -> findAndCache
+    Nothing -> findAndCacheWithMerchantAndCityId
   where
-    findAndCache = flip whenJust cacheOrganization /=<< Queries.findBySubscriberIdAndDomain subscriberId domain
+    -- findAndCache = flip whenJust cacheOrganization /=<< Queries.findBySubscriberIdAndDomain subscriberId domain
     findAndCacheWithMerchantAndCityId = flip whenJust cacheOrganizationWithMerchantIdAndOperatingCityId /=<< Queries.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId subscriberId domain merchantId merchantOperatingCityId
 
 cacheOrganizationWithMerchantIdAndOperatingCityId :: (CacheFlow m r) => WhiteListOrg -> m ()
