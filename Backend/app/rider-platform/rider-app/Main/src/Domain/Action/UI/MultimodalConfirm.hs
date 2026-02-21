@@ -769,11 +769,12 @@ getPublicTransportVehicleData ::
     ) ->
     VehicleCategory ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber = do
+getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber returnServiceTier = do
   case vehicleType of
-    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True
+    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True returnServiceTier
     _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
 type CacheKey = (Text, Maybe Text, Maybe Bool, Maybe Text, Maybe Text, Bool)
@@ -881,7 +882,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
 
   -- Get from cache or compute and store
   getCachedPublicTransportData cacheKey currentVersion $
-    getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType False
+    getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType False Nothing
 
 getPublicTransportDataImpl ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -893,9 +894,10 @@ getPublicTransportDataImpl ::
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe VehicleCategory ->
     Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData = do
+getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData returnServiceTier = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -996,9 +998,9 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                 map
                   ( \r ->
                       ApiTypes.TransportRoute
-                        { cd = r.code,
-                          sN = r.shortName,
-                          lN = r.longName,
+                        { cd = Just r.code,
+                          sN = Just r.shortName,
+                          lN = Just r.longName,
                           dTC = r.dailyTripCount,
                           stC = r.stopCount,
                           st = mbServiceType,
@@ -1006,7 +1008,9 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                           sst = mbServiceSubTypes,
                           vt = show r.vehicleType,
                           clr = r.color,
-                          ibc = bppConfig.id
+                          ibc = bppConfig.id,
+                          ec = Nothing,
+                          en = Nothing
                         }
                   )
                   routes,
@@ -1028,18 +1032,52 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
   let fetchData mbRouteCodeAndServiceType bppConfig = do
         case mbRouteCodeAndServiceType of
           Just (routeCode, mbServiceType) -> do
-            withTryCatch
-              "getPublicTransportData:fetchData"
-              ( do
-                  routes <- maybeToList <$> OTPRest.getRouteByRouteId bppConfig routeCode
-                  routeStopMappingInMem <- OTPRest.getRouteStopMappingByRouteCodeInMem routeCode bppConfig
-                  routeStops <- OTPRest.parseRouteStopMappingInMemoryServer routeStopMappingInMem bppConfig bppConfig.merchantId bppConfig.merchantOperatingCityId
-                  stations <- OTPRest.parseStationsFromInMemoryServer routeStopMappingInMem bppConfig (not isPublicVehicleData)
-                  mkResponse stations routes routeStops bppConfig mbServiceType
-              )
-              >>= \case
-                Left err -> throwError (PublicTransportDataUnavailable $ "Public transport data unavailable: " <> show err)
-                Right response -> return response
+            -- Special handling for fleet route map missing case
+            if routeCode == "ERROR: FLEET ROUTE MAP MISSING"
+              then do
+                -- Create a dummy route with the error info and service tier
+                frfsServiceTier <- maybe (pure Nothing) (\serviceType -> CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceType person.merchantOperatingCityId bppConfig.id) mbServiceType
+                gtfsVersion <-
+                  withTryCatch "getGtfsVersion:fetchData" (OTPRest.getGtfsVersion bppConfig) >>= \case
+                    Left _ -> return bppConfig.feedKey
+                    Right version -> return version
+                let errorRoute =
+                      ApiTypes.TransportRoute
+                        { cd = Nothing,
+                          sN = Nothing,
+                          lN = Nothing,
+                          dTC = Nothing,
+                          stC = Nothing,
+                          st = mbServiceType,
+                          stn = frfsServiceTier <&> (.shortName),
+                          sst = mbVehicleLiveRouteInfo >>= (snd >>> (.serviceSubTypes)),
+                          vt = show bppConfig.vehicleCategory,
+                          clr = Nothing,
+                          ibc = bppConfig.id,
+                          ec = Just "FLEET_ROUTE_MAP_MISSING",
+                          en = Just ("Vehicle is not found on any route")
+                        }
+                pure $
+                  ApiTypes.PublicTransportData
+                    { ss = [],
+                      rs = [errorRoute],
+                      rsm = [],
+                      ptcv = gtfsVersion,
+                      eligiblePassIds = mbEligiblePassIds
+                    }
+              else
+                withTryCatch
+                  "getPublicTransportData:fetchData"
+                  ( do
+                      routes <- maybeToList <$> OTPRest.getRouteByRouteId bppConfig routeCode
+                      routeStopMappingInMem <- OTPRest.getRouteStopMappingByRouteCodeInMem routeCode bppConfig
+                      routeStops <- OTPRest.parseRouteStopMappingInMemoryServer routeStopMappingInMem bppConfig bppConfig.merchantId bppConfig.merchantOperatingCityId
+                      stations <- OTPRest.parseStationsFromInMemoryServer routeStopMappingInMem bppConfig (not isPublicVehicleData)
+                      mkResponse stations routes routeStops bppConfig mbServiceType
+                  )
+                  >>= \case
+                    Left err -> throwError (PublicTransportDataUnavailable $ "Public transport data unavailable: " <> show err)
+                    Right response -> return response
           Nothing -> do
             stations <- OTPRest.getStationsByGtfsId bppConfig
             routes <- OTPRest.getRoutesByGtfsId bppConfig
@@ -1062,7 +1100,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
       )
       >>= \case
         Left _ -> do
-          mbRouteCodeAndServiceType :: Maybe (Kernel.Prelude.Text, Maybe Spec.ServiceTierType) <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId
+          mbRouteCodeAndServiceType :: Maybe (Kernel.Prelude.Text, Maybe Spec.ServiceTierType) <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId returnServiceTier
           lst1 <- mapConcurrently (fetchData mbRouteCodeAndServiceType) integratedBPPConfigs
           lst2 <-
             maybe
@@ -1079,7 +1117,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           -- Group configs by feed_id and take first config for each feed_id
           let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedKey, _)) -> (feedKey, [config])) configsWithFeedInfo
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
-          mbRouteCodeAndServiceType <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId
+          mbRouteCodeAndServiceType <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId returnServiceTier
           lst1 <- mapConcurrently (fetchData mbRouteCodeAndServiceType) uniqueConfigs
           lst2 <- maybe (pure []) (\oppositeTripDetails -> concat <$> mapConcurrently (\oppositeTripDetail -> mapConcurrently (fetchData (Just (oppositeTripDetail.route_id, snd =<< mbRouteCodeAndServiceType))) uniqueConfigs) oppositeTripDetails) mbOppositeTripDetails
           return (lst1 <> lst2)
@@ -1102,12 +1140,13 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
       vehicleRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
       pure $ Just vehicleRouteInfo
 
-    getRouteCodeAndServiceType Nothing _ _ = return Nothing
-    getRouteCodeAndServiceType (Just vehicleLiveRouteInfo) merchant merchantOperatingCityId = do
+    getRouteCodeAndServiceType Nothing _ _ _ = return Nothing
+    getRouteCodeAndServiceType (Just vehicleLiveRouteInfo) merchant merchantOperatingCityId mbReturnServiceTier = do
       let mbRouteCode = (snd vehicleLiveRouteInfo).routeCode
-      case mbRouteCode of
-        Just routeCode -> return $ Just (routeCode, Just ((snd vehicleLiveRouteInfo).serviceType))
-        Nothing -> do
+      case (mbRouteCode, mbReturnServiceTier) of
+        (Just routeCode, _) -> return $ Just (routeCode, Just ((snd vehicleLiveRouteInfo).serviceType))
+        (Nothing, Just True) -> return $ Just ("ERROR: FLEET ROUTE MAP MISSING", Just ((snd vehicleLiveRouteInfo).serviceType))
+        (Nothing, _) -> do
           let vehicleNumber = (snd vehicleLiveRouteInfo).vehicleNumber
           fork "incrementFleetRouteMapMissingCounter" $
             Metrics.incrementFleetRouteMapMissingCounter merchant.shortId.getShortId merchantOperatingCityId.getId vehicleNumber

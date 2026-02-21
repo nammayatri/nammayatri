@@ -418,12 +418,14 @@ data TowerInfoReq = TowerInfoReq {latLngAccuracy :: Kernel.Prelude.Double, timeS
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TransportRoute = TransportRoute
-  { cd :: Kernel.Prelude.Text,
+  { cd :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clr :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dTC :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    ec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    en :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
-    lN :: Kernel.Prelude.Text,
-    sN :: Kernel.Prelude.Text,
+    lN :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sN :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sst :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     st :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stC :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
