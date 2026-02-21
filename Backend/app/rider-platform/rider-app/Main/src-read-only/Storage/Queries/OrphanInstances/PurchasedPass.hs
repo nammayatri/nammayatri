@@ -18,12 +18,13 @@ instance FromTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass 
     pure $
       Just
         Domain.Types.PurchasedPass.PurchasedPass
-          { applicableVehicleServiceTiers = applicableVehicleServiceTiers,
+          { applicableRouteIds = applicableRouteIds,
+            applicableVehicleServiceTiers = applicableVehicleServiceTiers,
             benefitDescription = benefitDescription,
             benefitType = benefitType,
             benefitValue = benefitValue,
             deviceId = deviceId,
-            deviceSwitchCount = (fromMaybe 0 deviceSwitchCount),
+            deviceSwitchCount = fromMaybe 0 deviceSwitchCount,
             endDate = endDate,
             id = Kernel.Types.Id.Id id,
             maxValidDays = maxValidDays,
@@ -49,7 +50,8 @@ instance FromTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass 
 instance ToTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass where
   toTType' (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
     Beam.PurchasedPassT
-      { Beam.applicableVehicleServiceTiers = applicableVehicleServiceTiers,
+      { Beam.applicableRouteIds = applicableRouteIds,
+        Beam.applicableVehicleServiceTiers = applicableVehicleServiceTiers,
         Beam.benefitDescription = benefitDescription,
         Beam.benefitType = benefitType,
         Beam.benefitValue = benefitValue,

@@ -111,6 +111,11 @@ updateHasDisability hasDisability id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.hasDisability hasDisability, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateIsOrganizationPassHolder :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateIsOrganizationPassHolder isOrganizationPassHolder id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.isOrganizationPassHolder isOrganizationPassHolder, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateIsValidRating :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateIsValidRating isValidRating id = do
   _now <- getCurrentTime
@@ -244,6 +249,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.imeiNumberHash (imeiNumber <&> (.hash)),
       Se.Set Beam.informPoliceSos (Just informPoliceSos),
       Se.Set Beam.isNew isNew,
+      Se.Set Beam.isOrganizationPassHolder isOrganizationPassHolder,
       Se.Set Beam.isValidRating isValidRating,
       Se.Set Beam.juspayCustomerPaymentID juspayCustomerPaymentID,
       Se.Set Beam.language language,

@@ -173,6 +173,7 @@ library
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
       Domain.Action.Dashboard.AppManagement.Pass
+      Domain.Action.Dashboard.AppManagement.PassOrganization
       Domain.Action.Dashboard.AppManagement.Payment
       Domain.Action.Dashboard.AppManagement.TicketDashboard
       Domain.Action.Dashboard.AppManagement.Tickets
@@ -268,6 +269,7 @@ library
       Domain.Action.UI.PartnerBookingStatement
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Pass
+      Domain.Action.UI.PassDetails
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
       Domain.Action.UI.PersonDefaultEmergencyNumber
@@ -704,6 +706,7 @@ library
       API.Action.Dashboard.AppManagement.EventManagement
       API.Action.Dashboard.AppManagement.MerchantOnboarding
       API.Action.Dashboard.AppManagement.Pass
+      API.Action.Dashboard.AppManagement.PassOrganization
       API.Action.Dashboard.AppManagement.Payment
       API.Action.Dashboard.AppManagement.TicketDashboard
       API.Action.Dashboard.AppManagement.Tickets
@@ -763,6 +766,7 @@ library
       API.Action.UI.ParkingBooking
       API.Action.UI.PartnerBookingStatement
       API.Action.UI.Pass
+      API.Action.UI.PassDetails
       API.Action.UI.PickupInstructions
       API.Action.UI.Places
       API.Action.UI.PriceBreakup
@@ -784,12 +788,14 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.EventManagement
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.Pass
+      API.Types.Dashboard.AppManagement.Endpoints.PassOrganization
       API.Types.Dashboard.AppManagement.Endpoints.Payment
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
       API.Types.Dashboard.AppManagement.EventManagement
       API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Pass
+      API.Types.Dashboard.AppManagement.PassOrganization
       API.Types.Dashboard.AppManagement.Payment
       API.Types.Dashboard.AppManagement.TicketDashboard
       API.Types.Dashboard.AppManagement.Tickets
@@ -842,6 +848,7 @@ library
       API.Types.UI.ParkingBooking
       API.Types.UI.PartnerBookingStatement
       API.Types.UI.Pass
+      API.Types.UI.PassDetails
       API.Types.UI.PickupInstructions
       API.Types.UI.Places
       API.Types.UI.PriceBreakup
@@ -954,6 +961,8 @@ library
       Domain.Types.PartnerOrgStation
       Domain.Types.Pass
       Domain.Types.PassCategory
+      Domain.Types.PassDetails
+      Domain.Types.PassOrganization
       Domain.Types.PassType
       Domain.Types.PassVerifyTransaction
       Domain.Types.PaymentCustomer
@@ -1112,6 +1121,8 @@ library
       Storage.Beam.PartnerOrgStation
       Storage.Beam.Pass
       Storage.Beam.PassCategory
+      Storage.Beam.PassDetails
+      Storage.Beam.PassOrganization
       Storage.Beam.PassType
       Storage.Beam.PassVerifyTransaction
       Storage.Beam.PaymentCustomer
@@ -1339,6 +1350,8 @@ library
       Storage.Queries.PartnerOrgStation
       Storage.Queries.Pass
       Storage.Queries.PassCategory
+      Storage.Queries.PassDetails
+      Storage.Queries.PassOrganization
       Storage.Queries.PassType
       Storage.Queries.PassVerifyTransaction
       Storage.Queries.PaymentCustomer

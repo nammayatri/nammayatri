@@ -736,6 +736,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         businessProfileVerified = Nothing,
         businessEmail = encBusinessEmail,
         paymentMode = Nothing,
+        isOrganizationPassHolder = Nothing,
         cloudType = mbCloudType
       }
 

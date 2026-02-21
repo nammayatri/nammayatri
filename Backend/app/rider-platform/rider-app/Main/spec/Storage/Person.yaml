@@ -128,6 +128,7 @@ Person:
     liveActivityToken : Maybe Text
     comments: "Maybe [Text]"
     paymentMode: Maybe PaymentMode
+    isOrganizationPassHolder: Maybe Bool
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -417,6 +418,11 @@ Person:
     updatePersonPassword:
       kvFunction: updateWithKV
       params: [passwordHash]
+      where: id
+
+    updateIsOrganizationPassHolder:
+      kvFunction: updateWithKV
+      params: [isOrganizationPassHolder]
       where: id
 
   extraOperations:

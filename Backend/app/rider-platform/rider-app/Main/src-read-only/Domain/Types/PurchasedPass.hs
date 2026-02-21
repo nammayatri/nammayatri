@@ -18,7 +18,8 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data PurchasedPass = PurchasedPass
-  { applicableVehicleServiceTiers :: [BecknV2.FRFS.Enums.ServiceTierType],
+  { applicableRouteIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    applicableVehicleServiceTiers :: [BecknV2.FRFS.Enums.ServiceTierType],
     benefitDescription :: Kernel.Prelude.Text,
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
     benefitValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -47,7 +48,7 @@ data PurchasedPass = PurchasedPass
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BenefitType = FullSaving | FixedSaving | PercentageSaving deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data BenefitType = FullSaving | FixedSaving | PercentageSaving deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data StatusType
   = Pending
@@ -60,14 +61,14 @@ data StatusType
   | Refunded
   | RefundFailed
   | PhotoPending
-  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''StatusType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''StatusType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''StatusType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''StatusType)
 
-$(Kernel.Utils.TH.mkToHttpInstanceForEnum (''StatusType))
+$(Kernel.Utils.TH.mkToHttpInstanceForEnum ''StatusType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''BenefitType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''BenefitType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''BenefitType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''BenefitType)
