@@ -101,6 +101,7 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     futureRenewals :: [PurchasedPassTransactionAPIEntity],
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
     isAutoVerified :: Kernel.Prelude.Bool,
+    isPreferredSourceAndDestinationSet :: Kernel.Prelude.Bool,
     lastVerifiedVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
     passEntity :: PassDetailsAPIEntity,
     passNumber :: Data.Text.Text,
@@ -123,5 +124,9 @@ data PurchasedPassTransactionAPIEntity = PurchasedPassTransactionAPIEntity
     startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType
   }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SetPassPrefSrcAndDestReq = SetPassPrefSrcAndDestReq {prefDest :: Data.Text.Text, prefSrc :: Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -54,6 +54,8 @@ PurchasedPass:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     profilePicture: Maybe Text
+    preferredSource: Maybe Text
+    preferredDestination: Maybe Text
 
   beamType:
     deviceSwitchCount: Maybe Int
@@ -87,6 +89,11 @@ PurchasedPass:
     findByPassNumber:
       kvFunction: findOneWithKV
       where: passNumber
+
+    updatePrefSrcAndDestById:
+      kvFunction: updateWithKV
+      params: [preferredSource, preferredDestination]
+      where: id
 
 PurchasedPassPayment:
   tableName: purchased_pass_payment
