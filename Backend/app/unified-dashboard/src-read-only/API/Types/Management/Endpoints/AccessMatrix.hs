@@ -5,6 +5,7 @@ module API.Types.Management.Endpoints.AccessMatrix where
 
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified Data.Text
 import qualified Domain.Types.AccessMatrix
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Role
@@ -21,7 +22,11 @@ data AccessMatrixAPIEntity = AccessMatrixAPIEntity {accessMatrix :: [AccessMatri
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data AccessMatrixItemAPIEntity = AccessMatrixItemAPIEntity {serverName :: Kernel.Prelude.Maybe Domain.Types.AccessMatrix.ServerName, userActionType :: Domain.Types.AccessMatrix.UserActionType}
+data AccessMatrixItemAPIEntity = AccessMatrixItemAPIEntity
+  { additionalUserActions :: Kernel.Prelude.Maybe Data.Text.Text,
+    serverName :: Kernel.Prelude.Maybe Domain.Types.AccessMatrix.ServerName,
+    userActionType :: Domain.Types.AccessMatrix.UserActionType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -40,14 +45,14 @@ type GetAccessMatrix =
       :> QueryParam
            "roleId"
            (Kernel.Types.Id.Id Domain.Types.Role.Role)
-      :> Get ('[JSON]) AccessMatrixAPIEntity
+      :> Get '[JSON] AccessMatrixAPIEntity
   )
 
-type GetMerchantWithCityList = ("accessMatrix" :> "merchantWithCityList" :> Get ('[JSON]) [MerchantCityList])
+type GetMerchantWithCityList = ("accessMatrix" :> "merchantWithCityList" :> Get '[JSON] [MerchantCityList])
 
 data AccessMatrixAPIs = AccessMatrixAPIs
-  { getAccessMatrix :: (Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Role.Role) -> EulerHS.Types.EulerClient AccessMatrixAPIEntity),
-    getMerchantWithCityList :: (EulerHS.Types.EulerClient [MerchantCityList])
+  { getAccessMatrix :: Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Role.Role) -> EulerHS.Types.EulerClient AccessMatrixAPIEntity,
+    getMerchantWithCityList :: EulerHS.Types.EulerClient [MerchantCityList]
   }
 
 mkAccessMatrixAPIs :: (Client EulerHS.Types.EulerClient API -> AccessMatrixAPIs)
@@ -61,4 +66,4 @@ data AccessMatrixUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''AccessMatrixUserActionType)])
+$(Data.Singletons.TH.genSingletons [''AccessMatrixUserActionType])

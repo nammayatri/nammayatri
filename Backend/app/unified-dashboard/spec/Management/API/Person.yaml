@@ -76,6 +76,7 @@ types:
     recordType: Data
     serverName: Maybe ServerName
     userActionType: UserActionType
+    additionalUserActions: Maybe Text
 
 apis:
   # Admin endpoints

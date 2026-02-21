@@ -12,7 +12,8 @@ import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data AccessMatrix = AccessMatrix
-  { createdAt :: Kernel.Prelude.UTCTime,
+  { additionalUserActions :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.AccessMatrix.AccessMatrix,
     roleId :: Kernel.Types.Id.Id Domain.Types.Role.Role,
     serverName :: Kernel.Prelude.Maybe Domain.Types.AccessMatrix.ServerName,
@@ -68,6 +69,7 @@ data UserActionType
   | GET_OPERATOR_HEALTH_CHECK_TEST
   | GET_RIDE_BOOKING_HEALTH_CHECK_TEST
   | GET_MANAGEMENT_HEALTH_CHECK_TEST
+  | CONTROL_CENTER_ACCESS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServerName)

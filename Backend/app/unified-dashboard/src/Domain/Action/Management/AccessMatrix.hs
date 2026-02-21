@@ -77,7 +77,8 @@ mkAccessMatrixItemAPIEntity :: DMatrix.AccessMatrix -> API.Types.Management.Acce
 mkAccessMatrixItemAPIEntity accessMatrix =
   API.Types.Management.AccessMatrix.AccessMatrixItemAPIEntity
     { serverName = accessMatrix.serverName,
-      userActionType = accessMatrix.userActionType
+      userActionType = accessMatrix.userActionType,
+      additionalUserActions = accessMatrix.additionalUserActions
     }
 
 mkRoleAPIEntity :: DRole.Role -> DRole.RoleAPIEntity
