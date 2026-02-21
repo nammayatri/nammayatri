@@ -82,6 +82,11 @@ Invoice:
       where:
         and: [driverFeeId, paymentMode, invoiceStatus]
 
+    findInvoiceByFeeIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverFeeId, invoiceStatus]
+
     findByDriverFeePaymentModeAndInvoiceStatus:
       kvFunction: findAllWithKV
       where:
