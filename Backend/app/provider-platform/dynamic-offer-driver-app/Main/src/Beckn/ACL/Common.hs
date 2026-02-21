@@ -203,3 +203,16 @@ tfContact phoneNum =
     Spec.Contact
       { contactPhone = phoneNum
       }
+
+mkReason :: Maybe Text -> Maybe Text -> Maybe Spec.Reason
+mkReason mbCode mbShortDesc =
+  mbCode <&> \code ->
+    Spec.Reason
+      { reasonDescriptor =
+          Just $
+            Spec.Descriptor
+              { descriptorCode = Just code,
+                descriptorName = Nothing,
+                descriptorShortDesc = mbShortDesc
+              }
+      }

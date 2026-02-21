@@ -29,7 +29,7 @@ module Beckn.ACL.Common.Order
   )
 where
 
-import qualified Beckn.ACL.Common as Common
+import qualified Beckn.ACL.Common as ACLCommon
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.OnUpdate as UtilsOU
 import qualified Beckn.Types.Core.Taxi.Common.BreakupItem as Breakup
@@ -221,7 +221,7 @@ buildRideCompletedQuote ride fareParams = do
           }
       breakup =
         Fare.mkFareParamsBreakups (Breakup.BreakupItemPrice currency . DecimalValue.DecimalValue . getHighPrecMoney) Breakup.BreakupItem fareParams
-          & filter (Common.filterRequiredBreakups $ DFParams.getFareParametersType fareParams) -- TODO: Remove after roll out
+          & filter (ACLCommon.filterRequiredBreakups $ DFParams.getFareParametersType fareParams) -- TODO: Remove after roll out
   pure
     Quote.RideCompletedQuote
       { price,
@@ -231,10 +231,10 @@ buildRideCompletedQuote ride fareParams = do
 mkRideCompletedPayment :: Currency -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Payment.Payment
 mkRideCompletedPayment currency paymentMethodInfo paymentUrl = do
   Payment.Payment
-    { _type = maybe Payment.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) paymentMethodInfo,
+    { _type = maybe Payment.ON_FULFILLMENT (ACLCommon.castDPaymentType . (.paymentType)) paymentMethodInfo,
       params =
         Payment.PaymentParams
-          { collected_by = maybe Payment.BPP (Common.castDPaymentCollector . (.collectedBy)) paymentMethodInfo,
+          { collected_by = maybe Payment.BPP (ACLCommon.castDPaymentCollector . (.collectedBy)) paymentMethodInfo,
             instrument = Nothing,
             currency = show currency,
             amount = Nothing
@@ -347,7 +347,8 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
         orderCancellation =
           Just $
             Spec.Cancellation
-              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
+              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource,
+                cancellationReason = ACLCommon.mkReason cancellationReasonCode cancellationReasonCode
               },
         orderBilling = Nothing,
         orderCancellationTerms = Just $ Utils.tfCancellationTerms cancellationFee (Just EventEnum.RIDE_CANCELLED),

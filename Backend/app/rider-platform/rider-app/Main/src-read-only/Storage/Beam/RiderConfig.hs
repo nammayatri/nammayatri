@@ -170,6 +170,7 @@ data RiderConfigT f = RiderConfigT
     updateTicketValidityInSecondsPostSetOnboarding :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     useUserSettingsForSafetyIVR :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     userServiceTierOrderConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    validCancellationReasonCodesForImmediateCharge :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     validateSetOnboardingVehicleRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     variantListForNearByReq :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     videoFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,

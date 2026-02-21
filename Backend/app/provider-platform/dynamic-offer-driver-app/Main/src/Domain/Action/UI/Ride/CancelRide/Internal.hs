@@ -96,6 +96,7 @@ import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
 
+-- main fn
 cancelRideImpl ::
   ( MonadFlow m,
     EncFlow m r,
@@ -173,6 +174,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 return Nothing
               Right (charges :: Maybe PriceAPIEntity) -> return charges
             -- calculateNoShowCharges booking ride else return Nothing
+            logDebug $ "noShowCharges: " <> show noShowCharges
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
             vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")

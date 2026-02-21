@@ -375,8 +375,8 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
           (evaluate $ DDriverReg.postDriverRegistrationRegisterRc merchantShortId opCity driverId req2)
 
         -- Validate that different RC requests are handled correctly
-        let Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber1, Common.operatingCity = operatingCity1, Common.airConditioned = airConditioned1, Common.oxygen = oxygen1, Common.udinNumber = Nothing} = req1
-            Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber2, Common.operatingCity = operatingCity2, Common.airConditioned = airConditioned2, Common.oxygen = oxygen2, Common.udinNumber = Nothing} = req2
+        let Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber1, Common.operatingCity = operatingCity1, Common.airConditioned = airConditioned1, Common.oxygen = oxygen1} = req1
+            Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber2, Common.operatingCity = operatingCity2, Common.airConditioned = airConditioned2, Common.oxygen = oxygen2} = req2
 
         rcNumber1 @?= "RC123456789"
         rcNumber2 @?= "RC987654321"
