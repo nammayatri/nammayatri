@@ -769,14 +769,16 @@ getPublicTransportVehicleData ::
     ) ->
     VehicleCategory ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber = do
+getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber mbReturnServiceTier = do
+  let returnServiceTier = fromMaybe False mbReturnServiceTier
   case vehicleType of
-    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True
+    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True returnServiceTier
     _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
-type CacheKey = (Text, Maybe Text, Maybe Bool, Maybe Text, Maybe Text, Bool)
+type CacheKey = (Text, Maybe Text, Maybe Bool, Maybe Text, Maybe Text, Bool, Bool)
 
 type CacheValue = (Text, ApiTypes.PublicTransportData)
 
@@ -793,14 +795,16 @@ computeCacheKey ::
   Maybe Text ->
   Maybe VehicleCategory ->
   Bool ->
+  Bool ->
   CacheKey
-computeCacheKey merchantOperatingCityId mbCity mbEnableSwitchRoute mbVehicleNumber mbVehicleType isPublicVehicleData =
+computeCacheKey merchantOperatingCityId mbCity mbEnableSwitchRoute mbVehicleNumber mbVehicleType isPublicVehicleData returnServiceTier =
   ( merchantOperatingCityId.getId,
     show <$> mbCity,
     mbEnableSwitchRoute,
     mbVehicleNumber,
     show <$> mbVehicleType,
-    isPublicVehicleData
+    isPublicVehicleData,
+    returnServiceTier
   )
 
 computeVersionFromConfigs ::
@@ -877,11 +881,11 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
   currentVersion <- computeVersionFromConfigs integratedBPPConfigs riderConfig
 
   -- Compute cache key
-  let cacheKey = computeCacheKey merchantOperatingCityId mbCity mbEnableSwitchRoute mbVehicleNumber mbVehicleType False
+  let cacheKey = computeCacheKey merchantOperatingCityId mbCity mbEnableSwitchRoute mbVehicleNumber mbVehicleType False False
 
   -- Get from cache or compute and store
   getCachedPublicTransportData cacheKey currentVersion $
-    getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType False
+    getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType False False
 
 getPublicTransportDataImpl ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -893,9 +897,10 @@ getPublicTransportDataImpl ::
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe VehicleCategory ->
     Kernel.Prelude.Bool ->
+    Kernel.Prelude.Bool ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData = do
+getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData returnServiceTier = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -1022,7 +1027,10 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                   )
                   routeStops,
               ptcv = gtfsVersion,
-              eligiblePassIds = Nothing
+              eligiblePassIds = Nothing,
+              errorCode = Nothing,
+              errorMessage = Nothing,
+              serviceTier = mbServiceType <&> show
             }
 
   let fetchData mbRouteCodeAndServiceType bppConfig = do
@@ -1050,6 +1058,11 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                     else (stations, routes)
             mkResponse finalStations finalRoutes ([] :: [DRSM.RouteStopMapping]) bppConfig Nothing
 
+  gtfsVersion <-
+    withTryCatch "getGtfsVersion:getPublicTransportData" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
+      Left _ -> return (map (.feedKey) integratedBPPConfigs)
+      Right gtfsVersions -> return gtfsVersions
+
   transportDataList <-
     withTryCatch
       "getOTPRestServiceReq:getPublicTransportData"
@@ -1062,39 +1075,72 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
       )
       >>= \case
         Left _ -> do
-          mbRouteCodeAndServiceType :: Maybe (Kernel.Prelude.Text, Maybe Spec.ServiceTierType) <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId
-          lst1 <- mapConcurrently (fetchData mbRouteCodeAndServiceType) integratedBPPConfigs
-          lst2 <-
-            maybe
-              (pure [])
-              ( \oppositeTripDetails ->
-                  concat
-                    <$> mapConcurrently
-                      (\oppositeTripDetail -> mapConcurrently (fetchData (Just (oppositeTripDetail.route_id, snd =<< mbRouteCodeAndServiceType))) integratedBPPConfigs)
-                      oppositeTripDetails
-              )
-              mbOppositeTripDetails
-          return (lst1 <> lst2)
+          mbRouteCodeAndServiceType :: Either (Maybe Spec.ServiceTierType, Text, Text) (Maybe (Kernel.Prelude.Text, Maybe Spec.ServiceTierType)) <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId returnServiceTier
+          case mbRouteCodeAndServiceType of
+            Left (mbServiceType, errorCode, errorMessage) | returnServiceTier -> do
+              -- Return error response with service tier
+              return
+                [ ApiTypes.PublicTransportData
+                    { ss = [],
+                      rs = [],
+                      rsm = [],
+                      ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion))),
+                      eligiblePassIds = Nothing,
+                      errorCode = Just errorCode,
+                      errorMessage = Just errorMessage,
+                      serviceTier = show <$> mbServiceType
+                    }
+                ]
+            Left _ -> throwError (FleetRouteMapMissing "Route code not found")
+            Right mbRouteCodeAndServiceTypeTuple -> do
+              lst1 <- mapConcurrently (fetchData mbRouteCodeAndServiceTypeTuple) integratedBPPConfigs
+              lst2 <-
+                maybe
+                  (pure [])
+                  ( \oppositeTripDetails ->
+                      concat
+                        <$> mapConcurrently
+                          (\oppositeTripDetail -> mapConcurrently (fetchData (Just (oppositeTripDetail.route_id, snd =<< mbRouteCodeAndServiceTypeTuple))) integratedBPPConfigs)
+                          oppositeTripDetails
+                  )
+                  mbOppositeTripDetails
+              return (lst1 <> lst2)
         Right configsWithFeedInfo -> do
           -- Group configs by feed_id and take first config for each feed_id
           let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedKey, _)) -> (feedKey, [config])) configsWithFeedInfo
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
-          mbRouteCodeAndServiceType <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId
-          lst1 <- mapConcurrently (fetchData mbRouteCodeAndServiceType) uniqueConfigs
-          lst2 <- maybe (pure []) (\oppositeTripDetails -> concat <$> mapConcurrently (\oppositeTripDetail -> mapConcurrently (fetchData (Just (oppositeTripDetail.route_id, snd =<< mbRouteCodeAndServiceType))) uniqueConfigs) oppositeTripDetails) mbOppositeTripDetails
-          return (lst1 <> lst2)
+          mbRouteCodeAndServiceType <- getRouteCodeAndServiceType mbVehicleLiveRouteInfo merchant merchantOperatingCityId returnServiceTier
+          case mbRouteCodeAndServiceType of
+            Left (mbServiceType, errorCode, errorMessage) | returnServiceTier -> do
+              -- Return error response with service tier
+              return
+                [ ApiTypes.PublicTransportData
+                    { ss = [],
+                      rs = [],
+                      rsm = [],
+                      ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion))),
+                      eligiblePassIds = Nothing,
+                      errorCode = Just errorCode,
+                      errorMessage = Just errorMessage,
+                      serviceTier = show <$> mbServiceType
+                    }
+                ]
+            Left _ -> throwError (FleetRouteMapMissing "Route code not found")
+            Right mbRouteCodeAndServiceTypeTuple -> do
+              lst1 <- mapConcurrently (fetchData mbRouteCodeAndServiceTypeTuple) uniqueConfigs
+              lst2 <- maybe (pure []) (\oppositeTripDetails -> concat <$> mapConcurrently (\oppositeTripDetail -> mapConcurrently (fetchData (Just (oppositeTripDetail.route_id, snd =<< mbRouteCodeAndServiceTypeTuple))) uniqueConfigs) oppositeTripDetails) mbOppositeTripDetails
+              return (lst1 <> lst2)
 
-  gtfsVersion <-
-    withTryCatch "getGtfsVersion:getPublicTransportData" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
-      Left _ -> return (map (.feedKey) integratedBPPConfigs)
-      Right gtfsVersions -> return gtfsVersions
   let transportData =
         ApiTypes.PublicTransportData
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
             ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion))),
-            eligiblePassIds = mbEligiblePassIds
+            eligiblePassIds = mbEligiblePassIds,
+            errorCode = listToMaybe $ mapMaybe (.errorCode) transportDataList,
+            errorMessage = listToMaybe $ mapMaybe (.errorMessage) transportDataList,
+            serviceTier = listToMaybe $ mapMaybe (.serviceTier) transportDataList
           }
   return transportData
   where
@@ -1102,16 +1148,20 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
       vehicleRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
       pure $ Just vehicleRouteInfo
 
-    getRouteCodeAndServiceType Nothing _ _ = return Nothing
-    getRouteCodeAndServiceType (Just vehicleLiveRouteInfo) merchant merchantOperatingCityId = do
+    getRouteCodeAndServiceType Nothing _ _ _ = return $ Right Nothing
+    getRouteCodeAndServiceType (Just vehicleLiveRouteInfo) merchant merchantOperatingCityId shouldReturnServiceTier = do
       let mbRouteCode = (snd vehicleLiveRouteInfo).routeCode
+          serviceType = (snd vehicleLiveRouteInfo).serviceType
       case mbRouteCode of
-        Just routeCode -> return $ Just (routeCode, Just ((snd vehicleLiveRouteInfo).serviceType))
+        Just routeCode -> return $ Right $ Just (routeCode, Just serviceType)
         Nothing -> do
           let vehicleNumber = (snd vehicleLiveRouteInfo).vehicleNumber
+              errorMsg = "Route code not found for fleetId: " <> vehicleNumber
           fork "incrementFleetRouteMapMissingCounter" $
             Metrics.incrementFleetRouteMapMissingCounter merchant.shortId.getShortId merchantOperatingCityId.getId vehicleNumber
-          throwError (FleetRouteMapMissing $ "Route code not found for fleetId: " <> show vehicleNumber)
+          if shouldReturnServiceTier
+            then return $ Left (Just serviceType, "FLEET_ROUTE_MAP_MISSING", errorMsg)
+            else throwError (FleetRouteMapMissing errorMsg)
 
 getMultimodalOrderGetLegTierOptions ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
