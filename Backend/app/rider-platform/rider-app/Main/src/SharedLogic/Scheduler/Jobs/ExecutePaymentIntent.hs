@@ -21,6 +21,7 @@ import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Payment.Interface as PaymentInterface
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -60,70 +61,78 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       applicationFeeAmount = jobData.applicationFeeAmount
   Redis.withWaitOnLockRedisWithExpiry (DRidePayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
     logDebug "Executing payment intent"
-    QRide.markPaymentStatus DRide.Initiated rideId
-    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    -- Check if payment is already completed (idempotent check using invoice status)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-    fareWithTip <- case ride.tipAmount of
-      Nothing -> return fare
-      Just tipAmount -> fare `addPrice` tipAmount
-    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-    (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
-    driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
-    email <- mapM decrypt person.email
-    let createPaymentIntentServiceReq =
-          DPayment.CreatePaymentIntentServiceReq
-            { amount = fareWithTip.amount,
-              applicationFeeAmount,
-              currency = fareWithTip.currency,
-              customer = customerPaymentId,
-              paymentMethod = paymentMethodId,
-              receiptEmail = email,
-              driverAccountId
-            }
-    -- Lookup existing invoice to get order ID for retry handling
-    mbExistingInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE
-    let mbExistingOrderId = mbExistingInvoice >>= (.paymentOrderId)
-    paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id mbExistingOrderId createPaymentIntentServiceReq
-    paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode paymentIntentResp.paymentIntentId
-    -- Use returned orderId from makePaymentIntent (order.id is now independent of ride.id)
-    let orderId = paymentIntentResp.orderId
-    if paymentCharged
-      then do
-        QRide.markPaymentStatus DRide.Completed ride.id
-        -- Update invoice status to CAPTURED when payment is successfully charged
-        mbInvoice <- QPaymentInvoice.findByPaymentOrderIdAndInvoiceType (Just orderId) DPI.PAYMENT
-        whenJust mbInvoice $ \invoice -> QPaymentInvoice.updatePaymentStatus DPI.CAPTURED invoice.id
+    mbInvoiceForCheck <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose rideId DPI.PAYMENT DPI.RIDE
+    let isPaymentCaptured = maybe False (\inv -> inv.paymentStatus == DPI.CAPTURED) mbInvoiceForCheck
+    if isPaymentCaptured
+      then logInfo $ "Payment already captured (invoice status) for ride: " <> rideId.getId <> ", skipping"
       else do
-        -- Update ride.paymentStatus and invoice.paymentStatus to FAILED when scheduler fails
-        QRide.markPaymentStatus DRide.Failed ride.id
-        logError $ "Failed to charge payment intent for ride: " <> ride.id.getId
-        mbInvoice <- QPaymentInvoice.findByPaymentOrderIdAndInvoiceType (Just orderId) DPI.PAYMENT
-        whenJust mbInvoice $ \invoice -> QPaymentInvoice.updatePaymentStatus DPI.FAILED invoice.id
+        -- Get payment order via payment_invoice (order id is not ride id)
+        let mbPaymentOrderId = mbInvoiceForCheck >>= (.paymentOrderId)
+        mbOrder <- maybe (pure Nothing) QOrder.findById mbPaymentOrderId
+        case mbOrder of
+          Just order | order.status == PaymentInterface.CHARGED -> do
+            logInfo $ "Payment order already charged for ride: " <> rideId.getId <> ", marking payment as completed"
+            whenJust mbInvoiceForCheck $ \inv ->
+              QPaymentInvoice.updatePaymentStatus DPI.CAPTURED inv.id
+            QRide.markPaymentStatus DRide.Completed rideId
+          _ -> do
+            -- Proceed with payment capture
+            QRide.markPaymentStatus DRide.Initiated rideId
+            person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+            fareWithTip <- case ride.tipAmount of
+              Nothing -> return fare
+              Just tipAmount -> fare `addPrice` tipAmount
+            booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+            (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
+            driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+            email <- mapM decrypt person.email
+            let createPaymentIntentServiceReq =
+                  DPayment.CreatePaymentIntentServiceReq
+                    { amount = fareWithTip.amount,
+                      applicationFeeAmount,
+                      currency = fareWithTip.currency,
+                      customer = customerPaymentId,
+                      paymentMethod = paymentMethodId,
+                      receiptEmail = email,
+                      driverAccountId
+                    }
+            let mbExistingOrderId = mbInvoiceForCheck >>= (.paymentOrderId)
+            paymentIntentResp <- SPayment.makePaymentIntent person.merchantId booking.merchantOperatingCityId booking.paymentMode person.id mbExistingOrderId createPaymentIntentServiceReq
+            paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode paymentIntentResp.paymentIntentId
+            let orderId = paymentIntentResp.orderId
+            if paymentCharged
+              then do
+                QRide.markPaymentStatus DRide.Completed ride.id
+                -- Update invoice status to CAPTURED when payment is successfully charged
+                mbInvoiceByOrder <- QPaymentInvoice.findByPaymentOrderIdAndInvoiceType (Just orderId) DPI.PAYMENT
+                whenJust mbInvoiceByOrder $ \invoice -> QPaymentInvoice.updatePaymentStatus DPI.CAPTURED invoice.id
+              else do
+                -- Update ride.paymentStatus and invoice.paymentStatus to FAILED when scheduler fails
+                QRide.markPaymentStatus DRide.Failed ride.id
+                logError $ "Failed to charge payment intent for ride: " <> ride.id.getId
+                mbInvoiceByOrder <- QPaymentInvoice.findByPaymentOrderIdAndInvoiceType (Just orderId) DPI.PAYMENT
+                whenJust mbInvoiceByOrder $ \invoice -> QPaymentInvoice.updatePaymentStatus DPI.FAILED invoice.id
 
-    -- Handle tip payment orders (FALLBACK: for tips that weren't immediately captured)
-    -- Find tip invoices: payment_invoice.ride_id = ride.id AND payment_invoice.payment_purpose = 'TIP'
-    -- Note: Tips added after payment capture are usually captured immediately, but this serves as a fallback
-    allInvoices <- QPaymentInvoice.findAllByRideId rideId
-    let tipInvoices = filter (\inv -> inv.paymentPurpose == TIP && inv.paymentStatus == DPI.PENDING) allInvoices
+            -- Handle tip payment orders (FALLBACK: for tips that weren't immediately captured)
+            allInvoices <- QPaymentInvoice.findAllByRideId rideId
+            let tipInvoices = filter (\inv -> inv.paymentPurpose == TIP && inv.paymentStatus == DPI.PENDING) allInvoices
 
-    -- Process each tip payment order
-    forM_ tipInvoices $ \tipInvoice -> do
-      whenJust tipInvoice.paymentOrderId $ \tipPaymentOrderId -> do
-        tipPaymentOrder <- QOrder.findById tipPaymentOrderId
-        whenJust tipPaymentOrder $ \order -> do
-          -- Get Stripe payment intent ID from payment order
-          let paymentIntentId = order.paymentServiceOrderId
-          -- Charge the existing payment intent
-          tipPaymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode paymentIntentId
-          if tipPaymentCharged
-            then do
-              -- Update tip invoice status to CAPTURED
-              QPaymentInvoice.updatePaymentStatus DPI.CAPTURED tipInvoice.id
-              logDebug $ "Successfully charged tip payment intent: " <> paymentIntentId
-            else do
-              -- Update tip invoice status to FAILED
-              QPaymentInvoice.updatePaymentStatus DPI.FAILED tipInvoice.id
-              logError $ "Failed to charge tip payment intent: " <> paymentIntentId
+            -- Process each tip payment order
+            forM_ tipInvoices $ \tipInvoice -> do
+              whenJust tipInvoice.paymentOrderId $ \tipPaymentOrderId -> do
+                tipPaymentOrder <- QOrder.findById tipPaymentOrderId
+                whenJust tipPaymentOrder $ \tipOrder -> do
+                  let paymentIntentId = tipOrder.paymentServiceOrderId
+                  tipPaymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode paymentIntentId
+                  if tipPaymentCharged
+                    then do
+                      QPaymentInvoice.updatePaymentStatus DPI.CAPTURED tipInvoice.id
+                      logDebug $ "Successfully charged tip payment intent: " <> paymentIntentId
+                    else do
+                      QPaymentInvoice.updatePaymentStatus DPI.FAILED tipInvoice.id
+                      logError $ "Failed to charge tip payment intent: " <> paymentIntentId
   return Complete
 
 cancelExecutePaymentIntentJob ::

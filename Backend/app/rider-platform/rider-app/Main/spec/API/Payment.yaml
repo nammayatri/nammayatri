@@ -5,11 +5,15 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   Ride: Domain.Types.Ride
   PriceAPIEntity: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
   CreateCustomerResp : Kernel.External.Payment.Interface.Types
   RefundRequestStatus: Domain.Types.RefundRequest
   RefundRequestCode: Domain.Types.RefundRequest
   RefundPurpose: Domain.Types.RefundRequest
   FileType: AWS.S3
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  PaymentInvoice: Domain.Types.PaymentInvoice
 
 module: RidePayment
 types:
@@ -47,7 +51,25 @@ types:
     evidence: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
-
+  DueAmountRide:
+    rideId: Id Ride
+    amount: HighPrecMoney
+  GetDueAmountResp:
+    rides: "[DueAmountRide]"
+    totalDueAmount: HighPrecMoney
+    currency: Maybe Currency
+  ClearDuesStatus:
+    enum: "SUCCESS,FAILED"
+    derive: "HttpInstance"
+  ClearDuesReq:
+    paymentMethodId: Maybe PaymentMethodId
+  ClearDuesResp:
+    orderId: Maybe (Id PaymentOrder)
+    status: ClearDuesStatus
+    amountCleared: HighPrecMoney
+    currency: Currency
+    ridesCleared: "[Id Ride]"
+    errorMessage: Maybe Text
 apis:
   - GET:
       endpoint: /payment/methods
@@ -118,3 +140,22 @@ apis:
         refreshRefunds: Bool
       response:
         type: RefundRequestResp
+  - GET:
+      endpoint: /payment/getDueAmount
+      auth: TokenAuth
+      response:
+        type: GetDueAmountResp
+  - POST:
+      endpoint: /payment/clearDues
+      auth: TokenAuth
+      request:
+        type: ClearDuesReq
+      response:
+        type: ClearDuesResp
+  - POST:
+      endpoint: /payment/invoice/{invoiceId}/capture
+      auth: TokenAuth
+      params:
+        invoiceId: Id PaymentInvoice
+      response:
+        type: APISuccess

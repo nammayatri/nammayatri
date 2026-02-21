@@ -12,14 +12,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data BookingPartiesLinkT f = BookingPartiesLinkT
-  { bookingId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    isActive :: (B.C f Kernel.Prelude.Bool),
-    partyId :: (B.C f Kernel.Prelude.Text),
-    partyName :: (B.C f Kernel.Prelude.Text),
-    partyType :: (B.C f Domain.Types.Trip.TripParty),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { bookingId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    isActive :: B.C f Kernel.Prelude.Bool,
+    partyId :: B.C f Kernel.Prelude.Text,
+    partyName :: B.C f Kernel.Prelude.Text,
+    partyType :: B.C f Domain.Types.Trip.TripParty,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table BookingPartiesLinkT where
 
 type BookingPartiesLink = BookingPartiesLinkT Identity
 
-$(enableKVPG (''BookingPartiesLinkT) [('id)] [[('bookingId)], [('partyId)]])
+$(enableKVPG ''BookingPartiesLinkT ['id] [['bookingId], ['partyId]])
 
-$(mkTableInstances (''BookingPartiesLinkT) "booking_parties_link")
+$(mkTableInstances ''BookingPartiesLinkT "booking_parties_link")

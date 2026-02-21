@@ -22,6 +22,7 @@ import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.RideStatus as Ride
@@ -586,3 +587,32 @@ updateIsSafetyPlus rideId isSafetyPlus = do
 
 findCompletedRideByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
 findCompletedRideByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId, Se.Is BeamR.status $ Se.Eq Ride.COMPLETED] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+
+-- | Find most recent ride for a rider (excluding Cash/BoothOnline rides).
+-- Used by simplified Get Dues API to check the most recent ride for failed invoices.
+-- Filters out Cash and BoothOnline payment instruments since they don't have dues.
+-- Uses a single join query (Booking -> Ride) with ORDER BY ride.createdAt DESC, LIMIT 1.
+findMostRecentRideForRider :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
+findMostRecentRideForRider (Id personId) = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ 1 $
+            B.orderBy_ (\(_booking', ride') -> B.desc_ (BeamR.createdAt ride')) $
+              B.filter_'
+                ( \(booking', _ride') ->
+                    (BeamB.riderId booking' B.==?. B.val_ personId)
+                      B.&&?. B.sqlBool_ (B.not_ (BeamB.paymentInstrument booking' `B.in_` (B.val_ <$> [Just DMPM.Cash, Just DMPM.BoothOnline])))
+                )
+                do
+                  booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+                  ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\r -> BeamR.bookingId r B.==?. BeamB.id booking')
+                  pure (booking', ride')
+  case res of
+    Right rows -> do
+      let rides' = snd <$> rows
+      converted <- catMaybes <$> mapM fromTType' rides'
+      pure $ listToMaybe converted
+    Left _ -> pure Nothing

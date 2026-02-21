@@ -15,3 +15,10 @@ ALTER TABLE atlas_app.payment_invoice ADD COLUMN merchant_operating_city_id char
 ALTER TABLE atlas_app.payment_invoice ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.payment_invoice ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.payment_invoice ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payment_invoice ADD COLUMN settled_by_invoice_id character varying(36) ;
+ALTER TABLE atlas_app.payment_invoice ADD COLUMN parent_invoice_ids text[] ;
