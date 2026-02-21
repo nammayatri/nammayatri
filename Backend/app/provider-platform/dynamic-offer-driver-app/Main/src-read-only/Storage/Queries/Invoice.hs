@@ -68,6 +68,11 @@ findByIdWithPaymenModeAndStatus id paymentMode invoiceStatus = do
         ]
     ]
 
+findInvoiceByFeeIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> Domain.Types.Invoice.InvoiceStatus -> m [Domain.Types.Invoice.Invoice])
+findInvoiceByFeeIdAndStatus driverFeeId invoiceStatus = do findAllWithKV [Se.And [Se.Is Beam.driverFeeId $ Se.Eq (Kernel.Types.Id.getId driverFeeId), Se.Is Beam.invoiceStatus $ Se.Eq invoiceStatus]]
+
 updateBankErrorsByInvoiceId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> m ())
