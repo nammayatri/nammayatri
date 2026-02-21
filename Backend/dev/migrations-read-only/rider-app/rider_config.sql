@@ -581,3 +581,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN static_customer_id_threshold_day d
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_logo_url text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN tracking_short_url_pattern SET DEFAULT 'https://nammayatri.in/t?i=';
+ALTER TABLE atlas_app.rider_config ALTER COLUMN dashboard_media_file_url_pattern SET DEFAULT 'https://dashboard.moving.tech/bap/media-viewer?filePath=<FILE_PATH>&rid=<RIDE_SHORT_ID>&cid=<CUSTOMER_ID>';

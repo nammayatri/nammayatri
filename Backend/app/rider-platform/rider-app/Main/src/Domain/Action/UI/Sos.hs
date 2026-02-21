@@ -227,7 +227,7 @@ createTicketForNewSos person ride riderConfig trackLink req = do
       ticketId <- do
         if riderConfig.enableSupportForSafety
           then do
-            ticketResponse <- withTryCatch "createTicket:sosTrigger" (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
+            ticketResponse <- withTryCatch "createTicket:sosTrigger" (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber [trackLink] rideInfo req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
             case ticketResponse of
               Right ticketResponse' -> return (Just ticketResponse'.ticketId)
               Left _ -> return Nothing
@@ -371,27 +371,31 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
       void $ QSos.updateMediaFiles updatedMediaFiles sosId
       phoneNumber <- mapM decrypt person.mobileNumber
       let kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
-          dashboardFileUrl =
-            maybe
-              []
-              ( \patternS ->
-                  [ patternS
-                      & T.replace "<FILE_PATH>" filePath
-                  ]
-              )
-              riderConfig.dashboardMediaFileUrlPattern
       when riderConfig.enableSupportForSafety $ do
         when (isRideBasedSos sosDetails.entityType) $ do
           ride <- QRide.findById sosDetails.rideId >>= fromMaybeM (RideDoesNotExist sosDetails.rideId.getId)
           let rideInfo = SIVR.buildRideInfo ride person phoneNumber
               trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
+              customerId = person.id.getId
+              dashboardFileUrlWithRideInfo =
+                maybe
+                  []
+                  ( \patternS ->
+                      [ patternS
+                          & T.replace "<FILE_PATH>" filePath
+                          & T.replace "<RIDE_SHORT_ID>" ride.shortId.getShortId
+                          & T.replace "<CUSTOMER_ID>" customerId
+                      ]
+                  )
+                  riderConfig.dashboardMediaFileUrlPattern
+              mediaLinks = [trackLink] <> dashboardFileUrlWithRideInfo
           void $
             withTryCatch "createTicket:sendSosTracking" $
               withShortRetry $
                 createTicket
                   person.merchantId
                   person.merchantOperatingCityId
-                  (mkTicket person phoneNumber (["https://" <> trackLink] <> dashboardFileUrl) rideInfo DSos.AudioRecording (riderConfig.kaptureConfig.disposition) kaptureQueue)
+                  (mkTicket person phoneNumber mediaLinks rideInfo DSos.AudioRecording (riderConfig.kaptureConfig.disposition) kaptureQueue)
       return $ AddSosVideoRes {fileUrl = fileUrl}
 
 callUpdateTicket :: Person.Person -> DSos.Sos -> Maybe Text -> Flow APISuccess.APISuccess

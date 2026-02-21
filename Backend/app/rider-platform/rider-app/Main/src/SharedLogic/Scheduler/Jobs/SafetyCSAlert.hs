@@ -73,7 +73,7 @@ createSafetyTicket person ride = do
   phoneNumber <- mapM decrypt person.mobileNumber
   let rideInfo = buildRideInfo ride person phoneNumber
       kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
-  ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo DSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
+  ticketResponse <- withTryCatch "createTicket:safetyCSAlert" (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber [trackLink] rideInfo DSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
   ticketId <- do
     case ticketResponse of
       Right ticketResponse' -> do
