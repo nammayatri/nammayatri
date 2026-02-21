@@ -484,6 +484,8 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
             bookLater = fromMaybe False (mElement <&> (.skipBooking))
         let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
+        let seatIds = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.seatIds)
+        let tripId = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.tripId)
         categorySelectionReq <- do
           let categorySelectionReq' = fromMaybe [] $ find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.categorySelectionReq)
           if null categorySelectionReq' && leg.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]
@@ -511,7 +513,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
         let totalTicketQuantity = sum $ map (.quantity) categorySelectionReq
             bookingAllowed' = leg.bookingAllowed || ((fromMaybe False leg.hasApplicablePasses) && totalTicketQuantity /= 1)
             updatedLeg = leg {JL.bookingAllowed = bookingAllowed'}
-        JLI.confirm forcedBooking bookLater updatedLeg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer mbIsMockPayment
+        JLI.confirm forcedBooking bookLater updatedLeg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer mbIsMockPayment seatIds tripId
     )
     allLegs
 
@@ -537,7 +539,7 @@ startJourneyLeg legInfo isSingleMode = do
           ( \category -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.categoryId, quantity = category.categorySelectedQuantity}
           )
           categories
-  JLI.confirm True False legInfo crisSdkResponse categorySelectionReq isSingleMode Nothing Nothing
+  JLI.confirm True False legInfo crisSdkResponse categorySelectionReq isSingleMode Nothing Nothing Nothing Nothing
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,

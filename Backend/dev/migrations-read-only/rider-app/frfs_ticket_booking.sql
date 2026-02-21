@@ -131,3 +131,13 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_mock_payment boolean ;
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN ondc_on_init_received_at timestamp with time zone ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN ondc_on_init_received boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN trip_id text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN to_stop_idx integer ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN seat_labels text[] ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN seat_ids text[] ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN hold_id text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN from_stop_idx integer ;

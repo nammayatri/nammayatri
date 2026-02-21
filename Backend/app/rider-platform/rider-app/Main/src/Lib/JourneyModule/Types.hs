@@ -35,6 +35,7 @@ import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RouteDetails
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.Seat as DSeat
 import Domain.Types.Station as DTS
 import qualified Domain.Types.Station as DStation
 import Environment
@@ -451,7 +452,9 @@ data BusLegExtraInfo = BusLegExtraInfo
     categories :: [FRFSTicketServiceAPI.CategoryInfoResponse],
     categoryBookingDetails :: Maybe [CategoryBookingDetails], -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
     busConductorId :: Maybe Text,
-    busDriverId :: Maybe Text
+    busDriverId :: Maybe Text,
+    seatIds :: Maybe [Id DSeat.Seat],
+    seatLabels :: Maybe [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -974,7 +977,9 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                             tnc = maybe "" (.tnc) category.categoryMeta
                           },
                   categories = categories,
-                  categoryBookingDetails = Just categoryBookingDetails
+                  categoryBookingDetails = Just categoryBookingDetails,
+                  seatIds = booking.seatIds,
+                  seatLabels = booking.seatLabels
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -1234,7 +1239,9 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                             tnc = maybe "" (.tnc) category.categoryMeta
                           },
                   categories = categories,
-                  categoryBookingDetails = Nothing
+                  categoryBookingDetails = Nothing,
+                  seatIds = Nothing,
+                  seatLabels = Nothing
                 }
         Spec.SUBWAY -> do
           let mbSelectedServiceTier = getServiceTierFromQuote quoteCategories =<< mbQuote

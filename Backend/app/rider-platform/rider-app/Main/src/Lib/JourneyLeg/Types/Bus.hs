@@ -12,6 +12,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RecentLocation as DRecentLocation
+import qualified Domain.Types.Seat as DSeat
 import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -44,7 +45,9 @@ data BusLegRequestConfirmData = BusLegRequestConfirmData
     categorySelectionReq :: [FRFSCategorySelectionReq],
     mbEnableOffer :: Maybe Bool,
     isSingleMode :: Maybe Bool,
-    mbIsMockPayment :: Maybe Bool
+    mbIsMockPayment :: Maybe Bool,
+    seatIds :: Maybe [Id DSeat.Seat],
+    tripId :: Maybe Text
   }
 
 data BusLegRequestUpdateData = BusLegRequestUpdateData

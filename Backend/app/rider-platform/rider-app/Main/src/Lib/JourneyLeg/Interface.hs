@@ -8,6 +8,7 @@ import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Seat as DSeat
 import qualified Domain.Types.Trip as DTrip
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.Prelude
@@ -154,8 +155,8 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
               Just $ FRFSRouteDetails {routeCode = Just routeCode, serviceTier = serviceTier, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> m ()
-confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment =
+confirm :: JL.ConfirmFlow m r c => Bool -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe [Id DSeat.Seat] -> Maybe Text -> m ()
+confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment seatIds tripId =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -239,5 +240,7 @@ confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelection
               categorySelectionReq,
               isSingleMode,
               mbEnableOffer,
-              mbIsMockPayment
+              mbIsMockPayment,
+              seatIds,
+              tripId
             }

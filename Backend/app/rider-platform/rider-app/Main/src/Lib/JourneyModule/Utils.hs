@@ -9,7 +9,7 @@ import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
-import Data.List (groupBy, nub, sort, sortBy)
+import Data.List (findIndex, groupBy, nub, sort, sortBy, sortOn)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as M
 import qualified Data.Map.Strict as Map
@@ -35,6 +35,7 @@ import qualified Domain.Types.RiderConfig as RCTypes
 import Domain.Types.RouteDetails
 import qualified Domain.Types.RouteDetails as DRouteDetails
 import Domain.Types.RouteStopTimeTable
+import qualified Domain.Types.SeatLayout as SeatLayout
 import qualified Domain.Types.Trip as DTrip
 import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
 import Environment
@@ -1430,7 +1431,8 @@ data VehicleLiveRouteInfo = VehicleLiveRouteInfo
     busConductorId :: Maybe Text,
     busDriverId :: Maybe Text,
     eligiblePassIds :: Maybe [Text],
-    serviceSubTypes :: Maybe [Spec.ServiceSubType]
+    serviceSubTypes :: Maybe [Spec.ServiceSubType],
+    seatLayoutId :: Maybe (Id SeatLayout.SeatLayout)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -1486,7 +1488,7 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
         mbResult
           <&> ( \result ->
                   ( integratedBPPConfig,
-                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id, eligiblePassIds = result.eligible_pass_ids, serviceSubTypes = result.service_sub_types}
+                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id, eligiblePassIds = result.eligible_pass_ids, serviceSubTypes = result.service_sub_types, seatLayoutId = Id <$> result.seatLayoutId}
                   )
               )
 
@@ -1709,3 +1711,19 @@ getLiveRouteInfo integratedBPPConfig userPassedVehicleNumber userPassedRouteCode
             else Just (VehicleLiveRouteInfo {routeCode = Just userPassedRouteCode, ..})
       )
       (snd <$> mbRouteLiveInfo)
+
+getRouteStopIndices ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  Text ->
+  Text ->
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  m (Maybe (Int, Int))
+getRouteStopIndices routeCode fromStationCode toStationCode integratedBppConfig = do
+  routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBppConfig
+  let sortedStops = sortOn (.sequenceNum) routeStops
+      mFromIdx =
+        findIndex (\s -> s.stopCode == fromStationCode) sortedStops
+      mToIdx =
+        findIndex (\s -> s.stopCode == toStationCode) sortedStops
+  pure $ (,) <$> mFromIdx <*> mToIdx

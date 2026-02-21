@@ -703,6 +703,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote categories in
                   merchantOperatingCityId,
                   trainType = Nothing,
                   createdAt = now,
+                  seatLayoutId = Nothing,
                   updatedAt = now
                 }
           )

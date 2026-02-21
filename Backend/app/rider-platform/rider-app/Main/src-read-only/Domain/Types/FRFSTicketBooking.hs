@@ -15,6 +15,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.Seat
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -44,7 +45,9 @@ data FRFSTicketBooking = FRFSTicketBooking
     fromStationCode :: Kernel.Prelude.Text,
     fromStationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromStationPoint :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    fromStopIdx :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     googleWalletJWTUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    holdId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -72,6 +75,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
+    seatIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
+    seatLabels :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stationsJson :: Kernel.Prelude.Text,
     status :: Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
@@ -79,7 +84,9 @@ data FRFSTicketBooking = FRFSTicketBooking
     toStationCode :: Kernel.Prelude.Text,
     toStationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toStationPoint :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    toStopIdx :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalPrice :: Kernel.Types.Common.Price,
+    tripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,

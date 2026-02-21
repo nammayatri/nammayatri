@@ -81,6 +81,7 @@ updateByPrimaryKey (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.providerCode providerCode,
+      Se.Set Beam.seatLayoutId (Kernel.Types.Id.getId <$> seatLayoutId),
       Se.Set Beam.shortName shortName,
       Se.Set Beam.trainType trainType,
       Se.Set Beam.updatedAt _now
@@ -101,6 +102,7 @@ instance FromTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceT
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             providerCode = providerCode,
+            seatLayoutId = Kernel.Types.Id.Id <$> seatLayoutId,
             shortName = shortName,
             trainType = trainType,
             createdAt = createdAt,
@@ -119,6 +121,7 @@ instance ToTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceTie
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.providerCode = providerCode,
+        Beam.seatLayoutId = Kernel.Types.Id.getId <$> seatLayoutId,
         Beam.shortName = shortName,
         Beam.trainType = trainType,
         Beam.createdAt = createdAt,

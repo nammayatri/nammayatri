@@ -16,6 +16,8 @@ import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.Seat
+import qualified Domain.Types.SeatLayout
 import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -170,7 +172,9 @@ data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq
     crisSdkResponse :: Data.Maybe.Maybe CrisSdkResponse,
     enableOffer :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     offered :: Data.Maybe.Maybe [FRFSCategorySelectionReq],
-    ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int
+    seatIds :: Data.Maybe.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
+    ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    tripId :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -314,4 +318,23 @@ data FRFSVehicleServiceTierAPI = FRFSVehicleServiceTierAPI
     shortName :: Data.Text.Text
   }
   deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SeatLayoutDetailsResp = SeatLayoutDetailsResp {seatLayout :: Domain.Types.SeatLayout.SeatLayout, seats :: [Domain.Types.Seat.Seat]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SeatLayoutResp = SeatLayoutResp {seatLayout :: Domain.Types.SeatLayout.SeatLayout, seats :: [SeatWithStatus]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SeatStatus
+  = AVAILABLE
+  | BOOKED
+  | BLOCKED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SeatWithStatus = SeatWithStatus {seat :: Domain.Types.Seat.Seat, status :: SeatStatus}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

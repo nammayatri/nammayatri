@@ -31,6 +31,9 @@ imports:
   QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
   BusLocation: API.Types.UI.RiderLocation
   CrisSdkResponse: API.Types.UI.MultimodalConfirm
+  Seat: Domain.Types.Seat
+  SeatLayout: Domain.Types.SeatLayout
+  SeatType: Domain.Types.Seat
 
 module: FRFSTicketService
 types:
@@ -120,6 +123,8 @@ types:
     enableOffer: Maybe Bool
     ticketQuantity: Maybe Int # TODO: To Be Deprecated
     childTicketQuantity: Maybe Int # TODO: To Be Deprecated
+    seatIds: Maybe [(Id Seat)]
+    tripId: Maybe Text
 
   FRFSTicketCategoryMetadataAPIEntity:
     title: Text
@@ -278,6 +283,21 @@ types:
 
   FRFSPossibleStopsReq:
     stationCodes: [Text]
+
+  SeatStatus:
+    enum: "AVAILABLE, BOOKED, BLOCKED"
+
+  SeatWithStatus:
+    seat: Seat
+    status: SeatStatus
+
+  SeatLayoutResp:
+    seatLayout: SeatLayout
+    seats: [SeatWithStatus]
+
+  SeatLayoutDetailsResp:
+    seatLayout: SeatLayout
+    seats: [Seat]
 
 apis:
   # Get FRFS Config
@@ -515,3 +535,23 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+  - GET:
+      endpoint: /frfs/trip/{tripId}/route/{routeId}/seats
+      params:
+        tripId: Text
+        routeId: Text
+      query:
+        vehicleNumber: Text
+        fromStopCode: Text
+        toStopCode: Text
+      response:
+        type: SeatLayoutResp
+
+  - GET:
+      endpoint: /frfs/route/{routeId}/seatLayout
+      params:
+        routeId: Text
+      query:
+        vehicleNumber: Text
+      response:
+        type: SeatLayoutDetailsResp

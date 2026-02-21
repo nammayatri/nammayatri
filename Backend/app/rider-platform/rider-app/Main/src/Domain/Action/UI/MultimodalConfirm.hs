@@ -128,6 +128,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.Cancel as SharedCancel
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
+import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
@@ -231,6 +232,7 @@ postMultimodalConfirm (_mbPersonId, _merchantId) journeyId forcedBookLegOrder mb
   legs <- QJourneyLeg.getJourneyLegs journey.id
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
       isMockPayment = fromMaybe False mbIsMockPayment
+
   void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey journeyConfirmReq.enableOffer (Just isMockPayment)
   -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`.
   -- Note: INPROGRESS journey status indicates that the tracking has started.
@@ -1747,7 +1749,9 @@ data RouteServiceabilityContext = RouteServiceabilityContext
 
 data ResolvedLeg = ResolvedLeg
   { rlOrder :: Int,
-    rlRouteCodes :: [Text]
+    rlRouteCodes :: [Text],
+    rlFromStopCode :: Text,
+    rlToStopCode :: Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1838,8 +1842,10 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       CQMMB.RouteWithBuses ->
       RouteServiceabilityContext ->
       Bool ->
+      Text ->
+      Text ->
       Environment.Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
-    buildRouteWithLiveVehicle routeInfo routeServiceabilityContext enableDebug = do
+    buildRouteWithLiveVehicle routeInfo routeServiceabilityContext enableDebug fromStopCode toStopCode = do
       route <-
         OTPRest.getRouteByRouteId routeServiceabilityContext.integratedBPPConfig routeInfo.routeId
           >>= fromMaybeM
@@ -1847,7 +1853,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       busScheduleDetails <-
         OTPRest.getRouteBusSchedule routeInfo.routeId routeServiceabilityContext.integratedBPPConfig
       schedules <-
-        getBusScheduleInfo busScheduleDetails routeServiceabilityContext
+        getBusScheduleInfo busScheduleDetails routeServiceabilityContext routeInfo.routeId fromStopCode toStopCode
       when enableDebug $
         logDebug $
           "AlternateRoute getRouteBusSchedule routeId="
@@ -1937,8 +1943,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
 
       pure $ nub (routeCodeFromLeg <> stopToStopRouteCodes)
 
-    getBusScheduleInfo :: NandiTypes.BusScheduleDetails -> RouteServiceabilityContext -> Environment.Flow [API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo]
-    getBusScheduleInfo busScheduleDetails routeServiceabilityContext =
+    getBusScheduleInfo :: NandiTypes.BusScheduleDetails -> RouteServiceabilityContext -> Text -> Text -> Text -> Environment.Flow [API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo]
+    getBusScheduleInfo busScheduleDetails routeServiceabilityContext routeId fromStopCode toStopCode =
       catMaybes
         <$> mapM
           ( \detail -> do
@@ -1950,17 +1956,40 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                   frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier routeServiceabilityContext.merchantOperatingCityId routeServiceabilityContext.integratedBPPConfig.id
                   -- Get service subtypes from in-memory cache
                   mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [routeServiceabilityContext.integratedBPPConfig] detail.vehicle_no
-                  logDebug $ "getBusScheduleInfo: vehicle=" <> detail.vehicle_no <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", hasLiveInfo=" <> show (isJust busLiveInfo) <> ", eta=" <> show detail.eta <> ", position=" <> show ((\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo) <> ", timestamp=" <> show ((.timestamp) <$> busLiveInfo)
-                  return . Just $
-                    API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo
-                      { eta = Just detail.eta,
-                        position = (\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo,
-                        locationUTCTimestamp = posixSecondsToUTCTime . fromIntegral . (.timestamp) <$> busLiveInfo,
-                        serviceTierType = serviceTier,
-                        serviceTierName = (.shortName) <$> frfsServiceTier,
-                        vehicleNumber = detail.vehicle_no,
-                        serviceSubTypes = mbServiceSubTypes
-                      }
+
+                  let combinedTripId = do
+                        waybill <- detail.wayBill_no
+                        tNum <- detail.trip_number
+                        return $ waybill <> "-" <> tNum
+
+                  (isAvailable, availableSeatsCount) <- case frfsServiceTier >>= (.seatLayoutId) of
+                    Just layoutId -> case combinedTripId of
+                      Nothing -> return (False, Nothing)
+                      Just tripId -> do
+                        mIndices <- JLU.getRouteStopIndices routeId fromStopCode toStopCode routeServiceabilityContext.integratedBPPConfig
+                        case mIndices of
+                          Just (fromIdx, toIdx) -> do
+                            avail <- SeatBooking.getAvailableSeatCount layoutId tripId fromIdx toIdx
+                            return (avail > 0, Just avail)
+                          _ -> return (True, Nothing)
+                    Nothing -> return (True, Nothing)
+
+                  if not isAvailable
+                    then return Nothing
+                    else do
+                      logDebug $ "getBusScheduleInfo: vehicle=" <> detail.vehicle_no <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", hasLiveInfo=" <> show (isJust busLiveInfo) <> ", eta=" <> show detail.eta <> ", position=" <> show ((\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo) <> ", timestamp=" <> show ((.timestamp) <$> busLiveInfo)
+                      return . Just $
+                        API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo
+                          { eta = Just detail.eta,
+                            position = (\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo,
+                            locationUTCTimestamp = posixSecondsToUTCTime . fromIntegral . (.timestamp) <$> busLiveInfo,
+                            serviceTierType = serviceTier,
+                            serviceTierName = (.shortName) <$> frfsServiceTier,
+                            vehicleNumber = detail.vehicle_no,
+                            tripId = combinedTripId,
+                            serviceSubTypes = mbServiceSubTypes,
+                            availableSeats = availableSeatsCount
+                          }
                 Nothing -> do
                   logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
                   return Nothing
@@ -1978,6 +2007,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                   frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier routeServiceabilityContext.merchantOperatingCityId routeServiceabilityContext.integratedBPPConfig.id
                   -- Get service subtypes from in-memory cache
                   mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [routeServiceabilityContext.integratedBPPConfig] bus.vehicleNumber
+
                   logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
                   enrichedEta <-
                     mapConcurrently
@@ -2098,7 +2128,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
           routesWithLiveVehicles <-
             catMaybes
               <$> mapM
-                (\r -> buildRouteWithLiveVehicle r ctx False)
+                (\r -> buildRouteWithLiveVehicle r ctx False rlFromStopCode rlToStopCode)
                 busesForRoutes
 
           pure $
@@ -2129,10 +2159,14 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
             mapM
               ( \(idx, leg) -> do
                   codes <- getLegRouteCodes leg ctx.integratedBPPConfig
+                  let mLegSrc = getStopGtfsCode leg.fromStopDetails
+                      mLegDest = getStopGtfsCode leg.toStopDetails
                   pure $
                     ResolvedLeg
                       { rlOrder = idx,
-                        rlRouteCodes = codes
+                        rlRouteCodes = codes,
+                        rlFromStopCode = fromMaybe "" mLegSrc,
+                        rlToStopCode = fromMaybe "" mLegDest
                       }
               )
               (zip [0 ..] legs)
@@ -2184,10 +2218,12 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       Text ->
       [Text] ->
       [ResolvedLeg]
-    resolveLegsForDirectRoute _src _dest directRouteCodes =
+    resolveLegsForDirectRoute src dest directRouteCodes =
       [ ResolvedLeg
           { rlOrder = 0,
-            rlRouteCodes = directRouteCodes
+            rlRouteCodes = directRouteCodes,
+            rlFromStopCode = src,
+            rlToStopCode = dest
           }
       ]
 

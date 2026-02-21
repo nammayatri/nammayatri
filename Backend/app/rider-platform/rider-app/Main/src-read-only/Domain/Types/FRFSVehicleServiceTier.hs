@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.SeatLayout
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -22,6 +23,7 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     providerCode :: Kernel.Prelude.Text,
+    seatLayoutId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout),
     shortName :: Kernel.Prelude.Text,
     trainType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,

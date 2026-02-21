@@ -23,3 +23,8 @@ ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN is_air_conditioned bo
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN train_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN seat_layout_id character varying(36) ;
