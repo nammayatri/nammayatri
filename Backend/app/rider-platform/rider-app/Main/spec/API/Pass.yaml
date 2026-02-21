@@ -101,6 +101,7 @@ types:
     deviceSwitchAllowed: Bool
     profilePicture: Maybe Text
     futureRenewals: [PurchasedPassTransactionAPIEntity]
+    isPreferredSourceAndDestinationSet: Bool
     derive: "Show"
 
   PassDetailsAPIEntity:
@@ -118,6 +119,11 @@ types:
     amount: HighPrecMoney
     status: StatusType
     passType: Maybe PassEnum
+    derive: "Show"
+
+  SetPassPrefSrcAndDestReq:
+    prefSrc: Text
+    prefDest: Text
     derive: "Show"
 
 
@@ -211,4 +217,12 @@ apis:
       response:
         type: APISuccess
 
-
+  - POST:
+      endpoint: /multimodal/pass/set/prefSrcAndDest/{purchasedPassId}
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      request:
+        type: SetPassPrefSrcAndDestReq
+      response:
+        type: APISuccess

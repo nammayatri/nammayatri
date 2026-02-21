@@ -30,6 +30,13 @@ updateDeviceSwitchCount deviceSwitchCount id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.deviceSwitchCount (Just deviceSwitchCount), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePrefSrcAndDestById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ())
+updatePrefSrcAndDestById preferredSource preferredDestination id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.preferredSource preferredSource, Se.Set Beam.preferredDestination preferredDestination, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m (Maybe Domain.Types.PurchasedPass.PurchasedPass))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -55,6 +62,8 @@ updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
       Se.Set Beam.passNumber passNumber,
       Se.Set Beam.passTypeId (Kernel.Types.Id.getId passTypeId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
+      Se.Set Beam.preferredDestination preferredDestination,
+      Se.Set Beam.preferredSource preferredSource,
       Se.Set Beam.profilePicture profilePicture,
       Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,
