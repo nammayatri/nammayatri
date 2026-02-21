@@ -11,11 +11,14 @@ import qualified Storage.Clickhouse.ConductorStats as CHConductor
 data StatsResp = StatsResp
   { todayTickets :: Int,
     todayRevenue :: Money,
+    weeklyTickets :: Int,
+    weeklyRevenue :: Money,
     mtdTickets :: Int,
     mtdRevenue :: Money,
     activeCount :: Int,
     busNo :: Maybe Text,
     newUsersToday :: Int,
+    newUsersWeekly :: Int,
     newUsersMtd :: Int
   }
   deriving stock (Generic)
@@ -44,22 +47,32 @@ statsHandler conductorToken = withFlowHandlerAPI $ do
   let today = Time.utctDay now
   let (year, month, _) = Time.toGregorian today
   let monthStartDay = Time.fromGregorian year month 1
+  let mjd = Time.toModifiedJulianDay today
+  let daysFromFriday = fromInteger $ (mjd - 2 + 7) `mod` 7
+  let weekStartDay = Time.addDays (negate daysFromFriday) today
 
   mtdStats <- CHConductor.findConductorStatsBetween conductorToken monthStartDay today
   logDebug $ "mtdStats: " <> show mtdStats
 
+  weeklyStats <- CHConductor.findConductorStatsBetween conductorToken weekStartDay today
+  logDebug $ "weeklyStats: " <> show weeklyStats
+
   let (todayStats, _) =
         partition (\stat -> stat.bookingDate == today) mtdStats
   let todayAgg = foldr aggStat emptyAgg todayStats
+  let weeklyAgg = foldr aggStat emptyAgg weeklyStats
   let mtdAgg = foldr aggStat emptyAgg mtdStats
 
   let todayTickets = todayAgg.tickets
+  let weeklyTickets = weeklyAgg.tickets
   let mtdTickets = mtdAgg.tickets
 
   let todayRevenue = Money . round $ todayAgg.revenue
+  let weeklyRevenue = Money . round $ weeklyAgg.revenue
   let mtdRevenue = Money . round $ mtdAgg.revenue
 
   let newUsersToday = todayAgg.newUsers
+  let newUsersWeekly = weeklyAgg.newUsers
   let newUsersMtd = mtdAgg.newUsers
   let activeCount = 0
   let busNo = Nothing
