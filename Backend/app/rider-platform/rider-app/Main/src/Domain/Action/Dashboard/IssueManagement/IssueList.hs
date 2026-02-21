@@ -15,10 +15,11 @@
 module Domain.Action.Dashboard.IssueManagement.IssueList
   ( getIssueListV1,
     postIssueListTicketStatusCallBack,
+    getIssueListChats,
   )
 where
 
-import API.Types.RiderPlatform.IssueManagement.IssueList as Common (Issue (..), IssueListRes (..), Summary (..))
+import API.Types.RiderPlatform.IssueManagement.IssueList as Common (DashboardIssueChat (..), Issue (..), IssueListRes (..), Summary (..))
 import qualified Data.Aeson as A
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.IssueManagement.Issue as ADI
@@ -27,8 +28,10 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import Environment
-import qualified IssueManagement.Common as Common
-import qualified IssueManagement.Domain.Action.Dashboard.Issue as DCommon
+import qualified "shared-services" IssueManagement.Common as Common
+import qualified "shared-services" IssueManagement.Domain.Action.Dashboard.Issue as DCommon
+import qualified "shared-services" IssueManagement.Domain.Types.Issue.IssueChat as IssueChat
+import qualified "shared-services" IssueManagement.Storage.Queries.Issue.IssueChat as QIssueChat
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -94,3 +97,21 @@ postIssueListTicketStatusCallBack _ _ reqJson = do
     Just _ -> QIssue.updateIssueStatus req.ticketId =<< DCommon.transformKaptureStatus req
     Nothing -> void $ DCommon.ticketStatusCallBack reqJson ADI.dashboardIssueHandle Common.CUSTOMER
   return Success
+
+getIssueListChats :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Day -> Flow [DashboardIssueChat]
+getIssueListChats _merchantShortId _opCity limit offset date = do
+  let limit' = fromMaybe 25 limit
+      offset' = fromMaybe 0 offset
+  issueChats <- runInReplica $ QIssueChat.findAllByDate date limit' offset'
+  pure $ map toDashboardIssueChat issueChats
+
+toDashboardIssueChat :: IssueChat.IssueChat -> DashboardIssueChat
+toDashboardIssueChat ic =
+  DashboardIssueChat
+    { ticketId = ic.ticketId,
+      rideId = ic.rideId,
+      personId = ic.personId,
+      kaptureData = A.toJSON <$> ic.kaptureData,
+      issueReportId = ic.issueReportId,
+      createdAt = ic.createdAt
+    }

@@ -10,6 +10,7 @@ where
 import qualified API.Types.RiderPlatform.IssueManagement
 import qualified API.Types.RiderPlatform.IssueManagement.IssueList
 import qualified Data.Aeson
+import qualified Data.Time.Calendar
 import qualified Domain.Action.RiderPlatform.IssueManagement.IssueList
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
@@ -23,10 +24,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("issue" :> (GetIssueListV1 :<|> PostIssueListTicketStatusCallBack))
+type API = ("issue" :> (GetIssueListV1 :<|> PostIssueListTicketStatusCallBack :<|> GetIssueListChats))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getIssueListV1 merchantId city :<|> postIssueListTicketStatusCallBack merchantId city
+handler merchantId city = getIssueListV1 merchantId city :<|> postIssueListTicketStatusCallBack merchantId city :<|> getIssueListChats merchantId city
 
 type GetIssueListV1 =
   ( ApiAuth
@@ -44,8 +45,19 @@ type PostIssueListTicketStatusCallBack =
       :> API.Types.RiderPlatform.IssueManagement.IssueList.PostIssueListTicketStatusCallBack
   )
 
+type GetIssueListChats =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE_LIST / 'API.Types.RiderPlatform.IssueManagement.IssueList.GET_ISSUE_LIST_CHATS)
+      :> API.Types.RiderPlatform.IssueManagement.IssueList.GetIssueListChats
+  )
+
 getIssueListV1 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.IssueManagement.IssueList.IssueListRes)
 getIssueListV1 merchantShortId opCity apiTokenInfo limit offset mobileCountryCode mobileNumber from to = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.IssueList.getIssueListV1 merchantShortId opCity apiTokenInfo limit offset mobileCountryCode mobileNumber from to
 
 postIssueListTicketStatusCallBack :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Aeson.Value -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postIssueListTicketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.IssueList.postIssueListTicketStatusCallBack merchantShortId opCity apiTokenInfo req
+
+getIssueListChats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Environment.FlowHandler [API.Types.RiderPlatform.IssueManagement.IssueList.DashboardIssueChat])
+getIssueListChats merchantShortId opCity apiTokenInfo limit offset date = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.IssueList.getIssueListChats merchantShortId opCity apiTokenInfo limit offset date
