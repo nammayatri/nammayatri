@@ -19,6 +19,8 @@ module Domain.Action.UI.Payment
     getStatusV2,
     getOrder,
     juspayWebhookHandler,
+    juspayWebhookHandlerForPaymentServiceType,
+    paymentServiceNameForWebhook,
     pdnNotificationStatus,
     postWalletRecharge,
     getWalletBalance,
@@ -416,6 +418,107 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driver.merchantOperatingCityId Nothing serviceName'
           >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName')
       return (invoices', serviceName', serviceConfig, driver)
+
+----------------------------------------------------------Juspay Webhook Handler For Payment Service Type----------------------------------------------------------
+
+-- | Resolve merchant service config name from payment service type (e.g. STCL -> MembershipPaymentService).
+-- Extend this when adding new payment service types for webhooks.
+paymentServiceNameForWebhook :: DOrder.PaymentServiceType -> Maybe DMSC.ServiceName
+paymentServiceNameForWebhook = \case
+  DOrder.STCL -> Just $ DMSC.MembershipPaymentService Payment.Juspay
+  _ -> Nothing
+
+-- | Dispatch webhook to the appropriate domain handler based on order's payment service type.
+-- Add cases for new payment service types as needed.
+dispatchWebhookByPaymentServiceType ::
+  DOrder.PaymentOrder ->
+  DPayment.PaymentStatusResp ->
+  Flow ()
+dispatchWebhookByPaymentServiceType order paymentStatusResp =
+  case order.paymentServiceType of
+    Just DOrder.STCL ->
+      DStclMembership.stclMemberShipOrderStatusHandler paymentStatusResp order.id
+    Just _ -> pure () -- other payment service types: extend when needed
+    Nothing -> pure ()
+
+juspayWebhookHandlerForPaymentServiceType ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  DOrder.PaymentServiceType ->
+  BasicAuthData ->
+  Value ->
+  Flow AckResponse
+juspayWebhookHandlerForPaymentServiceType merchantShortId mbCity paymentServiceType authData value = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant mbCity
+  let merchantId = merchant.id
+  paymentServiceName <-
+    fromMaybeM (InternalError $ "Unsupported payment service type for webhook: " <> show paymentServiceType) (paymentServiceNameForWebhook paymentServiceType)
+  merchantServiceConfig <-
+    CQMSC.findByServiceAndCity paymentServiceName merchanOperatingCityId
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
+  psc <- case merchantServiceConfig.serviceConfig of
+    DMSC.PaymentServiceConfig psc' -> pure psc'
+    DMSC.RentalPaymentServiceConfig psc' -> pure psc'
+    DMSC.CautioPaymentServiceConfig psc' -> pure psc'
+    DMSC.MembershipPaymentServiceConfig psc' -> pure psc'
+    _ -> throwError $ InternalError "Unknown Service Config"
+  orderStatusResp <- Juspay.orderStatusWebhook psc DPayment.juspayWebhookService authData value
+  logDebug $ "Juspay Webhook Response: " <> show orderStatusResp
+  osr <- case orderStatusResp of
+    Nothing -> throwError $ InternalError "Order Contents not found."
+    Just osr' -> pure osr'
+  case osr of
+    Payment.OrderStatusResp {..} -> do
+      order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+      let paymentStatusResp =
+            DPayment.PaymentStatus
+              { orderId = order.id,
+                orderShortId = order.shortId,
+                status = transactionStatus,
+                bankErrorMessage = bankErrorMessage,
+                bankErrorCode = bankErrorCode,
+                isRetried = isRetriedOrder,
+                isRetargeted = isRetargetedOrder,
+                retargetLink = retargetPaymentLink,
+                refunds = refunds,
+                payerVpa = payerVpa <|> ((.payerVpa) =<< upi),
+                card = Nothing,
+                paymentMethodType = paymentMethodType,
+                authIdCode = (.authIdCode) =<< paymentGatewayResponse,
+                txnUUID = transactionUUID,
+                txnId = txnId,
+                effectAmount = effectiveAmount,
+                offers = offers,
+                paymentServiceType = order.paymentServiceType,
+                paymentFulfillmentStatus = order.paymentFulfillmentStatus,
+                domainEntityId = order.domainEntityId,
+                amount = order.amount,
+                validTill = order.validTill
+              }
+      dispatchWebhookByPaymentServiceType order paymentStatusResp
+    Payment.MandateOrderStatusResp {..} -> do
+      order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+      now <- getCurrentTime
+      let paymentStatusResp =
+            DPayment.MandatePaymentStatus
+              { status = transactionStatus,
+                mandateStatus = mandateStatus,
+                mandateStartDate = fromMaybe now mandateStartDate,
+                mandateEndDate = fromMaybe now mandateEndDate,
+                mandateId = mandateId,
+                mandateMaxAmount = mandateMaxAmount,
+                payerVpa = payerVpa,
+                bankErrorMessage = bankErrorMessage,
+                bankErrorCode = bankErrorCode,
+                upi = upi
+              }
+      dispatchWebhookByPaymentServiceType order paymentStatusResp
+    Payment.MandateStatusResp {} -> pure ()
+    Payment.PDNNotificationStatusResp {} -> pure ()
+    Payment.BadStatusResp -> pure ()
+  pure Ack
+
 
 processPayment ::
   ( MonadFlow m,
