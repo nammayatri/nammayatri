@@ -29,7 +29,6 @@ import Domain.Types.Role as Role
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Control.Lens ((^..), _Just, to)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
@@ -425,9 +424,9 @@ findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset mbFromDate mbT
                 Se.Is BeamP.verified $ Se.Eq Nothing
               ]
           ]
-            <> (mbFromDate ^.. _Just . to (\d -> Se.Is BeamP.createdAt $ Se.GreaterThanOrEq d))
-            <> (mbToDate ^.. _Just . to (\d -> Se.Is BeamP.createdAt $ Se.LessThanOrEq d))
-            <> (mbMobileNumberDbHash ^.. _Just . to (\h -> Se.Is BeamP.mobileNumberHash $ Se.Eq h))
+            <> foldMap (\d -> [Se.Is BeamP.createdAt $ Se.GreaterThanOrEq d]) mbFromDate
+            <> foldMap (\d -> [Se.Is BeamP.createdAt $ Se.LessThanOrEq d]) mbToDate
+            <> foldMap (\h -> [Se.Is BeamP.mobileNumberHash $ Se.Eq h]) mbMobileNumberDbHash
             <> [Se.Is BeamP.verified $ checkStatus | isJust mbStatus]
             <> [Se.Is BeamP.dashboardType $ Se.Eq DPT.DEFAULT_DASHBOARD]
         )

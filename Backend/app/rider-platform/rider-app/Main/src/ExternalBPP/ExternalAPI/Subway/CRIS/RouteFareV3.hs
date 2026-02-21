@@ -1,6 +1,6 @@
 module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 where
 
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
@@ -9,7 +9,7 @@ import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.MerchantOperatingCity
-import EulerHS.Prelude hiding (concatMap, find, null, readMaybe, whenJust, (^?), (^..))
+import EulerHS.Prelude hiding (concatMap, find, null, readMaybe, whenJust, (^?))
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
@@ -114,7 +114,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
         childFareAmount <- mbChildFareAmount & fromMaybeM (CRISError $ "[V3] Failed to parse fare amount: " <> show fare.childFare)
         classCode <- pure fare.classCode & fromMaybeM (CRISError $ "[V3] Failed to parse class code: " <> show fare.classCode)
         serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode classCode merchantOperatingCityId
-        serviceTier <- serviceTiers & (^? _head) & fromMaybeM (CRISError $ "[V3] Failed to find service tier: " <> show classCode)
+        serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "[V3] Failed to find service tier: " <> show classCode)
         return $
           FRFSUtils.FRFSFare
             { categories =

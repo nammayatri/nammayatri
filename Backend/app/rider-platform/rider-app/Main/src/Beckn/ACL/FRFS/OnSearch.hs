@@ -18,7 +18,6 @@ import qualified BecknV2.FRFS.Enums as Enums
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
-import Control.Lens ((^?), _Just, _head)
 import Data.List (groupBy, sortBy)
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
@@ -54,7 +53,7 @@ buildOnSearchReq onSearchReq = do
   let ttl = context.contextTtl >>= Utils.getQuoteValidTill (convertRFC3339ToUTC timeStamp)
 
   message <- onSearchReq.onSearchReqMessage & fromMaybeM (InvalidRequest "Message not found")
-  provider <- message.onSearchReqMessageCatalog.catalogProviders ^? _Just . _head & fromMaybeM (InvalidRequest "Provider not found")
+  provider <- message.onSearchReqMessageCatalog.catalogProviders >>= listToMaybe & fromMaybeM (InvalidRequest "Provider not found")
 
   let providerDescription = Nothing -- TODO: Fix this in types
   providerId <- provider.providerId & fromMaybeM (InvalidRequest "ProviderId not found")
@@ -73,7 +72,7 @@ buildOnSearchReq onSearchReq = do
         )
         payments
 
-  let bppDelayedInterest = interestTags ^? _head
+  let bppDelayedInterest = listToMaybe interestTags
 
   -- Get IntegratedBPPConfig to check mergeQuoteCriteria
   integratedBPPConfig <- QIBC.findById frfsSearch.integratedBppConfigId >>= fromMaybeM (InvalidRequest "IntegratedBPPConfig not found")
@@ -130,9 +129,9 @@ mergeQuotesByQuoteType quotes =
 
 mergeReturnJourneyQuotes :: [Domain.DQuote] -> [Domain.DQuote] -> [Domain.DQuote]
 mergeReturnJourneyQuotes sjtQuotes rjtQuotes =
-  case (sjtQuotes ^? _head, rjtQuotes) of
+  case (listToMaybe sjtQuotes, rjtQuotes) of
     (Just sjtQuote, rjts@(_ : _)) ->
-      let sjtStartStation = filter (\s -> s.stationType == Station.START) sjtQuote.stations ^? _head
+      let sjtStartStation = filter (\s -> s.stationType == Station.START) listToMaybe sjtQuote.stations
        in case sjtStartStation of
             Just refStart ->
               let forwardRjt = find (\rjt -> any (\s -> s.stationType == Station.START && s.stationCode == refStart.stationCode) rjt.stations) rjts

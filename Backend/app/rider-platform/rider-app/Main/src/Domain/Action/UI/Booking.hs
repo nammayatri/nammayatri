@@ -22,7 +22,7 @@ import qualified Beckn.ACL.Status as StatusACL
 import qualified Beckn.ACL.Update as ACL
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import BecknV2.Utils
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import Data.Maybe
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Sequence as Seq
@@ -50,7 +50,7 @@ import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as DTR
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, pack, safeHead, (^?), (^..))
+import EulerHS.Prelude hiding (id, pack, safeHead, (^?))
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps (LatLong (..))
@@ -123,7 +123,7 @@ bookingStatusPolling bookingId _ = runInMultiCloud $ do
 handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
 handleConfirmTtlExpiry booking = do
   bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId booking.merchantId "MOBILITY" booking.merchantOperatingCityId
-  bapConfig <- (bapConfigs ^? _head) & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
+  bapConfig <- (listToMaybe bapConfigs) & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
   now <- getCurrentTime
   confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")

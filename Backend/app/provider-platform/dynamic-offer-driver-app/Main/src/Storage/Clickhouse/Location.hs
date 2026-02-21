@@ -1,7 +1,7 @@
 module Storage.Clickhouse.Location where
 
 import qualified Domain.Types.Location as DLocation
-import Control.Lens ((^?), _head, _Just)
+import Control.Lens (_Just)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
@@ -45,4 +45,4 @@ findFullAddressById id createdAt = do
                 CH.&&. location.createdAt >=. addUTCTime (-120) createdAt -- locations are created before booking, so 2 mins buffer is added here
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE locationTTable)
-  return $ location ^? _head . _Just
+  return $ listToMaybe location . _Just

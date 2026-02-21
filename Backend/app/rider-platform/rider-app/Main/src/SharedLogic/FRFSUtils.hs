@@ -20,7 +20,6 @@ where
 
 import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
-import Control.Lens ((^?), _Just, _head)
 import BecknV2.FRFS.Utils
 import Control.Monad.Extra (mapMaybeM)
 import Data.Aeson as A
@@ -296,7 +295,7 @@ getPossibleRoutesBetweenTwoParentStops startParentStopCode endParentStopCode int
 
           -- Find the best start-end combination
           bestCombination = do
-            startStop <- startStopsInRoute ^? _head -- Get earliest start stop
+            startStop <- listToMaybe startStopsInRoute -- Get earliest start stop
             endStop <- find (\endStop -> endStop.sequenceNum > startStop.sequenceNum) endStopsInRoute -- Get first valid end stop
             return (startStop, endStop)
        in bestCombination <&> \(startStop, endStop) ->
@@ -565,7 +564,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       case mbUpcomingStop of
                         Just upcomingStop' -> do
                           upcomingStopNew <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode upcomingStop'.stop.stopCode routeCode integratedBPPConfig
-                          return $ upcomingStopNew ^? _head
+                          return $ listToMaybe upcomingStopNew
                         Nothing -> return Nothing
                     Nothing -> return Nothing
                 pure $
@@ -586,7 +585,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
           routeStopMapping <- HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
           nearbyBuses.buses `forM` \bus -> do
             let busData = bus.busData
-            let mbNextStop = busData.eta_data ^? _Just . _head
+            let mbNextStop = busData.eta_data >>= listToMaybe
             let mbNextStopMapping = mbNextStop >>= (\stop -> HM.lookup stop.stopCode routeStopMapping)
             let (_, upcomingStops) =
                   foldr'
@@ -693,7 +692,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
           Just $ takeUntil wpB $ dropWhile (/= wpA) waypoints
         _ -> Just []
     findNearestWaypoint point waypoints =
-      sortBy (comparing $ distanceBetweenInMeters point) waypoints ^? _head
+      sortBy (comparing $ distanceBetweenInMeters point) listToMaybe waypoints
 
     takeUntil y = foldr (\x acc -> x : if x == y then [] else acc) []
 
@@ -869,7 +868,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
-      groupId = sort (bookings <&> (.id.getId)) ^? _head
+      groupId = listToMaybe $ sort (bookings <&> (.id.getId))
   orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment groupId
   mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId) orderResp
   where

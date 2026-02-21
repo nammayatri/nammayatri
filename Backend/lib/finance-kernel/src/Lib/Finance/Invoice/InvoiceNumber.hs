@@ -24,7 +24,6 @@ module Lib.Finance.Invoice.InvoiceNumber
   )
 where
 
-import Control.Lens ((^?), _head)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime), addUTCTime, diffUTCTime, fromGregorian, toGregorian, utctDay)
 import Kernel.Prelude hiding (length, replicate)
@@ -134,8 +133,8 @@ parseInvoiceNumberSequence :: Text -> Maybe (Int, Day)
 parseInvoiceNumberSequence invoiceNumber = do
   let parts = T.splitOn "-" invoiceNumber
   guard (Prelude.length parts == 5) -- DDMMYY-MERCHANT-PURPOSE-TYPE-XXXXXX has 5 parts
-  datePart <- parts ^? _head
-  seqPart <- drop 4 parts ^? _head -- Last part is sequence
+  datePart <- listToMaybe parts
+  seqPart <- drop 4 listToMaybe parts -- Last part is sequence
   guard (T.length datePart == 6) -- DDMMYY = 6 characters
   guard (T.length seqPart == 6) -- XXXXXX = 6 characters
   seqNum <- readMaybe (T.unpack seqPart)

@@ -14,7 +14,7 @@
 
 module Domain.Action.UI.DriverWallet (getWalletTransactions, postWalletPayout, postWalletTopup, getWalletPayoutHistory) where
 
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import qualified API.Types.UI.DriverWallet as DriverWallet
 import Data.List (partition)
 import qualified Data.Map.Strict as Map
@@ -32,7 +32,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.VehicleCategory
 import qualified Environment
-import EulerHS.Prelude hiding (id, (^?), (^..))
+import EulerHS.Prelude hiding (id, (^?))
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payment.Types as Payment
@@ -220,7 +220,7 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
   let apiItems = map toHistoryItem items
       totalPaidOut = sum [fromMaybe 0 i.amount | i <- items, isPaidOut i.status]
       totalPending = sum [fromMaybe 0 i.amount | i <- items, isPending i.status]
-      lastPayout = [toHistoryItem i | i <- items, isPaidOut i.status] ^? _head
+      lastPayout = listToMaybe $ [toHistoryItem i | i <- items, isPaidOut i.status]
 
   pure $
     DriverWallet.PayoutHistoryResponse

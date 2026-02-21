@@ -68,7 +68,6 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
 import Control.Applicative ((<|>))
-import Control.Lens ((^?), _head)
 import qualified "dashboard-helper-api" Dashboard.Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -1030,7 +1029,7 @@ postDriverSyncDocAadharPan merchantShortId _opCity Common.AadharPanSyncReq {..} 
             then throwError DocumentAlreadyInSync
             else void $ mapM (maybe (return ()) (QImage.deleteById . (.id))) imgs
     Common.Pan -> do
-      image <- fromMaybeM UnsyncedImageNotFound (images ^? _head)
+      image <- fromMaybeM UnsyncedImageNotFound (listToMaybe images)
       when (isNothing image.workflowTransactionId) $ throwError NotValidatedUisngFrontendSDK
       when (length images > 1) $ throwError (InternalError "More than one Image found for document type PAN which is not possible using frontend sdk flow!!!!!!!!!")
 

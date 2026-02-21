@@ -1,7 +1,11 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Domain.Action.UI.Sos where
 
 import API.Types.UI.Sos
 import AWS.S3 as S3
+import Control.Lens ((.~), (?~))
+import Data.Generics.Labels ()
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.Foldable as Foldable
@@ -164,7 +168,11 @@ postSosCreate (mbPersonId, _merchantId) req = do
       now <- getCurrentTime
       let eightHoursInSeconds :: Int = 8 * 60 * 60
       let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
-      let sosDetailsWithEntityType = sosDetails {DSos.entityType = Just DSos.NonRide, DSos.sosState = Just DSos.SosActive, DSos.trackingExpiresAt = Just trackingExpiresAt}
+      let sosDetailsWithEntityType =
+            sosDetails
+              & #entityType ?~ DSos.NonRide
+              & #sosState ?~ DSos.SosActive
+              & #trackingExpiresAt ?~ trackingExpiresAt
       void $ QSos.create sosDetailsWithEntityType
 
       whenJust req.customerLocation $ \location -> do
@@ -216,7 +224,12 @@ createTicketForNewSos person ride riderConfig trackLink req = do
     Just sosDetails -> do
       void $ QSos.updateStatus DSos.Pending sosDetails.id
       void $ callUpdateTicket person sosDetails $ Just "SOS Re-Activated"
-      when (req.flow == DSos.SafetyFlow) $ CQSos.cacheSosIdByRideId ride.id $ sosDetails {DSos.status = DSos.Pending, DSos.entityType = Just DSos.Ride, DSos.sosState = Just DSos.SosActive}
+      when (req.flow == DSos.SafetyFlow) $
+        CQSos.cacheSosIdByRideId ride.id $
+          sosDetails
+            & #status .~ DSos.Pending
+            & #entityType ?~ DSos.Ride
+            & #sosState ?~ DSos.SosActive
       return sosDetails.id
     Nothing -> do
       phoneNumber <- mapM decrypt person.mobileNumber
@@ -231,7 +244,10 @@ createTicketForNewSos person ride riderConfig trackLink req = do
               Left _ -> return Nothing
           else return Nothing
       sosDetails <- SIVR.buildSosDetails person req ticketId
-      let sosDetailsWithEntityType = sosDetails {DSos.entityType = Just DSos.Ride, DSos.sosState = Just DSos.SosActive}
+      let sosDetailsWithEntityType =
+            sosDetails
+              & #entityType ?~ DSos.Ride
+              & #sosState ?~ DSos.SosActive
       when (req.flow == DSos.SafetyFlow) $ CQSos.cacheSosIdByRideId ride.id sosDetailsWithEntityType
       void $ QSos.create sosDetailsWithEntityType
       return sosDetailsWithEntityType.id
@@ -287,7 +303,7 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
       when shouldMarkAsResolved $ do
         void $ QSos.updateStatus DSos.Resolved sosId
         when (isRideBasedSos sosDetails.entityType) $
-          CQSos.cacheSosIdByRideId sosDetails.rideId $ sosDetails {DSos.status = DSos.Resolved}
+          CQSos.cacheSosIdByRideId sosDetails.rideId $ sosDetails & #status .~ DSos.Resolved
 
       when (sosDetails.entityType == Just DSos.NonRide && sosDetails.sosState == Just DSos.SosActive && isEndLiveTracking == Just False) $ do
         void $ QSos.updateState (Just DSos.LiveTracking) sosId

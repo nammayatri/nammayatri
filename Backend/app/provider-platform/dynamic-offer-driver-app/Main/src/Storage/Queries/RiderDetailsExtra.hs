@@ -1,6 +1,5 @@
 module Storage.Queries.RiderDetailsExtra where
 
-import Control.Lens ((^..), _Just, to)
 import Domain.Types.DriverReferral
 import Domain.Types.Merchant
 import Domain.Types.Person
@@ -45,12 +44,12 @@ findAllRiderDetailsWithOptions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
 findAllRiderDetailsWithOptions merchantId limit offset mbFrom mbTo areActivatedRidesOnly mbReferredByDriver mbMobileNumberHash = do
   findAllWithOptionsKV
     [ Se.And
-        ( (mbFrom ^.. _Just . to (\f -> Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq f))
-            <> (mbTo ^.. _Just . to (\t -> Se.Is BeamRD.createdAt $ Se.LessThanOrEq t))
+        ( foldMap (\f -> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq f]) mbFrom
+            <> foldMap (\t -> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq t]) mbTo
             <> [Se.Is BeamRD.merchantId $ Se.Eq merchantId.getId]
-            <> (mbReferredByDriver ^.. _Just . to (\d -> Se.Is BeamRD.referredByDriver $ Se.Eq (Just d.getId)))
+            <> foldMap (\d -> [Se.Is BeamRD.referredByDriver $ Se.Eq (Just d.getId)]) mbReferredByDriver
             <> [Se.Is BeamRD.referredByDriver $ Se.Not $ Se.Eq Nothing] -- filter the ones which are referred
-            <> (mbMobileNumberHash ^.. _Just . to (\h -> Se.Is BeamRD.mobileNumberHash $ Se.Eq h))
+            <> foldMap (\h -> [Se.Is BeamRD.mobileNumberHash $ Se.Eq h]) mbMobileNumberHash
             <> [Se.Is BeamRD.payoutFlagReason $ Se.Eq Nothing | areActivatedRidesOnly == True] -- show only which are not frauds i.e. Nothing as flag
         )
     ]

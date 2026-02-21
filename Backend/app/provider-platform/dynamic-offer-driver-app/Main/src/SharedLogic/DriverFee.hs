@@ -13,7 +13,7 @@
 -}
 module SharedLogic.DriverFee where
 
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import Data.List ((\\))
 import qualified Data.List as DL
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
@@ -25,7 +25,7 @@ import Domain.Types.Person (Person)
 import Domain.Types.Plan (Plan, ServiceNames (..))
 import qualified Domain.Types.Plan as Plan
 import Domain.Types.TransporterConfig as TC
-import EulerHS.Prelude hiding (id, state, (^?), (^..))
+import EulerHS.Prelude hiding (id, state, (^?))
 import GHC.Float (double2Int)
 import GHC.Records.Extra
 import Kernel.Beam.Functions
@@ -142,7 +142,7 @@ groupDriverFeeByInvoices currency driverFees_ = do
       now <- getCurrentTime
       let driverFeeIds = invoices <&> (.driverFeeId)
           invoiceDriverFees = DL.filter (\x -> x.id `elem` driverFeeIds) driverFees
-          date = utctDay $ maybe now (.createdAt) (invoices ^? _head)
+          date = utctDay $ maybe now (.createdAt) (listToMaybe invoices)
           numRides = sum (invoiceDriverFees <&> (.numRides))
           payBy = DL.minimum (invoiceDriverFees <&> (.payBy))
           startTime = DL.minimum (invoiceDriverFees <&> (.startTime))
@@ -158,7 +158,7 @@ groupDriverFeeByInvoices currency driverFees_ = do
           status =
             case mStatus of
               (Just status_) -> status_
-              Nothing -> maybe DDF.INACTIVE (.status) (invoiceDriverFees ^? _head)
+              Nothing -> maybe DDF.INACTIVE (.status) (listToMaybe invoiceDriverFees)
 
       return $ DriverFeeByInvoice {..}
 

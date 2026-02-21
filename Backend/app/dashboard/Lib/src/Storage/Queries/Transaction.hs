@@ -15,7 +15,6 @@
 
 module Storage.Queries.Transaction where
 
-import Control.Lens ((^?), _head)
 import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
 import qualified Database.Beam as B
 import Domain.Types.Person as DP
@@ -45,7 +44,7 @@ fetchLastTransaction endpoint serverName =
     (Se.Desc BeamT.createdAt)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 findAllTransactionsByLimitOffset ::
   BeamFlow m r =>

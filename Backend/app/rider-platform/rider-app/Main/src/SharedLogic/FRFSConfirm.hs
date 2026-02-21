@@ -23,8 +23,8 @@ import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
 import qualified Domain.Types.RouteDetails as DRD
 import qualified Domain.Types.Trip as DTrip
-import Control.Lens ((^?), _Just, _head)
-import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust, (^?), (^..))
+import Control.Lens ((^?))
+import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust, (^?))
 import qualified ExternalBPP.CallAPI.Init as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
 import Kernel.Beam.Functions as B
@@ -157,7 +157,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
 
       -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json
       let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< routeStationsJson
-      let mbFirstRouteStation = fromMaybe [] routeStations ^? _head
+      let mbFirstRouteStation = fromMaybe [] listToMaybe routeStations
       let mbBookedRouteShortName = mbFirstRouteStation <&> (.shortName)
       let mbBookedServiceTierType = mbFirstRouteStation >>= (.vehicleServiceTier) <&> (._type)
       when (isJust mbBookedRouteShortName && isJust mbBookedServiceTierType) $ do
@@ -352,7 +352,7 @@ buildJourneyAndLeg booking fareParameters = do
     let estimatedPrice = find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)
 
     let mbRouteStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
-        mbRouteStation = mbRouteStations ^? _Just . _head
+        mbRouteStation = mbRouteStations >>= listToMaybe
 
     routeLiveInfo <-
       case (mbRouteStation, booking.vehicleNumber) of

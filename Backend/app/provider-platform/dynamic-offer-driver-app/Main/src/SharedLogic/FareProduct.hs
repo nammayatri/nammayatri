@@ -9,7 +9,6 @@
 
 module SharedLogic.FareProduct where
 
-import Control.Lens ((^?), _head)
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.FareProduct as DFareProduct
@@ -157,4 +156,4 @@ getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
 getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area = do
   fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area
   currentIstTime <- getLocalCurrentTime 19800
-  return $ DTB.findBoundedDomain fareProducts currentIstTime ^? _head
+  return $ DTB.findBoundedDomain fareProducts listToMaybe currentIstTime

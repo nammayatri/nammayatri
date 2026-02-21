@@ -30,7 +30,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import qualified Data.Time.Clock.POSIX as Time
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding ((.~), (^..))
+import EulerHS.Prelude hiding ((.~))
 import Kernel.Types.Base64
 import qualified Kernel.Types.Beckn.Context as API
 import qualified Kernel.Types.Beckn.ReqTypes as API

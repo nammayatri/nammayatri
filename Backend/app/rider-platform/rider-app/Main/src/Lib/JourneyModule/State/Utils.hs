@@ -1,6 +1,5 @@
 module Lib.JourneyModule.State.Utils where
 
-import Control.Lens ((^?), _head)
 import Domain.Types.Booking as DBooking
 import Domain.Types.BookingStatus as DTaxiBooking
 import Domain.Types.Estimate as DEstimate
@@ -44,7 +43,7 @@ getFRFSAllStatuses journeyLeg mbBooking = do
                 FRFSTicket DFRFSTicket.USED -> JLTypes.Completed
                 FRFSTicket DFRFSTicket.EXPIRED -> JLTypes.Completed
                 Feedback _ -> JLTypes.Completed
-                _ -> castTrackingStatusToJourneyLegStatus (fromMaybe InPlan (trackingStatuses ^? _head <&> (\(_, a, _) -> a))) -- for UI backward compatibility
+                _ -> castTrackingStatusToJourneyLegStatus (fromMaybe InPlan (listToMaybe trackingStatuses <&> (\(_, a, _) -> a))) -- for UI backward compatibility
   return (oldStatus, bookingStatus, trackingStatuses)
   where
     getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBookingStatus -> JLTypes.JourneyLegStatus
@@ -62,7 +61,7 @@ getFRFSAllStatuses journeyLeg mbBooking = do
 
 getWalkAllStatuses :: DJourneyLeg.JourneyLeg -> (JLTypes.JourneyLegStatus, TrackingStatus, Maybe UTCTime)
 getWalkAllStatuses journeyLeg = do
-  case journeyLeg.routeDetails ^? _head of
+  case listToMaybe journeyLeg.routeDetails of
     Just routeDetail -> (maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus routeDetail.trackingStatus, fromMaybe InPlan routeDetail.trackingStatus, routeDetail.trackingStatusLastUpdatedAt)
     Nothing -> (JLTypes.InPlan, InPlan, Nothing)
 
@@ -70,7 +69,7 @@ getTaxiAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) =
 getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
   now <- getCurrentTime
   let bookingStatus = getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate
-  trackingStatus <- maybe (return InPlan) (getTaxiJourneyLegTrackingStatus bookingStatus) (journeyLeg.routeDetails ^? _head)
+  trackingStatus <- maybe (return InPlan) (getTaxiJourneyLegTrackingStatus bookingStatus) (listToMaybe journeyLeg.routeDetails)
   let oldStatus =
         if trackingStatus == Finished
           then JLTypes.Completed
@@ -85,7 +84,7 @@ getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
                   TaxiRide status -> fromMaybe (castTrackingStatusToJourneyLegStatus trackingStatus) (mapTaxiRideStatusToJourneyLegStatus status)
                   Feedback _ -> JLTypes.Completed
                   _ -> castTrackingStatusToJourneyLegStatus trackingStatus -- for UI backward compatibility
-  return (oldStatus, bookingStatus, trackingStatus, fromMaybe now ((journeyLeg.routeDetails ^? _head) >>= (.trackingStatusLastUpdatedAt)))
+  return (oldStatus, bookingStatus, trackingStatus, fromMaybe now ((listToMaybe journeyLeg.routeDetails) >>= (.trackingStatusLastUpdatedAt)))
   where
     mapTaxiEstimateStatusToJourneyLegStatus :: DTaxiEstimate.EstimateStatus -> JLTypes.JourneyLegStatus
     mapTaxiEstimateStatusToJourneyLegStatus estimateStatus =

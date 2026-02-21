@@ -29,7 +29,7 @@ import Control.Lens ((^?), _Just, _head)
 import Data.Generics.Labels ()
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
-import EulerHS.Prelude hiding (state, (^?), (^..))
+import EulerHS.Prelude hiding (state, (^?))
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Id

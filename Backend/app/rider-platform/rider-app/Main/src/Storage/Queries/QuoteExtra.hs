@@ -1,6 +1,5 @@
 module Storage.Queries.QuoteExtra where
 
-import Control.Lens ((^?), _head)
 import Domain.Types.DriverOffer as DDO
 import Domain.Types.Estimate
 import Domain.Types.Quote as DQ
@@ -51,7 +50,7 @@ findByBppIdAndBPPQuoteId bppId bppQuoteId = do
   dOffer <- QueryDO.findByBPPQuoteId bppQuoteId
   quoteList <- findAllWithKV [Se.And [Se.Is BeamQ.providerId $ Se.Eq bppId, Se.Is BeamQ.driverOfferId $ Se.In (map (Just . getId . DDO.id) dOffer)]]
   let quoteWithDoOfferId = foldl' (getQuoteWithDOffer dOffer) [] quoteList
-  pure $ quoteWithDoOfferId ^? _head
+  pure $ listToMaybe quoteWithDoOfferId
   where
     getQuoteWithDOffer dOffer res quote = do
       let doId = case quote.quoteDetails of

@@ -1,6 +1,5 @@
 module Storage.Queries.InvoiceExtra where
 
-import Control.Lens ((^?), (^..), _Just, _head, to)
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Invoice as Domain
@@ -70,7 +69,7 @@ findLatestByDriverFeeId (Id driverFeeId) =
     (Se.Desc BeamI.createdAt)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 findActiveManualOrMandateSetupInvoiceByFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DF.DriverFee -> m [Domain.Invoice]
 findActiveManualOrMandateSetupInvoiceByFeeId (Id driverFeeId) =
@@ -197,10 +196,10 @@ updateStatusAndTypeByMbdriverFeeIdAndInvoiceId invoiceId status paymentMode driv
   now <- getCurrentTime
   updateWithKV
     ( [Se.Set BeamI.updatedAt now]
-        <> (status ^.. _Just . to (Se.Set BeamI.invoiceStatus))
-        <> (paymentMode ^.. _Just . to (Se.Set BeamI.paymentMode))
+        <> foldMap (\v -> [Se.Set BeamI.invoiceStatus v]) status
+        <> foldMap (\v -> [Se.Set BeamI.paymentMode v]) paymentMode
     )
-    ((driverFeeId ^.. _Just . to (\dfId -> Se.Is BeamI.driverFeeId $ Se.Eq (getId dfId))) <> [Se.Is BeamI.id $ Se.Eq invoiceId.getId])
+    (foldMap (\dfId -> [Se.Is BeamI.driverFeeId $ Se.Eq (getId dfId)]) driverFeeId <> [Se.Is BeamI.id $ Se.Eq invoiceId.getId])
 
 updatePendingToFailed ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

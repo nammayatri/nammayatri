@@ -2,7 +2,6 @@
 
 module IssueManagement.Storage.Queries.Issue.IssueOption where
 
-import Control.Lens ((^?), _head)
 import Database.Beam.Postgres (Postgres)
 import qualified IGM.Enums as Spec
 import IssueManagement.Domain.Types.Issue.IssueCategory
@@ -73,7 +72,7 @@ findByIdAndLanguage :: BeamFlow m r => Id IssueOption -> Language -> m (Maybe (I
 findByIdAndLanguage issueOptionId language = do
   iOptions <- findAllWithKV [Is BeamIO.id $ Eq (getId issueOptionId)]
   iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIO.option <$> iOptions)]]
-  let dInfosWithTranslations' = foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions ^? _head
+  let dInfosWithTranslations' = foldl' (getIssueOptionsWithTranslations iTranslations) [] listToMaybe iOptions
   pure dInfosWithTranslations'
   where
     getIssueOptionsWithTranslations iTranslations dInfosWithTranslations iOption =

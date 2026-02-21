@@ -1,7 +1,6 @@
 module Storage.Queries.ServicePeopleCategoryExtra where
 
 import Control.Applicative ((<|>))
-import Control.Lens ((^?), _head)
 import Data.Time hiding (getCurrentTime)
 import Domain.Types.ServicePeopleCategory
 import Kernel.Beam.Functions
@@ -27,7 +26,7 @@ findServicePeopleCategoryById id day = do
   where
     getServicePeopleCategory servicePeopleCategories currentLocalTime pricingType = do
       let boundedServicePeopleCategories = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded && cfg.pricingType == pricingType) servicePeopleCategories) currentLocalTime
-      pure $ (boundedServicePeopleCategories ^? _head) <|> find (\cfg -> cfg.timeBounds == Unbounded && cfg.pricingType == pricingType) servicePeopleCategories
+      pure $ (listToMaybe boundedServicePeopleCategories) <|> find (\cfg -> cfg.timeBounds == Unbounded && cfg.pricingType == pricingType) servicePeopleCategories
 
 findByIdAndName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id ServicePeopleCategory] -> Text -> m (Maybe ServicePeopleCategory)
 findByIdAndName id name = findOneWithKV [Se.And [Se.Is BeamR.id $ Se.In (map getId id), Se.Is BeamR.name $ Se.Eq name]]

@@ -21,7 +21,6 @@ where
 import qualified API.Types.UI.Pass as PassAPI
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
-import Control.Lens ((^?), _head)
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -742,7 +741,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
     when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired] && purchasedPass.endDate < today) $ do
       -- check if user has already renewed the pass
       allPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] today
-      let mbFirstPreBookedPayment = allPreBookedPayments ^? _head
+      let mbFirstPreBookedPayment = listToMaybe allPreBookedPayments
       case mbFirstPreBookedPayment of
         Just firstPreBookedPayment -> do
           let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
@@ -834,7 +833,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
       Nothing -> return []
   let sourceStop =
         getNearestStop routeStopMapping passVerifyReq.currentLat passVerifyReq.currentLon
-          <|> ((routeStopMapping ^? _head) <&> (.stopCode))
+          <|> ((listToMaybe routeStopMapping) <&> (.stopCode))
       destinationStop = (safeTail routeStopMapping) <&> (.stopCode)
   id <- generateGUID
   now <- getCurrentTime
@@ -1053,7 +1052,7 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
 
   QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
   allPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusAndStartDate (Just 1) Nothing purchasedPass.id [DPurchasedPass.Active, DPurchasedPass.PreBooked] purchasedPass.startDate
-  whenJust (allPayments ^? _head) $ \payment -> do
+  whenJust (listToMaybe allPayments) $ \payment -> do
     QPurchasedPassPayment.updateStatusAndDatesById newStartDate newEndDate newStatus payment.id
   return APISuccess.Success
 

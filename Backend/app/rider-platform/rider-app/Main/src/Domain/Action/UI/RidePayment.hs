@@ -2,7 +2,7 @@ module Domain.Action.UI.RidePayment where
 
 import qualified API.Types.UI.RidePayment
 import AWS.S3 as S3
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import qualified Data.Text as Text
 import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Types.Booking
@@ -17,7 +17,7 @@ import qualified Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RideStatus
 import qualified Environment
-import EulerHS.Prelude hiding (id, (^?), (^..))
+import EulerHS.Prelude hiding (id, (^?))
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface
@@ -147,7 +147,7 @@ getPaymentMethods (mbPersonId, _) = do
           DMPM.LIVE -> person.defaultPaymentMethodId
           DMPM.TEST -> person.defaultTestPaymentMethodId
   when (maybe False (\dpm -> dpm `notElem` savedPaymentMethodIds) defaultPaymentMethodId) $ do
-    let firstSavedPaymentMethodId = savedPaymentMethodIds ^? _head
+    let firstSavedPaymentMethodId = listToMaybe savedPaymentMethodIds
     SPayment.updateDefaultPersonPaymentMethodId person firstSavedPaymentMethodId
   return $ API.Types.UI.RidePayment.PaymentMethodsResponse {list = resp, defaultPaymentMethodId}
 

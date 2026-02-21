@@ -1,6 +1,5 @@
 module SharedLogic.FRFSFareCalculator where
 
-import Control.Lens ((^?), _head)
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
@@ -57,7 +56,7 @@ mkFareParameters priceItems =
         Price
           { amount = sum ((.totalPrice.amount) <$> priceItems),
             amountInt = sum ((.totalPrice.amountInt) <$> priceItems),
-            currency = fromMaybe INR (map (.unitPrice.currency) priceItems ^? _head)
+            currency = fromMaybe INR (map (.unitPrice.currency) listToMaybe priceItems)
           }
       totalQuantity = sum ((.quantity) <$> priceItems)
    in FRFSFareParameters

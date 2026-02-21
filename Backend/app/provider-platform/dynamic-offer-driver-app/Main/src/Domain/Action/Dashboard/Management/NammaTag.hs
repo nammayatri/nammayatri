@@ -56,7 +56,7 @@ import Domain.Types.UiDriverConfig (UiDriverConfig (..))
 import qualified Domain.Types.UiDriverConfig as DTDC
 import qualified Domain.Types.Yudhishthira
 import qualified Environment
-import EulerHS.Prelude hiding (id, (^?), (^..))
+import EulerHS.Prelude hiding (id, (^?))
 import qualified Kernel.Prelude as Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -202,59 +202,59 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       driversData :: [DriverPoolWithActualDistResult] <- mapM (YudhishthiraFlow.createLogicData def . Just) req.inputData
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False 0)
     LYT.CANCELLATION_COIN_POLICY -> do
-      logicData :: CancellationCoinData <- YudhishthiraFlow.createLogicData def (req.inputData ^? _head)
+      logicData :: CancellationCoinData <- YudhishthiraFlow.createLogicData def (listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy CancellationCoinResult) transporterConfig.referralLinkPassword req logicData
     LYT.DYNAMIC_PRICING_UNIFIED -> do
-      logicData :: DynamicPricingData <- YudhishthiraFlow.createLogicData def (req.inputData ^? _head)
+      logicData :: DynamicPricingData <- YudhishthiraFlow.createLogicData def (listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DynamicPricingResult) transporterConfig.referralLinkPassword req logicData
     LYT.USER_CANCELLATION_DUES -> do
-      logicData :: UserCancellationDuesData <- YudhishthiraFlow.createLogicData def (req.inputData ^? _head)
+      logicData :: UserCancellationDuesData <- YudhishthiraFlow.createLogicData def (listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy UserCancellationDuesResult) transporterConfig.referralLinkPassword req logicData
     LYT.GPS_TOLL_BEHAVIOR -> do
-      logicData :: GpsTollBehavior.GpsTollBehaviorData <- YudhishthiraFlow.createLogicData def (req.inputData ^? _head)
+      logicData :: GpsTollBehavior.GpsTollBehaviorData <- YudhishthiraFlow.createLogicData def (listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy GpsTollBehavior.GpsTollBehaviorOutput) transporterConfig.referralLinkPassword req logicData
     LYT.USER_CANCELLATION_DUES_WAIVE_OFF -> do
-      logicData :: UserCancellationDuesWaiveOffData <- YudhishthiraFlow.createLogicData def (req.inputData ^? _head)
+      logicData :: UserCancellationDuesWaiveOffData <- YudhishthiraFlow.createLogicData def (listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy UserCancellationDuesWaiveOffResult) transporterConfig.referralLinkPassword req logicData
     LYT.CONFIG LYT.DriverPoolConfig -> do
-      logicData :: Config <- YudhishthiraFlow.createLogicData def (req.inputData ^? _head)
+      logicData :: Config <- YudhishthiraFlow.createLogicData def (listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy Config) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "DriverPoolConfig config not found") (YTH.genDef (Proxy @DTD.DriverPoolConfig) ^? _head)
+      defaultConfig <- fromMaybeM (InvalidRequest "DriverPoolConfig config not found") (listToMaybe $ YTH.genDef (Proxy @DTD.DriverPoolConfig))
       let configWrap = LYT.Config defaultConfig Nothing 1
-      logicData :: (LYT.Config DTD.DriverPoolConfig) <- YudhishthiraFlow.createLogicData configWrap (req.inputData ^? _head)
+      logicData :: (LYT.Config DTD.DriverPoolConfig) <- YudhishthiraFlow.createLogicData configWrap (listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTD.DriverPoolConfig)) transporterConfig.referralLinkPassword req logicData
     LYT.UI_DRIVER dt pt -> do
       let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       defaultConfig <- SQU.findUIConfig uiConfigReq merchantOpCityId >>= fromMaybeM (InvalidRequest "No default found for UiDriverConfig")
       let configWrap = LYT.Config defaultConfig.config Nothing 1
-      logicData :: (LYT.Config Value) <- YudhishthiraFlow.createLogicData configWrap (req.inputData ^? _head)
+      logicData :: (LYT.Config Value) <- YudhishthiraFlow.createLogicData configWrap (listToMaybe req.inputData)
       url <- TC.getTSServiceUrl
       YudhishthiraFlow.verifyAndUpdateUIDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config Value)) transporterConfig.referralLinkPassword req logicData url
     LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "PayoutConfig config not found") (YTH.genDef (Proxy @DTP.PayoutConfig) ^? _head)
+      defaultConfig <- fromMaybeM (InvalidRequest "PayoutConfig config not found") (listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
       let configWrap = LYT.Config defaultConfig Nothing 1
-      logicData :: (LYT.Config DTP.PayoutConfig) <- YudhishthiraFlow.createLogicData configWrap (req.inputData ^? _head)
+      logicData :: (LYT.Config DTP.PayoutConfig) <- YudhishthiraFlow.createLogicData configWrap (listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTP.PayoutConfig)) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig config not found") (YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig) ^? _head)
+      defaultConfig <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig config not found") (listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig))
       let configWrap = LYT.Config defaultConfig Nothing 1
-      logicData :: (LYT.Config DTRN.RideRelatedNotificationConfig) <- YudhishthiraFlow.createLogicData configWrap (req.inputData ^? _head)
+      logicData :: (LYT.Config DTRN.RideRelatedNotificationConfig) <- YudhishthiraFlow.createLogicData configWrap (listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTRN.RideRelatedNotificationConfig)) transporterConfig.referralLinkPassword req logicData
     -- LYT.DRIVER_CONFIG LYT.MerchantMessage -> do
     --   defaultConfig <- (pure $ YTH.genDef (Proxy @DTM.MerchantMessage) ^? _head) >>= fromMaybeM (InvalidRequest "MerchantMessage config not found")
     --   let configWrap = LYT.Config defaultConfig Nothing 1
-    --   logicData :: (LYT.Config DTM.MerchantMessage) <- YudhishthiraFlow.createLogicData configWrap (req.inputData ^? _head)
+    --   logicData :: (LYT.Config DTM.MerchantMessage) <- YudhishthiraFlow.createLogicData configWrap (listToMaybe req.inputData)
     --   YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTM.MerchantMessage) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.MerchantPushNotification -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "MerchantPushNotification config not found") (YTH.genDef (Proxy @DTPN.MerchantPushNotification) ^? _head)
+      defaultConfig <- fromMaybeM (InvalidRequest "MerchantPushNotification config not found") (listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
       let configWrap = LYT.Config defaultConfig Nothing 1
-      logicData :: (LYT.Config DTPN.MerchantPushNotification) <- YudhishthiraFlow.createLogicData configWrap (req.inputData ^? _head)
+      logicData :: (LYT.Config DTPN.MerchantPushNotification) <- YudhishthiraFlow.createLogicData configWrap (listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy (LYT.Config DTPN.MerchantPushNotification)) transporterConfig.referralLinkPassword req logicData
     -- LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
     --   def <- (pure $ YTH.genDef (Proxy @DTT.TransporterConfig) ^? _head) >>= fromMaybeM (InvalidRequest "Transporter config not found")
     --   let configWrap = LYT.Config def Nothing 1
-    --   logicData :: (LYT.Config DTT.TransporterConfig) <- YudhishthiraFlow.createLogicData configWrap (req.inputData ^? _head)
+    --   logicData :: (LYT.Config DTT.TransporterConfig) <- YudhishthiraFlow.createLogicData configWrap (listToMaybe req.inputData)
     --   YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTT.TransporterConfig) transporterConfig.referralLinkPassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
@@ -379,28 +379,28 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
             LYT.schema = toInlinedSchemaValue (Proxy @UserCancellationDuesWaiveOffData)
           }
     LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "DriverPoolConfig default config not found") (YTH.genDef (Proxy @DTD.DriverPoolConfig) ^? _head)
+      defaultConfig <- fromMaybeM (InvalidRequest "DriverPoolConfig default config not found") (listToMaybe $ YTH.genDef (Proxy @DTD.DriverPoolConfig))
       return $
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
             LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DTD.DriverPoolConfig))
           }
     LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "PayoutConfig default config not found") (YTH.genDef (Proxy @DTP.PayoutConfig) ^? _head)
+      defaultConfig <- fromMaybeM (InvalidRequest "PayoutConfig default config not found") (listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
       return $
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
             LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DTP.PayoutConfig))
           }
     LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig default config not found") (YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig) ^? _head)
+      defaultConfig <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig default config not found") (listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig))
       return $
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
             LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DTRN.RideRelatedNotificationConfig))
           }
     LYT.DRIVER_CONFIG LYT.MerchantPushNotification -> do
-      defaultConfig <- fromMaybeM (InvalidRequest "MerchantPushNotification default config not found") (YTH.genDef (Proxy @DTPN.MerchantPushNotification) ^? _head)
+      defaultConfig <- fromMaybeM (InvalidRequest "MerchantPushNotification default config not found") (listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
       return $
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),

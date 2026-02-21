@@ -27,7 +27,6 @@ where
 
 import AWS.S3 as S3
 import qualified Beckn.ACL.Update as ACL
-import Control.Lens ((^?), _head)
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
@@ -180,7 +179,7 @@ editLocation rideId (personId, merchantId) req = do
       {-
         Sorting down will sort mapping like this v-2, v-1, LATEST
       -}
-      oldestMapping <- (sortBy (comparing (Down . (.version))) pickupLocationMappings ^? _head) & fromMaybeM (InternalError $ "Latest mapping not found for rideId: " <> ride.id.getId)
+      oldestMapping <- (sortBy (comparing (Down . (.version))) listToMaybe pickupLocationMappings) & fromMaybeM (InternalError $ "Latest mapping not found for rideId: " <> ride.id.getId)
       initialLocationForRide <- QL.findById oldestMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> oldestMapping.locationId.getId)
       let initialLatLong = Maps.LatLong {lat = initialLocationForRide.lat, lon = initialLocationForRide.lon}
           currentLatLong = pickup.gps

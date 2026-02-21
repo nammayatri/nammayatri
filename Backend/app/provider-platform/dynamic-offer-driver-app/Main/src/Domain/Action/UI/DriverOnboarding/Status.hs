@@ -18,7 +18,6 @@ module Domain.Action.UI.DriverOnboarding.Status
   )
 where
 
-import Control.Lens ((^?), _head)
 import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -102,4 +101,4 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
 getDigilockerOverallStatus :: Id SP.Person -> Flow (Maybe DDV.SessionStatus)
 getDigilockerOverallStatus driverId = do
   latestSessions <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
-  return $ fmap (.sessionStatus) (latestSessions ^? _head)
+  return $ fmap (.sessionStatus) (listToMaybe latestSessions)

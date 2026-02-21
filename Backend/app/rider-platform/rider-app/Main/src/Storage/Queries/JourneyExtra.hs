@@ -3,7 +3,6 @@
 
 module Storage.Queries.JourneyExtra where
 
-import Control.Lens ((^..), _Just, to)
 import Control.Monad.Extra (mapMaybeM)
 import Data.List (maximumBy, sortBy)
 import Data.Ord (comparing)
@@ -42,8 +41,8 @@ findAllByRiderId (Kernel.Types.Id.Id personId) mbLimit mbOffset mbFromDate mbToD
     findAllWithOptionsKV
       [ Se.And
           ( [Se.Is Beam.riderId $ Se.Eq personId]
-              <> (mbFromDate ^.. _Just . to (\d -> Se.Is Beam.createdAt $ Se.GreaterThanOrEq d))
-              <> (mbToDate ^.. _Just . to (\d -> Se.Is Beam.createdAt $ Se.LessThanOrEq d))
+              <> foldMap (\d -> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq d]) mbFromDate
+              <> foldMap (\d -> [Se.Is Beam.createdAt $ Se.LessThanOrEq d]) mbToDate
               <> ([Se.Is Beam.status $ Se.Not $ Se.In [Just DJ.NEW, Just DJ.INITIATED]])
               <> ([Se.Is Beam.status $ Se.In mbJourneyStatus | not (null mbJourneyStatus)])
               <> [ Se.And

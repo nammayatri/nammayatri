@@ -14,7 +14,7 @@
 
 module Domain.Action.Internal.FeedbackForm where
 
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import Data.Foldable ()
 import qualified Domain.Types.Feedback as DFeedback
 import Domain.Types.Feedback.FeedbackForm (BadgeMetadata (..), FeedbackAnswer (FeedbackAnswer), FeedbackFormReq (..))
@@ -26,7 +26,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, (^?), (^..))
+import EulerHS.Prelude hiding (id, (^?))
 import qualified Kernel.Beam.Functions as B
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
@@ -257,4 +257,4 @@ selectPNBadge :: [BadgeMetadata] -> Maybe Text
 selectPNBadge badges =
   let sendPNBadges = filter (.sendPN) badges
       sortedBadges = sortOn (\b -> (fromMaybe 999 b.priority, b.badgeKey)) sendPNBadges
-   in (.badgeKey) <$> (sortedBadges ^? _head)
+   in (.badgeKey) <$> (listToMaybe sortedBadges)

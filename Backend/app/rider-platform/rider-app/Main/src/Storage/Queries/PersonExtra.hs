@@ -1,7 +1,6 @@
 module Storage.Queries.PersonExtra where
 
 import Control.Applicative ((<|>))
-import Control.Lens ((^..), (^?), _Just, _head, to)
 import qualified Data.Time as T
 import Domain.Action.UI.Person
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
@@ -58,7 +57,7 @@ findByMobileNumberHashAndCountryCode countryCode mobileNumberHash =
     (Se.Desc BeamP.id)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe
 
 findByMobileNumberAndMerchantAndRole :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Id Merchant -> [Role] -> m (Maybe Person)
 findByMobileNumberAndMerchantAndRole mobileNumberHash (Id merchantId) role = findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In role]]
@@ -182,7 +181,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.deviceToken mbDeviceToken | isJust mbDeviceToken]
         <> [Se.Set BeamP.notificationToken mbNotificationToken | isJust mbNotificationToken]
         <> [Se.Set BeamP.language mbLanguage | isJust mbLanguage]
-        <> (mbGender ^.. _Just . to (\v -> Se.Set BeamP.gender v))
+        <> foldMap (\v -> [Se.Set BeamP.gender v]) mbGender
         <> [Se.Set BeamP.clientReactNativeVersion mbRnVersion | isJust mbRnVersion]
         <> [Se.Set BeamP.businessEmailEncrypted mbBusinessEmailEncrypted | isJust mbBusinessEmailEncrypted]
         <> [Se.Set BeamP.businessEmailHash mbBusinessEmailHash | isJust mbBusinessEmailHash]
@@ -308,15 +307,15 @@ findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearch
         ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchant.id)),
             Se.Is BeamP.role (Se.Eq USER)
           ]
-            <> (mbEnabled ^.. _Just . to (\v -> Se.Is BeamP.enabled $ Se.Eq v))
-            <> (mbBlocked ^.. _Just . to (\v -> Se.Is BeamP.blocked $ Se.Eq v))
+            <> foldMap (\v -> [Se.Is BeamP.enabled $ Se.Eq v]) mbEnabled
+            <> foldMap (\v -> [Se.Is BeamP.blocked $ Se.Eq v]) mbBlocked
             <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq mbSearchPhoneDBHash | isJust mbSearchPhoneDBHash])
             <> [ Se.Or
                    ( [Se.Is BeamP.merchantOperatingCityId $ Se.Eq $ Just (getId moCity.id)]
                        <> [Se.Is BeamP.merchantOperatingCityId $ Se.Eq Nothing | moCity.city == merchant.defaultCity]
                    )
                ]
-            <> (mbPersonId ^.. _Just . to (\v -> Se.Is BeamP.id $ Se.Eq (getId v)))
+            <> foldMap (\v -> [Se.Is BeamP.id $ Se.Eq (getId v)]) mbPersonId
         )
     ]
     (Se.Asc BeamP.firstName)
@@ -343,10 +342,10 @@ updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyC
   now <- getCurrentTime
   updateOneWithKV
     ( [Se.Set BeamP.updatedAt now]
-        <> (shareEmergencyContacts ^.. _Just . to (\v -> Se.Set BeamP.shareEmergencyContacts v))
+        <> foldMap (\v -> [Se.Set BeamP.shareEmergencyContacts v]) shareEmergencyContacts
         <> [Se.Set BeamP.shareTripWithEmergencyContactOption shareTripWithEmergencyContactOption | isJust shareTripWithEmergencyContactOption]
-        <> (nightSafetyChecks ^.. _Just . to (\v -> Se.Set BeamP.nightSafetyChecks v))
-        <> (hasCompletedSafetySetup ^.. _Just . to (\v -> Se.Set BeamP.hasCompletedSafetySetup v))
+        <> foldMap (\v -> [Se.Set BeamP.nightSafetyChecks v]) nightSafetyChecks
+        <> foldMap (\v -> [Se.Set BeamP.hasCompletedSafetySetup v]) hasCompletedSafetySetup
         <> [Se.Set BeamP.informPoliceSos informPoliceSosFlag | isJust informPoliceSosFlag]
     )
     [Se.Is BeamP.id (Se.Eq personId)]

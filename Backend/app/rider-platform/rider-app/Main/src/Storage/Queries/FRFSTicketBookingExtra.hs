@@ -1,7 +1,6 @@
 module Storage.Queries.FRFSTicketBookingExtra where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import Control.Lens ((^..), _Just, to)
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import Domain.Types.Person
@@ -51,7 +50,7 @@ findAllByRiderId limit offset riderId mbVehicleCategory = do
   findAllWithOptionsKV
     [ Se.And
         ( [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)]
-            <> (mbVehicleCategory ^.. _Just . to (\vc -> Se.Is Beam.vehicleType $ Se.Eq vc))
+            <> foldMap (\vc -> [Se.Is Beam.vehicleType $ Se.Eq vc]) mbVehicleCategory
         )
     ]
     (Se.Desc Beam.createdAt)

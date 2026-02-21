@@ -24,7 +24,7 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((^?), _Just, _head)
 import Data.Generics.Labels ()
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
-import EulerHS.Prelude hiding (state, (^?), (^..))
+import EulerHS.Prelude hiding (state, (^?))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common

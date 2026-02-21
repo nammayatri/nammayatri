@@ -1,7 +1,6 @@
 module Storage.Clickhouse.Vehicle where
 
 import qualified Domain.Types.Person as DP
-import Control.Lens ((^?), _head)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
@@ -34,7 +33,7 @@ countByDriverIds driverIds = do
     CH.findAll $
       CH.select_ (\v -> CH.aggregate $ CH.count_ v.driverId) $
         CH.filter_ (\v -> v.driverId `CH.in_` driverIds) (CH.all_ @CH.APP_SERVICE_CLICKHOUSE vehicleTTable)
-  case (res ^? _head) of
+  case (listToMaybe res) of
     Just count -> pure (Just count)
     Nothing -> do
       logTagError "countByDriverIds" "No count found"

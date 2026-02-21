@@ -1,6 +1,5 @@
 module Storage.Queries.DriverGstinExtra where
 
-import Control.Lens ((^?), _head)
 import Domain.Types.DriverGstin
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
@@ -18,7 +17,7 @@ import Storage.Queries.OrphanInstances.DriverGstin ()
 findUnInvalidByGstNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> m (Maybe DriverGstin)
 findUnInvalidByGstNumber gstNumber = do
   gstNumberHash <- getDbHash gstNumber
-  (^? _head)
+  listToMaybe
     <$> findAllWithKV
       [ Se.And
           [ Se.Is Beam.gstinHash $ Se.Eq gstNumberHash,

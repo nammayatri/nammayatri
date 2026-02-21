@@ -3,7 +3,7 @@ module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails
 import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as M
 import qualified Data.Set as Set
@@ -16,7 +16,7 @@ import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RiderConfig as DomainRiderConfig
 import Domain.Types.RouteStopTimeTable
 import qualified Environment
-import EulerHS.Prelude hiding (decodeUtf8, id, (^?), (^..))
+import EulerHS.Prelude hiding (decodeUtf8, id, (^?))
 import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import qualified ExternalBPP.Flow as Flow
 import qualified Kernel.External.Maps.Types as Maps
@@ -98,7 +98,7 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
       busRouteMapping <- forM vehicleNumbers $ \vehicleNumber -> do
         mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
           maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber Nothing
-        pure $ mbResult ^? _head
+        pure $ listToMaybe mbResult
 
       let successfulMappings = catMaybes busRouteMapping
 
@@ -137,7 +137,7 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
     sortOnRouteMatchConfidence :: Maybe (M.Map CQMMB.BusRouteId CQMMB.BusRouteInfo) -> Maybe (CQMMB.BusRouteId, CQMMB.BusRouteInfo)
     sortOnRouteMatchConfidence mbRouteInfo = do
       let routeInfoList = M.toList (fromMaybe (M.empty) mbRouteInfo)
-      sortOn (\(_, a) -> a.route_state) routeInfoList ^? _head
+      sortOn (\(_, a) -> a.route_state) listToMaybe routeInfoList
 
 getRecentRides :: Domain.Types.Person.Person -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [Maybe API.Types.UI.NearbyBuses.RecentRide]
 getRecentRides person req = do
@@ -152,7 +152,7 @@ getRecentRides person req = do
             [] -> return Nothing
             integratedBPPConfigs@(_ : _) -> do
               mbFare <-
-                (^? _head)
+                listToMaybe
                   <$> ( SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
                           let fareRouteDetails = fromList [CallAPI.BasicRouteDetail {routeCode, startStopCode = fromStopCode, endStopCode = toStopCode}]
                           snd <$> Flow.getFares person.id person.merchantId person.merchantOperatingCityId integratedBPPConfig fareRouteDetails req.vehicleType Nothing Nothing [] [] False False

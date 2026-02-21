@@ -14,7 +14,6 @@
 
 module Storage.Clickhouse.Booking where
 
-import Control.Lens ((^?), _head)
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingStatus as DB
 import qualified Domain.Types.Location as DL
@@ -94,7 +93,7 @@ findCountByRideIdStatusAndTime riderId status from to = do
                 CH.&&. booking.createdAt <=. to
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
-  pure $ fromMaybe 0 (res ^? _head)
+  pure $ fromMaybe 0 (listToMaybe res)
 
 findCountByRiderIdAndStatus ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
@@ -113,7 +112,7 @@ findCountByRiderIdAndStatus riderId status createdAt = do
                 CH.&&. booking.createdAt >=. createdAt
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
-  pure (res ^? _head)
+  pure (listToMaybe res)
 
 findAllCancelledBookingIdsByRider ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

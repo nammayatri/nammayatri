@@ -2,7 +2,6 @@ module SharedLogic.Payment where
 
 import qualified Beckn.ACL.Cancel as ACL
 import qualified BecknV2.FRFS.Enums as Spec
-import Control.Lens ((^?), _head)
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -442,7 +441,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
       let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
       mbRefundResp <- DPayment.createRefundService paymentOrder.shortId refundsOrderCall
       whenJust mbRefundResp $ \refundResp -> do
-        let refundRequestId = (refundResp.refunds ^? _head) <&> (.requestId) -- TODO :: When will refunds be more than one ? even if more than 1 there requestId would be same right ?
+        let refundRequestId = (listToMaybe refundResp.refunds) <&> (.requestId) -- TODO :: When will refunds be more than one ? even if more than 1 there requestId would be same right ?
         whenJust refundRequestId $ \refundId -> do
           let scheduleAfter = riderConfig.refundStatusUpdateInterval -- Schedule for 24 hours later
               jobData =

@@ -58,7 +58,7 @@ module Lib.Payment.Domain.Action
 where
 
 import Control.Applicative ((<|>))
-import Control.Lens ((.~), (^?), _Just, _head)
+import Control.Lens ((.~))
 import Data.Generics.Labels ()
 import Data.List (sortBy)
 import Data.Ord (comparing)
@@ -1655,7 +1655,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
       shortId <- generateShortId
       customerEmail <- encrypt req.customerEmail
       mobileNo <- encrypt req.customerPhone
-      let txn = (^? _head) <$> sortBy (comparing (.updatedAt)) =<< ((.transactions) =<< (resp.fulfillments ^? _Just . _head))
+      let txn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< ((.transactions) =<< (resp.fulfillments >>= listToMaybe))
       pure $
         Payment.PayoutOrder
           { id = uuid,
@@ -1672,7 +1672,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             responseMessage = (.responseMessage) =<< txn,
             responseCode = (.responseCode) =<< txn,
             retriedOrderId = Nothing,
-            accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< (resp.fulfillments ^? _Just . _head), --- for now only one fullfillment supported
+            accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< (resp.fulfillments >>= listToMaybe), --- for now only one fullfillment supported
             vpa = Just req.customerVpa,
             customerEmail = customerEmail,
             lastStatusCheckedAt = Nothing,
@@ -1695,7 +1695,7 @@ payoutStatusService _merchantId _personId createPayoutOrderStatusReq createPayou
   let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = createPayoutOrderStatusReq.orderId, mbExpand = createPayoutOrderStatusReq.mbExpand}
   statusResp <- createPayoutOrderStatusCall payoutOrderStatusReq -- api call
   payoutStatusUpdates statusResp.status createPayoutOrderStatusReq.orderId (Just statusResp)
-  pure $ PayoutPaymentStatus {status = statusResp.status, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< (statusResp.fulfillments ^? _Just . _head))}
+  pure $ PayoutPaymentStatus {status = statusResp.status, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< (statusResp.fulfillments >>= listToMaybe))}
 
 payoutStatusUpdates :: (EncFlow m r, BeamFlow m r) => Payout.PayoutOrderStatus -> Text -> Maybe PT.PayoutOrderStatusResp -> m ()
 payoutStatusUpdates status_ orderId statusResp = do
@@ -1704,8 +1704,8 @@ payoutStatusUpdates status_ orderId statusResp = do
   logDebug $ "Payout order Status: " <> show statusResp
   case statusResp of
     Just Payout.CreatePayoutOrderResp {orderId = _orderPayoutId, status = _status, ..} -> do
-      let txns = (.transactions) =<< (fulfillments ^? _Just . _head)
-          mbTxn = (^? _head) <$> sortBy (comparing (.updatedAt)) =<< txns
+      let txns = (.transactions) =<< (fulfillments >>= listToMaybe)
+          mbTxn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< txns
       QPayoutOrder.updatePayoutOrderTxnRespInfo ((.responseCode) =<< mbTxn) ((.responseMessage) =<< mbTxn) orderId
       case mbTxn of
         Just Payout.Transaction {amount = amount_txn, ..} -> do

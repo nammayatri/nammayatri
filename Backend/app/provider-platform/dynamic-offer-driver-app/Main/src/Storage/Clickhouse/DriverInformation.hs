@@ -2,7 +2,6 @@ module Storage.Clickhouse.DriverInformation where
 
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.Person as DP
-import Control.Lens ((^?), _head)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
@@ -60,7 +59,7 @@ getEnabledDriverCountByDriverIds driverIds from to = do
         ( \info -> CH.aggregate $ CH.count_ info.driverId
         )
         $ CH.filter_ (\info -> info.driverId `CH.in_` driverIds CH.&&. info.enabled CH.==. True CH.&&. info.enabledAt CH.>=. Just from CH.&&. info.enabledAt CH.<=. Just to) (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
-  pure $ fromMaybe 0 (res ^? _head)
+  pure $ fromMaybe 0 (listToMaybe res)
 
 getOnlineDriverCountByDriverIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
@@ -71,4 +70,4 @@ getOnlineDriverCountByDriverIds driverIds = do
     CH.findAll $
       CH.select_ (\info -> CH.aggregate $ CH.count_ info.driverId) $
         CH.filter_ (\info -> info.driverId `CH.in_` driverIds CH.&&. info.driverFlowStatus CH.==. Just DDF.ONLINE) (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
-  pure $ fromMaybe 0 (res ^? _head)
+  pure $ fromMaybe 0 (listToMaybe res)

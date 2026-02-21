@@ -23,7 +23,7 @@ module Domain.Action.UI.Ride.CancelRide.Internal
   )
 where
 
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
@@ -39,7 +39,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Yudhishthira as TY
-import EulerHS.Prelude hiding (whenJust, (^?), (^..))
+import EulerHS.Prelude hiding (whenJust, (^?))
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map, notElem)
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -183,7 +183,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             fork "DriverRideCancelledCoin Event : " $ do
               mbLocation <- do
                 driverLocations <- LF.driversLocation [ride.driverId]
-                return $ driverLocations ^? _head
+                return $ listToMaybe driverLocations
               disToPickup <- forM mbLocation $ \location -> do
                 driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
               when (bookingCReason.source == SBCR.ByDriver) $
@@ -344,7 +344,7 @@ getDistanceToPickup booking mbRide = do
           Left err -> do
             logError ("Failed to fetch Driver Location with error : " <> show err)
             return Nothing
-          Right locations -> return $ locations ^? _head
+          Right locations -> return $ listToMaybe locations
       case mbLocation of
         Just location -> do
           distance <- driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)

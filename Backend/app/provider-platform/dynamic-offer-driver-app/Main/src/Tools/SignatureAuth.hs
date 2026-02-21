@@ -32,7 +32,7 @@ import Data.Typeable (typeRep)
 import Data.X509 (PubKey (PubKeyRSA))
 import qualified Debug.Trace as DT
 import Domain.Types.Merchant (Merchant)
-import EulerHS.Prelude hiding (fromList, (.~), (^..))
+import EulerHS.Prelude hiding (fromList, (.~))
 import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)

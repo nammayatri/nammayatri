@@ -14,7 +14,6 @@
 
 module Lib.Queries.SpecialLocation where
 
-import Control.Lens ((^?), _head)
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
@@ -206,7 +205,7 @@ findSpecialLocationByLatLongFull point = do
       where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
       orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return (specialLocation, F.getGeomGeoJSON)
-  mapM makeFullSpecialLocation (mbRes ^? _head)
+  mapM makeFullSpecialLocation (listToMaybe mbRes)
 
 findSpecialLocationByLatLongNearby :: Transactionable m => LatLong -> Int -> m (Maybe (D.SpecialLocation, Text))
 findSpecialLocationByLatLongNearby point radius = do
@@ -216,7 +215,7 @@ findSpecialLocationByLatLongNearby point radius = do
       where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. pointCloseByOrWithin (point.lon, point.lat) (val radius)
       orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return (specialLocation, F.getGeomGeoJSON)
-  return $ specialLocations ^? _head
+  return $ listToMaybe specialLocations
 
 findPickupSpecialLocationByLatLong :: (Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe D.SpecialLocation)
 findPickupSpecialLocationByLatLong point = do
@@ -233,7 +232,7 @@ findSpecialLocationByLatLong' point = do
       where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
       orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return specialLocation
-  return $ specialLocations ^? _head
+  return $ listToMaybe specialLocations
 
 findSpecialLocationByLatLong :: Transactionable m => LatLong -> m (Maybe (D.SpecialLocation, Text))
 findSpecialLocationByLatLong point = do
@@ -243,7 +242,7 @@ findSpecialLocationByLatLong point = do
       where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
       orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return (specialLocation, F.getGeomGeoJSON)
-  return $ specialLocations ^? _head
+  return $ listToMaybe specialLocations
 
 deleteById :: Id D.SpecialLocation -> SqlDB ()
 deleteById = Esq.deleteByKey @SpecialLocationT

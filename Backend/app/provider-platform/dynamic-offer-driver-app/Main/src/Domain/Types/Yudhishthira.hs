@@ -2,7 +2,6 @@
 
 module Domain.Types.Yudhishthira where
 
-import Control.Lens ((^?), _head)
 import qualified Data.Aeson as A
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -82,10 +81,10 @@ $(YTH.generateGenericDefault ''UpgradeTierTagData)
 instance YTC.LogicInputLink YA.ApplicationEvent where
   getLogicInputDef a =
     case a of
-      YA.Search -> A.toJSON <$> (YTH.genDef (Proxy @TagData) ^? _head)
-      YA.Select -> A.toJSON <$> (YTH.genDef (Proxy @SelectTagData) ^? _head)
-      YA.RideEnd -> A.toJSON <$> (YTH.genDef (Proxy @EndRideTagData) ^? _head)
-      YA.RideCancel -> A.toJSON <$> (YTH.genDef (Proxy @CancelRideTagData) ^? _head)
-      YA.PenaltyCheck -> A.toJSON <$> (YTH.genDef (Proxy @PenaltyCheckTagData) ^? _head)
-      YA.UpgradeTier -> A.toJSON <$> (YTH.genDef (Proxy @UpgradeTierTagData) ^? _head)
+      YA.Search -> A.toJSON <$> (listToMaybe $ YTH.genDef (Proxy @TagData))
+      YA.Select -> A.toJSON <$> (listToMaybe $ YTH.genDef (Proxy @SelectTagData))
+      YA.RideEnd -> A.toJSON <$> (listToMaybe $ YTH.genDef (Proxy @EndRideTagData))
+      YA.RideCancel -> A.toJSON <$> (listToMaybe $ YTH.genDef (Proxy @CancelRideTagData))
+      YA.PenaltyCheck -> A.toJSON <$> (listToMaybe $ YTH.genDef (Proxy @PenaltyCheckTagData))
+      YA.UpgradeTier -> A.toJSON <$> (listToMaybe $ YTH.genDef (Proxy @UpgradeTierTagData))
       _ -> Nothing

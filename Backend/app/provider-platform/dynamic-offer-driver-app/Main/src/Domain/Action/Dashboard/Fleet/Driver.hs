@@ -90,7 +90,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.En
 import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode (..))
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import Control.Applicative (liftA2, optional)
-import Control.Lens ((.~), (^?), _head)
+import Control.Lens ((.~))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Char (isDigit)
 import Data.Coerce (coerce)
@@ -2307,7 +2307,7 @@ postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId mbTerminat
           logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
           return Nothing
         Right locations -> do
-          let location = locations ^? _head
+          let location = listToMaybe locations
           when (isNothing location) $ logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
           return location
   void $ WMB.cancelTripTransaction fleetConfig tripTransaction (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation) (castActionSource mbTerminationSource)
@@ -2580,7 +2580,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
         QTT.createMany allTransactions
       Nothing -> do
         QTT.createMany allTransactions
-        whenJust (allTransactions ^? _head) $ \tripTransaction -> do
+        whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
           case tripTransaction.tripType of
             Just DTT.PILOT -> do
               psource <- maybe (throwError (InternalError "Pilot source not found")) pure tripTransaction.pilotSource

@@ -20,7 +20,7 @@ import API.Types.UI.RiderLocation (BusLocation)
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Control.Applicative ((<|>))
-import Control.Lens ((.~), (?~), (^..), (^?), _Just, _last)
+import Control.Lens ((.~), (?~), (^?), _last)
 import Control.Monad
 import Data.Generics.Labels ()
 import Data.Aeson
@@ -153,7 +153,7 @@ extractSearchDetails now = \case
     SearchDetails
       { riderPreferredOption = DRPO.OneWay,
         roundTrip = False,
-        stops = fold stops <> (destination ^.. _Just),
+        stops = fold stops <> toList destination,
         startTime = fromMaybe now startTime,
         returnTime = Nothing,
         hasStops = reqDetails.stops >>= \s -> Just $ not (null s),
@@ -210,7 +210,7 @@ extractSearchDetails now = \case
     SearchDetails
       { riderPreferredOption = DRPO.Ambulance,
         roundTrip = False,
-        stops = destination ^.. _Just,
+        stops = toList destination,
         startTime = fromMaybe now startTime,
         returnTime = Nothing,
         hasStops = Nothing,
@@ -231,7 +231,7 @@ extractSearchDetails now = \case
     SearchDetails
       { riderPreferredOption = DRPO.Delivery,
         roundTrip = False,
-        stops = destination ^.. _Just,
+        stops = toList destination,
         startTime = fromMaybe now startTime,
         returnTime = Nothing,
         hasStops = Nothing,
@@ -251,7 +251,7 @@ extractSearchDetails now = \case
   PTSearch PublicTransportSearchReq {..} ->
     SearchDetails
       { riderPreferredOption = DRPO.PublicTransport,
-        stops = destination ^.. _Just,
+        stops = toList destination,
         hasStops = Nothing,
         driverIdentifier_ = Nothing,
         roundTrip = False,

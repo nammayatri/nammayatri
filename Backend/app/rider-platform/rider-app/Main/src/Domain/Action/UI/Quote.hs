@@ -30,7 +30,7 @@ where
 
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified BecknV2.FRFS.Enums as FRFSEnums
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
@@ -55,7 +55,7 @@ import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Trip as DTrip
 import Environment
-import EulerHS.Prelude hiding (find, group, id, length, map, maximumBy, sum, (^?), (^..))
+import EulerHS.Prelude hiding (find, group, id, length, map, maximumBy, sum, (^?))
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude hiding (whenJust)
@@ -340,8 +340,8 @@ getJourneys searchRequest hasMultimodalSearch = do
                     toLatLong = LatLong {lat = journeyLeg.endLocation.latitude, lon = journeyLeg.endLocation.longitude},
                     fromStationCode = journeyLeg.fromStopDetails >>= (.stopCode),
                     toStationCode = journeyLeg.toStopDetails >>= (.stopCode),
-                    color = catMaybes (map (.routeShortName) journeyLeg.routeDetails) ^? _head,
-                    colorCode = catMaybes (map (.routeColorCode) journeyLeg.routeDetails) ^? _head,
+                    color = listToMaybe $ catMaybes (map (.routeShortName) journeyLeg.routeDetails),
+                    colorCode = listToMaybe $ catMaybes (map (.routeColorCode) journeyLeg.routeDetails),
                     routeDetails = map mkRouteDetail journeyLeg.routeDetails,
                     duration = journeyLeg.duration,
                     liveVehicleAvailableServiceTypes = journeyLeg.liveVehicleAvailableServiceTypes,

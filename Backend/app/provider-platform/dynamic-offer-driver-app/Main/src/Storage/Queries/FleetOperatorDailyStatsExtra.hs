@@ -1,6 +1,5 @@
 module Storage.Queries.FleetOperatorDailyStatsExtra where
 
-import Control.Lens ((^?), _head)
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import Data.Time.Calendar (Day)
 import qualified Database.Beam as B
@@ -388,7 +387,7 @@ sumFleetMetricsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay = do
               $ B.all_ (BeamCommon.fleetOperatorDailyStats BeamCommon.atlasDB)
   case res of
     Right rows ->
-      case rows ^? _head of
+      case listToMaybe rows of
         Just (ote, cte, cr, td, tr, rr, pr, (ar, dc, cc)) ->
           pure $ mkDailyFleetMetricsAggregated (ote, cte, cr, fmap (Meters . round) td, tr, rr, pr, ar, dc, cc)
         Nothing ->
@@ -491,7 +490,7 @@ sumFleetEarningsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay = do
               $ B.all_ (BeamCommon.fleetOperatorDailyStats BeamCommon.atlasDB)
   case res of
     Right rows ->
-      case rows ^? _head of
+      case listToMaybe rows of
         Just (onlineTot, cashTot, cashFees, onlineFees, od) ->
           pure $ mkDailyFleetEarningsAggregated (onlineTot, cashTot, cashFees, onlineFees, od)
         Nothing ->

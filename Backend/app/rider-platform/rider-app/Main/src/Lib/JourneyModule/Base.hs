@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Lib.JourneyModule.Base where
 
 import qualified API.Types.UI.FRFSTicketService as APITypes
@@ -5,8 +7,9 @@ import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified BecknV2.OnDemand.Enums as Enums
-import Control.Lens ((^?), _head)
+import Control.Lens ((%~), (.~), (^?), (?~))
 import Control.Monad.Extra (mapMaybeM)
+import Data.Generics.Labels ()
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.Location as DLoc
 import Domain.Action.UI.Ride as DRide
@@ -39,7 +42,7 @@ import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.RouteDetails as DRouteDetails
 import qualified Domain.Types.Trip as DTrip
 import Environment
-import EulerHS.Prelude hiding (id, state, (^?), (^..))
+import EulerHS.Prelude hiding (id, state, (^?))
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
@@ -300,7 +303,7 @@ checkAndMarkTerminalJourneyStatus ::
   m ()
 checkAndMarkTerminalJourneyStatus journey allLegStates = do
   let flattenedLegStates = concatLegStates allLegStates
-      isSingleTaxiJourneyLeg = length flattenedLegStates == 1 && (flattenedLegStates ^? _head <&> (.mode)) == Just DTrip.Taxi -- This Would Be A Single Leg Journey With Only A Taxi Leg.
+      isSingleTaxiJourneyLeg = length flattenedLegStates == 1 && (listToMaybe flattenedLegStates <&> (.mode)) == Just DTrip.Taxi -- This Would Be A Single Leg Journey With Only A Taxi Leg.
   go flattenedLegStates isSingleTaxiJourneyLeg
   where
     concatLegStates =
@@ -575,7 +578,7 @@ addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers black
           void $ addBusLeg journey journeyLeg journeyLeg.userBookedBusServiceTierType (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes
   where
     upsertJourneyLegAction :: JL.SearchRequestFlow m r c => DJourneyLeg.JourneyLeg -> Text -> m ()
-    upsertJourneyLegAction journeyLeg searchId = upsertJourneyLeg (journeyLeg {DJourneyLeg.legSearchId = Just searchId})
+    upsertJourneyLegAction journeyLeg searchId = upsertJourneyLeg (journeyLeg & #legSearchId ?~ searchId)
 
     traverseWithTriplets :: [a] -> [(Maybe a, a, Maybe a)]
     traverseWithTriplets [] = []
@@ -656,7 +659,7 @@ snapJourneyLegToNearestGate journeyLeg = do
             else findNearestGate journeyLeg.startLocation journeyLeg.endLocation (gatesInfo filteredSpecialLoc)
         Nothing -> return journeyLeg.startLocation
     Nothing -> return journeyLeg.startLocation
-  return journeyLeg {DJourneyLeg.startLocation = snappedStart}
+  return (journeyLeg & #startLocation .~ snappedStart)
   where
     findNearestGate ::
       ( JL.SearchRequestFlow m r c
@@ -1375,7 +1378,7 @@ generateJourneyInfoResponse journey legs = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
   let unifiedQR = getUnifiedQR journey legs
-  let mbCurrency = legs ^? _head >>= (\leg -> leg.estimatedMinFare <&> (.currency))
+  let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
   let unifiedQRV2 = getUnifiedQRV2 unifiedQR

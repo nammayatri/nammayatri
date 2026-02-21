@@ -10,7 +10,7 @@ import Control.Lens ((^?), _Just, _head)
 import Data.Generics.Labels ()
 import qualified Domain.Action.Beckn.OnSearch
 import Domain.Types
-import EulerHS.Prelude hiding (id, (^?), (^..))
+import EulerHS.Prelude hiding (id, (^?))
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import Kernel.Types.Common

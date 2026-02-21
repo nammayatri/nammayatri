@@ -3,7 +3,6 @@
 
 module Storage.Queries.MerchantOperatingCityExtra where
 
-import Control.Lens ((^?), _head)
 import Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -16,4 +15,4 @@ import qualified Storage.Beam.MerchantOperatingCity as Beam
 import Storage.Queries.OrphanInstances.MerchantOperatingCity
 
 findByCity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => City -> m (Maybe MerchantOperatingCity)
-findByCity city = do findAllWithOptionsKV [Se.And [Se.Is Beam.city $ Se.Eq city]] (Se.Desc Beam.createdAt) (Just 1) (Just 0) <&> (^? _head)
+findByCity city = do findAllWithOptionsKV [Se.And [Se.Is Beam.city $ Se.Eq city]] (Se.Desc Beam.createdAt) (Just 1) (Just 0) <&> listToMaybe

@@ -3,7 +3,6 @@
 
 module Storage.Queries.PurchasedPassExtra where
 
-import Control.Lens ((^?), _head)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Extra.PurchasedPass ()
 import qualified Domain.Types.Merchant as DM
@@ -73,7 +72,7 @@ findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId passTypeId device
       (Se.Desc Beam.createdAt)
       (Just 1)
       (Just 0)
-    <&> (^? _head)
+    <&> listToMaybe
 
 findPendingPassByPersonIdAndPassTypeId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -171,7 +170,7 @@ getLastPassNumber ::
   m Int
 getLastPassNumber = do
   pass <- findAllWithOptionsDb [Se.Is Beam.id $ Se.Not $ Se.Eq ""] (Se.Desc Beam.passNumber) (Just 1) (Just 0)
-  return $ case pass ^? _head of
+  return $ case listToMaybe pass of
     Just p -> p.passNumber
     Nothing -> 0
 

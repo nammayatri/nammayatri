@@ -25,7 +25,6 @@ where
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
 import Domain.Types.Ride
-import Control.Lens ((^?), _head)
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -68,7 +67,7 @@ getPickupRoutes (personId, merchantId) entityId GetPickupRoutesReq {..} = do
   whenJust mbRide $ \ride ->
     when (fromMaybe 0 ride.pickupRouteCallCount == 0) $ do
       let mbSpeed = do
-            routeInfo <- resp ^? _head
+            routeInfo <- listToMaybe resp
             dist <- routeInfo.distance
             dur <- routeInfo.duration
             guard (dur > 0)

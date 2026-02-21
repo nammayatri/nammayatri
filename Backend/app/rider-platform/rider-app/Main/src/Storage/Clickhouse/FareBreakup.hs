@@ -14,7 +14,6 @@
 
 module Storage.Clickhouse.FareBreakup where
 
-import Control.Lens ((^?), _head)
 import qualified Domain.Types.Booking as DB
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
@@ -64,4 +63,4 @@ findFareBreakupByBookingIdAndDescription bookingId description createdAt = do
                 CH.&&. fareBreakup.date >=. addUTCTime (-120) createdAt
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fareBreakupTTable)
-  return $ fareBreakup ^? _head
+  return $ listToMaybe fareBreakup

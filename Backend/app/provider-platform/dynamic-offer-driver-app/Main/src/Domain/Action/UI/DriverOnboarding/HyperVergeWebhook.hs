@@ -1,6 +1,5 @@
 module Domain.Action.UI.DriverOnboarding.HyperVergeWebhook where
 
-import Control.Lens ((^?), _head)
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
@@ -53,7 +52,7 @@ hyperVergeResultWebhookHandler payload = do
   when (isNothing parsedPayload.reviewerEmail) $ logError "Warning !!!!! Missing Field reviewerEmail in HyperVerge webhook Payload!!!!. Continuing the flow as other necessary fields are present."
   vstatus <- convertHVStatusToPanValidationStatus parsedPayload.applicationStatus
   QImage.updateVerificationStatus (Just vstatus) parsedPayload.reviewerEmail (Just parsedPayload.transactionId)
-  imageEntity <- QImage.findByWrokflowTransactionId (Just parsedPayload.transactionId) >>= fromMaybeM (ImageNotFoundForWorkflowId parsedPayload.transactionId) . (^? _head)
+  imageEntity <- QImage.findByWrokflowTransactionId (Just parsedPayload.transactionId) >>= fromMaybeM (ImageNotFoundForWorkflowId parsedPayload.transactionId) . listToMaybe
   case imageEntity.imageType of
     DVC.PanCard -> do
       QDPC.updateVerificationStatus vstatus imageEntity.personId

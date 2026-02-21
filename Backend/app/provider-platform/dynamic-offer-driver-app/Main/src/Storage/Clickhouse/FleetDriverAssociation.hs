@@ -2,7 +2,6 @@ module Storage.Clickhouse.FleetDriverAssociation where
 
 import qualified Domain.Types.FleetDriverAssociation as FDA
 import qualified Domain.Types.Person as DP
-import Control.Lens ((^?), _head)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
@@ -64,7 +63,7 @@ getTotalDriverCountByFleetOwnerIdsInDateRange fleetOwnerIds from to = do
         CH.filter_
           (\assoc -> assoc.fleetOwnerId `CH.in_` fleetOwnerIds CH.&&. assoc.isActive CH.==. True CH.&&. assoc.associatedOn CH.>=. from CH.&&. assoc.associatedOn CH.<=. to)
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetDriverAssociationTTable)
-  pure $ fromMaybe 0 (res ^? _head)
+  pure $ fromMaybe 0 (listToMaybe res)
 
 getDriverIdsByFleetOwnerIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

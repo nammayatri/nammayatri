@@ -1,6 +1,5 @@
 module Lib.Finance.Storage.Queries.InvoiceExtra where
 
-import Control.Lens ((^?), _head)
 import Data.Time (UTCTime (UTCTime), utctDay)
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -23,4 +22,4 @@ findLatestByCreatedAt now = do
     (Se.Desc Beam.createdAt)
     (Just 1)
     Nothing
-    <&> (^? _head)
+    <&> listToMaybe

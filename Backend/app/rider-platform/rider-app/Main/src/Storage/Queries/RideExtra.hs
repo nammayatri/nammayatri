@@ -35,7 +35,6 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Control.Lens ((^..), (^?), _Just, _head, to)
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
@@ -140,7 +139,7 @@ findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.E
 findLatestCompletedRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Ride)
 findLatestCompletedRide riderId = do
   booking <- findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId] (Se.Desc BeamB.createdAt) Nothing Nothing
-  findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> (^? _head)
+  findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
 updateDriverArrival :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe UTCTime -> m ()
 updateDriverArrival rideId arrivalTime = do
@@ -255,9 +254,9 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                   <$> findAllFromKvRedis
                     [ Se.And
                         ( [Se.Is BeamR.driverMobileNumber $ Se.Eq driverPhone, Se.Is BeamR.merchantId $ Se.Eq $ Just $ getId merchantID]
-                            <> (mbBookingStatus ^.. _Just . to (\v -> Se.Is BeamR.status $ Se.Eq (castBookingStatusToRideStatus v)))
-                            <> (mbFrom ^.. _Just . to (\v -> Se.Is BeamR.createdAt $ Se.GreaterThanOrEq (roundToMidnightUTC v)))
-                            <> (mbTo ^.. _Just . to (\v -> Se.Is BeamR.createdAt $ Se.LessThanOrEq (roundToMidnightUTCToDate v)))
+                            <> foldMap (\v -> [Se.Is BeamR.status $ Se.Eq (castBookingStatusToRideStatus v)]) mbBookingStatus
+                            <> foldMap (\v -> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq (roundToMidnightUTC v)]) mbFrom
+                            <> foldMap (\v -> [Se.Is BeamR.createdAt $ Se.LessThanOrEq (roundToMidnightUTCToDate v)]) mbTo
                         )
                     ]
                     Nothing
@@ -395,13 +394,13 @@ findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mb
   bookings' <-
     findAllWithOptionsKV
       [ Se.And
-          ( (mbPersonId ^.. _Just . to (\v -> Se.Is BeamB.riderId $ Se.Eq (getId v)))
+          ( foldMap (\v -> [Se.Is BeamB.riderId $ Se.Eq (getId v)]) mbPersonId
               <> ([Se.Is BeamB.dashboardAgentId $ Se.Eq mbAgentId | isJust mbAgentId])
               <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED] | isOnlyActive])
-              <> (mbBookingStatus ^.. _Just . to (\v -> Se.Is BeamB.status $ Se.Eq v))
+              <> foldMap (\v -> [Se.Is BeamB.status $ Se.Eq v]) mbBookingStatus
               <> ([Se.Is BeamB.clientId $ Se.Eq (getId <$> mbClientId) | isJust mbClientId])
-              <> (mbFromDate ^.. _Just . to (\v -> Se.Is BeamB.createdAt $ Se.GreaterThanOrEq v))
-              <> (mbToDate ^.. _Just . to (\v -> Se.Is BeamB.createdAt $ Se.LessThanOrEq v))
+              <> foldMap (\v -> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq v]) mbFromDate
+              <> foldMap (\v -> [Se.Is BeamB.createdAt $ Se.LessThanOrEq v]) mbToDate
               <> ([Se.Is BeamB.status $ Se.In mbBookingStatusList | not (null mbBookingStatusList)])
               <> ([Se.Is BeamB.isDashboardRequest $ Se.Eq mbOnlyDashboard | isJust mbOnlyDashboard])
               <> ([Se.Is BeamB.merchantOperatingCityId $ Se.Eq (mbMerchantOperatingCityId <&> (.getId)) | isJust mbMerchantOperatingCityId])
@@ -467,7 +466,7 @@ findAllByRiderIdAndDriverNumber (Id personId) mbLimit mbOffset mbOnlyActive mbBo
       [ Se.And
           ( [Se.Is BeamB.riderId $ Se.Eq personId]
               <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED] | isOnlyActive])
-              <> (mbBookingStatus ^.. _Just . to (\v -> Se.Is BeamB.status $ Se.Eq v))
+              <> foldMap (\v -> [Se.Is BeamB.status $ Se.Eq v]) mbBookingStatus
               <> ([Se.Is BeamB.clientId $ Se.Eq (getId <$> mbClientId) | isJust mbClientId])
           )
       ]
@@ -533,7 +532,7 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
               ]
           ]
           (Just (Se.Desc BeamR.createdAt))
-        <&> (^? _head)
+        <&> listToMaybe
 
     findLatestActiveByDriverNumber :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
     findLatestActiveByDriverNumber driverNum =
@@ -548,7 +547,7 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
           (Se.Desc BeamR.createdAt)
           (Just limit)
           Nothing
-        <&> (^? _head)
+        <&> listToMaybe
 
 appendByDriverPhoneNumber :: (MonadFlow m, Hedis.HedisFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 appendByDriverPhoneNumber ride = do
@@ -574,7 +573,7 @@ updateSafetyJourneyStatus rideId status = do
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 findOneByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
-findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> (^? _head)
+findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
 updateIsSafetyPlus :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Bool -> m ()
 updateIsSafetyPlus rideId isSafetyPlus = do
@@ -586,4 +585,4 @@ updateIsSafetyPlus rideId isSafetyPlus = do
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 findCompletedRideByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
-findCompletedRideByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId, Se.Is BeamR.status $ Se.Eq Ride.COMPLETED] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> (^? _head)
+findCompletedRideByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId, Se.Is BeamR.status $ Se.Eq Ride.COMPLETED] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe

@@ -2,7 +2,6 @@
 
 module Lib.Payment.Storage.Queries.PayoutRequestExtra where
 
-import Control.Lens ((^..), _Just, to)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Lib.Payment.Domain.Types.PayoutRequest
@@ -26,8 +25,8 @@ findByBeneficiaryWithFilters beneficiaryId mbFrom mbTo statuses limit offset = d
   findAllWithOptionsKV
     [ Se.And
         ( [Se.Is Beam.beneficiaryId $ Se.Eq beneficiaryId]
-            <> (mbFrom ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.GreaterThanOrEq v))
-            <> (mbTo ^.. _Just . to (\v -> Se.Is Beam.createdAt $ Se.LessThanOrEq v))
+            <> foldMap (\v -> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq v]) mbFrom
+            <> foldMap (\v -> [Se.Is Beam.createdAt $ Se.LessThanOrEq v]) mbTo
             <> [Se.Is Beam.status (Se.In statuses) | not (null statuses)]
         )
     ]

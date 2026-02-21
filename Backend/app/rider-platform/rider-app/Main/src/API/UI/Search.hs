@@ -38,7 +38,6 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
-import Control.Lens ((^?), _head)
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -407,12 +406,12 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 case mbBestOneWayRoute of
                   Just bestOneWayRoute -> do
                     mbPreliminaryLeg <-
-                      if ((bestOneWayRoute.legs ^? _head) <&> (.mode)) == Just MultiModalTypes.Walk
+                      if ((listToMaybe bestOneWayRoute.legs) <&> (.mode)) == Just MultiModalTypes.Walk
                         then return Nothing
                         else -- preliminaryLeg for bus is to be Nothing only when firstMileRemoved is True
                         case ptSearchReq.vehicleCategory of
                           Just Enums.BUS | isFirstMileRemoved -> pure Nothing
-                          _ -> join <$> mapM (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area ((bestOneWayRoute.legs ^? _head) >>= (.toStopDetails) >>= (.name))) ((bestOneWayRoute.legs ^? _head) <&> (.startLocation))
+                          _ -> join <$> mapM (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area ((listToMaybe bestOneWayRoute.legs) >>= (.toStopDetails) >>= (.name))) ((listToMaybe bestOneWayRoute.legs) <&> (.startLocation))
                     let updatedBestOneWayRoute =
                           case mbPreliminaryLeg of
                             Just leg -> bestOneWayRoute {MultiModalTypes.legs = [leg] ++ bestOneWayRoute.legs}
@@ -451,7 +450,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
 
       journeys <- JMU.measureLatency (if isFirstJourneyReq then DQuote.getJourneys searchRequest (Just True) else return Nothing) "getJourneys Multimodal Init time"
-      let mbFirstJourney = fold journeys ^? _head
+      let mbFirstJourney = fold listToMaybe journeys
       firstJourneyInfo <-
         if initiateJourney && isFirstJourneyReq
           then do
@@ -795,7 +794,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
 
     tryGetSdkTokenFromLeg :: DIBC.IntegratedBPPConfig -> Id MerchantOperatingCity -> MultiModalTypes.MultiModalLeg -> Flow (Maybe Text)
     tryGetSdkTokenFromLeg integratedBPPConfig mocId leg = do
-      let mbRouteCode = leg.routeDetails ^? _head >>= (.gtfsId) <&> gtfsIdtoDomainCode
+      let mbRouteCode = listToMaybe leg.routeDetails >>= (.gtfsId) <&> gtfsIdtoDomainCode
           mbFromStopCode = (leg.fromStopDetails >>= (.stopCode)) <|> ((leg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)
           mbToStopCode = (leg.toStopDetails >>= (.stopCode)) <|> ((leg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)
       case (mbFromStopCode, mbToStopCode, mbRouteCode) of

@@ -33,7 +33,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
   )
 where
 
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
@@ -66,7 +66,7 @@ import qualified Domain.Types.VehiclePUC as DPUC
 import qualified Domain.Types.VehiclePermit as DVPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (elem, find, foldl', map, whenJust, (^?), (^..))
+import EulerHS.Prelude hiding (elem, find, foldl', map, whenJust, (^?))
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
@@ -146,7 +146,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   vehicleNOCImgs <- getDriverImages merchant.id DVC.VehicleNOC
   commonDocumentsData <- runInReplica (QCommonDriverOnboardingDocuments.findByDriverId (Just (cast driverId)))
   let commonDocuments = map toCommonDocumentItem commonDocumentsData
-  allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) $ mapMaybe (^? _head) dlImgs))
+  allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) $ mapMaybe listToMaybe dlImgs))
   allRCImgs <- runInReplica (QRC.findAllByImageId (map (Id) vehRegImgs))
   allDLDetails <- mapM convertDLToDLDetails allDlImgs
   allRCDetails <- mapM convertRCToRCDetails allRCImgs

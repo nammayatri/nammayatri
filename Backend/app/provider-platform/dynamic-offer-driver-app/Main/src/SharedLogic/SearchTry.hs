@@ -14,7 +14,6 @@
 
 module SharedLogic.SearchTry where
 
-import Control.Lens ((^?), _head)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
@@ -138,7 +137,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
         let batchTime = fromIntegral driverPoolConfig.singleBatchProcessTime + singleBatchProcessingTempDelay
         let totalBatchTime = fromIntegral driverPoolConfig.maxNumberOfBatches * batchTime
         let scheduleTryTimes = secondsToNominalDiffTime . Seconds <$> driverPoolConfig.scheduleTryTimes
-            instantReallocation = maybe True (\scheduleTryTime -> diffUTCTime searchReq.startTime now <= scheduleTryTime) (scheduleTryTimes ^? _head)
+            instantReallocation = maybe True (\scheduleTryTime -> diffUTCTime searchReq.startTime now <= scheduleTryTime) (listToMaybe scheduleTryTimes)
         if not searchTry.isScheduled || (instantReallocation && isRepeatSearch)
           then do
             (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg

@@ -2,7 +2,6 @@ module SharedLogic.WMB where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
 import API.Types.UI.WMB
-import Control.Lens ((^?), _head)
 import Data.List (sortBy)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text
@@ -616,7 +615,7 @@ findNextActiveTripTransaction fleetOwnerId driverId = do
                         logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
                         return Nothing
                       Right locations -> do
-                        let location = locations ^? _head
+                        let location = listToMaybe locations
                         when (isNothing location) $ logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
                         return location
                 assignedTripTransaction <- assignUpcomingTripTransaction tripTransaction (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation)

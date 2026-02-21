@@ -31,7 +31,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as VehVar
-import EulerHS.Prelude hiding (id, state, (%~), (^..))
+import EulerHS.Prelude hiding (id, state, (%~))
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Prelude as KP
 import Kernel.Types.App

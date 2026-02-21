@@ -22,7 +22,6 @@ module Domain.Action.UI.Maps
   )
 where
 
-import Control.Lens ((^?), _head)
 import qualified Data.Geohash as DG
 import Data.Text (pack)
 import qualified Data.Time as DT
@@ -90,7 +89,7 @@ getPlaceName merchantId merchantOpCityId entityId req = do
 callMapsApi :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> Int -> Maybe Text -> m Maps.GetPlaceNameResp
 callMapsApi merchantId merchantOpCityId req geoHashPrecisionValue entityId = do
   res <- Maps.getPlaceName merchantId merchantOpCityId entityId req
-  let firstElement = res ^? _head
+  let firstElement = listToMaybe res
   whenJust firstElement $ \element -> do
     let (latitude, longitude) = case req.getBy of
           MIT.ByLatLong (Maps.LatLong lat lon) -> (lat, lon)

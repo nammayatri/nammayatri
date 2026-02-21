@@ -11,7 +11,6 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Me
 import AWS.S3 as S3
 import qualified "dashboard-helper-api" Dashboard.Common.MediaFileDocument as CommonMFD
 import Data.Either (isRight)
-import Control.Lens ((^?), _head)
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Types.Common as DCommon
@@ -75,7 +74,7 @@ mediaFileDocumentUploadLink merchantShortId opCity requestorId req = do
           <> show (length existingMediaFiles)
           <> " times"
 
-    mediaFileDocument <- case existingMediaFiles ^? _head of
+    mediaFileDocument <- case listToMaybe existingMediaFiles of
       Nothing -> do
         mediaPath <- createMediaPathByRcId merchantOpCity.id rc.id mediaFileDocumentType fileExtension
         mediaFileLink <- S3.generateUploadUrl (T.unpack mediaPath) merchant.mediaFileDocumentLinkExpires
@@ -283,7 +282,7 @@ mediaFileDocumentDownloadLink merchantShortId opCity mediaFileDocumentType' rcNu
         <> show (length mediaFileDocuments)
         <> " times"
 
-  mediaFileDocument <- (mediaFileDocuments ^? _head) & fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
+  mediaFileDocument <- (listToMaybe mediaFileDocuments) & fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
 
   let fileWasUploaded = mediaFileDocument.status `elem` [DMFD.CONFIRMED, DMFD.COMPLETED]
   mbMediaFileLink <-

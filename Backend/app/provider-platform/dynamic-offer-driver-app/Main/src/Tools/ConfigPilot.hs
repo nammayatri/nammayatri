@@ -3,7 +3,6 @@
 module Tools.ConfigPilot where
 
 import qualified ConfigPilotFrontend.Types as CPT
-import Control.Lens ((^?), _head)
 import qualified Data.Aeson as A
 import Data.List (sortOn)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
@@ -164,7 +163,7 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       patchedConfigs <- applyPatchToConfig configWrapper
       let extractedPatchedConfigElement :: [Value] = fmap LYTC.config patchedConfigs
       appDynamicLogicElement <- LTSQADLE.findByPrimaryKey domain 0 version >>= fromMaybeM (InvalidRequest $ "No AppDynamicLogicElement found for domain " <> show domain <> " and version " <> show version)
-      let updatedAppDynamicLogicElement :: LYTADLE.AppDynamicLogicElement = appDynamicLogicElement {LYTADLE.patchedElement = extractedPatchedConfigElement ^? _head}
+      let updatedAppDynamicLogicElement :: LYTADLE.AppDynamicLogicElement = appDynamicLogicElement {LYTADLE.patchedElement = listToMaybe extractedPatchedConfigElement}
       configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
       let configsToUpdate' :: [DTU.UiDriverConfig] = zipWith (\cfg newConfig -> cfg {DTU.config = newConfig}) [uiConfig] configsToUpdate
       LTSQADLE.updateByPrimaryKey updatedAppDynamicLogicElement

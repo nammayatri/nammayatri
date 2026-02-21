@@ -23,7 +23,7 @@ module Domain.Action.UI.Ride.StartRide
   )
 where
 
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import qualified Data.Text as Text
 import qualified Domain.Action.Internal.StopDetection as StopDetection
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
@@ -39,7 +39,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Trip
 import Environment (Flow)
-import EulerHS.Prelude hiding ((^?), (^..))
+import EulerHS.Prelude hiding ((^?))
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
@@ -196,7 +196,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
             Nothing -> do
               driverLocation <- do
                 driverLocations <- LF.driversLocation [driverId]
-                driverLocations ^? _head & fromMaybeM LocationNotFound
+                listToMaybe driverLocations & fromMaybeM LocationNotFound
               pure (getCoordinates driverLocation, dashboardReq.odometer)
       now <- getCurrentTime
       -- create first entry of eta here

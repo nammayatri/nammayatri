@@ -5,7 +5,7 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import BecknV2.FRFS.Enums hiding (END, START)
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
-import Control.Lens ((^?), _head)
+import Control.Lens ((^?))
 import Control.Monad.Extra hiding (fromMaybeM)
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (groupBy, nub, nubBy)
@@ -37,7 +37,7 @@ import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import Domain.Types.Station
 import Domain.Types.StationType
 import qualified Environment
-import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust, (^?), (^..))
+import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust, (^?))
 import qualified ExternalBPP.CallAPI.Cancel as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Search as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Select as CallExternalBPP
@@ -191,7 +191,7 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
   currentTime <- getCurrentTime
   let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
       stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
-      firstStop = stopsSortedBySequenceNumber ^? _head
+      firstStop = listToMaybe stopsSortedBySequenceNumber
   stops <-
     if isJust firstStop
       then do
@@ -731,7 +731,7 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
       )
       bookingPayments
   let (bookingsStatus, _, journeyIds) = unzip3 bookingsStatusWithBooking
-      journeyId = catMaybes journeyIds ^? _head
+      journeyId = catMaybes listToMaybe journeyIds
   return $
     ( evaluateConditions
         [ (Nothing, Just FRFSTicketService.REFUND_PENDING, DPayment.FulfillmentRefundPending, all), -- Paid But Refund Pending (Could be due to Booking Cancellation/Failure/Async Ticket Generation Failure)
