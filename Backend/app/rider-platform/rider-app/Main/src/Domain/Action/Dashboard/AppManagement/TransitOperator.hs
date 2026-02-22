@@ -41,19 +41,19 @@ import Servant
 import qualified "this" SharedLogic.External.Nandi.Types
 import Tools.Auth
 
-transitOperatorGetRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow Data.Aeson.Value)
+transitOperatorGetRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow SharedLogic.External.Nandi.Types.NandiRow)
 transitOperatorGetRow merchantShortId opCity column table vehicleCategory =
   DTOp.transitOperatorGetRowUtil merchantShortId opCity vehicleCategory table column
 
-transitOperatorGetAllRows :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [Data.Aeson.Value])
+transitOperatorGetAllRows :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.NandiRow])
 transitOperatorGetAllRows merchantShortId opCity limit offset table vehicleCategory =
   DTOp.transitOperatorGetAllRowsUtil merchantShortId opCity vehicleCategory table limit offset
 
-transitOperatorDeleteRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
+transitOperatorDeleteRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
 transitOperatorDeleteRow merchantShortId opCity table vehicleCategory req =
   DTOp.transitOperatorDeleteRowUtil merchantShortId opCity vehicleCategory table req
 
-transitOperatorUpsertRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> Environment.Flow Data.Aeson.Value)
+transitOperatorUpsertRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> Environment.Flow SharedLogic.External.Nandi.Types.NandiRow)
 transitOperatorUpsertRow merchantShortId opCity table vehicleCategory req =
   DTOp.transitOperatorUpsertRowUtil merchantShortId opCity vehicleCategory table req
 
@@ -69,7 +69,7 @@ transitOperatorGetDepots :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 transitOperatorGetDepots merchantShortId opCity vehicleCategory =
   DTOp.transitOperatorGetDepotsUtil merchantShortId opCity vehicleCategory
 
-transitOperatorGetShiftTypes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [Kernel.Prelude.Text])
+transitOperatorGetShiftTypes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.ShiftType])
 transitOperatorGetShiftTypes merchantShortId opCity vehicleCategory =
   DTOp.transitOperatorGetShiftTypesUtil merchantShortId opCity vehicleCategory
 
@@ -77,15 +77,15 @@ transitOperatorGetScheduleNumbers :: (Kernel.Types.Id.ShortId Domain.Types.Merch
 transitOperatorGetScheduleNumbers merchantShortId opCity vehicleCategory =
   DTOp.transitOperatorGetScheduleNumbersUtil merchantShortId opCity vehicleCategory
 
-transitOperatorGetDayTypes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [Kernel.Prelude.Text])
+transitOperatorGetDayTypes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.DayType])
 transitOperatorGetDayTypes merchantShortId opCity vehicleCategory =
   DTOp.transitOperatorGetDayTypesUtil merchantShortId opCity vehicleCategory
 
-transitOperatorGetTripTypes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [Kernel.Prelude.Text])
+transitOperatorGetTripTypes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.TripType])
 transitOperatorGetTripTypes merchantShortId opCity vehicleCategory =
   DTOp.transitOperatorGetTripTypesUtil merchantShortId opCity vehicleCategory
 
-transitOperatorGetBreakTypes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [Kernel.Prelude.Text])
+transitOperatorGetBreakTypes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.BreakType])
 transitOperatorGetBreakTypes merchantShortId opCity vehicleCategory =
   DTOp.transitOperatorGetBreakTypesUtil merchantShortId opCity vehicleCategory
 
@@ -113,7 +113,7 @@ transitOperatorGetTabletIds :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Me
 transitOperatorGetTabletIds merchantShortId opCity vehicleCategory =
   DTOp.transitOperatorGetTabletIdsUtil merchantShortId opCity vehicleCategory
 
-transitOperatorGetOperators :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.Employee])
+transitOperatorGetOperators :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> SharedLogic.External.Nandi.Types.OperatorRole -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.Employee])
 transitOperatorGetOperators merchantShortId opCity role vehicleCategory =
   DTOp.transitOperatorGetOperatorsUtil merchantShortId opCity vehicleCategory role
 
@@ -129,6 +129,6 @@ transitOperatorUpdateWaybillTablet :: (Kernel.Types.Id.ShortId Domain.Types.Merc
 transitOperatorUpdateWaybillTablet merchantShortId opCity vehicleCategory req =
   DTOp.transitOperatorUpdateWaybillTabletUtil merchantShortId opCity vehicleCategory req
 
-transitOperatorGetWaybills :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [Data.Aeson.Value])
+transitOperatorGetWaybills :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.NandiWaybillRow])
 transitOperatorGetWaybills merchantShortId opCity limit offset vehicleCategory =
   DTOp.transitOperatorGetWaybillsUtil merchantShortId opCity vehicleCategory limit offset
