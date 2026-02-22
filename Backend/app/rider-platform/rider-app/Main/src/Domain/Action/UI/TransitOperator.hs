@@ -1,13 +1,14 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+
 module Domain.Action.UI.TransitOperator where
 
 import qualified BecknV2.OnDemand.Enums as BecknSpec
-import qualified Kernel.Types.Beckn.Context as Context
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant (Merchant)
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (ShortId (..))
 import Kernel.Utils.Common
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow

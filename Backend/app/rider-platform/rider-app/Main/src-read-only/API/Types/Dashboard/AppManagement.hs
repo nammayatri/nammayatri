@@ -11,6 +11,7 @@ import qualified API.Types.Dashboard.AppManagement.Pass
 import qualified API.Types.Dashboard.AppManagement.Payment
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified API.Types.Dashboard.AppManagement.Tickets
+import qualified API.Types.Dashboard.AppManagement.TransitOperator
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -27,6 +28,7 @@ data AppManagementUserActionType
   | PAYMENT API.Types.Dashboard.AppManagement.Payment.PaymentUserActionType
   | TICKET_DASHBOARD API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardUserActionType
   | TICKETS API.Types.Dashboard.AppManagement.Tickets.TicketsUserActionType
+  | TRANSIT_OPERATOR API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -40,6 +42,7 @@ instance Text.Show.Show AppManagementUserActionType where
     PAYMENT e -> "PAYMENT/" <> show e
     TICKET_DASHBOARD e -> "TICKET_DASHBOARD/" <> show e
     TICKETS e -> "TICKETS/" <> show e
+    TRANSIT_OPERATOR e -> "TRANSIT_OPERATOR/" <> show e
 
 instance Text.Read.Read AppManagementUserActionType where
   readsPrec d' =
@@ -102,6 +105,15 @@ instance Text.Read.Read AppManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "TICKETS/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( TRANSIT_OPERATOR v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TRANSIT_OPERATOR/" r,
                    ( v1,
                      r2
                      ) <-
