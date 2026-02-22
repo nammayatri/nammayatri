@@ -35,22 +35,22 @@ resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory = do
   baseUrl <- MM.getOTPRestServiceReq bppConfig.merchantId opCityId
   pure (baseUrl, bppConfig.feedKey)
 
-transitOperatorGetRowUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Maybe Text -> Flow Value
+transitOperatorGetRowUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> NandiTable -> Maybe Text -> Flow NandiRow
 transitOperatorGetRowUtil merchantShortId city vehicleCategory table column = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorGetRow baseUrl gtfsId table column
 
-transitOperatorGetAllRowsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Maybe Int -> Maybe Int -> Flow [Value]
+transitOperatorGetAllRowsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> NandiTable -> Maybe Int -> Maybe Int -> Flow [NandiRow]
 transitOperatorGetAllRowsUtil merchantShortId city vehicleCategory table limit offset = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorGetAllRows baseUrl gtfsId table limit offset
 
-transitOperatorDeleteRowUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Value -> Flow RowsAffectedResp
+transitOperatorDeleteRowUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> NandiTable -> Value -> Flow RowsAffectedResp
 transitOperatorDeleteRowUtil merchantShortId city vehicleCategory table pkValue = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorDeleteRow baseUrl gtfsId table pkValue
 
-transitOperatorUpsertRowUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Value -> Flow Value
+transitOperatorUpsertRowUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> NandiTable -> Value -> Flow NandiRow
 transitOperatorUpsertRowUtil merchantShortId city vehicleCategory table body = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorUpsertRow baseUrl gtfsId table body
@@ -70,7 +70,7 @@ transitOperatorGetDepotsUtil merchantShortId city vehicleCategory = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorDepots baseUrl gtfsId
 
-transitOperatorGetShiftTypesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [Text]
+transitOperatorGetShiftTypesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [ShiftType]
 transitOperatorGetShiftTypesUtil merchantShortId city vehicleCategory = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorShiftTypes baseUrl gtfsId
@@ -80,17 +80,17 @@ transitOperatorGetScheduleNumbersUtil merchantShortId city vehicleCategory = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorScheduleNumbers baseUrl gtfsId
 
-transitOperatorGetDayTypesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [Text]
+transitOperatorGetDayTypesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [DayType]
 transitOperatorGetDayTypesUtil merchantShortId city vehicleCategory = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorDayTypes baseUrl gtfsId
 
-transitOperatorGetTripTypesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [Text]
+transitOperatorGetTripTypesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [TripType]
 transitOperatorGetTripTypesUtil merchantShortId city vehicleCategory = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorTripTypes baseUrl gtfsId
 
-transitOperatorGetBreakTypesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [Text]
+transitOperatorGetBreakTypesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [BreakType]
 transitOperatorGetBreakTypesUtil merchantShortId city vehicleCategory = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorBreakTypes baseUrl gtfsId
@@ -125,7 +125,7 @@ transitOperatorGetTabletIdsUtil merchantShortId city vehicleCategory = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorTabletIds baseUrl gtfsId
 
-transitOperatorGetOperatorsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Flow [Employee]
+transitOperatorGetOperatorsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> OperatorRole -> Flow [Employee]
 transitOperatorGetOperatorsUtil merchantShortId city vehicleCategory role = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorOperators baseUrl gtfsId role
@@ -145,7 +145,7 @@ transitOperatorUpdateWaybillTabletUtil merchantShortId city vehicleCategory req 
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorWaybillTablet baseUrl gtfsId req
 
-transitOperatorGetWaybillsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Int -> Maybe Int -> Flow [Value]
+transitOperatorGetWaybillsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Int -> Maybe Int -> Flow [NandiWaybillRow]
 transitOperatorGetWaybillsUtil merchantShortId city vehicleCategory limit offset = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorWaybills baseUrl gtfsId limit offset

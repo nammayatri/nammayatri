@@ -11,6 +11,15 @@ imports:
   UpdateWaybillFleetReq: SharedLogic.External.Nandi.Types
   UpdateWaybillTabletReq: SharedLogic.External.Nandi.Types
   RowsAffectedResp: SharedLogic.External.Nandi.Types
+  NandiTable: SharedLogic.External.Nandi.Types
+  WaybillStatus: SharedLogic.External.Nandi.Types
+  OperatorRole: SharedLogic.External.Nandi.Types
+  ShiftType: SharedLogic.External.Nandi.Types
+  DayType: SharedLogic.External.Nandi.Types
+  TripType: SharedLogic.External.Nandi.Types
+  BreakType: SharedLogic.External.Nandi.Types
+  NandiRow: SharedLogic.External.Nandi.Types
+  NandiWaybillRow: SharedLogic.External.Nandi.Types
   Value: Data.Aeson
 
 importPackageOverrides:
@@ -18,7 +27,7 @@ importPackageOverrides:
   SharedLogic.External.Nandi.Types: "rider-app"
 
 module: TransitOperator
-apiPrefix: /transitOperator
+apiPrefix: transitOperator
 
 apis:
   - GET:
@@ -27,11 +36,11 @@ apis:
       auth: ApiAuthV2
       mandatoryQuery:
         vehicleCategory: VehicleCategory
-        table: Text
+        table: NandiTable
       query:
         column: Text
       response:
-        type: Value
+        type: NandiRow
 
   - GET:
       endpoint: /allRows
@@ -39,12 +48,12 @@ apis:
       auth: ApiAuthV2
       mandatoryQuery:
         vehicleCategory: VehicleCategory
-        table: Text
+        table: NandiTable
       query:
         limit: Int
         offset: Int
       response:
-        type: "[Value]"
+        type: "[NandiRow]"
 
   - DELETE:
       endpoint: /row
@@ -52,7 +61,7 @@ apis:
       auth: ApiAuthV2
       mandatoryQuery:
         vehicleCategory: VehicleCategory
-        table: Text
+        table: NandiTable
       request:
         type: Value
       response:
@@ -64,11 +73,11 @@ apis:
       auth: ApiAuthV2
       mandatoryQuery:
         vehicleCategory: VehicleCategory
-        table: Text
+        table: NandiTable
       request:
         type: Value
       response:
-        type: Value
+        type: NandiRow
 
   - GET:
       endpoint: /serviceTypes
@@ -104,7 +113,7 @@ apis:
       mandatoryQuery:
         vehicleCategory: VehicleCategory
       response:
-        type: "[Text]"
+        type: "[ShiftType]"
 
   - GET:
       endpoint: /scheduleNumbers
@@ -122,7 +131,7 @@ apis:
       mandatoryQuery:
         vehicleCategory: VehicleCategory
       response:
-        type: "[Text]"
+        type: "[DayType]"
 
   - GET:
       endpoint: /tripTypes
@@ -131,7 +140,7 @@ apis:
       mandatoryQuery:
         vehicleCategory: VehicleCategory
       response:
-        type: "[Text]"
+        type: "[TripType]"
 
   - GET:
       endpoint: /breakTypes
@@ -140,7 +149,7 @@ apis:
       mandatoryQuery:
         vehicleCategory: VehicleCategory
       response:
-        type: "[Text]"
+        type: "[BreakType]"
 
   - GET:
       endpoint: /tripDetails
@@ -205,7 +214,7 @@ apis:
       auth: ApiAuthV2
       mandatoryQuery:
         vehicleCategory: VehicleCategory
-        role: Text
+        role: OperatorRole
       response:
         type: "[Employee]"
 
@@ -252,6 +261,7 @@ apis:
         limit: Int
         offset: Int
       response:
-        type: "[Value]"
+        type: "[NandiWaybillRow]"
 
 types: {}
+

@@ -228,15 +228,15 @@ type OperatorRoutesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "
 
 type OperatorDepotsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "depots" :> Get '[JSON] [Depot]
 
-type OperatorShiftTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "shift-types" :> Get '[JSON] [Text]
+type OperatorShiftTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "shift-types" :> Get '[JSON] [ShiftType]
 
 type OperatorScheduleNumbersAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "schedule-numbers" :> Get '[JSON] [ScheduleNumber]
 
-type OperatorDayTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "day-types" :> Get '[JSON] [Text]
+type OperatorDayTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "day-types" :> Get '[JSON] [DayType]
 
-type OperatorTripTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "trip-types" :> Get '[JSON] [Text]
+type OperatorTripTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "trip-types" :> Get '[JSON] [TripType]
 
-type OperatorBreakTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "break-types" :> Get '[JSON] [Text]
+type OperatorBreakTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "break-types" :> Get '[JSON] [BreakType]
 
 type OperatorTripDetailsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "trip-details" :> QueryParam "scheduleNumber" Text :> Get '[JSON] [NandiTripDetail]
 
@@ -351,19 +351,19 @@ getOperatorRoutes = ET.client operatorRoutesAPI
 getOperatorDepots :: Text -> ET.EulerClient [Depot]
 getOperatorDepots = ET.client operatorDepotsAPI
 
-getOperatorShiftTypes :: Text -> ET.EulerClient [Text]
+getOperatorShiftTypes :: Text -> ET.EulerClient [ShiftType]
 getOperatorShiftTypes = ET.client operatorShiftTypesAPI
 
 getOperatorScheduleNumbers :: Text -> ET.EulerClient [ScheduleNumber]
 getOperatorScheduleNumbers = ET.client operatorScheduleNumbersAPI
 
-getOperatorDayTypes :: Text -> ET.EulerClient [Text]
+getOperatorDayTypes :: Text -> ET.EulerClient [DayType]
 getOperatorDayTypes = ET.client operatorDayTypesAPI
 
-getOperatorTripTypes :: Text -> ET.EulerClient [Text]
+getOperatorTripTypes :: Text -> ET.EulerClient [TripType]
 getOperatorTripTypes = ET.client operatorTripTypesAPI
 
-getOperatorBreakTypes :: Text -> ET.EulerClient [Text]
+getOperatorBreakTypes :: Text -> ET.EulerClient [BreakType]
 getOperatorBreakTypes = ET.client operatorBreakTypesAPI
 
 getOperatorTripDetails :: Text -> Maybe Text -> ET.EulerClient [NandiTripDetail]
