@@ -398,4 +398,3 @@ postOperatorWaybillTablet = ET.client operatorWaybillTabletAPI
 
 getOperatorWaybills :: Text -> Maybe Int -> Maybe Int -> ET.EulerClient [Value]
 getOperatorWaybills = ET.client operatorWaybillsAPI
-

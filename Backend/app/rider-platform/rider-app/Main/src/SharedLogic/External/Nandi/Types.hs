@@ -10,6 +10,7 @@ import qualified Data.Text.Encoding as TE
 import Domain.Types.Station
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Types.HideSecrets (HideSecrets (..))
 import qualified Kernel.Types.Time
 import Storage.CachedQueries.Merchant.MultiModalBus (BusStopETA)
 
@@ -493,14 +494,23 @@ data UpdateWaybillStatusReq = UpdateWaybillStatusReq
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+instance HideSecrets UpdateWaybillStatusReq where
+  hideSecrets = identity
+
 data UpdateWaybillFleetReq = UpdateWaybillFleetReq
   { waybill_id :: Int64,
     fleet_no :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+instance HideSecrets UpdateWaybillFleetReq where
+  hideSecrets = identity
+
 data UpdateWaybillTabletReq = UpdateWaybillTabletReq
   { waybill_id :: Int64,
     tablet_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets UpdateWaybillTabletReq where
+  hideSecrets = identity

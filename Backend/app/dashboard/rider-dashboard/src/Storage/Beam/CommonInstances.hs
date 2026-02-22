@@ -15,9 +15,12 @@
 
 module Storage.Beam.CommonInstances where
 
+import qualified Data.Aeson as A
 import Data.Text as T
 import Kernel.Beam.Lib.UtilsTH as Reexport
+import qualified Kernel.Prelude
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as BeamMOC
+import Kernel.Types.HideSecrets (HideSecrets (..))
 import qualified "lib-dashboard" Storage.Beam.AccessMatrix as BeamAM
 import qualified "lib-dashboard" Storage.Beam.Merchant as BeamM
 import qualified "lib-dashboard" Storage.Beam.MerchantAccess as BeamMA
@@ -49,3 +52,6 @@ instance HasSchemaName BeamT.TransactionT where
 
 instance HasSchemaName BeamMOC.MerchantOperatingCityT where
   schemaName _ = T.pack "atlas_bap_dashboard"
+
+instance HideSecrets A.Value where
+  hideSecrets = Kernel.Prelude.identity
