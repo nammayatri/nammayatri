@@ -293,6 +293,7 @@ parseRoutesFromInMemoryServer routes integratedBppConfigId merchantId merchantOp
               shortName = fromMaybe "" route.shortName,
               vehicleType = route.mode,
               stopCount = route.stopCount,
+              serviceTierType = route.serviceTierType,
               timeBounds = Unbounded,
               createdAt = now,
               updatedAt = now
