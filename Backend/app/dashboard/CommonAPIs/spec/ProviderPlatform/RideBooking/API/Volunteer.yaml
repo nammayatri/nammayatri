@@ -56,6 +56,8 @@ types:
     - building: Maybe Text
     - areaCode: Maybe Text
     - area: Maybe Text
+    - door: Maybe Text
+    - fullAddress: Maybe Text
   AssignCreateAndStartOtpRideAPIReq:
     - bookingId: Id Booking
     - driverId: Id Driver
