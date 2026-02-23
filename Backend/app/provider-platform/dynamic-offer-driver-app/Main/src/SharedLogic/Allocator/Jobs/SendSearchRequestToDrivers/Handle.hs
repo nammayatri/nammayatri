@@ -23,6 +23,7 @@ where
 import qualified Data.HashMap.Strict as HM
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Person (Driver)
+import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
@@ -49,7 +50,7 @@ data Handle m r = Handle
     metrics :: MetricsHandle m,
     isSearchTryValid :: m Bool,
     isBookingValid :: Bool,
-    initiateDriverSearchBatch :: m (),
+    initiateDriverSearchBatch :: m DST.SearchTry,
     cancelSearchTry :: m (),
     cancelBookingIfApplies :: m (),
     isScheduledBooking :: Bool
@@ -81,7 +82,7 @@ processRequestSending Handle {..} goHomeCfg transactionId = do
     then do
       if isScheduledBooking
         then do
-          initiateDriverSearchBatch
+          void initiateDriverSearchBatch
           return (Complete, NormalPool, Nothing)
         else do
           metrics.incrementFailedTaskCounter

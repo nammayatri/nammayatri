@@ -131,7 +131,7 @@ handler merchant sReq searchReq estimates = do
             isAllocatorBatch = False,
             paymentMethodInfo = sReq.paymentMethodInfo
           }
-  initiateDriverSearchBatch driverSearchBatchInput
+  void $ initiateDriverSearchBatch driverSearchBatchInput
   Metrics.finishGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST searchReq.transactionId
   where
     mbGetPayoutFlag isMultipleOrNoDeviceIdExist = maybe Nothing (\val -> if val then Just DRD.MultipleDeviceIdExists else Nothing) isMultipleOrNoDeviceIdExist
