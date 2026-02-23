@@ -191,7 +191,8 @@ handler merchant req validatedQuote = do
                 paymentMethodInfo = paymentMethodInfo,
                 emailDomain = booking.emailDomain
               }
-      initiateDriverSearchBatch driverSearchBatchInput
+      searchTry <- initiateDriverSearchBatch driverSearchBatchInput
+      QRB.updateSearchTryId booking.id searchTry.id
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mkDConfirmResp Nothing uBooking riderDetails
 
