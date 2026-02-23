@@ -28,7 +28,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 
 buildCancelReq ::
-  (MonadFlow m) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   Text ->
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
