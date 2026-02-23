@@ -138,7 +138,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
           -- Cached fares available: fork probing calls in background
           let probeWindow = fromMaybe 60 (apiConfig <&> (.canaryWindowSeconds))
           probeCount <- CB.getProbeCounter ptMode CB.FareAPI merchantOperatingCityId
-          when (alwaysProbe || probeCount < probeLimit) $ do
+          when (not isSingleMode && (alwaysProbe || probeCount < probeLimit)) $ do
             -- Fork a background probe request for circuit breaker tracking
             fork "probe-fare-api" $ do
               unless alwaysProbe $ void $ CB.incrementProbeCounter ptMode CB.FareAPI merchantOperatingCityId probeWindow
