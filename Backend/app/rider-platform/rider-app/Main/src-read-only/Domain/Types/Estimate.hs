@@ -69,6 +69,7 @@ data Estimate = Estimate
     smartTipSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    stateEntryPermitChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.StateEntryPermitChargesInfo,
     status :: Domain.Types.EstimateStatus.EstimateStatus,
     tipOptions :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
     tollChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.TollChargesInfo,
@@ -111,6 +112,8 @@ data NightShiftInfo = NightShiftInfo
   deriving (Generic, (Show))
 
 data PersonalDiscountInfo = PersonalDiscountInfo {personalDiscount :: Kernel.Types.Common.Price, personalDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, (Show))
+
+data StateEntryPermitChargesInfo = StateEntryPermitChargesInfo {stateEntryPermitCharges :: Kernel.Types.Common.Price, stateEntryPermitNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))
 
 data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))
 

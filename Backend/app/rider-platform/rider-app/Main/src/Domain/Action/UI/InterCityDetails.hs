@@ -6,8 +6,8 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 
-mkInterCityDetailsAPIEntity :: InterCityDetails -> Maybe PriceAPIEntity -> InterCityDetailsAPIEntity
-mkInterCityDetailsAPIEntity InterCityDetails {..} tollCharges = do
+mkInterCityDetailsAPIEntity :: InterCityDetails -> Maybe PriceAPIEntity -> Maybe PriceAPIEntity -> InterCityDetailsAPIEntity
+mkInterCityDetailsAPIEntity InterCityDetails {..} tollCharges stateEntryPermitCharges = do
   InterCityDetailsAPIEntity
     { quoteId = getId id,
       baseFare = mkPriceAPIEntity baseFare,

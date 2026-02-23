@@ -44,7 +44,7 @@ getPriceBreakup (_, _, merchantOpCityId) rideId = do
   let govtChargesRate = mbTransporterConfig >>= (SFC.computeTotalGstRate . (.taxConfig.rideGst))
   case quote of
     Just quote' -> do
-      let fareDetails_ = catMaybes $ maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem booking.currency) booking.estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare quote'.fareParams.congestionChargeViaDp govtChargesRate) quote'.farePolicy
+      let fareDetails_ = catMaybes $ maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem booking.currency) booking.estimatedDistance booking.fareParams.customerCancellationDues Nothing Nothing booking.estimatedFare quote'.fareParams.congestionChargeViaDp govtChargesRate) quote'.farePolicy
       pure fareDetails_
     _ -> pure []
   where

@@ -65,7 +65,7 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
         { agencyName = bppDetails.name,
           agencyNumber = Just providerNum,
           tripTerms = maybe [] (.descriptions) tripTerms,
-          quoteDetails = mkQuoteAPIDetails (tollChargesInfo <&> (mkPriceAPIEntity . (.tollCharges))) quoteDetails,
+          quoteDetails = mkQuoteAPIDetails (tollChargesInfo <&> (mkPriceAPIEntity . (.tollCharges))) (stateEntryPermitChargesInfo <&> (mkPriceAPIEntity . (.stateEntryPermitCharges))) quoteDetails,
           estimatedFare = estimatedFare.amountInt,
           estimatedTotalFare = estimatedTotalFare.amountInt,
           discount = discount <&> (.amountInt),
@@ -94,32 +94,34 @@ instance FromJSON QuoteAPIDetails where
 instance ToSchema QuoteAPIDetails where
   declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
 
-mkQuoteAPIDetails :: Maybe PriceAPIEntity -> QuoteDetails -> QuoteAPIDetails
-mkQuoteAPIDetails tollCharges = \case
+mkQuoteAPIDetails :: Maybe PriceAPIEntity -> Maybe PriceAPIEntity -> QuoteDetails -> QuoteAPIDetails
+mkQuoteAPIDetails tollCharges stateEntryPermitCharges = \case
   MeterRideDetails MeterRideQuoteDetails {..} -> MeterRideAPIDetails MeterRideQuoteAPIDetails {..}
-  RentalDetails details -> RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details tollCharges
+  RentalDetails details -> RentalAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details tollCharges stateEntryPermitCharges
   OneWayDetails OneWayQuoteDetails {..} ->
     OneWayAPIDetails
       OneWayQuoteAPIDetails
         { distanceToNearestDriver = distanceToHighPrecMeters distanceToNearestDriver,
           distanceToNearestDriverWithUnit = distanceToNearestDriver,
+          tollCharges = tollCharges,
+          stateEntryPermitCharges = stateEntryPermitCharges,
           ..
         }
   AmbulanceDetails DDriverOffer.DriverOffer {..} ->
     let distanceToPickup' = distanceToHighPrecMeters <$> distanceToPickup
-     in DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickup, durationToPickup = durationToPickup, rating = rating, isUpgradedToCab = fromMaybe False isUpgradedToCab, ..}
+     in DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickup, durationToPickup = durationToPickup, rating = rating, isUpgradedToCab = fromMaybe False isUpgradedToCab, tollCharges = tollCharges, stateEntryPermitCharges = stateEntryPermitCharges, ..}
   DeliveryDetails DDriverOffer.DriverOffer {..} ->
     -- TODO::is delivery entity required
     let distanceToPickup' = distanceToHighPrecMeters <$> distanceToPickup
-     in DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickup, durationToPickup = durationToPickup, rating = rating, isUpgradedToCab = fromMaybe False isUpgradedToCab, ..}
+     in DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickup, durationToPickup = durationToPickup, rating = rating, isUpgradedToCab = fromMaybe False isUpgradedToCab, tollCharges = tollCharges, stateEntryPermitCharges = stateEntryPermitCharges, ..}
   DriverOfferDetails DDriverOffer.DriverOffer {..} ->
     let distanceToPickup' = (distanceToHighPrecMeters <$> distanceToPickup) <|> (Just . HighPrecMeters $ toCentesimal 0) -- TODO::remove this default value
         distanceToPickupWithUnit' = distanceToPickup <|> Just (Distance 0 Meter) -- TODO::remove this default value
         durationToPickup' = durationToPickup <|> Just 0 -- TODO::remove this default value
         rating' = rating <|> Just (toCentesimal 500) -- TODO::remove this default value
-     in DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', isUpgradedToCab = fromMaybe False isUpgradedToCab, ..}
-  OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails USpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
-  InterCityDetails details -> InterCityAPIDetails $ DInterCityDetails.mkInterCityDetailsAPIEntity details tollCharges
+     in DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', isUpgradedToCab = fromMaybe False isUpgradedToCab, tollCharges = tollCharges, stateEntryPermitCharges = stateEntryPermitCharges, ..}
+  OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails USpecialZoneQuote.SpecialZoneQuoteAPIEntity {tollCharges = tollCharges, stateEntryPermitCharges = stateEntryPermitCharges, ..}
+  InterCityDetails details -> InterCityAPIDetails $ DInterCityDetails.mkInterCityDetailsAPIEntity details tollCharges stateEntryPermitCharges
 
 mkQAPIEntityList :: [Quote] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteAPIEntity]
 mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =

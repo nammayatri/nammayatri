@@ -38,6 +38,7 @@ data DailyStatsT f = DailyStatsT
     payoutStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DailyStats.PayoutStatus),
     referralCounts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     referralEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    stateEntryPermitCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     tipAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     totalDistance :: B.C f Kernel.Types.Common.Meters,
@@ -55,6 +56,6 @@ instance B.Table DailyStatsT where
 
 type DailyStats = DailyStatsT Identity
 
-$(enableKVPG ''DailyStatsT ['id] [['driverId]])
+$(enableKVPG (''DailyStatsT) [('id)] [[('driverId)]])
 
-$(mkTableInstances ''DailyStatsT "daily_stats")
+$(mkTableInstances (''DailyStatsT) "daily_stats")

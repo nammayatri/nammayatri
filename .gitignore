@@ -35,4 +35,6 @@ docker-compose.yaml
 stack.yaml
 
 shared-kernel/
+ny-react-native/
+location-tracking-service/
 

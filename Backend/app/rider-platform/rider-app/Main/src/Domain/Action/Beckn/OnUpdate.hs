@@ -33,6 +33,7 @@ module Domain.Action.Beckn.OnUpdate
     EditDestConfirmUpdateReq (..),
     EditDestErrorReq (..),
     TollCrossedEventReq (..),
+    StateEntryPermitCrossedEventReq (..),
     PhoneCallRequestEventReq (..),
     PhoneCallCompletedEventReq (..),
     DestinationReachedReq (..),
@@ -123,6 +124,7 @@ data OnUpdateReq
   | OUEditDestSoftUpdateReq EditDestSoftUpdateReq
   | OUEditDestConfirmUpdateReq EditDestConfirmUpdateReq
   | OUTollCrossedEventReq TollCrossedEventReq
+  | OUStateEntryPermitCrossedEventReq StateEntryPermitCrossedEventReq
   | OUPhoneCallRequestEventReq PhoneCallRequestEventReq
   | OUPhoneCallCompletedEventReq PhoneCallCompletedEventReq
   | OUEditDestError EditDestErrorReq
@@ -147,6 +149,7 @@ data ValidatedOnUpdateReq
   | OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq
   | OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq
   | OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq
+  | OUValidatedStateEntryPermitCrossedEventReq ValidatedStateEntryPermitCrossedEventReq
   | OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq
   | OUValidatedPhoneCallCompletedEventReq ValidatedPhoneCallCompletedEventReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
@@ -345,6 +348,15 @@ newtype TollCrossedEventReq = TollCrossedEventReq
   }
 
 data ValidatedTollCrossedEventReq = ValidatedTollCrossedEventReq
+  { booking :: DRB.Booking,
+    person :: DPerson.Person
+  }
+
+newtype StateEntryPermitCrossedEventReq = StateEntryPermitCrossedEventReq
+  { transactionId :: Text
+  }
+
+data ValidatedStateEntryPermitCrossedEventReq = ValidatedStateEntryPermitCrossedEventReq
   { booking :: DRB.Booking,
     person :: DPerson.Person
   }
@@ -557,6 +569,11 @@ onUpdate = \case
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+  OUValidatedStateEntryPermitCrossedEventReq ValidatedStateEntryPermitCrossedEventReq {..} -> do
+    mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "STATE_CROSSED" Nothing Nothing person.language booking.configInExperimentVersions
+    whenJust mbMerchantPN $ \merchantPN -> do
+      let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
+      TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
   OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq {..} -> do
     mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "FCM_CHAT_MESSAGE" Nothing Nothing person.language booking.configInExperimentVersions
     whenJust mbMerchantPN $ \merchantPN -> do
@@ -670,6 +687,10 @@ validateRequest = \case
     booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
     person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
     return $ OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..}
+  OUStateEntryPermitCrossedEventReq StateEntryPermitCrossedEventReq {..} -> do
+    booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
+    person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    return $ OUValidatedStateEntryPermitCrossedEventReq ValidatedStateEntryPermitCrossedEventReq {..}
   OUPhoneCallRequestEventReq PhoneCallRequestEventReq {..} -> do
     booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
     person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)

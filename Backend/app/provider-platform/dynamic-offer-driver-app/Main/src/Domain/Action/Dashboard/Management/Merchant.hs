@@ -1405,7 +1405,6 @@ postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
             nightShiftBounds = req.nightShiftBounds <|> nightShiftBounds,
             allowedTripDistanceBounds = (FarePolicy.mkAllowedTripDistanceBounds distanceUnit <$> req.allowedTripDistanceBounds) <|> allowedTripDistanceBounds,
             perMinuteRideExtraTimeCharge = (req.perMinuteRideExtraTimeChargeWithCurrency <&> (.amount)) <|> req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
-            tollCharges = req.tollCharges <|> tollCharges,
             petCharges = req.petCharges <|> petCharges,
             driverAllowance = req.driverAllowance <|> driverAllowance,
             priorityCharges = req.priorityCharges <|> priorityCharges,
@@ -1469,7 +1468,6 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     minAllowedTripDistance :: Text,
     maxAllowedTripDistance :: Text,
     serviceCharge :: Text,
-    tollCharges :: Text,
     petCharges :: Text,
     driverAllowance :: Text,
     businessDiscountPercentage :: Text,
@@ -1573,7 +1571,6 @@ instance ToNamedRecord FarePolicyCSVRow where
         "min_allowed_trip_distance" .= minAllowedTripDistance,
         "max_allowed_trip_distance" .= maxAllowedTripDistance,
         "service_charge" .= serviceCharge,
-        "toll_charges" .= tollCharges,
         "pet_charges" .= petCharges,
         "driver_allowance" .= driverAllowance,
         "business_discount_percentage" .= businessDiscountPercentage,
@@ -1676,7 +1673,6 @@ farePolicyCSVHeader =
       "min_allowed_trip_distance",
       "max_allowed_trip_distance",
       "service_charge",
-      "toll_charges",
       "pet_charges",
       "driver_allowance",
       "business_discount_percentage",
@@ -1779,7 +1775,6 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "min_allowed_trip_distance"
       <*> r .: "max_allowed_trip_distance"
       <*> r .: "service_charge"
-      <*> r .: "toll_charges"
       <*> r .: "pet_charges"
       <*> r .: "driver_allowance"
       <*> r .: "business_discount_percentage"
@@ -2106,7 +2101,6 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     minAllowedTripDistance = minTripDist,
                     maxAllowedTripDistance = maxTripDist,
                     serviceCharge = maybe "" showT farePolicy.serviceCharge,
-                    tollCharges = maybe "" showT farePolicy.tollCharges,
                     petCharges = maybe "" showT farePolicy.petCharges,
                     driverAllowance = maybe "" showT farePolicy.driverAllowance,
                     businessDiscountPercentage = maybe "" showT farePolicy.businessDiscountPercentage,
@@ -2446,7 +2440,6 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let allowedTripDistanceBounds = Just $ FarePolicy.AllowedTripDistanceBounds {distanceUnit, minAllowedTripDistance, maxAllowedTripDistance}
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
       let driverCancellationPenaltyAmount :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.driverCancellationPenaltyAmount "Driver Cancellation Penalty Amount"
-      let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"
       let driverAllowance :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.driverAllowance "Driver Allowance"
       let businessDiscountPercentage :: (Maybe Double) = readMaybeCSVField idx row.businessDiscountPercentage "Business Discount Percentage"
@@ -3218,7 +3211,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             region = show req.city,
             state = req.state,
             city = req.city,
-            geom = Just req.geom
+            geom = Just req.geom,
+            bbox = Nothing -- TODO: @Himanshu compute and persist bbox for this geometry (Phase: geometry bbox backfill)
           }
 
     buildMerchant merchantId merchantData currentTime DM.Merchant {city = _city, ..} =

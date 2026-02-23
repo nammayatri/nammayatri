@@ -221,7 +221,7 @@ tfItems booking merchant mbFarePolicy =
           Spec.itemCategoryIds = Just [BUtils.tripCategoryToCategoryCode booking.tripCategory],
           Spec.itemPaymentIds = tfPaymentId booking.paymentId,
           Spec.itemPrice = tfItemPrice booking,
-          Spec.itemTags = BUtils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing
+          Spec.itemTags = BUtils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing
         }
     ]
 

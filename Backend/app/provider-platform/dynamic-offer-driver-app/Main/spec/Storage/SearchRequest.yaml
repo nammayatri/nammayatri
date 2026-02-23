@@ -59,6 +59,9 @@ SearchRequest:
     tollCharges: Maybe HighPrecMoney
     tollNames: Maybe [Text]
     tollIds: Maybe [Text]
+    stateEntryPermitCharges: Maybe HighPrecMoney
+    stateEntryPermitNames: Maybe [Text]
+    stateEntryPermitIds: Maybe [Text]
     isReallocationEnabled: Maybe Bool
     toLocation: Maybe Location
     estimatedDistance: Maybe Meters
@@ -209,6 +212,8 @@ SearchRequest:
     currency: character varying(255)
     tollNames: "text[]"
     tollIds: "text[]"
+    stateEntryPermitNames: "text[]"
+    stateEntryPermitIds: "text[]"
     driverDefaultExtraFee: double precision
     driverDefaultExtraFeeAmount: double precision
     customerLanguage: character varying(36)

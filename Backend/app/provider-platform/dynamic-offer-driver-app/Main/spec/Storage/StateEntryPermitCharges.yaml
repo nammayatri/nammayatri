@@ -1,0 +1,30 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Geometry: Domain.Types.Geometry
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+
+StateEntryPermitCharges:
+  tableName: state_entry_permit_charges
+  derives: "Generic,Show,FromJSON,ToJSON"
+  fields:
+    id: Id StateEntryPermitCharges
+    amount: HighPrecMoney
+    geomId: Id Geometry
+    name: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    geomId: character varying(36)
+
+  queries:
+    findAllByGeomId:
+      kvFunction: findAllWithKV
+      where: geomId
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -23,6 +23,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.FarePolicy as FP
+import qualified SharedLogic.StateEntryPermitDetector as SEP
 import qualified SharedLogic.TollsDetector as TD
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMM
@@ -82,21 +83,52 @@ calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong 
   let mbToLocGeohash = T.pack <$> ((\dropLatLong -> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (dropLatLong.lat, dropLatLong.lon)) =<< mbDropLatLong)
   fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong mbDropLatLong Nothing Nothing Nothing mbFromLocGeohash mbToLocGeohash mbDistance mbDuration Nothing tripCategory configsInExperimentVersions
   mbTollChargesAndNames <- TD.getTollInfoOnRoute merchanOperatingCityId Nothing (maybe [] (\x -> x.points) mbRoute)
+  mbStateEntryPermitInfo <- SEP.getStateEntryPermitInfoOnRoute merchanOperatingCityId Nothing (maybe [] (\x -> x.points) mbRoute)
   let mbTollCharges = (\(tollCharges, _, _, _, _) -> tollCharges) <$> mbTollChargesAndNames
   let mbTollNames = (\(_, tollNames, _, _, _) -> tollNames) <$> mbTollChargesAndNames
   let mbTollIds = (\(_, _, tollIds, _, _) -> tollIds) <$> mbTollChargesAndNames
+  let mbStateEntryPermitCharges = (\(charges, _, _) -> charges) <$> mbStateEntryPermitInfo
+  let mbStateEntryPermitNames = (\(_, names, _) -> names) <$> mbStateEntryPermitInfo
+  let mbStateEntryPermitIds = (\(_, _, ids) -> ids) <$> mbStateEntryPermitInfo
   let mbIsAutoRickshawAllowed = (\(_, _, _, mbIsAutoRickshawAllowed', _) -> mbIsAutoRickshawAllowed') <$> mbTollChargesAndNames
   let mbIsTwoWheelerAllowed = join ((\(_, _, _, _, isTwoWheelerAllowed) -> isTwoWheelerAllowed) <$> mbTollChargesAndNames)
   let allFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed fareProducts.farePolicies
-  estimates <- mapMaybeM (\fp -> buildEstimateHelper fp mbTollCharges mbTollNames mbTollIds now transporterConfig.currency transporterConfig) allFarePolicies
+  estimates <- mapMaybeM (\fp -> buildEstimateHelper fp mbTollCharges mbTollNames mbTollIds mbStateEntryPermitCharges mbStateEntryPermitNames mbStateEntryPermitIds now transporterConfig.currency transporterConfig) allFarePolicies
   let estimateAPIEntity = map buildEstimateApiEntity estimates
   return API.Types.UI.FareCalculator.FareResponse {estimatedFares = estimateAPIEntity}
   where
-    buildEstimateHelper fp mbTollCharges mbTollNames mbTollIds now currency tConfig = do
+    buildEstimateHelper fp mbTollCharges mbTollNames mbTollIds mbStateEntryPermitCharges mbStateEntryPermitNames mbStateEntryPermitIds now currency tConfig = do
       CQVST.findByServiceTierTypeAndCityIdInRideFlow fp.vehicleServiceTier merchanOperatingCityId configsInExperimentVersions
         >>= \case
           Just vehicleServiceTierItem -> do
-            estimate <- DBS.buildEstimate merchantId merchanOperatingCityId currency Meter Nothing now False Nothing False mbDistance Nothing Nothing mbTollCharges mbTollNames mbTollIds Nothing Nothing 0 mbDuration tConfig False vehicleServiceTierItem fp
+            estimate <-
+              DBS.buildEstimate
+                merchantId
+                merchanOperatingCityId
+                currency
+                Meter
+                Nothing -- mbSearchReq
+                now
+                False -- isScheduled
+                Nothing -- returnTime
+                False -- roundTrip
+                mbDistance
+                Nothing -- specialLocationTag
+                Nothing -- mbSpecialLocName
+                mbTollCharges
+                mbTollNames
+                mbTollIds
+                mbStateEntryPermitCharges
+                mbStateEntryPermitNames
+                mbStateEntryPermitIds
+                Nothing -- isCustomerPrefferedSearchRoute
+                Nothing -- isBlockedRoute
+                0 -- noOfStops
+                mbDuration -- mbEstimatedDuration
+                tConfig
+                False -- nightShiftOverlapChecking
+                vehicleServiceTierItem
+                fp
             return $ Just estimate
           Nothing -> return Nothing
 

@@ -333,6 +333,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       clientDevice = Nothing
       clientSdkVersion = Nothing
       tollConfidence = Nothing
+      stateEntryPermitConfidence = Nothing
       distanceUnit = booking.distanceUnit
       paymentStatus = DRide.NotInitiated
       driverAccountId = Nothing

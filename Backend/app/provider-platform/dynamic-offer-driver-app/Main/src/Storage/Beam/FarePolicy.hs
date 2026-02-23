@@ -37,7 +37,6 @@ data FarePolicyT f = FarePolicyT
     businessDiscountPercentage :: B.C f (Maybe Double),
     personalDiscountPercentage :: B.C f (Maybe Double),
     priorityCharges :: B.C f (Maybe HighPrecMoney),
-    tollCharges :: B.C f (Maybe HighPrecMoney),
     pickupBufferInSecsForNightShiftCal :: B.C f (Maybe Seconds),
     tipOptions :: B.C f (Maybe [Int]),
     currency :: B.C f (Maybe Currency),

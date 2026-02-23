@@ -313,10 +313,11 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
   let personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 tripEndLocation else Nothing
       arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
       tollConfidence = if isValueAddNP then Utils.mkTollConfidenceTagGroupV2 ride.tollConfidence else Nothing
+      sepcConfidence = if isValueAddNP then Utils.mkStateEntryPermitConfidenceTagGroupV2 ride.stateEntryPermitConfidence else Nothing
       isValidRide = Tools.isValidRide ride
       rideTagGroup = if isValueAddNP then Utils.mkRideDetailsTagGroup (Just isValidRide) else Nothing
   distanceTagGroup <- if isValueAddNP then UtilsOU.mkDistanceTagGroup ride else return Nothing
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> distanceTagGroup <> tollConfidence <> rideTagGroup) personTag False False Nothing (Just $ show EventEnum.RIDE_ENDED) isValueAddNP riderPhone False 0
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> distanceTagGroup <> tollConfidence <> sepcConfidence <> rideTagGroup) personTag False False Nothing (Just $ show EventEnum.RIDE_ENDED) isValueAddNP riderPhone False 0
   quote <- UtilsOU.mkRideCompletedQuote ride fareParams
   let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
   let items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId

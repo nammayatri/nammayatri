@@ -46,6 +46,7 @@ data Quote = Quote
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
     tollNames :: Maybe [Text],
+    stateEntryPermitNames :: Maybe [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)

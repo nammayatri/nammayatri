@@ -198,6 +198,13 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
                     { tollCharges = tollCharges',
                       tollNames = tollNames'
                     },
+            stateEntryPermitChargesInfo =
+              ((,) <$> (estimate.stateEntryPermitChargesInfo <&> (.stateEntryPermitCharges)) <*> (estimate.stateEntryPermitChargesInfo <&> (.stateEntryPermitNames)))
+                <&> \(sepcCharges', sepcNames') ->
+                  DQuote.StateEntryPermitChargesInfo
+                    { stateEntryPermitCharges = sepcCharges',
+                      stateEntryPermitNames = sepcNames'
+                    },
             vehicleServiceTierAirConditioned = estimate.vehicleServiceTierAirConditioned,
             isAirConditioned = estimate.isAirConditioned,
             vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,

@@ -265,6 +265,7 @@ incrementOnboardedCount refType referredEntityId transporterConfig = do
                 numRides = 0,
                 totalDistance = 0,
                 tollCharges = 0.0,
+                stateEntryPermitCharges = 0.0,
                 bonusEarnings = 0.0,
                 merchantLocalDate = utctDay currentTime,
                 currency = transporterConfig.currency,

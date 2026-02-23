@@ -119,6 +119,7 @@ parseEventV2 transactionId messageId bppUri order = do
         "PHONE_CALL_COMPLETED" -> return $ DOnUpdate.OUPhoneCallCompletedEventReq $ DOnUpdate.PhoneCallCompletedEventReq transactionId
         "STOP_ARRIVED" -> parseStopArrivedEvent transactionId order
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
+        "STATE_ENTRY_PERMIT_CROSSED" -> return $ DOnUpdate.OUStateEntryPermitCrossedEventReq $ DOnUpdate.StateEntryPermitCrossedEventReq transactionId
         "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
         "ESTIMATED_END_TIME_RANGE_UPDATED" -> parseEstimatedEndTimeRangeUpdatedEvent order
         "PARCEL_IMAGE_UPLOADED" -> parseParcelImageUploaded order

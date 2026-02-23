@@ -112,6 +112,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       tollChargesCaption = show Enums.TOLL_CHARGES
       mbTollChargesItem = mkBreakupItem tollChargesCaption . mkPrice <$> fareParams.tollCharges
 
+      stateEntryPermitChargesCaption = show Enums.STATE_ENTRY_PERMIT_CHARGES
+      mbStateEntryPermitChargesItem = mkBreakupItem stateEntryPermitChargesCaption . mkPrice <$> fareParams.stateEntryPermitCharges
+
       petChargesCaption = show Enums.PET_CHARGES
       mbPetChargesItem = mkBreakupItem petChargesCaption . mkPrice <$> fareParams.petCharges
 
@@ -176,6 +179,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mkCustomerExtraFareItem,
       mkExtraTimeFareCaption,
       mbTollChargesItem,
+      mbStateEntryPermitChargesItem,
       mbCustomerCancellationDues,
       mbInsuranceChargeItem,
       mbCardChargesFareItem,
@@ -313,7 +317,7 @@ pureFareSum fareParams conditionalChargeCategories = do
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
     + platformFee
-    + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + fromMaybe 0.0 fareParams.parkingCharge)
+    + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + fromMaybe 0.0 fareParams.stateEntryPermitCharges + fromMaybe 0.0 fareParams.parkingCharge)
     + fromMaybe 0.0 fareParams.insuranceCharge
     + fromMaybe 0.0 fareParams.luggageCharge
     + fromMaybe 0.0 fareParams.returnFeeCharge
@@ -362,6 +366,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     estimatedDistance :: Maybe Meters,
     timeDiffFromUtc :: Maybe Seconds,
     tollCharges :: Maybe HighPrecMoney,
+    stateEntryPermitCharges :: Maybe HighPrecMoney,
     noOfStops :: Int,
     currency :: Currency,
     distanceUnit :: DistanceUnit,
@@ -492,7 +497,8 @@ calculateFareParameters params = do
                   params.currency
                   fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
-            tollCharges = addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing),
+            tollCharges = if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing,
+            stateEntryPermitCharges = if isStateEntryPermitApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.stateEntryPermitCharges else Nothing,
             govtCharges = govtCharges,
             insuranceCharge = insuranceChargeResult,
             luggageCharge = luggageCharge,
@@ -792,11 +798,6 @@ countFullFareOfParamsDetails = \case
   DFParams.RentalDetails det -> (0.0, det.distBasedFare + det.timeBasedFare + det.deadKmFare, 0.0)
   DFParams.InterCityDetails det -> (0.0, det.pickupCharge + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare + fromMaybe 0.0 det.stateEntryPermitCharges, 0.0)
   DFParams.AmbulanceDetails det -> (det.distBasedFare, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
-
-addMaybes :: Num a => Maybe a -> Maybe a -> Maybe a
-addMaybes Nothing y = y
-addMaybes x Nothing = x
-addMaybes (Just x) (Just y) = Just (x + y)
 
 calNightShiftCharge :: Maybe HighPrecMoney -> UTCTime -> Maybe NightShiftBounds -> Seconds -> Maybe HighPrecMoney
 calNightShiftCharge resultFullNightShiftCharge rideTime (Just nightShiftBounds) duration = do

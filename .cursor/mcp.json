@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "postgres-local": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://himanshukm-yatri:@127.0.0.1:5434/atlas_dev"
+      ]
+    }
+  }
+}

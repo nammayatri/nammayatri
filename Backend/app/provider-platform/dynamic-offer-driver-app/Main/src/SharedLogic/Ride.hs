@@ -306,6 +306,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
   trackingUrl <- buildTrackingUrl guid
   let previousRideToLocation = dinfo >>= (.driverTripEndLocation)
   let status = bool DRide.NEW DRide.UPCOMING booking.isScheduled
+  logInfo $ "SEPC: Building ride, rideId: " <> getId guid <> ", bookingId: " <> getId booking.id <> ", driverId: " <> getId driver.id <> ", estimatedSEPC: " <> show booking.stateEntryPermitCharges
   return
     DRide.Ride
       { id = guid,
@@ -360,6 +361,13 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         estimatedTollNames = booking.tollNames,
         estimatedTollIds = booking.tollIds,
         tollIds = Nothing,
+        estimatedStateEntryPermitCharges = booking.stateEntryPermitCharges,
+        estimatedStateEntryPermitIds = booking.stateEntryPermitIds,
+        estimatedStateEntryPermitNames = booking.stateEntryPermitNames,
+        stateEntryPermitCharges = Nothing,
+        stateEntryPermitConfidence = Nothing,
+        stateEntryPermitIds = Nothing,
+        stateEntryPermitNames = Nothing,
         uiDistanceCalculationWithAccuracy = Nothing,
         uiDistanceCalculationWithoutAccuracy = Nothing,
         isFreeRide = Just False,

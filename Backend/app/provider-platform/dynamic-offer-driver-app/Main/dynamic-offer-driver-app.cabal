@@ -346,6 +346,7 @@ library
       Domain.Action.UnifiedDashboard.Operator.HealthCheck
       Domain.Action.UnifiedDashboard.RideBooking.HealthCheck
       Domain.Types.Beckn.Status
+      Domain.Types.BoundingBoxPoints
       Domain.Types.Cac
       Domain.Types.CacType
       Domain.Types.City
@@ -515,6 +516,7 @@ library
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SpecialLocationUpsert
+      SharedLogic.StateEntryPermitDetector
       SharedLogic.SyncRide
       SharedLogic.TollsDetector
       SharedLogic.Type
@@ -766,6 +768,7 @@ library
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
+      Storage.Queries.StateEntryPermitChargesExtra
       Storage.Queries.StationExtra
       Storage.Queries.Status
       Storage.Queries.StclMembershipExtra
@@ -1179,6 +1182,7 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.StateEntryPermitCharges
       Domain.Types.Station
       Domain.Types.StclMembership
       Domain.Types.StopInformation
@@ -1356,6 +1360,7 @@ library
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
+      Storage.Beam.StateEntryPermitCharges
       Storage.Beam.Station
       Storage.Beam.StclMembership
       Storage.Beam.StopInformation
@@ -1589,6 +1594,7 @@ library
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.SearchTry
+      Storage.Queries.OrphanInstances.StateEntryPermitCharges
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.StclMembership
       Storage.Queries.OrphanInstances.SubscriptionPurchase
@@ -1634,6 +1640,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
+      Storage.Queries.StateEntryPermitCharges
       Storage.Queries.Station
       Storage.Queries.StclMembership
       Storage.Queries.StopInformation

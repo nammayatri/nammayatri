@@ -97,6 +97,7 @@ import qualified SharedLogic.FareCalculatorV2 as FareV2
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
+import qualified SharedLogic.StateEntryPermitDetector as StateEntryPermitDetector
 import qualified SharedLogic.TollsDetector as TollsDetector
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.GoHomeConfig as CGHC
@@ -174,7 +175,7 @@ data ServiceHandle m = ServiceHandle
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> HighPrecMoney -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
-    finalDistanceCalculation :: Maybe MapsServiceConfig -> Bool -> Bool -> Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Maybe HighPrecMoney -> Maybe [Text] -> Maybe [Text] -> Bool -> Bool -> Bool -> m (),
+    finalDistanceCalculation :: Maybe MapsServiceConfig -> Bool -> Bool -> Bool -> Bool -> Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Maybe HighPrecMoney -> Maybe [Text] -> Maybe [Text] -> Maybe HighPrecMoney -> Maybe [Text] -> Maybe [Text] -> Bool -> Bool -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: Maybe CacKey -> m (Maybe DTConf.TransporterConfig),
@@ -448,8 +449,28 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                       then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
                       else pure Nothing
                   let passedThroughDrop = any (isDropInsideThreshold booking thresholdConfig) tripEndPoints'
+                      isStateEntryPermitApplicable = DTC.isStateEntryPermitApplicableForTrip booking.vehicleServiceTier booking.tripCategory
                   logDebug $ "Did we passed through drop yet in endRide" <> show passedThroughDrop <> " " <> show tripEndPoints'
-                  withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames estimatedTollIds pickupDropOutsideOfThreshold passedThroughDrop (booking.tripCategory == DTC.OneWay DTC.MeterRide)
+                  withTimeAPI "endRide" "finalDistanceCalculation" $
+                    finalDistanceCalculation
+                      rectificationMapsConfig
+                      (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory)
+                      isStateEntryPermitApplicable
+                      thresholdConfig.enableTollCrossedNotifications
+                      (fromMaybe False thresholdConfig.enableSepcCrossedNotifications)
+                      rideOld.id
+                      driverId
+                      tripEndPoints'
+                      estimatedDistance
+                      estimatedTollCharges
+                      estimatedTollNames
+                      estimatedTollIds
+                      rideOld.estimatedStateEntryPermitCharges
+                      rideOld.estimatedStateEntryPermitNames
+                      rideOld.estimatedStateEntryPermitIds
+                      pickupDropOutsideOfThreshold
+                      passedThroughDrop
+                      (booking.tripCategory == DTC.OneWay DTC.MeterRide)
 
                 updRide <- runInMasterDbAndRedis $ findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
@@ -471,6 +492,15 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 -- Log if we have validated toll but can't apply due to route deviation
                 when (isJust mbValidatedPendingToll && pickupDropOutsideOfThreshold) $ do
                   logWarning $ "Validated pending toll found but NOT applying due to pickup/drop outside threshold. RideId: " <> rideId.getId
+
+                -- Reconcile SEPC IDs: get pending (missed) and extra (unexpected) for logging
+                logInfo $ "SEPC: End ride validation for rideId: " <> rideId.getId <> ", estimatedIds: " <> show updRide.estimatedStateEntryPermitIds <> ", detectedIds: " <> show updRide.stateEntryPermitIds
+                (sepcPendingIds, sepcExtraIds) <-
+                  StateEntryPermitDetector.checkAndValidatePendingStateEntryPermits
+                    updRide.id
+                    updRide.estimatedStateEntryPermitIds
+                    updRide.stateEntryPermitIds
+                logInfo $ "SEPC: Validation result for rideId: " <> rideId.getId <> ", pendingIds: " <> show sepcPendingIds <> ", extraIds: " <> show sepcExtraIds
 
                 let (tollCharges, tollNames, tollIds, tollConfidence) = do
                       let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
@@ -523,12 +553,20 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                           _ ->
                             (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
 
+                -- SEPC confidence block (mirrors toll confidence block; see computeSepcConfidence for intentional deviations)
+                let (sepcCharges, sepcNames, sepcIds, sepcConfidence) =
+                      computeSepcConfidence
+                        distanceCalculationFailed
+                        pickupDropOutsideOfThreshold
+                        updRide
+                logInfo $ "SEPC: Final confidence for rideId: " <> rideId.getId <> ", charges: " <> show sepcCharges <> ", confidence: " <> show sepcConfidence <> ", names: " <> show sepcNames
+
                 fork "ride-interpolation" $ do
                   interpolatedPoints <- getInterpolatedPoints updRide.driverId
                   let rideInterpolationData = RideInterpolationData {interpolatedPoints = interpolatedPoints, rideId = updRide.id}
                   when (isJust updRide.driverDeviatedToTollRoute && tollConfidence == Just Sure && ((maybe True (== 0) tollCharges && isJust updRide.estimatedTollCharges) || fromMaybe False (((,) <$> tollCharges <*> updRide.estimatedTollCharges) <&> \(tollCharges', estimatedTollCharges') -> tollCharges' /= estimatedTollCharges'))) $ pushToKafka rideInterpolationData "ride-interpolated-waypoints" updRide.id.getId
 
-                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
+                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, stateEntryPermitCharges = sepcCharges, stateEntryPermitNames = sepcNames, stateEntryPermitIds = sepcIds, stateEntryPermitConfidence = sepcConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
 
                 (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                   if shouldRectifyDistantPointsSnapToRoadFailure
@@ -553,6 +591,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                rideEndedBy = Just rideEndedBy',
                fareParametersId = Just baseFareParams.id,
                tollCharges = mbUpdatedFareParams >>= (.tollCharges),
+               stateEntryPermitCharges = mbUpdatedFareParams >>= (.stateEntryPermitCharges),
                distanceCalculationFailed = distanceCalculationFailed,
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
                endOdometerReading = mbOdometer,
@@ -704,6 +743,65 @@ determineMetroRideType mbSplLocTag sureMetro sureWarriorMetro =
         toMetro = destTag == Just sureMetro || destTag == Just sureWarriorMetro
     Nothing -> DCT.None
 
+-- | Computes the final SEPC (State Entry Permit Charges) confidence tuple.
+--
+-- 4-case model (cleaner than toll because SEPC estimated amounts are authoritative from ride start):
+--   1. IDs match (same set)                          -> Sure,    detected charges
+--   2. IDs differ + dist calc failed / self-tuned    -> Unsure,  estimated charges
+--      (driver/customer was shown estimated; don't surprise them when tracking failed)
+--   3. IDs differ + dist OK + within pickup/drop threshold -> Neutral, estimated charges
+--      (route broadly as expected; don't newly charge IDs not in estimate)
+--   4. IDs differ + dist OK + outside threshold      -> Neutral, detected charges
+--      (route clearly deviated; charge what was actually crossed, but Neutral since IDs still differ)
+--
+-- pending/extra IDs are computed in checkAndValidatePendingStateEntryPermits purely for logging.
+computeSepcConfidence ::
+  Bool -> -- distanceCalculationFailed
+  Bool -> -- pickupDropOutsideOfThreshold
+  DRide.Ride -> -- updRide (post-finalDistanceCalculation ride)
+  (Maybe HighPrecMoney, Maybe [Text], Maybe [Text], Maybe Confidence)
+computeSepcConfidence distanceCalculationFailed pickupDropOutsideOfThreshold updRide =
+  let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
+      estimatedIds = fromMaybe [] updRide.estimatedStateEntryPermitIds
+      detectedIds = fromMaybe [] updRide.stateEntryPermitIds
+      -- Set equality (order-insensitive)
+      idsMatch = all (`elem` detectedIds) estimatedIds && all (`elem` estimatedIds) detectedIds
+   in if idsMatch
+        then -- Case 1: same set of SEPC IDs crossed -> Sure, use detected (same as estimated)
+
+          ( updRide.stateEntryPermitCharges,
+            updRide.stateEntryPermitNames,
+            updRide.stateEntryPermitIds,
+            if isJust updRide.stateEntryPermitCharges || isJust updRide.estimatedStateEntryPermitCharges
+              then Just Sure
+              else Nothing
+          )
+        else
+          if distanceCalculationFailure
+            then -- Case 2: IDs differ + tracking unreliable -> Unsure, use estimated
+
+              ( updRide.estimatedStateEntryPermitCharges,
+                updRide.estimatedStateEntryPermitNames,
+                updRide.estimatedStateEntryPermitIds,
+                if isJust updRide.estimatedStateEntryPermitCharges then Just Unsure else Nothing
+              )
+            else
+              if not pickupDropOutsideOfThreshold
+                then -- Case 3: IDs differ + dist OK + within threshold -> Neutral, use estimated
+
+                  ( updRide.estimatedStateEntryPermitCharges,
+                    updRide.estimatedStateEntryPermitNames,
+                    updRide.estimatedStateEntryPermitIds,
+                    if isJust updRide.estimatedStateEntryPermitCharges then Just Neutral else Nothing
+                  )
+                else -- Case 4: IDs differ + dist OK + outside threshold -> Neutral, use detected
+
+                  ( updRide.stateEntryPermitCharges,
+                    updRide.stateEntryPermitNames,
+                    updRide.stateEntryPermitIds,
+                    if isJust updRide.stateEntryPermitCharges then Just Neutral else Nothing
+                  )
+
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thresholdConfig recomputeWithLatestPricing tripEndPoint = do
   tripEndTime <- getCurrentTime
@@ -761,6 +859,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
               tollCharges = ride.tollCharges,
+              stateEntryPermitCharges = ride.stateEntryPermitCharges,
               vehicleAge = vehicleAge,
               currency = booking.currency,
               noOfStops = length ride.stops,

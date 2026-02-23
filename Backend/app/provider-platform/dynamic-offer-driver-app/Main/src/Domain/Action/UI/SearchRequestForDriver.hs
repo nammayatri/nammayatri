@@ -100,9 +100,12 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverPickUpChargesWithCurrency :: Maybe PriceAPIEntity,
     tollCharges :: Maybe HighPrecMoney,
     tollChargesWithCurrency :: Maybe PriceAPIEntity,
+    stateEntryPermitCharges :: Maybe HighPrecMoney,
+    stateEntryPermitChargesWithCurrency :: Maybe PriceAPIEntity,
     useSilentFCMForForwardBatch :: Bool,
     isOnRide :: Bool,
     tollNames :: Maybe [Text],
+    stateEntryPermitNames :: Maybe [Text],
     parkingCharge :: Maybe HighPrecMoney,
     isFavourite :: Maybe Bool,
     isReferredRideReq :: Maybe Bool,
@@ -120,9 +123,10 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
 
 $(deriveJSON defaultOptions {omitNothingFields = True} ''SearchRequestForDriverAPIEntity)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge safetyCharges congestionCharges petCharges priorityCharges tollCharges = do
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge safetyCharges congestionCharges petCharges priorityCharges tollCharges stateEntryPermitCharges = do
   let isTollApplicable = DTC.isTollApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
+      isStateEntryPermitApplicable = DTC.isStateEntryPermitApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
       specialZoneExtraTip = (\a -> if a == 0 then Nothing else Just a) =<< min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
       driverDefaultStepFee = specialZoneExtraTip <|> nearbyReq.driverDefaultStepFee
       driverStepFee = minNonZero specialZoneExtraTip nearbyReq.driverStepFee
@@ -182,7 +186,9 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           airConditioned = nearbyReq.airConditioned,
           requestedVehicleVariant = DV.castServiceTierToVariant requestedVehicleServiceTier,
           tollChargesWithCurrency = flip PriceAPIEntity searchRequest.currency <$> tollCharges,
+          stateEntryPermitChargesWithCurrency = flip PriceAPIEntity searchRequest.currency <$> stateEntryPermitCharges,
           tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,
+          stateEntryPermitNames = if isStateEntryPermitApplicable then searchRequest.stateEntryPermitNames else Nothing,
           useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
           isOnRide = nearbyReq.isForwardRequest,
           isReferredRideReq = searchRequest.driverIdForSearch $> True,

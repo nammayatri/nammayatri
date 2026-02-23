@@ -617,3 +617,14 @@ ALTER TABLE atlas_app.estimate ADD COLUMN personal_discount double precision ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN state_entry_permit_names text[] ;
+ALTER TABLE atlas_app.estimate ADD COLUMN state_entry_permit_charges double precision ;
+
+
+------- SQL updates -------
+

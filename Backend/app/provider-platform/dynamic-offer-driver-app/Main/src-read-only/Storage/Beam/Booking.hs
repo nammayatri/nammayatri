@@ -92,6 +92,9 @@ data BookingT f = BookingT
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialZoneOtpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startTime :: B.C f Kernel.Prelude.UTCTime,
+    stateEntryPermitCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    stateEntryPermitIds :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
+    stateEntryPermitNames :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     status :: B.C f Domain.Types.Booking.BookingStatus,
     stopLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -116,6 +119,6 @@ instance B.Table BookingT where
 
 type Booking = BookingT Identity
 
-$(enableKVPG ''BookingT ['id] [['quoteId], ['specialZoneOtpCode], ['transactionId]])
+$(enableKVPG (''BookingT) [('id)] [[('quoteId)], [('specialZoneOtpCode)], [('transactionId)]])
 
-$(mkTableInstances ''BookingT "booking")
+$(mkTableInstances (''BookingT) "booking")

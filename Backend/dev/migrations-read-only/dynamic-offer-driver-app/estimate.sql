@@ -174,3 +174,9 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN commission_charges double
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN special_location_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN state_entry_permit_names text[] ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN state_entry_permit_ids text[] ;

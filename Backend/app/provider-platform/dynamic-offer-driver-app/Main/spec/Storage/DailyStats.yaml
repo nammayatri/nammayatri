@@ -30,6 +30,7 @@ DailyStats:
     payoutOrderId: Maybe Text
     payoutOrderStatus: Maybe PayoutOrderStatus
     tollCharges: HighPrecMoney
+    stateEntryPermitCharges: HighPrecMoney
     bonusEarnings: HighPrecMoney
     tipAmount: HighPrecMoney
     cancellationCharges: HighPrecMoney
@@ -50,6 +51,7 @@ DailyStats:
     payoutStatus: Maybe PayoutStatus
     referralEarnings: Maybe HighPrecMoney
     tollCharges: Maybe HighPrecMoney
+    stateEntryPermitCharges: Maybe HighPrecMoney
     bonusEarnings: Maybe HighPrecMoney
     tipAmount: Maybe HighPrecMoney
     cancellationCharges: Maybe HighPrecMoney
@@ -75,6 +77,7 @@ DailyStats:
     referralCounts: Kernel.Prelude.fromMaybe 0|I
     payoutStatus: Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Initialized|I
     tollCharges: Kernel.Prelude.fromMaybe 0|I
+    stateEntryPermitCharges: Kernel.Prelude.fromMaybe 0|I
     bonusEarnings: Kernel.Prelude.fromMaybe 0|I
     tipAmount: Kernel.Prelude.fromMaybe 0|I
     cancellationCharges: Kernel.Prelude.fromMaybe 0|I
@@ -95,6 +98,7 @@ DailyStats:
     referralCounts: Kernel.Prelude.Just|I
     payoutStatus: Kernel.Prelude.Just|I
     tollCharges: Kernel.Prelude.Just|I
+    stateEntryPermitCharges: Kernel.Prelude.Just|I
     bonusEarnings: Kernel.Prelude.Just|I
     tipAmount: Kernel.Prelude.Just|I
     cancellationCharges: Kernel.Prelude.Just|I
@@ -116,7 +120,7 @@ DailyStats:
 
     updateByDriverId:
       kvFunction: updateOneWithKV
-      params: [totalEarnings, numRides, totalDistance, tollCharges, bonusEarnings, totalRideTime]
+      params: [totalEarnings, numRides, totalDistance, tollCharges, stateEntryPermitCharges, bonusEarnings, totalRideTime]
       where:
         and: [driverId, merchantLocalDate]
 

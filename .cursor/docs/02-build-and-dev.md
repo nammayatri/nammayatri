@@ -6,6 +6,7 @@
 # From project root
 ln -sf .envrc.backend .envrc   # For backend work
 direnv allow
+ulimit -s 200000                 # Prerequisite for cabal build (same shell session)
 # This drops you into a Nix develop shell with all dependencies
 ```
 

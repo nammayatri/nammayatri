@@ -51,6 +51,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
+import qualified SharedLogic.StateEntryPermitDetector as StateEntryPermitDetector
 import qualified SharedLogic.TollsDetector as TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
@@ -274,6 +275,40 @@ getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDis
       logInfo $ "MultipleRoutes not found for ride" <> show rideId
       return (estimatedDistance, estimatedTollInfo)
 
+getTravelledDistanceAndSepcInfo :: LocationUpdateFlow m r c => Id DMOC.MerchantOperatingCity -> Maybe Ride -> Meters -> Maybe (HighPrecMoney, [Text], [Text]) -> m (Meters, Maybe (HighPrecMoney, [Text], [Text]))
+getTravelledDistanceAndSepcInfo _ Nothing _ estimatedSepcInfo = do
+  logInfo "SEPC: No ride found to get travelled distance"
+  return (0, estimatedSepcInfo)
+getTravelledDistanceAndSepcInfo merchantOperatingCityId (Just ride) estimatedDistance estimatedSepcInfo = do
+  let rideId = ride.id
+      driverId = ride.driverId
+  logInfo $ "SEPC: Getting travelled distance and SEPC info for rideId: " <> getId rideId <> ", driverId: " <> getId driverId
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  let key = multipleRouteKey booking.transactionId
+  multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
+  case multipleRoutes of
+    Just routes -> do
+      logDebug $ "SEPC: Found " <> show (length routes) <> " routes for rideId: " <> getId rideId
+      let undeviatedRoute = find (not . RI.deviation . RI.deviationInfo) routes
+      case undeviatedRoute of
+        Just route -> do
+          let distance = RI.distance $ RI.routeInfo route
+              routePoints = RI.points $ RI.routeInfo route
+          logDebug $ "SEPC: Checking SEPC on undeviated route with " <> show (length routePoints) <> " points for rideId: " <> getId rideId
+          sepcInfo <- join <$> mapM (StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOperatingCityId (Just driverId)) routePoints
+          case sepcInfo of
+            Just (charges, names, ids) ->
+              logInfo $ "SEPC: Detected on undeviated route for rideId: " <> getId rideId <> ", charges: " <> show charges <> ", names: " <> show names <> ", ids: " <> show ids
+            Nothing ->
+              logDebug $ "SEPC: No SEPC detected on undeviated route for rideId: " <> getId rideId
+          return (fromMaybe estimatedDistance distance, sepcInfo <|> estimatedSepcInfo)
+        Nothing -> do
+          logInfo $ "SEPC: UndeviatedRoute not found for rideId: " <> getId rideId
+          return (estimatedDistance, estimatedSepcInfo)
+    Nothing -> do
+      logInfo $ "SEPC: MultipleRoutes not found for rideId: " <> getId rideId
+      return (estimatedDistance, estimatedSepcInfo)
+
 buildRideInterpolationHandler :: LocationUpdateFlow m r c => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id Ride) -> Bool -> Maybe Integer -> m (RideInterpolationHandler Person m)
 buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBatchSize = do
   transportConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -292,17 +327,28 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed -> QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed)
       (\driverId tollCharges tollNames tollIds -> void (QRide.updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds))
+      (\driverId sepcCharges sepcNames sepcIds -> void (QRide.updateStateEntryPermitChargesAndNamesAndIds driverId sepcCharges sepcNames sepcIds))
       ( \driverId batchWaypoints -> do
+          -- NOTE (@himanshu): we don't add a SEPC-specific route deviation flag analogous to tollRouteDeviation
+          -- because SEPC only needs overall route deviation; we intentionally keep snapToRoadCallCondition logic
+          -- in the library exactly as it was before.
+          -- isSepcPresentOnCurrentRoute mirrors isTollPresentOnCurrentRoute but for state entry permits.
           ride <- QRide.getActiveByDriverId driverId
           let isSafetyCheckEnabledForTripCategory = maybe True (enableSafetyCheckWrtTripCategory . (.tripCategory)) ride
           routeDeviation <- updateDeviation transportConfig (enableNightSafety && isSafetyCheckEnabledForTripCategory) ride batchWaypoints
           (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
-          return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute)
+          isSepcPresentOnCurrentRoute <- isJust <$> StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints
+          return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute, isSepcPresentOnCurrentRoute)
       )
       (TollsDetector.getTollInfoOnRoute merchantOpCityId)
+      (StateEntryPermitDetector.getStateEntryPermitInfoOnRoute merchantOpCityId)
       ( \driverId estimatedDistance estimatedTollInfo -> do
           ride <- QRide.getActiveByDriverId driverId
           getTravelledDistanceAndTollInfo merchantOpCityId ride estimatedDistance estimatedTollInfo
+      )
+      ( \driverId estimatedDistance estimatedSepcInfo -> do
+          ride <- QRide.getActiveByDriverId driverId
+          getTravelledDistanceAndSepcInfo merchantOpCityId ride estimatedDistance estimatedSepcInfo
       )
       transportConfig.recomputeIfPickupDropNotOutsideOfThreshold
       snapToRoad'
@@ -320,6 +366,33 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
           mbBooking <- maybe (return Nothing) (QBooking.findById . bookingId) mbRide
           vehicle <- QVeh.findById driver.id >>= fromMaybeM (DriverWithoutVehicle driver.id.getId)
           BP.sendTollCrossedUpdateToBAP mbBooking mbRide driver driverStats vehicle
+      )
+      ( \driverId -> do
+          -- SEPC crossed notification to driver: uses its own MerchantPN key; ensure STATE_CROSSED exists in merchant_push_notification.
+          logInfo $ "SEPC: Sending STATE_CROSSED notification to driver, driverId: " <> getId driverId
+          person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "STATE_CROSSED" Nothing Nothing person.language Nothing
+          case mbMerchantPN of
+            Just merchantPN -> do
+              let entityData = TN.NotifReq {entityId = person.id.getId, title = merchantPN.title, message = merchantPN.body}
+              logInfo $ "SEPC: Sending notification to driver, driverId: " <> getId driverId <> ", title: " <> merchantPN.title
+              TN.notifyDriverOnEvents person.merchantOperatingCityId person.id person.deviceToken entityData merchantPN.fcmNotificationType
+            Nothing -> do
+              logWarning $ "SEPC: STATE_CROSSED notification config not found for merchantOpCityId: " <> getId merchantOpCityId <> ", driverId: " <> getId driverId
+      )
+      ( \driverId -> do
+          logInfo $ "SEPC: Sending STATE_CROSSED update to BAP, driverId: " <> getId driverId
+          driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          driverStats <- QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
+          mbRide <- QRide.getActiveByDriverId driverId
+          mbBooking <- maybe (return Nothing) (QBooking.findById . bookingId) mbRide
+          vehicle <- QVeh.findById driver.id >>= fromMaybeM (DriverWithoutVehicle driver.id.getId)
+          case (mbBooking, mbRide) of
+            (Just booking, Just ride) -> do
+              logInfo $ "SEPC: Sending BAP update for rideId: " <> getId ride.id <> ", bookingId: " <> getId booking.id
+              BP.sendStateEntryPermitCrossedUpdateToBAP mbBooking mbRide driver driverStats vehicle
+            _ -> do
+              logWarning $ "SEPC: Cannot send BAP update - missing booking or ride for driverId: " <> getId driverId
       )
   where
     snapToRoadWithService rideId' req = do

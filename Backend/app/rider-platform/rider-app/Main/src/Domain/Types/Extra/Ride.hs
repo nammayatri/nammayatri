@@ -60,6 +60,7 @@ data RideAPIEntity = RideAPIEntity
     startOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     status :: Domain.Types.RideStatus.RideStatus,
     tollConfidence :: Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence,
+    stateEntryPermitConfidence :: Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence,
     traveledRideDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,

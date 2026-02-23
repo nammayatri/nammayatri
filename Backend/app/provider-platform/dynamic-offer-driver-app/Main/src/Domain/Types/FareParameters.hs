@@ -41,6 +41,7 @@ data FareParameters = FareParameters
     fareParametersDetails :: FareParametersDetails,
     customerCancellationDues :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
+    stateEntryPermitCharges :: Maybe HighPrecMoney,
     congestionCharge :: Maybe HighPrecMoney,
     petCharges :: Maybe HighPrecMoney,
     driverAllowance :: Maybe HighPrecMoney,

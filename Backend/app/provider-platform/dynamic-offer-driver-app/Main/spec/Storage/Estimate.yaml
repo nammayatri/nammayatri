@@ -62,6 +62,8 @@ Estimate:
       isBlockedRoute: Maybe Bool
       tollNames: Maybe [Text]
       tollIds: Maybe [Text]
+      stateEntryPermitNames: Maybe [Text]
+      stateEntryPermitIds: Maybe [Text]
       eligibleForUpgrade: Bool
       createdAt: UTCTime
       updatedAt: UTCTime

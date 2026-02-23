@@ -54,6 +54,7 @@ Quote:
       distanceToNearestDriverWithUnit: Distance
       quoteId: Text
       tollCharges: Maybe PriceAPIEntity
+      stateEntryPermitCharges: Maybe PriceAPIEntity
 
     OneWaySpecialZoneQuoteAPIDetails:
       distanceToNearestDriver: HighPrecMeters
@@ -65,6 +66,11 @@ Quote:
     TollChargesInfo:
       tollCharges: Price
       tollNames: "[Text]"
+      derive': "Generic, Show"
+
+    StateEntryPermitChargesInfo:
+      stateEntryPermitCharges: Price
+      stateEntryPermitNames: "[Text]"
       derive': "Generic, Show"
 
 
@@ -101,6 +107,7 @@ Quote:
     isCustomerPrefferedSearchRoute: Maybe Bool
     isBlockedRoute: Maybe Bool
     tollChargesInfo: Maybe TollChargesInfo
+    stateEntryPermitChargesInfo: Maybe StateEntryPermitChargesInfo
     quoteBreakupList : "[QuoteBreakup]"
     billingCategory: BillingCategory
     createdAt : UTCTime
@@ -137,6 +144,9 @@ Quote:
       tollChargesInfo:
         tollCharges : Maybe HighPrecMoney
         tollNames : Maybe [Text]
+      stateEntryPermitChargesInfo:
+        stateEntryPermitCharges : Maybe HighPrecMoney
+        stateEntryPermitNames : Maybe [Text]
       quoteBreakupList: {}
 
   beamType:
@@ -161,6 +171,7 @@ Quote:
     providerUrl: parseBaseUrl|MI
     tripTerms: getTripTerms|M
     tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
+    stateEntryPermitChargesInfo: mkStateEntryPermitChargesInfo stateEntryPermitCharges stateEntryPermitNames currency|E
     quoteBreakupList: Storage.Queries.QuoteBreakup.findAllByQuoteIdT id|EM
     quoteDetails: (Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId meterRideBppQuoteId staticBppQuoteId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue)|EM
     discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
@@ -187,6 +198,8 @@ Quote:
     estimatedTotalFare: ((.amount) estimatedTotalFare)|E
     tollCharges: (tollChargesInfo <&> ((.amount) . (.tollCharges)))|E
     tollNames: (tollChargesInfo <&> (.tollNames))|E
+    stateEntryPermitCharges: (stateEntryPermitChargesInfo <&> ((.amount) . (.stateEntryPermitCharges)))|E
+    stateEntryPermitNames: (stateEntryPermitChargesInfo <&> (.stateEntryPermitNames))|E
     tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     distanceToNearestDriver: (Kernel.Types.Common.distanceToHighPrecMeters <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)))|E

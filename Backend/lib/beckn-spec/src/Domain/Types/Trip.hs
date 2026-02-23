@@ -425,6 +425,14 @@ isTollApplicableForTrip _ (CrossCity _ _) = True
 isTollApplicableForTrip _ (Delivery _) = True
 isTollApplicableForTrip _ _ = False
 
+isStateEntryPermitApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
+isStateEntryPermitApplicableForTrip AUTO_RICKSHAW _ = False
+isStateEntryPermitApplicableForTrip _ (OneWay _) = True
+isStateEntryPermitApplicableForTrip _ (CrossCity _ _) = True
+isStateEntryPermitApplicableForTrip _ (InterCity _ _) = True
+isStateEntryPermitApplicableForTrip _ (Delivery _) = True
+isStateEntryPermitApplicableForTrip _ _ = False
+
 isDeliveryTrip :: TripCategory -> Bool
 isDeliveryTrip (Delivery _) = True
 isDeliveryTrip _ = False

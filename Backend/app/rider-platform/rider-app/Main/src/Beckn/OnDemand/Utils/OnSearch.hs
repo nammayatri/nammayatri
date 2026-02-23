@@ -221,6 +221,26 @@ getTollNames item = do
   parsedTagValue <- readMaybe tagValueStr :: Maybe [Text]
   return parsedTagValue
 
+buildStateEntryPermitChargesInfo :: Spec.Item -> Currency -> Maybe OnSearch.StateEntryPermitChargesInfo
+buildStateEntryPermitChargesInfo item currency = do
+  let itemTags = item.itemTags
+  stateEntryPermitCharges <- getStateEntryPermitCharges itemTags currency
+  stateEntryPermitNames <- getStateEntryPermitChargeNames item
+  Just $
+    OnSearch.StateEntryPermitChargesInfo {..}
+
+getStateEntryPermitCharges :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getStateEntryPermitCharges tagGroup currency = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.STATE_ENTRY_PERMIT_CHARGES tagGroup
+  sepcCharges <- DecimalValue.valueFromString tagValue
+  Just $ decimalValueToPrice currency sepcCharges
+
+getStateEntryPermitChargeNames :: Spec.Item -> Maybe [Text]
+getStateEntryPermitChargeNames item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.STATE_ENTRY_PERMIT_CHARGE_NAMES item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe [Text]
+  return parsedTagValue
+
 getestimatedPickupDuration :: Spec.Item -> Maybe Seconds
 getestimatedPickupDuration item = do
   tagValueStr <- Utils.getTagV2 Tag.INFO Tag.DURATION_TO_NEAREST_DRIVER_MINUTES item.itemTags

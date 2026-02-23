@@ -17,6 +17,7 @@ module Domain.Action.Beckn.OnSearch
     ProviderInfo (..),
     EstimateInfo (..),
     TollChargesInfo (..),
+    StateEntryPermitChargesInfo (..),
     DEstimate.FareRange (..),
     QuoteInfo (..),
     QuoteDetails (..),
@@ -146,6 +147,7 @@ data EstimateInfo = EstimateInfo
     businessDiscountInfo :: Maybe BusinessDiscountInfo,
     personalDiscountInfo :: Maybe PersonalDiscountInfo,
     tollChargesInfo :: Maybe TollChargesInfo,
+    stateEntryPermitChargesInfo :: Maybe StateEntryPermitChargesInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong],
     specialLocationTag :: Maybe Text,
@@ -179,6 +181,11 @@ data NightShiftInfo = NightShiftInfo
 data TollChargesInfo = TollChargesInfo
   { tollCharges :: Price,
     tollNames :: [Text]
+  }
+
+data StateEntryPermitChargesInfo = StateEntryPermitChargesInfo
+  { stateEntryPermitCharges :: Price,
+    stateEntryPermitNames :: [Text]
   }
 
 data BusinessDiscountInfo = BusinessDiscountInfo
@@ -226,6 +233,7 @@ data QuoteInfo = QuoteInfo
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
     tollChargesInfo :: Maybe TollChargesInfo,
+    stateEntryPermitChargesInfo :: Maybe StateEntryPermitChargesInfo,
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
@@ -524,6 +532,12 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
               { tollCharges = tollChargesInfo'.tollCharges,
                 tollNames = tollChargesInfo'.tollNames
               },
+        stateEntryPermitChargesInfo =
+          stateEntryPermitChargesInfo <&> \sepcInfo ->
+            DEstimate.StateEntryPermitChargesInfo
+              { stateEntryPermitCharges = sepcInfo.stateEntryPermitCharges,
+                stateEntryPermitNames = sepcInfo.stateEntryPermitNames
+              },
         waitingCharges =
           DEstimate.WaitingCharges
             { waitingChargePerMin = waitingCharges >>= (.waitingChargePerMin)
@@ -592,6 +606,12 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
             DQuote.TollChargesInfo
               { tollCharges = tollChargesInfo'.tollCharges,
                 tollNames = tollChargesInfo'.tollNames
+              },
+        stateEntryPermitChargesInfo =
+          stateEntryPermitChargesInfo <&> \sepcInfo ->
+            DQuote.StateEntryPermitChargesInfo
+              { stateEntryPermitCharges = sepcInfo.stateEntryPermitCharges,
+                stateEntryPermitNames = sepcInfo.stateEntryPermitNames
               },
         distanceUnit = searchRequest.distanceUnit,
         tripCategory = Just tripCategory,

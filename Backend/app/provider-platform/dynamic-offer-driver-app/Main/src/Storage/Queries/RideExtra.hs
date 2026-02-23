@@ -379,6 +379,17 @@ updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds = do
     ]
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
+updateStateEntryPermitChargesAndNamesAndIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> [Text] -> [Text] -> m ()
+updateStateEntryPermitChargesAndNamesAndIds driverId stateEntryPermitCharges stateEntryPermitNames stateEntryPermitIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamR.stateEntryPermitCharges (Just stateEntryPermitCharges),
+      Se.Set BeamR.stateEntryPermitNames (Just stateEntryPermitNames),
+      Se.Set BeamR.stateEntryPermitIds (Just stateEntryPermitIds),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
+
 updateAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
   now <- getCurrentTime
@@ -387,6 +398,9 @@ updateAll rideId ride = do
       Se.Set BeamR.chargeableDistance ride.chargeableDistance,
       Se.Set BeamR.fare $ roundToIntegral <$> ride.fare,
       Se.Set BeamR.fareAmount $ ride.fare,
+      Se.Set BeamR.stateEntryPermitCharges ride.stateEntryPermitCharges,
+      Se.Set BeamR.stateEntryPermitNames ride.stateEntryPermitNames,
+      Se.Set BeamR.stateEntryPermitConfidence ride.stateEntryPermitConfidence,
       Se.Set BeamR.commission ride.commission,
       Se.Set BeamR.tripEndTime ride.tripEndTime,
       Se.Set BeamR.tripEndLat (ride.tripEndPos <&> (.lat)),

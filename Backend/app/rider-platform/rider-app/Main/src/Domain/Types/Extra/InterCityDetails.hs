@@ -23,6 +23,7 @@ data InterCityDetailsAPIEntity = InterCityDetailsAPIEntity
     perDayMaxHourAllowance :: Hours,
     perDayMaxAllowanceInMins :: Maybe Minutes,
     tollCharges :: Maybe PriceAPIEntity,
+    stateEntryPermitCharges :: Maybe PriceAPIEntity,
     roundTrip :: Maybe Bool
   }
   deriving (Generic, FromJSON, Show, ToSchema)

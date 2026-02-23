@@ -599,7 +599,6 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     allowedTripDistanceBounds :: Kernel.Prelude.Maybe AllowedTripDistanceBoundsAPIEntity,
     govtCharges :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     perMinuteRideExtraTimeCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     priorityCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     pickupBufferInSecsForNightShiftCal :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     perMinuteRideExtraTimeChargeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,

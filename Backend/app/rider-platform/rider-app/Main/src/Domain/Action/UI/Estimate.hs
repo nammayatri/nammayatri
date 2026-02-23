@@ -57,6 +57,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     businessDiscountInfo :: Maybe BusinessDiscountInfoAPIEntity,
     personalDiscountInfo :: Maybe PersonalDiscountInfoAPIEntity,
     tollChargesInfo :: Maybe TollChargesInfoAPIEntity,
+    stateEntryPermitChargesInfo :: Maybe StateEntryPermitChargesInfoAPIEntity,
     waitingCharges :: WaitingChargesAPIEntity,
     driversLatLong :: [LatLong],
     tipOptions :: Maybe [Int],
@@ -128,6 +129,7 @@ mkEstimateAPIEntity isReferredRide (Estimate {..}) = do
         businessDiscountInfo = mkBusinessDiscountInfoAPIEntity <$> businessDiscountInfo,
         personalDiscountInfo = mkPersonalDiscountInfoAPIEntity <$> personalDiscountInfo,
         tollChargesInfo = mkTollChargesInfoAPIEntity <$> tollChargesInfo,
+        stateEntryPermitChargesInfo = mkStateEntryPermitChargesInfoAPIEntity <$> stateEntryPermitChargesInfo,
         waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
         totalFareRange = mkFareRangeAPIEntity totalFareRange,
         vehicleVariant = Vehicle.castServiceTierToVariant vehicleServiceTierType,
@@ -165,6 +167,17 @@ mkTollChargesInfoAPIEntity :: TollChargesInfo -> TollChargesInfoAPIEntity
 mkTollChargesInfoAPIEntity TollChargesInfo {..} = do
   let tollChargesWithCurrency = mkPriceAPIEntity tollCharges
   TollChargesInfoAPIEntity {..}
+
+data StateEntryPermitChargesInfoAPIEntity = StateEntryPermitChargesInfoAPIEntity
+  { stateEntryPermitChargesWithCurrency :: PriceAPIEntity,
+    stateEntryPermitNames :: [Text]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+mkStateEntryPermitChargesInfoAPIEntity :: StateEntryPermitChargesInfo -> StateEntryPermitChargesInfoAPIEntity
+mkStateEntryPermitChargesInfoAPIEntity StateEntryPermitChargesInfo {..} = do
+  let stateEntryPermitChargesWithCurrency = mkPriceAPIEntity stateEntryPermitCharges
+  StateEntryPermitChargesInfoAPIEntity {..}
 
 data NightShiftInfoAPIEntity = NightShiftInfoAPIEntity
   { nightShiftCharge :: Money,

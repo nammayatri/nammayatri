@@ -1013,6 +1013,7 @@ TransporterConfig:
     aadhaarImageResizeConfig: Maybe AadhaarImageResizeConfig
     enableFaceVerification: Bool
     enableTollCrossedNotifications: Bool
+    enableSepcCrossedNotifications: Maybe Bool
     specialZoneBookingOtpExpiry: Int
     isPlanMandatory: Bool
     freeTrialDays: Int
@@ -1555,6 +1556,7 @@ TransporterConfig:
     canSuvDowngradeToTaxi: "false"
     enableFaceVerification: "false"
     enableTollCrossedNotifications: "false"
+    enableSepcCrossedNotifications: "false"
     ratingAsDecimal: "false"
     refillVehicleModel: "false"
     driverFeeOverlaySendingTimeLimitInDays: "15"

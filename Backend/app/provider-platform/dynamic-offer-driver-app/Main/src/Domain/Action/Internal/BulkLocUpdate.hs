@@ -62,9 +62,24 @@ bulkLocUpdate req = do
       then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
       else pure Nothing
   let isTollApplicable = DC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory
+  let isStateEntryPermitApplicable = DC.isStateEntryPermitApplicableForTrip booking.vehicleServiceTier booking.tripCategory
+  let enableTollCrossedNotifications = transportConfig.enableTollCrossedNotifications
+      enableSepcCrossedNotifications = fromMaybe False transportConfig.enableSepcCrossedNotifications
   let passedThroughDrop = any (isDropInsideThreshold booking transportConfig) loc
   logDebug $ "Did we passed through drop yet in bulkLocation  " <> show passedThroughDrop <> " and points: " <> show loc
-  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId passedThroughDrop (booking.tripCategory == DC.OneWay DC.MeterRide) loc
+  _ <-
+    addIntermediateRoutePoints
+      defaultRideInterpolationHandler
+      rectificationServiceConfig
+      isTollApplicable
+      isStateEntryPermitApplicable
+      enableTollCrossedNotifications
+      enableSepcCrossedNotifications
+      rideId
+      driverId
+      passedThroughDrop
+      (booking.tripCategory == DC.OneWay DC.MeterRide)
+      loc
 
   let buffertime' = getArrivalTimeBufferOfVehicle transportConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
   when (isJust buffertime' && ride.status == DRide.INPROGRESS && isJust ride.estimatedEndTimeRange && isJust ride.toLocation) $ do

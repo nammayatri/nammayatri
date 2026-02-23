@@ -208,6 +208,7 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
                 payoutOrderId = Nothing,
                 payoutOrderStatus = Nothing,
                 tollCharges = fromMaybe 0.0 ride.tollCharges,
+                stateEntryPermitCharges = fromMaybe 0.0 ride.stateEntryPermitCharges,
                 bonusEarnings = fromMaybe 0.0 (fareParameter >>= (.driverSelectedFare)) + fromMaybe 0.0 (fareParameter >>= (.customerExtraFee)) + fromMaybe 0.0 deadKmFares,
                 createdAt = now,
                 updatedAt = now,
@@ -227,9 +228,10 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
           totalDistance = dailyStats.totalDistance + fromMaybe 0 ride.chargeableDistance
           merchantLocalDate = utctDay localTime
           tollCharges = dailyStats.tollCharges + fromMaybe 0.0 ride.tollCharges
+          stateEntryPermitCharges = dailyStats.stateEntryPermitCharges + fromMaybe 0.0 ride.stateEntryPermitCharges
           bonusEarnings = dailyStats.bonusEarnings + fromMaybe 0.0 (fareParameter >>= (.driverSelectedFare)) + fromMaybe 0.0 (fareParameter >>= (.customerExtraFee)) + fromMaybe 0.0 deadKmFares
           totalRideDuration = dailyStats.totalRideTime + rideDuration
-      SQDS.updateByDriverId totalEarnings numRides totalDistance tollCharges bonusEarnings totalRideDuration driverId merchantLocalDate
+      SQDS.updateByDriverId totalEarnings numRides totalDistance tollCharges stateEntryPermitCharges bonusEarnings totalRideDuration driverId merchantLocalDate
 
 createDriverStat :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Currency -> DistanceUnit -> Id DP.Person -> m DS.DriverStats
 createDriverStat currency distanceUnit driverId = do

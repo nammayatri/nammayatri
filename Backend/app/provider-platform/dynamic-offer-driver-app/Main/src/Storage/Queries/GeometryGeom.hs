@@ -25,6 +25,7 @@ import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
+import Domain.Types.BoundingBoxPoints (BoundingBoxPoints)
 import Domain.Types.Geometry
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -55,18 +56,18 @@ findAllGeometries cityParam mbLimit mbOffset = do
         B.select $
           B.limit_ (fromIntegral limitVal) $
             B.offset_ (fromIntegral offsetVal) $
-              B.orderBy_ (\(gId, _, _, _, _) -> B.desc_ gId) $
+              B.orderBy_ (\(gId, _, _, _, _, _) -> B.desc_ gId) $
                 fmap
                   ( \BeamG.GeometryT {..} ->
-                      (id, city, state, region, getGeomAsGeoJSON)
+                      (id, city, state, region, getGeomAsGeoJSON, bbox)
                   )
                   $ B.filter_' (\BeamG.GeometryT {..} -> B.sqlBool_ (city B.==. B.val_ cityParam)) $
                     B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] result)
 
 -- | FromTType instance for the tuple result from the raw query
-instance FromTType' (Text, Context.City, Context.IndianState, Text, Maybe Text) Geometry where
-  fromTType' (gId, gCity, gState, gRegion, gGeom) = do
+instance FromTType' (Text, Context.City, Context.IndianState, Text, Maybe Text, Maybe BoundingBoxPoints) Geometry where
+  fromTType' (gId, gCity, gState, gRegion, gGeom, gBbox) = do
     pure $
       Just
         Geometry
@@ -74,7 +75,8 @@ instance FromTType' (Text, Context.City, Context.IndianState, Text, Maybe Text) 
             city = gCity,
             state = gState,
             region = gRegion,
-            geom = gGeom
+            geom = gGeom,
+            bbox = gBbox
           }
 
 -- | Find all geometries across all cities for a merchant (for allCities=true).
@@ -90,10 +92,10 @@ findAllGeometriesForMerchant _merchantId mbLimit mbOffset = do
         B.select $
           B.limit_ (fromIntegral limitVal) $
             B.offset_ (fromIntegral offsetVal) $
-              B.orderBy_ (\(gId, _, _, _, _) -> B.desc_ gId) $
+              B.orderBy_ (\(gId, _, _, _, _, _) -> B.desc_ gId) $
                 fmap
                   ( \BeamG.GeometryT {..} ->
-                      (id, city, state, region, getGeomAsGeoJSON)
+                      (id, city, state, region, getGeomAsGeoJSON, bbox)
                   )
                   $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] result)
@@ -127,8 +129,7 @@ instance ToTType' BeamGeomG.GeometryGeom Geometry where
   toTType' Geometry {..} =
     BeamGeomG.GeometryGeomT
       { BeamGeomG.id = getId id,
-        BeamGeomG.region = region,
-        BeamGeomG.state = state,
-        BeamGeomG.city = city,
-        BeamGeomG.geom = geom
+        BeamGeomG.geom = geom,
+        ..
       }
+

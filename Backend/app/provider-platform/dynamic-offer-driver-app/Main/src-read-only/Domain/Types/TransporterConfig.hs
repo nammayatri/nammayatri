@@ -155,6 +155,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableOverchargingBlocker :: Kernel.Prelude.Bool,
     enableScheduleReallocation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableSepcCrossedNotifications :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
     enableVendorCheckForCollectingDues :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

@@ -289,7 +289,7 @@ tfItems ride booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemLocationIds = Nothing,
           itemPaymentIds = Utils.tfPaymentId mbPaymentId,
           itemPrice = Utils.tfItemPrice booking.estimatedFare booking.currency,
-          itemTags = Utils.mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing,
+          itemTags = Utils.mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing,
           itemAddOns = Nothing,
           itemCancellationTerms = Nothing
         }

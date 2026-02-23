@@ -63,6 +63,9 @@ data Ride = Ride
     endOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimatedEndTimeRange :: Kernel.Prelude.Maybe Domain.Types.Ride.EstimatedEndTimeRange,
+    estimatedStateEntryPermitCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    estimatedStateEntryPermitIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    estimatedStateEntryPermitNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     estimatedTollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     estimatedTollIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     estimatedTollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
@@ -100,6 +103,10 @@ data Ride = Ride
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     sosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos),
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
+    stateEntryPermitCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    stateEntryPermitConfidence :: Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence,
+    stateEntryPermitIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    stateEntryPermitNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     status :: Domain.Types.Ride.RideStatus,
     stops :: [Domain.Types.Location.Location],
     subscriptionPurchaseIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.SubscriptionPurchase.SubscriptionPurchase],
@@ -135,8 +142,8 @@ data RideEndedBy = Driver | Dashboard | CallBased | CronJob | Allocator | FleetO
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))
