@@ -69,6 +69,17 @@ let ltsRedis =
       , connectReadOnly = True
       }
 
+let ltsSecondaryRedis =
+      { connectHost = "localhost"
+      , connectPort = 6379
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
 let smsConfig =
       { sessionConfig = common.smsSessionConfig
       , credConfig =
@@ -387,6 +398,7 @@ in  { esqDBCfg
     , hedisNonCriticalClusterCfg = hccfg
     , hedisMigrationStage = False
     , ltsRedis
+    , ltsSecondaryRedis
     , cutOffHedisCluster = False
     , cutOffNonCriticalHedisCluster = True
     , smsCfg = smsConfig
