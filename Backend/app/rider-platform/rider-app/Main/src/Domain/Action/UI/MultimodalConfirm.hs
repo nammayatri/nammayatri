@@ -190,14 +190,14 @@ postMultimodalInitiate ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe [ServiceTierType] ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyType = do
+postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyType mbNewServiceTiers = do
   runAction journeyId $ do
     journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
     journey <- JM.getJourney journeyId
-    let blacklistedServiceTiers = if filterServiceAndJrnyType == Just False then [] else [Spec.AC_EMU_FIRST_CLASS]
-    let blacklistedFareQuoteTypes = if filterServiceAndJrnyType == Just False then [] else [DFRFSQuote.ReturnJourney]
+    let (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters filterServiceAndJrnyType mbNewServiceTiers
     JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes) "addAllLegs"
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
@@ -479,11 +479,12 @@ postMultimodalSwitch ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe [ServiceTierType] ->
   ApiTypes.SwitchLegReq ->
   Environment.Flow ApiTypes.JourneyInfoResp
-postMultimodalSwitch userInfo@(mbPersonId, _) journeyId filterServiceAndJrnyType req = do
+postMultimodalSwitch userInfo@(mbPersonId, _) journeyId filterServiceAndJrnyType mbNewServiceTiers req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
-  JM.switchLeg journeyId personId req filterServiceAndJrnyType
+  JM.switchLeg journeyId personId req filterServiceAndJrnyType mbNewServiceTiers
   getMultimodalBookingInfo userInfo journeyId
 
 postMultimodalRiderLocation ::
@@ -769,11 +770,12 @@ getPublicTransportVehicleData ::
     ) ->
     VehicleCategory ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe [ServiceTierType] ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber = do
+getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber mbNewServiceTiers = do
   case vehicleType of
-    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True
+    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers
     _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
 type CacheKey = (Text, Maybe Text, Maybe Bool, Maybe Text, Maybe Text, Bool)
@@ -846,12 +848,13 @@ getPublicTransportData ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe [ServiceTierType] ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe VehicleCategory ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType = do
+getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute mbNewServiceTiers _mbConfigVersion mbVehicleNumber mbVehicleType = do
   -- Get parameters needed for cache key and version computation
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -881,7 +884,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
 
   -- Get from cache or compute and store
   getCachedPublicTransportData cacheKey currentVersion $
-    getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType False
+    getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType False mbNewServiceTiers
 
 getPublicTransportDataImpl ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -893,9 +896,10 @@ getPublicTransportDataImpl ::
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe VehicleCategory ->
     Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe [ServiceTierType] ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData = do
+getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData mbNewServiceTiers = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -1088,10 +1092,13 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
     withTryCatch "getGtfsVersion:getPublicTransportData" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
       Left _ -> return (map (.feedKey) integratedBPPConfigs)
       Right gtfsVersions -> return gtfsVersions
-  let transportData =
+  let (blacklistedServiceTiers, _) = JMU.getBlacklistedFilters Nothing mbNewServiceTiers
+      allRoutes = concatMap (.rs) transportDataList
+      filteredRoutes = filter (\r -> maybe True (\st -> st `Kernel.Prelude.notElem` blacklistedServiceTiers) r.st) allRoutes
+      transportData =
         ApiTypes.PublicTransportData
           { ss = concatMap (.ss) transportDataList,
-            rs = concatMap (.rs) transportDataList,
+            rs = filteredRoutes,
             rsm = concatMap (.rsm) transportDataList,
             ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion))),
             eligiblePassIds = mbEligiblePassIds
