@@ -126,7 +126,7 @@ initiateDriverSearchBatch ::
     ClickhouseFlow m r
   ) =>
   DriverSearchBatchInput m ->
-  m ()
+  m DST.SearchTry
 initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
   searchTry <- createNewSearchTry
   withTryCatch
@@ -177,8 +177,8 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
     >>= \case
       Left e -> do
         logError $ "Error in initiateDriverSearchBatch: " <> show e
-        return ()
-      Right _ -> return ()
+        return searchTry
+      Right _ -> return searchTry
   where
     scheduleBatching searchTry inTime = do
       JC.createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) inTime $
