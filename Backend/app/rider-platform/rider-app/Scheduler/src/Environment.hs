@@ -82,6 +82,7 @@ data HandlerEnv = HandlerEnv
     hedisClusterEnv :: HedisEnv,
     secondaryHedisClusterEnv :: Maybe HedisEnv,
     ltsHedisEnv :: HedisEnv,
+    secondaryLTSHedisEnv :: Maybe HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     cacheConfig :: CacheConfig,
@@ -182,6 +183,12 @@ buildHandlerEnv HandlerCfg {..} = do
   let serviceClickhouseCfg = riderClickhouseCfg
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   ltsHedisEnv <- connectHedis ltsRedis identity
+  secondaryLTSHedisEnv <-
+    Kernel.Prelude.try (connectHedis ltsSecondaryRedis identity) >>= \case
+      Left (e :: SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary LTS Redis: " ++ show e
+        pure Nothing
+      Right env -> pure (Just env)
   let url = Nothing
   cloudType <- Just <$> lookupCloudType
   return HandlerEnv {..}
@@ -192,6 +199,8 @@ releaseHandlerEnv HandlerEnv {..} = do
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
   maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
+  disconnectHedis ltsHedisEnv
+  maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
 
 type Flow = FlowR HandlerEnv
 

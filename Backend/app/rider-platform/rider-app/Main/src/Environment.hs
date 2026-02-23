@@ -104,6 +104,7 @@ data AppCfg = AppCfg
     hedisClusterCfg :: HedisCfg,
     hedisSecondaryClusterCfg :: HedisCfg,
     ltsRedis :: HedisCfg,
+    ltsSecondaryRedis :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     cutOffHedisCluster :: Bool,
@@ -245,6 +246,7 @@ data AppEnv = AppEnv
     selfUIUrl :: BaseUrl,
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
+    secondaryLTSHedisEnv :: Maybe HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -374,6 +376,12 @@ buildAppEnv cfg@AppCfg {..} = do
   let serviceClickhouseCfg = riderClickhouseCfg
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
   ltsHedisEnv <- connectHedis ltsRedis identity
+  secondaryLTSHedisEnv <-
+    Kernel.Prelude.try (connectHedis ltsSecondaryRedis identity) >>= \case
+      Left (e :: SomeException) -> do
+        putStrLn $ "ERROR: Failed to connect to secondary LTS Redis: " ++ show e
+        pure Nothing
+      Right env -> pure (Just env)
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, disableViaPointTimetableCheck = disableViaPointTimetableCheck, ..}
@@ -385,6 +393,8 @@ releaseAppEnv AppEnv {..} = do
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
   maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
+  disconnectHedis ltsHedisEnv
+  maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
 
 type Env = EnvR AppEnv
 

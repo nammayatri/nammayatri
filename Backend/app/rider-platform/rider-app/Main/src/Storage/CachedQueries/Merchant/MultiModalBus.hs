@@ -25,6 +25,7 @@ import Domain.Utils (mapConcurrently)
 import EulerHS.Prelude hiding (encodeUtf8, fromStrict, id, map)
 import Kernel.Prelude hiding (encodeUtf8)
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 
 -- Route state enum for bus routes
@@ -121,24 +122,30 @@ mkRouteKey mbRedisPrefix routeId = case mbRedisPrefix of
   Nothing -> "route:" <> routeId
 
 -- Get all buses for a single route
-getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> DIBC.IntegratedBPPConfig -> m RouteWithBuses
+getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Text -> DIBC.IntegratedBPPConfig -> m RouteWithBuses
 getRoutesBuses routeId integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
         _ -> Nothing
   let key = mkRouteKey redisPrefix routeId
-  busDataPairs <- withCrossAppRedisNew $ Hedis.hGetAll key
+  cloudType <- asks (.cloudType)
+  busDataPairs <- case cloudType of
+    Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.hGetAll key
+    _ -> withCrossAppRedisNew $ Hedis.hGetAll key
   let buses = map (uncurry FullBusData) busDataPairs
   return $ RouteWithBuses routeId buses
 
-getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [Text] -> DIBC.IntegratedBPPConfig -> m [RouteWithBuses]
+getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => [Text] -> DIBC.IntegratedBPPConfig -> m [RouteWithBuses]
 getBusesForRoutes routeCodes integratedBppConfig = mapConcurrently (\routeCode -> getRoutesBuses routeCode integratedBppConfig) routeCodes
 
-hasLiveVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> DIBC.IntegratedBPPConfig -> m Bool
+hasLiveVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Text -> DIBC.IntegratedBPPConfig -> m Bool
 hasLiveVehicles routeId integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
         _ -> Nothing
   let key = mkRouteKey redisPrefix routeId
-  res <- withCrossAppRedisNew $ Hedis.ttl key
+  cloudType <- asks (.cloudType)
+  res <- case cloudType of
+    Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.ttl key
+    _ -> withCrossAppRedisNew $ Hedis.ttl key
   return $ res >= -1
