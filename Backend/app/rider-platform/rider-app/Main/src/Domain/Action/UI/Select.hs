@@ -236,7 +236,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   let remainingEstimateBppIds = remainingEstimates <&> (.bppEstimateId)
   isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
   phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
-  searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
+  searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
