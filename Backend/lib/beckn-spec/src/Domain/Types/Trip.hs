@@ -420,8 +420,9 @@ isDynamicOfferTrip _ = False
 
 isTollApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
 isTollApplicableForTrip AUTO_RICKSHAW _ = False
-isTollApplicableForTrip _ (OneWay OneWayOnDemandDynamicOffer) = True
-isTollApplicableForTrip _ (CrossCity OneWayOnDemandDynamicOffer _) = True
+isTollApplicableForTrip _ (OneWay _) = True
+isTollApplicableForTrip _ (CrossCity _ _) = True
+isTollApplicableForTrip _ (Delivery _) = True
 isTollApplicableForTrip _ _ = False
 
 isDeliveryTrip :: TripCategory -> Bool
