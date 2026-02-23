@@ -14,7 +14,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data StclMembershipE e = StclMembership
-    { accountNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+  { accountNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     addressCity :: Kernel.Prelude.Text,
     addressPostalCode :: Kernel.Prelude.Text,
     addressState :: Kernel.Prelude.Text,
@@ -68,8 +68,7 @@ instance EncryptedItem StclMembership where
     panNumber_ <- encryptItem (panNumber entity, salt)
     pure
       StclMembership
-       {
-          accountNumber = accountNumber_,
+        { accountNumber = accountNumber_,
           addressCity = addressCity entity,
           addressPostalCode = addressPostalCode entity,
           addressState = addressState entity,
@@ -115,8 +114,7 @@ instance EncryptedItem StclMembership where
     panNumber_ <- fst <$> decryptItem (panNumber entity)
     pure
       ( StclMembership
-          {
-            accountNumber = accountNumber_,
+          { accountNumber = accountNumber_,
             addressCity = addressCity entity,
             addressPostalCode = addressPostalCode entity,
             addressState = addressState entity,

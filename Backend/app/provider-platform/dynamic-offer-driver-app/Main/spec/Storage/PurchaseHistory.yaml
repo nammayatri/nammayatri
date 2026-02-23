@@ -5,7 +5,7 @@ imports:
   PayoutOrder: Lib.Payment.Domain.Types.PayoutOrder
 
 PurchaseHistory:
-  tableName: purchase_history
+  tableName: coin_purchase_history
   beamInstance: Custom Kernel.Beam.Lib.UtilsTH.mkTableInstances "coin_purchase_history" "atlas_driver_offer_bpp"
   types:
     CoinRedemptionType:

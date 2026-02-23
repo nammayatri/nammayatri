@@ -1130,6 +1130,7 @@ TransporterConfig:
     allowedPaymentInstrumentForPayout: Maybe [PaymentInstrument]
     vehicleCategoryExcludedFromVerification: "Maybe [VehicleCategory]"
     linkFleetToUnVerifiedExistingRC: Maybe Bool
+    enableCoinsToDirectPayout: Maybe Bool
 
   beamType:
     currency: Maybe Currency
