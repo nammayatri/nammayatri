@@ -206,6 +206,14 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             return $ Just pendingPass
           Nothing -> return Nothing
 
+  passType <- CQPassType.findById pass.passTypeId
+  userApplicableRouteIds <-
+    case passType >>= (.passEnum) of
+      Just DPassType.StudentPass -> do
+        mbDetails <- QPassDetails.findByPersonId personId DPassType.StudentPass
+        pure $ mbDetails >>= (.applicableRouteIds)
+      _ -> pure Nothing
+
   let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
   purchasedPassId <-
     case mbSamePass of
@@ -246,14 +254,13 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   usedTripCount = Just 0,
                   verificationValidity = pass.verificationValidity,
                   merchantOperatingCityId = pass.merchantOperatingCityId,
-                  applicableRouteIds = Nothing,
+                  applicableRouteIds = userApplicableRouteIds,
                   createdAt = now,
                   updatedAt = now
                 }
 
         QPurchasedPass.create purchasedPass
         return newPurchasedPassId
-  passType <- CQPassType.findById pass.passTypeId
 
   let purchasedPassPayment =
         DPurchasedPassPayment.PurchasedPassPayment
@@ -276,7 +283,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             merchantOperatingCityId = pass.merchantOperatingCityId,
             profilePicture = mbProfilePicture <|> person.profilePicture,
             createdAt = now,
-            applicableRouteIds = Nothing,
+            applicableRouteIds = userApplicableRouteIds,
             updatedAt = now
           }
 
@@ -418,6 +425,11 @@ calculatePassEndDate startDate mbMaxValidDays =
        in DT.fromGregorian nextY nextM endDay
     Just days -> DT.addDays (fromIntegral days) startDate
     Nothing -> startDate
+
+-- Generate Redis key for tracking per-person per-passType route-based activations
+mkPassRouteActivationCountKey :: Id.Id DP.Person -> Id.Id DPassType.PassType -> Text
+mkPassRouteActivationCountKey personId passTypeId =
+  "PassRouteActivation:PersonId:" <> personId.getId <> ":PassTypeId:" <> passTypeId.getId
 
 -- Construct message keys for Pass fields
 mkPassMessageKey :: Id.Id DPass.Pass -> Text -> Text
@@ -868,6 +880,21 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   when (fromMaybe True vehicleInfo.isActuallyValid) $ do
     unless (vehicleInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
       throwError $ InvalidRequest ("This pass is only " <> purchasedPass.benefitDescription)
+  -- Check applicableRouteIds restriction and enforce per-person per-passType activation cap
+  -- applicableRouteIds is stored as text[] in DB; Nothing or Just [] both mean no restriction
+  let normalizedRouteIds = filter (not . T.null) . map T.strip <$> purchasedPass.applicableRouteIds
+  case normalizedRouteIds of
+    Nothing -> pure () -- NULL in DB: no route restriction
+    Just [] -> pure () -- empty text[] in DB: no route restriction
+    Just applicableRoutes -> do
+      routeCode <- T.strip <$> (vehicleInfo.routeCode & fromMaybeM (InvalidRequest "Could not determine route for the scanned vehicle"))
+      unless (routeCode `elem` applicableRoutes) $
+        throwError (InvalidRequest "This pass is not valid for the route of the scanned vehicle")
+      let countKey = mkPassRouteActivationCountKey purchasedPass.personId purchasedPass.passTypeId
+      count <- fromMaybe (0 :: Integer) <$> Hedis.safeGet countKey
+      when (count >= 4) $
+        throwError (InvalidRequest "Pass activation limit reached for this pass type")
+      void $ Hedis.incr countKey
   routeStopMapping <-
     case vehicleInfo.routeCode of
       Just routeCode ->
