@@ -237,3 +237,17 @@ updateExotelCallDeclinedTime bookingId = do
   updateOneWithKV
     [Se.Set BeamB.exotelDeclinedCallStatusReceivingTime $ Just now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateSearchTryId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Id DST.SearchTry -> m ()
+updateSearchTryId bookingId searchTryId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.searchTryId $ Just $ getId searchTryId, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateDqDurationToPickup :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Seconds -> m ()
+updateDqDurationToPickup bookingId durationToPickup = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.dqDurationToPickup $ Just durationToPickup, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
