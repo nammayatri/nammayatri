@@ -159,9 +159,9 @@ data DSearchReq = DSearchReq
     numberOfLuggages :: Maybe Int,
     paymentMode :: Maybe DMPM.PaymentMode,
     fromSpecialLocationId :: Maybe (Id SL.SpecialLocation), -- Fixed route: from area ID
-    toSpecialLocationId :: Maybe (Id SL.SpecialLocation),, -- Fixed route: to area ID
+    toSpecialLocationId :: Maybe (Id SL.SpecialLocation), -- Fixed route: to area ID
     emailDomain :: Maybe Text,
-    businessEmailDomain :: Maybe Text
+    businessEmailDomain :: Maybe Text,
     userClientDevice :: Maybe Device,
     userBundleVersion :: Maybe Version,
     userSdkVersion :: Maybe Version,
