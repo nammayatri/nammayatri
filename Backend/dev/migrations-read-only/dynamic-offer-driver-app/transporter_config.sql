@@ -773,6 +773,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_pan_aadha
 ------- SQL updates -------
 
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_coins_to_direct_payout boolean ;
 
 
 ------- SQL updates -------
