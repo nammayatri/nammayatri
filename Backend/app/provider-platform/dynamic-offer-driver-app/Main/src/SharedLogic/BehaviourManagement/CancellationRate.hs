@@ -54,6 +54,13 @@ data CancellationRateData = CancellationRateData
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+data CancellationPercentageTags = CancellationPercentageTags
+  { daily :: Int,
+    weekly :: Int,
+    fortnightly :: Int,
+    monthly :: Int
+  }
+
 -- TODO: TEMPORARY — Chakra reads these base keys via REDIS queries with operation "sliding_window_count"
 -- (SWC.getCurrentWindowCount per user with window params). Remove those Chakra queries and tag rules
 -- after the short-term release. See Backend/docs/chakra-cancellation-rate-plan.md.
@@ -160,10 +167,9 @@ updateDriverCancellationPercentageTagsDaily ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
-  Int ->
-  Int ->
+  CancellationPercentageTags ->
   m ()
-updateDriverCancellationPercentageTagsDaily mocId driverId dailyCancellationRate weeklyCancellationRate = do
+updateDriverCancellationPercentageTagsDaily mocId driverId cancellationRates = do
   now <- getCurrentTime
   let today = utctDay now
       redisKey = "driver-cancellation-tags-updated:" <> driverId.getId <> ":" <> show today
@@ -173,15 +179,21 @@ updateDriverCancellationPercentageTagsDaily mocId driverId dailyCancellationRate
   when (isNothing alreadyUpdated) $ do
     -- Update tags using pre-calculated rates
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    let dailyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_1") (LYT.NumberValue $ fromIntegral dailyCancellationRate)
-        weeklyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_7") (LYT.NumberValue $ fromIntegral weeklyCancellationRate)
+    let dailyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_1") (LYT.NumberValue $ fromIntegral cancellationRates.daily)
+        weeklyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_7") (LYT.NumberValue $ fromIntegral cancellationRates.weekly)
+        fortnightlyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_14") (LYT.NumberValue $ fromIntegral cancellationRates.fortnightly)
+        monthlyTag = Yudhishthira.mkTagNameValue (LYT.TagName "driver_cancellation_28") (LYT.NumberValue $ fromIntegral cancellationRates.monthly)
 
     mbDailyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) dailyTag) (\(_ :: SomeException) -> pure Nothing)
     mbWeeklyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) weeklyTag) (\(_ :: SomeException) -> pure Nothing)
+    mbFortnightlyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) fortnightlyTag) (\(_ :: SomeException) -> pure Nothing)
+    mbMonthlyTag <- catch (YudhishthiraFlow.verifyTag (cast mocId) monthlyTag) (\(_ :: SomeException) -> pure Nothing)
 
     let dailyTagWithExpiry = Yudhishthira.addTagExpiry dailyTag (mbDailyTag >>= \tag -> tag.validity) now
         weeklyTagWithExpiry = Yudhishthira.addTagExpiry weeklyTag (mbWeeklyTag >>= \tag -> tag.validity) now
-        updatedTags = Yudhishthira.replaceTagNameValue (Just $ Yudhishthira.replaceTagNameValue driver.driverTag dailyTagWithExpiry) weeklyTagWithExpiry
+        fortnightlyTagWithExpiry = Yudhishthira.addTagExpiry fortnightlyTag (mbFortnightlyTag >>= \tag -> tag.validity) now
+        monthlyTagWithExpiry = Yudhishthira.addTagExpiry monthlyTag (mbMonthlyTag >>= \tag -> tag.validity) now
+        updatedTags = Yudhishthira.replaceTagNameValue (Just $ Yudhishthira.replaceTagNameValue (Just $ Yudhishthira.replaceTagNameValue (Just $ Yudhishthira.replaceTagNameValue driver.driverTag dailyTagWithExpiry) weeklyTagWithExpiry) fortnightlyTagWithExpiry) monthlyTagWithExpiry
 
     unless (Just (Yudhishthira.showRawTags updatedTags) == (Yudhishthira.showRawTags <$> driver.driverTag)) $ do
       QPerson.updateDriverTag (Just updatedTags) driverId
@@ -260,8 +272,16 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
 
       -- Update driver tags with cancellation percentages once per day (uses Redis to ensure once per day per driver)
       -- Uses already-calculated rates to avoid redundant queries
+      (fortnightlyCancellationRate, _fortnightlyAssignedCount) <- getCancellationRateOfDays 14 windowSize
+      (monthlyCancellationRate, _monthlyAssignedCount) <- getCancellationRateOfDays 28 windowSize
+      let cancellationRates = CancellationPercentageTags
+            { daily = dailyCancellationRate,
+              weekly = weeklyCancellationRate,
+              fortnightly = fortnightlyCancellationRate,
+              monthly = monthlyCancellationRate
+            }
       fork "Update cancellation percentage tags daily" $ do
-        catch (updateDriverCancellationPercentageTagsDaily driver.merchantOperatingCityId driver.id dailyCancellationRate weeklyCancellationRate) $ \(err :: SomeException) -> do
+        catch (updateDriverCancellationPercentageTagsDaily driver.merchantOperatingCityId driver.id cancellationRates) $ \(err :: SomeException) -> do
           logError $ "Failed to update cancellation percentage tags for driver " <> driver.id.getId <> ": " <> show err
     _ -> logInfo "cancellationRateWindow or cancellationRateBasedNudgingAndBlockingConfig not found in transporter config"
   where
