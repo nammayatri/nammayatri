@@ -26,9 +26,9 @@ data DriverRidePayoutBankAccountE e = DriverRidePayoutBankAccount
   }
   deriving (Generic)
 
-type DriverRidePayoutBankAccount = DriverRidePayoutBankAccountE 'AsEncrypted
+type DriverRidePayoutBankAccount = DriverRidePayoutBankAccountE ('AsEncrypted)
 
-type DecryptedDriverRidePayoutBankAccount = DriverRidePayoutBankAccountE 'AsUnencrypted
+type DecryptedDriverRidePayoutBankAccount = DriverRidePayoutBankAccountE ('AsUnencrypted)
 
 instance EncryptedItem DriverRidePayoutBankAccount where
   type Unencrypted DriverRidePayoutBankAccount = (DecryptedDriverRidePayoutBankAccount, HashSalt)

@@ -40,6 +40,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     allowDuplicateAadhaar :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateGst :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicatePan :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allowDuplicateUdyam :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowMultiFleetOperatorLink :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowRcUnlinkWhenDriverOffline :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowedPaymentInstrumentForPayout :: Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument],
@@ -374,7 +375,8 @@ data DriverWalletConfig = DriverWalletConfig
 data FeedbackNotificationConfig = FeedbackNotificationConfig {allowNotificationOnEmptyBadge :: Kernel.Prelude.Bool, enableFeedbackNotification :: Kernel.Prelude.Bool, feedbackNotificationDelayInSec :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data PayoutFeeConfig = PayoutFeeConfig {feeType :: Domain.Types.TransporterConfig.PayoutFeeType, feeValue :: Kernel.Types.Common.HighPrecMoney} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq)
+data PayoutFeeConfig = PayoutFeeConfig {feeType :: Domain.Types.TransporterConfig.PayoutFeeType, feeValue :: Kernel.Types.Common.HighPrecMoney}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq)
 
 data PayoutFeeType = PERCENTAGE | FIXED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

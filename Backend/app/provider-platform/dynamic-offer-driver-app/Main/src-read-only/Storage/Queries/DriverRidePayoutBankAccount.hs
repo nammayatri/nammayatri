@@ -22,7 +22,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverRidePayoutBankAccount.DriverRidePayoutBankAccount] -> m ())
 createMany = traverse_ create
 
-findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.DriverRidePayoutBankAccount.DriverRidePayoutBankAccount])
+findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.DriverRidePayoutBankAccount.DriverRidePayoutBankAccount]))
 findAllByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByRcId ::
@@ -39,10 +39,10 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DriverRidePayoutBankAccount.DriverRidePayoutBankAccount {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bankAccountNumberEncrypted (bankAccountNumber <&> unEncrypted . (.encrypted)),
-      Se.Set Beam.bankAccountNumberHash (bankAccountNumber <&> (.hash)),
-      Se.Set Beam.bankIfscCodeEncrypted (bankIfscCode <&> unEncrypted . (.encrypted)),
-      Se.Set Beam.bankIfscCodeHash (bankIfscCode <&> (.hash)),
+    [ Se.Set Beam.bankAccountNumberEncrypted (((bankAccountNumber <&> unEncrypted . (.encrypted)))),
+      Se.Set Beam.bankAccountNumberHash ((bankAccountNumber <&> (.hash))),
+      Se.Set Beam.bankIfscCodeEncrypted (((bankIfscCode <&> unEncrypted . (.encrypted)))),
+      Se.Set Beam.bankIfscCodeHash ((bankIfscCode <&> (.hash))),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -70,10 +70,10 @@ instance FromTType' Beam.DriverRidePayoutBankAccount Domain.Types.DriverRidePayo
 instance ToTType' Beam.DriverRidePayoutBankAccount Domain.Types.DriverRidePayoutBankAccount.DriverRidePayoutBankAccount where
   toTType' (Domain.Types.DriverRidePayoutBankAccount.DriverRidePayoutBankAccount {..}) = do
     Beam.DriverRidePayoutBankAccountT
-      { Beam.bankAccountNumberEncrypted = bankAccountNumber <&> unEncrypted . (.encrypted),
-        Beam.bankAccountNumberHash = bankAccountNumber <&> (.hash),
-        Beam.bankIfscCodeEncrypted = bankIfscCode <&> unEncrypted . (.encrypted),
-        Beam.bankIfscCodeHash = bankIfscCode <&> (.hash),
+      { Beam.bankAccountNumberEncrypted = ((bankAccountNumber <&> unEncrypted . (.encrypted))),
+        Beam.bankAccountNumberHash = (bankAccountNumber <&> (.hash)),
+        Beam.bankIfscCodeEncrypted = ((bankIfscCode <&> unEncrypted . (.encrypted))),
+        Beam.bankIfscCodeHash = (bankIfscCode <&> (.hash)),
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.rcId = Kernel.Types.Id.getId rcId,

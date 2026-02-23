@@ -35,7 +35,7 @@ data DigilockerVerification = DigilockerVerification
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data SessionStatus = PENDING | SUCCESS | FAILED | CONSENT_DENIED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

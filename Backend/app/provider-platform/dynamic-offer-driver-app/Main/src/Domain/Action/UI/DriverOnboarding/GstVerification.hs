@@ -16,18 +16,24 @@ module Domain.Action.UI.DriverOnboarding.GstVerification
   ( DriverGstinReq (..),
     DriverGstinRes,
     verifyGstin,
+    onVerifyGst,
   )
 where
 
+import Control.Applicative (liftA2)
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import Data.Aeson hiding (Success)
 import Data.Text as T hiding (elem, find, length, map, null, zip)
+import Data.Tuple.Extra (both)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverGstin as DGst
 import qualified Domain.Types.DriverPanCard as DPan
+import qualified Domain.Types.IdfyVerification as DIdfy
+import qualified Domain.Types.IdfyVerification as Domain
+import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -35,6 +41,7 @@ import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface as VI
+import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -47,10 +54,13 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverGstin as DGQuery
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
+import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
 import qualified Tools.Verification as Verification
@@ -98,9 +108,9 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
   let mbGstVerificationService =
         (if isDashboard then merchantServiceUsageConfig.dashboardGstVerificationService else merchantServiceUsageConfig.gstVerificationService)
   let runBody = do
-        mdriverGstInformation <- DGQuery.findByDriverId person.id
         case mbGstVerificationService of
           Just VI.Idfy -> do
+            mdriverGstInformation <- DGQuery.findByDriverId person.id
             void $ callIdfy person mdriverGstInformation driverDocument transporterConfig
           _ -> do
             gstCardDetails <- buildGstinCard person Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
@@ -143,7 +153,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
           { documentImageId1 = Id req.imageId,
             driverId = person.id,
             id = uuid,
-            verificationStatus = Documents.VALID,
+            verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
             merchantId = Just person.merchantId,
             merchantOperatingCityId = Just merchantOpCityId,
             createdAt = now,
@@ -166,6 +176,10 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
 
     callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverGstInformation driverDocument transporterConfig = do
+      documentVerificationConfig <-
+        CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
+          >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
+            . listToMaybe
       image1 <- DVRC.getDocumentImage person.id req.imageId ODC.GSTCertificate
       let extractReq =
             Verification.ExtractImageReq
@@ -182,6 +196,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
                   ImageDocumentNumberMismatch
                     (maybe "null" maskText extractedGstNo)
                     (maskText req.gstin)
+              verifyGstFlow person merchantOpCityId documentVerificationConfig (fromMaybe "" extractedGstNo) (Id req.imageId)
               pure extractedGST
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
 
@@ -195,7 +210,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
           extractedGst <- validateExtractedGst resp
           when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
             DVRC.validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
-          DGQuery.updateVerificationStatus Documents.VALID person.id
+          DGQuery.updateVerificationStatus Documents.MANUAL_VERIFICATION_REQUIRED person.id
         Nothing -> do
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
@@ -205,5 +220,77 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
           DGQuery.create gstCardDetails
       pure Success
 
-    makeVerifyGstinHitsCountKey :: Text -> Text
-    makeVerifyGstinHitsCountKey gstin = "VerifyGstin:gstinHits:" <> gstin <> ":hitsCount"
+verifyGstFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> ODC.DocumentVerificationConfig -> Text -> Id Image.Image -> Flow ()
+verifyGstFlow person merchantOpCityId documentVerificationConfig gstNumber imageId1 = do
+  now <- getCurrentTime
+  encryptedGst <- encrypt gstNumber
+  let imageExtractionValidation =
+        if documentVerificationConfig.checkExtraction
+          then DIdfy.Success
+          else DIdfy.Skipped
+  verifyRes <-
+    Verification.verifyGstAsync person.merchantId merchantOpCityId $
+      Verification.VerifyGstAsyncReq {gstNumber, driverId = person.id.getId, filingDetails = True, eInvoiceDetails = True}
+  case verifyRes.requestor of
+    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntityGst person imageId1 verifyRes.requestId now imageExtractionValidation encryptedGst
+    _ -> throwError $ InternalError ("Service provider not configured to return GST verification async responses. Provider Name : " <> (show verifyRes.requestor))
+  pure ()
+
+onVerifyGst :: VerificationReqRecord -> VT.GstVerificationResponse -> VT.VerificationService -> Flow AckResponse
+onVerifyGst verificationReq output serviceName = do
+  person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
+  if verificationReq.imageExtractionValidation == Domain.Skipped
+    && (output.gstinStatus /= Just "Active")
+    then do
+      case serviceName of
+        VT.Idfy -> do
+          IVQuery.updateExtractValidationStatus Domain.Failed verificationReq.requestId
+          DGQuery.updateVerificationStatus Documents.INVALID verificationReq.driverId
+        _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyGst. Name of provider : " <> show serviceName)
+      pure Ack
+    else do
+      onVerifyGstHandler person verificationReq.documentImageId1 verificationReq.documentImageId2 output
+      pure Ack
+
+onVerifyGstHandler :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> VT.GstVerificationResponse -> Flow ()
+onVerifyGstHandler person imageId1 imageId2 output = do
+  mEncryptedGstinNumber <- encrypt `mapM` output.gstin
+  let isValidGst = output.gstinStatus == Just "Active"
+  DGQuery.updateVerificationStatus (if isValidGst then Documents.VALID else Documents.INVALID) person.id
+  when (DCommon.checkFleetOwnerRole person.role) $ do
+    QFOI.updateGstImage mEncryptedGstinNumber (Just imageId1.getId) person.id
+  (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
+  when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
+    mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
+
+mkIdfyVerificationEntityGst :: MonadFlow m => Person.Person -> Id Image.Image -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> m DIdfy.IdfyVerification
+mkIdfyVerificationEntityGst person imageId1 requestId now imageExtractionValidation encryptedGst = do
+  entityId <- generateGUID
+  return $
+    DIdfy.IdfyVerification
+      { id = entityId,
+        driverId = person.id,
+        documentImageId1 = imageId1,
+        documentImageId2 = Nothing,
+        requestId,
+        docType = ODC.GSTCertificate,
+        documentNumber = encryptedGst,
+        driverDateOfBirth = Nothing,
+        imageExtractionValidation = imageExtractionValidation,
+        issueDateOnDoc = Nothing,
+        status = "pending",
+        idfyResponse = Nothing,
+        vehicleCategory = Nothing,
+        airConditioned = Nothing,
+        oxygen = Nothing,
+        ventilator = Nothing,
+        retryCount = Just 0,
+        nameOnCard = Nothing,
+        merchantId = Just person.merchantId,
+        merchantOperatingCityId = Just person.merchantOperatingCityId,
+        createdAt = now,
+        updatedAt = now
+      }
+
+makeVerifyGstinHitsCountKey :: Text -> Text
+makeVerifyGstinHitsCountKey gstin = "VerifyGstin:gstinHits:" <> gstin <> ":hitsCount"

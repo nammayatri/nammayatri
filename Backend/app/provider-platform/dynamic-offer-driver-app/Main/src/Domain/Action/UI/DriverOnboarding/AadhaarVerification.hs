@@ -26,6 +26,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
+import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanVerification
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
@@ -40,7 +41,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (DbHash, encrypt, getDbHash)
+import Kernel.External.Encryption (DbHash, decrypt, encrypt, getDbHash)
 import Kernel.Prelude hiding (null)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
@@ -171,6 +172,10 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
               aadhaarEntity <- mkAadhaar person.merchantId person.merchantOperatingCityId personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) Nothing True (Just orgImageFilePath)
               QAadhaarCard.create aadhaarEntity
               DriverInfo.updateAadhaarVerifiedState True (cast personId)
+              -- If PAN and Aadhaar exist, trigger PAN-Aadhaar linkage verification and create idfy_verification entry
+              driverInfoUpdated <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+              mbAadhaarNumber <- traverse decrypt driverInfoUpdated.aadhaarNumber
+              PanVerification.triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaarNumber
               let onlyMandatoryDocs = Just True
               void $ Status.statusHandler (person.id, person.merchantId, merchantOpCityId) (Just True) Nothing Nothing (Just False) onlyMandatoryDocs Nothing
               uploadCompressedAadhaarImage person merchantOpCityId res.image imageType >> pure ()
@@ -276,6 +281,12 @@ unVerifiedAadhaarData personId merchantId merchantOpCityId req = do
   when (isJust mAadhaarCard) $ throwError AadhaarDataAlreadyPresent
   aadhaarEntity <- mkAadhaar merchantId merchantOpCityId personId req.driverName req.driverGender req.driverDob Nothing Nothing False Nothing
   QAadhaarCard.create aadhaarEntity
+  -- If PAN and Aadhaar exist, trigger PAN-Aadhaar linkage verification and create idfy_verification entry
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  mbAadhaarNumber <- traverse decrypt driverInfo.aadhaarNumber
+  PanVerification.triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaarNumber
+
   return Success
 
 makeTransactionIdAndAadhaarHashKey :: Id Person.Person -> Text

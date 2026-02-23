@@ -543,7 +543,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
     DocumentCategory:
@@ -862,6 +862,8 @@ DriverPanCard:
       enum: "FRONTEND_SDK,DASHBOARD,DASHBOARD_ADMIN,DASHBOARD_USER,DIGILOCKER"
     PanType:
       enum: "INDIVIDUAL,BUSINESS"
+    PanAadhaarLinkage:
+      enum: "PAN_AADHAAR_LINKED,AADHAAR_LINKED_TO_OTHER_PAN,PAN_AADHAAR_NOT_LINKED,PAN_DOES_NOT_EXIST"
   fields:
     id: Id DriverPanCard
     driverId: Id Person
@@ -878,6 +880,7 @@ DriverPanCard:
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     docType: Maybe PanType
     driverNameOnGovtDB: Maybe Text
+    panAadhaarLinkage: Maybe PanAadhaarLinkage
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
@@ -910,6 +913,10 @@ DriverPanCard:
     updateMerchantIdAndCityIdByDriverId:
       kvFunction: updateWithKV
       params: [merchantId, merchantOperatingCityId]
+      where: driverId
+    updatePanAadhaarLinkage:
+      kvFunction: updateOneWithKV
+      params: [panAadhaarLinkage]
       where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -1003,6 +1010,34 @@ DriverBankAccount:
       where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
+
+DriverUdyam :
+  tableName: driver_udyam
+  fields:
+    id: Id DriverUdyam
+    driverId: Id Person
+    udyamNumber: EncryptedHashedField e Text
+    enterpriseType: Maybe Text
+    enterpriseName : Maybe Text
+    verifiedBy: Maybe Domain.Types.DriverPanCard.VerifiedBy
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    verificationStatus: VerificationStatus
+  excludedFields: [merchantOperatingCityId]
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    # udyamNumberHash: "!SecondaryKey" # forcing to be a secondary key
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByDriverId:
+      kvFunction: findOneWithKV
+      where: driverId
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, updatedAt]
+      where: driverId
 
 DriverRidePayoutBankAccount:
   tableName: driver_ride_payout_bank_account

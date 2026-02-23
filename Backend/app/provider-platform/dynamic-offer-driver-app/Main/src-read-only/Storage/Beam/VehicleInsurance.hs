@@ -13,23 +13,23 @@ import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data VehicleInsuranceT f = VehicleInsuranceT
-  { documentImageId :: B.C f Kernel.Prelude.Text,
-    driverId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    insuredName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    issueDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    limitsOfLiability :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    policyExpiry :: B.C f Kernel.Prelude.UTCTime,
-    policyNumberEncrypted :: B.C f Kernel.Prelude.Text,
-    policyNumberHash :: B.C f Kernel.External.Encryption.DbHash,
-    policyProvider :: B.C f Kernel.Prelude.Text,
-    rcId :: B.C f Kernel.Prelude.Text,
-    rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { documentImageId :: (B.C f Kernel.Prelude.Text),
+    driverId :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    insuredName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    issueDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    limitsOfLiability :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    policyExpiry :: (B.C f Kernel.Prelude.UTCTime),
+    policyNumberEncrypted :: (B.C f Kernel.Prelude.Text),
+    policyNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
+    policyProvider :: (B.C f Kernel.Prelude.Text),
+    rcId :: (B.C f Kernel.Prelude.Text),
+    rejectReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    verificationStatus :: (B.C f Kernel.Types.Documents.VerificationStatus),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -39,6 +39,6 @@ instance B.Table VehicleInsuranceT where
 
 type VehicleInsurance = VehicleInsuranceT Identity
 
-$(enableKVPG ''VehicleInsuranceT ['id] [['documentImageId]])
+$(enableKVPG (''VehicleInsuranceT) [('id)] [[('documentImageId)]])
 
-$(mkTableInstances ''VehicleInsuranceT "vehicle_insurance")
+$(mkTableInstances (''VehicleInsuranceT) "vehicle_insurance")

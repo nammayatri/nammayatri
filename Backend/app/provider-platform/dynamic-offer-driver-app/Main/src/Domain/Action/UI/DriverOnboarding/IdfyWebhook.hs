@@ -23,7 +23,10 @@ where
 
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
+import qualified Domain.Action.UI.DriverOnboarding.GstVerification as GstCard
+import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanCard
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
+import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UdyamCard
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.IdfyVerification as DIdfyVerification
@@ -160,6 +163,7 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
         Just (Idfy.DLResult (Idfy.SourceOutput o)) -> o.status
         Just (Idfy.PanResult (Idfy.SourceOutput o)) -> o.status
         Just (Idfy.GstResult (Idfy.SourceOutput o)) -> o.status
+        Just (Idfy.UdyamAadhaarResult (Idfy.SourceOutput o)) -> o.status
         Just (Idfy.RCResult (Idfy.ExtractionOutput o)) -> o.status
         _ -> Nothing
     verifyDocument person verificationReq rslt mbRemPriorityList =
@@ -181,10 +185,27 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
             (Idfy.convertDLOutputToDLVerificationOutput resSrcOp.source_output)
             VT.Idfy
-        Idfy.PanResult _ -> pure Ack
-        Idfy.GstResult _ -> pure Ack
+        Idfy.PanResult resSrcOp ->
+          PanCard.onVerifyPan
+            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            (Idfy.convertPanOutputToPanVerification resSrcOp.source_output)
+            VT.Idfy
+        Idfy.GstResult resSrcOp -> do
+          GstCard.onVerifyGst
+            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            (Idfy.convertGstOutputToGstVerification resSrcOp.source_output)
+            VT.Idfy
         Idfy.BankAccountResult _ -> pure Ack
-        Idfy.PanAadhaarLinkResult _ -> pure Ack
+        Idfy.PanAadhaarLinkResult resSrcOp ->
+          PanCard.onVerifyPanAadhaarLink
+            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            (Idfy.convertPanAadhaarLinkOutputToPanAadhaarLinkVerification resSrcOp.source_output)
+            VT.Idfy
+        Idfy.UdyamAadhaarResult resSrcOp ->
+          UdyamCard.onVerifyUdyam
+            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            (Idfy.convertUdyamAadhaarOutputToUdyamAadhaarVerification resSrcOp.source_output)
+            VT.Idfy
         _ -> pure Ack
 
 handleIdfySourceDown :: DP.Person -> (IV.IdfyVerification -> Flow ()) -> DIdfyVerification.IdfyVerification -> Flow ()
