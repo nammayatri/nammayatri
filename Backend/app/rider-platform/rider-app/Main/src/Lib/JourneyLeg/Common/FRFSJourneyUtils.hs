@@ -274,7 +274,11 @@ getNearbyBusesFRFS userPos' riderConfig integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
         _ -> Nothing
-  busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.runInMasterLTSRedisCell $ Hedis.geoSearch (nearbyBusKeyFRFS redisPrefix) (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
+  logInfo $ "getNearbyBusesFRFS: Searching with key=" <> show (nearbyBusKeyFRFS redisPrefix) <> ", location=(" <> show userPos'.lat <> "," <> show userPos'.lon <> "), radius=" <> show nearbyBusSearchRadius <> "km"
+  busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.runInMasterLTSRedisCell $ do
+   hedisEnv <- asks (.hedisEnv)
+   logInfo $ "Inside runInMasterLTSRedisCell - hedisEnv=" <> show hedisEnv
+   Hedis.geoSearch (nearbyBusKeyFRFS redisPrefix) (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
   logDebug $ "getNearbyBusesFRFS: busesBS: " <> show busesBS
   buses <-
     if null busesBS
