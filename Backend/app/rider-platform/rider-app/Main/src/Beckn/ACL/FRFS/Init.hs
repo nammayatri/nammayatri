@@ -33,7 +33,7 @@ type RiderName = Text
 type RiderNumber = Text
 
 buildInitReq ::
-  (MonadFlow m) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   (Maybe RiderName, Maybe RiderNumber) ->
   DTBooking.FRFSTicketBooking ->
   BecknConfig ->

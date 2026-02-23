@@ -27,7 +27,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 
 buildStatusReq ::
-  (MonadFlow m) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
   Utils.BppData ->
