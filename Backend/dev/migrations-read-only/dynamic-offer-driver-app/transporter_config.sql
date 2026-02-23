@@ -622,3 +622,12 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN missing_mapping
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN link_fleet_to_un_verified_existing_rc boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_coins_to_direct_payout boolean ;
+
+
+------- SQL updates -------
+

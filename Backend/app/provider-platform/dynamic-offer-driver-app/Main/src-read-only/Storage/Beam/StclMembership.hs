@@ -14,8 +14,7 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data StclMembershipT f = StclMembershipT
-  {
-    accountNumberEncrypted :: B.C f Kernel.Prelude.Text,
+  { accountNumberEncrypted :: B.C f Kernel.Prelude.Text,
     accountNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     addressCity :: B.C f Kernel.Prelude.Text,
     addressPostalCode :: B.C f Kernel.Prelude.Text,
