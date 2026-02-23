@@ -427,6 +427,7 @@ apis:
         journeyId: Id Journey
       query:
         filterServiceAndJrnyType: Bool
+        newServiceTiers: [ServiceTierType]
       response:
         type: JourneyInfoResp
   - POST:
@@ -468,6 +469,7 @@ apis:
         journeyId: Id Journey
       query:
         filterServiceAndJrnyType: Bool
+        newServiceTiers: [ServiceTierType]
       request:
         type: SwitchLegReq
       response:
@@ -611,6 +613,7 @@ apis:
         vehicleNumber: Text
         vehicleType: VehicleCategory
         enableSwitchRoute: Bool
+        newServiceTiers: "[ServiceTierType]"
       response:
         type: PublicTransportData
 
@@ -619,6 +622,8 @@ apis:
       params:
         vehicleType: VehicleCategory
         vehicleNumber: Text
+      query:
+        newServiceTiers: "[ServiceTierType]"
       response:
         type: PublicTransportData
 

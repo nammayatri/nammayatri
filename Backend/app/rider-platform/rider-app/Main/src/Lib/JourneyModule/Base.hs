@@ -1278,13 +1278,13 @@ switchLeg ::
   Id DPerson.Person ->
   APITypes.SwitchLegReq ->
   Maybe Bool ->
+  Maybe [Spec.ServiceTierType] ->
   m ()
-switchLeg journeyId _ req filterServiceAndJrnyType = do
+switchLeg journeyId _ req filterServiceAndJrnyType mbNewServiceTiers = do
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId req.legOrder
   canSwitch <- canBeSwitched journeyLeg req.newMode
   unless canSwitch $ do throwError (JourneyLegCannotBeSwitched journeyLeg.id.getId)
-  let blacklistedServiceTiers = if filterServiceAndJrnyType == Just False then [] else [Spec.AC_EMU_FIRST_CLASS]
-  let blacklistedFareQuoteTypes = if filterServiceAndJrnyType == Just False then [] else [DFRFSQuote.ReturnJourney]
+  let (blacklistedServiceTiers, blacklistedFareQuoteTypes) = getBlacklistedFilters filterServiceAndJrnyType mbNewServiceTiers
   startLocation <- return $ fromMaybe journeyLeg.startLocation req.startLocation
   (newDistance, newDuration) <-
     case req.newMode of

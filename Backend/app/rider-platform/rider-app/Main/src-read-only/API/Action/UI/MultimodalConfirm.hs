@@ -41,6 +41,9 @@ type API =
       :> QueryParam
            "filterServiceAndJrnyType"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "newServiceTiers"
+           [BecknV2.FRFS.Enums.ServiceTierType]
       :> Post
            '[JSON]
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
@@ -104,6 +107,9 @@ type API =
       :> QueryParam
            "filterServiceAndJrnyType"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "newServiceTiers"
+           [BecknV2.FRFS.Enums.ServiceTierType]
       :> ReqBody
            '[JSON]
            API.Types.UI.MultimodalConfirm.SwitchLegReq
@@ -317,6 +323,9 @@ type API =
            "enableSwitchRoute"
            Kernel.Prelude.Bool
       :> QueryParam
+           "newServiceTiers"
+           [BecknV2.FRFS.Enums.ServiceTierType]
+      :> QueryParam
            "publicTransportConfigVersion"
            Kernel.Prelude.Text
       :> QueryParam
@@ -337,6 +346,9 @@ type API =
       :> Capture
            "vehicleNumber"
            Kernel.Prelude.Text
+      :> QueryParam
+           "newServiceTiers"
+           [BecknV2.FRFS.Enums.ServiceTierType]
       :> Get
            '[JSON]
            API.Types.UI.MultimodalConfirm.PublicTransportData
@@ -566,9 +578,10 @@ postMultimodalInitiate ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalInitiate a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalInitiate a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -616,10 +629,11 @@ postMultimodalSwitch ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] ->
     API.Types.UI.MultimodalConfirm.SwitchLegReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalSwitch a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalSwitch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalSwitch a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalSwitch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postMultimodalJourneyLegSkip ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -783,12 +797,13 @@ getPublicTransportData ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportData a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+getPublicTransportData a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
 
 getPublicTransportVehicleData ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -796,9 +811,10 @@ getPublicTransportVehicleData ::
     ) ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportVehicleData a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportVehicleData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getPublicTransportVehicleData a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportVehicleData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getMultimodalOrderGetLegTierOptions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

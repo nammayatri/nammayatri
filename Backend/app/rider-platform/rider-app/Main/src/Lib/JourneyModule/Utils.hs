@@ -1732,3 +1732,35 @@ getLiveRouteInfo integratedBPPConfig userPassedVehicleNumber userPassedRouteCode
             else Just (VehicleLiveRouteInfo {routeCode = Just userPassedRouteCode, ..})
       )
       (snd <$> mbRouteLiveInfo)
+
+getBlacklistedFilters ::
+  Maybe Bool ->
+  Maybe [Spec.ServiceTierType] ->
+  ([Spec.ServiceTierType], [DFRFSQuote.FRFSQuoteType])
+getBlacklistedFilters filterServiceAndJrnyType mbNewServiceTiers =
+  let baseServiceTiers = [Spec.PREMIUM]
+
+      -- flag based blacklist
+      flagServiceTiers =
+        if filterServiceAndJrnyType == Just False
+          then []
+          else [Spec.AC_EMU_FIRST_CLASS]
+
+      flagFareQuoteTypes =
+        if filterServiceAndJrnyType == Just False
+          then []
+          else [DFRFSQuote.ReturnJourney]
+
+      -- list based blacklist
+      -- mbNewServiceTiers controls how baseServiceTiers contribute to blacklist
+      -- Nothing     -> blacklist all baseServiceTiers
+      -- Just []     -> blacklist none
+      -- Just xs     -> remove xs from baseServiceTiers and blacklist remaining
+      listServiceTiers =
+        case mbNewServiceTiers of
+          Nothing -> baseServiceTiers
+          Just [] -> []
+          Just toKeep -> filter (`notElem` toKeep) baseServiceTiers
+
+      blacklistedServiceTiers = flagServiceTiers ++ listServiceTiers
+   in (blacklistedServiceTiers, flagFareQuoteTypes)

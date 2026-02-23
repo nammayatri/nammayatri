@@ -17,12 +17,17 @@ module BecknV2.FRFS.Enums where
 
 import Data.Aeson
 import Data.Aeson.Types
+import qualified Data.Bifunctor as BF
+import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Kernel.Prelude
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.JSON (constructorsToLowerOptions, constructorsWithHyphens)
 import Kernel.Utils.TH
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 data Domain
   = FRFS
@@ -74,7 +79,7 @@ data VehicleCategory = METRO | SUBWAY | BUS
 
 $(mkHttpInstancesForEnum ''VehicleCategory)
 
-data ServiceTierType = ORDINARY | AC | NON_AC | EXPRESS | SPECIAL | EXECUTIVE | FIRST_CLASS | SECOND_CLASS | THIRD_CLASS | ASHOK_LEYLAND_AC | MIDI_AC | VOLVO_AC | ELECTRIC_V | ELECTRIC_V_PMI | AC_EMU_FIRST_CLASS
+data ServiceTierType = ORDINARY | AC | NON_AC | EXPRESS | SPECIAL | EXECUTIVE | FIRST_CLASS | SECOND_CLASS | THIRD_CLASS | ASHOK_LEYLAND_AC | MIDI_AC | VOLVO_AC | ELECTRIC_V | ELECTRIC_V_PMI | AC_EMU_FIRST_CLASS | PREMIUM
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, ToParamSchema)
 
 instance FromJSON ServiceTierType where
@@ -102,6 +107,7 @@ instance FromJSON ServiceTierType where
     (String "ELECTRIC_V") -> pure ELECTRIC_V
     (String "ELECTRIC_V_PMI") -> pure ELECTRIC_V_PMI
     (String "AC_EMU_FIRST_CLASS") -> pure AC_EMU_FIRST_CLASS
+    (String "PREMIUM") -> pure PREMIUM
     _ -> parseFail "Invalid Service Tier Type"
 
 instance ToSchema ServiceTierType where
@@ -111,6 +117,16 @@ instance ToSchema ServiceTierType where
       customSchemaOptions = defaultSchemaOptions {datatypeNameModifier = const "FRFSServiceTierType"}
 
 $(mkHttpInstancesForEnum ''ServiceTierType)
+
+instance FromHttpApiData [ServiceTierType] where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader bs = BF.first T.pack . eitherDecode . BSL.fromStrict $ bs
+
+instance ToHttpApiData [ServiceTierType] where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 data ServiceSubType = LF | EV
   deriving (Eq, Ord, Show, Read, Generic, ToParamSchema, ToSchema)
