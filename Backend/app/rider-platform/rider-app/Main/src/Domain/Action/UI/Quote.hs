@@ -180,7 +180,7 @@ getQuotes searchRequestId mbAllowMultiple = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   unless (mbAllowMultiple == Just True) $ do
     activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
-    whenJust activeBooking $ \booking -> processActiveBooking booking (Just searchRequest.riderPreferredOption) OnSearch
+    whenJust activeBooking $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
   logDebug $ "search Request is : " <> show searchRequest
   journeyData <- getJourneys searchRequest searchRequest.hasMultimodalSearch
   person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
@@ -206,23 +206,11 @@ getQuotes searchRequestId mbAllowMultiple = do
           journey = journeyData
         }
 
-processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> Maybe SSR.RiderPreferredOption -> CancellationStage -> m ()
-processActiveBooking booking mbNewRiderPreferredOption cancellationStage = do
-  -- Check if both bookings are FixedRoute and allow multiple bookings
-  -- Fetch the active booking's SearchRequest through its Quote
-  mbActiveRiderPreferredOption <- case booking.quoteId of
-    Just quoteId -> do
-      mbQuote <- runInReplica $ QQuote.findById quoteId
-      case mbQuote of
-        Just quote -> do
-          mbActiveSearchRequest <- runInReplica $ QSR.findById quote.requestId
-          pure $ (.riderPreferredOption) <$> mbActiveSearchRequest
-        Nothing -> pure Nothing
-    Nothing -> pure Nothing
-  let isFixedRouteMultipleAllowed = canCoexistForFixedRoute mbNewRiderPreferredOption mbActiveRiderPreferredOption
+processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> Maybe Bool -> CancellationStage -> m ()
+processActiveBooking booking mbIsDashBoardRequest cancellationStage = do
 
-  -- Allow multiple bookings only if both are FixedRoute (based on riderPreferredOption)
-  unless isFixedRouteMultipleAllowed $ do
+  -- Allow multiple bookings only if request is coming from dashboard
+  unless (mbIsDashBoardRequest == Just True) $ do
     mbRide <- QRide.findActiveByRBId booking.id
     case mbRide of
       Just ride -> do
@@ -257,11 +245,11 @@ isHighPriorityBooking bookingDetails = case bookingDetails of
 
 -- | Check if two bookings can coexist based on FixedRoute riderPreferredOption
 -- Allows multiple bookings only if both bookings have riderPreferredOption = FixedRoute
-canCoexistForFixedRoute :: Maybe SSR.RiderPreferredOption -> Maybe SSR.RiderPreferredOption -> Bool
-canCoexistForFixedRoute mbNewRiderPreferredOption mbActiveRiderPreferredOption =
-  case (mbNewRiderPreferredOption, mbActiveRiderPreferredOption) of
-    (Just SSR.FixedRoute, Just SSR.FixedRoute) -> True
-    _ -> False
+-- canCoexistForFixedRoute :: Maybe SSR.RiderPreferredOption -> Maybe SSR.RiderPreferredOption -> Bool
+-- canCoexistForFixedRoute mbNewRiderPreferredOption mbActiveRiderPreferredOption =
+--   case (mbNewRiderPreferredOption, mbActiveRiderPreferredOption) of
+--     (Just SSR.FixedRoute, Just SSR.FixedRoute) -> True
+--     _ -> False
 
 getOffers :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest = do
