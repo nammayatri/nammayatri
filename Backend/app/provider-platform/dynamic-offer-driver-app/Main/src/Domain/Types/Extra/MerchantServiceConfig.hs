@@ -24,6 +24,7 @@ import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.Types
 import Kernel.External.Whatsapp.Interface as Whatsapp
+import qualified Kernel.External.Plasma as Plasma
 import Kernel.Prelude
 import Lib.Dashcam.Domain.Interface as DashcamInter
 import Lib.Dashcam.Domain.Types as Dashcam
@@ -55,6 +56,7 @@ data ServiceName
   | LLMChatCompletionService ChatCompletion.Types.LLMChatCompletionService
   | DashCamService Dashcam.DashcamService
   | JuspayWalletService Payment.PaymentService
+  | PlasmaService Plasma.PlasmaService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -83,6 +85,7 @@ instance Show ServiceName where
   show (LLMChatCompletionService s) = "LLMChatCompletion_" <> show s
   show (DashCamService s) = "DashCamService_" <> show s
   show (JuspayWalletService s) = "JuspayWalletService_" <> show s
+  show (PlasmaService s) = "Plasma_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -177,6 +180,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "JuspayWalletService_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (PlasmaService v1, r2)
+                 | r1 <- stripPrefix "Plasma_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -205,6 +212,7 @@ data ServiceConfigD (s :: UsageSafety)
   | LLMChatCompletionServiceConfig !ChatCompletion.Interface.Types.LLMChatCompletionServiceConfig
   | DashCamServiceConfig !DashcamInter.DashCamServiceConfig
   | JuspayWalletServiceConfig !PaymentServiceConfig
+  | PlasmaServiceConfig !Plasma.PlasmaServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

@@ -23,6 +23,7 @@ import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
+import qualified Kernel.External.Plasma as Plasma
 import Kernel.Prelude as P
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -114,6 +115,8 @@ getConfigJSON = \case
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
     Payment.PaytmEDCConfig cfg -> toJSON cfg
+  Domain.PlasmaServiceConfig plasmaCfg -> case plasmaCfg of
+    Plasma.LMSConfig cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -187,6 +190,8 @@ getServiceName = \case
     Payment.JuspayConfig _ -> Domain.JuspayWalletService Payment.Juspay
     Payment.StripeConfig _ -> Domain.JuspayWalletService Payment.Stripe
     Payment.PaytmEDCConfig _ -> Domain.JuspayWalletService Payment.PaytmEDC
+  Domain.PlasmaServiceConfig plasmaCfg -> case plasmaCfg of
+    Plasma.LMSConfig _ -> Domain.PlasmaService Plasma.LMS
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -256,6 +261,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.LLMChatCompletionService ChatCompletion.Types.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> eitherValue configJSON
   Domain.DashCamService Dashcam.Cautio -> Domain.DashCamServiceConfig . DashcamInter.CautioConfig <$> eitherValue configJSON
   Domain.JuspayWalletService paymentServiceName -> Domain.JuspayWalletServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+  Domain.PlasmaService Plasma.LMS -> Domain.PlasmaServiceConfig . Plasma.LMSConfig <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of
