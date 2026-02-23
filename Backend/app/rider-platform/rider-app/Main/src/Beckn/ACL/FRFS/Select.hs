@@ -16,7 +16,7 @@ import Kernel.Utils.Common
 import SharedLogic.FRFSFareCalculator
 
 buildSelectReq ::
-  (MonadFlow m) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DQuote.FRFSQuote ->
   BecknConfig ->
   Utils.BppData ->

@@ -35,8 +35,18 @@ import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 
+-- | Build a BaseUrl with the request host (nwAddress) and the path from the given URL.
+-- Used so BAP context/callbacks hit the current instance (multicloud).
+mkCloudBapUri ::
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  BaseUrl ->
+  m BaseUrl
+mkCloudBapUri subscriberUrl = do
+  nwAddr <- asks (.nwAddress)
+  return $ nwAddr {baseUrlPath = baseUrlPath subscriberUrl}
+
 buildContext ::
-  (MonadFlow m) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   Spec.Action ->
   BecknConfig ->
   Text ->
@@ -48,7 +58,8 @@ buildContext ::
   m Spec.Context
 buildContext action bapConfig txnId msgId mTTL bppData city vehicleCategory = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
-  let bapUrl = showBaseUrl bapConfig.subscriberUrl
+  bapUriForContext <- mkCloudBapUri bapConfig.subscriberUrl
+  let bapUrl = showBaseUrl bapUriForContext
   let bapId = bapConfig.subscriberId
       contextBppId = bppData <&> (.bppId)
       contextBppUri = bppData <&> (.bppUri)

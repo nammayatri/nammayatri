@@ -26,7 +26,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
 
 buildSearchReq ::
-  (MonadFlow m) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   Text ->
   Spec.VehicleCategory ->
   BecknConfig ->
