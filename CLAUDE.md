@@ -85,6 +85,17 @@ The backend is a multi-package Cabal project (~48 packages) following a microser
 ### BECKN Protocol Flow
 The system implements BAP (Beckn Application Platform = rider side) and BPP (Beckn Provider Platform = driver side). The core ride flow follows: `search` -> `on_search` -> `select` -> `on_select` -> `init` -> `on_init` -> `confirm` -> `on_confirm`. ACL (Anti-Corruption Layer) modules translate between BECKN protocol types and internal domain types.
 
+### FRFS (Public Transport) Architecture
+- FRFS (metro/bus) is BAP-only — BPPs are external transit operators (CMRL, CRIS, EBIX), no driver-side component
+- Two flow paths: ONDC (async Beckn callbacks via gateway) and Direct (synchronous API calls, no callbacks)
+- All FRFS Beckn context building goes through single `buildContext` in `Beckn/ACL/FRFS/Utils.hs`
+- `mkCloudBapUri` in same file replaces host of `subscriberUrl` with runtime `nwAddress` for multi-cloud callback routing
+- `ExternalBPP/Flow/Common.hs` `bppSubscriberUrl` field stores BAP URL as placeholder for direct integrations, not actual BPP URL
+
+### Multi-Cloud Constraint Propagation
+- When adding `HasFlowEnv` constraints, prefer adding to type aliases (`BecknAPICallFlow`, `FRFSSearchFlow`, `FRFSConfirmFlow`) — cascades to all callers automatically
+- Type aliases defined in `ExternalBPP/CallAPI/Types.hs` and `SharedLogic/CallFRFSBPP.hs`
+
 ## Code Generation (NammaDSL) - Critical Workflow
 
 YAML specification files are the source of truth for APIs and database schemas:
