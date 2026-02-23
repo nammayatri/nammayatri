@@ -19,6 +19,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
+import Kernel.Types.Version (CloudType (..))
 import qualified Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -47,7 +48,10 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
             _ -> Nothing
       let nearbyBusSearchRadius :: Double = fromMaybe 0.1 riderConfig.nearbyBusSearchRadius
           maxNearbyBuses :: Int = fromMaybe 5 riderConfig.maxNearbyBuses
-      busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
+      cloudType <- asks (.cloudType)
+      busesBS <- mapM (pure . decodeUtf8) =<< case cloudType of
+        Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
+        _ -> CQMMB.withCrossAppRedisNew $ Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
       logDebug $ "getNearbyBuses: busesBS: " <> show busesBS
       if null busesBS
         then do
@@ -55,7 +59,9 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
           pure []
         else do
           logDebug $ "getNearbyBuses: Fetching bus metadata for " <> show (length busesBS) <> " buses"
-          buses <- CQMMB.withCrossAppRedisNew $ Hedis.hmGet (vehicleMetaKey redisPrefix) busesBS
+          buses <- case cloudType of
+            Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.hmGet (vehicleMetaKey redisPrefix) busesBS
+            _ -> CQMMB.withCrossAppRedisNew $ Hedis.hmGet (vehicleMetaKey redisPrefix) busesBS
           let validBuses = catMaybes buses
               sortedLimitedBuses = take maxNearbyBuses $ EulerHS.Prelude.sortOn (distanceToUser userPos) validBuses
           pure sortedLimitedBuses
