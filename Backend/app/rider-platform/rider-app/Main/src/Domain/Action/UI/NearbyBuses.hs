@@ -23,6 +23,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Common.FRFS (getNearbyBusesFRFS)
 import Lib.JourneyModule.Utils as JourneyUtils
@@ -192,14 +193,20 @@ fetchPlatformCodesFromRedis tripIds stopCode = do
       let platformHashKey = "platform-codes-hashmap"
       let redisKeys = map (\tripId -> tripId <> ":" <> stopCode) tripIds
       logDebug $ "fetchPlatformCodesFromRedis: Fetching platform codes for " <> show (length redisKeys) <> " tripId:stopCode keys for stopCode: " <> stopCode
-      platformCodes <- CQMMB.withCrossAppRedisNew $ Hedis.hmGet platformHashKey redisKeys
+      cloudType <- asks (.cloudType)
+      platformCodes <- case cloudType of
+        Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.hmGet platformHashKey redisKeys
+        _ -> CQMMB.withCrossAppRedisNew $ Hedis.hmGet platformHashKey redisKeys
       let result = HashMap.fromList $ catMaybes $ zipWith (\tripId mbCode -> (tripId,) <$> mbCode) tripIds platformCodes
       logDebug $ "fetchPlatformCodesFromRedis: Retrieved " <> show (HashMap.size result) <> " platform codes"
       return result
 
 fetchCancelledTrainsFromRedis :: Environment.Flow [Text]
 fetchCancelledTrainsFromRedis = do
-  cancelledTrains <- CQMMB.withCrossAppRedisNew $ Hedis.get "trains:cancelled"
+  cloudType <- asks (.cloudType)
+  cancelledTrains <- case cloudType of
+    Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.get "trains:cancelled"
+    _ -> CQMMB.withCrossAppRedisNew $ Hedis.get "trains:cancelled"
   case cancelledTrains of
     Nothing -> do
       logDebug "fetchCancelledTrainsFromRedis: No cancelled trains data found in Redis"

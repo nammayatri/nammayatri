@@ -27,6 +27,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -60,6 +61,8 @@ paymentOrderStatusCheckJob ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text]
   ) =>
@@ -116,6 +119,8 @@ processPaymentOrder ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text]
   ) =>
