@@ -152,7 +152,7 @@ confirm DConfirmReq {..} = do
     SPayment.updateDefaultPersonPaymentMethodId person paymentMethodId -- Make payment method as default payment method for customer
   activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
   case activeBooking of
-    Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking (Just searchRequest.riderPreferredOption) OnConfirm
+    Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking searchRequest.isDashboardRequest OnConfirm
     _ -> pure ()
   -- when (searchRequest.validTill < now) $
   --   throwError SearchRequestExpired
