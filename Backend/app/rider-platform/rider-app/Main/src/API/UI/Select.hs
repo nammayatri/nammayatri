@@ -89,7 +89,7 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonId
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   let searchRequestId = estimate.requestId
-  searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
+  searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   autoAssignEnabled <- searchRequest.autoAssignEnabled & fromMaybeM (InternalError "Invalid autoAssignEnabled")
   bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId searchRequest.merchantId "MOBILITY" searchRequest.merchantOperatingCityId
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
