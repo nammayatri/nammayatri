@@ -376,6 +376,7 @@ apis:
       query:
         city: City
         integratedBppConfigId: Id IntegratedBPPConfig
+        newServiceTiers: [ServiceTierType]
       request:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:

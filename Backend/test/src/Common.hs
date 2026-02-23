@@ -16,6 +16,7 @@ module Common where
 
 import qualified API.UI.Quote as AbeQuoteAPI
 import qualified "rider-app" API.UI.Search as AppBESearch
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Aeson as J
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
@@ -60,6 +61,7 @@ searchServices ::
   Maybe Text ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe [Spec.ServiceTierType] ->
   ClientM AppBESearch.SearchResp
 searchServices = client (Proxy :: Proxy AppBESearch.SearchAPI)
 
