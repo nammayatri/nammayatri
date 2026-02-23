@@ -55,10 +55,11 @@ cmrlAppType = "CMRL_CUM_IQR"
 
 getAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m Text
 getAuthToken config = do
-  authToken :: (Maybe Text) <- Hedis.get authTokenKey
-  case authToken of
-    Nothing -> resetAuthToken config
-    Just token -> return token
+  Hedis.runInMasterCloudRedisCell $
+    authToken :: (Maybe Text) <- Hedis.get authTokenKey
+    case authToken of
+      Nothing -> resetAuthToken config
+      Just token -> return token
 
 resetAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m Text
 resetAuthToken config = do
