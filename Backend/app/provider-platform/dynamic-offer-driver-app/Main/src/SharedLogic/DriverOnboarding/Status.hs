@@ -49,11 +49,14 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Types
 import qualified Kernel.External.Verification as KEV
+import qualified Kernel.External.Plasma as Plasma
 import Kernel.Prelude
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -903,8 +906,8 @@ getProcessedDriverDocuments driverId driverImagesInfo docType useHVSdkForDL = do
       let (status, reason, url) = checkImageValidity driverImagesInfo DVC.LocalResidenceProof
       return (status, reason, url, Nothing, mbS3Path)
     DVC.TrainingForm -> do
-      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.TrainingForm
-      return (status, reason, url, Nothing, mbS3Path)
+      status <- checkLMSTrainingStatus driverId merchantOpCityId
+      return (status, Nothing, Nothing, Nothing, mbS3Path)
     DVC.DriverInspectionHub -> do
       status <- getInspectionHubStatusForResponseStatus DOHR.DRIVER_ONBOARDING_INSPECTION (Just driverId) Nothing
       return (status, Nothing, Nothing, Nothing, Nothing)
@@ -1001,6 +1004,27 @@ checkImageValidity driverImagesInfo docType = do
       | any (\img -> img.verificationStatus == Just Documents.VALID) validImages = (Just VALID, Nothing, Nothing)
       | any (\img -> img.verificationStatus == Just Documents.MANUAL_VERIFICATION_REQUIRED) validImages = (Just MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
       | otherwise = (Nothing, Nothing, Nothing)
+
+checkLMSTrainingStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow (Maybe ResponseStatus)
+checkLMSTrainingStatus driverId merchantOpCityId = do
+  -- Get Plasma service config from merchant service config
+  mbPlasmaConfig <- QMSC.findByServiceAndCity (DMSC.PlasmaService Plasma.LMS) merchantOpCityId
+  case mbPlasmaConfig of
+    Nothing -> return Nothing -- No Plasma config found, return Nothing
+    Just plasmaServiceConfig -> do
+      case plasmaServiceConfig.serviceConfig of
+        DMSC.PlasmaServiceConfig plasmaConfig -> do
+          -- Call Plasma LMS API to get modules for the driver
+          -- getLMSModules takes PlasmaServiceConfig and driverId as Text
+          mbModules <- withTryCatch "checkLMSTrainingStatus" $ do
+            Plasma.getLMSModules plasmaConfig (driverId.getId)
+          case mbModules of
+            Right modules -> do
+              -- Check if all modules have status COMPLETED
+              let hasCompleted = all (\lmsModule -> lmsModule.status == Plasma.COMPLETED) modules
+              return $ if hasCompleted then Just VALID else Nothing
+            Left _ -> return Nothing -- API call failed, return Nothing
+        _ -> return Nothing -- Invalid service config type
 
 checkVehiclePhotosStatusByRC :: Maybe IQuery.RcImagesInfo -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkVehiclePhotosStatusByRC mbRcImagesInfo = do
