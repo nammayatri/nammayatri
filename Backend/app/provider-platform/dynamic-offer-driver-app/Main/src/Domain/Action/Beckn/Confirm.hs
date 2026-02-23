@@ -190,7 +190,8 @@ handler merchant req validatedQuote = do
                 isAllocatorBatch = False,
                 paymentMethodInfo = paymentMethodInfo
               }
-      initiateDriverSearchBatch driverSearchBatchInput
+      searchTry <- initiateDriverSearchBatch driverSearchBatchInput
+      QRB.updateSearchTryId booking.id searchTry.id
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mkDConfirmResp Nothing uBooking riderDetails
 
