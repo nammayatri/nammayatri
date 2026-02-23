@@ -1001,7 +1001,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                           lN = r.longName,
                           dTC = r.dailyTripCount,
                           stC = r.stopCount,
-                          st = mbServiceType,
+                          st = mbServiceType <|> r.serviceTierType,
                           stn = frfsServiceTier <&> (.shortName),
                           sst = mbServiceSubTypes,
                           vt = show r.vehicleType,

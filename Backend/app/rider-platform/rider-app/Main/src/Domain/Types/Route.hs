@@ -30,6 +30,7 @@ data Route = Route
     stopCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
+    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
