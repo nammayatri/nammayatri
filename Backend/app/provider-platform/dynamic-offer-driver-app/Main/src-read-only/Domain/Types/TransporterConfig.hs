@@ -141,6 +141,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     editLocDriverPermissionNeeded :: Kernel.Prelude.Bool,
     editLocTimeThreshold :: Kernel.Types.Common.Seconds,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
+    enableCoinsToDirectPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableDashboardSms :: Kernel.Prelude.Bool,
     enableExistingVehicleInBulkUpload :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,

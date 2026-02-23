@@ -1149,6 +1149,7 @@ TransporterConfig:
     linkFleetToUnVerifiedExistingRC: Maybe Bool
     sendSmsOnEnablement: Maybe Bool # Controls whether SMS is sent to drivers/fleet owners when they are enabled
     enableScheduleReallocation: Maybe Bool
+    enableCoinsToDirectPayout: Maybe Bool
 
   beamType:
     currency: Maybe Currency

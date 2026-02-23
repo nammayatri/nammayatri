@@ -227,7 +227,7 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset m
     toUsageHistoryItem historyItem = do
       (payoutOrderStatus, vpa) <- case historyItem.payoutOrderIdForDirectPayout of
         Just payoutOrderId -> do
-          payoutOrder <- QPayoutOrder.findById payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId.getId)
+          payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId.getId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId.getId)
           pure $ (Just $ DAP.castPayoutOrderStatus payoutOrder.status, payoutOrder.vpa)
         Nothing -> pure (Nothing, Nothing)
       pure $
@@ -304,8 +304,12 @@ handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
       payoutOrderId <-
         case coinRedemptionType of
           Just DirectPayout -> do
+            unless (fromMaybe False transporterConfig.enableCoinsToDirectPayout) $
+              throwError $ InvalidRequest "Coins to direct payout is not enabled"
             payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehCategory) merchantOpCityId.getId)
-            whenJust payoutConfig.coinRedemptionMinimumLimit $ \coinRedemptionMinimumLimit -> when (calculatedAmount < coinRedemptionMinimumLimit) $ throwError $ InvalidRequest "Calculated amount is less than the coin redemption minimum limit"
+            case payoutConfig.coinRedemptionMinimumLimit of
+              Just coinRedemptionMinimumLimit -> when (calculatedAmount < coinRedemptionMinimumLimit) $ throwError $ InvalidRequest "Calculated amount is less than the coin redemption minimum limit"
+              Nothing -> throwError $ InvalidRequest "Coin redemption minimum limit is not set"
             uid <- generateGUID
             phoneNo <- mapM decrypt driver.mobileNumber
             driverInformation <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
