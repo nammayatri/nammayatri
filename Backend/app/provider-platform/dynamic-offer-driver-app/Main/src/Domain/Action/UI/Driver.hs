@@ -317,6 +317,7 @@ import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification hiding (ImageType, length)
 import Utils.Common.Cac.KeyNameConstants
+import Kernel.Storage.Clickhouse.Config
 
 data FleetInfo = FleetInfo
   { id :: Text,
@@ -1543,7 +1544,8 @@ getNearbySearchRequests ::
     CacheFlow m r,
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe (Id DST.SearchTry) ->

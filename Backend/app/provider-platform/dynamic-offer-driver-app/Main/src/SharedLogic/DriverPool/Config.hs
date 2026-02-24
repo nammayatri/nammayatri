@@ -37,7 +37,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchTry
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Prelude as KP
-import qualified Kernel.Storage.ClickhouseV2 as CH
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Cac (CACData (..))
@@ -155,7 +155,7 @@ getDriverPoolConfigFromDB ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     BeamFlow m r,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+    ClickhouseFlow m r
   ) =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->

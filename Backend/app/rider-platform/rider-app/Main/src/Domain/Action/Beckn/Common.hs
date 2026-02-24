@@ -66,7 +66,6 @@ import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
-import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -841,7 +840,7 @@ addOffersNammaTags ::
     CacheFlow m r,
     EncFlow m r,
     HasKafkaProducer r,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+    ClickhouseFlow m r
   ) =>
   DRide.Ride ->
   DPerson.Person ->

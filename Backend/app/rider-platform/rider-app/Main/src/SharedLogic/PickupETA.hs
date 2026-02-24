@@ -23,7 +23,7 @@ import qualified Data.Aeson as A
 import Data.Default.Class
 import Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
-import qualified Kernel.Storage.ClickhouseV2 as CH
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -54,7 +54,7 @@ getPickupETAFromModel ::
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+    ClickhouseFlow m r
   ) =>
   Seconds ->
   Double ->

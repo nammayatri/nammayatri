@@ -27,7 +27,7 @@ import qualified Data.Aeson as A
 import Data.Default.Class
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
-import qualified Kernel.Storage.ClickhouseV2 as CH
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Hedis as Redis
 -- import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
@@ -128,7 +128,7 @@ getGpsTollBadBehaviorCount windowDays driverId =
 -- Rules should be fetched from GPS_TOLL_BEHAVIOR domain by the caller
 evaluateGpsTollBehavior ::
   ( MonadFlow m,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r,
     CacheFlow m r
   ) =>
   Id LYT.MerchantOperatingCity ->
