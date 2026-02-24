@@ -34,6 +34,7 @@ import qualified Tools.Metrics.BAPMetrics as Metrics
 search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> m DOnSearch
 search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode = do
   quotes <- buildQuotes routeDetails
+  logDebug $ "Route Details Debug: " <> show routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
   return $
@@ -104,6 +105,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
     mkQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Maybe Spec.ServiceTierType -> Spec.VehicleCategory -> [RouteStopInfo] -> m [DQuote]
     mkQuote _serviceTier _vehicleType [] = return []
     mkQuote serviceTier vehicleType routesInfo = do
+      logDebug $ "Routes Info Debug: " <> show routesInfo
       let fareRouteDetails = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode}) routesInfo
       stations <- CallAPI.buildStations fareRouteDetails integratedBPPConfig
       let nonEmptyFareRouteDetails = NE.fromList fareRouteDetails

@@ -21,7 +21,7 @@ where
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.Aeson
-import Data.List (sortBy)
+import Data.List (partition, sortBy)
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import Domain.Types.Beckn.FRFS.OnSearch
@@ -259,7 +259,7 @@ upsertFareCache onSearchReq validatedReq = do
       QQuote.createMany quotes
       QFRFSQuoteCategory.createMany quoteCategories
     else do
-      -- Existing quotes found, update them
+      -- Existing quotes found: update matched ones and create any new quotes from BPP that we don't have yet
       logInfo $ "Found " <> show (length quotesCreatedByCache) <> " existing quotes for search " <> onSearchReq.transactionId <> ", updating them"
       quotesCreatedByCacheWithQuoteCategories <-
         mapM
@@ -268,14 +268,28 @@ upsertFareCache onSearchReq validatedReq = do
               return (quote, quoteCategories')
           )
           quotesCreatedByCache
-      zippedQuotesWithQuoteCategories <- verifyAndZipQuotes quotesCreatedByCacheWithQuoteCategories quotesWithCategories
-      let quotesToUpdate = map updateQuotes zippedQuotesWithQuoteCategories
-      for_ quotesToUpdate QQuote.updateCachedQuoteByPrimaryKey
-      -- Update quote categories (offeredPrice might have changed)
-      QFRFSQuoteCategory.createMany quoteCategories
+      let (zippedQuotesWithQuoteCategories, newQuotesFromBpp) = matchQuotesForUpsert quotesCreatedByCacheWithQuoteCategories quotesWithCategories
+
+      for_ zippedQuotesWithQuoteCategories updateQuoteCategoriesFromOnSearch
+      -- Create any new quotes from ONDC on_search that don't have a cache entry yet
+      when (not $ null newQuotesFromBpp) $ do
+        logInfo $ "Creating " <> show (length newQuotesFromBpp) <> " new quote(s) from BPP on_search for search " <> onSearchReq.transactionId
+        let newQuotes = map fst newQuotesFromBpp
+            newQuoteCategories = concatMap snd newQuotesFromBpp
+        QQuote.createMany newQuotes
+        QFRFSQuoteCategory.createMany newQuoteCategories
 
   -- Update search status
   QSearch.updateIsOnSearchReceivedById (Just True) validatedReq.search.id
+
+  let search = validatedReq.search
+  mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just onSearchReq.transactionId)
+  mbRequiredQuote <- filterQuotes integratedBPPConfig quotesWithCategories mbJourneyLeg
+  case mbRequiredQuote of
+    Just (requiredQuote, _requiredQuoteCategories) -> do
+      void $ SLCF.createFares search.id.getId requiredQuote.id.getId
+    Nothing -> do
+      QSearch.updateOnSearchFailed validatedReq.search.id (Just True)
 
   -- Refresh fare cache (StopFare table)
   fork "Refreshing Route Stop Fare Cache" $ do
@@ -602,6 +616,66 @@ updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch,
   where
     toJsonText :: FRFSCachedQuote -> Text
     toJsonText cachedQuote = toStrict $ decodeUtf8 $ encode cachedQuote
+
+
+updateQuoteCategoriesFromOnSearch ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ((Quote.FRFSQuote, [FRFSQuoteCategory]), (Quote.FRFSQuote, [FRFSQuoteCategory])) ->
+  m ()
+updateQuoteCategoriesFromOnSearch ((cachedQuote, cachedCats), (_onSearchQuote, onSearchCats)) = do
+  now <- getCurrentTime
+  -- Update existing cached categories with BPP data (match by category type)
+  for_ cachedCats $ \cachedCat -> do
+    let mbOnSearchCat = find (\c -> c.category == cachedCat.category && c.bppItemId == cachedCat.bppItemId) onSearchCats
+    whenJust mbOnSearchCat $ \onSearchCat -> do
+      let updatedCat =
+            cachedCat
+              { price = onSearchCat.price,
+                offeredPrice = onSearchCat.offeredPrice,
+                bppItemId = onSearchCat.bppItemId,
+                categoryMeta = onSearchCat.categoryMeta,
+                updatedAt = now
+              }
+      QFRFSQuoteCategory.updateByPrimaryKey updatedCat
+  -- Create new categories from BPP that don't exist in cache (same quote id so they stay linked)
+  let cachedCategories = map (.category) cachedCats
+  for_ onSearchCats $ \onSearchCat ->
+    when (onSearchCat.category `notElem` cachedCategories) $ do
+      newId <- generateGUID
+      let newCategory =
+            onSearchCat
+              { id = newId,
+                quoteId = cachedQuote.id,
+                merchantId = cachedQuote.merchantId,
+                merchantOperatingCityId = cachedQuote.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QFRFSQuoteCategory.create newCategory
+
+-- | Pairs cached quotes with BPP quotes by quote type (same order: SingleJourney first, then ReturnJourney).
+-- When BPP sends more quotes than we have in cache, the extra BPP quotes are returned as 'newQuotesFromBpp'
+-- so they can be created. When lengths or types don't match for pairing, we still pair what we can and
+-- treat the rest as new from BPP (no throw).
+matchQuotesForUpsert ::
+  [(Quote.FRFSQuote, [FRFSQuoteCategory])] ->
+  [(Quote.FRFSQuote, [FRFSQuoteCategory])] ->
+  ( [((Quote.FRFSQuote, [FRFSQuoteCategory]), (Quote.FRFSQuote, [FRFSQuoteCategory]))],
+    [(Quote.FRFSQuote, [FRFSQuoteCategory])]
+  )
+matchQuotesForUpsert quotesFromCacheWithQuoteCategories quotesFromOnSearchWithQuoteCategories =
+  let sortedCache = sortBy (comparing (Down . Quote._type . fst)) quotesFromCacheWithQuoteCategories
+      sortedBpp = sortBy (comparing (Down . Quote._type . fst)) quotesFromOnSearchWithQuoteCategories
+      zipped = zip sortedCache sortedBpp
+      (validPairs, mismatchedOrExtra) =
+        partition
+          ( \((cachedQuote, _), (bppQuote, _)) ->
+              cachedQuote._type == bppQuote._type
+          )
+          zipped
+      -- BPP quotes that were paired but had type mismatch, or BPP quotes beyond cache length
+      newQuotesFromBpp = map snd mismatchedOrExtra ++ drop (length sortedCache) sortedBpp
+   in (validPairs, newQuotesFromBpp)
 
 verifyAndZipQuotes :: (MonadFlow m) => [(Quote.FRFSQuote, [FRFSQuoteCategory])] -> [(Quote.FRFSQuote, [FRFSQuoteCategory])] -> m [((Quote.FRFSQuote, [FRFSQuoteCategory]), (Quote.FRFSQuote, [FRFSQuoteCategory]))]
 verifyAndZipQuotes quotesFromCacheWithQuoteCategories quotesFromOnSearchWithQuoteCategories = do
