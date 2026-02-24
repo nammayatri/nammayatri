@@ -1030,7 +1030,11 @@ getInProgressDriverDocuments driverImagesInfo docType = do
 
 vehicleDocsByRcIdList :: [DVC.DocumentType]
 vehicleDocsByRcIdList =
-  [ DVC.VehicleLeft,
+  [ DVC.VehiclePermit,
+    DVC.VehicleFitnessCertificate,
+    DVC.VehicleInsurance,
+    DVC.VehiclePUC,
+    DVC.VehicleLeft,
     DVC.VehicleRight,
     DVC.VehicleFrontInterior,
     DVC.VehicleBackInterior,
@@ -1051,27 +1055,44 @@ getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType = do
   (status, mbReason, mbUrl) <- case docType of
     DVC.VehicleRegistrationCertificate -> checkIfUnderProgress driverImagesInfo DVC.VehicleRegistrationCertificate
     DVC.SubscriptionPlan -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
-    DVC.VehiclePermit -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehiclePermit
-    DVC.VehicleFitnessCertificate -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleFitnessCertificate
-    DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleInsurance
-    DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehiclePUC
+    DVC.VehiclePermit -> checkByRcOrFallback mbRcImagesInfo driverImagesInfo DVC.VehiclePermit
+    DVC.VehicleFitnessCertificate -> checkByRcOrFallback mbRcImagesInfo driverImagesInfo DVC.VehicleFitnessCertificate
+    DVC.VehicleInsurance -> checkByRcOrFallback mbRcImagesInfo driverImagesInfo DVC.VehicleInsurance
+    DVC.VehiclePUC -> checkByRcOrFallback mbRcImagesInfo driverImagesInfo DVC.VehiclePUC
     DVC.VehicleInspectionForm -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleInspectionForm
     DVC.VehicleNOC -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleNOC
     _ | docType `elem` vehicleDocsByRcIdList -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
   return (status, mbReason, mbUrl, Nothing, mbS3Path)
 
+-- | Use RC-scoped images if any exist within the time window; otherwise fall back
+-- to person-level images. This handles the case where RC images are outside
+-- onboardingRetryTimeInHours but the person's image table still has valid entries.
+checkByRcOrFallback ::
+  Maybe IQuery.RcImagesInfo ->
+  IQuery.DriverImagesInfo ->
+  DDVC.DocumentType ->
+  Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkByRcOrFallback mbRcImagesInfo driverImagesInfo docType =
+  let rcImages = case mbRcImagesInfo of
+        Just rcImagesInfo -> IQuery.filterRecentByPersonRCAndImageType rcImagesInfo docType
+        Nothing -> []
+   in if null rcImages
+        then checkIfImageUploadedOrInvalidated driverImagesInfo docType
+        else return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType
+
 checkIfImageUploadedOrInvalidatedByRC :: Maybe IQuery.RcImagesInfo -> DDVC.DocumentType -> (ResponseStatus, Maybe Text, Maybe BaseUrl)
-checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType = do
+checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType =
   let images = case mbRcImagesInfo of
         Just rcImagesInfo -> IQuery.filterRecentByPersonRCAndImageType rcImagesInfo docType
         _ -> []
-  case images of
-    [] -> (NO_DOC_AVAILABLE, Nothing, Nothing)
-    latestImage : _ -> do
-      if latestImage.verificationStatus == Just Documents.INVALID
-        then (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
-        else (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
+   in case images of
+        [] -> (NO_DOC_AVAILABLE, Nothing, Nothing)
+        latestImage : _ ->
+          case latestImage.verificationStatus of
+            Just Documents.VALID -> (VALID, Nothing, Nothing)
+            Just Documents.INVALID -> (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
+            _ -> (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
 
 checkIfImageUploadedOrInvalidated :: IQuery.DriverImagesInfo -> DDVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkIfImageUploadedOrInvalidated driverImagesInfo docType = do
@@ -1079,10 +1100,12 @@ checkIfImageUploadedOrInvalidated driverImagesInfo docType = do
   documentVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndDefaultEnabledOnManualVerification driverImagesInfo.merchantOperatingCity.id docType False Nothing
   case images of
     [] -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
-    latestImage : _ -> do
-      if latestImage.verificationStatus == Just Documents.INVALID
-        then return (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
-        else
+    latestImage : _ ->
+      case latestImage.verificationStatus of
+        Just Documents.VALID -> return (VALID, Nothing, Nothing)
+        Just Documents.INVALID -> return (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
+        Just Documents.MANUAL_VERIFICATION_REQUIRED -> return (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
+        _ ->
           if length documentVerificationConfig > 0
             then return (FAILED, Nothing, Nothing)
             else return (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
