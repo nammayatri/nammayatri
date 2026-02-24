@@ -95,6 +95,7 @@ import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
+import Kernel.Storage.Clickhouse.Config
 
 cancelRideImpl ::
   ( MonadFlow m,
@@ -132,7 +133,8 @@ cancelRideImpl ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    ClickhouseFlow m r
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
@@ -264,7 +266,8 @@ updateNammaTagsForCancelledRide ::
     Redis.HedisFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -361,7 +364,8 @@ customerCancellationChargesCalculation ::
     Esq.EsqDBReplicaFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -451,7 +455,8 @@ getCancellationCharges ::
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   SRB.Booking ->
   DRide.Ride ->

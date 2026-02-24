@@ -11,7 +11,7 @@ import qualified Domain.Types.UpgradedTier as DU
 import qualified Domain.Types.Yudhishthira as Yudhishthira
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.Prelude
-import qualified Kernel.Storage.ClickhouseV2 as CH
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -49,7 +49,7 @@ eligibleTiersFromTags tags = mapMaybe matchTag tags
       | otherwise = Nothing
 
 computeEligibleUpgradeTiers ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, ClickhouseFlow m r) =>
   DRide.Ride ->
   DTTC.TransporterConfig ->
   m ()
