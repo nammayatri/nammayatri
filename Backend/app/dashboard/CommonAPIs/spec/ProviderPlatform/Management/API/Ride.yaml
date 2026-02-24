@@ -175,6 +175,19 @@ types:
   RideListItem:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
+    - ondcOrderId: Maybe Text
+    - buyerAppOrderId: Maybe Text
+    - rideCreatedAt: UTCTime
+    - rideStartedAt: Maybe UTCTime
+    - rideCompletedAt: Maybe UTCTime
+    - rideCancelledAt: Maybe UTCTime
+    - rideStatus: RideStatus
+    - fleetOperatorId: Maybe Text
+    - customerIdMasked: Maybe Text
+    - pickupLocationId: Maybe Text
+    - dropLocationId: Maybe Text
+    - tripDistanceKm: Maybe Meters
+    - tripDurationMinutes: Maybe Minutes
     - customerName: Maybe Text
     - customerPhoneNo: Text
     - driverName: Text
@@ -184,15 +197,73 @@ types:
     - vehicleNo: Text
     - fareDiff: Maybe Money
     - fareDiffWithCurrency: Maybe PriceAPIEntity
+    - baseFare: Maybe Money
+    - distanceCharge: Maybe Money
+    - timeCharge: Maybe Money
+    - surgeMultiplier: Maybe Double
+    - surgeAmount: Maybe Money
+    - grossRideValue: Maybe HighPrecMoney
+    - platformFee: Maybe HighPrecMoney
+    - platformFeeGst: Maybe HighPrecMoney
+    - subscriptionOffsetAmount: Maybe HighPrecMoney
+    - incentivesAmount: Maybe HighPrecMoney
+    - penaltiesAmount: Maybe HighPrecMoney
+    - gstApplicableFlag: Maybe Bool
+    - gstRate: Maybe Double
+    - gstAmount: Maybe HighPrecMoney
+    - tdsApplicableFlag: Maybe Bool
+    - tdsRate: Maybe Double
+    - tdsAmount: Maybe HighPrecMoney
+    - netPayableToDriver: Maybe HighPrecMoney
+    - netPlatformRevenue: Maybe HighPrecMoney
+    - paymentMode: Maybe Text
+    - paymentStatus: Maybe Text
+    - paymentReferenceInternal: Maybe Text
+    - walletTransactionIds: [Text]
+    - invoiceIds: [Text]
     - bookingStatus: BookingStatus
-    - rideCreatedAt: UTCTime
   RideListItemV2:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
+    - ondcOrderId: Maybe Text
+    - buyerAppOrderId: Maybe Text
+    - rideCreatedAt: UTCTime
+    - rideStartedAt: Maybe UTCTime
+    - rideCompletedAt: Maybe UTCTime
+    - rideCancelledAt: Maybe UTCTime
+    - rideStatus: RideStatus
+    - fleetOperatorId: Maybe Text
+    - customerIdMasked: Maybe Text
+    - pickupLocationId: Maybe Text
+    - dropLocationId: Maybe Text
+    - tripDistanceKm: Maybe Meters
+    - tripDurationMinutes: Maybe Minutes
     - driverName: Text
     - driverPhoneNo: Maybe Text
-    - rideStatus: RideStatus
-    - rideCreatedAt: UTCTime
+    - baseFare: Maybe Money
+    - distanceCharge: Maybe Money
+    - timeCharge: Maybe Money
+    - surgeMultiplier: Maybe Double
+    - surgeAmount: Maybe Money
+    - grossRideValue: Maybe HighPrecMoney
+    - platformFee: Maybe HighPrecMoney
+    - platformFeeGst: Maybe HighPrecMoney
+    - subscriptionOffsetAmount: Maybe HighPrecMoney
+    - incentivesAmount: Maybe HighPrecMoney
+    - penaltiesAmount: Maybe HighPrecMoney
+    - gstApplicableFlag: Maybe Bool
+    - gstRate: Maybe Double
+    - gstAmount: Maybe HighPrecMoney
+    - tdsApplicableFlag: Maybe Bool
+    - tdsRate: Maybe Double
+    - tdsAmount: Maybe HighPrecMoney
+    - netPayableToDriver: Maybe HighPrecMoney
+    - netPlatformRevenue: Maybe HighPrecMoney
+    - paymentMode: Maybe Text
+    - paymentStatus: Maybe Text
+    - paymentReferenceInternal: Maybe Text
+    - walletTransactionIds: [Text]
+    - invoiceIds: [Text]
   WaiverRideCancellationPenaltyReq:
     - reason: Text
 

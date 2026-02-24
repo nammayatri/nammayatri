@@ -44,6 +44,7 @@ import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -91,6 +92,7 @@ import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
@@ -119,6 +121,7 @@ import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJL
+import qualified Storage.Queries.PaymentInvoice as QPaymentInvoice
 import qualified Storage.Queries.PaymentInvoiceExtra as QPaymentInvoiceExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
@@ -136,9 +139,6 @@ import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
-import qualified Storage.Queries.PaymentInvoice as QPaymentInvoice
-import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 
 data BookingDetails = BookingDetails
   { bppBookingId :: Id DRB.BPPBooking,
@@ -1049,24 +1049,25 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee paymen
               cancellationPaymentCaptured <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode cancellationPaymentIntentResp.paymentIntentId
               if cancellationPaymentCaptured
                 then do
-                    QPaymentInvoice.updatePaymentStatus DPI.CAPTURED cancellationInvoice.id
-                    QPaymentInvoiceExtra.updatePaymentStatusByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE DPI.CANCELLED
-                    when (isNothing ride.cancellationFeeIfCancelled) $ do
-                      QRide.updateCancellationFeeIfCancelledField (Just fee.amount) ride.id
-                    mobileNumber <- mapM decrypt personD.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-                    let countryCode = fromMaybe "+91" personD.mobileCountryCode
-                    void $ CallBPPInternal.customerCancellationDuesSync
-                        (merchantD.driverOfferApiKey)
-                        (merchantD.driverOfferBaseUrl)
-                        (merchantD.driverOfferMerchantId)
-                        mobileNumber
-                        countryCode
-                        (Just fee.amount)
-                        (Just fee)
-                        Nothing
-                        True
-                        (merchantOpCity.city)
-                    logDebug $ "Customer cancellation dues synced successfully for booking: " <> show booking.id
+                  QPaymentInvoice.updatePaymentStatus DPI.CAPTURED cancellationInvoice.id
+                  QPaymentInvoiceExtra.updatePaymentStatusByRideIdAndTypeAndPurpose ride.id DPI.PAYMENT DPI.RIDE DPI.CANCELLED
+                  when (isNothing ride.cancellationFeeIfCancelled) $ do
+                    QRide.updateCancellationFeeIfCancelledField (Just fee.amount) ride.id
+                  mobileNumber <- mapM decrypt personD.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+                  let countryCode = fromMaybe "+91" personD.mobileCountryCode
+                  void $
+                    CallBPPInternal.customerCancellationDuesSync
+                      (merchantD.driverOfferApiKey)
+                      (merchantD.driverOfferBaseUrl)
+                      (merchantD.driverOfferMerchantId)
+                      mobileNumber
+                      countryCode
+                      (Just fee.amount)
+                      (Just fee)
+                      Nothing
+                      True
+                      (merchantOpCity.city)
+                  logDebug $ "Customer cancellation dues synced successfully for booking: " <> show booking.id
                 else do
                   logDebug $ "Failed to capture cancellation payment intent: " <> cancellationPaymentIntentResp.paymentIntentId
                   QPaymentInvoice.updatePaymentStatus DPI.FAILED cancellationInvoice.id

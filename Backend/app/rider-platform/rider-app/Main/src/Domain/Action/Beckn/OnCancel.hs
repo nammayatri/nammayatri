@@ -42,6 +42,7 @@ import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+
 -- import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 
 data OnCancelReq = BookingCancelledReq
@@ -68,9 +69,10 @@ onCancel ValidatedBookingCancelledReq {..} = do
   let castedCancellationSource = castCancellatonSource cancellationSource_
   -- riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let validCancellationReasonCodesForImmediateCharge = ["NO_SHOW_CHARGE"] :: [Text] -- make it config in riderConfig
-  let paymentPurpose = if isJust cancellationFee && maybe False (`elem` validCancellationReasonCodesForImmediateCharge) cancellationReasonCode
-                       then Just DPI.CANCELLATION_FEE
-                       else Nothing
+  let paymentPurpose =
+        if isJust cancellationFee && maybe False (`elem` validCancellationReasonCodesForImmediateCharge) cancellationReasonCode
+          then Just DPI.CANCELLATION_FEE
+          else Nothing
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee paymentPurpose
   SharedCancel.releaseCancellationLock booking.transactionId
   where

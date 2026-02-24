@@ -72,8 +72,8 @@ import Data.Time hiding (getCurrentTime)
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
-import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
+import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.ConditionalCharges as DTCC
 import qualified Domain.Types.DocumentVerificationConfig as DIT
 import qualified Domain.Types.DriverQuote as DDQ
@@ -123,13 +123,13 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RideDetails as QRideDetails
-import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.RiderDetails as QRD
 import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.Vehicle as QVeh
