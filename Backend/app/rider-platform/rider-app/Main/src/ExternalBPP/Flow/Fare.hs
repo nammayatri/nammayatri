@@ -72,7 +72,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
   let failureThreshold = CB.getFirstThresholdFailureCount apiConfig
   let probeLimit = 2 * failureThreshold
 
-  -- Determine if we should always probe (for Suburban)
+  -- Determine if we should always probe (for CRIS non-single-mode)
   let alwaysProbe =
         case integratedBPPConfig.providerConfig of
           CRIS _ -> not isSingleMode
@@ -135,10 +135,12 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
 
       case cachedResult of
         Just filteredFares | not (null filteredFares) -> do
-          -- Cached fares available: fork probing calls in background
           let probeWindow = fromMaybe 60 (apiConfig <&> (.canaryWindowSeconds))
           probeCount <- CB.getProbeCounter ptMode CB.FareAPI merchantOperatingCityId
-          when (not isSingleMode && (alwaysProbe || probeCount < probeLimit)) $ do
+          let shouldProbe = case integratedBPPConfig.providerConfig of
+                CRIS _ -> not isSingleMode
+                _ -> probeCount < probeLimit
+          when (alwaysProbe || shouldProbe) $ do
             -- Fork a background probe request for circuit breaker tracking
             fork "probe-fare-api" $ do
               unless alwaysProbe $ void $ CB.incrementProbeCounter ptMode CB.FareAPI merchantOperatingCityId probeWindow
