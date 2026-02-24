@@ -60,6 +60,7 @@ import qualified Tools.Metrics as Metrics
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 
 getNextScheduleTime ::
   ( MonadFlow m,
@@ -121,7 +122,8 @@ initiateDriverSearchBatch ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasShortDurationRetryCfg r c,
     HasField "blackListedJobs" r [Text],
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   DriverSearchBatchInput m ->
   m ()
@@ -291,7 +293,8 @@ buildTripQuoteDetail ::
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   DSR.SearchRequest ->
   DTC.TripCategory ->

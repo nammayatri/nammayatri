@@ -43,6 +43,7 @@ import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.DriverPool.Config as DPC
 import SharedLogic.DriverPool.Types as Reexport
+import Kernel.Storage.Clickhouse.Config
 import qualified Storage.Beam.DriverPoolConfig as SBMDPC
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as CTC
@@ -51,7 +52,7 @@ import Storage.Queries.DriverPoolConfig ()
 import Utils.Common.CacUtils as CCU
 
 getSearchDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, ClickhouseFlow m r) =>
   Id MerchantOperatingCity ->
   Maybe Meters ->
   SL.Area ->
@@ -104,7 +105,7 @@ doubleToInt :: Double -> Int
 doubleToInt = floor
 
 getDriverPoolConfigCond ::
-  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, ClickhouseFlow m r) =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
@@ -157,7 +158,7 @@ setConfigInMemory id mbvst tripCategory dist config = do
   CCU.setConfigInMemoryCommon (DTC.DriverPoolConfig id.getId (show mbvst) tripCategory roundeDist) isExp config
 
 getDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  (CacheFlow m r, EsqDBFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, ClickhouseFlow m r) =>
   Id MerchantOperatingCity ->
   DVST.ServiceTierType ->
   DTC.TripCategory ->
