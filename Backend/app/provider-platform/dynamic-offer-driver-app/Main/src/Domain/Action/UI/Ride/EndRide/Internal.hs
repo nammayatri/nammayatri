@@ -151,6 +151,7 @@ import Tools.Notifications
 import qualified Tools.PaymentNudge as PaymentNudge
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 
 endRideTransaction ::
   ( CacheFlow m r,
@@ -166,6 +167,7 @@ endRideTransaction ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
+    ClickhouseFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text]
@@ -377,7 +379,8 @@ sendReferralFCM ::
     EsqDBFlow m r,
     EncFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   Bool ->
   Ride.Ride ->

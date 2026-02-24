@@ -100,7 +100,8 @@ sendSearchRequestToDrivers ::
     LT.HasLocationService m r,
     JobCreator r m,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    ClickhouseFlow m r
   ) =>
   Bool ->
   [SDP.TripQuoteDetail] ->
@@ -255,7 +256,8 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
         HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
         HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
         HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-        HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+        HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+        ClickhouseFlow m r
       ) =>
       DSR.SearchRequest ->
       HashMap.HashMap DVST.ServiceTierType SDP.TripQuoteDetail ->
