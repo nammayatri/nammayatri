@@ -32,14 +32,21 @@ getFromLocation id bookingId merchantId merchantOperatingCityId = do
   mappings <- QLM.findByEntityId id
   fromLocationMapping <-
     if null mappings
-      then do
-        void $ QBooking.findById (Id bookingId)
-        fromLocationMapping <- QLM.getLatestStartByEntityId bookingId >>= fromMaybeM (FromLocationMappingNotFound bookingId)
-        fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocationMapping.locationId id DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
-        QLM.create fromLocationRideMapping
-        return fromLocationRideMapping
-      else QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+      then getFromLocationFromBooking id bookingId merchantId merchantOperatingCityId
+      else do
+        mbRideStartMapping <- QLM.getLatestStartByEntityId id
+        case mbRideStartMapping of
+          Just m -> return m
+          Nothing -> getFromLocationFromBooking id bookingId merchantId merchantOperatingCityId
   QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
+
+getFromLocationFromBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m DLM.LocationMapping
+getFromLocationFromBooking id bookingId merchantId merchantOperatingCityId = do
+  void $ QBooking.findById (Id bookingId)
+  fromLocationMapping <- QLM.getLatestStartByEntityId bookingId >>= fromMaybeM (FromLocationMappingNotFound bookingId)
+  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocationMapping.locationId id DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
+  QLM.create fromLocationRideMapping
+  return fromLocationRideMapping
 
 getStops :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> Maybe Bool -> m [Location]
 getStops id hasStops = do
