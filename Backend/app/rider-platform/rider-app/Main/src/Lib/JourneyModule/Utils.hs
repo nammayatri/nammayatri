@@ -54,6 +54,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -221,6 +222,8 @@ getISTTimeInfo currentTime =
 
 fetchLiveBusTimings ::
   ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    HasField "cloudType" r (Maybe CloudType),
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -317,6 +320,8 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
 
 fetchLiveSubwayTimings ::
   ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    HasField "cloudType" r (Maybe CloudType),
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -368,6 +373,8 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
 
 fetchLiveTimings ::
   ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    HasField "cloudType" r (Maybe CloudType),
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -404,6 +411,8 @@ findPossibleRoutes ::
     EncFlow m r,
     Monad m,
     HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    HasField "cloudType" r (Maybe CloudType),
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
@@ -622,10 +631,14 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
       nominalDiffTimeToSeconds $
         diffUTCTime (getISTArrivalTime r.timeOfArrival currentTime) currentTimeIST'
 
-    getRouteFrequency :: (Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> m (Maybe Int)
-    getRouteFrequency routeId = CQMMB.withCrossAppRedisNew $ Hedis.get (routeTripCountKey routeId)
+    getRouteFrequency :: (Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Text -> m (Maybe Int)
+    getRouteFrequency routeId = do
+      cloudType <- asks (.cloudType)
+      case cloudType of
+        Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.get (routeTripCountKey routeId)
+        _ -> CQMMB.withCrossAppRedisNew $ Hedis.get (routeTripCountKey routeId)
 
-    loadRouteFrequencies :: (Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [RouteStopTimeTable] -> m (M.Map Text Int)
+    loadRouteFrequencies :: (Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => [RouteStopTimeTable] -> m (M.Map Text Int)
     loadRouteFrequencies timings = do
       case vc of
         Enums.BUS -> do
@@ -650,6 +663,8 @@ findUpcomingTrips ::
     EncFlow m r,
     Monad m,
     HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    HasField "cloudType" r (Maybe CloudType),
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
@@ -900,6 +915,8 @@ buildMultimodalRouteDetails ::
     EncFlow m r,
     Monad m,
     HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    HasField "cloudType" r (Maybe CloudType),
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
@@ -1561,6 +1578,8 @@ switchFRFSQuoteTierUtil ::
     EncFlow m r,
     Monad m,
     HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    HasField "cloudType" r (Maybe CloudType),
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
@@ -1610,6 +1629,8 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
         EncFlow m r,
         Monad m,
         HasField "ltsHedisEnv" r Hedis.HedisEnv,
+        HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+        HasField "cloudType" r (Maybe CloudType),
         HasKafkaProducer r,
         HasShortDurationRetryCfg r c
       ) =>
@@ -1644,6 +1665,8 @@ getLegTierOptionsUtil ::
     EncFlow m r,
     Monad m,
     HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    HasField "cloudType" r (Maybe CloudType),
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>

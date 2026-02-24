@@ -5,6 +5,7 @@ import qualified Data.Text as T
 import Data.Time
 import Kernel.Prelude hiding (encodeUtf8, sequence)
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 
@@ -95,12 +96,15 @@ parseUTCTime dateStr =
     epoch = UTCTime (fromGregorian 1970 1 1) 0
 
 -- Get all trains for a single route
-getRoutesTrains :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> m RouteWithTrains
+getRoutesTrains :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Text -> m RouteWithTrains
 getRoutesTrains routeId = do
   let key = mkRouteKey routeId
 
   -- Get train data from Redis as Text
-  trainDataList :: Maybe [TrainInfo] <- CQMMB.withCrossAppRedisNew $ Hedis.safeGet key
+  cloudType <- asks (.cloudType)
+  trainDataList :: Maybe [TrainInfo] <- case cloudType of
+    Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.safeGet key
+    _ -> CQMMB.withCrossAppRedisNew $ Hedis.safeGet key
   logDebug $ "Got train data for route " <> routeId <> ": " <> show trainDataList
   case trainDataList of
     Just trainDataList' -> return $ RouteWithTrains routeId trainDataList'
@@ -109,5 +113,5 @@ getRoutesTrains routeId = do
       return $ RouteWithTrains routeId []
 
 -- Get trains for multiple routes
-getTrainsForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [Text] -> m [RouteWithTrains]
+getTrainsForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => [Text] -> m [RouteWithTrains]
 getTrainsForRoutes = mapM getRoutesTrains
