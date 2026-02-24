@@ -81,7 +81,6 @@ import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 
-import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -431,7 +430,7 @@ signatureAuth ::
     EsqDBFlow m r,
     EncFlow m r,
     HasKafkaProducer r,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+    ClickhouseFlow m r
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -877,7 +876,7 @@ createPerson ::
     DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     CacheFlow m r,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+    ClickhouseFlow m r
   ) =>
   AuthReq ->
   SP.IdentifierType ->
@@ -912,7 +911,7 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
     addNammaTags ::
       ( EsqDBFlow m r,
         CacheFlow m r,
-        CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+        ClickhouseFlow m r
       ) =>
       SP.Person ->
       Y.LoginTagData ->
@@ -1045,7 +1044,7 @@ createPersonWithPhoneNumber ::
     DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     CacheFlow m r,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+    ClickhouseFlow m r
   ) =>
   Id DMerchant.Merchant ->
   Text ->

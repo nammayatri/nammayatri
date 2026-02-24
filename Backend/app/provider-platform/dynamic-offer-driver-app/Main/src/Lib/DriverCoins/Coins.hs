@@ -48,7 +48,7 @@ import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Types as L
 import Kernel.Prelude
-import qualified Kernel.Storage.ClickhouseV2 as CH
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -76,7 +76,7 @@ import qualified Tools.Notifications as Notify
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
-type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m)
+type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r)
 
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
 getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withLockRedisAndReturnValue driverId.getId 60 $ do
