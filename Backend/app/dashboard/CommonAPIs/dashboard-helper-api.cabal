@@ -37,6 +37,7 @@ library
       Dashboard.Common.SpecialZone
       Dashboard.ProviderPlatform.CacAuth
       Dashboard.ProviderPlatform.Fleet.Driver
+      Dashboard.ProviderPlatform.Fleet.PayoutAccount
       Dashboard.ProviderPlatform.Fleet.RegistrationV2
       Dashboard.ProviderPlatform.Management.Driver
       Dashboard.ProviderPlatform.Management.DriverCoins
@@ -56,9 +57,11 @@ library
       API.Types.ProviderPlatform.Fleet.Endpoints.Driver
       API.Types.ProviderPlatform.Fleet.Endpoints.LiveMap
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+      API.Types.ProviderPlatform.Fleet.Endpoints.PayoutAccount
       API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
       API.Types.ProviderPlatform.Fleet.LiveMap
       API.Types.ProviderPlatform.Fleet.Onboarding
+      API.Types.ProviderPlatform.Fleet.PayoutAccount
       API.Types.ProviderPlatform.Fleet.RegistrationV2
       API.Types.ProviderPlatform.Management
       API.Types.ProviderPlatform.Management.Account

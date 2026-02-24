@@ -162,6 +162,7 @@ library
       Domain.Action.Dashboard.Fleet.Driver
       Domain.Action.Dashboard.Fleet.LiveMap
       Domain.Action.Dashboard.Fleet.Onboarding
+      Domain.Action.Dashboard.Fleet.PayoutAccount
       Domain.Action.Dashboard.Fleet.Referral
       Domain.Action.Dashboard.Fleet.Registration
       Domain.Action.Dashboard.Fleet.RegistrationV2
@@ -823,6 +824,7 @@ library
       API.Action.Dashboard.Fleet.Driver
       API.Action.Dashboard.Fleet.LiveMap
       API.Action.Dashboard.Fleet.Onboarding
+      API.Action.Dashboard.Fleet.PayoutAccount
       API.Action.Dashboard.Fleet.RegistrationV2
       API.Action.Dashboard.IssueManagement
       API.Action.Dashboard.IssueManagement.Issue

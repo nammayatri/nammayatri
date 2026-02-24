@@ -7,6 +7,7 @@ import qualified "dynamic-offer-driver-app" API.Dashboard
 import qualified API.Types.ProviderPlatform.Fleet.Driver
 import qualified API.Types.ProviderPlatform.Fleet.LiveMap
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding
+import qualified API.Types.ProviderPlatform.Fleet.PayoutAccount
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.ServerName
@@ -20,6 +21,7 @@ data FleetAPIs = FleetAPIs
   { driverDSL :: API.Types.ProviderPlatform.Fleet.Driver.DriverAPIs,
     liveMapDSL :: API.Types.ProviderPlatform.Fleet.LiveMap.LiveMapAPIs,
     onboardingDSL :: API.Types.ProviderPlatform.Fleet.Onboarding.OnboardingAPIs,
+    payoutAccountDSL :: API.Types.ProviderPlatform.Fleet.PayoutAccount.PayoutAccountAPIs,
     registrationV2DSL :: API.Types.ProviderPlatform.Fleet.RegistrationV2.RegistrationV2APIs
   }
 
@@ -28,10 +30,11 @@ mkFleetAPIs merchantId city token = do
   let driverDSL = API.Types.ProviderPlatform.Fleet.Driver.mkDriverAPIs driverClientDSL
   let liveMapDSL = API.Types.ProviderPlatform.Fleet.LiveMap.mkLiveMapAPIs liveMapClientDSL
   let onboardingDSL = API.Types.ProviderPlatform.Fleet.Onboarding.mkOnboardingAPIs onboardingClientDSL
+  let payoutAccountDSL = API.Types.ProviderPlatform.Fleet.PayoutAccount.mkPayoutAccountAPIs payoutAccountClientDSL
   let registrationV2DSL = API.Types.ProviderPlatform.Fleet.RegistrationV2.mkRegistrationV2APIs registrationV2ClientDSL
   (FleetAPIs {..})
   where
-    driverClientDSL :<|> liveMapClientDSL :<|> onboardingClientDSL :<|> registrationV2ClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.FleetDSLAPI) merchantId city token
+    driverClientDSL :<|> liveMapClientDSL :<|> onboardingClientDSL :<|> payoutAccountClientDSL :<|> registrationV2ClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.FleetDSLAPI) merchantId city token
 
 callFleetAPI ::
   forall m r b c.
