@@ -40,6 +40,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Storage.Clickhouse.Config
 import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -73,7 +74,8 @@ bulkUpdateByDriverId ::
     MonadReader r m,
     EsqDBFlow m r,
     CacheFlow m r,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -144,7 +146,8 @@ bulkUpdateByDriverIdV2 ::
     MonadReader r m,
     EsqDBFlow m r,
     CacheFlow m r,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

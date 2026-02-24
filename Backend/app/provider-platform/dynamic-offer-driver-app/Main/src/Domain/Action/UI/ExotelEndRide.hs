@@ -35,6 +35,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.PersonExtra as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import Kernel.Storage.Clickhouse.Config
 
 type AckResp = AckResponse
 
@@ -48,7 +49,8 @@ callBasedEndRide ::
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   EndRide.ServiceHandle m ->
   Id Merchant ->

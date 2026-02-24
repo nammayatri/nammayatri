@@ -104,6 +104,7 @@ import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import Tools.Error
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
+import Kernel.Storage.Clickhouse.Config
 
 type SelectFlow m r c =
   ( CacheFlow m r,
@@ -119,7 +120,8 @@ type SelectFlow m r c =
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
     Redis.HedisFlow m r,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   )
 
 data DSelectReq = DSelectReq

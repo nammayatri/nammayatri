@@ -115,6 +115,8 @@ import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
+import Kernel.Storage.Clickhouse.Config
+
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq | CronJobReq CronJobEndRideReq
 
@@ -239,7 +241,7 @@ type EndRideFlow m r =
   )
 
 driverEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, ClickhouseFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -250,7 +252,7 @@ driverEndRide handle rideId req = do
     $ DriverReq req
 
 callBasedEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, ClickhouseFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
@@ -258,7 +260,7 @@ callBasedEndRide ::
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, ClickhouseFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -271,7 +273,7 @@ dashboardEndRide handle rideId req = do
   return APISuccess.Success
 
 cronJobEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, ClickhouseFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CronJobEndRideReq ->
@@ -284,7 +286,7 @@ cronJobEndRide handle rideId req = do
   return APISuccess.Success
 
 endRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, ClickhouseFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
@@ -307,7 +309,7 @@ endRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) do
     mkLockKey = "EndTransaction:RID:-" <> rideId.getId
 
 endRideHandler ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, ClickhouseFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->

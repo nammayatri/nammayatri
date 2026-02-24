@@ -95,7 +95,8 @@ sendSearchRequestToDrivers ::
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    ClickhouseFlow m r
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -160,7 +161,8 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
         HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
         HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
         HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-        CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+        CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+        ClickhouseFlow m r
       ) =>
       SearchTry ->
       DSR.SearchRequest ->
@@ -208,7 +210,8 @@ sendSearchRequestToDrivers' ::
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    ClickhouseFlow m r
   ) =>
   DriverPoolConfig ->
   SearchTry ->

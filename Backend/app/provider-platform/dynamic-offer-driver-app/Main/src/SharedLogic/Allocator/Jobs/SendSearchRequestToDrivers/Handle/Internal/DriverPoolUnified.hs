@@ -43,6 +43,8 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverPlan as QDriverPlan
 import qualified Storage.Queries.RiderDriverCorrelation as QFavDrivers
 import Tools.Maps as Maps
+import Kernel.Storage.Clickhouse.Config
+
 
 getNextDriverPoolBatch ::
   ( EncFlow m r,
@@ -54,7 +56,8 @@ getNextDriverPoolBatch ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
@@ -99,7 +102,8 @@ prepareDriverPoolBatch ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   [DVST.VehicleServiceTier] ->
   DM.Merchant ->
@@ -135,7 +139,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
         EsqDBFlow m r,
         CacheFlow m r,
         LT.HasLocationService m r,
-        HasKafkaProducer r
+        HasKafkaProducer r,
+        ClickhouseFlow m r
       ) =>
       Maybe Bool ->
       m [Id Driver]

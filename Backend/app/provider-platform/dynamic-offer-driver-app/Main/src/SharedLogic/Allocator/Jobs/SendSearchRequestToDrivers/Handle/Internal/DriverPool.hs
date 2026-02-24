@@ -90,6 +90,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
 import Tools.Maps as Maps
 import Utils.Common.Cac.KeyNameConstants
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 
 isBatchNumExceedLimit ::
   ( CacheFlow m r
@@ -118,7 +119,8 @@ prepareDriverPoolBatch ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   [DVST.VehicleServiceTier] ->
   DM.Merchant ->
@@ -630,7 +632,8 @@ makeTaggedDriverPool ::
     MonadFlow m,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   Id MerchantOperatingCity ->
   Seconds ->
@@ -837,7 +840,8 @@ getNextDriverPoolBatch ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m
+    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->

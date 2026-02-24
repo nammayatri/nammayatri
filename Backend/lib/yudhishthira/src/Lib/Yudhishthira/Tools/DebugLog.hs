@@ -16,7 +16,9 @@ import qualified Data.Text as T
 import qualified Data.Time.Format as Time
 import qualified Data.Time.Format.ISO8601 as ISO
 import Kernel.Prelude
-import qualified Kernel.Storage.ClickhouseV2 as CH
+import qualified Kernel.Storage.Clickhouse.Config as CHConfig
+import qualified Kernel.Storage.Clickhouse.Queries as CHQueries
+import Kernel.Storage.Clickhouse.Types (ClickhouseExpr (..))
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
@@ -105,7 +107,7 @@ checkDebugLogFlags mocId identifier' = do
 
 -- | Insert a debug log row into ClickHouse json_logic_transactions table
 insertJsonLogicTransaction ::
-  (MonadFlow m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, Log m) =>
+  (MonadFlow m, CHConfig.ClickhouseFlow m r, Log m) =>
   Text -> -- domain/event identifier
   A.Value -> -- inputData
   A.Value -> -- logic
@@ -133,7 +135,7 @@ insertJsonLogicTransaction domain inputData logic outputData = do
           <> "', '"
           <> T.unpack outputStr
           <> "')"
-  eResult :: Either String [A.Object] <- CH.runRawQuery (Proxy @CH.APP_SERVICE_CLICKHOUSE) $ CH.RawQuery query
+  eResult <- CHQueries.runExecQuery' (ExprStr query) CHConfig.APP_SERVICE_CLICKHOUSE
   case eResult of
     Right _ -> logDebug $ "Debug log inserted for domain: " <> domain
     Left err -> logWarning $ "Debug log ClickHouse insert failed: " <> T.pack err
@@ -145,7 +147,7 @@ formatDateTimeUTC = Time.formatTime Time.defaultTimeLocale "%Y-%m-%d %H:%M:%S"
 runLogicsWithDebugLog ::
   ( MonadFlow m,
     ToJSON a,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
+    CHConfig.ClickhouseFlow m r,
     CacheFlow m r
   ) =>
   Id LYT.MerchantOperatingCity ->
@@ -174,7 +176,7 @@ computeNammaTagsWithDebugLog ::
     CacheFlow m r,
     HasYudhishthiraTablesSchema,
     ToJSON a,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+    CHConfig.ClickhouseFlow m r
   ) =>
   Id LYT.MerchantOperatingCity ->
   YA.ApplicationEvent ->
@@ -205,7 +207,7 @@ computeNammaTagsWithExpiryAndDebugLog ::
     CacheFlow m r,
     HasYudhishthiraTablesSchema,
     ToJSON a,
-    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m
+    CHConfig.ClickhouseFlow m r
   ) =>
   Id LYT.MerchantOperatingCity ->
   YA.ApplicationEvent ->

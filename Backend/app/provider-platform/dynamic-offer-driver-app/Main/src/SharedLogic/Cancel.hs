@@ -101,7 +101,8 @@ reAllocateBookingIfPossible ::
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    ClickhouseFlow m r
   ) =>
   Bool ->
   Bool ->
@@ -215,7 +216,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
         HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
         HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-        HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+        HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+        ClickhouseFlow m r
       ) =>
       DSR.SearchRequest ->
       DST.SearchTry ->
@@ -248,7 +250,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
         HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
         HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-        HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+        HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+        ClickhouseFlow m r
       ) =>
       DSR.SearchRequest ->
       DST.SearchTry ->
