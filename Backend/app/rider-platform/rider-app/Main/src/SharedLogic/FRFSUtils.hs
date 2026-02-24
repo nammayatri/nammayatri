@@ -357,6 +357,8 @@ getFare riderId vehicleType serviceTier integratedBPPConfigId merchantId merchan
       maybeToList <$> QFRFSRouteFareProduct.findByRouteCodeAndVehicleServiceTierId routeCode vehicleServiceTier.id
     Nothing -> QFRFSRouteFareProduct.findByRouteCode routeCode integratedBPPConfigId
   let serviceableFareProducts = DTB.findBoundedDomain fareProducts now ++ filter (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded) fareProducts
+  logDebug $ "Serviceable Fare Products Debug: " <> show serviceableFareProducts
+  logDebug $ "Route Code Debug: " <> routeCode <> " Debug Service Tier: " <> show serviceTier
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigById integratedBPPConfigId
   mapM (buildFRFSFare riderId vehicleType merchantId merchantOperatingCityId routeCode startStopCode endStopCode integratedBPPConfig) serviceableFareProducts
 
@@ -372,6 +374,7 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
         case routeStopFares of
           [] -> throwError $ InternalError "FRFS Route Stop Fare Not Found"
           fares -> do
+            let faresForPolicy = filter (\stopFare -> stopFare.farePolicyId == farePolicy.id) fares
             return $
               map
                 ( \stopFare ->
@@ -393,7 +396,7 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
                         eligibility = True
                       }
                 )
-                fares
+                faresForPolicy
       DFRFSFarePolicy.StageBased -> do
         stageFares <- QFRFSStageFare.findAllByFarePolicyId farePolicy.id
         startStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode startStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
