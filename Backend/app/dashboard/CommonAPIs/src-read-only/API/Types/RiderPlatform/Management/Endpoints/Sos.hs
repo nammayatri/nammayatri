@@ -15,7 +15,13 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-newtype SosDetailsMaybeRes = SosDetailsMaybeRes {details :: Kernel.Prelude.Maybe SosDetailsRes}
+data ExternalSOSTriggerSource
+  = FRONTEND
+  | DASHBOARD
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SosDetailsMaybeRes = SosDetailsMaybeRes {details :: Kernel.Prelude.Maybe SosDetailsRes, triggerSource :: Kernel.Prelude.Maybe ExternalSOSTriggerSource}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
