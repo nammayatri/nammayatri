@@ -61,6 +61,7 @@ data JourneyLeg = JourneyLeg
     toDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     toStopDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails,
     userBookedBusServiceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    userPreferredServiceTier :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

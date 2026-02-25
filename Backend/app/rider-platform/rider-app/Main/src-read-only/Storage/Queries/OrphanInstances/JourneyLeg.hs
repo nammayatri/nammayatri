@@ -73,6 +73,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             toDepartureTime = toDepartureTime,
             toStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId,
             userBookedBusServiceTierType = userBookedBusServiceTierType,
+            userPreferredServiceTier = userPreferredServiceTier,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -131,6 +132,7 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.toStopName = toStopDetails >>= (.name),
         Beam.toStopPlatformCode = toStopDetails >>= (.platformCode),
         Beam.userBookedBusServiceTierType = userBookedBusServiceTierType,
+        Beam.userPreferredServiceTier = userPreferredServiceTier,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

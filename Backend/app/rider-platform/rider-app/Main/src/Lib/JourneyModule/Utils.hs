@@ -60,7 +60,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
-import SharedLogic.FRFSUtils
+import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
@@ -1507,19 +1507,20 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
                   )
               )
 
-sortAndGetBusFares :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id MerchantOperatingCity -> [FRFSFare] -> m (Maybe FRFSFare)
-sortAndGetBusFares _ [] = return Nothing
-sortAndGetBusFares merchantOpCityId finalFares = do
+sortAndGetBusFares :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id MerchantOperatingCity -> Maybe Spec.ServiceTierType -> [FRFSFare] -> m (Maybe FRFSFare)
+sortAndGetBusFares _ _ [] = return Nothing
+sortAndGetBusFares merchantOpCityId mbPreferredTier finalFares = do
   mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOpCityId Nothing
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
+  let cfgMap' = FRFSUtils.adjustCfgMapForPreferredTier mbPreferredTier cfgMap
   let serviceTierTypeFromFare fare = Just fare.vehicleServiceTier.serviceTierType
   return $
     Just $
       minimumBy
         ( \fare1 fare2 ->
             compare
-              (maybe maxBound (tierRank cfgMap) (serviceTierTypeFromFare fare1))
-              (maybe maxBound (tierRank cfgMap) (serviceTierTypeFromFare fare2))
+              (maybe maxBound (tierRank cfgMap') (serviceTierTypeFromFare fare1))
+              (maybe maxBound (tierRank cfgMap') (serviceTierTypeFromFare fare2))
         )
         finalFares
 
