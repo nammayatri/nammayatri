@@ -6,6 +6,7 @@ imports:
   ServiceTierType: Domain.Types.Common
   BaseUrl: Kernel.Types.Common
   VehicleCategory : Domain.Types.VehicleCategory
+  VSTAllowedArea: Domain.Types.VSTAllowedArea
 
 VehicleServiceTier:
   tableName: vehicle_service_tier
@@ -40,7 +41,7 @@ VehicleServiceTier:
     stopFcmSuppressCount: Maybe Int
     scheduleBookingListEligibilityTags: Maybe [Text]
     isEnabled: Maybe Bool
-    allowedAreas: Maybe [Text]
+    allowedAreas: Maybe [VSTAllowedArea]
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]
@@ -55,10 +56,13 @@ VehicleServiceTier:
     allowedAreas: 'NULL'
   beamType:
     vehicleIconUrl: Maybe Text
+    allowedAreas: Maybe [Text]
   fromTType:
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+    allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.map Domain.Types.VSTAllowedArea.VSTAllowedArea))|I
   toTType:
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+    allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.map Domain.Types.VSTAllowedArea.vstAllowedAreaToText))|I
   constraints:
     id: PrimaryKey
   queries:
