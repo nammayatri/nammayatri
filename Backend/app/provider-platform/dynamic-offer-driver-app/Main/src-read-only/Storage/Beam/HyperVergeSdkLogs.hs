@@ -12,17 +12,17 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data HyperVergeSdkLogsT f = HyperVergeSdkLogsT
-  { callbackResponse :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    docType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentType),
-    driverId :: B.C f Kernel.Prelude.Text,
-    failureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    hvFlowId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    status :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    txnId :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { callbackResponse :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    docType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentType)),
+    driverId :: (B.C f Kernel.Prelude.Text),
+    failureReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    hvFlowId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    status :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    txnId :: (B.C f Kernel.Prelude.Text),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table HyperVergeSdkLogsT where
 
 type HyperVergeSdkLogs = HyperVergeSdkLogsT Identity
 
-$(enableKVPG ''HyperVergeSdkLogsT ['txnId] [['driverId]])
+$(enableKVPG (''HyperVergeSdkLogsT) [('txnId)] [[('driverId)]])
 
-$(mkTableInstances ''HyperVergeSdkLogsT "hyperverge_sdk_logs")
+$(mkTableInstances (''HyperVergeSdkLogsT) "hyperverge_sdk_logs")

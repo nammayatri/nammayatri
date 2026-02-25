@@ -42,6 +42,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     allowDuplicatePan :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateUdyam :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowMultiFleetOperatorLink :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allowPanAadhaarLinkage :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowRcUnlinkWhenDriverOffline :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowedPaymentInstrumentForPayout :: Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument],
     allowedReferralEntities :: [Domain.Types.Person.Role],

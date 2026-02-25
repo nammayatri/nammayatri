@@ -315,6 +315,7 @@ mapDocumentType Common.LDCCertificate = DVC.LDCCertificate
 mapDocumentType Common.TDSCertificate = DVC.TDSCertificate
 mapDocumentType Common.TANCertificate = DVC.TANCertificate
 mapDocumentType Common.UDYAMCertificate = DVC.UDYAMCertificate
+mapDocumentType Common.PanAadhaarLink = DVC.PanAadhaarLinkage
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
@@ -980,7 +981,8 @@ approveAndUpdatePan req mId mOpCityId = do
                 driverName = Just person.firstName,
                 driverNameOnGovtDB = req.driverNameOnGovtDB,
                 failedRules = [],
-                verifiedBy = Just DPan.DASHBOARD
+                verifiedBy = Just DPan.DASHBOARD,
+                panAadhaarLinkage = Nothing
               }
       QPan.create pan
 

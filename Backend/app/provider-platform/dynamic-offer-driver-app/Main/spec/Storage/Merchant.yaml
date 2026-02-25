@@ -1121,6 +1121,7 @@ TransporterConfig:
     allowDuplicateGst: Maybe Bool
     allowDuplicateAadhaar : Maybe Bool
     allowDuplicateUdyam: Maybe Bool
+    allowPanAadhaarLinkage : Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"

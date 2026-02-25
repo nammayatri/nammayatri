@@ -989,6 +989,7 @@ castDDocumentType = \case
   DVC.TDSCertificate -> Common.TDSCertificate
   DVC.TANCertificate -> Common.TANCertificate
   DVC.UDYAMCertificate -> Common.UDYAMCertificate
+  DVC.PanAadhaarLinkage -> Common.PanAadhaarLink
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1090,6 +1091,7 @@ castDocumentType = \case
   Common.TDSCertificate -> DVC.TDSCertificate
   Common.TANCertificate -> DVC.TANCertificate
   Common.UDYAMCertificate -> DVC.UDYAMCertificate
+  Common.PanAadhaarLink -> DVC.PanAadhaarLinkage
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::

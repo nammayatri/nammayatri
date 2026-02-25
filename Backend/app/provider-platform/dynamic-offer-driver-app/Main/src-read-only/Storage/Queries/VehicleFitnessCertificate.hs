@@ -34,7 +34,7 @@ findByRcId rcId = do findAllWithKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.get
 
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate])
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate]))
 findByRcIdAndDriverId rcId driverId = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId), Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
@@ -51,8 +51,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.applicationNumberEncrypted (applicationNumber & unEncrypted . encrypted),
-      Se.Set Beam.applicationNumberHash (applicationNumber & hash),
+    [ Se.Set Beam.applicationNumberEncrypted (((applicationNumber & unEncrypted . encrypted))),
+      Se.Set Beam.applicationNumberHash ((applicationNumber & hash)),
       Se.Set Beam.categoryOfVehicle categoryOfVehicle,
       Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
@@ -95,8 +95,8 @@ instance FromTType' Beam.VehicleFitnessCertificate Domain.Types.VehicleFitnessCe
 instance ToTType' Beam.VehicleFitnessCertificate Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate where
   toTType' (Domain.Types.VehicleFitnessCertificate.VehicleFitnessCertificate {..}) = do
     Beam.VehicleFitnessCertificateT
-      { Beam.applicationNumberEncrypted = applicationNumber & unEncrypted . encrypted,
-        Beam.applicationNumberHash = applicationNumber & hash,
+      { Beam.applicationNumberEncrypted = ((applicationNumber & unEncrypted . encrypted)),
+        Beam.applicationNumberHash = (applicationNumber & hash),
         Beam.categoryOfVehicle = categoryOfVehicle,
         Beam.documentImageId = Kernel.Types.Id.getId documentImageId,
         Beam.driverId = Kernel.Types.Id.getId driverId,

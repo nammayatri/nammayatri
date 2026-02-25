@@ -15,6 +15,7 @@ where
 
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverUdyam as DUdyam
 import qualified Domain.Types.IdfyVerification as DIdfy
@@ -44,11 +45,10 @@ import qualified Storage.Queries.Person as PersonQuery
 import Tools.Error
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
-import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 
 data DriverUdyamReq = DriverUdyamReq
   { uamNumber :: Text,
-    driverId :: Text
+    imageId1 :: Id Image.Image
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -82,7 +82,7 @@ verifyUdyam (personId, merchantOpCityId) req = do
     CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.UDYAMCertificate Nothing
       >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.UDYAMCertificate))
         . listToMaybe
-  verifyUdyamFlow person merchantOpCityId documentVerificationConfig req.uamNumber
+  verifyUdyamFlow person merchantOpCityId documentVerificationConfig req.uamNumber req.imageId1
   res <- case person.role of
     Person.DRIVER -> do
       now <- getCurrentTime
@@ -102,8 +102,8 @@ verifyUdyam (personId, merchantOpCityId) req = do
     _ -> pure False
   pure res
 
-verifyUdyamFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> ODC.DocumentVerificationConfig -> Text -> Flow ()
-verifyUdyamFlow person merchantOpCityId _documentVerificationConfig uamNumber = do
+verifyUdyamFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> ODC.DocumentVerificationConfig -> Text -> Id Image.Image -> Flow ()
+verifyUdyamFlow person merchantOpCityId _documentVerificationConfig uamNumber imageId1 = do
   now <- getCurrentTime
   encryptedUam <- encrypt uamNumber
   let imageExtractionValidation = DIdfy.Skipped
@@ -111,7 +111,7 @@ verifyUdyamFlow person merchantOpCityId _documentVerificationConfig uamNumber = 
     Verification.verifyUdyamAadhaarAsync person.merchantId merchantOpCityId $
       Verification.VerifyUdyamAadhaarAsyncReq {uamNumber, driverId = person.id.getId}
   case verifyRes.requestor of
-    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntityUdyam person verifyRes.requestId now imageExtractionValidation encryptedUam
+    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntityUdyam person imageId1 verifyRes.requestId now imageExtractionValidation encryptedUam
     _ -> throwError $ InternalError ("Service provider not configured to return Udyam Aadhaar verification async responses. Provider Name : " <> show verifyRes.requestor)
   pure ()
 
@@ -137,7 +137,7 @@ onVerifyUdyam verificationReq output serviceName = do
       case person.role of
         role
           | DCommon.checkFleetOwnerRole role ->
-              void $ DFR.enableFleetIfPossible person.id Nothing (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
+            void $ DFR.enableFleetIfPossible person.id Nothing (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
         _ -> pure ()
     _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyUdyam. Name of provider : " <> show serviceName)
   pure Ack
@@ -161,16 +161,14 @@ buildDriverUdyamCard person encryptedUdyamNumber enterpriseName enterpriseType =
         updatedAt = now
       }
 
--- IdfyVerification row requires documentImageId1; use placeholder since Udyam has no image
-mkIdfyVerificationEntityUdyam :: MonadFlow m => Person.Person -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> m DIdfy.IdfyVerification
-mkIdfyVerificationEntityUdyam person requestId now imageExtractionValidation encryptedUam = do
+mkIdfyVerificationEntityUdyam :: MonadFlow m => Person.Person -> Id Image.Image -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> m DIdfy.IdfyVerification
+mkIdfyVerificationEntityUdyam person imageId1 requestId now imageExtractionValidation encryptedUam = do
   entityId <- generateGUID
-  placeholderImageId <- (Id :: Text -> Id Image.Image) <$> generateGUID
   return $
     DIdfy.IdfyVerification
-      { id = entityId,
+      { id = Id entityId,
         driverId = person.id,
-        documentImageId1 = placeholderImageId,
+        documentImageId1 = imageId1,
         documentImageId2 = Nothing,
         requestId,
         docType = ODC.UDYAMCertificate,
