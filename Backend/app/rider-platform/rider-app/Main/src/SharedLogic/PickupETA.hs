@@ -83,7 +83,7 @@ getPickupETAFromModel timeDiffFromUtc speedInMps distanceInMeters mbVersion merc
                 distanceToPickupInMeters = distanceInMeters
               }
 
-      response <- withTryCatch "runLogics:getPickupETAFromModel" $ LYDL.runLogicsWithDebugLog (cast merchantOperatingCityId) LYT.PICKUP_ETA_CALCULATION allLogics inputData
+      response <- withTryCatch "runLogics:getPickupETAFromModel" $ LYDL.runLogicsWithDebugLog LYDL.Rider (cast merchantOperatingCityId) LYT.PICKUP_ETA_CALCULATION allLogics inputData
       logInfo $ "PickupETA Req Logics: " <> show allLogics <> " and data is: " <> show inputData <> " and response is: " <> show response
 
       case response of
