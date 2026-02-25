@@ -47,10 +47,18 @@ getSosTracking _merchantShortId _opCity sosId = do
   pure $ convertToApiRes res
 
 getSosDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow API.Types.RiderPlatform.Management.Sos.SosDetailsMaybeRes)
-getSosDetails _merchantShortId _opCity sosId = do
+getSosDetails merchantShortId opCity sosId = do
   let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @Domain.Types.Sos.Sos sosId
+  mbMerchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+  mbRideConfig <- maybe (pure Nothing) (\moc -> QRC.findByMerchantOperatingCityId moc.id Nothing) mbMerchantOpCity
+  let externalSOSConfig = mbRideConfig >>= \rc -> rc.externalSOSConfig
+  let triggerSource = convertTriggerSource <$> (externalSOSConfig <&> (.triggerSource))
   mbSos <- B.runInReplica $ QSos.findById sosId'
-  pure $ API.Types.RiderPlatform.Management.Sos.SosDetailsMaybeRes {API.Types.RiderPlatform.Management.Sos.details = convertToSosDetailsRes <$> mbSos}
+  pure $
+    API.Types.RiderPlatform.Management.Sos.SosDetailsMaybeRes
+      { API.Types.RiderPlatform.Management.Sos.details = convertToSosDetailsRes <$> mbSos,
+        API.Types.RiderPlatform.Management.Sos.triggerSource = triggerSource
+      }
 
 convertToSosDetailsRes :: DSos.Sos -> API.Types.RiderPlatform.Management.Sos.SosDetailsRes
 convertToSosDetailsRes s =
@@ -86,6 +94,10 @@ convertSosType Domain.Types.Sos.KaptureDashboard = API.Types.RiderPlatform.Manag
 convertSosEntityType :: Domain.Types.Sos.SosEntityType -> API.Types.RiderPlatform.Management.Sos.SosEntityType
 convertSosEntityType Domain.Types.Sos.Ride = API.Types.RiderPlatform.Management.Sos.Ride
 convertSosEntityType Domain.Types.Sos.NonRide = API.Types.RiderPlatform.Management.Sos.NonRide
+
+convertTriggerSource :: DRC.ExternalSOSTriggerSource -> API.Types.RiderPlatform.Management.Sos.ExternalSOSTriggerSource
+convertTriggerSource DRC.FRONTEND = API.Types.RiderPlatform.Management.Sos.FRONTEND
+convertTriggerSource DRC.DASHBOARD = API.Types.RiderPlatform.Management.Sos.DASHBOARD
 
 -- Convert from rider-app SosTrackingRes to dashboard API SosTrackingRes
 convertToApiRes :: UISos.SosTrackingRes -> API.Types.RiderPlatform.Management.Sos.SosTrackingRes
