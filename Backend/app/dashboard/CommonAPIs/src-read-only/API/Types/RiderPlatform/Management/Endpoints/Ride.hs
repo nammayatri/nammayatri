@@ -223,7 +223,7 @@ data RideInfoRes = RideInfoRes
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isSafetyPlus :: Kernel.Prelude.Bool,
     isAirConditioned :: Kernel.Prelude.Bool,
-    sosDetails :: Kernel.Prelude.Maybe SosDetails
+    rideSosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Sos)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -290,25 +290,6 @@ data ShareRideInfoRes = ShareRideInfoRes
     destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SosDetails = SosDetails
-  { sosStatus :: SosStatus,
-    sosId :: Kernel.Types.Id.Id Dashboard.Common.Sos,
-    sosState :: Kernel.Prelude.Maybe SosState,
-    externalReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    sosCreatedAt :: Kernel.Prelude.UTCTime,
-    externalReferenceStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    externalStatusHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    mediaFiles :: [Kernel.Prelude.Text]
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SosState
-  = LiveTracking
-  | SosActive
-  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SosStatus

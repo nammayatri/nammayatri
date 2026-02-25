@@ -203,16 +203,7 @@ types:
     - mobileCountryCode: Maybe Text
     - isSafetyPlus: Bool
     - isAirConditioned: Bool
-    - sosDetails: Maybe SosDetails
-  SosDetails:
-    - sosStatus: SosStatus
-    - sosId: Id Sos
-    - sosState: Maybe SosState
-    - externalReferenceId: Maybe Text
-    - sosCreatedAt: UTCTime
-    - externalReferenceStatus: Maybe Text
-    - externalStatusHistory: Maybe Text
-    - mediaFiles: "[Text]"
+    - rideSosId: Maybe (Id Sos)
   CancellationChargesWaiveOffRes:
     - rideId: Id Ride
     - waivedOffAmount: Maybe HighPrecMoney
@@ -251,8 +242,6 @@ types:
     - enum: UPCOMING_RIDE, NEW, INPROGRESS, COMPLETED, CANCELLED
   SosStatus:
     - enum: NotResolved, Pending, Resolved, MockPending, MockResolved
-  SosState:
-    - enum: LiveTracking, SosActive
   EstimateBreakup:
     - title: Text
     - price: EstimateBreakupPrice

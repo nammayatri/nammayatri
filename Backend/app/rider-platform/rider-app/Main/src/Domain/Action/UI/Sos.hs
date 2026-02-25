@@ -768,6 +768,9 @@ getSosTrackingDetails (mbPersonId, _) sosId = do
 sosTrackingHitsCountKey :: Id DSos.Sos -> Text
 sosTrackingHitsCountKey sosId = "SosTrackingHits:" <> sosId.getId <> ":hitsCount"
 
+erssStatusUpdateHitsCountKey :: Text
+erssStatusUpdateHitsCountKey = "ErssStatusUpdateHits:hitsCount"
+
 -- | Build tracking URL for SOS rider location (non-ride scenario)
 -- Uses the same pattern-based approach as ride tracking for consistency
 -- Pattern format: "https://nammayatri.in/u?vp={#vp#}&rideId=" or "https://nammayatri.in/u?vp=shareRide&rideId="
@@ -1038,6 +1041,8 @@ extractStateCode _ = Nothing
 
 postSosErssStatusUpdate :: API.Types.UI.Sos.ErssStatusUpdateReq -> Flow API.Types.UI.Sos.ErssStatusUpdateRes
 postSosErssStatusUpdate req = do
+  erssStatusUpdateRateLimitOptions <- asks (.erssStatusUpdateRateLimitOptions)
+  checkSlidingWindowLimitWithOptions erssStatusUpdateHitsCountKey erssStatusUpdateRateLimitOptions
   trackingId <- req.idSource & fromMaybeM (InvalidRequest "idSource is required")
   sosDetails <-
     QSos.findByExternalReferenceId (Just trackingId)
