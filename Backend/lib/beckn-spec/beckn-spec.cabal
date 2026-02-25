@@ -239,6 +239,7 @@ library
       Domain.Types.Trip
       Domain.Types.VehicleCategory
       Domain.Types.VehicleVariant
+      Domain.Types.VSTAllowedArea
       Domain.Utils
       IGM.Enums
       IGM.Types
