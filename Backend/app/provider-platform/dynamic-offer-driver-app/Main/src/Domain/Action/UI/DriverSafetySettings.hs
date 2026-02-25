@@ -17,12 +17,20 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Domain.Types.SafetySettings as DSafety
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import Servant hiding (throwError)
+import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Tools.Auth
 import Tools.Error
+
+-- | Derive aggregatedRideShareSetting from emergency contacts (first contact's option), same as rider.
+deriveAggregatedRideShareSetting :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Kernel.Prelude.Maybe SafetyCommon.RideShareOptions)
+deriveAggregatedRideShareSetting personId = do
+  personENList <- QPDEN.findAllByPersonId personId
+  return $ Kernel.Prelude.listToMaybe personENList >>= (.shareTripWithEmergencyContactOption)
 
 getDriverGetSafetySettings ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -36,7 +44,11 @@ getDriverGetSafetySettings (mbPersonId, _, _) personId = do
   authPersonId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   unless (authPersonId == personId) $ throwError $ InvalidRequest "PersonId mismatch"
   safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId
-  return $ toGetRes personId safetySettings
+  aggregatedRideShareSetting <- deriveAggregatedRideShareSetting personId
+  return $
+    (toGetRes personId safetySettings)
+      { API.aggregatedRideShareSetting = aggregatedRideShareSetting
+      }
 
 putDriverUpdateSafetySettings ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -76,7 +88,7 @@ toGetRes personId ss =
 applyUpdateReq :: DSafety.SafetySettings -> API.UpdateDriverSafetySettingsReq -> DSafety.SafetySettings
 applyUpdateReq ss req =
   ss
-    { DSafety.aggregatedRideShareSetting = req.aggregatedRideShareSetting <|> ss.aggregatedRideShareSetting,
+    { -- aggregatedRideShareSetting is derived from emergency contacts (same as rider), not set via this API
       DSafety.autoCallDefaultContact = fromMaybe ss.autoCallDefaultContact req.autoCallDefaultContact,
       DSafety.enableOtpLessRide = req.enableOtpLessRide <|> ss.enableOtpLessRide,
       DSafety.enablePostRideSafetyCheck = fromMaybe ss.enablePostRideSafetyCheck req.enablePostRideSafetyCheck,

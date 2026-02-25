@@ -62,7 +62,7 @@ types:
   SosDetailsRes:
     - id: Id Sos
     - personId: Id Customer
-    - rideId: Id Ride
+    - rideId: Maybe (Id Ride)
     - flow: SosType
     - status: SosStatus
     - ticketId: Maybe Text

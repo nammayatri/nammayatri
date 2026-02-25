@@ -13,6 +13,9 @@ import qualified Safety.Domain.Types.Sos
 data SosT f = SosT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
     entityType :: B.C f (Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosEntityType),
+    externalReferenceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    externalReferenceStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    externalStatusHistory :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     flow :: B.C f Safety.Domain.Types.Sos.SosType,
     id :: B.C f Kernel.Prelude.Text,
     mediaFiles :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

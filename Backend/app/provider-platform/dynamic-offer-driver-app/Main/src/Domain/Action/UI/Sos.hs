@@ -198,7 +198,7 @@ createTicketForNewSos person ride booking _merchantOperatingCityId _merchantId e
   case mbExistingSos of
     Just existingSos -> do
       logDebug $ "createTicketForNewSos: reactivating SOS, rideId=" <> ride.id.getId <> ", personId=" <> person.id.getId <> ", existingSosId=" <> existingSos.id.getId
-      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast _merchantOperatingCityId) (cast _merchantId) req.flow (Just existingSos) existingSos.ticketId
+      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast _merchantOperatingCityId) (cast _merchantId) req.flow (Just existingSos) existingSos.ticketId Nothing
       logDebug $ "createTicketForNewSos: createRideBasedSos (reactivate) returned, sosId=" <> result.sosId.getId
       void $ callUpdateTicket person result.sosDetails $ Just "SOS Re-Activated"
       return (cast result.sosId)
@@ -226,7 +226,7 @@ createTicketForNewSos person ride booking _merchantOperatingCityId _merchantId e
                 return Nothing
           else return Nothing
       logDebug $ "createTicketForNewSos: creating new SOS, rideId=" <> ride.id.getId <> ", personId=" <> person.id.getId
-      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast _merchantOperatingCityId) (cast _merchantId) req.flow Nothing ticketId
+      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast _merchantOperatingCityId) (cast _merchantId) req.flow Nothing ticketId Nothing
       logDebug $ "createTicketForNewSos: createRideBasedSos (new) returned, sosId=" <> result.sosId.getId
       return (cast result.sosId)
 

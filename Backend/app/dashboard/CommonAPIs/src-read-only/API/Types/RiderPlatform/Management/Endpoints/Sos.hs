@@ -22,7 +22,7 @@ newtype SosDetailsMaybeRes = SosDetailsMaybeRes {details :: Kernel.Prelude.Maybe
 data SosDetailsRes = SosDetailsRes
   { id :: Kernel.Types.Id.Id Dashboard.Common.Sos,
     personId :: Kernel.Types.Id.Id Dashboard.Common.Customer,
-    rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride,
+    rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride),
     flow :: SosType,
     status :: SosStatus,
     ticketId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

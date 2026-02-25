@@ -74,7 +74,7 @@ data SosReq = SosReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosRes = SosRes {sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos}
+data SosRes = SosRes {externalSOSSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -94,6 +94,7 @@ data StartTrackingReq = StartTrackingReq
   { contacts :: [Data.Text.Text],
     customerLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     durationInMinutes :: Kernel.Prelude.Int,
+    externalReferenceId :: Kernel.Prelude.Maybe Data.Text.Text,
     sosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos)
   }
   deriving stock (Generic)

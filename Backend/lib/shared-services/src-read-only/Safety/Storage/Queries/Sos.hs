@@ -24,6 +24,9 @@ create = createWithKV
 createMany :: (Safety.Storage.BeamFlow.BeamFlow m r) => ([Safety.Domain.Types.Sos.Sos] -> m ())
 createMany = traverse_ create
 
+findByExternalReferenceId :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Safety.Domain.Types.Sos.Sos))
+findByExternalReferenceId externalReferenceId = do findOneWithKV [Se.Is Beam.externalReferenceId $ Se.Eq externalReferenceId]
+
 findById :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos -> m (Maybe Safety.Domain.Types.Sos.Sos))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -38,6 +41,23 @@ findByTicketId ticketId = do findOneWithKV [Se.Is Beam.ticketId $ Se.Eq ticketId
 
 updateEntityType :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosEntityType -> Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos -> m ())
 updateEntityType entityType id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.entityType entityType, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateExternalReferenceId :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos -> m ())
+updateExternalReferenceId externalReferenceId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.externalReferenceId externalReferenceId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateExternalReferenceStatus ::
+  (Safety.Storage.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos -> m ())
+updateExternalReferenceStatus externalReferenceStatus externalStatusHistory id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.externalReferenceStatus externalReferenceStatus,
+      Se.Set Beam.externalStatusHistory externalStatusHistory,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateMediaFiles :: (Safety.Storage.BeamFlow.BeamFlow m r) => ([Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile] -> Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos -> m ())
 updateMediaFiles mediaFiles id = do
@@ -87,6 +107,9 @@ instance FromTType' Beam.Sos Safety.Domain.Types.Sos.Sos where
         Safety.Domain.Types.Sos.Sos
           { createdAt = createdAt,
             entityType = entityType,
+            externalReferenceId = externalReferenceId,
+            externalReferenceStatus = externalReferenceStatus,
+            externalStatusHistory = externalStatusHistory,
             flow = flow,
             id = Kernel.Types.Id.Id id,
             mediaFiles = Kernel.Types.Id.Id <$> Kernel.Prelude.fromMaybe [] mediaFiles,
@@ -106,6 +129,9 @@ instance ToTType' Beam.Sos Safety.Domain.Types.Sos.Sos where
     Beam.SosT
       { Beam.createdAt = createdAt,
         Beam.entityType = entityType,
+        Beam.externalReferenceId = externalReferenceId,
+        Beam.externalReferenceStatus = externalReferenceStatus,
+        Beam.externalStatusHistory = externalStatusHistory,
         Beam.flow = flow,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.mediaFiles = Kernel.Prelude.Just (Kernel.Types.Id.getId <$> mediaFiles),

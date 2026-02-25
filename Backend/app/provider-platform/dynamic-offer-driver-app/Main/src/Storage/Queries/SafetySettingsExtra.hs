@@ -5,18 +5,20 @@ module Storage.Queries.SafetySettingsExtra where
 import qualified Domain.Types.Person as Person
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Domain.Types.SafetySettings as DSafety
 import qualified Safety.Storage.BeamFlow
 import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
+import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import Storage.Beam.Sos ()
 
 -- | Find safety_settings for the given driver person; if none exists, create a row with
 -- defaults (driver Person does not have safety-related columns) and return it.
+-- aggregatedRideShareSetting is derived from emergency contacts (same as rider).
 -- Ensures markSosAsSafe and other shared safety flows have a row to work with.
 findSafetySettingsWithFallback ::
-  (MonadFlow m, Safety.Storage.BeamFlow.BeamFlow m r) =>
+  (MonadFlow m, Safety.Storage.BeamFlow.BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   Id Person.Person ->
   m DSafety.SafetySettings
 findSafetySettingsWithFallback personId = do
@@ -25,9 +27,11 @@ findSafetySettingsWithFallback personId = do
   case mb of
     Just ss -> return ss
     Nothing -> do
+      personENList <- QPDEN.findAllByPersonId personId
+      let aggregatedRideShareSetting = listToMaybe personENList >>= (.shareTripWithEmergencyContactOption)
       let safetySettings =
             DSafety.SafetySettings
-              { aggregatedRideShareSetting = Nothing,
+              { aggregatedRideShareSetting,
                 autoCallDefaultContact = False,
                 enableOtpLessRide = Nothing,
                 enablePostRideSafetyCheck = SafetyCommon.NEVER_SHARE,

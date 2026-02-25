@@ -83,6 +83,7 @@ import qualified API.UI.Whatsapp as Whatsapp
 import Environment
 import Kernel.Prelude
 import Servant
+import qualified API.Action.UI.PersonDefaultEmergencyContact as PersonDefaultEmergencyContact
 
 type HealthCheckAPI = Get '[JSON] Text
 
@@ -151,6 +152,7 @@ type API =
            :<|> PayoutDriverStatus.API
            :<|> StclMembership.API
            :<|> DriverSafetySettings.API
+           :<|> PersonDefaultEmergencyContact.API
        )
 
 handler :: FlowServer API
@@ -218,3 +220,4 @@ handler =
     :<|> PayoutDriverStatus.handler
     :<|> StclMembership.handler
     :<|> DriverSafetySettings.handler
+    :<|> PersonDefaultEmergencyContact.handler

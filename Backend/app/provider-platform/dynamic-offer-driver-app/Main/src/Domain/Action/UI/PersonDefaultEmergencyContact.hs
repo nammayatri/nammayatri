@@ -22,8 +22,11 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EncFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Servant
+import qualified Safety.Domain.Types.SafetySettings as DSafety
+import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonExtra as QPersonExtra
+import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Tools.Auth
 import Tools.Error
 
@@ -67,6 +70,11 @@ putDriverPersonDefaultEmergencyContacts (mbPersonId, merchantId, _) req = do
   now <- getCurrentTime
   domainList <- mapM (buildPersonDefaultEmergencyNumber now personId merchantId) req.emergencyContacts
   QPDEN.replaceAll personId domainList
+  -- Keep aggregatedRideShareSetting in sync with emergency contacts (same as rider)
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId
+  let aggregatedRideShareSetting = Kernel.Prelude.listToMaybe domainList >>= (.shareTripWithEmergencyContactOption)
+  let updated = safetySettings {DSafety.aggregatedRideShareSetting = aggregatedRideShareSetting}
+  QSafetySettings.updateByPrimaryKey updated
   pure Kernel.Types.APISuccess.Success
   where
     buildPersonDefaultEmergencyNumber ::

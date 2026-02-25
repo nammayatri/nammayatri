@@ -207,16 +207,16 @@ castSosStatus = \case
   SafetyDSos.MockPending -> Common.MockPending
   SafetyDSos.MockResolved -> Common.MockResolved
 
-castSosState :: DSos.SosState -> Common.SosState
+castSosState :: SafetyDSos.SosState -> Common.SosState
 castSosState = \case
-  DSos.LiveTracking -> Common.LiveTracking
-  DSos.SosActive -> Common.SosActive
+  SafetyDSos.LiveTracking -> Common.LiveTracking
+  SafetyDSos.SosActive -> Common.SosActive
 
-mkSosDetails :: DSos.Sos -> Common.SosDetails
+mkSosDetails :: SafetyDSos.Sos -> Common.SosDetails
 mkSosDetails sos =
   Common.SosDetails
     { sosStatus = castSosStatus sos.status,
-      sosId = cast @DSos.Sos @Dashboard.Common.Sos sos.id,
+      sosId = cast @SafetyDSos.Sos @Dashboard.Common.Sos sos.id,
       sosState = castSosState <$> sos.sosState,
       externalReferenceId = sos.externalReferenceId,
       sosCreatedAt = sos.createdAt,
@@ -404,7 +404,7 @@ rideInfo merchantId reqRideId = do
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   unencryptedDriverAlternateNumber <- mapM decrypt ride.driverAlternateNumber
   let fareProductType = mkFareProductType booking.bookingDetails
-  mbSosDetails <- CQSos.findByRideId ride.id
+  mbSosDetails <- SafetyCQSos.findByRideId (cast ride.id)
   let sosDetails = mkSosDetails <$> mbSosDetails
   pure
     Common.RideInfoRes

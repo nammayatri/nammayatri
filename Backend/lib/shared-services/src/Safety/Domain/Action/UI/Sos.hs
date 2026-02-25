@@ -298,8 +298,9 @@ createRideBasedSos ::
   DSos.SosType ->
   Maybe DSos.Sos ->
   Maybe Text -> -- ticketId
+  Maybe Text -> -- externalReferenceId
   m CreateSosResult
-createRideBasedSos personId rideId merchantOperatingCityId merchantId flow mbExistingSos ticketId = do
+createRideBasedSos personId rideId merchantOperatingCityId merchantId flow mbExistingSos ticketId mbExternalReferenceId = do
   -- Only one active SOS per person: if person has active SOS for another ride or non-ride, reuse it
   mbActive <- findActiveSosByPersonId personId
   case mbActive of
@@ -351,7 +352,10 @@ createRideBasedSos personId rideId merchantOperatingCityId merchantId flow mbExi
                     entityType = Just DSos.Ride,
                     sosState = Just DSos.SosActive,
                     createdAt = now,
-                    updatedAt = now
+                    updatedAt = now,
+                    externalReferenceId = mbExternalReferenceId,
+                    externalReferenceStatus = Nothing,
+                    externalStatusHistory = Nothing
                   }
 
           logDebug $ "createRideBasedSos: about to createSos, sosId=" <> getId pid <> ", rideId=" <> rideId.getId
@@ -379,9 +383,10 @@ createNonRideSos ::
   Maybe (Id Common.Merchant) ->
   Maybe (Id Common.MerchantOperatingCity) ->
   Maybe UTCTime -> -- trackingExpiresAt
+  Maybe Text -> -- externalReferenceId
   DSos.SosType ->
   m DSos.Sos
-createNonRideSos personId mbMerchantId mbMerchantOperatingCityId mbTrackingExpiresAt flow = do
+createNonRideSos personId mbMerchantId mbMerchantOperatingCityId mbTrackingExpiresAt mbExternalReferenceId flow = do
   -- Only one active SOS per person: reuse existing active if any
   mbActive <- findActiveSosByPersonId personId
   case mbActive of
@@ -404,7 +409,10 @@ createNonRideSos personId mbMerchantId mbMerchantOperatingCityId mbTrackingExpir
                 entityType = Just DSos.NonRide,
                 sosState = Just DSos.SosActive,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                externalReferenceId = mbExternalReferenceId,
+                externalReferenceStatus = Nothing,
+                externalStatusHistory = Nothing
               }
 
       void $ createSos newSos
@@ -453,9 +461,10 @@ startSosTracking ::
   Maybe (Id Common.Merchant) ->
   Maybe (Id Common.MerchantOperatingCity) ->
   UTCTime -> -- trackingExpiresAt
+  Maybe Text -> -- externalReferenceId
   DSos.SosType ->
   m (Id DSos.Sos)
-startSosTracking mbSosId personId mbMerchantId mbMerchantOperatingCityId trackingExpiresAt flow = do
+startSosTracking mbSosId personId mbMerchantId mbMerchantOperatingCityId trackingExpiresAt mbExternalReferenceId flow = do
   case mbSosId of
     Just sosId -> do
       -- Update existing SOS tracking expiration
@@ -463,7 +472,7 @@ startSosTracking mbSosId personId mbMerchantId mbMerchantOperatingCityId trackin
       return sosId
     Nothing -> do
       -- Create new SOS for tracking
-      newSos <- createNonRideSos personId mbMerchantId mbMerchantOperatingCityId (Just trackingExpiresAt) flow
+      newSos <- createNonRideSos personId mbMerchantId mbMerchantOperatingCityId (Just trackingExpiresAt) mbExternalReferenceId flow
       return newSos.id
 
 -- | Update SOS state and tracking expiration
