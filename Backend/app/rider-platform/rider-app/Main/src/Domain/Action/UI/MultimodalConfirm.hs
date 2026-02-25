@@ -1511,6 +1511,7 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
       (Just finalBoardedBus)
       reqJourneyLeg.userBookedBusServiceTierType
       []
+      reqJourneyLeg.userPreferredServiceTier
 
   QJourneyLegMapping.updateIsDeleted True reqJourneyLeg.id
   QJourneyLegExtra.create newJourneyLeg

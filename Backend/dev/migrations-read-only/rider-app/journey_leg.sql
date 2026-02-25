@@ -385,3 +385,8 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN bus_conductor_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey_leg ADD COLUMN provider_route_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN user_preferred_service_tier text ;

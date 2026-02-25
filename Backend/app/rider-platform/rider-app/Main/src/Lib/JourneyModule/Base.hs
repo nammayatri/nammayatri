@@ -155,7 +155,7 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
     mapWithIndex
       ( \idx (mbPrev, leg, mbNext) -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) journeyReq.maximumWalkDistance
-          legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.routeLiveInfo leg travelMode (Just journeyReq.parentSearchId.getId) blacklistedServiceTiers blacklistedFareQuoteTypes journeyReq.isSingleMode) "multimodal getFare"
+          legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.routeLiveInfo leg travelMode (Just journeyReq.parentSearchId.getId) blacklistedServiceTiers blacklistedFareQuoteTypes journeyReq.isSingleMode journeyReq.userPreferredServiceTier) "multimodal getFare"
           let onboardedSingleModeVehicle =
                 if travelMode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]
                   then
@@ -171,7 +171,7 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
                           busDriverId = liveInfo.busDriverId
                         }
                   else Nothing
-          journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.parentSearchId journeyReq.maximumWalkDistance mbTotalLegFare Nothing onboardedSingleModeVehicle ((.serviceType) <$> journeyReq.routeLiveInfo) journeyReq.busLocationData
+          journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.parentSearchId journeyReq.maximumWalkDistance mbTotalLegFare Nothing onboardedSingleModeVehicle ((.serviceType) <$> journeyReq.routeLiveInfo) journeyReq.busLocationData (if travelMode == DTrip.Bus then journeyReq.userPreferredServiceTier else Nothing)
           return (legFare, journeyLeg)
       )
       legsWithContext
@@ -1042,7 +1042,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           Nothing -> return $ filter (\leg -> leg.sequenceNumber >= startLegOrder) allLegs
       leg <- mkMultiModalTaxiLeg newDistance newDuration MultiModalTypes.Unspecified currentLeg.startLocation.latitude currentLeg.startLocation.longitude endLocation.lat endLocation.lon (fromMaybe now currentLeg.fromArrivalTime)
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
-      journeyLeg <- JL.mkJourneyLeg startLegOrder (Nothing, leg, Nothing) journey.fromLocation journey.toLocation currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId (Id journey.searchRequestId) riderConfig.maximumWalkDistance (Just fare) Nothing Nothing Nothing []
+      journeyLeg <- JL.mkJourneyLeg startLegOrder (Nothing, leg, Nothing) journey.fromLocation journey.toLocation currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId (Id journey.searchRequestId) riderConfig.maximumWalkDistance (Just fare) Nothing Nothing Nothing [] Nothing
       withJourneyUpdateInProgress journeyId $ do
         forM_ legsToCancel $ \currLeg -> deleteLeg currLeg (SCR.CancellationReasonCode "") False Nothing
         QJourneyLeg.create journeyLeg
@@ -1064,7 +1064,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       now <- getCurrentTime
       leg <- mkMultiModalTaxiLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
-      journeyLeg <- JL.mkJourneyLeg currentLeg.sequenceNumber (Nothing, leg, Nothing) journey.fromLocation journey.toLocation currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId (Id journey.searchRequestId) riderConfig.maximumWalkDistance (Just fare) Nothing Nothing Nothing []
+      journeyLeg <- JL.mkJourneyLeg currentLeg.sequenceNumber (Nothing, leg, Nothing) journey.fromLocation journey.toLocation currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId (Id journey.searchRequestId) riderConfig.maximumWalkDistance (Just fare) Nothing Nothing Nothing [] Nothing
       withJourneyUpdateInProgress journeyId $ do
         -- fix it properly later
         -- cancelRequiredLegs journey.riderId
@@ -1198,7 +1198,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation _ = do
       let distance = convertMetersToDistance Meter distResp.distance
       now <- getCurrentTime
       let multiModalLeg = mkMultiModalTaxiLeg distance distResp.duration MultiModalTypes.Unspecified startLocation.lat startLocation.lon endLocation.lat endLocation.lon
-      (isFareMandatory, estimatedFare) <- JLI.getFare (Just now) journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId Nothing multiModalLeg DTrip.Taxi Nothing [] [] (fromMaybe False journey.isSingleMode)
+      (isFareMandatory, estimatedFare) <- JLI.getFare (Just now) journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId Nothing multiModalLeg DTrip.Taxi Nothing [] [] (fromMaybe False journey.isSingleMode) Nothing
       when (isFareMandatory && isNothing estimatedFare) $ throwError (InvalidRequest "Fare is mandatory for this leg, but unavailable")
       return $
         APITypes.ExtendLegGetFareResp

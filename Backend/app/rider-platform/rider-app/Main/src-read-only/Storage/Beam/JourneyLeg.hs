@@ -67,6 +67,7 @@ data JourneyLegT f = JourneyLegT
     toStopName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStopPlatformCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     userBookedBusServiceTierType :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType),
+    userPreferredServiceTier :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
