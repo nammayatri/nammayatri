@@ -261,13 +261,14 @@ checkPasswordExpiry ::
   DP.Person ->
   m ()
 checkPasswordExpiry person = do
-  now <- getCurrentTime
-  passwordExpiryDays <- asks (.passwordExpiryDays)
-  whenJust passwordExpiryDays $ \days -> do
-    when (isNothing person.passwordUpdatedAt) $
-      QPerson.updatePersonPasswordUpdatedAt person.id
-    let passwordUpdatedAt = fromMaybe now person.passwordUpdatedAt
-        secondsSinceUpdate = diffUTCTime now passwordUpdatedAt
-        expiryLimit = fromIntegral days * 86400
-    when (secondsSinceUpdate > expiryLimit) $
-      throwError $ InvalidRequest "Your password has expired. Please reset or contact admin."
+  when (isJust person.passwordHash) $ do
+    now <- getCurrentTime
+    passwordExpiryDays <- asks (.passwordExpiryDays)
+    whenJust passwordExpiryDays $ \days -> do
+      when (isNothing person.passwordUpdatedAt) $
+        QPerson.updatePersonPasswordUpdatedAt person.id
+      let passwordUpdatedAt = fromMaybe now person.passwordUpdatedAt
+          secondsSinceUpdate = diffUTCTime now passwordUpdatedAt
+          expiryLimit = fromIntegral days * 86400
+      when (secondsSinceUpdate > expiryLimit) $
+        throwError $ InvalidRequest "Your password has expired. Please reset or contact admin."
