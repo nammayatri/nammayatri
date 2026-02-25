@@ -30,5 +30,5 @@ instance JT.JourneyLeg MetroLegRequest m where
   getInfo (MetroLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.journeyLeg req.journeyLegs
   getInfo _ = throwError (InternalError "Not supported")
 
-  getFare (MetroLegRequestGetFare MetroLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.METRO Nothing routeDetails fromArrivalTime agencyGtfsId Nothing blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode
+  getFare (MetroLegRequestGetFare MetroLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.METRO Nothing routeDetails fromArrivalTime agencyGtfsId Nothing blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode Nothing
   getFare _ = throwError (InternalError "Not supported")

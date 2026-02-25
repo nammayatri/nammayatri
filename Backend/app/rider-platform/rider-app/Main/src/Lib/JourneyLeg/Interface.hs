@@ -44,8 +44,9 @@ getFare ::
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
   Bool ->
+  Maybe Spec.ServiceTierType ->
   m (Bool, Maybe JL.GetFareResponse)
-getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveInfo leg mode searchReqId blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode = case mode of
+getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveInfo leg mode searchReqId blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbPreferredServiceTier = case mode of
   DTrip.Taxi -> do
     getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq
     JL.getFare getFareReq
@@ -82,6 +83,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
       let routeDetails = catMaybes $ map (mkRouteDetails (mbRouteLiveInfo <&> (.serviceType))) leg.routeDetails
+          userPreferredServiceTier = mbPreferredServiceTier
       if length routeDetails /= length leg.routeDetails
         then do
           logError "Unable to Map Route Details for all Bus Route Sub Legs"

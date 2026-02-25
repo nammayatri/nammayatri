@@ -85,6 +85,7 @@ import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Maps as Maps
@@ -606,17 +607,19 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   unless (personId == search.riderId) $ throwError AccessDenied
   (quotes :: [DFRFSQuote.FRFSQuote]) <- B.runInReplica $ QFRFSQuote.findAllBySearchId searchId_
   quotesWithCategories <- mapM (\quote -> (quote,) <$> QFRFSQuoteCategory.findAllByQuoteId quote.id) quotes
+  mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId_.getId)
   sortedQuotesWithCategories <- case search.vehicleType of
     Spec.BUS -> do
       mbRiderConfig <- QRC.findByMerchantOperatingCityId search.merchantOperatingCityId Nothing
       let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
-          serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)
+      let cfgMap' = FRFSUtils.adjustCfgMapForPreferredTier (mbJourneyLeg >>= (.userPreferredServiceTier)) cfgMap
+      let serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)
       return $
         sortBy
           ( \(quote1, quoteCategories1) (quote2, quoteCategories2) ->
               compare
-                (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote1 quoteCategories1))
-                (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote2 quoteCategories2))
+                (maybe maxBound (JourneyUtils.tierRank cfgMap') (serviceTierTypeFromQuote quote1 quoteCategories1))
+                (maybe maxBound (JourneyUtils.tierRank cfgMap') (serviceTierTypeFromQuote quote2 quoteCategories2))
           )
           quotesWithCategories
     _ ->

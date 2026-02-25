@@ -287,8 +287,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 --         when isBooking $ logDebug $ "CFRFS getState: Not finalizing state for booking with searchId: " <> searchId'.getId <> "for state: " <> show detailedStateData
 --         pure detailedStateData
 
-getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasField "cloudType" r (Maybe CloudType), HasKafkaProducer r, HasShortDurationRetryCfg r c) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> [FRFSRouteDetails] -> Maybe UTCTime -> Maybe Text -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> m (Bool, Maybe JT.GetFareResponse)
-getFare riderId merchant merchantOperatingCity vehicleCategory serviecType routeDetails mbFromArrivalTime agencyGtfsId mbSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode = do
+getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasField "cloudType" r (Maybe CloudType), HasKafkaProducer r, HasShortDurationRetryCfg r c) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> [FRFSRouteDetails] -> Maybe UTCTime -> Maybe Text -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Spec.ServiceTierType -> m (Bool, Maybe JT.GetFareResponse)
+getFare riderId merchant merchantOperatingCity vehicleCategory serviecType routeDetails mbFromArrivalTime agencyGtfsId mbSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbPreferredServiceTier = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency agencyGtfsId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
   case routeDetails of
     [] -> do
@@ -312,7 +312,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
 
             (mbMinFarePerRoute, mbMaxFarePerRoute) <- case vehicleCategory of
               Spec.BUS -> do
-                mbSelectedServiceTierQuote <- JMU.sortAndGetBusFares merchantOperatingCity.id availableFares
+                mbSelectedServiceTierQuote <- JMU.sortAndGetBusFares merchantOperatingCity.id mbPreferredServiceTier availableFares
                 case mbSelectedServiceTierQuote of
                   Just selectedServiceTierQuote -> pure (Just selectedServiceTierQuote, Just selectedServiceTierQuote)
                   Nothing -> pure (selectMinFare availableFares, selectMaxFare availableFares)
