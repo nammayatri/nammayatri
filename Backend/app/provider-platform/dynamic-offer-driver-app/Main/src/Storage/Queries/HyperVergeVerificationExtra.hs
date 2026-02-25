@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Storage.Queries.HyperVergeVerificationExtra where
 
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -21,7 +19,7 @@ findLatestByDriverIdAndDocType ::
   DVC.DocumentType ->
   UTCTime ->
   UTCTime ->
-  m ([Domain.Types.HyperVergeVerification.HyperVergeVerification])
+  m [Domain.Types.HyperVergeVerification.HyperVergeVerification]
 findLatestByDriverIdAndDocType limit offset driverId docType fromDate toDate = do
   findAllWithOptionsKV
     [ Se.And

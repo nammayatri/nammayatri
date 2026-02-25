@@ -27,8 +27,10 @@ createMany = traverse_ create
 findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.VehicleNOC.VehicleNOC))
 findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
 
-findByRcId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m [Domain.Types.VehicleNOC.VehicleNOC])
-findByRcId rcId = do findAllWithKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]
+findByRcId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m [Domain.Types.VehicleNOC.VehicleNOC])
+findByRcId limit offset rcId = do findAllWithOptionsKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)] (Se.Desc Beam.createdAt) limit offset
 
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
