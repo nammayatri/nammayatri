@@ -303,7 +303,7 @@ runCancellationLogic merchantOpCityId logicInput = do
       pure 0
     else do
       logInfo $ "Running cancellation logic with " <> show (length logics) <> " rules"
-      result <- LYDL.runLogicsWithDebugLog (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY logics logicInput
+      result <- LYDL.runLogicsWithDebugLog LYDL.Driver (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY logics logicInput
       case A.fromJSON result.result :: A.Result CancellationCoins.CancellationCoinResult of
         A.Success logicResult -> do
           logInfo $ "Cancellation logic result: " <> show logicResult

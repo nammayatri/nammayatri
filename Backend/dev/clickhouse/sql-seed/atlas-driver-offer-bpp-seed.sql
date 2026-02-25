@@ -166,12 +166,13 @@ create table atlas_driver_offer_bpp.fleet_rc_daily_stats (
 ) ENGINE = ReplacingMergeTree(version)
 ORDER BY (merchant_local_date, fleet_owner_id, rc_id);
 
-CREATE TABLE atlas_driver_offer_bpp.json_logic_transactions (
+CREATE TABLE app_monitor.json_logic_transactions (
     `transactionId` String,
     `domain` String,
     `timestamp` DateTime,
     `inputData` String,
     `logic` String,
-    `outputData` String
+    `outputData` String,
+    `caller_app` String
 ) ENGINE = MergeTree()
 ORDER BY (timestamp, domain, transactionId);

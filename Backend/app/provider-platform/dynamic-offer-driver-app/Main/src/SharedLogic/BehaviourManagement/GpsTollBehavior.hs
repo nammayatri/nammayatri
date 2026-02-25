@@ -143,7 +143,7 @@ evaluateGpsTollBehavior mocId domain allLogics inputData = do
       return def
     else do
       logDebug $ "Evaluating GPS toll behavior with input: " <> show inputData
-      resp <- withTryCatch "runLogics:GpsTollBehavior" $ LYDL.runLogicsWithDebugLog mocId domain allLogics inputData
+      resp <- withTryCatch "runLogics:GpsTollBehavior" $ LYDL.runLogicsWithDebugLog LYDL.Driver mocId domain allLogics inputData
       case resp of
         Left err -> do
           logError $ "Error in running GPS toll behavior logics - " <> show err <> " - " <> show inputData

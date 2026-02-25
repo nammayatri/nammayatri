@@ -291,7 +291,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
             merchantOperatingCityId = booking.merchantOperatingCityId,
             ..
           }
-  nammaTags <- withTryCatch "computeNammaTags:RideCancel" (LYDL.computeNammaTagsWithDebugLog (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel tagData)
+  nammaTags <- withTryCatch "computeNammaTags:RideCancel" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel tagData)
   logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags) <> "| tagdata: " <> show tagData
   let allTags = ride.rideTags <> eitherToMaybe nammaTags
   QRide.updateRideTags allTags ride.id
@@ -426,7 +426,7 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
       (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES localTime Nothing Nothing
       logDebug $ "allLogics: for cancellation charges calculation" <> show allLogics
       logDebug $ "logicInput: for cancellation charges calculation" <> show logicInput
-      response <- withTryCatch "runLogics:UserCancellationDues" $ LYDL.runLogicsWithDebugLog (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES allLogics logicInput
+      response <- withTryCatch "runLogics:UserCancellationDues" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES allLogics logicInput
       cancellationCharge <- case response of
         Left e -> do
           logError $ "Error in running UserCancellationDuesLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
