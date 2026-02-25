@@ -114,11 +114,11 @@ import qualified SharedLogic.Person as SLP
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.CachedQueries.MerchantConfig as CQM
 import qualified Storage.CachedQueries.Person as CQP
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.DepotManager as QDepotManager
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDisability as PDisability
@@ -747,7 +747,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
   useFraudDetection <- do
     if isBlockedBySameDeviceToken
       then do
-        merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+        merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
         return merchantConfig.useFraudDetection
       else return False
   encMobNum <- mapM encrypt req.mobileNumber
@@ -936,7 +936,7 @@ verify tokenId req = do
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do
-    merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+    merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
     when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
   void $ RegistrationToken.setVerified True tokenId
   void $ Person.updateDeviceToken deviceToken person.id
@@ -1027,7 +1027,7 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
     addNammaTags person tagData = do
       newPersonTags <- withTryCatch "computeNammaTagsWithExpiry:Login" (LYDL.computeNammaTagsWithExpiryAndDebugLog LYDL.Rider (cast person.merchantOperatingCityId) Yudhishthira.Login tagData)
       let tags = nub (fromMaybe [] person.customerNammaTags <> fromMaybe [] (eitherToMaybe newPersonTags))
-      Person.updateCustomerTags (Just tags) tagData.id
+      CQP.updateCustomerTags (Just tags) tagData.id
 
     makePersonStats :: MonadTime m => SP.Person -> m DPS.PersonStats
     makePersonStats person = do

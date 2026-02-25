@@ -27,7 +27,8 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import SharedLogic.Search as SLS
-import qualified Storage.CachedQueries.BecknConfig as QBC
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..), filterByDomain)
+import Storage.ConfigPilot.Interface.Types (getConfig)
 
 buildSearchReqV2 ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -35,7 +36,8 @@ buildSearchReqV2 ::
   m Spec.SearchReq
 buildSearchReqV2 res@SLS.SearchRes {..} = do
   bapUri <- Utils.mkBapUri merchant.id
-  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId merchant.id "MOBILITY" res.merchantOperatingCityId
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = res.merchantOperatingCityId.getId})
+  let bapConfigs = filterByDomain allBecknConfigs "MOBILITY"
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> "merchantOperatingCityId:-" <> show merchantOperatingCityId.getId) -- Using findAll for backward compatibility TODO : Remove findAll and use findOne
   messageId <- generateGUIDText
   let eBecknSearchReq = Search.buildBecknSearchReqV2 res bapConfig bapUri messageId

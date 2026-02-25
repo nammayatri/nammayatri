@@ -78,6 +78,9 @@ data SConfigType (cfg :: ConfigType) where
   SToll :: SConfigType 'Toll
   SCancellationFarePolicy :: SConfigType 'CancellationFarePolicy
   SSurgePricing :: SConfigType 'SurgePricing
+  SBecknConfig :: SConfigType 'BecknConfig
+  SMerchantServiceConfig :: SConfigType 'MerchantServiceConfig
+  SExophone :: SConfigType 'Exophone
 
 deriving instance Show (SConfigType cfg)
 
@@ -95,8 +98,10 @@ class ConfigTypeInfo (ConfigTypeOf a) => ConfigDimensions a where
   type ConfigTypeOf a :: ConfigType
   type ConfigValueTypeOf a :: Type
   getConfigType :: a -> ConfigType
+
   -- | Fetch config for this dimension. Default throws; override per dimension.
   getConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> m (ConfigValueTypeOf a)
   getConfig _ = throwError $ InvalidRequest "getConfig not implemented for this dimension"
+
   setConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> m (ConfigValueTypeOf a)
   setConfig _ = throwError $ InvalidRequest "setConfig not implemented for this dimension"

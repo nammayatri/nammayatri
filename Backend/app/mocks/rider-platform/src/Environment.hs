@@ -71,7 +71,7 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
-txnId :: Maybe Text,
+    txnId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     url :: Maybe Text,
     noSignatureSubscribers :: [Text]

@@ -14,6 +14,10 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.BecknConfig
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ Use Storage.ConfigPilot.Config.BecknConfig (getConfig) instead for reads."
+    #-}
   ( findAll,
     findByMerchantIdDomainAndVehicle,
     findByMerchantIdDomainandMerchantOperatingCityId,

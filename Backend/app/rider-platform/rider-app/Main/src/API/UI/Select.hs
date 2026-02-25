@@ -45,12 +45,13 @@ import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Cancel
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.BecknConfig as QBC
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..), filterByDomain)
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
-import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import Tools.Error
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 -------- Select Flow --------
 type API =
@@ -92,7 +93,8 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId person
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   autoAssignEnabled <- searchRequest.autoAssignEnabled & fromMaybeM (InternalError "Invalid autoAssignEnabled")
-  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId searchRequest.merchantId "MOBILITY" searchRequest.merchantOperatingCityId
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+  let bapConfigs = filterByDomain allBecknConfigs "MOBILITY"
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   selectTtl <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl")
   ttlInInt <-

@@ -28,7 +28,8 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..), filterByService)
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified System.Environment as SE
 
 createPayoutOrder :: (ServiceFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payout.CreatePayoutOrderReq -> m Payout.CreatePayoutOrderResp
@@ -47,9 +48,10 @@ runWithServiceConfigAndName ::
   req ->
   m resp
 runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mRoutingId req = do
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.getId})
   merchantServiceConfig <-
-    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCity serviceName
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show Payout.Juspay))
+    filterByService allMSC serviceName
+      & fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show Payout.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig vsc -> func vsc getRoutingId req
     _ -> throwError $ InternalError "Unknown Service Config"

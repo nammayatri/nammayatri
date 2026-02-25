@@ -333,7 +333,8 @@ findCityInfoById personId = do
   person <- findByPId personId
   case person of
     Nothing -> pure Nothing
-    Just Person {..} -> pure $ Just $ PersonCityInformation {personId = id, ..}
+    Just Person {id = pid, currentCity = city, merchantOperatingCityId = mocId, customerNammaTags = tags} ->
+      pure $ Just $ PersonCityInformation {personId = pid, currentCity = city, merchantOperatingCityId = mocId, customerNammaTags = tags}
 
 updateEmergencyInfo ::
   (MonadFlow m, EsqDBFlow m r) =>

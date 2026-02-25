@@ -26,6 +26,7 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.KaalChakra.Actions as Actions
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.Queries.Person as QPerson
 
 type ChakraJobs m r =
@@ -46,7 +47,7 @@ mkKaalChakraHandle merchantId merchantOperatingCityId =
     { getUserTags = \userId -> do
         mbRider <- QPerson.findById $ cast @LYT.User @DPerson.Person userId
         pure $ mbRider <&> (\rider -> fromMaybe [] rider.customerNammaTags),
-      updateUserTags = \userId customerTags -> QPerson.updateCustomerTags (Just customerTags) (cast @LYT.User @DPerson.Person userId),
+      updateUserTags = \userId customerTags -> CQPerson.updateCustomerTags (Just customerTags) (cast @LYT.User @DPerson.Person userId),
       action = Actions.kaalChakraAction merchantOperatingCityId . cast @LYT.User @DPerson.Person,
       createFetchUserDataJob = createFetchUserDataJob merchantId merchantOperatingCityId,
       createUpdateUserTagDataJob = createUpdateUserTagDataJob merchantId merchantOperatingCityId,

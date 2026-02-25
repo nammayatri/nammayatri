@@ -33,7 +33,7 @@ import Lib.Scheduler
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..), filterByService)
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QB
@@ -93,9 +93,10 @@ getTokenofJMService merchantId merchantOpCityId = do
   where
     fetchAndStoreToken = do
       logDebug "Journey Monitoring Token does not exist in Redis, fetching from Tokenize Service"
+      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       sc <-
-        QMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (DMSC.TokenizationService Tokenize.JourneyMonitoring)
-          >>= maybe (throwError $ MerchantServiceUsageConfigNotFound merchantId.getId) pure
+        filterByService allMSC (DMSC.TokenizationService Tokenize.JourneyMonitoring)
+          & maybe (throwError $ MerchantServiceUsageConfigNotFound merchantId.getId) pure
           >>= validateTokenizationServiceConfig
       res <- Tokenize.tokenize sc Tokenize.TokenizationReq {expiry = Nothing, code = Nothing, codeVerifier = Nothing}
       now <- getCurrentTime
@@ -123,7 +124,8 @@ diffUTCTimeInSeconds _ Nothing = 3600 -- default to (1 hour)
 
 getServiceConfig :: CallApiFlow m r => Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> m IncidentReportServiceConfig
 getServiceConfig merchantId merchantOpCityId service = do
-  merchantSvcCfgResult <- QMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId service
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+  let merchantSvcCfgResult = filterByService allMSC service
   case merchantSvcCfgResult of
     Just cfg -> case cfg.serviceConfig of
       DMSC.IncidentReportServiceConfig sc -> return sc

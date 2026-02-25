@@ -31,10 +31,10 @@ import Kernel.Utils.Common (CacheFlow, fork, fromMaybeM, getCurrentTime)
 import qualified Safety.Domain.Types.SafetySettings as DSafety
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import Storage.Beam.Sos ()
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.BookingCancellationReason as CHBCR
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QP
 import Tools.Error

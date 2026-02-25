@@ -31,7 +31,8 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..), filterByService)
+import Storage.ConfigPilot.Interface.Types (getConfig)
 
 createWallet ::
   ( EncFlow m r,
@@ -106,9 +107,10 @@ runWithServiceConfig ::
   m resp
 runWithServiceConfig func merchantId merchantOperatingCityId req = do
   let serviceName = DMSC.JuspayWalletService Payment.Juspay
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
   merchantServiceConfig <-
-    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId serviceName
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "JuspayWallet" (show Payment.Juspay))
+    filterByService allMSC serviceName
+      & fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "JuspayWallet" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.JuspayWalletServiceConfig paymentCfg -> func paymentCfg req
     _ -> throwError $ InternalError "Unknown Service Config"

@@ -52,9 +52,10 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as SMerchant
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Person as CQP
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..), filterByService)
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 
 getDistance ::
@@ -150,9 +151,10 @@ getRoutes isAvoidToll personId merchantId mbMOCId entityId req = do
 getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> MapsService -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
 getPickupRoutes merchantId merchantOperatingCityId service entityId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
   merchantMapsServiceConfig <-
-    QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MapsService service)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show service))
+    filterByService allMSC (DMSC.MapsService service)
+      & fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show service))
   case merchantMapsServiceConfig.serviceConfig of
     DMSC.MapsServiceConfig msc -> Maps.getRoutes entityId merchant.isAvoidToll msc req
     _ -> throwError $ InternalError "Unknown Service Config"
@@ -209,10 +211,11 @@ runWithServiceConfig ::
   req ->
   m resp
 runWithServiceConfig func getCfg merchantId merchantOperatingCityId entityId req = do
-  merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  allMSC' <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
   merchantMapsServiceConfig <-
-    QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MapsService $ getCfg merchantConfig)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show $ getCfg merchantConfig))
+    filterByService allMSC' (DMSC.MapsService $ getCfg merchantConfig)
+      & fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show $ getCfg merchantConfig))
   case merchantMapsServiceConfig.serviceConfig of
     DMSC.MapsServiceConfig msc -> func entityId msc req
     _ -> throwError $ InternalError "Unknown Service Config"

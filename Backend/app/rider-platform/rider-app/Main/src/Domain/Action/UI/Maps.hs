@@ -47,9 +47,9 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
+import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Person as CQP
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps

@@ -52,7 +52,7 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
-txnId :: Maybe Text,
+    txnId :: Maybe Text,
     requestId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     url :: Maybe Text

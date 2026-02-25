@@ -48,7 +48,6 @@ import Servant hiding (throwError)
 import SharedLogic.External.BbpsService.Flow
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.BBPS as QBBPS
 import qualified Storage.Queries.BBPSConfig as QBBPSC
 import qualified Storage.Queries.Person as QP

@@ -72,11 +72,10 @@ import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..), filterByService)
+import qualified Storage.CachedQueries.Sos as CQSos
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QP
@@ -179,7 +178,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   Redis.del $ CQSos.mockSosKey personId
   safetySettings <- QSafetyExtra.findSafetySettingsWithFallback (cast personId) (QSafetyExtra.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderDimensions person.merchantOperatingCityId.getId) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   -- Check if we already have an external reference ID in the DB for this Ride
   mbExistingSos <- case req.rideId of
     Just rId -> do
@@ -457,9 +456,10 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
             -- Skip if no phone number available
             whenJust phoneNumber $ \phoneNo -> do
               let sosServiceType = flowToSOSService sosConfig.flow
+              allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
               merchantSvcCfg <-
-                QMSC.findByMerchantOpCityIdAndService person.merchantId person.merchantOperatingCityId (DMSC.SOSService sosServiceType)
-                  >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantOperatingCityId.getId "SOS" (show sosServiceType))
+                filterByService allMSC (DMSC.SOSService sosServiceType)
+                  & fromMaybeM (MerchantServiceConfigNotFound person.merchantOperatingCityId.getId "SOS" (show sosServiceType))
               case merchantSvcCfg.serviceConfig of
                 DMSC.SOSServiceConfig specificConfig -> do
                   let fileName = "sos-" <> getId sosId <> "." <> fileExtension
@@ -675,7 +675,7 @@ getExternalSOSTracePollingConfig :: Maybe (Id DMOC.MerchantOperatingCity) -> Flo
 getExternalSOSTracePollingConfig = \case
   Nothing -> pure (defaultExternalSOSTracePollingIntervalSec, defaultTimeDiff)
   Just merchantOpCityId -> do
-    mbRiderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing
+    mbRiderConfig <- getConfig (RiderDimensions merchantOpCityId.getId)
     case mbRiderConfig of
       Nothing -> pure (defaultExternalSOSTracePollingIntervalSec, defaultTimeDiff)
       Just rc ->
@@ -693,7 +693,8 @@ resolveExternalSOSTraceConfig sosDetails = do
       case mbRiderConfig >>= (.externalSOSConfig) of
         Just sosConfig | sosConfig.latLonRequired -> do
           let sosServiceType = flowToSOSService sosConfig.flow
-          mbMerchantSvcCfg <- QMSC.findByMerchantOpCityIdAndService (cast merchantId) (cast merchantOpCityId) (DMSC.SOSService sosServiceType)
+          allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+          let mbMerchantSvcCfg = filterByService allMSC (DMSC.SOSService sosServiceType)
           pure $ case mbMerchantSvcCfg of
             Just cfg -> case cfg.serviceConfig of
               DMSC.SOSServiceConfig specificConfig -> Just specificConfig
@@ -976,8 +977,8 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
 handleExternalSOS :: Person.Person -> DRC.ExternalSOSConfig -> SosReq -> Id Person.Person -> DRC.RiderConfig -> Flow (Maybe Text)
 handleExternalSOS person sosConfig req personId riderConfig = do
   let sosServiceType = flowToSOSService sosConfig.flow
-  mbMerchantSvcCfg <-
-    QMSC.findByMerchantOpCityIdAndService person.merchantId person.merchantOperatingCityId (DMSC.SOSService sosServiceType)
+  allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  let mbMerchantSvcCfg = filterByService allMSC (DMSC.SOSService sosServiceType)
   case mbMerchantSvcCfg of
     Nothing -> do
       logError $ "handleExternalSOS: MerchantServiceConfig not found for SOS service " <> show sosServiceType

@@ -30,7 +30,8 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, MonadFlow, fromMaybeM)
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as Maps
@@ -59,7 +60,7 @@ getPickupRoutes ::
   m Maps.GetRoutesResp
 getPickupRoutes (personId, merchantId) entityId GetPickupRoutesReq {..} = do
   mocId <- Maps.getMerchantOperatingCityId personId Nothing
-  merchantConfig <- QMSUC.findByMerchantOperatingCityId mocId >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
   mbRide <- mapM (\rid -> QRide.findById rid >>= fromMaybeM (RideNotFound rid.getId)) rideId
   service <- getService merchantConfig mbRide
   let req = Maps.GetRoutesReq {..}

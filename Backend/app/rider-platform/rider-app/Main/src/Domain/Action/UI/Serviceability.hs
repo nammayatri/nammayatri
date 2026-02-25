@@ -42,9 +42,9 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Person as CQP
 import Storage.Queries.Geometry (findGeometriesContaining)
 import Tools.Error
 
