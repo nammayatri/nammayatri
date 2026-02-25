@@ -24,6 +24,7 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import Kernel.Utils.TH
 import qualified Lib.Yudhishthira.Types
+import qualified Safety.Domain.Types.Sos
 import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
@@ -97,6 +98,7 @@ data Ride = Ride
     rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
     safetyAlertTriggered :: Kernel.Prelude.Bool,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
+    sosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos),
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     status :: Domain.Types.Ride.RideStatus,
     stops :: [Domain.Types.Location.Location],

@@ -65,7 +65,7 @@ SafetySettings:
   extraOperations:
   - EXTRA_QUERY_FILE
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt]
 
   defaultQueryTypeConstraint: "(Safety.Storage.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

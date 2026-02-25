@@ -157,12 +157,15 @@ buildShareRideInfo merchantId ride = do
         )
           <&> (\number -> if ride.status `elem` [DRide.NEW, DRide.INPROGRESS] then number else "xxxx")
   cached <- SafetyCQSos.findByRideId (cast ride.id)
-  sosDetails <- case cached of
-    Just x -> pure (Just x)
-    Nothing -> do
-      mbFromDb <- SafetyQSos.findByRideId (Just (cast ride.id))
-      whenJust mbFromDb $ \sos -> SafetyCQSos.cacheSosIdByRideId (cast ride.id) sos
-      pure mbFromDb
+  sosDetails <-
+    maybe
+      ( do
+          mbFromDb <- SafetyQSos.findByRideId (Just (cast ride.id))
+          whenJust mbFromDb $ \sos -> SafetyCQSos.cacheSosIdByRideId (cast ride.id) sos
+          pure mbFromDb
+      )
+      (pure . Just)
+      cached
   let fareProductType = mkFareProductType booking.bookingDetails
   return $
     Common.ShareRideInfoRes
@@ -386,8 +389,8 @@ rideInfo merchantId reqRideId = do
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   unencryptedDriverAlternateNumber <- mapM decrypt ride.driverAlternateNumber
   let fareProductType = mkFareProductType booking.bookingDetails
-  mbSos <- CQSos.findByRideId ride.id
-  let mbSosId = (cast @DSos.Sos @Dashboard.Common.Sos . (.id)) <$> mbSos
+  mbSos <- SafetyCQSos.findByRideId (cast ride.id)
+  let mbSosId = (cast @SafetyDSos.Sos @Dashboard.Common.Sos . (.id)) <$> mbSos
   pure
     Common.RideInfoRes
       { rideId = reqRideId,

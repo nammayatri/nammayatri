@@ -49,7 +49,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.Person as SLP
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -58,7 +60,6 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Clickhouse.Sos as CHSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import qualified Storage.Queries.SavedReqLocation as QSRL
 
 ---------------------------------------------------------------------
@@ -134,7 +135,7 @@ getCustomerInfo merchantShortId opCity customerId = do
     runInReplica $
       QP.findById personId
         >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId Nothing
+  safetySettings <- Lib.findSafetySettingsWithFallback (cast personId) (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults customer))
   -- merchant access checking
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
@@ -221,15 +222,19 @@ postCustomerUpdateSafetyCenterBlocking ::
   Flow APISuccess
 postCustomerUpdateSafetyCenterBlocking _ _ personId req = do
   let personId' = cast @Common.Customer @DP.Person personId
-  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId' Nothing
+  customer <-
+    runInReplica $
+      QP.findById personId'
+        >>= fromMaybeM (PersonDoesNotExist personId'.getId)
+  safetySettings <- Lib.findSafetySettingsWithFallback (cast personId') (Lib.getDefaultSafetySettings (cast personId') (Just $ SLP.riderPersonToSafetySettingsPersonDefaults customer))
   case req.resetCount of
     Just True -> do
-      QSafetyExtra.updateSafetyCenterBlockingCounter personId' (Just 0) Nothing
+      Lib.updateSafetyCenterBlockingCounter (cast personId') (Just 0) Nothing
     _ -> pure ()
   case req.incrementCount of
     Just True -> do
       now <- getCurrentTime
-      QSafetyExtra.updateSafetyCenterBlockingCounter personId' (Just $ safetySettings.falseSafetyAlarmCount + 1) $ blockingDate now safetySettings.falseSafetyAlarmCount
+      Lib.updateSafetyCenterBlockingCounter (cast personId') (Just $ safetySettings.falseSafetyAlarmCount + 1) $ blockingDate now safetySettings.falseSafetyAlarmCount
     _ -> pure ()
   return Success
   where

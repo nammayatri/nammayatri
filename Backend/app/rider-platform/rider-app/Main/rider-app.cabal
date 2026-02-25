@@ -627,7 +627,6 @@ library
       Storage.Queries.PassTypeExtra
       Storage.Queries.PassVerifyTransactionExtra
       Storage.Queries.PaymentInvoiceExtra
-      Storage.Queries.PersonDefaultEmergencyNumberExtra
       Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
@@ -643,7 +642,6 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.RouteDetailsExtra
       Storage.Queries.RoutePolylinesExtra
-      Storage.Queries.SafetySettingsExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.ServiceCategoryExtra
@@ -982,7 +980,6 @@ library
       Domain.Types.PaymentTransactionOfferPayout
       Domain.Types.PayoutConfig
       Domain.Types.Person
-      Domain.Types.PersonDefaultEmergencyNumber
       Domain.Types.PersonDisability
       Domain.Types.PersonFlowStatus
       Domain.Types.PersonStats
@@ -1142,7 +1139,6 @@ library
       Storage.Beam.PaymentTransactionOfferPayout
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
-      Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PersonDisability
       Storage.Beam.PersonStats
       Storage.Beam.PickupInstructions
@@ -1329,7 +1325,6 @@ library
       Storage.Queries.OrphanInstances.PassType
       Storage.Queries.OrphanInstances.PassVerifyTransaction
       Storage.Queries.OrphanInstances.Person
-      Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.PopularLocation
@@ -1372,7 +1367,6 @@ library
       Storage.Queries.PaymentTransactionOfferPayout
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
-      Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PersonDisability
       Storage.Queries.PersonStats
       Storage.Queries.PickupInstructions

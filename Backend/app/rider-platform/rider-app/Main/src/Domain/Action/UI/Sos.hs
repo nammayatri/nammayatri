@@ -59,6 +59,9 @@ import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
+import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
+import qualified Safety.Storage.Queries.SafetySettingsExtra as QSafetyExtra
+import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
@@ -78,10 +81,8 @@ import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import qualified Tools.Call as Call
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -136,10 +137,7 @@ data ExternalStatusEntry = ExternalStatusEntry
 getSosGetDetails :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DRide.Ride -> Flow SosDetailsRes
 getSosGetDetails (mbPersonId, _) rideId_ = do
   personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  cached <- SafetyCQSos.findByRideId (cast rideId_)
-  mbSosDetails <- case cached of
-    Just x -> return (Just x)
-    Nothing -> SafetySos.findSosByRideId (cast rideId_)
+  mbSosDetails <- SafetyCQSos.findByRideId (cast rideId_) |<|>| SafetySos.findSosByRideId (cast rideId_)
   case mbSosDetails of
     Nothing -> do
       mockSos :: Maybe SafetyDSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId_
@@ -179,7 +177,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   Redis.del $ CQSos.mockSosKey personId
-  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId (Just person)
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback (cast personId) (QSafetyExtra.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   (mbExternalReferenceId, externalApiCalledStatus) <- case riderConfig.externalSOSConfig of
     Just sosConfig
@@ -191,19 +189,18 @@ postSosCreate (mbPersonId, _merchantId) req = do
     Just rideId -> do
       ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
       booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-      riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      riderConfig' <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
       let trackLink' = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
-      let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig.timeDiffFromUtc) <$> ride.rideEndTime
-      sosId' <- createTicketForNewSos person ride riderConfig person.merchantId person.merchantOperatingCityId trackLink' req
+      let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig'.timeDiffFromUtc) <$> ride.rideEndTime
+      sosId' <- createTicketForNewSos person ride riderConfig' person.merchantId person.merchantOperatingCityId trackLink' mbExternalReferenceId req
       return (sosId', trackLink', localRideEndTime)
     Nothing -> do
-      riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
       now <- getCurrentTime
       let eightHoursInSeconds :: Int = 8 * 60 * 60
       let trackingExpiresAt = addUTCTime (fromIntegral eightHoursInSeconds) now
 
       -- Create non-ride SOS using shared-services function
-      sosDetails <- SafetySos.createNonRideSos (cast personId) (Just (cast person.merchantId)) (Just (cast person.merchantOperatingCityId)) (Just trackingExpiresAt) req.flow
+      sosDetails <- SafetySos.createNonRideSos (cast personId) (Just (cast person.merchantId)) (Just (cast person.merchantOperatingCityId)) (Just trackingExpiresAt) mbExternalReferenceId req.flow
 
       whenJust req.customerLocation $ \location -> do
         SOSLocation.updateSosRiderLocation sosDetails.id location Nothing (Just trackingExpiresAt)
@@ -222,7 +219,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
       when (triggerShareRideAndNotifyContacts safetySettings) $ do
         emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
         when (req.isRideEnded /= Just True) $ do
-          void $ QPDEN.updateShareRideForAll personId True
+          void $ QPDEN.updateShareRideForAll (cast personId) True
           enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
         let sosType = if req.isRideEnded == Just True then Notification.POST_RIDE_SOS_ALERT else Notification.SOS_TRIGGERED
         when shouldNotifyContacts $ SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" sosType [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
@@ -250,8 +247,8 @@ enableFollowRideInSos emergencyContacts = do
     )
     emergencyContacts
 
-createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> SosReq -> Flow (Id SafetyDSos.Sos)
-createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId trackLink req = do
+createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Maybe Text -> SosReq -> Flow (Id SafetyDSos.Sos)
+createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId trackLink mbExternalReferenceId req = do
   -- Check if SOS exists using shared-services cached query
   cached <- SafetyCQSos.findByRideId (cast ride.id)
   mbExistingSos <- case cached of
@@ -261,7 +258,7 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
   case mbExistingSos of
     Just existingSos -> do
       -- Reactivate existing SOS using shared-services function
-      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast merchantOperatingCityId) (cast merchantId) req.flow (Just existingSos) existingSos.ticketId
+      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast merchantOperatingCityId) (cast merchantId) req.flow (Just existingSos) existingSos.ticketId mbExternalReferenceId
       void $ callUpdateTicket person result.sosDetails $ Just "SOS Re-Activated"
       return (cast result.sosId)
     Nothing -> do
@@ -279,7 +276,8 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
           else return Nothing
 
       -- Create new SOS using shared-services function
-      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast merchantOperatingCityId) (cast merchantId) req.flow Nothing ticketId
+      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast merchantOperatingCityId) (cast merchantId) req.flow Nothing ticketId mbExternalReferenceId
+      QRide.updateSosId (Just $ cast result.sosId) ride.id
       return (cast result.sosId)
 
 postSosStatus :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id SafetyDSos.Sos -> SosUpdateReq -> Flow APISuccess.APISuccess
@@ -341,12 +339,12 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId (Just person)
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback (cast personId) (QSafetyExtra.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   case startDrill of
     Just True -> do
       SPDEN.notifyEmergencyContacts person (notificationBody person True) notificationTitle Notification.SOS_MOCK_DRILL_NOTIFY Nothing False emergencyContacts.defaultEmergencyNumbers Nothing
       when (fromMaybe False onRide) $ do
-        void $ QPDEN.updateShareRideForAll personId True
+        void $ QPDEN.updateShareRideForAll (cast personId) True
         enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
     _ -> do
       unless (fromMaybe False safetySettings.hasCompletedMockSafetyDrill) $ SafetySos.updateMockSafetyDrillStatus (Just True) (cast personId)
@@ -622,10 +620,10 @@ postSosUpdateLocation (mbPersonId, _) sosId req = do
 
 type ExternalSOSTraceCache = (Integer, Bool, Maybe SOSInterface.SOSServiceConfig)
 
-sendExternalSOSTrace :: DSos.Sos -> SosLocationUpdateReq -> Flow ()
+sendExternalSOSTrace :: SafetyDSos.Sos -> SosLocationUpdateReq -> Flow ()
 sendExternalSOSTrace sosDetails req = do
   let sosId = sosDetails.id
-  (pollingIntervalSec, timeDiff) <- getExternalSOSTracePollingConfig sosDetails.merchantOperatingCityId
+  (pollingIntervalSec, timeDiff) <- getExternalSOSTracePollingConfig (cast <$> sosDetails.merchantOperatingCityId)
   cached :: Maybe ExternalSOSTraceCache <- Redis.safeGet (mkExternalSOSTraceKey sosId)
   now <- getCurrentTime
   let nowSec = round $ utcTimeToPOSIXSeconds now
@@ -639,7 +637,7 @@ sendExternalSOSTrace sosDetails req = do
     Just (lastTraceSec, True, Just specificConfig) ->
       when (nowSec - lastTraceSec >= fromIntegral pollingIntervalSec) $
         whenJust sosDetails.externalReferenceId $ \trackingId -> do
-          mbMobile <- getPersonMobileNo sosDetails.personId
+          mbMobile <- getPersonMobileNo (cast sosDetails.personId)
           whenJust mbMobile $ \mobileNo -> do
             callSOSTraceAPI trackingId specificConfig mobileNo req timeDiff
             Redis.setExp (mkExternalSOSTraceKey sosId) (nowSec, True, Just specificConfig) ttl
@@ -649,7 +647,7 @@ sendExternalSOSTrace sosDetails req = do
       Redis.setExp (mkExternalSOSTraceKey sosId) (nowSec, shouldCall, mbConfig) ttl
       whenJust mbConfig $ \specificConfig ->
         whenJust sosDetails.externalReferenceId $ \trackingId -> do
-          mbMobile <- getPersonMobileNo sosDetails.personId
+          mbMobile <- getPersonMobileNo (cast sosDetails.personId)
           whenJust mbMobile $ \mobileNo ->
             callSOSTraceAPI trackingId specificConfig mobileNo req timeDiff
 
@@ -667,15 +665,15 @@ getExternalSOSTracePollingConfig = \case
     defaultExternalSOSTracePollingIntervalSec = 60
     defaultTimeDiff = 19800 -- IST: 5h 30m
 
-resolveExternalSOSTraceConfig :: DSos.Sos -> Flow (Maybe SOSInterface.SOSServiceConfig)
+resolveExternalSOSTraceConfig :: SafetyDSos.Sos -> Flow (Maybe SOSInterface.SOSServiceConfig)
 resolveExternalSOSTraceConfig sosDetails = do
   case (sosDetails.externalReferenceId, sosDetails.merchantId, sosDetails.merchantOperatingCityId) of
     (Just _, Just merchantId, Just merchantOpCityId) -> do
-      mbRiderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing
+      mbRiderConfig <- QRC.findByMerchantOperatingCityId (cast merchantOpCityId) Nothing
       case mbRiderConfig >>= (.externalSOSConfig) of
         Just sosConfig | sosConfig.latLonRequired -> do
           let sosServiceType = flowToSOSService sosConfig.flow
-          mbMerchantSvcCfg <- QMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (DMSC.SOSService sosServiceType)
+          mbMerchantSvcCfg <- QMSC.findByMerchantOpCityIdAndService (cast merchantId) (cast merchantOpCityId) (DMSC.SOSService sosServiceType)
           pure $ case mbMerchantSvcCfg of
             Just cfg -> case cfg.serviceConfig of
               DMSC.SOSServiceConfig specificConfig -> Just specificConfig
@@ -709,7 +707,7 @@ callSOSTraceAPI trackingId specificConfig mobileNo req timeDiff = do
   unless traceRes.success $
     throwError $ InternalError (fromMaybe "SOS Trace failed" traceRes.errorMessage)
 
-mkExternalSOSTraceKey :: Id DSos.Sos -> Text
+mkExternalSOSTraceKey :: Id SafetyDSos.Sos -> Text
 mkExternalSOSTraceKey sosId = "SOS:ExternalTrace:" <> sosId.getId
 
 getSosTracking :: Id SafetyDSos.Sos -> Flow SosTrackingRes
@@ -762,7 +760,7 @@ getSosTrackingDetails (mbPersonId, _) sosId = do
       then return True
       else do
         emergencyContacts <- runInReplica $ QPDEN.findAllByPersonId (cast sosDetails.personId)
-        return $ Foldable.any (\ec -> ec.contactPersonId == Just personId) emergencyContacts
+        return $ Foldable.any (\ec -> ec.contactPersonId == Just (cast personId)) emergencyContacts
   unless isEmergencyContact $
     throwError $ InvalidRequest "Access denied"
 
@@ -817,9 +815,7 @@ postSosStartTracking (mbPersonId, merchantId) StartTrackingReq {..} = do
   -- Call shared-services function (handles SOS DB operations)
   let safetyPersonId = cast @Person.Person @SafetyCommon.Person personId
       mbSafetySosId = cast <$> sosId
-  finalSosId <- SafetySos.startSosTracking mbSafetySosId safetyPersonId (Just (cast person.merchantId)) (Just (cast person.merchantOperatingCityId)) expiryTimeStamp SafetyDSos.SafetyFlow
-
-  -- Handle location updates (rider-app specific)
+  finalSosId <- SafetySos.startSosTracking mbSafetySosId safetyPersonId (Just (cast person.merchantId)) (Just (cast person.merchantOperatingCityId)) expiryTimeStamp externalReferenceId SafetyDSos.SafetyFlow -- Handle location updates (rider-app specific)
   whenJust customerLocation $ \location -> do
     SOSLocation.updateSosRiderLocation (cast finalSosId) location Nothing (Just expiryTimeStamp)
 
@@ -936,10 +932,11 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
 
   -- Fetch updated SOS (may have new ticketId) for ticket update comment
   updatedSos <- runInReplica $ SafetySos.findSosById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
+  QRide.updateSosId (Just $ cast updatedSos.id) ride.id
   void $ callUpdateTicket person updatedSos $ Just "SOS linked to ride"
 
   -- Notify emergency contacts with ride tracking link (parity with postSosCreate ride flow)
-  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId (Just person)
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback (cast personId) (QSafetyExtra.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   when safetySettings.notifySosWithEmergencyContacts $ do
     buildSmsReq <-
       MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
@@ -950,7 +947,7 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
             isRideEnded = False
           }
     emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
-    void $ QPDEN.updateShareRideForAll personId True
+    void $ QPDEN.updateShareRideForAll (cast personId) True
     enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
     SPDEN.notifyEmergencyContactsWithKey person "SOS_ALERT" Notification.SOS_TRIGGERED [("userName", SLP.getName person)] (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers Nothing
 
@@ -1085,7 +1082,7 @@ postSosErssStatusUpdate req = do
   checkSlidingWindowLimitWithOptions erssStatusUpdateHitsCountKey erssStatusUpdateRateLimitOptions
   trackingId <- req.idErss & fromMaybeM (InvalidRequest "idErss is required")
   sosDetails <-
-    QSos.findByExternalReferenceId (Just trackingId)
+    SafetyQSos.findByExternalReferenceId (Just trackingId)
       >>= fromMaybeM (InvalidRequest $ "No SOS found for tracking ID: " <> trackingId)
 
   let previousStatus = sosDetails.externalReferenceStatus
@@ -1095,10 +1092,10 @@ postSosErssStatusUpdate req = do
       updatedHistory = existingHistory <> [newEntry]
       updatedHistoryJson = Just $ TE.decodeUtf8 $ LBS.toStrict $ A.encode updatedHistory
 
-  QSos.updateExternalReferenceStatus (Just newStatus) updatedHistoryJson sosDetails.id
+  SafetyQSos.updateExternalReferenceStatus (Just newStatus) updatedHistoryJson sosDetails.id
 
   when (newStatus == "RESOLVED") $ do
-    QSos.updateStatus DSos.Resolved sosDetails.id
+    SafetyQSos.updateStatus SafetyDSos.Resolved sosDetails.id
 
   logInfo $ "ERSS status update received for SOS " <> sosDetails.id.getId <> ": " <> fromMaybe "none" previousStatus <> " -> " <> newStatus
 

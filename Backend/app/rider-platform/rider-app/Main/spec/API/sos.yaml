@@ -78,6 +78,7 @@ types:
     durationInMinutes: Int
     customerLocation: Maybe LatLong
     sosId: Maybe (Id Sos)
+    externalReferenceId: Maybe Text
 
   StartTrackingRes:
     sosId: Id Sos

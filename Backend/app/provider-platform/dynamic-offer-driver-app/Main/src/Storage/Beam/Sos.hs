@@ -11,6 +11,7 @@
 module Storage.Beam.Sos where
 
 import qualified Data.Text as T
+import qualified Safety.Storage.Beam.PersonDefaultEmergencyNumber as BeamPDEN
 import qualified Safety.Storage.Beam.SafetySettings as BeamSafetySettings
 import qualified Safety.Storage.Beam.Sos as BeamSos
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
@@ -19,4 +20,7 @@ instance HasSchemaName BeamSos.SosT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamSafetySettings.SafetySettingsT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPDEN.PersonDefaultEmergencyNumberT where
   schemaName _ = T.pack currentSchemaName

@@ -76,6 +76,8 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Base as JM
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
+import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import qualified SharedLogic.Person as SLP
 import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Payment as SPayment
@@ -95,7 +97,6 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as SQQ
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Transformers.Booking as STB
 import Tools.Error
@@ -504,7 +505,8 @@ onUpdate = \case
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     void $ QRide.updateSafetyJourneyStatus ride.id (DRide.UnexpectedCondition DRide.DriverDeviated)
-    safetySettings <- QSafetyExtra.findSafetySettingsWithFallback booking.riderId Nothing
+    rider <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    safetySettings <- Lib.findSafetySettingsWithFallback (cast booking.riderId) (Lib.getDefaultSafetySettings (cast booking.riderId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults rider))
     let triggerIVRFlow
           | riderConfig.useUserSettingsForSafetyIVR = safetySettings.informPoliceSos || safetySettings.notifySafetyTeamForSafetyCheckFailure
           | otherwise = True

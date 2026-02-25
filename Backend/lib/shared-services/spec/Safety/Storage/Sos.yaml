@@ -94,6 +94,17 @@ Sos:
       kvFunction: updateOneWithKV
       params: [externalReferenceStatus, externalStatusHistory]
       where: id
+    findActiveByPersonId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - personId
+          - in:
+              - status
+      orderBy:
+        field: createdAt
+        order: desc
+      limit: 1
 
   beamType:
     mediaFiles: Maybe [Text]

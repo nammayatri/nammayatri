@@ -14,6 +14,9 @@ import qualified Tools.Beam.UtilsTH
 data Sos = Sos
   { createdAt :: Kernel.Prelude.UTCTime,
     entityType :: Kernel.Prelude.Maybe Safety.Domain.Types.Sos.SosEntityType,
+    externalReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    externalReferenceStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    externalStatusHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     flow :: Safety.Domain.Types.Sos.SosType,
     id :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos,
     mediaFiles :: [Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile],

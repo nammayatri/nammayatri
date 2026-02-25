@@ -25,6 +25,7 @@ data SafetySettings = SafetySettings
     notifySosWithEmergencyContacts :: Kernel.Prelude.Bool,
     personId :: Kernel.Types.Id.Id Safety.Domain.Types.Common.Person,
     safetyCenterDisabledOnDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    shakeToActivate :: Kernel.Prelude.Bool
+    shakeToActivate :: Kernel.Prelude.Bool,
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)

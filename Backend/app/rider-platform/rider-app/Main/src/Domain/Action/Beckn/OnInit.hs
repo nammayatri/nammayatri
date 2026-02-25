@@ -31,6 +31,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Safety.Domain.Types.Common as SafetyCommon
+import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -38,7 +40,6 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 import Tools.Notifications
@@ -105,7 +106,7 @@ onInit req = do
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   decRider <- decrypt person
   createFareBreakup booking.id req.fareBreakups
-  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback booking.riderId (Just person)
+  safetySettings <- Lib.findSafetySettingsWithFallback (cast booking.riderId) (Lib.getDefaultSafetySettings (cast booking.riderId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   let convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> Person.RideShareOptions
       convertToPersonRideShareOptions = \case
         SafetyCommon.ALWAYS_SHARE -> Person.ALWAYS_SHARE
@@ -185,7 +186,7 @@ buildOnInitResFromBooking bookingId = do
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   decRider <- decrypt person
-  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback booking.riderId (Just person)
+  safetySettings <- Lib.findSafetySettingsWithFallback (cast booking.riderId) (Lib.getDefaultSafetySettings (cast booking.riderId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <-

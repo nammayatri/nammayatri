@@ -606,6 +606,25 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN external_sos_config json;
 ------- SQL updates -------
 
 
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.rider_config ADD COLUMN max_number_of_luggages integer ;
 
 

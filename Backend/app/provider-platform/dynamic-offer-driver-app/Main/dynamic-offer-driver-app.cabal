@@ -740,7 +740,6 @@ library
       Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
       Storage.Queries.Person.GetNearestGoHomeDrivers
       Storage.Queries.Person.Internal
-      Storage.Queries.PersonDefaultEmergencyNumberExtra
       Storage.Queries.PersonExtra
       Storage.Queries.PlanExtra
       Storage.Queries.PurchaseHistoryExtra
@@ -754,7 +753,6 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
       Storage.Queries.RouteExtra
-      Storage.Queries.SafetySettingsExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
@@ -1135,7 +1133,6 @@ library
       Domain.Types.Overlay
       Domain.Types.PayoutConfig
       Domain.Types.Person
-      Domain.Types.PersonDefaultEmergencyNumber
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
       Domain.Types.PlanTranslation
@@ -1308,7 +1305,6 @@ library
       Storage.Beam.Overlay
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
-      Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
@@ -1548,7 +1544,6 @@ library
       Storage.Queries.OrphanInstances.OperationHubRequests
       Storage.Queries.OrphanInstances.PayoutConfig
       Storage.Queries.OrphanInstances.Person
-      Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
       Storage.Queries.OrphanInstances.Plan
       Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
@@ -1580,7 +1575,6 @@ library
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
-      Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation

@@ -12,6 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+-- | Safety CS Alert scheduler job: creates Kapture ticket and SOS record when rider
+-- does not pick IVR call. Uses Safety library (Safety.Domain.Action.UI.Sos.createSos)
+-- for SOS creation; ticket and job scheduling remain app-specific.
 module SharedLogic.Scheduler.Jobs.SafetyCSAlert where
 
 import API.Types.UI.Sos
@@ -84,7 +87,8 @@ createSafetyTicket person ride = do
       Left err -> do
         logError $ "Ticket didn't created when rider didn't picked up call with error : " <> show err
         return Nothing
-  sosDetails <- buildSosDetails person SosReq {flow = SafetyDSos.CSAlertSosTicket, rideId = Just ride.id, isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing} ticketId
+  sosDetails <- buildSosDetails person SosReq {flow = SafetyDSos.CSAlertSosTicket, rideId = Just (cast ride.id), isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing} ticketId
+  -- SOS persistence via shared-services Safety library
   void $ SafetySos.createSos sosDetails
 
 mkTicket :: DP.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> SafetyDSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
