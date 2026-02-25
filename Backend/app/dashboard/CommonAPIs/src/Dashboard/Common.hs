@@ -27,6 +27,8 @@ module Dashboard.Common
     RentalMode,
     RideShareMode,
     module Reexport,
+    VSTAllowedArea,
+    vstAllowedAreaToText,
   )
 where
 
@@ -39,6 +41,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Domain.Types.ServiceTierType (ServiceTierType (..))
 import Domain.Types.Trip (OneWayMode (..), RentalMode, RideShareMode, TripCategory (..), TripMode (..))
+import Domain.Types.VSTAllowedArea
 import Domain.Types.VehicleCategory
 import Domain.Types.VehicleVariant
 import Kernel.Prelude

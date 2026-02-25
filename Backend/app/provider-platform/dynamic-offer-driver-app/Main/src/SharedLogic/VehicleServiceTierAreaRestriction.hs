@@ -21,14 +21,13 @@ module SharedLogic.VehicleServiceTierAreaRestriction
   )
 where
 
-import qualified Storage.Queries.VehicleServiceTier as QVST
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logDebug, logInfo)
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.VSTAllowedArea as VSTAllowedArea
 import Domain.Types.VehicleServiceTier
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Types.Time (MonadTime)
+import Kernel.Utils.Common (CacheFlow, MonadFlow, logDebug, logInfo)
 import qualified Lib.Types.SpecialLocation as SL
 
 areaToText :: SL.Area -> Maybe Text
@@ -57,11 +56,11 @@ populateVSTAreasCache vst =
           thirtyDaysInSeconds = 30 * 24 * 60 * 60 :: Int
       logInfo $ "VST area cache: writing to Redis key=" <> hashKey <> " areasCount=" <> show (length areasList)
       forM_ areasList $ \area ->
-        Redis.hSetExp hashKey area ("1" :: Text) thirtyDaysInSeconds
+        Redis.hSetExp hashKey (VSTAllowedArea.vstAllowedAreaToText area) ("1" :: Text) thirtyDaysInSeconds
       logDebug $ "VST area cache: populated Redis for vstId=" <> vst.id.getId
 
 isAreaAllowedForVST ::
-  (Redis.HedisFlow m r, MonadTime m, EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Redis.HedisFlow m r, MonadFlow m, CacheFlow m r) =>
   VehicleServiceTier ->
   SL.Area ->
   m Bool
@@ -80,7 +79,7 @@ isAreaAllowedForVST vst area =
       Just areaText -> checkAreaInCache vst areaText
 
 checkAreaInCache ::
-  (Redis.HedisFlow m r, MonadTime m, EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Redis.HedisFlow m r, MonadFlow m, CacheFlow m r) =>
   VehicleServiceTier ->
   Text ->
   m Bool
@@ -92,17 +91,9 @@ checkAreaInCache vst areaText = do
       logDebug $ "VST area check: cache HIT vstId=" <> vst.id.getId <> " areaText=" <> areaText
       return True
     Nothing -> do
-      logInfo $ "VST area check: cache MISS vstId=" <> vst.id.getId <> " areaText=" <> areaText <> " key=" <> hashKey
-      freshVst <- QVST.findByPrimaryKey vst.id
-      case freshVst of
-        Just vstFromDb -> do
-          let allowed = maybe False (elem areaText) vstFromDb.allowedAreas
-          logInfo $ "VST area check: loaded from DB vstId=" <> vst.id.getId <> " areaText=" <> areaText <> " allowed=" <> show allowed <> " (will populate Redis if allowed)"
-          populateVSTAreasCache vstFromDb
-          return allowed
-        Nothing -> do
-          logInfo $ "VST area check: VST not found in DB vstId=" <> vst.id.getId
-          return False
+      logInfo $ "VST area check: cache MISS vstId=" <> vst.id.getId <> " areaText=" <> areaText <> " key=" <> hashKey <> " (warming from passed-in VST)"
+      populateVSTAreasCache vst
+      return $ maybe False (elem areaText . map VSTAllowedArea.vstAllowedAreaToText) vst.allowedAreas
 
 clearVSTAreasCache :: (Redis.HedisFlow m r) => VehicleServiceTier -> m ()
 clearVSTAreasCache vst = void $ Redis.del $ vstAreasCacheKey vst.id vst.merchantOperatingCityId

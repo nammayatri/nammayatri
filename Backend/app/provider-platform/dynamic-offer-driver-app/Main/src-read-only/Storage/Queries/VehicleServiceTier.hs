@@ -6,6 +6,7 @@ module Storage.Queries.VehicleServiceTier where
 
 import qualified Domain.Types.Common
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.VSTAllowedArea
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleServiceTier
 import Kernel.Beam.Functions
@@ -86,7 +87,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.airConditionedThreshold airConditionedThreshold,
-      Se.Set Beam.allowedAreas allowedAreas,
+      Se.Set Beam.allowedAreas ((Kernel.Prelude.fmap (Kernel.Prelude.map Domain.Types.VSTAllowedArea.vstAllowedAreaToText)) allowedAreas),
       Se.Set Beam.allowedVehicleVariant allowedVehicleVariant,
       Se.Set Beam.autoSelectedVehicleVariant autoSelectedVehicleVariant,
       Se.Set Beam.baseVehicleServiceTier baseVehicleServiceTier,
@@ -125,7 +126,7 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
       Just
         Domain.Types.VehicleServiceTier.VehicleServiceTier
           { airConditionedThreshold = airConditionedThreshold,
-            allowedAreas = allowedAreas,
+            allowedAreas = (Kernel.Prelude.fmap (Kernel.Prelude.map Domain.Types.VSTAllowedArea.VSTAllowedArea)) allowedAreas,
             allowedVehicleVariant = allowedVehicleVariant,
             autoSelectedVehicleVariant = autoSelectedVehicleVariant,
             baseVehicleServiceTier = baseVehicleServiceTier,
@@ -162,7 +163,7 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
   toTType' (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = do
     Beam.VehicleServiceTierT
       { Beam.airConditionedThreshold = airConditionedThreshold,
-        Beam.allowedAreas = allowedAreas,
+        Beam.allowedAreas = (Kernel.Prelude.fmap (Kernel.Prelude.map Domain.Types.VSTAllowedArea.vstAllowedAreaToText)) allowedAreas,
         Beam.allowedVehicleVariant = allowedVehicleVariant,
         Beam.autoSelectedVehicleVariant = autoSelectedVehicleVariant,
         Beam.baseVehicleServiceTier = baseVehicleServiceTier,
