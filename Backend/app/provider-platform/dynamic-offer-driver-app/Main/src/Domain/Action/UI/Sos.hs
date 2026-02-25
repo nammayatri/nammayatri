@@ -48,6 +48,7 @@ import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Domain.Types.Sos
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
+import qualified Safety.Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Servant hiding (throwError)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.PersonDefaultEmergencyNumber as SPDEN
@@ -59,7 +60,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
-import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Tools.Auth
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -198,7 +198,8 @@ createTicketForNewSos person ride booking _merchantOperatingCityId _merchantId e
   case mbExistingSos of
     Just existingSos -> do
       logDebug $ "createTicketForNewSos: reactivating SOS, rideId=" <> ride.id.getId <> ", personId=" <> person.id.getId <> ", existingSosId=" <> existingSos.id.getId
-      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast _merchantOperatingCityId) (cast _merchantId) req.flow (Just existingSos) existingSos.ticketId
+      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast _merchantOperatingCityId) (cast _merchantId) req.flow (Just existingSos) existingSos.ticketId Nothing
+      QRide.updateSosId (Just $ cast result.sosId) ride.id
       logDebug $ "createTicketForNewSos: createRideBasedSos (reactivate) returned, sosId=" <> result.sosId.getId
       void $ callUpdateTicket person result.sosDetails $ Just "SOS Re-Activated"
       return (cast result.sosId)
@@ -226,7 +227,7 @@ createTicketForNewSos person ride booking _merchantOperatingCityId _merchantId e
                 return Nothing
           else return Nothing
       logDebug $ "createTicketForNewSos: creating new SOS, rideId=" <> ride.id.getId <> ", personId=" <> person.id.getId
-      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast _merchantOperatingCityId) (cast _merchantId) req.flow Nothing ticketId
+      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast _merchantOperatingCityId) (cast _merchantId) req.flow Nothing ticketId Nothing
       logDebug $ "createTicketForNewSos: createRideBasedSos (new) returned, sosId=" <> result.sosId.getId
       return (cast result.sosId)
 
@@ -254,7 +255,7 @@ postSosCreate ::
 postSosCreate (mbPersonId, _merchantId, _merchantOperatingCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback personId
+  safetySettings <- QSafetyExtra.findSafetySettingsWithFallback (cast personId) (QSafetyExtra.getDefaultSafetySettings (cast personId) Nothing)
   rideId <- req.rideId & fromMaybeM (RideDoesNotExist "Ride Id is required")
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (personId == ride.driverId) $ throwError $ InvalidRequest "Ride does not belong to this person"
@@ -292,7 +293,7 @@ postSosMarkRideAsSafe ::
 postSosMarkRideAsSafe (mbPersonId, _merchantId, _) sosId API.Types.UI.Sos.MarkAsSafeReq {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  void $ QSafetyExtra.findSafetySettingsWithFallback personId
+  void $ QSafetyExtra.findSafetySettingsWithFallback (cast personId) (QSafetyExtra.getDefaultSafetySettings (cast personId) Nothing)
   emergencyContacts <- SPDEN.getDriverDefaultEmergencyNumbers personId
   let contactsToNotify =
         case contacts of

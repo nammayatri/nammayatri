@@ -39,6 +39,7 @@ import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.Operator as Operator
 import qualified API.Action.UI.PayoutDriverStatus as PayoutDriverStatus
 import qualified API.Action.UI.Penalty as Penalty
+import qualified API.Action.UI.PersonDefaultEmergencyContact as PersonDefaultEmergencyContact
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
@@ -155,6 +156,7 @@ type API =
            :<|> PayoutDriverStatus.API
            :<|> StclMembership.API
            :<|> DriverSafetySettings.API
+           :<|> PersonDefaultEmergencyContact.API
            :<|> CancellationReasonLookup.API
        )
 
@@ -223,5 +225,6 @@ handler =
     :<|> FleetOwnerList.handler
     :<|> PayoutDriverStatus.handler
     :<|> StclMembership.handler
-    :<|> DriverSafetySettings.handler    :<|> CancellationReasonLookup.handler
-
+    :<|> DriverSafetySettings.handler
+    :<|> PersonDefaultEmergencyContact.handler
+    :<|> CancellationReasonLookup.handler

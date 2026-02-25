@@ -16,7 +16,6 @@ import qualified Data.Text as T
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
-import Domain.Types.PersonDefaultEmergencyNumber (DecryptedPersonDefaultEmergencyNumber)
 import Environment
 import qualified EulerHS.Prelude as EulerHS
 import Kernel.Beam.Functions (runInReplica)
@@ -25,10 +24,12 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber as SafetyPDEN
 import qualified Safety.Domain.Types.Sos as SafetyDSos
+import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as LibQPDEN
+import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.PersonDefaultEmergencyNumberExtra as QPDEN
 import Tools.Error
 import Tools.Notifications hiding (buildTemplate)
 import qualified Tools.SMS as Sms
@@ -43,17 +44,17 @@ data DriverEmergencyContactEntity = DriverEmergencyContactEntity
 
 getDriverDefaultEmergencyNumbers :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> m [DriverEmergencyContactEntity]
 getDriverDefaultEmergencyNumbers personId = do
-  personENList <- runInReplica $ QPDEN.findAllByPersonId personId
+  personENList <- runInReplica $ LibQPDEN.findAllByPersonId (cast personId)
   decList <- mapM decrypt personENList
   return $ map toEntity decList
   where
-    toEntity :: DecryptedPersonDefaultEmergencyNumber -> DriverEmergencyContactEntity
+    toEntity :: SafetyPDEN.DecryptedPersonDefaultEmergencyNumber -> DriverEmergencyContactEntity
     toEntity pden =
       DriverEmergencyContactEntity
         { name = pden.name,
           mobileCountryCode = pden.mobileCountryCode,
           mobileNumber = pden.mobileNumber,
-          contactPersonId = pden.contactPersonId
+          contactPersonId = cast <$> pden.contactPersonId
         }
 
 data SosNotificationEntityData = SosNotificationEntityData

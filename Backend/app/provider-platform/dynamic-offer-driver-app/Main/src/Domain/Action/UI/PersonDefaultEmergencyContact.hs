@@ -10,7 +10,6 @@ import qualified API.Types.UI.PersonDefaultEmergencyContact as API
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.PersonDefaultEmergencyNumber as DPDEN
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions (runInReplica)
@@ -19,10 +18,16 @@ import Kernel.Prelude (UTCTime)
 import qualified Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess
+import Kernel.Types.Id (cast)
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EncFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Safety.Domain.Action.UI.PersonDefaultEmergencyNumber as LibPDEN
+import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber as SafetyPDEN
+import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as LibQPDEN
+import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
+import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import Servant
-import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
+import Storage.Beam.Sos ()
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import Tools.Auth
 import Tools.Error
@@ -36,19 +41,21 @@ getDriverPersonDefaultEmergencyContacts ::
   )
 getDriverPersonDefaultEmergencyContacts (mbPersonId, _, _) = do
   personId <- mbPersonId & fromMaybeM (PersonDoesNotExist "No person found")
-  personENList <- runInReplica $ QPDEN.findAllByPersonId personId
-  decPersonENList <- decrypt `mapM` personENList
-  return $ toAPIContact <$> decPersonENList
+  LibPDEN.getEmergencyContacts
+    (runInReplica . LibQPDEN.findAllByPersonId . cast)
+    decrypt
+    toAPIContact
+    personId
   where
-    toAPIContact :: DPDEN.DecryptedPersonDefaultEmergencyNumber -> API.PersonDefaultEmergencyContact
+    toAPIContact :: SafetyPDEN.DecryptedPersonDefaultEmergencyNumber -> API.PersonDefaultEmergencyContact
     toAPIContact pden =
       API.PersonDefaultEmergencyContact
         { name = pden.name,
           mobileCountryCode = pden.mobileCountryCode,
           mobileNumber = pden.mobileNumber,
           priority = pden.priority,
-          contactPersonId = pden.contactPersonId,
-          merchantId = pden.merchantId,
+          contactPersonId = cast <$> pden.contactPersonId,
+          merchantId = cast <$> pden.merchantId,
           enableForFollowing = pden.enableForFollowing,
           enableForShareRide = pden.enableForShareRide,
           shareTripWithEmergencyContactOption = pden.shareTripWithEmergencyContactOption
@@ -65,8 +72,14 @@ putDriverPersonDefaultEmergencyContacts ::
 putDriverPersonDefaultEmergencyContacts (mbPersonId, merchantId, _) req = do
   personId <- mbPersonId & fromMaybeM (PersonDoesNotExist "No person found")
   now <- getCurrentTime
-  domainList <- mapM (buildPersonDefaultEmergencyNumber now personId merchantId) req.emergencyContacts
-  QPDEN.replaceAll personId domainList
+  LibPDEN.putEmergencyContacts
+    personId
+    req.emergencyContacts
+    (buildPersonDefaultEmergencyNumber now personId merchantId)
+    (LibQPDEN.replaceAll . cast)
+    (\pid -> Lib.findSafetySettingsWithFallback (cast pid) (Lib.getDefaultSafetySettings (cast pid) Nothing))
+    QSafetySettings.updateByPrimaryKey
+    SafetyPDEN.shareTripWithEmergencyContactOption
   pure Kernel.Types.APISuccess.Success
   where
     buildPersonDefaultEmergencyNumber ::
@@ -75,22 +88,22 @@ putDriverPersonDefaultEmergencyContacts (mbPersonId, merchantId, _) req = do
       Kernel.Types.Id.Id Domain.Types.Person.Person ->
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
       API.PersonDefaultEmergencyContact ->
-      m DPDEN.PersonDefaultEmergencyNumber
+      m SafetyPDEN.PersonDefaultEmergencyNumber
     buildPersonDefaultEmergencyNumber now personId mId apiContact = do
       encMobile <- encrypt apiContact.mobileNumber
       mobileNumberHash <- getDbHash apiContact.mobileNumber
-      mbContactPerson <- QPersonExtra.findByMobileNumberAndMerchantAndRole apiContact.mobileCountryCode mobileNumberHash merchantId Domain.Types.Person.DRIVER
+      mbContactPerson <- QPersonExtra.findByMobileNumberAndMerchantAndRole apiContact.mobileCountryCode mobileNumberHash mId Domain.Types.Person.DRIVER
       return $
-        DPDEN.PersonDefaultEmergencyNumber
-          { personId = personId,
+        SafetyPDEN.PersonDefaultEmergencyNumber
+          { personId = cast personId,
             name = apiContact.name,
             mobileNumber = encMobile,
             mobileCountryCode = apiContact.mobileCountryCode,
             createdAt = now,
-            contactPersonId = (.id) <$> mbContactPerson,
+            contactPersonId = (cast . (.id)) <$> mbContactPerson,
             enableForFollowing = apiContact.enableForFollowing,
             enableForShareRide = apiContact.enableForShareRide,
-            merchantId = Just mId,
+            merchantId = Just (cast mId),
             priority = apiContact.priority,
             shareTripWithEmergencyContactOption = apiContact.shareTripWithEmergencyContactOption
           }

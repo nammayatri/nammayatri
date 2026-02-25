@@ -58,9 +58,12 @@ import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.Type as SLT
+-- Keep for mockSosKey only
+
+import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
-import qualified Storage.CachedQueries.Sos as CQSos -- Keep for mockSosKey only
+import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -69,7 +72,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.StopInformation as QSI
-import Storage.Beam.Sos ()
 import Tools.Error
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S

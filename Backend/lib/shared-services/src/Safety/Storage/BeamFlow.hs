@@ -16,6 +16,7 @@ module Safety.Storage.BeamFlow where
 
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Utils.Common
+import qualified Safety.Storage.Beam.PersonDefaultEmergencyNumber as BeamPDEN
 import qualified Safety.Storage.Beam.SafetySettings as BeamSS
 import qualified Safety.Storage.Beam.Sos as BeamSos
 
@@ -23,6 +24,7 @@ type BeamFlow m r =
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
+    HasSchemaName BeamPDEN.PersonDefaultEmergencyNumberT,
     HasSchemaName BeamSos.SosT,
     HasSchemaName BeamSS.SafetySettingsT
   )

@@ -374,3 +374,17 @@ ALTER TABLE atlas_app.ride ADD COLUMN refund_request_status text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN cloud_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN sos_id character varying(36) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -11,21 +11,22 @@ import qualified Kernel.Prelude
 import qualified Safety.Domain.Types.Common
 
 data SafetySettingsT f = SafetySettingsT
-  { aggregatedRideShareSetting :: (B.C f (Kernel.Prelude.Maybe Safety.Domain.Types.Common.RideShareOptions)),
-    autoCallDefaultContact :: (B.C f Kernel.Prelude.Bool),
-    enableOtpLessRide :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    enablePostRideSafetyCheck :: (B.C f Safety.Domain.Types.Common.RideShareOptions),
-    enableUnexpectedEventsCheck :: (B.C f Safety.Domain.Types.Common.RideShareOptions),
-    falseSafetyAlarmCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    hasCompletedMockSafetyDrill :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    hasCompletedSafetySetup :: (B.C f Kernel.Prelude.Bool),
-    informPoliceSos :: (B.C f Kernel.Prelude.Bool),
-    nightSafetyChecks :: (B.C f Kernel.Prelude.Bool),
-    notifySafetyTeamForSafetyCheckFailure :: (B.C f Kernel.Prelude.Bool),
-    notifySosWithEmergencyContacts :: (B.C f Kernel.Prelude.Bool),
-    personId :: (B.C f Kernel.Prelude.Text),
-    safetyCenterDisabledOnDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    shakeToActivate :: (B.C f Kernel.Prelude.Bool)
+  { aggregatedRideShareSetting :: B.C f (Kernel.Prelude.Maybe Safety.Domain.Types.Common.RideShareOptions),
+    autoCallDefaultContact :: B.C f Kernel.Prelude.Bool,
+    enableOtpLessRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enablePostRideSafetyCheck :: B.C f Safety.Domain.Types.Common.RideShareOptions,
+    enableUnexpectedEventsCheck :: B.C f Safety.Domain.Types.Common.RideShareOptions,
+    falseSafetyAlarmCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    hasCompletedMockSafetyDrill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    hasCompletedSafetySetup :: B.C f Kernel.Prelude.Bool,
+    informPoliceSos :: B.C f Kernel.Prelude.Bool,
+    nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
+    notifySafetyTeamForSafetyCheckFailure :: B.C f Kernel.Prelude.Bool,
+    notifySosWithEmergencyContacts :: B.C f Kernel.Prelude.Bool,
+    personId :: B.C f Kernel.Prelude.Text,
+    safetyCenterDisabledOnDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    shakeToActivate :: B.C f Kernel.Prelude.Bool,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +36,6 @@ instance B.Table SafetySettingsT where
 
 type SafetySettings = SafetySettingsT Identity
 
-$(enableKVPG (''SafetySettingsT) [('personId)] [])
+$(enableKVPG ''SafetySettingsT ['personId] [])
 
-$(mkTableInstancesGenericSchema (''SafetySettingsT) "safety_settings")
+$(mkTableInstancesGenericSchema ''SafetySettingsT "safety_settings")

@@ -32,7 +32,8 @@ instance FromTType' Beam.SafetySettings Safety.Domain.Types.SafetySettings.Safet
             notifySosWithEmergencyContacts = notifySosWithEmergencyContacts,
             personId = Kernel.Types.Id.Id personId,
             safetyCenterDisabledOnDate = safetyCenterDisabledOnDate,
-            shakeToActivate = shakeToActivate
+            shakeToActivate = shakeToActivate,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.SafetySettings Safety.Domain.Types.SafetySettings.SafetySettings where
@@ -43,7 +44,7 @@ instance ToTType' Beam.SafetySettings Safety.Domain.Types.SafetySettings.SafetyS
         Beam.enableOtpLessRide = enableOtpLessRide,
         Beam.enablePostRideSafetyCheck = enablePostRideSafetyCheck,
         Beam.enableUnexpectedEventsCheck = enableUnexpectedEventsCheck,
-        Beam.falseSafetyAlarmCount = (Kernel.Prelude.Just falseSafetyAlarmCount),
+        Beam.falseSafetyAlarmCount = Kernel.Prelude.Just falseSafetyAlarmCount,
         Beam.hasCompletedMockSafetyDrill = hasCompletedMockSafetyDrill,
         Beam.hasCompletedSafetySetup = hasCompletedSafetySetup,
         Beam.informPoliceSos = informPoliceSos,
@@ -52,5 +53,6 @@ instance ToTType' Beam.SafetySettings Safety.Domain.Types.SafetySettings.SafetyS
         Beam.notifySosWithEmergencyContacts = notifySosWithEmergencyContacts,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.safetyCenterDisabledOnDate = safetyCenterDisabledOnDate,
-        Beam.shakeToActivate = shakeToActivate
+        Beam.shakeToActivate = shakeToActivate,
+        Beam.updatedAt = updatedAt
       }

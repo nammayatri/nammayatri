@@ -1,8 +1,8 @@
 imports:
-  Person: Domain.Types.Person
+  Person: Safety.Domain.Types.Common
   EncryptedHashedField: Kernel.External.Encryption
-  Merchant: Domain.Types.Merchant
-  RideShareOptions: Domain.Types.Person
+  Merchant: Safety.Domain.Types.Common
+  RideShareOptions: Safety.Domain.Types.Common
 
 PersonDefaultEmergencyNumber:
   derives: Generic
@@ -19,16 +19,9 @@ PersonDefaultEmergencyNumber:
     priority: Int
     shareTripWithEmergencyContactOption : Maybe RideShareOptions
 
-  # beamType: -- Why do this its already having a default value
-  #   enableForShareRide: Maybe Bool
   excludedFields:
     - merchantOperatingCityId
     - updatedAt
-
-  # toTType:
-  #   enableForShareRide: Just enableForShareRide|E
-  # fromTType:
-  #   enableForShareRide: fromMaybe False enableForShareRide|E
 
   excludedDefaultQueries:
     - updateByPrimaryKey
@@ -55,6 +48,7 @@ PersonDefaultEmergencyNumber:
   constraints:
     personId: PrimaryKey|!SecondaryKey
     mobileNumberHash: PrimaryKey|!SecondaryKey
-    contactPersonId: "!SecondaryKey" # forcing to be a secondary key
-    #mobileNumberEncrypted: PrimaryKey
+    contactPersonId: "!SecondaryKey"
 
+  defaultQueryTypeConstraint: "(Safety.Storage.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

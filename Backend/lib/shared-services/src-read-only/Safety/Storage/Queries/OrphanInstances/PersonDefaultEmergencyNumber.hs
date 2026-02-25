@@ -1,22 +1,22 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber where
+module Safety.Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber where
 
-import qualified Domain.Types.PersonDefaultEmergencyNumber
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Storage.Beam.PersonDefaultEmergencyNumber as Beam
+import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber
+import qualified Safety.Storage.Beam.PersonDefaultEmergencyNumber as Beam
 
-instance FromTType' Beam.PersonDefaultEmergencyNumber Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber where
+instance FromTType' Beam.PersonDefaultEmergencyNumber Safety.Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber where
   fromTType' (Beam.PersonDefaultEmergencyNumberT {..}) = do
     pure $
       Just
-        Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber
+        Safety.Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber
           { contactPersonId = Kernel.Types.Id.Id <$> contactPersonId,
             createdAt = createdAt,
             enableForFollowing = enableForFollowing,
@@ -30,8 +30,8 @@ instance FromTType' Beam.PersonDefaultEmergencyNumber Domain.Types.PersonDefault
             shareTripWithEmergencyContactOption = shareTripWithEmergencyContactOption
           }
 
-instance ToTType' Beam.PersonDefaultEmergencyNumber Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber where
-  toTType' (Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber {..}) = do
+instance ToTType' Beam.PersonDefaultEmergencyNumber Safety.Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber where
+  toTType' (Safety.Domain.Types.PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber {..}) = do
     Beam.PersonDefaultEmergencyNumberT
       { Beam.contactPersonId = Kernel.Types.Id.getId <$> contactPersonId,
         Beam.createdAt = createdAt,

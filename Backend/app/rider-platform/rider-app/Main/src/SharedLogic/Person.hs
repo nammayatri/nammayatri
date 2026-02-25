@@ -16,6 +16,7 @@ module SharedLogic.Person where
 
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.WeekDate
+import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.BookingStatus as DB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -28,17 +29,37 @@ import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fork, fromMaybeM, getCurrentTime)
 import qualified Safety.Domain.Types.SafetySettings as DSafety
+import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.BookingCancellationReason as CHBCR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QP
-import qualified Storage.Queries.SafetySettingsExtra as QSafetyExtra
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
 personRedisKey :: Id DP.Person -> Text
 personRedisKey pId = "person_stats:" <> pId.getId <> ":"
+
+-- | Build SafetySettingsPersonDefaults from rider Person. Used when fetching/creating
+-- safety_settings so that if no row exists we use Person table values (rider has them).
+riderPersonToSafetySettingsPersonDefaults :: DP.Person -> Lib.SafetySettingsPersonDefaults
+riderPersonToSafetySettingsPersonDefaults person =
+  Lib.SafetySettingsPersonDefaults
+    { nightSafetyChecks = person.nightSafetyChecks,
+      shareEmergencyContacts = person.shareEmergencyContacts,
+      falseSafetyAlarmCount = person.falseSafetyAlarmCount,
+      hasCompletedMockSafetyDrill = person.hasCompletedMockSafetyDrill,
+      hasCompletedSafetySetup = person.hasCompletedSafetySetup,
+      informPoliceSos = person.informPoliceSos,
+      notifySafetyTeamForSafetyCheckFailure = False,
+      notifySosWithEmergencyContacts = person.shareEmergencyContacts,
+      shakeToActivate = False,
+      enableOtpLessRide = person.enableOtpLessRide,
+      safetyCenterDisabledOnDate = person.safetyCenterDisabledOnDate,
+      shareTripWithEmergencyContactOption = DPDEN.toSafetyRideShare <$> person.shareTripWithEmergencyContactOption
+    }
 
 backfillPersonStats :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m, ClickhouseFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
 backfillPersonStats personId merchantOpCityid = do
@@ -146,6 +167,6 @@ checkSafetyCenterDisabled person safetySettings = do
           let unblockAfterDays = (intToNominalDiffTime riderConfig.autoUnblockSafetyCenterAfterDays) * 24 * 60 * 60
           if diffUTCTime now safetyCenterDisabledOnDate > unblockAfterDays
             then do
-              fork "" $ QSafetyExtra.updateSafetyCenterBlockingCounter person.id Nothing Nothing
+              fork "" $ Lib.updateSafetyCenterBlockingCounter (cast person.id) Nothing Nothing
               return False
             else return True

@@ -24,9 +24,10 @@ import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified SharedLogic.Person as SP
+import Storage.Beam.Sos ()
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SavedReqLocation as QSRL
@@ -87,7 +88,7 @@ getPersonStats (personId, _) = do
   completedRidesInLast30DaysCount <- runInReplica $ QRide.countRidesFromDateToNowByRiderId personId (negate days30 `addUTCTime` now)
   latestSearch <- runInReplica $ QSR.findLatestSearchRequest personId
   decEmail <- decrypt `mapM` person.email
-  emergencyContactsNum <- length <$> runInReplica (QPDEN.findAllByPersonId personId)
+  emergencyContactsNum <- length <$> runInReplica (QPDEN.findAllByPersonId (cast personId))
   let userCancellationRate =
         fromIntegral personStats.userCancelledRides
           / fromIntegral (personStats.userCancelledRides + personStats.completedRides)

@@ -1,11 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.PersonDefaultEmergencyNumber where
+module Safety.Domain.Types.PersonDefaultEmergencyNumber where
 
 import Data.Aeson
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Person
+import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -13,23 +12,23 @@ import qualified Safety.Domain.Types.Common
 import qualified Tools.Beam.UtilsTH
 
 data PersonDefaultEmergencyNumberE e = PersonDefaultEmergencyNumber
-  { contactPersonId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+  { contactPersonId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Common.Person),
     createdAt :: Kernel.Prelude.UTCTime,
     enableForFollowing :: Kernel.Prelude.Bool,
     enableForShareRide :: Kernel.Prelude.Bool,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Common.Merchant),
     mobileCountryCode :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     name :: Kernel.Prelude.Text,
-    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    personId :: Kernel.Types.Id.Id Safety.Domain.Types.Common.Person,
     priority :: Kernel.Prelude.Int,
     shareTripWithEmergencyContactOption :: Kernel.Prelude.Maybe Safety.Domain.Types.Common.RideShareOptions
   }
   deriving (Generic)
 
-type PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberE 'AsEncrypted
+type PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberE ('AsEncrypted)
 
-type DecryptedPersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberE 'AsUnencrypted
+type DecryptedPersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberE ('AsUnencrypted)
 
 instance EncryptedItem PersonDefaultEmergencyNumber where
   type Unencrypted PersonDefaultEmergencyNumber = (DecryptedPersonDefaultEmergencyNumber, HashSalt)

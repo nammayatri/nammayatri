@@ -13,7 +13,8 @@
 -}
 
 module SharedLogic.MessageBuilder
-  ( BuildSendOTPMessageReq (..),
+  ( buildSendSmsReq,
+    BuildSendOTPMessageReq (..),
     buildSendOTPMessage,
     WelcomeToPlatformMessageReq (..),
     buildWelcomeToPlatformMessage,
@@ -52,6 +53,8 @@ module SharedLogic.MessageBuilder
     buildDriverPayoutMessage,
     BuildDocumentExpiryReminderMessageReq (..),
     buildDocumentExpiryReminderMessage,
+    BuildSOSAlertMessageReq (..),
+    buildSOSAlertMessage,
   )
 where
 

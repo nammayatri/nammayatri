@@ -42,7 +42,6 @@ import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.App
 import Kernel.Utils.Common
-import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth
@@ -118,7 +117,6 @@ runRiderApp' appCfg = do
         )
           >> L.setOption KafkaConn appEnv.kafkaProducerTools
           >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
-          >> L.setOption KBT.Tables KUC.defaultTableData
       )
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
