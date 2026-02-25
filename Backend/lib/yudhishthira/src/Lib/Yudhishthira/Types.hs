@@ -76,6 +76,8 @@ module Lib.Yudhishthira.Types
     UiConfigGetVersionResponse (..),
     GetPatchedElementReq (..),
     GetPatchedElementResp (..),
+    AlwaysOnPatchInfo (..),
+    AlwaysOnListResp (..),
   )
 where
 
@@ -456,7 +458,8 @@ data ConfigDetailsResp = ConfigDetailsResp
     percentageRollout :: Int,
     version :: Int,
     configPatch :: [Value],
-    isBasePatch :: Bool
+    isBasePatch :: Bool,
+    canRevert :: Bool
   }
   deriving (Show, Read, Generic, ToSchema, ToJSON, FromJSON)
 
@@ -475,6 +478,21 @@ data GetPatchedElementResp = GetPatchedElementResp
   { patchedElement :: Maybe Value
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data AlwaysOnPatchInfo = AlwaysOnPatchInfo
+  { version :: Int,
+    order :: Int,
+    configPatch :: [Value],
+    versionDescription :: Maybe Text
+  }
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+
+data AlwaysOnListResp = AlwaysOnListResp
+  { baseVersion :: Maybe Int,
+    baseDescription :: Maybe Text,
+    alwaysOnPatches :: [AlwaysOnPatchInfo]
+  }
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 
 data AppDynamicLogicReq = AppDynamicLogicReq
   { rules :: [Value],
@@ -500,7 +518,8 @@ data GetLogicsResp = GetLogicsResp
   { domain :: LogicDomain,
     version :: Int,
     description :: Maybe Text,
-    logics :: [Value]
+    logics :: [Value],
+    experimentStatus :: Maybe ExperimentStatus
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -598,7 +617,9 @@ type AppDynamicLogicVersionResp = [AppDynamicLogicVersion]
 
 data AppDynamicLogicVersion = AppDynamicLogicVersion
   { version :: Int,
-    description :: Maybe Text
+    description :: Maybe Text,
+    experimentStatus :: Maybe ExperimentStatus,
+    canRevert :: Bool
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

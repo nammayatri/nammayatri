@@ -34,6 +34,7 @@ withFlowHandlerAPI ::
   ( Metrics.CoreMetrics (FlowR r),
     HasField "isShuttingDown" r (TMVar ()),
     HasField "url" r (Maybe Text),
+    HasField "txnId" r (Maybe Text),
     Log (FlowR r)
   ) =>
   FlowR r a ->

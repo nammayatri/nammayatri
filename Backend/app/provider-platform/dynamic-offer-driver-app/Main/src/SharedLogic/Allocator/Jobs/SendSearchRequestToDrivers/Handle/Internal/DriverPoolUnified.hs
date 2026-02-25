@@ -20,6 +20,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
@@ -43,8 +44,6 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverPlan as QDriverPlan
 import qualified Storage.Queries.RiderDriverCorrelation as QFavDrivers
 import Tools.Maps as Maps
-import Kernel.Storage.Clickhouse.Config
-
 
 getNextDriverPoolBatch ::
   ( EncFlow m r,

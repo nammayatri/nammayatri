@@ -80,12 +80,12 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..), filterByService)
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PD
@@ -771,7 +771,8 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
   let collectMMIData = fromMaybe False riderConfig.collectMMIRouteData
   when collectMMIData $ do
     fork "calling mmi directions api" $ do
-      mmiConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
+      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+      mmiConfigs <- filterByService allMSC (DMSC.MapsService MapsK.MMI) & fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
       case mmiConfigs.serviceConfig of
         DMSC.MapsServiceConfig mapsCfg -> do
           routeResp <- MapsRoutes.getRoutes (Just searchRequestId.getId) True mapsCfg request
@@ -783,7 +784,8 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
   shouldCollectRouteData <- asks (.collectRouteData)
   when shouldCollectRouteData $ do
     fork "calling next billion directions api" $ do
-      nextBillionConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.NextBillion) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
+      allMSC' <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+      nextBillionConfigs <- filterByService allMSC' (DMSC.MapsService MapsK.NextBillion) & fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
       case nextBillionConfigs.serviceConfig of
         DMSC.MapsServiceConfig mapsCfg -> do
           case mapsCfg of

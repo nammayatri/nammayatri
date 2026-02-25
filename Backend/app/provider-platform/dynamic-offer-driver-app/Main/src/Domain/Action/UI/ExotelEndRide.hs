@@ -25,6 +25,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Beckn.Ack
@@ -35,7 +36,6 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.PersonExtra as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import Kernel.Storage.Clickhouse.Config
 
 type AckResp = AckResponse
 

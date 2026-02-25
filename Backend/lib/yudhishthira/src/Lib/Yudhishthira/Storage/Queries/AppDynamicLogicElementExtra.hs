@@ -12,9 +12,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement as Beam
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
-import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement
 import Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicElement
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement
 import Sequelize as Se
 
 -- Extra code goes here --

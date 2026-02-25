@@ -41,7 +41,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (DbHash, encrypt, getDbHash, decrypt)
+import Kernel.External.Encryption (DbHash, decrypt, encrypt, getDbHash)
 import Kernel.Prelude hiding (null)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))

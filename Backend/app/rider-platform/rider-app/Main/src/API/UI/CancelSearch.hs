@@ -13,11 +13,12 @@ import Servant hiding (throwError)
 import SharedLogic.Cancel
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
 import Tools.Constants
-import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import Tools.Error
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   "estimate"
@@ -55,7 +56,7 @@ rejectUpgrade (personId, merchantId) estimateId = withFlowHandlerAPIPersonId per
   let personTags = fromMaybe [] person.customerNammaTags
   unless (rejectUpgradeTag `Yudhishthira.elemTagNameValue` personTags) $ do
     rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry (cast person.merchantOperatingCityId) rejectUpgradeTag
-    QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
+    CQPerson.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
   cancelSearch' (personId, merchantId) estimateId
 
 cancelSearch' :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow CancelAPIResponse

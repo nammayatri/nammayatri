@@ -110,7 +110,7 @@ data HandlerEnv = HandlerEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
-txnId :: Maybe Text,
+    txnId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     singleBatchProcessingTempDelay :: NominalDiffTime,
     enableAPILatencyLogging :: Bool,

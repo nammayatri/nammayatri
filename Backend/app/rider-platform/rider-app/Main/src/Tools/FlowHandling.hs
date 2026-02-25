@@ -5,17 +5,21 @@ where
 
 import qualified Domain.Types.Person as Person
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.ConfigPilot.Interface.Getter (PersonIdKey (..))
 
 withFlowHandlerAPIPersonId :: Id Person.Person -> Flow a -> FlowHandler a
 withFlowHandlerAPIPersonId personId action = withFlowHandlerAPI $ do
   mbTxnId <- getTxnIdForPerson personId
-  case mbTxnId of
-    Just txnId' -> local (\env -> env {txnId = Just txnId'}) action
-    Nothing -> action
+  L.setOptionLocal PersonIdKey (getId personId)
+  let modifyEnv env =
+        env{txnId = maybe env.txnId Just mbTxnId
+           }
+  local modifyEnv action
 
 getTxnIdForPerson :: Id Person.Person -> Flow (Maybe Text)
 getTxnIdForPerson personId = Hedis.get (mkPersonTxnIdKey personId)

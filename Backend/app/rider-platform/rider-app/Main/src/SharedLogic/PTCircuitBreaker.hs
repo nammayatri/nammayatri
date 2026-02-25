@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module SharedLogic.PTCircuitBreaker
   ( PTMode (..),
     APIType (..),
@@ -51,9 +53,9 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.Queries.PTCircuitBreakerHistory as QPTCBH
 
 -- | Threshold configuration for triggering circuit breaker

@@ -28,10 +28,10 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fork, fromMaybeM, getCurrentTime)
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.BookingCancellationReason as CHBCR
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QP
 import qualified Storage.Queries.SafetySettings as QSafety

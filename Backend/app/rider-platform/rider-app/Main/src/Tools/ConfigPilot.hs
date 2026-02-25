@@ -20,24 +20,29 @@ import qualified Lib.Yudhishthira.Types as LYTU
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.FRFSConfig as SCFRFS
-import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as SCMMPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as SCMPC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.MerchantConfig as SCMC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRN
 import qualified Storage.CachedQueries.UiRiderConfig as SCU
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
+import Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.Queries.BecknConfig as SQBC
+import qualified Storage.Queries.Exophone as SQExo
 import qualified Storage.Queries.FRFSConfig as SQFRFS
 import qualified Storage.Queries.MerchantConfig as SQMC
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
+import qualified Storage.Queries.MerchantServiceConfig as SQMSC
+import qualified Storage.Queries.MerchantServiceUsageConfig as SQMSUC
 import qualified Storage.Queries.PayoutConfig as SQPC
 import qualified Storage.Queries.RideRelatedNotificationConfig as SQRRN
 import qualified Storage.Queries.RiderConfig as SQR
 import qualified Storage.Queries.UiRiderConfig as SQU
 import qualified Tools.DynamicLogic as DynamicLogic
-
-
-
 
 returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYTU.LogicDomain -> Id LYTU.MerchantOperatingCity -> Id LYTU.Merchant -> Kernel.Types.Beckn.Context.City -> m LYTU.TableDataResp
 returnConfigs cfgType merchantOpCityId merchantId opCity = do
@@ -54,9 +59,21 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
     LYTU.RIDER_CONFIG LYTU.MerchantConfig -> do
       merchantCfg <- SCMC.findAllByMerchantOperatingCityId (cast merchantOpCityId) (Just [])
       return LYTU.TableDataResp {configs = map A.toJSON merchantCfg}
+    LYTU.RIDER_CONFIG LYTU.MerchantServiceUsageConfig -> do
+      msucCfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList msucCfg)}
+    LYTU.RIDER_CONFIG LYTU.MerchantServiceConfig -> do
+      mscCfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON mscCfgs}
+    LYTU.RIDER_CONFIG LYTU.BecknConfig -> do
+      bcCfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON bcCfgs}
     LYTU.RIDER_CONFIG LYTU.MerchantPushNotification -> do
-      merchantPushNotification <- SCMMPN.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])
-      return LYTU.TableDataResp {configs = map A.toJSON merchantPushNotification}
+      mpnCfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON mpnCfgs}
+    LYTU.RIDER_CONFIG LYTU.Exophone -> do
+      exoCfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON exoCfgs}
     LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
       frfsConfig <- SCFRFS.findByMerchantOperatingCityId (cast merchantOpCityId) (Just [])
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList frfsConfig)}
@@ -81,6 +98,14 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdate SQMPN.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantPushNotification)) SQMPN.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
       handleConfigUpdate (normalizeMaybeFetch SQFRFS.findByMerchantOperatingCityId) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.FRFSConfig)) SQFRFS.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.MerchantServiceUsageConfig -> do
+      handleConfigUpdateViaJson (normalizeMaybeFetchJson SQMSUC.findByMerchantOperatingCityId) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantServiceUsageConfig)) SQMSUC.updateMerchantServiceUsageConfig (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.MerchantServiceConfig -> do
+      handleConfigUpdateViaJson SQMSC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantServiceConfig)) SQMSC.upsertMerchantServiceConfig (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.BecknConfig -> do
+      handleConfigUpdateViaJson (SQBC.findAllByMerchantOperatingCityId . Just) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.BecknConfig)) SQBC.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.Exophone -> do
+      handleConfigUpdateViaJson SQExo.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.Exophone)) SQExo.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = maybe "" getId mbMerchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       handleConfigUpdateWithExtraDimensionsUi SQU.getUiConfig (SCU.clearCache (cast merchantOpCityId) dt pt) SCU.updateByPrimaryKey (cast merchantOpCityId) uiConfigReq
@@ -167,6 +192,42 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
 
     normalizeMaybeFetch :: (MonadFlow m, FromJSON a, ToJSON a, Eq a, Show a) => (Id MerchantOperatingCity -> m (Maybe a)) -> Id MerchantOperatingCity -> m [a]
     normalizeMaybeFetch fetchFunc merchantOpCityId' = do
+      result <- fetchFunc merchantOpCityId'
+      pure $ maybeToList result
+
+    -- | Variant of handleConfigUpdate that uses JSON-based equality comparison.
+    -- Useful for config types that don't derive Eq.
+    handleConfigUpdateViaJson ::
+      (MonadFlow m, FromJSON a, ToJSON a) =>
+      (Id MerchantOperatingCity -> m [a]) ->
+      m () ->
+      (a -> m ()) ->
+      Id MerchantOperatingCity ->
+      m ()
+    handleConfigUpdateViaJson fetchFunc clearCacheFunc updateFunc merchantOpCityId' = do
+      configs <- fetchFunc merchantOpCityId'
+      let configWrapper = convertToConfigWrapper configs
+      patchedConfigs <- applyPatchToConfig configWrapper
+      configsToUpdateRes <- getConfigsToUpdateViaJson configWrapper patchedConfigs
+      mapM_ updateFunc configsToUpdateRes
+      clearCacheFunc
+
+    getConfigsToUpdateViaJson :: (MonadFlow m, FromJSON a, ToJSON a) => [LYTU.Config a] -> [LYTU.Config a] -> m [a]
+    getConfigsToUpdateViaJson configWrapper cfgs = do
+      let sortedCfgs = sortOn LYTU.identifier cfgs
+      pure $
+        catMaybes $
+          zipWith
+            ( \cfg1 cfg2 ->
+                if cfg1.identifier == cfg2.identifier && A.toJSON cfg1.config /= A.toJSON cfg2.config
+                  then Just cfg2.config
+                  else Nothing
+            )
+            configWrapper
+            sortedCfgs
+
+    normalizeMaybeFetchJson :: (MonadFlow m) => (Id MerchantOperatingCity -> m (Maybe a)) -> Id MerchantOperatingCity -> m [a]
+    normalizeMaybeFetchJson fetchFunc merchantOpCityId' = do
       result <- fetchFunc merchantOpCityId'
       pure $ maybeToList result
 

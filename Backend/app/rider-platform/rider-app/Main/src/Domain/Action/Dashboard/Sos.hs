@@ -26,14 +26,15 @@ import qualified Kernel.External.SOS.Types as SOS
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Getter (getConfig)
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SosLocationTracking as SOSLocation
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..), filterByService)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Sos as QSos
@@ -123,16 +124,17 @@ callExternalSOS sosId = do
   merchantOpCityId <- sos.merchantOperatingCityId & fromMaybeM (InvalidRequest "SOS record missing merchantOperatingCityId")
   merchantId <- sos.merchantId & fromMaybeM (InvalidRequest "SOS record missing merchantId")
   person <- QP.findById sos.personId >>= fromMaybeM (PersonDoesNotExist sos.personId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  riderConfig <- getConfig (RiderDimensions merchantOpCityId.getId) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case riderConfig.externalSOSConfig of
     Nothing -> throwError $ InvalidRequest "External SOS config not configured for this city"
     Just sosConfig -> do
       when (sosConfig.triggerSource /= DRC.DASHBOARD) $
         throwError $ InvalidRequest "External SOS trigger source is not DASHBOARD for this city"
       let sosServiceType = flowToSOSService sosConfig.flow
+      allMSC <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       merchantSvcCfg <-
-        QMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (DMSC.SOSService sosServiceType)
-          >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "SOS" (show sosServiceType))
+        filterByService allMSC (DMSC.SOSService sosServiceType)
+          & fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "SOS" (show sosServiceType))
       case merchantSvcCfg.serviceConfig of
         DMSC.SOSServiceConfig specificConfig -> do
           mbRide <- QRide.findById sos.rideId

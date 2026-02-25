@@ -57,12 +57,12 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as TB
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.BusinessHour as QBusinessHour
 import qualified Storage.Queries.DraftTicketChange as QDTC
 import qualified Storage.Queries.DraftTicketChangeHistory as QDTCH
 import qualified Storage.Queries.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.ServiceCategory as QServiceCategory
 import qualified Storage.Queries.ServicePeopleCategory as QServicePeopleCategory
 import qualified Storage.Queries.TicketPlace as QTicketPlace

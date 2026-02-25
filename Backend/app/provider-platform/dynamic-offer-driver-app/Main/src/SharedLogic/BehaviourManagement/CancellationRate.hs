@@ -274,12 +274,13 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
       -- Uses already-calculated rates to avoid redundant queries
       (fortnightlyCancellationRate, _fortnightlyAssignedCount) <- getCancellationRateOfDays 14 windowSize
       (monthlyCancellationRate, _monthlyAssignedCount) <- getCancellationRateOfDays 28 windowSize
-      let cancellationRates = CancellationPercentageTags
-            { daily = dailyCancellationRate,
-              weekly = weeklyCancellationRate,
-              fortnightly = fortnightlyCancellationRate,
-              monthly = monthlyCancellationRate
-            }
+      let cancellationRates =
+            CancellationPercentageTags
+              { daily = dailyCancellationRate,
+                weekly = weeklyCancellationRate,
+                fortnightly = fortnightlyCancellationRate,
+                monthly = monthlyCancellationRate
+              }
       fork "Update cancellation percentage tags daily" $ do
         catch (updateDriverCancellationPercentageTagsDaily driver.merchantOperatingCityId driver.id cancellationRates) $ \(err :: SomeException) -> do
           logError $ "Failed to update cancellation percentage tags for driver " <> driver.id.getId <> ": " <> show err

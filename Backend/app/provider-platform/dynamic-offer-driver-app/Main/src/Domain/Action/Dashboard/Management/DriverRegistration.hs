@@ -30,7 +30,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationTriggerReminder,
     postDriverRegistrationVerifyBankAccount,
     getDriverRegistrationInfoBankAccount,
-    postDriverRegistrationDeleteBankAccount
+    postDriverRegistrationDeleteBankAccount,
   )
 where
 
@@ -1305,4 +1305,3 @@ postDriverRegistrationDeleteBankAccount merchantShortId opCity driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
   _ <- BankAccountVerification.deleteBankAccount (personId, merchant.id, merchantOpCityId)
   pure Success
-

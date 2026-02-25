@@ -105,7 +105,7 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
-txnId :: Maybe Text,
+    txnId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     inMemEnv :: CF.InMemEnv,
     url :: Maybe Text,

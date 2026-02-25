@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module SharedLogic.Scheduler.Jobs.MetroBusinessHour where
 
 import qualified BecknV2.OnDemand.Enums as BecknSpec

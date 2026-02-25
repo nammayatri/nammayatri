@@ -40,8 +40,8 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QR
 import Tools.Auth
-import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import Tools.Error
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 
 type API =
   SoftCancelAPI

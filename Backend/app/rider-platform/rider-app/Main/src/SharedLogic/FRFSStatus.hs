@@ -54,7 +54,7 @@ import SharedLogic.Offer as SOffer
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.BecknConfig as CQBC
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..), filterByDomain, filterByDomainAndVehicleWithFallback)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
@@ -67,7 +67,7 @@ import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingP
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.Person as QP
+import qualified Storage.CachedQueries.Person as CQPerson
 import Tools.Error
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
@@ -86,7 +86,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   logInfo $ "frfsBookingStatus for booking: " <> show booking'
   let bookingId = booking'.id
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking'.merchantOperatingCityId merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking'.merchantOperatingCityId.getId})
+  bapConfig <- filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType) & fromMaybeM (InternalError "Beckn Config not found")
   unless (personId == booking'.riderId) $ throwError AccessDenied
   now <- getCurrentTime
   let validTillWithBuffer = addUTCTime 5 booking'.validTill
@@ -252,7 +253,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
         when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
           riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-          becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId merchantId_ "FRFS" merchantOperatingCity.id
+          allBecknConfigsFRFS <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+          let becknConfigs = filterByDomain allBecknConfigsFRFS "FRFS"
           let initTTLs = map (.initTTLSec) becknConfigs
           let maxInitTTL = intToNominalDiffTime $ case catMaybes initTTLs of
                 [] -> 0 -- 30 minutes in seconds if all are Nothing
@@ -526,7 +528,7 @@ addPaymentoffersTags totalPrice person = do
               -- Create new tags and add them after removing old ones
               newTags = map LYT.TagNameValueExpiry offerTags
               updatedTags = filteredCurrentTags <> newTags
-          QP.updateCustomerTags (Just updatedTags) person.id
+          CQPerson.updateCustomerTags (Just updatedTags) person.id
           logInfo $ "Added payment offer tags for person: " <> person.id.getId <> ", tags: " <> show offerTags
   where
     createPaymentOfferTags :: [Payment.OfferResp] -> [Text]

@@ -13,8 +13,18 @@ import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout
 import Sequelize as Se
 
 -- Extra code goes here --
-deleteApartFromBaseVersion :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
-deleteApartFromBaseVersion cityId domain = deleteWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId cityId), Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.isBaseVersion $ Se.Not (Se.Eq (Just True))]]
+-- | Deletes non-base rollout rows that are active (RUNNING or NULL status).
+-- Preserves: base version, DISCARDED (aborted), CONCLUDED (demoted bases), REVERTED rows.
+deleteActiveNonBaseRollouts :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
+deleteActiveNonBaseRollouts cityId domain =
+  deleteWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId cityId),
+          Se.Is Beam.domain $ Se.Eq domain,
+          Se.Or [Se.Is Beam.isBaseVersion (Se.Eq (Just False)), Se.Is Beam.isBaseVersion $ Se.Eq Nothing],
+          Se.Or [Se.Is Beam.experimentStatus (Se.Eq (Just Lib.Yudhishthira.Types.RUNNING)), Se.Is Beam.experimentStatus $ Se.Eq Nothing]
+        ]
+    ]
 
 delete :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
 delete cityId domain = deleteWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId cityId), Se.Is Beam.domain $ Se.Eq domain]]

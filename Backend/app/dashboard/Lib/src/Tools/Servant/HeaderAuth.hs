@@ -72,6 +72,7 @@ instance
     VerificationPayload (VerificationPayloadType verify) payload,
     KnownSymbol header,
     HasLog r,
+    HasTxnId r,
     HasCoreMetrics r
   ) =>
   HasServer (HeaderAuthWithPayload header verify payload :> api) ctx

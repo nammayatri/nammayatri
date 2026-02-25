@@ -27,11 +27,6 @@ instance ConfigTypeInfo 'FRFSConfig where
   configTypeValue = FRFSConfig
   sConfigType = SFRFSConfig
 
-instance ConfigTypeInfo 'MerchantServiceUsageConfig where
-  type DimensionsFor 'MerchantServiceUsageConfig = CommonDimensions
-  configTypeValue = MerchantServiceUsageConfig
-  sConfigType = SMerchantServiceUsageConfig
-
 instance ConfigTypeInfo 'HotSpotConfig where
   type DimensionsFor 'HotSpotConfig = CommonDimensions
   configTypeValue = HotSpotConfig
@@ -51,11 +46,6 @@ instance ConfigTypeInfo 'MerchantMessage where
   type DimensionsFor 'MerchantMessage = CommonDimensions
   configTypeValue = MerchantMessage
   sConfigType = SMerchantMessage
-
-instance ConfigTypeInfo 'MerchantPushNotification where
-  type DimensionsFor 'MerchantPushNotification = CommonDimensions
-  configTypeValue = MerchantPushNotification
-  sConfigType = SMerchantPushNotification
 
 instance ConfigTypeInfo 'LeaderBoardConfig where
   type DimensionsFor 'LeaderBoardConfig = CommonDimensions

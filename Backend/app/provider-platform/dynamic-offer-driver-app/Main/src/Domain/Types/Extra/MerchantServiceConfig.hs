@@ -18,13 +18,13 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types
 import Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payout.Interface as Payout
+import qualified Kernel.External.Plasma as Plasma
 import Kernel.External.SMS as Sms
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.Types
 import Kernel.External.Whatsapp.Interface as Whatsapp
-import qualified Kernel.External.Plasma as Plasma
 import Kernel.Prelude
 import Lib.Dashcam.Domain.Interface as DashcamInter
 import Lib.Dashcam.Domain.Types as Dashcam

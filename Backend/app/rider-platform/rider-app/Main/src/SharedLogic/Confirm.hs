@@ -57,11 +57,12 @@ import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Payment as SPayment
 -- import SharedLogic.Type
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Exophone as CQExophone
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..), filterByService)
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
@@ -484,8 +485,9 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOperatingCityId = do
-  merchantServiceUsageConfig <- CMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-  exophones <- CQExophone.findByMerchantOperatingCityIdAndService merchantOperatingCityId merchantServiceUsageConfig.getExophone
+  merchantServiceUsageConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  allExophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  let exophones = filterByService allExophones merchantServiceUsageConfig.getExophone
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantOperatingCityId.getId
     e : es -> pure $ e :| es

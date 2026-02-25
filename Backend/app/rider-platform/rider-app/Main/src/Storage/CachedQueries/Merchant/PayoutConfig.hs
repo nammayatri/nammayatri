@@ -1,4 +1,11 @@
-module Storage.CachedQueries.Merchant.PayoutConfig where
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
+module Storage.CachedQueries.Merchant.PayoutConfig
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ Use Storage.ConfigPilot.Config.PayoutConfig (getConfig) instead for reads."
+    #-}
+  where
 
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.PayoutConfig

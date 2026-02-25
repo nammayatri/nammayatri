@@ -25,7 +25,8 @@ import qualified Lib.JourneyModule.State.Types as JMState
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
-import qualified Storage.CachedQueries.BecknConfig as CQBC
+import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..), filterByDomainAndVehicleWithFallback)
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -54,7 +55,7 @@ cancelJourney booking = do
     JM.checkAndMarkTerminalJourneyStatus journey updatedLegStatus
 
 handleCancelledStatus :: Merchant.Merchant -> DFRFSTicketBooking.FRFSTicketBooking -> HighPrecMoney -> HighPrecMoney -> Text -> Bool -> Flow ()
-handleCancelledStatus merchant booking refundAmount cancellationCharges messageId counterCancellationPossible = do
+handleCancelledStatus _merchant booking refundAmount cancellationCharges messageId counterCancellationPossible = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   paymentBooking <- QTBP.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
@@ -80,9 +81,10 @@ handleCancelledStatus merchant booking refundAmount cancellationCharges messageI
   void $ CQP.clearPSCache booking.riderId
   void $ sendTicketCancelSMS mRiderNumber person.mobileCountryCode booking fareParameters
   handleGoogleWalletStatusUpdate booking
+  allBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
   bapConfig <-
-    CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId merchant.id (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)
-      >>= fromMaybeM (InternalError "Beckn Config not found")
+    filterByDomainAndVehicleWithFallback allBecknConfigs (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)
+      & fromMaybeM (InternalError "Beckn Config not found")
   updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
 
 checkRefundAndCancellationCharges :: Id DFRFSTicketBooking.FRFSTicketBooking -> HighPrecMoney -> HighPrecMoney -> Flow ()

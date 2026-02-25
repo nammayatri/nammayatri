@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Domain.Action.Beckn.Common
   ( module Domain.Action.Beckn.Common,
@@ -105,13 +106,14 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..), filterByCityIdAndVehicleCategory)
 import qualified Storage.CachedQueries.MerchantConfig as CMC
+import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRRN
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -644,7 +646,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
 
     sendRideEndOTPMessage = fork "sending ride end otp sms" $ do
       let merchantOperatingCityId = booking.merchantOperatingCityId
-      merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       if merchantConfig.enableDashboardSms
         then do
           case endOtp_ of
@@ -854,7 +856,7 @@ addOffersNammaTags ride person = do
   tags <- LYDL.computeNammaTagsWithExpiryAndDebugLog (cast person.merchantOperatingCityId) Yudhishthira.RideEndOffers (Y.EndRideOffersTagData customerData rideData)
   newTags <- modifiedNewNammaTags tags (fromMaybe [] person.customerNammaTags) now
   when (not $ null newTags) $ do
-    QP.updateCustomerTags (Just $ (fromMaybe [] person.customerNammaTags) <> newTags) person.id
+    CQPerson.updateCustomerTags (Just $ (fromMaybe [] person.customerNammaTags) <> newTags) person.id
     pushToKafka (RideEndOffersKafkaData ride.id person.id newTags now) "customer-ride-end-offers" person.id.getId
     Notify.notifyOnRideEndOffer person
   where
@@ -1069,7 +1071,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
           person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
           let existingTags = fromMaybe [] person.customerNammaTags
           let updatedTags = existingTags <> tagsWithExpiry
-          QP.updateCustomerTags (Just updatedTags) booking.riderId
+          CQPerson.updateCustomerTags (Just updatedTags) booking.riderId
           let tags = fromMaybe [] mbNammaTags
           when (validCustomerCancellation `elem` tags) $ do
             windowSize <- CCR.getWindowSize booking.merchantOperatingCityId
@@ -1103,7 +1105,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
             let personTags = fromMaybe [] person.customerNammaTags
             unless (rejectUpgradeTag `Yudhishthira.elemTagNameValue` personTags) $ do
               rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry (cast booking.merchantOperatingCityId) rejectUpgradeTag
-              QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
+              CQPerson.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
         _ -> pure ()
 
 checkAndUpdateJourneyTerminalStatusForNormalRide :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DRB.Booking -> DJourney.JourneyStatus -> m ()
@@ -1344,7 +1346,8 @@ customerReferralPayout ::
 customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantOperatingCityId = do
   let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
   logDebug $ "Ride End referral payout : vehicleCategory : " <> show vehicleCategory <> " isValidRide: " <> show isValidRide
-  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory merchantOperatingCityId vehicleCategory Nothing
+  allPayoutCfgs <- getConfig (PayoutDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, txnId = Nothing, payoutType = ""})
+  let mbPayoutConfig = filterByCityIdAndVehicleCategory allPayoutCfgs vehicleCategory Nothing
   case mbPayoutConfig of
     Just payoutConfig -> do
       whenJust person_.referredByCustomer $ \referredByCustomerId -> do

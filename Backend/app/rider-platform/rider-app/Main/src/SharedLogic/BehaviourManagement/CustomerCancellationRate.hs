@@ -29,9 +29,9 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified SharedLogic.JobScheduler as RJS
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.BookingExtra as QBExtra
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.PersonExtra as QPExtra

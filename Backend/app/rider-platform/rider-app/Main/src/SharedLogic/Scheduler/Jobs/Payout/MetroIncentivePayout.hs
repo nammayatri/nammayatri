@@ -39,7 +39,7 @@ import SharedLogic.JobScheduler
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..), filterByPayoutEnabledAndEntity)
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
@@ -65,7 +65,8 @@ sendCustomerRefund Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       merchantId = jobData.merchantId
       statusForRetry = jobData.statusForRetry
       toScheduleNextPayout = jobData.toScheduleNextPayout
-  payoutConfig <- CPC.findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity merchantOpCityId True METRO_TICKET_CASHBACK Nothing
+  allPayoutCfgs <- getConfig (PayoutDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, txnId = Nothing, payoutType = ""})
+  let payoutConfig = filterByPayoutEnabledAndEntity allPayoutCfgs True METRO_TICKET_CASHBACK
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InternalError $ "RiderConfig not found for mocId: " <> show merchantOpCityId.getId)
   let rescheduleTimeDiff = payoutConfig <&> (.timeDiff)
   eligibleBookingsList <- QFTB.findAllByCashbackStatus riderConfig.payoutBatchSize (Just 0) (Just statusForRetry)

@@ -36,7 +36,7 @@ data AppEnv = AppEnv
     version :: DeploymentVersion,
     requestId :: Maybe Text,
     sessionId :: Maybe Text,
-txnId :: Maybe Text,
+    txnId :: Maybe Text,
     url :: Maybe Text
   }
   deriving (Generic)

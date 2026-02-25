@@ -46,9 +46,9 @@ import SharedLogic.NyRegularSubscriptionHasher (calculateSubscriptionSchedulingH
 import qualified SharedLogic.Search as SLS
 import qualified SharedLogic.Search as Search
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Queries.Estimate as QEstimate
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription

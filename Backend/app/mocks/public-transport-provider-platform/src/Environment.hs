@@ -71,7 +71,7 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
-txnId :: Maybe Text,
+    txnId :: Maybe Text,
     requestId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     url :: Maybe Text

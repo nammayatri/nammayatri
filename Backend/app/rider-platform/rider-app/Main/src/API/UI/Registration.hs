@@ -51,8 +51,8 @@ import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as Person
 import Tools.Auth (TokenAuth)
-import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import Tools.Error
+import Tools.FlowHandling (withFlowHandlerAPIPersonId)
 import Tools.SignatureAuth (SignatureAuth, SignatureAuthResult (..))
 import Tools.SignatureResponseBody (SignedResponse)
 

@@ -8,6 +8,7 @@ module Domain.Action.Dashboard.Management.NammaTag
     postNammaTagTagVerify,
     postNammaTagTagUpdate,
     deleteNammaTagTagDelete,
+    getNammaTagTagAll,
     postNammaTagQueryCreate,
     postNammaTagQueryUpdate,
     deleteNammaTagQueryDelete,
@@ -29,6 +30,7 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagConfigPilotAllConfigs,
     getNammaTagConfigPilotConfigDetails,
     getNammaTagConfigPilotGetTableData,
+    getNammaTagConfigPilotAlwaysOnList,
     postNammaTagConfigPilotActionChange,
     getNammaTagConfigPilotAllUiConfigs,
     getNammaTagConfigPilotUiConfigDetails,
@@ -69,8 +71,10 @@ import qualified Lib.Yudhishthira.SchemaInstances ()
 import Lib.Yudhishthira.SchemaTH
 import Lib.Yudhishthira.SchemaUtils
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
+import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNammaTagV2
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.Common as C
+import qualified Lib.Yudhishthira.Types.NammaTagV2
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.BehaviourManagement.GpsTollBehavior as GpsTollBehavior
@@ -181,6 +185,11 @@ deleteNammaTagTagDelete merchantShortId opCity tagName = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   YudhishthiraFlow.deleteTag (cast merchantOperatingCity.id) tagName
 
+getNammaTagTagAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow [Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2]
+getNammaTagTagAll merchantShortId opCity = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  QNammaTagV2.findAllByMerchantOperatingCityId (cast merchantOperatingCity.id)
+
 postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagQueryCreate _merchantShortId _opCity req = YudhishthiraFlow.postQueryCreate req
 
@@ -258,7 +267,10 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYT.LogicDomain -> Environment.Flow [LYT.GetLogicsResp]
-getNammaTagAppDynamicLogic _ _ = YudhishthiraFlow.getAppDynamicLogicForDomain
+getNammaTagAppDynamicLogic merchantShortId opCity mbVersion domain = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  YudhishthiraFlow.getAppDynamicLogicForDomain (cast merchantOpCityId) mbVersion domain
 
 postNammaTagRunJob ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -320,11 +332,11 @@ deleteNammaTagTimeBoundsDelete merchantShortId opCity domain name = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   YudhishthiraFlow.deleteTimeBounds (cast merchantOpCityId) domain name
 
-getNammaTagAppDynamicLogicGetLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Text -> LYT.LogicDomain -> Environment.Flow [LYT.LogicRolloutObject]
-getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity timeBound domain = do
+getNammaTagAppDynamicLogicGetLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Bool -> Maybe Text -> LYT.LogicDomain -> Environment.Flow [LYT.LogicRolloutObject]
+getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity activeOnly timeBound domain = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  YudhishthiraFlow.getLogicRollout (cast merchantOpCityId) timeBound domain
+  YudhishthiraFlow.getLogicRollout (cast merchantOpCityId) timeBound activeOnly domain
 
 postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> [LYT.LogicRolloutObject] -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
@@ -333,7 +345,10 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
   YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) rolloutReq TC.returnConfigs opCity
 
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYT.LogicDomain -> Environment.Flow LYT.AppDynamicLogicVersionResp
-getNammaTagAppDynamicLogicVersions _merchantShortId _opCity = YudhishthiraFlow.getAppDynamicLogicVersions
+getNammaTagAppDynamicLogicVersions merchantShortId opCity mbLimit mbOffset domain = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  YudhishthiraFlow.getAppDynamicLogicVersions (cast merchantOpCityId) mbLimit mbOffset domain
 
 getNammaTagAppDynamicLogicDomains :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow LYT.AppDynamicLogicDomainResp
 getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return LYT.allValues
@@ -476,6 +491,12 @@ getNammaTagConfigPilotConfigDetails _merchantShortId _opCity configType = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   YudhishthiraFlow.getNammaTagConfigPilotConfigDetails (cast merchantOpCityId) (LYT.DRIVER_CONFIG configType)
+
+getNammaTagConfigPilotAlwaysOnList :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.LogicDomain -> Environment.Flow LYT.AlwaysOnListResp
+getNammaTagConfigPilotAlwaysOnList merchantShortId opCity domain = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  YudhishthiraFlow.getNammaTagConfigPilotAlwaysOnList (cast merchantOpCityId) domain
 
 getNammaTagConfigPilotGetTableData :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigType -> Environment.Flow LYT.TableDataResp
 getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do

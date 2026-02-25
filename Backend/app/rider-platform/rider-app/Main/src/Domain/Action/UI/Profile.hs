@@ -103,10 +103,10 @@ import qualified SharedLogic.OTP as SOTP
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..), filterByCityIdAndVehicleCategory)
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.Disability as QD
@@ -360,7 +360,8 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY Nothing
+  allPayoutCfgs <- getConfig (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, merchantId = person.merchantId.getId, txnId = Nothing, payoutType = ""})
+  let mbPayoutConfig = filterByCityIdAndVehicleCategory allPayoutCfgs VehicleCategory.AUTO_CATEGORY Nothing
   let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   integratedBPPConfigs <-
     concatMapM

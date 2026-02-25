@@ -1,4 +1,3 @@
-
 module API.UI.Booking
   ( DBooking.BookingListRes,
     API,
@@ -137,4 +136,4 @@ generateInvoice (personId, merchantId) req = withFlowHandlerAPIPersonId personId
 
 -- | Optional: get payment status for payment-before-confirm booking. With Paytm EDC webhook, confirm is triggered server-side on success so polling is not required; use only for UI refresh or fallback if webhook is delayed.
 getRideBookingPaymentStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DPayment.PaymentStatusResp
-getRideBookingPaymentStatus bookingId authInfo = withFlowHandlerAPIPersonId personId $ DPayment.getRideBookingPaymentStatusByBookingId authInfo bookingId
+getRideBookingPaymentStatus bookingId (personId, merchantId) = withFlowHandlerAPIPersonId personId $ DPayment.getRideBookingPaymentStatusByBookingId (personId, merchantId) bookingId

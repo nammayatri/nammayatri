@@ -41,6 +41,11 @@ import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map, notElem)
+-- import qualified Lib.Yudhishthira.Event as Yudhishthira
+
+-- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
@@ -55,9 +60,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
--- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
--- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.Analytics as Analytics
@@ -95,7 +98,6 @@ import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
-import Kernel.Storage.Clickhouse.Config
 
 cancelRideImpl ::
   ( MonadFlow m,

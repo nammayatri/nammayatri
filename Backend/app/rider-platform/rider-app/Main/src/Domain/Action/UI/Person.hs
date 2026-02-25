@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (maskText)
 import qualified Lib.Yudhishthira.Tools.Utils as YUtils
+import qualified Lib.Yudhishthira.Types as YTypes
 
 data PersonAPIEntity = PersonAPIEntity
   { id :: Id Person,
@@ -73,6 +74,7 @@ makePersonAPIEntity Person {..} disability isSafetyCenterDisabled safetySettings
 data PersonCityInformation = PersonCityInformation
   { personId :: Id Person,
     currentCity :: Context.City,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    customerNammaTags :: Maybe [YTypes.TagNameValueExpiry]
   }
   deriving (Generic, Show, FromJSON, ToJSON)

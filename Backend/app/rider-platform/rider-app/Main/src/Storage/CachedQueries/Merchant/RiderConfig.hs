@@ -14,6 +14,10 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.RiderConfig
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ Use Storage.ConfigPilot.Config.RiderConfig (getConfig) instead for reads."
+    #-}
   ( create,
     clearCache,
     findByMerchantOperatingCityId,

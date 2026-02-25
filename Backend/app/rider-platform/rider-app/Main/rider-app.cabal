@@ -570,8 +570,12 @@ library
       Storage.Clickhouse.QuoteBreakup
       Storage.Clickhouse.Ride
       Storage.Clickhouse.Sos
+      Storage.ConfigPilot.Config.BecknConfig
       Storage.ConfigPilot.Config.CommonConfig
-      Storage.ConfigPilot.Config.DriverPoolConfig
+      Storage.ConfigPilot.Config.Exophone
+      Storage.ConfigPilot.Config.MerchantPushNotification
+      Storage.ConfigPilot.Config.MerchantServiceConfig
+      Storage.ConfigPilot.Config.MerchantServiceUsageConfig
       Storage.ConfigPilot.Config.PayoutConfig
       Storage.ConfigPilot.Config.RiderConfig
       Storage.ConfigPilot.Interface.Getter

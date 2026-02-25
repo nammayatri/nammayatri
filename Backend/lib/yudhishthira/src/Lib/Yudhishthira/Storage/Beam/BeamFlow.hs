@@ -17,6 +17,7 @@ module Lib.Yudhishthira.Storage.Beam.BeamFlow where
 import Kernel.Beam.Lib.UtilsTH as Reexport
 import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicAlwaysOn as BeamADAO
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement as BeamADLE
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout as BeamADLR
 import qualified Lib.Yudhishthira.Storage.Beam.ChakraQueries as BeamCQ
@@ -36,7 +37,8 @@ type BeamFlow m r =
   )
 
 type HasYudhishthiraTablesSchema =
-  ( HasSchemaName BeamADLR.AppDynamicLogicRolloutT,
+  ( HasSchemaName BeamADAO.AppDynamicLogicAlwaysOnT,
+    HasSchemaName BeamADLR.AppDynamicLogicRolloutT,
     HasSchemaName BeamADLE.AppDynamicLogicElementT,
     HasSchemaName BeamCQ.ChakraQueriesT,
     HasSchemaName BeamNT.NammaTagT,
