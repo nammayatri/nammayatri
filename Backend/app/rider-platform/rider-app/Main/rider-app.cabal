@@ -236,6 +236,7 @@ library
       Domain.Action.UI.Dispatcher
       Domain.Action.UI.DriverOffer
       Domain.Action.UI.EditLocation
+      Domain.Action.UI.EKDLiveCallFeedback
       Domain.Action.UI.Estimate
       Domain.Action.UI.EstimateBP
       Domain.Action.UI.FareBreakup
@@ -746,6 +747,7 @@ library
       API.Action.UI.DeletedPerson
       API.Action.UI.Dispatcher
       API.Action.UI.EditLocation
+      API.Action.UI.EKDLiveCallFeedback
       API.Action.UI.EstimateBP
       API.Action.UI.FavouriteDriver
       API.Action.UI.FollowRide
@@ -826,6 +828,7 @@ library
       API.Types.UI.DeletedPerson
       API.Types.UI.Dispatcher
       API.Types.UI.EditLocation
+      API.Types.UI.EKDLiveCallFeedback
       API.Types.UI.EstimateBP
       API.Types.UI.FavouriteDriver
       API.Types.UI.FollowRide
