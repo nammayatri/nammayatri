@@ -26,9 +26,12 @@ findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOpCityId) paymen
     [ Se.And
         ( [ Se.Is BeamP.merchantOpCityId $ Se.Eq merchantOpCityId,
             Se.Is BeamP.paymentMode $ Se.Eq paymentMode,
-            Se.Is BeamP.serviceName $ Se.Eq serviceName,
-            Se.Is BeamP.isFleetOwnerPlan $ Se.Eq mbIsFleetOwnerPlan
+            Se.Is BeamP.serviceName $ Se.Eq serviceName
           ]
+            <> ( case mbIsFleetOwnerPlan of
+                   Just True -> [Se.Is BeamP.isFleetOwnerPlan $ Se.Eq (Just True)]
+                   _ -> [Se.Or [Se.Is BeamP.isFleetOwnerPlan $ Se.Eq Nothing, Se.Is BeamP.isFleetOwnerPlan $ Se.Eq (Just False)]]
+               )
             <> ( case mbIsDeprecated of
                    Nothing -> []
                    Just isDeprecated -> [Se.Is BeamP.isDeprecated $ Se.Eq isDeprecated]
@@ -47,9 +50,12 @@ findByMerchantOpCityIdAndServiceName (Id merchantOpCityId) serviceName mbIsDepre
   findAllWithKV
     [ Se.And
         ( [ Se.Is BeamP.merchantOpCityId $ Se.Eq merchantOpCityId,
-            Se.Is BeamP.serviceName $ Se.Eq serviceName,
-            Se.Is BeamP.isFleetOwnerPlan $ Se.Eq mbIsFleetOwnerPlan
+            Se.Is BeamP.serviceName $ Se.Eq serviceName
           ]
+            <> ( case mbIsFleetOwnerPlan of
+                   Just True -> [Se.Is BeamP.isFleetOwnerPlan $ Se.Eq (Just True)]
+                   _ -> [Se.Or [Se.Is BeamP.isFleetOwnerPlan $ Se.Eq Nothing, Se.Is BeamP.isFleetOwnerPlan $ Se.Eq (Just False)]]
+               )
             <> ( case mbIsDeprecated of
                    Nothing -> []
                    Just isDeprecated -> [Se.Is BeamP.isDeprecated $ Se.Eq isDeprecated]
