@@ -63,15 +63,16 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
   merchantOperatingCity <- SMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  driverImages <- IQuery.findAllByPersonId transporterConfig personId
   now <- getCurrentTime
-  let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just personId, merchantOperatingCity, driverImages, transporterConfig, now}
+  let entity = IQuery.PersonEntity person
+  entityImages <- IQuery.findAllByEntityId transporterConfig entity
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
       language = if useDriverLanguage == Just True then fromMaybe merchantOperatingCity.language person.language else merchantOperatingCity.language
-  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus personId driverImagesInfo language useHVSdkForDL
-  (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus personId driverImagesInfo language
+  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus personId entityImagesInfo language useHVSdkForDL
+  (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus personId entityImagesInfo language
   (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
   let shouldActivateRc = True
-  SStatus.StatusRes' {..} <- SStatus.statusHandler' person driverImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs
+  SStatus.StatusRes' {..} <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs
 
   -- Fetch common documents
   commonDocumentsData <- QCommonDoc.findByDriverId (Just personId)
