@@ -45,6 +45,8 @@ data SpecialLocation = SpecialLocation
     linkedLocationsIds :: [Id SpecialLocation],
     locationType :: SpecialLocationType,
     enabled :: Bool,
+    isOpenMarketEnabled :: Bool,
+    isQueueEnabled :: Maybe Bool,
     priority :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

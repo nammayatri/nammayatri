@@ -211,6 +211,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
         DSL.SpecialLocation
           { id = Id locationName,
             enabled = enabled,
+            isOpenMarketEnabled = True,
             locationName = locationName,
             category = category,
             merchantId = Just (cast merchantOpCity.merchantId),

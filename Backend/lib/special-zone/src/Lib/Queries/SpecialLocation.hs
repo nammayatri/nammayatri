@@ -38,7 +38,9 @@ data SpecialLocationFull = SpecialLocationFull
     geoJson :: Maybe Text,
     createdAt :: UTCTime,
     priority :: Int,
-    enabled :: Bool
+    enabled :: Bool,
+    isOpenMarketEnabled :: Bool,
+    isQueueEnabled :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -167,6 +169,28 @@ findAllSpecialLocationsWithGeoJSON mocId mbLimit mbOffset mbLocationType = do
           &&. case mbLocationType of
             Just locationType -> specialLocation ^. SpecialLocationLocationType ==. just (val locationType)
             Nothing -> val True
+      orderBy [asc (specialLocation ^. SpecialLocationPriority)]
+
+      forM_ mbLimit (limit . fromIntegral)
+      forM_ mbOffset (offset . fromIntegral)
+
+      return (specialLocation, F.getGeomGeoJSON)
+  mapM makeFullSpecialLocation mbRes
+
+findAllSpecialLocationsWithGeoJSONAllCities ::
+  (Transactionable m) =>
+  Maybe Int ->
+  Maybe Int ->
+  Maybe D.SpecialLocationType ->
+  m [SpecialLocationFull]
+findAllSpecialLocationsWithGeoJSONAllCities mbLimit mbOffset mbLocationType = do
+  mbRes <-
+    Esq.findAll $ do
+      specialLocation <- from $ table @SpecialLocationT
+      where_ $
+        case mbLocationType of
+          Just locationType -> specialLocation ^. SpecialLocationLocationType ==. just (val locationType)
+          Nothing -> val True
       orderBy [asc (specialLocation ^. SpecialLocationPriority)]
 
       forM_ mbLimit (limit . fromIntegral)
