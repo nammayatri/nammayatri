@@ -742,3 +742,4 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.TDSCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.TDSCertificate
   Domain.Types.DocumentVerificationConfig.TANCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.TANCertificate
   Domain.Types.DocumentVerificationConfig.UDYAMCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UDYAMCertificate
+  Domain.Types.DocumentVerificationConfig.PanAadhaarLinkage -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PanAadhaarLink

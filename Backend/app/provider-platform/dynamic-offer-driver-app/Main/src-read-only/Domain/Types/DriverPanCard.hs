@@ -27,6 +27,7 @@ data DriverPanCardE e = DriverPanCard
     failedRules :: [Kernel.Prelude.Text],
     id :: Kernel.Types.Id.Id Domain.Types.DriverPanCard.DriverPanCard,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    panAadhaarLinkage :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.PanAadhaarLinkage,
     panCardNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     verificationStatus :: Kernel.Types.Documents.VerificationStatus,
     verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy,
@@ -36,9 +37,9 @@ data DriverPanCardE e = DriverPanCard
   }
   deriving (Generic)
 
-type DriverPanCard = DriverPanCardE 'AsEncrypted
+type DriverPanCard = DriverPanCardE ('AsEncrypted)
 
-type DecryptedDriverPanCard = DriverPanCardE 'AsUnencrypted
+type DecryptedDriverPanCard = DriverPanCardE ('AsUnencrypted)
 
 instance EncryptedItem DriverPanCard where
   type Unencrypted DriverPanCard = (DecryptedDriverPanCard, HashSalt)
@@ -58,6 +59,7 @@ instance EncryptedItem DriverPanCard where
           failedRules = failedRules entity,
           id = id entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
+          panAadhaarLinkage = panAadhaarLinkage entity,
           panCardNumber = panCardNumber_,
           verificationStatus = verificationStatus entity,
           verifiedBy = verifiedBy entity,
@@ -81,6 +83,7 @@ instance EncryptedItem DriverPanCard where
             failedRules = failedRules entity,
             id = id entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
+            panAadhaarLinkage = panAadhaarLinkage entity,
             panCardNumber = panCardNumber_,
             verificationStatus = verificationStatus entity,
             verifiedBy = verifiedBy entity,
@@ -96,10 +99,14 @@ instance EncryptedItem' DriverPanCard where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
+data PanAadhaarLinkage = PAN_AADHAAR_LINKED | AADHAAR_LINKED_TO_OTHER_PAN | PAN_AADHAAR_NOT_LINKED | PAN_DOES_NOT_EXIST deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data PanType = INDIVIDUAL | BUSINESS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data VerifiedBy = FRONTEND_SDK | DASHBOARD | DASHBOARD_ADMIN | DASHBOARD_USER | DIGILOCKER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PanType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PanAadhaarLinkage))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VerifiedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PanType))
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VerifiedBy))

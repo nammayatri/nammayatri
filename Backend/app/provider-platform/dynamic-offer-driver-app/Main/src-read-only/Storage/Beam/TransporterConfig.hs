@@ -36,6 +36,7 @@ data TransporterConfigT f = TransporterConfigT
     allowDuplicatePan :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowDuplicateUdyam :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowMultiFleetOperatorLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    allowPanAadhaarLinkage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowRcUnlinkWhenDriverOffline :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowedPaymentInstrumentForPayout :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument]),
     allowedReferralEntities :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

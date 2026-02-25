@@ -55,6 +55,11 @@ updateMerchantIdAndCityIdByDriverId merchantId merchantOperatingCityId driverId 
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updatePanAadhaarLinkage :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.DriverPanCard.PanAadhaarLinkage -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePanAadhaarLinkage panAadhaarLinkage driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.panAadhaarLinkage panAadhaarLinkage, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVerificationStatus verificationStatus driverId = do
   _now <- getCurrentTime
@@ -83,8 +88,9 @@ updateByPrimaryKey (Domain.Types.DriverPanCard.DriverPanCard {..}) = do
       Se.Set Beam.driverNameOnGovtDB driverNameOnGovtDB,
       Se.Set Beam.failedRules failedRules,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.panCardNumberEncrypted (panCardNumber & unEncrypted . encrypted),
-      Se.Set Beam.panCardNumberHash (panCardNumber & hash),
+      Se.Set Beam.panAadhaarLinkage panAadhaarLinkage,
+      Se.Set Beam.panCardNumberEncrypted (((panCardNumber & unEncrypted . encrypted))),
+      Se.Set Beam.panCardNumberHash ((panCardNumber & hash)),
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.verifiedBy verifiedBy,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

@@ -55,13 +55,13 @@ Persist HyperVerge response fields (**aadhaar linkage**, **PAN status**, **PAN c
 
 - **Aadhaar linkage** (if present):
   - Field name in response (e.g. `aadhaar_link_status`, `panAadhaarLink`, etc.).
-  - Possible values (e.g. `PANINVALID`, `PANAPPLIED`, `PANNOTAVBL`, or free-text). Create an enum or mapping for storage.
+  - Possible values (e.g. `PAN_AADHAAR_LINKED`, `AADHAAR_LINKED_TO_OTHER_PAN`, `PAN_AADHAAR_NOT_LINKED`,  `PAN_DOES_NOT_EXIST`). Create an enum or mapping for storage.
 - **PAN status:**
   - Field name (e.g. `pan_status`, `status`).
-  - Values: e.g. valid / invalid / under verification / not_found. Map to a domain enum or `Maybe Text` for `driver_pan_card.panStatus`.
+  - Values: e.g. VALID / INVALID `driver_pan_card.panStatus`.
 - **PAN category:**
   - Field name (e.g. `category`, `pan_category`).
-  - Values: e.g. individual / company / trust / HUF. Map to a domain enum or `Maybe Text` for `driver_pan_card.panCategory`.
+  - Values: e.g. INDIVIDUAL / COMPANY / TRUST . Map to a domain enum or `Maybe Text` for `driver_pan_card.panCategory`.
 
 ### 3.3 Document response shape
 

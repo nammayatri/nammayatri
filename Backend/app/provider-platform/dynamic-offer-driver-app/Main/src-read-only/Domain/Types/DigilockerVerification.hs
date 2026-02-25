@@ -37,6 +37,6 @@ data DigilockerVerification = DigilockerVerification
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data SessionStatus = PENDING | SUCCESS | FAILED | CONSENT_DENIED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SessionStatus = PENDING | SUCCESS | FAILED | CONSENT_DENIED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SessionStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SessionStatus))
