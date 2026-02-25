@@ -59,6 +59,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -192,6 +193,11 @@ onConfirm merchant booking' quoteCategories dOrder = do
   let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
   let discountedTickets = fromMaybe 0 booking.discountedTickets
   tickets <- createTickets booking dOrder.tickets discountedTickets
+  whenJust booking'.holdId $ \holdId -> do
+    whenJust booking'.tripId $ \tripId -> do
+      logInfo $ "OnConfirm:onConfirm finalizing seat hold bookingId=" <> booking.id.getId <> " holdId=" <> holdId <> " tripId=" <> tripId
+      SeatBooking.confirmBooking tripId holdId
+      SeatBooking.releaseAbandonedHolds tripId booking.id.getId holdId
   void $ QTicket.createMany tickets
   mbJourneyId <- FRFSUtils.getJourneyIdFromBooking booking
   -- Update journey expiry time based on maximum ticket validity using the created tickets

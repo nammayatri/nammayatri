@@ -441,6 +441,8 @@ library
       SharedLogic.FRFSCancel
       SharedLogic.FRFSConfirm
       SharedLogic.FRFSFareCalculator
+      SharedLogic.FRFSSeatBooking
+      SharedLogic.FRFSSeatBooking.Lua
       SharedLogic.FRFSStatus
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
@@ -478,6 +480,7 @@ library
       SharedLogic.Scheduler.Jobs.CheckRefundStatus
       SharedLogic.Scheduler.Jobs.CrisRecon
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
+      SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
       SharedLogic.Scheduler.Jobs.NyRegularInstance
       SharedLogic.Scheduler.Jobs.NyRegularMaster
@@ -549,6 +552,7 @@ library
       Storage.CachedQueries.RoutePolylines
       Storage.CachedQueries.RouteStopTimeTable
       Storage.CachedQueries.SavedReqLocationExtra
+      Storage.CachedQueries.Seat
       Storage.CachedQueries.Sos
       Storage.CachedQueries.StationsExtraInformation
       Storage.CachedQueries.Translations
@@ -991,6 +995,8 @@ library
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestPartiesLink
+      Domain.Types.Seat
+      Domain.Types.SeatLayout
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
@@ -1148,6 +1154,8 @@ library
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestPartiesLink
+      Storage.Beam.Seat
+      Storage.Beam.SeatLayout
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
@@ -1375,6 +1383,8 @@ library
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestPartiesLink
+      Storage.Queries.Seat
+      Storage.Queries.SeatLayout
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
@@ -1472,6 +1482,7 @@ library
     , geohash ==1.0.1
     , hashable
     , haskell-cac
+    , hedis
     , http-api-data
     , http-client
     , http-client-tls
@@ -1518,6 +1529,7 @@ library
     , special-zone
     , special-zone-a
     , split
+    , string-conversions
     , template-haskell
     , text
     , text-conversions
@@ -1612,6 +1624,7 @@ executable rider-app-exe
     , filepath
     , geohash ==1.0.1
     , hashable
+    , hedis
     , http-api-data
     , http-client
     , http-client-tls
@@ -1654,6 +1667,7 @@ executable rider-app-exe
     , singletons
     , singletons-th
     , split
+    , string-conversions
     , template-haskell
     , text
     , text-conversions
@@ -1748,6 +1762,7 @@ test-suite rider-app-test
     , filepath
     , geohash ==1.0.1
     , hashable
+    , hedis
     , http-api-data
     , http-client
     , http-client-tls
@@ -1791,6 +1806,7 @@ test-suite rider-app-test
     , singletons
     , singletons-th
     , split
+    , string-conversions
     , tasty
     , tasty-hunit
     , tasty-quickcheck

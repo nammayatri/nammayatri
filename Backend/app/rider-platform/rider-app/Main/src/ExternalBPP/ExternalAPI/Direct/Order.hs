@@ -37,7 +37,7 @@ getBppOrderId booking = do
   return orderId
 
 getTicketDetail :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> [FRFSQuoteCategory] -> FRFSRouteStationsAPI -> m ProviderTicket
-getTicketDetail config integratedBPPConfig qrTtl _ quoteCategories routeStation = do
+getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
   let startStation = head routeStation.stations
@@ -69,6 +69,10 @@ getTicketDetail config integratedBPPConfig qrTtl _ quoteCategories routeStation 
       childQuantity = find (\category -> category.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
       qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
       qrRefreshAt = config.qrRefreshTtl <&> (\ttl -> addUTCTime (secondsToNominalDiffTime ttl) now)
+      seatLabels =
+        let labels = concatMap (fromMaybe [] . (.seatLabels)) quoteCategories
+        in if null labels then Nothing else Just labels
+  logInfo $ "DirectOrder:createOrder bookingId=" <> booking.id.getId <> " seatLabels=" <> show seatLabels
   qrData <-
     generateQR config $
       TicketPayload
@@ -82,7 +86,9 @@ getTicketDetail config integratedBPPConfig qrTtl _ quoteCategories routeStation 
           ticketNumber,
           ticketAmount = fromMaybe 0 singleAdultTicketPrice,
           refreshAt = qrRefreshAt,
-          otpCode = Just otpCode
+          otpCode = Just otpCode,
+          seatLabels = seatLabels,
+          fleetNo = Nothing
         }
   return $
     ProviderTicket

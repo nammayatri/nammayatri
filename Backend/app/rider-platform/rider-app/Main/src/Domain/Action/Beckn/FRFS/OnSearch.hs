@@ -505,7 +505,9 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             merchantOperatingCityId = search.merchantOperatingCityId,
             selectedQuantity = if category.category == ADULT then search.quantity else 0, -- To Handle Partner Org
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            seatIds = Nothing,
+            seatLabels = Nothing
           }
 
   return (frfsQuote, frfsQuoteCategories)

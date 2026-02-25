@@ -577,5 +577,7 @@ paymentCategoryToQuoteCategory DTBPC.FRFSTicketBookingPaymentCategory {..} =
       merchantId = merchantId,
       merchantOperatingCityId = merchantOperatingCityId,
       createdAt = createdAt,
-      updatedAt = updatedAt
+      updatedAt = updatedAt,
+      seatIds = seatIds,
+      seatLabels = seatLabels
     }

@@ -1,0 +1,58 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Value: Data.Aeson
+
+Seat:
+  tableName: seat
+
+  derives: "Show, Generic, ToJSON, FromJSON, Eq, ToSchema"
+
+  fields:
+    id: Id Seat
+    seatLabel: Text
+    rowNo: Int
+    colNo: Int
+    seatType: Maybe SeatType
+    isBookable: Bool
+    isLadiesOnly: Maybe Bool
+    seatLayoutId: Id SeatLayout
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  types:
+    SeatType:
+      enum: "WINDOW, AISLE, MIDDLE, SLEEPER_LOWER, SLEEPER_UPPER, MOUNT_AREA"
+
+  constraints:
+    id: PrimaryKey
+    seatLayoutId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByLayoutId:
+      kvFunction: findAllWithKV
+      where: seatLayoutId
+
+SeatLayout:
+  tableName: seat_layout
+
+  derives: "Show, Generic, ToJSON, FromJSON, Eq, ToSchema"
+
+  fields:
+    id: Id SeatLayout
+    name: Text
+    rows: Int
+    columns: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id

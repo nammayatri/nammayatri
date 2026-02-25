@@ -42,6 +42,7 @@ imports:
   Value: Data.Aeson
   Gate: Domain.Types.Station
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
+  Seat: Domain.Types.Seat
   SourceType: Domain.Types.RouteStopTimeTable
   FRFSCategorySelectionReq: API.Types.UI.FRFSTicketService
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
@@ -213,6 +214,8 @@ types:
     skipBooking: Bool
     ticketQuantity: Maybe Int
     childTicketQuantity: Maybe Int
+    seatIds: Maybe [Id Seat]
+    tripId: Maybe Text
     crisSdkResponse: Maybe CrisSdkResponse
     categorySelectionReq: Maybe [FRFSCategorySelectionReq]
 
@@ -319,12 +322,14 @@ types:
 
   ScheduledVehicleInfo:
     vehicleNumber: Text
+    tripId: Maybe Text
     serviceTierType: ServiceTierType
     serviceTierName: Maybe Text
     locationUTCTimestamp: Maybe UTCTime
     eta: Maybe [BusStopETA]
     position: Maybe LatLong
     serviceSubTypes: "Maybe [ServiceSubType]"
+    availableSeats: Maybe Int
 
   LiveVehicleInfo:
     number: Text

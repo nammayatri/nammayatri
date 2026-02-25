@@ -8,6 +8,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Seat
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -24,6 +25,8 @@ data FRFSQuoteCategory = FRFSQuoteCategory
     offeredPrice :: Kernel.Types.Common.Price,
     price :: Kernel.Types.Common.Price,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    seatIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
+    seatLabels :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     selectedQuantity :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

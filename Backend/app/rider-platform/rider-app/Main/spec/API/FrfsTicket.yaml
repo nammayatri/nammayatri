@@ -31,6 +31,9 @@ imports:
   QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
   BusLocation: API.Types.UI.RiderLocation
   CrisSdkResponse: API.Types.UI.MultimodalConfirm
+  Seat: Domain.Types.Seat
+  SeatLayout: Domain.Types.SeatLayout
+  SeatType: Domain.Types.Seat
 
 module: FRFSTicketService
 types:
@@ -101,11 +104,14 @@ types:
     categoryOfferedPrice: PriceAPIEntity
     categoryFinalPrice: Maybe PriceAPIEntity
     categorySelectedQuantity: Int
+    seatIds: Maybe [(Id Seat)]
+    seatLabels: Maybe [Text]
     derive: "Show"
 
   FRFSCategorySelectionReq:
     quoteCategoryId: Id FRFSQuoteCategory
     quantity: Int
+    seatIds: Maybe [(Id Seat)]
 
   CrisSdkResponse:
     osType: Text
@@ -120,6 +126,7 @@ types:
     enableOffer: Maybe Bool
     ticketQuantity: Maybe Int # TODO: To Be Deprecated
     childTicketQuantity: Maybe Int # TODO: To Be Deprecated
+    tripId: Maybe Text
 
   FRFSTicketCategoryMetadataAPIEntity:
     title: Text
@@ -133,6 +140,8 @@ types:
     categoryMetadata: Maybe FRFSTicketCategoryMetadataAPIEntity
     price: PriceAPIEntity # Single Item Quantity Price without any passes or offers determined in OnSearch.
     offeredPrice: PriceAPIEntity # Single Item Quantity Discounted Price determined in OnSearch that would be less than or equal to `price`.
+    seatIds: Maybe [(Id Seat)]
+    seatLabels: Maybe [Text]
     finalPrice: Maybe PriceAPIEntity # Single Item Quantity Final Price determined in OnInit that the customer would actually pay.
     selectedQuantity: Int
     derive: "Show"
@@ -278,6 +287,21 @@ types:
 
   FRFSPossibleStopsReq:
     stationCodes: [Text]
+
+  SeatStatus:
+    enum: "AVAILABLE, BOOKED, BLOCKED"
+
+  SeatWithStatus:
+    seat: Seat
+    status: SeatStatus
+
+  SeatLayoutResp:
+    seatLayout: SeatLayout
+    seats: [SeatWithStatus]
+
+  SeatLayoutDetailsResp:
+    seatLayout: SeatLayout
+    seats: [Seat]
 
 apis:
   # Get FRFS Config
@@ -516,3 +540,23 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+  - GET:
+      endpoint: /frfs/trip/{tripId}/route/{routeId}/seats
+      params:
+        tripId: Text
+        routeId: Text
+      query:
+        vehicleNumber: Text
+        fromStopCode: Text
+        toStopCode: Text
+      response:
+        type: SeatLayoutResp
+
+  - GET:
+      endpoint: /frfs/route/{routeId}/seatLayout
+      params:
+        routeId: Text
+      query:
+        vehicleNumber: Text
+      response:
+        type: SeatLayoutDetailsResp

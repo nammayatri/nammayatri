@@ -282,6 +282,7 @@ let RiderJobType =
       | PartnerInvoiceDataExport
       | UnblockCustomer
       | UpdateCRISRDSBalance
+      | FRFSSeatHoldReaper
       >
 
 let jobInfoMapx =
@@ -323,6 +324,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.PartnerInvoiceDataExport, mapValue = True }
       , { mapKey = RiderJobType.UnblockCustomer, mapValue = True }
       , { mapKey = RiderJobType.UpdateCRISRDSBalance, mapValue = True }
+      , { mapKey = RiderJobType.FRFSSeatHoldReaper, mapValue = True }
       ]
 
 let cacConfig =

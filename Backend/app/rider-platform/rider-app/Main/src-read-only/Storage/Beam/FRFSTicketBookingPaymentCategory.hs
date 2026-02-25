@@ -28,6 +28,8 @@ data FRFSTicketBookingPaymentCategoryT f = FRFSTicketBookingPaymentCategoryT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
     quoteId :: B.C f Kernel.Prelude.Text,
+    seatIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    seatLabels :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     selectedQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

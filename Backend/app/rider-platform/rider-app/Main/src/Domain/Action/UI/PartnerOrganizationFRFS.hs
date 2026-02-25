@@ -687,7 +687,9 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                   merchantOperatingCityId = fromStation.merchantOperatingCityId,
                   selectedQuantity = 1,
                   createdAt = now,
-                  updatedAt = now
+                  updatedAt = now,
+                  seatIds = Nothing,
+                  seatLabels = Nothing
                 }
             ]
       return $ Just (quote, quoteCategories)
@@ -741,7 +743,24 @@ createNewBookingAndTriggerInit :: PartnerOrganization -> UpsertPersonAndQuoteCon
 createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
   quote <- QQuote.findById req.quoteId >>= fromMaybeM (FRFSQuoteNotFound req.quoteId.getId)
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId req.quoteId
-  updatedQuoteCategories <- Utils.updateQuoteCategoriesWithQuantitySelections ((\category -> if category.category == ADULT then (category.id, req.numberOfPassengers) else (category.id, category.selectedQuantity)) <$> quoteCategories) quoteCategories
+  let selections =
+        map
+          ( \category ->
+              Utils.QuoteCategorySelection
+                { qcQuoteCategoryId = category.id
+                , qcQuantity =
+                    if category.category == ADULT
+                      then req.numberOfPassengers
+                      else category.selectedQuantity
+                , qcSeatIds = Nothing
+                , qcSeatLabels = Nothing
+                }
+          )
+          quoteCategories
+  updatedQuoteCategories <-
+    Utils.updateQuoteCategoriesWithSelections
+      selections
+      quoteCategories
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode quote.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for fromStationCode:" +|| quote.fromStationCode ||+ "")
   toStation <- OTPRest.getStationByGtfsIdAndStopCode quote.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for toStationCode:" +|| quote.toStationCode ||+ "")
@@ -777,10 +796,10 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
       QQuote.backfillQuotesForCachedQuoteFlow personId discountedTickets eventDiscountAmount frfsConfig.isEventOngoing req.searchId
       let selectedQuoteCategories =
             map
-              ( \quoteCategory -> FRFSTypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity = quoteCategory.selectedQuantity}
+              ( \quoteCategory -> FRFSTypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity = quoteCategory.selectedQuantity, seatIds = Nothing}
               )
               updatedQuoteCategories
-      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig
+      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig Nothing
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

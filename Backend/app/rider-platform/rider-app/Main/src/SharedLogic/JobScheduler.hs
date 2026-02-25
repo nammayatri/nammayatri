@@ -69,6 +69,7 @@ data RiderJobType
   | PartnerInvoiceDataExport
   | UnblockCustomer
   | UpdateCRISRDSBalance
+  | FRFSSeatHoldReaper
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -110,6 +111,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SPartnerInvoiceDataExport jobData = AnyJobInfo <$> restoreJobInfo SPartnerInvoiceDataExport jobData
   restoreAnyJobInfo SUnblockCustomer jobData = AnyJobInfo <$> restoreJobInfo SUnblockCustomer jobData
   restoreAnyJobInfo SUpdateCRISRDSBalance jobData = AnyJobInfo <$> restoreJobInfo SUpdateCRISRDSBalance jobData
+  restoreAnyJobInfo SFRFSSeatHoldReaper jobData = AnyJobInfo <$> restoreJobInfo SFRFSSeatHoldReaper jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -406,3 +408,13 @@ data UpdateCRISRDSBalanceJobData = UpdateCRISRDSBalanceJobData
 instance JobInfoProcessor 'UpdateCRISRDSBalance
 
 type instance JobContent 'UpdateCRISRDSBalance = UpdateCRISRDSBalanceJobData
+
+data FRFSSeatHoldReaperJobData = FRFSSeatHoldReaperJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'FRFSSeatHoldReaper
+
+type instance JobContent 'FRFSSeatHoldReaper = FRFSSeatHoldReaperJobData

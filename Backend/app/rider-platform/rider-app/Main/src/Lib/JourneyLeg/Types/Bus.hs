@@ -44,7 +44,8 @@ data BusLegRequestConfirmData = BusLegRequestConfirmData
     categorySelectionReq :: [FRFSCategorySelectionReq],
     mbEnableOffer :: Maybe Bool,
     isSingleMode :: Maybe Bool,
-    mbIsMockPayment :: Maybe Bool
+    mbIsMockPayment :: Maybe Bool,
+    mbTripId :: Maybe Text
   }
 
 data BusLegRequestUpdateData = BusLegRequestUpdateData

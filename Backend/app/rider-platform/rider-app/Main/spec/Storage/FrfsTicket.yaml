@@ -44,6 +44,8 @@ imports:
   QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
   BusLocation: API.Types.UI.RiderLocation
   Value: Data.Aeson
+  SeatLayout: Domain.Types.SeatLayout
+  Seat: Domain.Types.Seat
 
 FRFSSearch:
   tableName: frfs_search
@@ -269,6 +271,8 @@ FRFSQuoteCategory:
     selectedQuantity: Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    seatIds: Maybe [Id Seat]
+    seatLabels: Maybe [Text]
   constraints:
     id: PrimaryKey
     quoteId: SecondaryKey
@@ -298,6 +302,7 @@ FRFSQuoteCategory:
     categoryMeta: Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadata code title description tnc|E
     category: Kernel.Prelude.fromMaybe Domain.Types.FRFSQuoteCategoryType.ADULT category|E
     selectedQuantity: Kernel.Prelude.fromMaybe 0|I
+    seatIds: fmap (fmap Kernel.Types.Id.Id) seatIds|E
 
   toTType:
     price: (.amount)|I
@@ -310,6 +315,11 @@ FRFSQuoteCategory:
     tnc: (categoryMeta <&> (.tnc))|E
     category: Kernel.Prelude.Just|I
     selectedQuantity: Kernel.Prelude.Just|I
+    seatIds: (fmap Kernel.Types.Id.getId) <$> seatIds|E
+
+  sqlType:
+    seatIds: "text[]"
+    seatLabels: "text[]"
 
   types:
     QuoteCategoryMetadata:
@@ -403,6 +413,10 @@ FRFSTicketBooking:
     isMockPayment: Maybe Bool
     ondcOnInitReceived: Maybe Bool
     ondcOnInitReceivedAt: Maybe UTCTime
+    fromStopIdx: Maybe Int
+    toStopIdx: Maybe Int
+    holdId: Maybe Text
+    tripId: Maybe Text
 
   default:
     customerCancelled: "false"
@@ -443,6 +457,7 @@ FRFSTicketBooking:
     fromStationLon: (.lon) <$> fromStationPoint|E
     toStationLat: (.lat) <$> toStationPoint|E
     toStationLon: (.lon) <$> toStationPoint|E
+
 
   sqlType:
     busLocationData: "json"
@@ -682,6 +697,8 @@ FRFSTicketBookingPaymentCategory:
     selectedQuantity: Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    seatIds: Maybe [Id Seat]
+    seatLabels: Maybe [Text]
 
   constraints:
     id: PrimaryKey
@@ -715,6 +732,7 @@ FRFSTicketBookingPaymentCategory:
     categoryMeta: Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadata code title description tnc|E
     category: Kernel.Prelude.fromMaybe Domain.Types.FRFSQuoteCategoryType.ADULT category|E
     selectedQuantity: Kernel.Prelude.fromMaybe 0|I
+    seatIds: fmap (fmap Kernel.Types.Id.Id) seatIds|E
 
   toTType:
     price: (.amount)|I
@@ -727,6 +745,11 @@ FRFSTicketBookingPaymentCategory:
     tnc: (categoryMeta <&> (.tnc))|E
     category: Kernel.Prelude.Just|I
     selectedQuantity: Kernel.Prelude.Just|I
+    seatIds: (fmap Kernel.Types.Id.getId) <$> seatIds|E
+
+  sqlType:
+    seatIds: "text[]"
+    seatLabels: "text[]"
 
   queries:
     findById:

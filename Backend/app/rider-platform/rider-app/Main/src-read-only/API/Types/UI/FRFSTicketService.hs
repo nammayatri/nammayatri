@@ -16,6 +16,8 @@ import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.Seat
+import qualified Domain.Types.SeatLayout
 import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -47,7 +49,9 @@ data CategoryInfoResponse = CategoryInfoResponse
     categoryName :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType,
     categoryOfferedPrice :: Kernel.Types.Common.PriceAPIEntity,
     categoryPrice :: Kernel.Types.Common.PriceAPIEntity,
-    categorySelectedQuantity :: Kernel.Prelude.Int
+    categorySelectedQuantity :: Kernel.Prelude.Int,
+    seatIds :: Data.Maybe.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
+    seatLabels :: Data.Maybe.Maybe [Data.Text.Text]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -94,7 +98,11 @@ data FRFSCancelStatus = FRFSCancelStatus {cancellationCharges :: Data.Maybe.Mayb
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSCategorySelectionReq = FRFSCategorySelectionReq {quantity :: Kernel.Prelude.Int, quoteCategoryId :: Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory}
+data FRFSCategorySelectionReq = FRFSCategorySelectionReq
+  { quantity :: Kernel.Prelude.Int,
+    quoteCategoryId :: Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory,
+    seatIds :: Data.Maybe.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -160,6 +168,8 @@ data FRFSQuoteCategoryAPIEntity = FRFSQuoteCategoryAPIEntity
     finalPrice :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,
     offeredPrice :: Kernel.Types.Common.PriceAPIEntity,
     price :: Kernel.Types.Common.PriceAPIEntity,
+    seatIds :: Data.Maybe.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
+    seatLabels :: Data.Maybe.Maybe [Data.Text.Text],
     selectedQuantity :: Kernel.Prelude.Int
   }
   deriving stock (Generic, Show)
@@ -170,7 +180,8 @@ data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq
     crisSdkResponse :: Data.Maybe.Maybe CrisSdkResponse,
     enableOffer :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     offered :: Data.Maybe.Maybe [FRFSCategorySelectionReq],
-    ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int
+    ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    tripId :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -314,4 +325,23 @@ data FRFSVehicleServiceTierAPI = FRFSVehicleServiceTierAPI
     shortName :: Data.Text.Text
   }
   deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SeatLayoutDetailsResp = SeatLayoutDetailsResp {seatLayout :: Domain.Types.SeatLayout.SeatLayout, seats :: [Domain.Types.Seat.Seat]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SeatLayoutResp = SeatLayoutResp {seatLayout :: Domain.Types.SeatLayout.SeatLayout, seats :: [SeatWithStatus]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SeatStatus
+  = AVAILABLE
+  | BOOKED
+  | BLOCKED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SeatWithStatus = SeatWithStatus {seat :: Domain.Types.Seat.Seat, status :: SeatStatus}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
