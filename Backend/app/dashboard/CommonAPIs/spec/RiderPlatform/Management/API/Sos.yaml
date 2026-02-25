@@ -55,9 +55,12 @@ types:
   SosEntityType:
     - enum: Ride, NonRide
 
+  ExternalSOSTriggerSource:
+    - enum: FRONTEND, DASHBOARD
+
   SosDetailsMaybeRes:
-    - recordType: NewType
     - details: Maybe SosDetailsRes
+    - triggerSource: Maybe ExternalSOSTriggerSource
 
   SosDetailsRes:
     - id: Id Sos

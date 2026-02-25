@@ -200,23 +200,6 @@ castSosStatus = \case
   DSos.MockPending -> Common.MockPending
   DSos.MockResolved -> Common.MockResolved
 
-castSosState :: DSos.SosState -> Common.SosState
-castSosState = \case
-  DSos.LiveTracking -> Common.LiveTracking
-  DSos.SosActive -> Common.SosActive
-
-mkSosDetails :: DSos.Sos -> Common.SosDetails
-mkSosDetails sos =
-  Common.SosDetails
-    { sosStatus = castSosStatus sos.status,
-      sosId = cast @DSos.Sos @Dashboard.Common.Sos sos.id,
-      sosState = castSosState <$> sos.sosState,
-      externalReferenceId = sos.externalReferenceId,
-      sosCreatedAt = sos.createdAt,
-      externalReferenceStatus = sos.externalReferenceStatus,
-      externalStatusHistory = sos.externalStatusHistory,
-      mediaFiles = map (.getId) sos.mediaFiles
-    }
 
 ---------------------------------------------------------------------
 
@@ -397,8 +380,8 @@ rideInfo merchantId reqRideId = do
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   unencryptedDriverAlternateNumber <- mapM decrypt ride.driverAlternateNumber
   let fareProductType = mkFareProductType booking.bookingDetails
-  mbSosDetails <- CQSos.findByRideId ride.id
-  let sosDetails = mkSosDetails <$> mbSosDetails
+  mbSos <- CQSos.findByRideId ride.id
+  let mbSosId = (cast @DSos.Sos @Dashboard.Common.Sos . (.id)) <$> mbSos
   pure
     Common.RideInfoRes
       { rideId = reqRideId,
@@ -450,7 +433,7 @@ rideInfo merchantId reqRideId = do
         mobileCountryCode = person.mobileCountryCode,
         isSafetyPlus = ride.isSafetyPlus,
         isAirConditioned = fromMaybe False booking.isAirConditioned,
-        sosDetails = sosDetails
+        rideSosId = mbSosId
       }
 
 transformFareBreakup :: DFareBreakup.FareBreakup -> Common.FareBreakup
