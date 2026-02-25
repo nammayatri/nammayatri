@@ -114,6 +114,19 @@ import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
+import qualified Data.Map.Strict as M
+
+adjustCfgMapForPreferredTier ::
+  Ord Spec.ServiceTierType =>
+  Maybe Spec.ServiceTierType ->
+  M.Map Spec.ServiceTierType Int ->
+  M.Map Spec.ServiceTierType Int
+adjustCfgMapForPreferredTier mbPreferred cfgMap =
+  case mbPreferred of
+    Just pref ->
+      let cfgMapInc = M.map (+ 1) cfgMap
+       in M.insert pref 0 cfgMapInc
+    Nothing -> cfgMap
 
 getProviderName :: IntegratedBPPConfig -> Text
 getProviderName integrationBPPConfig =

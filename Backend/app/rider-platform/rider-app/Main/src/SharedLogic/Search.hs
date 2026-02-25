@@ -1,6 +1,7 @@
 module SharedLogic.Search where
 
 import qualified API.Types.UI.RiderLocation as RL
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Data.Aeson
@@ -135,7 +136,8 @@ data PublicTransportSearchReq = PublicTransportSearchReq
     currentLocation :: Maybe LatLong,
     busLocationData :: Maybe [RL.BusLocation],
     firstMileRemoved :: Maybe Bool,
-    doMultimodalSearch :: Maybe Bool
+    doMultimodalSearch :: Maybe Bool,
+    userPreferredServiceTier :: Maybe Spec.ServiceTierType
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

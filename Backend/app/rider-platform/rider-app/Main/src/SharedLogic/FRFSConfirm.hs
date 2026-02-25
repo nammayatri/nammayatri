@@ -440,6 +440,7 @@ buildJourneyAndLeg booking fareParameters = do
               finalBoardedWaybillId = routeLiveInfo >>= (.waybillId),
               finalBoardedBusServiceTierType = routeLiveInfo <&> (.serviceType),
               userBookedBusServiceTierType = mbRouteStation >>= (.vehicleServiceTier) <&> (._type),
+              userPreferredServiceTier = Nothing,
               osmEntrance = Nothing,
               osmExit = Nothing,
               straightLineEntrance = Nothing,

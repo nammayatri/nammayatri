@@ -80,7 +80,8 @@ data BusLegRequestGetFareData = BusLegRequestGetFareData
     merchantOpCity :: DMOC.MerchantOperatingCity,
     blacklistedServiceTiers :: [Spec.ServiceTierType],
     blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
-    isSingleMode :: Bool
+    isSingleMode :: Bool,
+    userPreferredServiceTier :: Maybe Spec.ServiceTierType
   }
 
 data BusLegRequest

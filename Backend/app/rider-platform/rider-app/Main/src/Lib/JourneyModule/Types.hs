@@ -271,7 +271,8 @@ data JourneyInitData = JourneyInitData
     maximumWalkDistance :: Meters,
     isSingleMode :: Bool,
     relevanceScore :: Maybe Double,
-    busLocationData :: [RL.BusLocation]
+    busLocationData :: [RL.BusLocation],
+    userPreferredServiceTier :: Maybe Spec.ServiceTierType
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1363,8 +1364,9 @@ mkJourneyLeg ::
   Maybe FinalBoardedBusData ->
   Maybe Spec.ServiceTierType ->
   [RL.BusLocation] ->
+  Maybe Spec.ServiceTierType ->
   m DJL.JourneyLeg
-mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates mbFinalBoardedBusData mbUserBookedServiceTierType busLocationData = do
+mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates mbFinalBoardedBusData mbUserBookedServiceTierType busLocationData mbUserPreferredServiceTier = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   routeDetails <- mapM (mkRouteDetail journeyLegId fare) leg.routeDetails
@@ -1410,6 +1412,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         busDriverId = mbFinalBoardedBusData >>= (.busDriverId),
         finalBoardedBusServiceTierType = mbFinalBoardedBusData >>= (.serviceTierType),
         userBookedBusServiceTierType = mbUserBookedServiceTierType,
+        userPreferredServiceTier = mbUserPreferredServiceTier,
         finalBoardedDepotNo = mbFinalBoardedBusData >>= (.depotNo),
         finalBoardedWaybillId = mbFinalBoardedBusData >>= (.waybillId),
         finalBoardedScheduleNo = mbFinalBoardedBusData >>= (.scheduleNo),

@@ -397,14 +397,15 @@ filterQuotes integratedBPPConfig quotesWithCategories (Just journeyLeg) = do
         DTripTypes.Bus -> do
           mbRiderConfig <- QRC.findByMerchantOperatingCityId journeyLeg.merchantOperatingCityId Nothing
           let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
+          let cfgMap' = SFU.adjustCfgMapForPreferredTier journeyLeg.userPreferredServiceTier cfgMap
           let serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)
           return $
             Just $
               minimumBy
                 ( \(quote1, quoteCategories1) (quote2, quoteCategories2) ->
                     compare
-                      (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote1 quoteCategories1))
-                      (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote2 quoteCategories2))
+                      (maybe maxBound (JourneyUtils.tierRank cfgMap') (serviceTierTypeFromQuote quote1 quoteCategories1))
+                      (maybe maxBound (JourneyUtils.tierRank cfgMap') (serviceTierTypeFromQuote quote2 quoteCategories2))
                 )
                 finalQuotesWithCategories
         _ ->

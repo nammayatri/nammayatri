@@ -528,6 +528,7 @@ mkJourneyForSearch searchRequest estimate personId = do
             finalBoardedWaybillId = Nothing,
             finalBoardedBusServiceTierType = Nothing,
             userBookedBusServiceTierType = Nothing,
+            userPreferredServiceTier = Nothing,
             osmEntrance = Nothing,
             osmExit = Nothing,
             straightLineEntrance = Nothing,
