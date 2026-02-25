@@ -1,169 +1,138 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Detailed topic docs live in `.cursor/docs/` — read the relevant one(s) for your current task.
 
-## Project Overview
+## Critical Rules (Always Apply)
 
-Namma Yatri is an open-source mobility platform (ride-hailing + delivery + public transport) built on the BECKN/ONDC open network protocol. It's a monorepo with a Haskell backend, PureScript frontend, and native Android components.
+1. **NEVER edit files in `src-read-only/`** — these are generated from YAML specs via NammaDSL
+2. **Always run `cabal build all`** after code generation to verify correctness
+3. **Project uses `-Werror`** — all GHC warnings are compile errors (unused imports, dodgy imports, etc.)
+4. **ID generation**: `newId <- generateGUID` (from `Kernel.Utils.Common`)
+5. **Error handling**: `entity <- QEntity.findById id >>= fromMaybeM (EntityNotFound id.getId)`
+6. **DB inserts**: Call `create` from `Storage.Queries` directly; never wrap single creates in `runInTransaction`
+7. **YAML imports**: Use full module paths (e.g., `Domain.Types.IntegratedBPPConfig`), not short names
+8. **Beckn tags**: Must be defined in `Backend/lib/beckn-spec/src/BecknV2/OnDemand/Tags.hs` before use
+9. **Orphan instances**: Go in `Domain/Types/Extra/*.hs` files
+10. **Logging**: Use `logInfo`, `logDebug`, `logError` from `Kernel.Utils.Logging`
 
-## Build & Development Commands
+## Build & Development
 
-### Environment Setup (one-time, from project root)
 ```bash
-ln -sf .envrc.backend .envrc   # For backend work
-direnv allow
-# This drops you into a Nix develop shell with all dependencies
-```
+# Environment setup (one-time, from project root)
+ln -sf .envrc.backend .envrc && direnv allow
 
-### Backend (Haskell)
-```bash
+# Backend
 cd Backend
 cabal build all                  # Build everything
 cabal build <package-name>       # Build specific package (e.g., rider-app)
-cabal test all                   # Run all tests
-cabal repl <package-name>        # Interactive REPL for a specific package
-```
 
-### Code Generation (NammaDSL)
-```bash
-# Generate Haskell from YAML specs (run from Backend/ inside nix shell)
+# Code generation (run from Backend/ inside nix shell)
 , run-generator                  # Only changed specs
 , run-generator --all            # All specs
 , run-generator --apply-hint     # With HLint auto-fixes
-```
 
-### Development Utilities (comma commands, available in nix shell)
-```bash
-, run-mobility-stack-dev         # Start all external services (Postgres, Redis, Kafka, etc.)
+# Utilities
+, run-mobility-stack-dev         # Start external services (Postgres, Redis, Kafka, etc.)
 , ghcid lib/<package-name>       # Fast compile feedback loop
 , hpack                          # Regenerate .cabal files from package.yaml
-, docs                           # Run Hoogle documentation server
 , kill-svc-ports                 # Kill lingering service processes
 ```
 
-### Frontend (PureScript)
-```bash
-nix develop .#frontend
-cd Frontend/ui-customer          # or ui-driver
-npm install
-npm start                        # Dev server
-```
+Full build details: `.cursor/docs/02-build-and-dev.md`
 
-### Linting
-```bash
-hlint .                          # Haskell linting (uses .hlint.yaml)
-```
+## Architecture — Quick Reference
 
-## Architecture
+| Service | Port | Path |
+|---------|------|------|
+| rider-app (BAP) | 8013 | `app/rider-platform/rider-app/` |
+| dynamic-offer-driver-app (BPP) | 8016 | `app/provider-platform/dynamic-offer-driver-app/` |
+| driver-offer-allocator | 9996 | `app/provider-platform/dynamic-offer-driver-app/Allocator/` |
 
-### Backend Service Layout
+| Database | Rider Schema | Driver Schema |
+|----------|-------------|---------------|
+| PostgreSQL | `atlas_app` | `atlas_driver_offer_bpp` |
+| Redis | Single 6379 / Cluster 30001 | Same |
 
-The backend is a multi-package Cabal project (~48 packages) following a microservices architecture:
+BAP (rider-app) initiates BECKN calls → BPP (driver-app) responds with callbacks.
+ACL modules translate between BECKN protocol types and internal domain types.
 
-- **Rider Platform** (`app/rider-platform/`): Customer-facing services
-  - `rider-app` (port 8013): Main customer APIs, search, booking, payment
-  - `rider-app-scheduler`: Background jobs for rider platform
-  - `public-transport-rider-platform`: FRFS bus/metro services
-- **Provider Platform** (`app/provider-platform/`): Driver/fleet services
-  - `dynamic-offer-driver-app` (port 8016): Main driver APIs, ride management
-  - `driver-offer-allocator` (port 9996): Core driver allocation engine
-- **Dashboards** (`app/dashboard/`): Operations dashboards (rider, provider, safety)
-- **Shared Libraries** (`lib/`): Cross-cutting concerns
-  - `beckn-spec`: BECKN protocol types and API definitions
-  - `payment`: Juspay payment gateway integration
-  - `scheduler`: Redis-based job scheduling
-  - `location-updates`: Real-time tracking with OSRM
-  - `yudhishthira`: Business rule/decision engine
-  - `finance-kernel`: Financial primitives
+Full architecture: `.cursor/docs/01-architecture-overview.md`
 
-### Databases
-- **PostgreSQL**: Primary OLTP (schemas: `atlas_app`, `atlas_driver_offer_bpp`)
-- **Redis**: Caching, location data, job queues (single instance port 6379, cluster port 30001)
-- **ClickHouse**: Analytics and event tracking
-- **Kafka**: Event streaming between services
+## Key Directory Patterns
 
-### BECKN Protocol Flow
-The system implements BAP (Beckn Application Platform = rider side) and BPP (Beckn Provider Platform = driver side). The core ride flow follows: `search` -> `on_search` -> `select` -> `on_select` -> `init` -> `on_init` -> `confirm` -> `on_confirm`. ACL (Anti-Corruption Layer) modules translate between BECKN protocol types and internal domain types.
+| Purpose | Path Pattern |
+|---------|-------------|
+| Domain types | `*/src-read-only/Domain/Types/` |
+| Business logic | `*/src/Domain/Action/UI/` |
+| DB queries | `*/src-read-only/Storage/Queries/` |
+| Extra queries | `*/src/Storage/Queries/` |
+| Cached queries | `*/src/Storage/CachedQueries/` or `*/src-read-only/Storage/CachedQueries/` |
+| YAML API specs | `*/spec/API/*.yaml` |
+| YAML Storage specs | `*/spec/Storage/*.yaml` |
+| Beckn ACL | `*/src/Beckn/ACL/` |
+| SharedLogic | `*/src/SharedLogic/` |
+| Migrations | `dev/migrations/<service-name>/` |
 
-### FRFS (Public Transport) Architecture
-- FRFS (metro/bus) is BAP-only — BPPs are external transit operators (CMRL, CRIS, EBIX), no driver-side component
-- Two flow paths: ONDC (async Beckn callbacks via gateway) and Direct (synchronous API calls, no callbacks)
-- All FRFS Beckn context building goes through single `buildContext` in `Beckn/ACL/FRFS/Utils.hs`
-- `mkCloudBapUri` in same file replaces host of `subscriberUrl` with runtime `nwAddress` for multi-cloud callback routing
-- `ExternalBPP/Flow/Common.hs` `bppSubscriberUrl` field stores BAP URL as placeholder for direct integrations, not actual BPP URL
+## Code Generation (NammaDSL)
 
-### Multi-Cloud Constraint Propagation
-- When adding `HasFlowEnv` constraints, prefer adding to type aliases (`BecknAPICallFlow`, `FRFSSearchFlow`, `FRFSConfirmFlow`) — cascades to all callers automatically
-- Type aliases defined in `ExternalBPP/CallAPI/Types.hs` and `SharedLogic/CallFRFSBPP.hs`
-
-## Code Generation (NammaDSL) - Critical Workflow
-
-YAML specification files are the source of truth for APIs and database schemas:
-- **API specs**: `spec/API/*.yaml` within each service package
-- **Storage specs**: `spec/Storage/*.yaml` within each service package
-
-The generator produces code into `src-read-only/` directories. **Never edit files in `src-read-only/` directly** - always modify the source YAML and re-run the generator.
-
-The generator also creates stub files in `src/` directories (e.g., `src/Domain/Action/UI/`) for manual business logic implementation.
-
-### API YAML conventions
-- Use camelCase for endpoint path segments (e.g., `/nyRegular/`), not hyphens
-- Auth options: `TokenAuth`, `AdminTokenAuth`, `NoAuth`, `DashboardAuth`, `ApiAuth`
-
-### Storage YAML conventions
-- Fields, constraints, beam mappings, queries, and cached queries are all defined in YAML
+- **API specs**: `spec/API/*.yaml` → generates `src-read-only/API/`
+- **Storage specs**: `spec/Storage/*.yaml` → generates `src-read-only/Domain/Types/`, `Storage/Beam/`, `Storage/Queries/`
+- Generator also creates stub files in `src/Domain/Action/UI/` for business logic
+- Use camelCase for endpoint paths, full module paths for imports
 - Common auto-imported types: `Text`, `Maybe`, `Int`, `Bool`, `Id`, `UTCTime`, `HighPrecMoney`, `Currency`
-- Use `fromTType`/`toTType` for domain-to-beam type transformations
-- `extraOperations` like `EXTRA_QUERY_FILE` and `EXTRA_DOMAIN_TYPE_FILE` generate editable extension files
 
-### After code generation
-Always compile (`cabal build all`) after running the generator to verify correctness before proceeding with further changes.
+Full DSL reference: `.cursor/docs/07-namma-dsl.md`
 
 ## Haskell Conventions
 
-### Module Organization
-- `Domain/Types/`: Domain entity definitions (many use phantom types for safety: `UsageSafety`, `EncryptionStatus`)
-- `Domain/Types/Extra/`: Supplementary types, orphan instances for external types
-- `Domain/Action/`: Business logic handlers
-- `Storage/Queries/`: Database query modules (naming: `Queries.*`)
-- `Storage/CachedQueries/`: Redis-cached queries (naming: `CachedQueries/*`)
-- `API/`: Servant API type definitions
-- `Beckn/ACL/`: BECKN protocol translation layers
+- `cabal build <target>` for checks; `cabal repl` alone doesn't guarantee compilability
+- If a `.hs` file is deleted, run `, hpack` to update `.cabal` file
+- Use `fromTType`/`toTType` in YAML for domain-to-beam type transformations
+- `extraOperations`: `EXTRA_QUERY_FILE`, `EXTRA_DOMAIN_TYPE_FILE`, `EXTRA_CACHED_QUERY_FILE`
 
-### Common Patterns
-- **ID generation**: `newId <- generateGUID` (from `Kernel.Utils.Common`)
-- **Error handling**: `person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)`
-- **DB inserts**: Call `create` from `Storage.Queries` directly; don't wrap single creates in `runInTransaction`
-- **Logging**: `logInfo` from `Kernel.Utils.Logging`
-- **YAML imports**: Use full module paths (e.g., `Domain.Types.IntegratedBPPConfig`), not short names
-- **Beckn tags**: Must be defined in `Backend/lib/beckn-spec/src/BecknV2/OnDemand/Tags.hs` before use
+Full conventions: `.cursor/docs/15-conventions.md`
 
-### Compilation Notes
-- Project uses `-Werror`: all GHC warnings are treated as errors (unused imports, dodgy imports, etc.)
-- Use `cabal build <target>` for comprehensive checks; `cabal repl` alone doesn't guarantee full compilability
-- If a `.hs` file is deleted, ensure the `.cabal` file is updated (run `, hpack` or the generator)
-- Orphan instances for external types go in `Domain/Types/Extra/*.hs` files
+## BECKN Protocol
 
-## Database Migrations
-- Located in `Backend/dev/migrations/` and `Backend/dev/migrations-read-only/`
-- Migrations are SQL files organized by service schema
+Flow: `search` → `on_search` → `select` → `on_select` → `init` → `on_init` → `confirm` → `on_confirm`
+Protocol details: `.cursor/docs/05-beckn-protocol-flow.md`
+Ride lifecycle: `.cursor/docs/06-ride-flow.md`
 
-## Commit Message Convention
+## FRFS (Public Transport)
+
+- BAP-only — BPPs are external operators (CMRL, CRIS, EBIX)
+- Two paths: ONDC (async Beckn) and Direct (synchronous API)
+- `mkCloudBapUri` in `Beckn/ACL/FRFS/Utils.hs` handles multi-cloud callback routing
+- Constraint propagation: add to type aliases in `ExternalBPP/CallAPI/Types.hs` and `SharedLogic/CallFRFSBPP.hs`
+
+Full FRFS details: `.cursor/docs/10-frfs-public-transport.md`
+
+## Commit / Branch Conventions
+
 ```
-<sub-project>/<type>: <issue-number> <short summary>
+Commit: <sub-project>/<type>: <issue-number> <summary>
+Branch: <sub-project>/<type>/<issue-number><description>
+Types: feat, fix, chore, ci, docs, perf, refactor, test
 ```
-Types: `feat`, `fix`, `chore`, `ci`, `docs`, `perf`, `refactor`, `test`
-Example: `backend/feat: #341 Driver onboarding flow`
 
-## Branch Naming Convention
-```
-<sub-project>/<type>/<issue-number><short-description>
-```
-Example: `backend/fix/GH-123/driver-allocation-bug`
+## Deep Dive Docs (`.cursor/docs/`)
 
-## Key External Integrations
-- **Juspay**: Payment gateway (webhooks for payment + payout)
-- **Idfy/HyperVerge**: Document verification
-- **OSRM**: Routing, snap-to-road, distance calculations
-- **Dhall**: Typed configuration language (configs in `dhall-configs/`)
-- **Paseto**: Token-based API authentication
+| Doc | Read when working on... |
+|-----|------------------------|
+| `01-architecture-overview.md` | Service map, ports, packages |
+| `02-build-and-dev.md` | Build commands, nix, compilation |
+| `03-rider-app.md` | Customer-facing features |
+| `04-driver-app.md` | Driver-facing features |
+| `05-beckn-protocol-flow.md` | BECKN protocol interactions |
+| `06-ride-flow.md` | End-to-end ride lifecycle |
+| `07-namma-dsl.md` | Creating/modifying YAML specs |
+| `08-database-patterns.md` | Queries, caching, migrations |
+| `09-dashboards.md` | Dashboard services |
+| `10-frfs-public-transport.md` | Metro/bus/public transport |
+| `11-libraries.md` | Shared libraries |
+| `12-multi-cloud.md` | Multi-cloud, KV connector, Redis |
+| `13-external-integrations.md` | Juspay, OSRM, Idfy, SMS, FCM |
+| `14-testing-and-debugging.md` | Debugging patterns |
+| `15-conventions.md` | Haskell conventions |
+| `16-status-definitions.md` | Status enums, state transitions |
