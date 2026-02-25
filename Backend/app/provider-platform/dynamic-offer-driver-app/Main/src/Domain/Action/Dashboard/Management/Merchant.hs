@@ -2026,7 +2026,13 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
           -- For Progressive, we need one row per perExtraKmRateSection.
           -- For other types, just one row.
           numRows = case farePolicy.farePolicyDetails of
-            FarePolicy.ProgressiveDetails _ -> max 1 (length progressiveSections)
+            FarePolicy.ProgressiveDetails _ ->
+              maximum
+                [ 1,
+                  length progressiveSections,
+                  length driverExtraFeeBoundsList,
+                  length perMinSections
+                ]
             _ -> 1
 
           -- Build a row for a given section index
@@ -2054,6 +2060,12 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     _ ->
                       let perMinSec = perMinSections !! min sectionIdx (length perMinSections - 1)
                        in (showT perMinSec.rideDurationInMin, showT perMinSec.perMinRate.amount)
+
+                -- Only emit cancellation fields on the first row to avoid duplicate policies on import
+                (rowCfpDesc, rowCfpFreeSecs, rowCfpMaxCharge, rowCfpMaxWaitSecs, rowCfpMinCharge, rowCfpPerMetre, rowCfpPerMin, rowCfpPercent) =
+                  if sectionIdx == 0
+                    then (cfpDesc, cfpFreeSecs, cfpMaxCharge, cfpMaxWaitSecs, cfpMinCharge, cfpPerMetre, cfpPerMin, cfpPercent)
+                    else ("", "", "", "", "", "", "", "")
              in FarePolicyCSVRow
                   { city = showT city,
                     vehicleServiceTier = showT fp.vehicleServiceTier,
@@ -2102,14 +2114,14 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     perMinRate = perMinRateVal,
                     peakTimings = peakTimingsVal,
                     peakDays = peakDaysVal,
-                    cancellationFarePolicyDescription = cfpDesc,
-                    freeCancellationTimeSeconds = cfpFreeSecs,
-                    maxCancellationCharge = cfpMaxCharge,
-                    maxWaitingTimeAtPickupSeconds = cfpMaxWaitSecs,
-                    minCancellationCharge = cfpMinCharge,
-                    perMetreCancellationCharge = cfpPerMetre,
-                    perMinuteCancellationCharge = cfpPerMin,
-                    percentageOfRideFareToBeCharged = cfpPercent,
+                    cancellationFarePolicyDescription = rowCfpDesc,
+                    freeCancellationTimeSeconds = rowCfpFreeSecs,
+                    maxCancellationCharge = rowCfpMaxCharge,
+                    maxWaitingTimeAtPickupSeconds = rowCfpMaxWaitSecs,
+                    minCancellationCharge = rowCfpMinCharge,
+                    perMetreCancellationCharge = rowCfpPerMetre,
+                    perMinuteCancellationCharge = rowCfpPerMin,
+                    percentageOfRideFareToBeCharged = rowCfpPercent,
                     platformFeeChargeType = platformFeeType,
                     platformFeeCharge = platformFeeVal,
                     platformFeeCgst = pfCgst,
