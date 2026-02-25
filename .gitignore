@@ -26,6 +26,7 @@ Frontend/android-native/app/driverProd/release/output-metadata.json
 Frontend/android-native/package-lock.json
 # Ignore all files in the app directory
 .idea
+.claude
 
 # Non-nix bans
 Makefile
