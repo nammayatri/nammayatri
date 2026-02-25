@@ -75,6 +75,7 @@ import qualified Storage.Queries.SearchRequest as SQSR
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Utils.Common.Cac.KeyNameConstants
 
 data DUpdateReq
@@ -206,31 +207,29 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   logTagError "DebugErrorLog: EditDestSoftUpdate" $ "driver location points count: " <> show (length currentLocationPointsBatch.loc) <> ", driverId=" <> ride.driverId.getId <> ", rideId=" <> rideId.getId
                   editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId
                   logTagError "DebugErrorLog: EditDestSoftUpdate" $ "edit destination waypoints count: " <> show (length editDestinationWaypoints)
-                  (snapToRoadFailed, editDestinationPoints) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
+                  (snapToRoadFailed, editDestinationPoints) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> map (,now) currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
                   logTagError "DebugErrorLog: EditDestSoftUpdate" $ "snapped edit destination points count: " <> show (length editDestinationPoints)
                   alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
-                  let startPoint = if length alreadySnappedPoints > 0 then (fst $ last alreadySnappedPoints) else (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon)
+                  let startPoint = if length alreadySnappedPoints > 0 then (\(ll, _, _) -> ll) $ last alreadySnappedPoints else (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon)
                   let (currentLocPoint :: Maps.LatLong) =
                         fromMaybe startPoint $
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
-                            <|> (if not $ null editDestinationWaypoints then Just (last editDestinationWaypoints) else Nothing)
+                            <|> (if not $ null editDestinationWaypoints then Just (fst $ last editDestinationWaypoints) else Nothing)
                   logTagError "DebugErrorLog: EditDestSoftUpdate" $ "Already snapped points count: " <> show (length alreadySnappedPoints)
-                  let currentPoint = if snapToRoadFailed || null editDestinationPoints then currentLocPoint else fst $ last editDestinationPoints
-                      alreadySnappedPointsWithCurrentPoint = alreadySnappedPoints <> editDestinationPoints <> [(currentPoint, True)]
+                  let currentPoint = if snapToRoadFailed || null editDestinationPoints then currentLocPoint else let (ll, _, _) = last editDestinationPoints in ll
+                      alreadySnappedPointsWithCurrentPoint = alreadySnappedPoints <> editDestinationPoints <> [(currentPoint, True, now)]
 
                   whenJust (nonEmpty alreadySnappedPointsWithCurrentPoint) $ \alreadySnappedPointsWithCurrentPoint' -> do
                     deleteAndPushEditDestinationSnappedWayPoints ride.driverId alreadySnappedPointsWithCurrentPoint' -- deletes the existing snapped points and pushes the new snapped points for future update requests
                   deleteEditDestinationWaypoints ride.driverId
-                  reachedStopLocations <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get (VID.mkReachedStopKey ride.id)
-                  let filteredStops = case reachedStopLocations of
-                        Just reachedStops -> filter (\stop -> not (any (\reachedStop -> stop.lat == reachedStop.lat && stop.lon == reachedStop.lon) reachedStops)) stopLatLongs
-                        Nothing -> stopLatLongs
-                  let reachedStopLocationsWithTrue = case reachedStopLocations of
-                        Just reachedStops -> map (\stop -> (stop, True)) reachedStops
-                        Nothing -> []
+                  reachedStops <- VID.getReachedStopsWithFallback ride.id
+                  let isNearStop stop reachedStop = highPrecMetersToMeters (distanceBetweenInMeters stop reachedStop) <= 10
+                  let pendingStops = filter (\stop -> not (any (\(reachedStop, _) -> isNearStop stop reachedStop) reachedStops)) stopLatLongs
+                  let mergedPathWithTime = mergeReachedStopsChronologically alreadySnappedPointsWithCurrentPoint reachedStops
+                  let mergedPath = map (\(ll, b, _) -> (ll, b)) mergedPathWithTime
                   case bookedsStops of
-                    [] -> return (srcPt :| (pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints) 7 ++ filteredStops ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
-                    _ -> return (srcPt :| (pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints <> reachedStopLocationsWithTrue) (7 - length filteredStops) ++ filteredStops ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
+                    [] -> return (srcPt :| (pickedWaypointsForEditDestination mergedPath 8 ++ pendingStops ++ [dropLatLong]), Just currentPoint, Just snapToRoadFailed)
+                    _ -> return (srcPt :| (pickedWaypointsForEditDestination mergedPath (8 - length pendingStops) ++ pendingStops ++ [dropLatLong]), Just currentPoint, Just snapToRoadFailed)
                 else return (srcPt :| (stopLatLongs ++ [dropLatLong]), Nothing, Nothing)
             logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
             routeResponse <-
@@ -355,16 +354,21 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
           _ -> throwError (InvalidRequest "Invalid status for edit location request")
   where
-    snapToRoad latlongs merchantId merchanOperatingCityId = do
+    snapToRoad :: [(Maps.LatLong, UTCTime)] -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (Bool, [(Maps.LatLong, Bool, UTCTime)])
+    snapToRoad latlongsWithTime merchantId merchanOperatingCityId = do
+      let latlongs = map fst latlongsWithTime
       res <- Maps.snapToRoadWithFallback Nothing merchantId merchanOperatingCityId True (Just rideId.getId) Maps.SnapToRoadReq {points = latlongs, distanceUnit = Meter, calculateDistanceFrom = Nothing}
       case res of
         (_, Left e) -> do
           logTagError "snapToRoadWithFallback failed in edit destination" $ "Error: " <> show e
           return (True, [])
-        (_, Right snapToRoadResp) -> return (False, snapToRoadResp.snappedPoints)
+        (_, Right snapToRoadResp) ->
+          let snappedWithTime = zipWith (\snapped (_, t) -> (snapped, False, t)) snapToRoadResp.snappedPoints latlongsWithTime
+           in return (False, snappedWithTime)
 
-    getLatlongsViaSnapToRoad latlongs merchantId merchanOperatingCityId = do
-      let latlongs' = chunksOf 98 latlongs
+    getLatlongsViaSnapToRoad :: [(Maps.LatLong, UTCTime)] -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (Bool, [(Maps.LatLong, Bool, UTCTime)])
+    getLatlongsViaSnapToRoad latlongsWithTime merchantId merchanOperatingCityId = do
+      let latlongs' = chunksOf 98 latlongsWithTime
       logTagError "DebugErrorLog: EditDestSnapToRoad" $ "SnapToRoad request batch count: " <> show (length latlongs')
       (failed, snappedLatLongs) <-
         foldM
@@ -377,7 +381,25 @@ handler (UEditLocationReq EditLocationReq {..}) = do
           (False, [])
           latlongs'
       logTagError "DebugErrorLog: EditDestSnapToRoad" $ "Total snapped points count: " <> show (length snappedLatLongs)
-      return (failed, map (,False) snappedLatLongs)
+      return (failed, snappedLatLongs)
+
+    mergeReachedStopsChronologically ::
+      [(Maps.LatLong, Bool, UTCTime)] ->
+      [(Maps.LatLong, UTCTime)] ->
+      [(Maps.LatLong, Bool, UTCTime)]
+    mergeReachedStopsChronologically snappedPath reachedStops =
+      go snappedPath (sortOn snd reachedStops) Nothing
+      where
+        go [] [] _ = []
+        go path [] _ = path
+        go [] stops _ = map (\(ll, t) -> (ll, True, t)) stops
+        go path@((ll, b, t) : restPath) stops@((stopLL, arrivalTime) : restStops) prevLL
+          | arrivalTime <= t =
+            let isDup = maybe False (\prev -> prev.lat == stopLL.lat && prev.lon == stopLL.lon) prevLL
+             in if isDup
+                  then go path restStops prevLL
+                  else (stopLL, True, arrivalTime) : go path restStops (Just stopLL)
+          | otherwise = (ll, b, t) : go restPath stops (Just ll)
 
 mkActions2 :: Text -> Double -> Double -> FCM.FCMActions -> FCM.FCMActions
 mkActions2 bookingUpdateReqId lat long action = do

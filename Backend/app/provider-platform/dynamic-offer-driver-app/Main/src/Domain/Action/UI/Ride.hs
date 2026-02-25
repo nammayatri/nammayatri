@@ -331,14 +331,11 @@ stopAction rideId pt stopLocId action = do
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
       let currentPassStop = LatLong stopInfo.stopStartLatLng.lat stopInfo.stopStartLatLng.lon
-      existingStops <- Redis.runInMultiCloudRedisMaybeResult $ Redis.get (VID.mkReachedStopKey rideId)
-      case existingStops of
-        Just reachedStopList -> do
-          unless (currentPassStop `elem` reachedStopList) $ do
-            let updatedList = reachedStopList ++ [currentPassStop]
-            Redis.setExp (VID.mkReachedStopKey rideId) updatedList 86400
-        Nothing -> do
-          Redis.setExp (VID.mkReachedStopKey rideId) [currentPassStop] 86400
+      reachedStopList <- VID.getReachedStopsWithFallback rideId
+      let isNearExistingStop = any (\existingStop -> highPrecMetersToMeters (distanceBetweenInMeters currentPassStop existingStop) <= 10) (map fst reachedStopList)
+      unless isNearExistingStop $ do
+        let updatedList = reachedStopList ++ [(currentPassStop, now)]
+        Redis.setExp (VID.mkReachedStopKey rideId) updatedList 86400
       pure Success
     ARRIVE -> do
       unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)
