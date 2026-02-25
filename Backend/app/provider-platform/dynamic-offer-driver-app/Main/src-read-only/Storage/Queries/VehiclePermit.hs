@@ -29,8 +29,8 @@ findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ S
 
 findByRcId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m [Domain.Types.VehiclePermit.VehiclePermit])
-findByRcId rcId = do findAllWithKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m [Domain.Types.VehiclePermit.VehiclePermit])
+findByRcId limit offset rcId = do findAllWithOptionsKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)] (Se.Desc Beam.createdAt) limit offset
 
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

@@ -86,12 +86,13 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
       merchant <- findMerchantByShortId merchantShortId
       merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
       transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-      driverImages <- IQuery.findAllByPersonId transporterConfig person.id
-      let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just person.id, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+      let entity = IQuery.PersonEntity person
+      entityImages <- IQuery.findAllByEntityId transporterConfig entity
+      let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
       let shouldActivateRc = False
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' person driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc Nothing
+          <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc Nothing
       pure $
         Common.FleetInfo
           { id = ID.cast fleetOwnerPersonId,

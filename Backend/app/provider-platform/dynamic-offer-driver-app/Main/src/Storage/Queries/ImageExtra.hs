@@ -29,6 +29,14 @@ import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
 
 -- Extra code goes here --
+findAllByEntityId ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  DTC.TransporterConfig ->
+  ImagesEntity ->
+  m [DImage.Image]
+findAllByEntityId transporterConfig (PersonEntity person) = findAllByPersonId transporterConfig person.id
+findAllByEntityId transporterConfig (VehicleRCEntity rc) = findRecentByRcId transporterConfig rc.id
+
 findAllByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DTC.TransporterConfig -> Id Person -> m [DImage.Image]
 findAllByPersonId transporterConfig personId = do
   let onboardingDocsCountLimit = fromMaybe 50 transporterConfig.onboardingDocsCountLimit
@@ -43,6 +51,23 @@ findAllByPersonId transporterConfig personId = do
   let imagesCount = length images
   when (imagesCount >= onboardingDocsCountLimit) $ do
     logWarning $ "Onboarding docs count limit reached. Some docs probably would be skipped: driverId: " <> show personId <> "; count: " <> show imagesCount
+  pure images
+
+findRecentByRcId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DTC.TransporterConfig -> Id DReg.VehicleRegistrationCertificate -> m [DImage.Image]
+findRecentByRcId transporterConfig rcId = do
+  let onboardingDocsCountLimit = fromMaybe 50 transporterConfig.onboardingDocsCountLimit
+  images <-
+    findAllWithOptionsKV
+      [ Se.And
+          [ Se.Is BeamI.rcId $ Se.Eq $ Just rcId.getId
+          ]
+      ]
+      (Se.Desc BeamI.createdAt)
+      (Just onboardingDocsCountLimit)
+      (Just 0)
+  let imagesCount = length images
+  when (imagesCount >= onboardingDocsCountLimit) $ do
+    logWarning $ "Onboarding docs count limit reached. Some docs probably would be skipped: rcId: " <> show rcId <> "; count: " <> show imagesCount
   pure images
 
 findRecentByRcIdAndImageTypes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DTC.TransporterConfig -> Id DReg.VehicleRegistrationCertificate -> [DocumentType] -> m [DImage.Image]
@@ -168,38 +193,45 @@ findRecentLatestByPersonIdAndImagesType driverId imgType = do
         let latestImg = DL.maximumBy (compare `on` (.createdAt)) images
         return $ filter ((== latestImg.workflowTransactionId) . (.workflowTransactionId)) images
 
-data DriverImagesInfo = DriverImagesInfo
-  { driverId :: Maybe (Id Person), -- Nothing for vehilce inspection, without driver linked to vehicle
+data ImagesEntity = PersonEntity Person | VehicleRCEntity DReg.VehicleRegistrationCertificate
+
+data EntityImagesInfo = EntityImagesInfo
+  { entity :: ImagesEntity,
     merchantOperatingCity :: DMOC.MerchantOperatingCity,
-    driverImages :: [DImage.Image],
+    entityImages :: [DImage.Image],
     transporterConfig :: DTC.TransporterConfig,
     now :: UTCTime
   }
 
--- filter on haskell level instead of db queries for performance reason: findRecentByPersonIdAndImageType
-filterRecentByPersonIdAndImageType :: DriverImagesInfo -> DocumentType -> [DImage.Image]
-filterRecentByPersonIdAndImageType DriverImagesInfo {transporterConfig, driverImages, now} imgType = do
-  let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
-  filter (\img -> img.imageType == imgType && img.createdAt >= hoursAgo onboardingRetryTimeInHours now) driverImages
+getPersonEntityId :: EntityImagesInfo -> Maybe (Id Person)
+getPersonEntityId EntityImagesInfo {entity} = case entity of
+  PersonEntity person -> Just person.id
+  VehicleRCEntity _rc -> Nothing
 
--- filter on haskell level instead of db queries for performance reason: findImagesByPersonAndType
-filterImagesByPersonAndType ::
-  DriverImagesInfo ->
+-- filter on haskell level instead of db queries for performance reason: findRecentByEntityIdAndImageType
+filterRecentByEntityIdAndImageType :: EntityImagesInfo -> DocumentType -> [DImage.Image]
+filterRecentByEntityIdAndImageType EntityImagesInfo {transporterConfig, entityImages, now} imgType = do
+  let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
+  filter (\img -> img.imageType == imgType && img.createdAt >= hoursAgo onboardingRetryTimeInHours now) entityImages
+
+-- filter on haskell level instead of db queries for performance reason: findImagesByEntityAndType
+filterImagesByEntityAndType ::
+  EntityImagesInfo ->
   Id DM.Merchant ->
   DocumentType ->
   [DImage.Image]
-filterImagesByPersonAndType DriverImagesInfo {driverImages} merchantId imageType =
-  filter (\img -> img.merchantId == merchantId && img.imageType == imageType) driverImages
+filterImagesByEntityAndType EntityImagesInfo {entityImages} merchantId imageType =
+  filter (\img -> img.merchantId == merchantId && img.imageType == imageType) entityImages
 
--- filter on haskell level instead of db queries for performance reason: findImageByPersonIdAndImageTypeAndVerificationStatus
-filterImageByPersonIdAndImageTypeAndVerificationStatus :: DriverImagesInfo -> DocumentType -> [Documents.VerificationStatus] -> [DImage.Image]
-filterImageByPersonIdAndImageTypeAndVerificationStatus DriverImagesInfo {driverImages} imageType verificationStatus = do
-  filter (\img -> img.imageType == imageType && img.verificationStatus `elem` (Just <$> verificationStatus)) driverImages
+-- filter on haskell level instead of db queries for performance reason: findImageByEntityIdAndImageTypeAndVerificationStatus
+filterImageByEntityIdAndImageTypeAndVerificationStatus :: EntityImagesInfo -> DocumentType -> [Documents.VerificationStatus] -> [DImage.Image]
+filterImageByEntityIdAndImageTypeAndVerificationStatus EntityImagesInfo {entityImages} imageType verificationStatus = do
+  filter (\img -> img.imageType == imageType && img.verificationStatus `elem` (Just <$> verificationStatus)) entityImages
 
--- filter on haskell level instead of db queries for performance reason: findRecentLatestByPersonIdAndImageType
-filterRecentLatestByPersonIdAndImageType :: DriverImagesInfo -> DocumentType -> Maybe DImage.Image
-filterRecentLatestByPersonIdAndImageType DriverImagesInfo {driverImages} imgType = do
-  case filter (\img -> img.imageType == imgType) driverImages of
+-- filter on haskell level instead of db queries for performance reason: findRecentLatestByEntityIdAndImageType
+filterRecentLatestByEntityIdAndImageType :: EntityImagesInfo -> DocumentType -> Maybe DImage.Image
+filterRecentLatestByEntityIdAndImageType EntityImagesInfo {entityImages} imgType = do
+  case filter (\img -> img.imageType == imgType) entityImages of
     [] -> Nothing
     images -> Just (DL.maximumBy (compare `on` (.createdAt)) images)
 
