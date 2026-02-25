@@ -181,7 +181,7 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
   case dpc' of
     Just dpc -> do
       let config = Config dpc (Just otherDimensions)
-      resp <- LYDL.runLogicsWithDebugLog (cast merchantOpCityId) (LYT.CONFIG LYT.DriverPoolConfig) allLogics config
+      resp <- LYDL.runLogicsWithDebugLog LYDL.Driver (cast merchantOpCityId) (LYT.CONFIG LYT.DriverPoolConfig) allLogics config
       case (fromJSON resp.result :: Result Config) of
         Success dpc'' -> do
           when
