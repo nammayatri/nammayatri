@@ -6,6 +6,7 @@ module Lib.Yudhishthira.Tools.DebugLog
     checkDebugLogFlags,
     SetJsonLogicDebugReq (..),
     DebugLogIdentifier (..),
+    CallerApp (..),
     debugLogIdentifierToText,
   )
 where
@@ -40,6 +41,14 @@ data DebugLogIdentifier
 debugLogIdentifierToText :: DebugLogIdentifier -> Text
 debugLogIdentifierToText (LogicDomainId domain) = T.pack $ show domain
 debugLogIdentifierToText (NammaTagEventId event) = T.pack $ show event
+
+-- | Identifies which app triggered the debug log
+data CallerApp = Rider | Driver
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+callerAppToText :: CallerApp -> Text
+callerAppToText Rider = "rider"
+callerAppToText Driver = "driver"
 
 -- | Request to enable/disable debug logging for a domain/event
 data SetJsonLogicDebugReq = SetJsonLogicDebugReq
@@ -108,12 +117,13 @@ checkDebugLogFlags mocId identifier' = do
 -- | Insert a debug log row into ClickHouse json_logic_transactions table
 insertJsonLogicTransaction ::
   (MonadFlow m, CHConfig.ClickhouseFlow m r, Log m) =>
+  CallerApp -> -- caller app (rider/driver)
   Text -> -- domain/event identifier
   A.Value -> -- inputData
   A.Value -> -- logic
   A.Value -> -- outputData
   m ()
-insertJsonLogicTransaction domain inputData logic outputData = do
+insertJsonLogicTransaction callerApp domain inputData logic outputData = do
   transactionId <- generateGUID
   now <- getCurrentTime
   let escapeStr = T.replace "'" "\\'" . T.replace "\\" "\\\\"
@@ -121,8 +131,9 @@ insertJsonLogicTransaction domain inputData logic outputData = do
   let logicStr = escapeStr $ CS.cs $ A.encode logic
   let outputStr = escapeStr $ CS.cs $ A.encode outputData
   let timestampStr = T.pack $ formatDateTimeUTC now
+  let callerAppStr = callerAppToText callerApp
   let query =
-        "INSERT INTO atlas_driver_offer_bpp.json_logic_transactions (transactionId, domain, timestamp, inputData, logic, outputData) VALUES ('"
+        "INSERT INTO app_monitor.json_logic_transactions (transactionId, domain, timestamp, inputData, logic, outputData, caller_app) VALUES ('"
           <> T.unpack transactionId
           <> "', '"
           <> T.unpack domain
@@ -134,6 +145,8 @@ insertJsonLogicTransaction domain inputData logic outputData = do
           <> T.unpack logicStr
           <> "', '"
           <> T.unpack outputStr
+          <> "', '"
+          <> T.unpack callerAppStr
           <> "')"
   eResult <- CHQueries.runExecQuery' (ExprStr query) CHConfig.APP_SERVICE_CLICKHOUSE
   case eResult of
@@ -150,12 +163,13 @@ runLogicsWithDebugLog ::
     CHConfig.ClickhouseFlow m r,
     CacheFlow m r
   ) =>
+  CallerApp ->
   Id LYT.MerchantOperatingCity ->
   LYT.LogicDomain ->
   [A.Value] ->
   a ->
   m LYT.RunLogicResp
-runLogicsWithDebugLog mocId domain logics data_ = do
+runLogicsWithDebugLog callerApp mocId domain logics data_ = do
   resp <- runLogics logics data_
   let domainStr = T.pack $ show domain
   fork "jsonLogicDebugLog" $ do
@@ -165,7 +179,7 @@ runLogicsWithDebugLog mocId domain logics data_ = do
       let logicVal = A.toJSON logics
       let outputVal = resp.result
       handle (\(e :: SomeException) -> logWarning $ "Debug log to ClickHouse failed: " <> show e) $
-        insertJsonLogicTransaction domainStr inputVal logicVal outputVal
+        insertJsonLogicTransaction callerApp domainStr inputVal logicVal outputVal
   return resp
 
 -- | Wrapper around computeNammaTags with debug logging
@@ -178,11 +192,12 @@ computeNammaTagsWithDebugLog ::
     ToJSON a,
     CHConfig.ClickhouseFlow m r
   ) =>
+  CallerApp ->
   Id LYT.MerchantOperatingCity ->
   YA.ApplicationEvent ->
   a ->
   m [LYT.TagNameValue]
-computeNammaTagsWithDebugLog merchantOpCityId event sourceData_ = do
+computeNammaTagsWithDebugLog callerApp merchantOpCityId event sourceData_ = do
   let sourceData = A.toJSON sourceData_
   let req = LYT.YudhishthiraDecideReq {merchantOperatingCityId = merchantOpCityId, source = LYT.Application event, sourceData}
   resp <- Event.yudhishthiraDecide req
@@ -196,7 +211,7 @@ computeNammaTagsWithDebugLog merchantOpCityId event sourceData_ = do
       let logicVal = A.String "NammaTag"
       let outputVal = A.toJSON (resp.tags <&> (\t -> A.object ["tagName" A..= t.tagName, "tagValue" A..= (T.pack $ show t.tagValue)]))
       handle (\(e :: SomeException) -> logWarning $ "NammaTag debug log to ClickHouse failed: " <> show e) $
-        insertJsonLogicTransaction eventStr inputVal logicVal outputVal
+        insertJsonLogicTransaction callerApp eventStr inputVal logicVal outputVal
   pure tags
 
 -- | Wrapper around computeNammaTagsWithExpiry with debug logging
@@ -209,11 +224,12 @@ computeNammaTagsWithExpiryAndDebugLog ::
     ToJSON a,
     CHConfig.ClickhouseFlow m r
   ) =>
+  CallerApp ->
   Id LYT.MerchantOperatingCity ->
   YA.ApplicationEvent ->
   a ->
   m [LYT.TagNameValueExpiry]
-computeNammaTagsWithExpiryAndDebugLog merchantOpCityId event sourceData_ = do
+computeNammaTagsWithExpiryAndDebugLog callerApp merchantOpCityId event sourceData_ = do
   let sourceData = A.toJSON sourceData_
   let req = LYT.YudhishthiraDecideReq {merchantOperatingCityId = merchantOpCityId, source = LYT.Application event, sourceData}
   resp <- Event.yudhishthiraDecide req
@@ -228,5 +244,5 @@ computeNammaTagsWithExpiryAndDebugLog merchantOpCityId event sourceData_ = do
       let logicVal = A.String "NammaTag"
       let outputVal = A.toJSON (resp.tags <&> (\t -> A.object ["tagName" A..= t.tagName, "tagValue" A..= (T.pack $ show t.tagValue)]))
       handle (\(e :: SomeException) -> logWarning $ "NammaTag debug log to ClickHouse failed: " <> show e) $
-        insertJsonLogicTransaction eventStr inputVal logicVal outputVal
+        insertJsonLogicTransaction callerApp eventStr inputVal logicVal outputVal
   pure tags
