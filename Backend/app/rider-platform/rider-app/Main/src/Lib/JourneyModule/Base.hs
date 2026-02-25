@@ -503,7 +503,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
                                           ADULT -> ticketQuantity
                                           CHILD -> childTicketQuantity
                                           _ -> Just quoteCategory.selectedQuantity
-                                 in APITypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity}
+                                 in APITypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity, seatIds = quoteCategory.seatIds}
                             )
                             quoteCategories
                     return $ categorySelectionReq' <> selectedQuoteCategories
@@ -513,7 +513,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
         let totalTicketQuantity = sum $ map (.quantity) categorySelectionReq
             bookingAllowed' = leg.bookingAllowed || ((fromMaybe False leg.hasApplicablePasses) && totalTicketQuantity /= 1)
             updatedLeg = leg {JL.bookingAllowed = bookingAllowed'}
-        JLI.confirm forcedBooking bookLater updatedLeg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer mbIsMockPayment
+        JLI.confirm forcedBooking bookLater updatedLeg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer mbIsMockPayment (mElement >>= (.tripId))
     )
     allLegs
 
@@ -536,10 +536,10 @@ startJourneyLeg legInfo isSingleMode = do
     QTBooking.updateOnInitDoneBySearchId (Just False) (Id legInfo.searchId)
   let categorySelectionReq =
         map
-          ( \category -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.categoryId, quantity = category.categorySelectedQuantity}
+          ( \category -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.categoryId, quantity = category.categorySelectedQuantity, seatIds = category.seatIds}
           )
           categories
-  JLI.confirm True False legInfo crisSdkResponse categorySelectionReq isSingleMode Nothing Nothing
+  JLI.confirm True False legInfo crisSdkResponse categorySelectionReq isSingleMode Nothing Nothing Nothing
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,

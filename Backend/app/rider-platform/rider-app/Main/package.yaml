@@ -84,6 +84,7 @@ dependencies:
   - uuid
   - wai-extra
   - http-types
+  - hedis
   - http-api-data
   - warp
   - time
@@ -125,6 +126,7 @@ dependencies:
   - regex-posix
   - pureMD5
   - lens-aeson
+  - string-conversions
   - http-client
   - http-client-tls
   - hashable

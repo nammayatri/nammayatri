@@ -45,7 +45,7 @@ verify (Base64 privateKey) msg signatureBs =
 generateQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DIRECTConfig -> TicketPayload -> m Text
 generateQR config ticket = do
   let secretKey = config.cipherKey
-      qrData = ticket.ticketNumber <> "," <> ticket.fromRouteProviderCode <> "," <> ticket.toRouteProviderCode <> "," <> show ticket.adultQuantity <> "," <> show ticket.childQuantity <> "," <> ticket.vehicleTypeProviderCode <> "," <> show ticket.ticketAmount.getMoney <> "," <> maybe "" show ticket.otpCode <> "," <> maybe "" (\otpCode -> qrColorHex !! (otpCode `mod` length qrColorHex)) ticket.otpCode <> "," <> ticket.expiry <> "," <> maybe "" show ticket.refreshAt
+      qrData = ticket.ticketNumber <> "," <> ticket.fromRouteProviderCode <> "," <> ticket.toRouteProviderCode <> "," <> show ticket.adultQuantity <> "," <> show ticket.childQuantity <> "," <> ticket.vehicleTypeProviderCode <> "," <> show ticket.ticketAmount.getMoney <> "," <> maybe "" show ticket.otpCode <> "," <> maybe "" (\otpCode -> qrColorHex !! (otpCode `mod` length qrColorHex)) ticket.otpCode <> "," <> ticket.expiry <> "," <> maybe "" show ticket.refreshAt <> "," <> fromMaybe "" ticket.fleetNo <> "," <> fromMaybe "" (T.intercalate "|" <$> ticket.seatLabels)
   signature <- sign secretKey qrData & fromEitherM (\err -> InternalError $ "Failed to encrypt: " <> show err)
   return $ (TE.decodeUtf8 $ Base64.encode signature) <> "," <> qrData
 
@@ -56,10 +56,26 @@ decodeQR config signatureAndQrData = do
   let qrData = T.drop 1 $ T.dropWhile (/= ',') signatureAndQrData
   isVerified <- verify secretKey qrData signature & fromEitherM (\err -> InternalError $ "Failed to decrypt: " <> show err)
   unless isVerified $ throwError (InvalidRequest "Invalid QR data")
-  (ticketNumber, fromRouteProviderCode, toRouteProviderCode, adultQuantity', childQuantity', vehicleTypeProviderCode, ticketAmount', otpCode', _colorCode, expiry, refreshAt') <-
-    case T.strip <$> T.splitOn "," qrData of
-      [ticketNumber, fromRouteProviderCode, toRouteProviderCode, adultQuantity', childQuantity', vehicleTypeProviderCode, ticketAmount', otpCode', colorCode, expiry, refreshAt'] -> pure (ticketNumber, fromRouteProviderCode, toRouteProviderCode, adultQuantity', childQuantity', vehicleTypeProviderCode, ticketAmount', otpCode', colorCode, expiry, refreshAt')
-      _ -> throwError (InvalidRequest "Unable to decode QR data")
+  let fields = T.strip <$> T.splitOn "," qrData
+
+  -- helper
+  let atMay' i = if length fields > i then Just (fields !! i) else Nothing
+  let req i err = fromMaybeM (InvalidRequest err) (atMay' i)
+  let opt i = fromMaybe "" (atMay' i)
+
+  ticketNumber <- req 0 "Missing ticketNumber"
+  fromRouteProviderCode <- req 1 "Missing fromRouteProviderCode"
+  toRouteProviderCode <- req 2 "Missing toRouteProviderCode"
+  adultQuantity' <- req 3 "Missing adultQuantity"
+  childQuantity' <- req 4 "Missing childQuantity"
+  vehicleTypeProviderCode <- req 5 "Missing vehicleTypeProviderCode"
+  ticketAmount' <- req 6 "Missing ticketAmount"
+  otpCode' <- req 7 "Missing otpCode"
+  _colorCode <- req 8 "Missing colorCode"
+  expiry <- req 9 "Missing expiry"
+  refreshAt' <- req 10 "Missing refreshAt"
+  let fleetNo' = opt 11
+  let seatLabels' = opt 12
   now <- getCurrentTime
   let expiryIST = fromMaybe (addUTCTime (secondsToNominalDiffTime 330) now) $ parseUtcTime expiry
   adultQuantity :: Int <- (readMaybe . T.unpack $ adultQuantity') & fromMaybeM (InvalidRequest "Unable to decode adult quantity")
@@ -67,6 +83,8 @@ decodeQR config signatureAndQrData = do
   ticketAmount :: Money <- (readMaybe . T.unpack $ ticketAmount') & fromMaybeM (InvalidRequest "Unable to decode ticket amount")
   let refreshAt :: Maybe UTCTime = readMaybe . T.unpack $ refreshAt'
       otpCode :: Maybe Int = readMaybe . T.unpack $ otpCode'
+  let fleetNo = if T.null fleetNo' then Nothing else Just fleetNo'
+  let seatLabels = if T.null seatLabels' then Nothing else Just (T.splitOn "|" seatLabels')
   return $
     TicketPayload
       { ..

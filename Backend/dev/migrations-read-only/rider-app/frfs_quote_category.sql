@@ -186,3 +186,10 @@ ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN selected_quantity DROP NO
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN seat_labels text[] ;
+ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN seat_ids text[] ;

@@ -54,7 +54,7 @@ onSelect onSelectReq merchant quote isSingleMode mbEnableOffer crisSdkResponse i
         mapMaybe
           ( \category ->
               (find (\category' -> category'.category == category.category) quoteCategories)
-                <&> (\category' -> (FRFSCategorySelectionReq {quantity = category.quantity, quoteCategoryId = category'.id}))
+                <&> (\category' -> (FRFSCategorySelectionReq {quantity = category.quantity, quoteCategoryId = category'.id, seatIds = category'.seatIds}))
           )
           onSelectReq.categories
-  void $ postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer Nothing integratedBppConfig
+  void $ postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer Nothing integratedBppConfig Nothing

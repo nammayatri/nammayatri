@@ -19,3 +19,10 @@ ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD COLUMN selected_q
 ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD COLUMN seat_labels text[] ;
+ALTER TABLE atlas_app.frfs_ticket_booking_payment_category ADD COLUMN seat_ids text[] ;

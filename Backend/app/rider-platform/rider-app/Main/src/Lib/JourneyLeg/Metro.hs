@@ -15,7 +15,7 @@ instance JT.JourneyLeg MetroLegRequest m where
   search (MetroLegRequestSearch MetroLegRequestSearchData {..}) = CFRFS.search Spec.METRO personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId Nothing upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode
   search _ = throwError (InternalError "Not supported")
 
-  confirm (MetroLegRequestConfirm MetroLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId bookLater bookingAllowed Nothing Spec.METRO categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment
+  confirm (MetroLegRequestConfirm MetroLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId bookLater bookingAllowed Nothing Spec.METRO categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment Nothing
   confirm _ = throwError (InternalError "Not supported")
 
   update (MetroLegRequestUpdate _) = return ()

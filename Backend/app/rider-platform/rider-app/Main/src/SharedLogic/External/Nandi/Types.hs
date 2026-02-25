@@ -111,7 +111,8 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     is_actually_valid :: Maybe Bool,
     driver_id :: Maybe Text,
     conductor_id :: Maybe Text,
-    eligible_pass_ids :: Maybe [Text]
+    eligible_pass_ids :: Maybe [Text],
+    seatLayoutId :: Maybe Text
   }
   deriving (Generic, ToJSON, ToSchema, Show)
 
@@ -135,6 +136,7 @@ instance FromJSON VehicleServiceTypeResponse where
     driver_id <- v .:? "driver_id"
     conductor_id <- v .:? "conductor_id"
     eligible_pass_ids <- v .:? "eligible_pass_ids"
+    seatLayoutId <- v .:? "seatLayoutId"
     return VehicleServiceTypeResponse {..}
 
 data BusScheduleTrip = BusScheduleTrip
@@ -242,7 +244,9 @@ data RouteInfoNandi = RouteInfoNandi
 data BusScheduleDetail = BusScheduleDetail
   { eta :: [BusStopETA],
     vehicle_no :: Text,
-    service_tier :: BecknV2.FRFS.Enums.ServiceTierType
+    service_tier :: BecknV2.FRFS.Enums.ServiceTierType,
+    trip_number :: Maybe Text,
+    waybill_no :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

@@ -20,6 +20,7 @@ import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.MultimodalPreferences
 import qualified Domain.Types.RouteDetails
 import qualified Domain.Types.RouteStopTimeTable
+import qualified Domain.Types.Seat
 import qualified Domain.Types.Station
 import qualified Domain.Types.StationType
 import qualified Domain.Types.Trip
@@ -126,8 +127,10 @@ data JourneyConfirmReqElement = JourneyConfirmReqElement
     childTicketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     crisSdkResponse :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.CrisSdkResponse,
     journeyLegOrder :: Kernel.Prelude.Int,
+    seatIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
     skipBooking :: Kernel.Prelude.Bool,
-    ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    tripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -343,12 +346,14 @@ data RouteWithLiveVehicle = RouteWithLiveVehicle {liveVehicles :: [LiveVehicleIn
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ScheduledVehicleInfo = ScheduledVehicleInfo
-  { eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
+  { availableSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
     locationUTCTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     position :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     serviceSubTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    tripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text
   }
   deriving stock (Generic)

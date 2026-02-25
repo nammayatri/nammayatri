@@ -23,6 +23,8 @@ import qualified Lib.JourneyLeg.Types as JL
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.State.Types as JMState
 import SharedLogic.FRFSUtils as FRFSUtils
+import qualified SharedLogic.FRFSSeatBooking as SeatBooking
+import qualified Domain.Types.FRFSQuoteCategory as FRFSQuoteCategory
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -40,6 +42,7 @@ import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
+import Data.List (nub)
 
 cancelJourney :: DFRFSTicketBooking.FRFSTicketBooking -> Flow ()
 cancelJourney booking = do
@@ -76,6 +79,7 @@ handleCancelledStatus merchant booking refundAmount cancellationCharges messageI
       void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
       void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
       cancelJourney booking
+  releaseSeatsIfHeld booking quoteCategories
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId
   void $ sendTicketCancelSMS mRiderNumber person.mobileCountryCode booking fareParameters
@@ -84,6 +88,15 @@ handleCancelledStatus merchant booking refundAmount cancellationCharges messageI
     CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId merchant.id (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)
       >>= fromMaybeM (InternalError "Beckn Config not found")
   updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
+
+releaseSeatsIfHeld :: DFRFSTicketBooking.FRFSTicketBooking -> [FRFSQuoteCategory.FRFSQuoteCategory] -> Flow ()
+releaseSeatsIfHeld booking quoteCategories = do
+  let allSeatIds = nub $ concatMap (fromMaybe [] . (.seatIds)) quoteCategories
+  case (booking.tripId, booking.fromStopIdx, booking.toStopIdx) of
+    (Just tripId, Just fromIdx, Just toIdx) | not (null allSeatIds) -> do
+      logInfo $ "Releasing seats on cancel for bookingId: " <> booking.id.getId <> ", tripId: " <> tripId
+      SeatBooking.releaseConfirmedSeats tripId allSeatIds fromIdx toIdx
+    _ -> pure ()
 
 checkRefundAndCancellationCharges :: Id DFRFSTicketBooking.FRFSTicketBooking -> HighPrecMoney -> HighPrecMoney -> Flow ()
 checkRefundAndCancellationCharges bookingId refundAmount cancellationCharges = do

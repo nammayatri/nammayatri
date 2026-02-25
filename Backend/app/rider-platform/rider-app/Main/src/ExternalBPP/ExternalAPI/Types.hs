@@ -15,7 +15,9 @@ data TicketPayload = TicketPayload
     expiry :: Text,
     expiryIST :: UTCTime,
     refreshAt :: Maybe UTCTime,
-    otpCode :: Maybe Int
+    otpCode :: Maybe Int,
+    fleetNo :: Maybe Text,
+    seatLabels :: Maybe [Text]
   }
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq)
 

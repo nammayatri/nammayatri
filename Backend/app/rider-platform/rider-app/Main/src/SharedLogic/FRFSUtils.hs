@@ -57,6 +57,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.RouteTripMapping as DRTM
+import qualified Domain.Types.Seat as DSeat
 import qualified Domain.Types.Station as Station
 import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
 import EulerHS.Prelude (comparing, concatMapM, (+||), (||+))
@@ -938,7 +939,9 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             merchantId = booking.merchantId,
             merchantOperatingCityId = booking.merchantOperatingCityId,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            seatIds = quoteCategory.seatIds,
+            seatLabels = quoteCategory.seatLabels
           }
 
 makecancelledTtlKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
@@ -1011,23 +1014,36 @@ getTotalPriceTagFromCategory categoryType = case categoryType of
   FEMALE -> FRFSCategorySpec.TOTAL_FEMALE_PRICE
   MALE -> FRFSCategorySpec.TOTAL_MALE_PRICE
 
-updateQuoteCategoriesWithQuantitySelections ::
+data QuoteCategorySelection = QuoteCategorySelection
+  { qcQuoteCategoryId :: Id DFRFSQuoteCategory.FRFSQuoteCategory,
+    qcQuantity :: Int,
+    qcSeatIds :: Maybe [Id DSeat.Seat],
+    qcSeatLabels :: Maybe [Text]
+  }
+
+updateQuoteCategoriesWithSelections ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  [(Id DFRFSQuoteCategory.FRFSQuoteCategory, Int)] ->
+  [QuoteCategorySelection] ->
   [DFRFSQuoteCategory.FRFSQuoteCategory] ->
   m [DFRFSQuoteCategory.FRFSQuoteCategory]
-updateQuoteCategoriesWithQuantitySelections categories quoteCategories = do
-  updatedQuoteCategories <- mapM updateCategory quoteCategories
-  return updatedQuoteCategories
+updateQuoteCategoriesWithSelections selections quoteCategories = do
+  mapM updateCategory quoteCategories
   where
     updateCategory category =
-      case find (\(quoteCategoryId, _) -> quoteCategoryId == category.id) categories of
-        Just (_, quantity) -> do
-          QFRFSQuoteCategory.updateQuantityByQuoteCategoryId quantity category.id
-          return (category {DFRFSQuoteCategory.selectedQuantity = quantity})
+      case find (\sel -> sel.qcQuoteCategoryId == category.id) selections of
+        Just sel -> do
+          let updatedCategory =
+                category
+                  { DFRFSQuoteCategory.selectedQuantity = sel.qcQuantity,
+                    DFRFSQuoteCategory.seatIds = sel.qcSeatIds,
+                    DFRFSQuoteCategory.seatLabels = sel.qcSeatLabels
+                  }
+          QFRFSQuoteCategory.updateByPrimaryKey updatedCategory
+          return updatedCategory
         Nothing -> do
-          QFRFSQuoteCategory.updateQuantityByQuoteCategoryId 0 category.id
-          return (category {DFRFSQuoteCategory.selectedQuantity = 0})
+          let updatedCategory = category {DFRFSQuoteCategory.selectedQuantity = 0}
+          QFRFSQuoteCategory.updateByPrimaryKey updatedCategory
+          return updatedCategory
 
 updateQuoteCategoriesWithFinalPrice ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -1222,7 +1238,7 @@ vendorSplitDetailSplitTypeToPaymentSplitType = \case
 
 mkCategoryInfoResponse :: DFRFSQuoteCategory.FRFSQuoteCategory -> APITypes.CategoryInfoResponse
 mkCategoryInfoResponse category =
-  APITypes.CategoryInfoResponse {categoryId = category.id, categoryName = category.category, categoryMeta = category.categoryMeta, categoryPrice = mkPriceAPIEntity category.price, categoryOfferedPrice = mkPriceAPIEntity category.offeredPrice, categoryFinalPrice = mkPriceAPIEntity <$> category.finalPrice, categorySelectedQuantity = category.selectedQuantity}
+  APITypes.CategoryInfoResponse {categoryId = category.id, categoryName = category.category, categoryMeta = category.categoryMeta, categoryPrice = mkPriceAPIEntity category.price, categoryOfferedPrice = mkPriceAPIEntity category.offeredPrice, categoryFinalPrice = mkPriceAPIEntity <$> category.finalPrice, categorySelectedQuantity = category.selectedQuantity, seatIds = category.seatIds, seatLabels = category.seatLabels}
 
 getPaymentType :: Bool -> Spec.VehicleCategory -> PaymentOrder.PaymentServiceType
 getPaymentType isMultiModalBooking = \case
