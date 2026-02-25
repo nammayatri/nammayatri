@@ -373,6 +373,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
         SL.SpecialLocation
           { gates = [],
             enabled = True,
+            isOpenMarketEnabled = maybe True (.isOpenMarketEnabled) mbExistingSpLoc,
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
             merchantOperatingCityId = Just merchantOperatingCityId,
@@ -1511,6 +1512,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
             DSL.SpecialLocation
               { id = Id locationName,
                 enabled = enabled,
+                isOpenMarketEnabled = True,
                 locationName = locationName,
                 category = category,
                 merchantId = Just (cast merchantOpCity.merchantId),
