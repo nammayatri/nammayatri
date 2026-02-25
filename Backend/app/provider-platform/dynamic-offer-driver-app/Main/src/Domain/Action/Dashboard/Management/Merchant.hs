@@ -2218,8 +2218,10 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       if city /= opCity
         then return $ (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap)
         else do
-          let mergeFarePolicy newId FarePolicy.FarePolicy {..} = do
+          let mergeFarePolicy newId firstFarePolicy'@FarePolicy.FarePolicy {..} = do
                 let remainingfarePolicies = map (\(_, _, _, _, _, _, _, _, fp) -> fp) xs
+                let mergedCancellationFarePolicyId =
+                      listToMaybe $ catMaybes $ map (.cancellationFarePolicyId) (firstFarePolicy' : remainingfarePolicies)
                 let driverExtraFeeBounds' = NE.nonEmpty $ maybe [] NE.toList driverExtraFeeBounds <> concatMap (maybe [] NE.toList . (.driverExtraFeeBounds)) remainingfarePolicies
                 let driverExtraFeeBoundsDuplicateRemoved = NE.nubBy (\a b -> a.startDistance == b.startDistance) <$> driverExtraFeeBounds'
                 farePolicyDetails' <-
@@ -2314,7 +2316,14 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                       let pricingSlabsDuplicateRemoved = NE.nubBy (\a b -> a.timePercentage == b.timePercentage && a.distancePercentage == b.distancePercentage) pricingSlabs'
                       return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {pricingSlabs = pricingSlabsDuplicateRemoved, ..}
                     _ -> return farePolicyDetails
-                return $ FarePolicy.FarePolicy {id = newId, driverExtraFeeBounds = driverExtraFeeBoundsDuplicateRemoved, farePolicyDetails = farePolicyDetails', ..}
+                return $
+                  FarePolicy.FarePolicy
+                    { id = newId,
+                      cancellationFarePolicyId = mergedCancellationFarePolicyId,
+                      driverExtraFeeBounds = driverExtraFeeBoundsDuplicateRemoved,
+                      farePolicyDetails = farePolicyDetails',
+                      ..
+                    }
 
           newId <- generateGUID
           finalFarePolicy <- mergeFarePolicy newId firstFarePolicy
