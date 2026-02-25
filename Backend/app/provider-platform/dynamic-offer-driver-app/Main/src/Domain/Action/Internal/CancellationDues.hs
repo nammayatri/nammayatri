@@ -65,7 +65,7 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
       then do
         localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
         (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF localTime Nothing Nothing
-        response <- withTryCatch "runLogics:canWaiveOffResult" $ LYDL.runLogicsWithDebugLog (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF allLogics logicInput
+        response <- withTryCatch "runLogics:canWaiveOffResult" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF allLogics logicInput
         case response of
           Left e -> do
             logError $ "Error in running UserCancellationDuesLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
