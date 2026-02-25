@@ -331,8 +331,8 @@ instance IsBaseError RiderError where
 
 instance IsHTTPError RiderError where
   toErrorCode = \case
-    RiderConfigNotFound _ -> "RIDER_NOT_FOUND"
-    RiderConfigDoesNotExist _ -> "RIDER_NOT_EXISTS"
+    RiderConfigNotFound _ -> "RIDER_CONFIG_NOT_FOUND"
+    RiderConfigDoesNotExist _ -> "RIDER_CONFIG_NOT_EXISTS"
     RiderConfigFieldIsEmpty _ _ -> "RIDER_CONFIG_FIELD_IS_EMPTY"
   toHttpCode = \case
     RiderConfigNotFound _ -> E500
