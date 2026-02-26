@@ -175,7 +175,8 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
         let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
         let onlyMandatoryDocs = Just True
             shouldActivateRc = False
-        void $ SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
+            skipMessages = True -- Skip translations, result is ignored (void)
+        void $ SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->

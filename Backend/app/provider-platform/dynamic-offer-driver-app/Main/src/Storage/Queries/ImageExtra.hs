@@ -1,4 +1,27 @@
-module Storage.Queries.ImageExtra where
+module Storage.Queries.ImageExtra
+  ( ImagesEntity (..),
+    EntityImagesInfo (..),
+    RcImagesInfo (..),
+    findAllByEntityId,
+    getPersonEntityId,
+    findRecentByRcId,
+    getRcImagesInfoFromEntityImagesInfo,
+    findAllByPersonId,
+    findRecentByPersonIdAndImageType,
+    findByPersonIdImageTypeAndValidationStatus,
+    findByPersonIdAndImageTypes,
+    findRecentLatestByPersonIdAndImagesType,
+    findImagesByRCAndType,
+    updateVerificationStatusOnlyById,
+    updateVerificationStatusByIdAndType,
+    updateVerificationStatusAndFailureReason,
+    filterRecentByEntityIdAndImageType,
+    filterImagesByEntityAndType,
+    filterImageByEntityIdAndImageTypeAndVerificationStatus,
+    filterRecentLatestByEntityIdAndImageType,
+    filterRecentByPersonRCAndImageType,
+  )
+where
 
 import qualified Data.List as DL
 import qualified Data.Time as DT
@@ -18,7 +41,7 @@ import qualified Kernel.Types.Documents
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, logWarning)
+import Kernel.Utils.Common (CacheFlow, logDebug, logWarning)
 import Kernel.Utils.Error.Throwing
 import qualified Sequelize as Se
 import qualified Storage.Beam.Image as BeamI
@@ -264,16 +287,12 @@ getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId documentTypes = do
   -- 1. Check entity type
   case entity of
     -- 2. If PersonEntity, fallback to DB (Person can have multiple RCs, we don't know which images we need)
-    PersonEntity _ -> do
-      rcImages <- findRecentByRcIdAndImageTypes transporterConfig rcId documentTypes
-      pure $ RcImagesInfo {rcId, rcImages, documentTypes}
+    PersonEntity _ -> fallbackToDb
     -- 3. If VehicleRCEntity, check if it's the RC we need
     VehicleRCEntity rc -> do
       -- 4. If not the RC we need, fallback to DB
       if rc.id /= rcId
-        then do
-          rcImages <- findRecentByRcIdAndImageTypes transporterConfig rcId documentTypes
-          pure $ RcImagesInfo {rcId, rcImages, documentTypes}
+        then fallbackToDb
         else do
           -- 5. If it's the right RC, check limit
           let imagesCount = length entityImages
@@ -282,12 +301,15 @@ getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId documentTypes = do
           if limitReached
             then do
               logWarning $ "Onboarding docs count limit reached in cache, possible missing images due to other types: rcId: " <> show rcId <> "; count: " <> show imagesCount <> "; falling back to DB"
-              rcImages <- findRecentByRcIdAndImageTypes transporterConfig rcId documentTypes
-              pure $ RcImagesInfo {rcId, rcImages, documentTypes}
+              fallbackToDb
             else do
               -- 7. If limit not reached, filter by time and document types (same as findRecentByRcIdAndImageTypes)
               let cutoffTime = hoursAgo onboardingRetryTimeInHours now
                   filteredByTime = filter (\img -> img.createdAt >= cutoffTime) entityImages
                   filteredByType = filter (\img -> img.imageType `elem` documentTypes) filteredByTime
-                  sortedImages = DL.sortBy (\a b -> compare b.createdAt a.createdAt) filteredByType
-              pure $ RcImagesInfo {rcId, rcImages = sortedImages, documentTypes}
+              logDebug $ "Use cached rc images: rcId: " <> show rcId <> "; count: " <> show (length filteredByType)
+              pure $ RcImagesInfo {rcId, rcImages = filteredByType, documentTypes}
+  where
+    fallbackToDb = do
+      rcImages <- findRecentByRcIdAndImageTypes entityImagesInfo.transporterConfig rcId documentTypes
+      pure $ RcImagesInfo {rcId, rcImages, documentTypes}

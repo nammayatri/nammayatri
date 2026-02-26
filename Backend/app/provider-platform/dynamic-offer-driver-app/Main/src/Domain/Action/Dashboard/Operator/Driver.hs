@@ -348,7 +348,8 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             entityImages <- IQuery.findAllByEntityId transporterConfig entity
             let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
             let shouldActivateRc = False
-            Just . castStatusRes <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
+                skipMessages = False -- Need translations for API response
+            Just . castStatusRes <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
           else pure Nothing
 
       driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
