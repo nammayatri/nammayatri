@@ -21,7 +21,6 @@ where
 
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
-import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
@@ -32,7 +31,8 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.DriverOnboarding (convertUTCTimetoDate, removeSpaceAndDash)
+import SharedLogic.DriverOnboarding (convertUTCTimetoDate, parseDateTime, removeSpaceAndDash)
+import SharedLogic.RCOcrCache
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -52,7 +52,17 @@ data ValidateDocumentImageResponse = ValidateDocumentImageResponse
     documentNumber :: Maybe Text,
     dateOfBirth :: Maybe Text,
     nameOnCard :: Maybe Text,
-    isVerified :: Bool
+    isVerified :: Bool,
+    -- | RC-specific OCR fields (populated when imageType = VehicleRegistrationCertificate)
+    vehicleClass :: Maybe Text,
+    manufacturer :: Maybe Text,
+    vehicleModel :: Maybe Text,
+    fuelType :: Maybe Text,
+    colour :: Maybe Text,
+    chassisNumber :: Maybe Text,
+    engineNumber :: Maybe Text,
+    registrationDate :: Maybe Text,
+    ownerName :: Maybe Text
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -79,29 +89,78 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
   logDebug $ "DocumentRegistration.validateDocument: isImageValidationRequired=" <> show isImageValidationRequired
   if not isImageValidationRequired
     then do
-      return $ ValidateDocumentImageResponse imageId Nothing Nothing Nothing True
+      return $ emptyValidateDocumentImageResponse imageId
     else do
-      (documentNumber, dateOfBirth, nameOnCard) <- case imageType of
+      case imageType of
         DVC.DriverLicense -> do
           resp <- Verification.extractDLImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
           logDebug $ "DocumentRegistration.validateDocument: Extracted DL Image successfully, resp=" <> show resp
           case resp.extractedDL of
             Just extractedDL -> do
               let documentNumber = removeSpaceAndDash <$> extractedDL.dlNumber
-              let dateOfBirth = fmap convertUTCTimetoDate (VC.parseDateTime =<< extractedDL.dateOfBirth)
+              let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< extractedDL.dateOfBirth)
               let nameOnCard = extractedDL.nameOnCard
               DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
-              return (documentNumber, dateOfBirth, nameOnCard)
-            Nothing -> do
-              return (Nothing, Nothing, Nothing)
+              logDebug $ "DocumentRegistration.validateDocument: Validation completed, returning response with documentNumber=" <> show documentNumber <> ", dateOfBirth=" <> show dateOfBirth
+              pure $ (emptyValidateDocumentImageResponse imageId) {documentNumber, dateOfBirth, nameOnCard}
+            Nothing ->
+              return $ emptyValidateDocumentImageResponse imageId
         DVC.VehicleRegistrationCertificate -> do
           resp <- Verification.extractRCImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
           case resp.extractedRC of
             Just extractedRC -> do
               let documentNumber = removeSpaceAndDash <$> extractedRC.rcNumber
-              return (documentNumber, Nothing, Nothing)
-            Nothing -> do
-              return (Nothing, Nothing, Nothing)
-        _ -> return (Nothing, Nothing, Nothing)
-      logDebug $ "DocumentRegistration.validateDocument: Validation completed, returning response with documentNumber=" <> show documentNumber <> ", dateOfBirth=" <> show dateOfBirth
-      pure $ ValidateDocumentImageResponse imageId documentNumber dateOfBirth nameOnCard True
+              -- Populate RCOcrData from the full ExtractedRC returned by the OCR service.
+              let ocrData =
+                    RCOcrData
+                      { rcNumber = extractedRC.rcNumber,
+                        vehicleClass = extractedRC.vehicleClass,
+                        manufacturer = extractedRC.manufacturer,
+                        model = extractedRC.model,
+                        fuelType = extractedRC.fuelType,
+                        colour = extractedRC.colour,
+                        chassisNumber = extractedRC.chassisNumber,
+                        engineNumber = extractedRC.engineNumber,
+                        registrationDate = extractedRC.registrationDate,
+                        ownerName = extractedRC.ownerName,
+                        manufacturingDate = extractedRC.manufacturingDate,
+                        bodyType = extractedRC.bodyType
+                      }
+              cacheExtractedRC personId ocrData
+              logDebug $ "DocumentRegistration.validateDocument: RC OCR completed, rcNumber=" <> show documentNumber
+              pure $
+                (emptyValidateDocumentImageResponse imageId)
+                  { documentNumber,
+                    vehicleClass = extractedRC.vehicleClass,
+                    manufacturer = extractedRC.manufacturer,
+                    vehicleModel = extractedRC.model,
+                    fuelType = extractedRC.fuelType,
+                    colour = extractedRC.colour,
+                    chassisNumber = extractedRC.chassisNumber,
+                    engineNumber = extractedRC.engineNumber,
+                    registrationDate = extractedRC.registrationDate,
+                    ownerName = extractedRC.ownerName
+                  }
+            Nothing ->
+              return $ emptyValidateDocumentImageResponse imageId
+        _ -> return $ emptyValidateDocumentImageResponse imageId
+
+emptyValidateDocumentImageResponse :: Id Domain.Image -> ValidateDocumentImageResponse
+emptyValidateDocumentImageResponse imageId =
+  ValidateDocumentImageResponse
+    { imageId,
+      documentNumber = Nothing,
+      dateOfBirth = Nothing,
+      nameOnCard = Nothing,
+      isVerified = True,
+      vehicleClass = Nothing,
+      manufacturer = Nothing,
+      vehicleModel = Nothing,
+      fuelType = Nothing,
+      colour = Nothing,
+      chassisNumber = Nothing,
+      engineNumber = Nothing,
+      registrationDate = Nothing,
+      ownerName = Nothing
+    }
+

@@ -1397,4 +1397,34 @@ CommonDriverOnboardingDocuments:
     updateRejectReason:
       kvFunction: updateWithKV
       params: [rejectReason, verificationStatus, updatedAt]
+
+MorthRCVerification:
+  tableName: morth_rc_verification
+  fields:
+    id: Id MorthRCVerification
+    driverId: Id Person
+    rcNumber: Text
+    success: Bool
+    rcValidity: Maybe Text
+    rcValidUpto: Maybe Text
+    message: Maybe Text
+    statusCode: Maybe Int
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    rcNumber: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findLatestByDriverIdAndRCNumber:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [driverId, rcNumber]
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: driverId
       where: id

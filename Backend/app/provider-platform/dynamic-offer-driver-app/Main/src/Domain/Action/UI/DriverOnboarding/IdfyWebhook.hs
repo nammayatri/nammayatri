@@ -80,6 +80,7 @@ oldIdfyWebhookHandler secret val = do
         Verification.HyperVergeVerificationConfigRCDL _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
+        Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookHandler ::
@@ -108,6 +109,7 @@ idfyWebhookHandler merchantShortId secret val = do
         Verification.HyperVergeVerificationConfigRCDL _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
+        Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookV2Handler ::
@@ -137,6 +139,7 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
         Verification.HyperVergeVerificationConfigRCDL _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
+        Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
@@ -216,7 +219,7 @@ handleIdfySourceDown person retryFunc verificationReq = do
   flip (maybe (retryFunc verificationReq)) mbRemPriorityList $
     \priorityList -> do
       logDebug $ "Idfy Source down trying with alternate service providers remaining !!!!!!" <> verificationReq.requestId
-      rsltresp' <- try @_ @SomeException $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just priorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = verificationReq.driverId.getId, token = Nothing, udinNo = Nothing})
+      rsltresp' <- try @_ @SomeException $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just priorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = verificationReq.driverId.getId, token = Nothing, udinNo = Nothing, engineNumber = Nothing, chassisNumber = Nothing, applicantMobile = Nothing})
       case rsltresp' of
         Left _ -> retryFunc verificationReq
         Right resp' -> do
