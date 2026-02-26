@@ -138,7 +138,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
 
 executables:
   unified-dashboard-exe:
@@ -162,7 +162,7 @@ executables:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
     dependencies:
       - unified-dashboard
       - mobility-core

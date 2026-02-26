@@ -121,7 +121,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
 
 executables:
   image-api-helper-exe:
@@ -145,6 +145,6 @@ executables:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
     dependencies:
       - image-api-helper

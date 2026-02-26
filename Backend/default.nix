@@ -11,6 +11,27 @@
   ];
   perSystem = { config, self', pkgs, lib, system, ... }:
     let
+      # Packages to exclude from CI builds (not needed for production deployment)
+      ciExcludedPackages = [
+        "hunit-tests"
+        "beckn-test"
+        "image-api-helper"
+        "route-extractor"
+        "mock-public-transport-provider-platform"
+        "public-transport-rider-platform"
+        "public-transport-search-consumer"
+        "mock-idfy"
+        "mock-payment"
+        "mock-google"
+        "kafka-consumers"
+        "mock-rider-platform"
+        "sdk-event-pipeline"
+        "special-zone"
+        "example-service"
+        "safety-dashboard"
+        "search-result-aggregator"
+        "beckn-cli"
+      ];
       cacConfig = p: p.overrideAttrs (oa: {
         inherit (config.haskellProjects.default.outputs.finalPackages) cac_client;
         preBuild = ''
@@ -59,7 +80,9 @@
           # inputs.namma-dsl.haskellFlakeProjectModules.output
           inputs.haskell-cac.haskellFlakeProjectModules.output
         ];
-        autoWire = [ "packages" "checks" "apps" ];
+        # "packages" is excluded from autoWire so we can filter out ciExcludedPackages
+        # from the flake's top-level packages output (used by devour-flake in om ci run).
+        autoWire = [ "checks" "apps" ];
         devShell.tools = _: {
           inherit (self'.packages)
             arion;
@@ -135,16 +158,27 @@
         };
       };
 
-      packages = {
-        # The final nammayatri package containing the various executables and
-        # configuration files.
-        nammayatri =
-          let
-            localCabalPackages = builtins.map
-              (p: if p.exes != { } then lib.getBin p.package else null)
-              (lib.attrValues config.haskellProjects.default.outputs.packages);
-          in
-          pkgs.symlinkJoin {
+      packages =
+        let
+          # Manually wire haskell packages, excluding ciExcludedPackages.
+          # This ensures devour-flake (via om ci run) does not build them.
+          allHaskellPackages = config.haskellProjects.default.outputs.packages;
+          filteredHaskellPackages = lib.mapAttrs
+            (_: p: p.package)
+            (lib.filterAttrs
+              (name: _: !(builtins.elem name ciExcludedPackages))
+              allHaskellPackages);
+
+          localCabalPackages = builtins.map
+            (p: if p.exes != { } then lib.getBin p.package else null)
+            (lib.filter
+              (p: !(builtins.elem p.package.pname ciExcludedPackages))
+              (lib.attrValues allHaskellPackages));
+        in
+        filteredHaskellPackages // {
+          # The final nammayatri package containing the various executables and
+          # configuration files.
+          nammayatri = pkgs.symlinkJoin {
             name = "nammayatri";
             paths = localCabalPackages;
             postBuild = ''
@@ -159,7 +193,7 @@
               cp -r ${./swagger} $out/opt/app/swagger
             '';
           };
-      };
+        };
 
       devShells.backend = pkgs.mkShell {
         name = builtins.traceVerbose "devShells.backend" "ny-backend";

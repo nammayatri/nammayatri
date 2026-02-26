@@ -122,7 +122,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
   dependencies:
     - lib-dashboard
     - dynamic-offer-driver-app
@@ -156,7 +156,7 @@ executables:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
     dependencies:
       - provider-dashboard
       - mobility-core

@@ -139,7 +139,7 @@ library
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j4
+    ghc-options: -O2 -j12
 
 executable dynamic-offer-driver-drainer-exe
   main-is: Main.hs
@@ -233,4 +233,4 @@ executable dynamic-offer-driver-drainer-exe
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j4
+    ghc-options: -O2 -j12

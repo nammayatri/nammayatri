@@ -123,7 +123,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
 
 executables:
   mock-public-transport-provider-platform-exe:
@@ -147,6 +147,6 @@ executables:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
     dependencies:
       - mock-public-transport-provider-platform
