@@ -72,7 +72,8 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
   (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus personId entityImagesInfo language
   (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
   let shouldActivateRc = True
-  SStatus.StatusRes' {..} <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs
+      skipMessages = False -- Need translations for API response
+  SStatus.StatusRes' {..} <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages
 
   -- Fetch common documents
   commonDocumentsData <- QCommonDoc.findByDriverId (Just personId)
