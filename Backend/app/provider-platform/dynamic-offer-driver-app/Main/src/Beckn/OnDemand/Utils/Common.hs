@@ -19,7 +19,9 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
+import BecknV2.OnDemand.Tags ((~=), (~=?), (~=|))
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import BecknV2.OnDemand.Utils.Context as ContextUtils
 import BecknV2.OnDemand.Utils.Payment
@@ -118,44 +120,19 @@ mkStops origin mbDestination intermediateStops = do
   Just $
     catMaybes
       [ Just $
-          Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = Nothing, -- For start and end in on_search, we send address as nothing
-                      locationAreaCode = Nothing,
-                      locationCity = Nothing,
-                      locationCountry = Nothing,
-                      locationGps = Utils.gpsToText originGps,
-                      locationState = Nothing,
-                      locationId = Nothing,
-                      locationUpdatedAt = Nothing
-                    },
-              stopType = Just $ show Enums.START,
-              stopAuthorization = Nothing,
-              stopTime = Nothing,
-              stopId = Just "0",
-              stopParentStopId = Nothing
+          emptyStop
+            { Spec.stopLocation =
+                Just $ emptyLocation { Spec.locationGps = Utils.gpsToText originGps },
+              Spec.stopType = Just $ show Enums.START,
+              Spec.stopId = Just "0"
             },
         ( \destination ->
-            Spec.Stop
-              { stopLocation =
-                  Just $
-                    Spec.Location
-                      { locationAddress = Nothing, -- For start and end in on_search, we send address as nothing
-                        locationAreaCode = Nothing,
-                        locationCity = Nothing,
-                        locationCountry = Nothing,
-                        locationGps = Utils.gpsToText $ destinationGps destination,
-                        locationState = Nothing,
-                        locationId = Nothing,
-                        locationUpdatedAt = Nothing
-                      },
-                stopType = Just $ show Enums.END,
-                stopAuthorization = Nothing,
-                stopTime = Nothing,
-                stopId = Just $ show (length intermediateStops + 1),
-                stopParentStopId = Just $ show (length intermediateStops)
+            emptyStop
+              { Spec.stopLocation =
+                  Just $ emptyLocation { Spec.locationGps = Utils.gpsToText $ destinationGps destination },
+                Spec.stopType = Just $ show Enums.END,
+                Spec.stopId = Just $ show (length intermediateStops + 1),
+                Spec.stopParentStopId = Just $ show (length intermediateStops)
               }
         )
           <$> mbDestination
@@ -342,44 +319,36 @@ mkStops' origin mbDestination intermediateStops mAuthorization =
    in Just $
         catMaybes
           [ Just $
-              Spec.Stop
-                { stopLocation =
+              emptyStop
+                { Spec.stopLocation =
                     Just $
-                      Spec.Location
-                        { locationAddress = Just $ mkAddress origin.address,
-                          locationAreaCode = origin.address.areaCode,
-                          locationCity = Just $ Spec.City Nothing origin.address.city,
-                          locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                          locationGps = Utils.gpsToText originGps,
-                          locationState = Just $ Spec.State origin.address.state,
-                          locationId = Nothing,
-                          locationUpdatedAt = Nothing
+                      emptyLocation
+                        { Spec.locationAddress = Just $ mkAddress origin.address,
+                          Spec.locationAreaCode = origin.address.areaCode,
+                          Spec.locationCity = Just $ Spec.City Nothing origin.address.city,
+                          Spec.locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                          Spec.locationGps = Utils.gpsToText originGps,
+                          Spec.locationState = Just $ Spec.State origin.address.state
                         },
-                  stopType = Just $ show Enums.START,
-                  stopAuthorization = mAuthorization >>= mkAuthorization,
-                  stopTime = Nothing,
-                  stopId = Just "0",
-                  stopParentStopId = Nothing
+                  Spec.stopType = Just $ show Enums.START,
+                  Spec.stopAuthorization = mAuthorization >>= mkAuthorization,
+                  Spec.stopId = Just "0"
                 },
             ( \destination ->
-                Spec.Stop
-                  { stopLocation =
+                emptyStop
+                  { Spec.stopLocation =
                       Just $
-                        Spec.Location
-                          { locationAddress = Just $ mkAddress destination.address,
-                            locationAreaCode = destination.address.areaCode,
-                            locationCity = Just $ Spec.City Nothing destination.address.city,
-                            locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                            locationGps = Utils.gpsToText $ destinationGps destination,
-                            locationState = Just $ Spec.State destination.address.state,
-                            locationId = Nothing,
-                            locationUpdatedAt = Nothing
+                        emptyLocation
+                          { Spec.locationAddress = Just $ mkAddress destination.address,
+                            Spec.locationAreaCode = destination.address.areaCode,
+                            Spec.locationCity = Just $ Spec.City Nothing destination.address.city,
+                            Spec.locationCountry = Just $ Spec.Country Nothing destination.address.country,
+                            Spec.locationGps = Utils.gpsToText $ destinationGps destination,
+                            Spec.locationState = Just $ Spec.State destination.address.state
                           },
-                    stopType = Just $ show Enums.END,
-                    stopAuthorization = Nothing,
-                    stopTime = Nothing,
-                    stopId = Just $ show (length intermediateStops + 1),
-                    stopParentStopId = Just $ show (length intermediateStops)
+                    Spec.stopType = Just $ show Enums.END,
+                    Spec.stopId = Just $ show (length intermediateStops + 1),
+                    Spec.stopParentStopId = Just $ show (length intermediateStops)
                   }
             )
               <$> mbDestination
@@ -402,47 +371,32 @@ mkAddress DLoc.LocationAddress {..} =
 mkIntermediateStop :: DLoc.Location -> Int -> Int -> Spec.Stop
 mkIntermediateStop stop id parentStopId =
   let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
-   in Spec.Stop
-        { stopLocation =
+   in emptyStop
+        { Spec.stopLocation =
             Just $
-              Spec.Location
-                { locationAddress = Just $ mkAddress stop.address,
-                  locationAreaCode = stop.address.areaCode,
-                  locationCity = Just $ Spec.City Nothing stop.address.city,
-                  locationCountry = Just $ Spec.Country Nothing stop.address.country,
-                  locationGps = Utils.gpsToText gps,
-                  locationState = Just $ Spec.State stop.address.state,
-                  locationId = Just stop.id.getId,
-                  locationUpdatedAt = Nothing
+              emptyLocation
+                { Spec.locationAddress = Just $ mkAddress stop.address,
+                  Spec.locationAreaCode = stop.address.areaCode,
+                  Spec.locationCity = Just $ Spec.City Nothing stop.address.city,
+                  Spec.locationCountry = Just $ Spec.Country Nothing stop.address.country,
+                  Spec.locationGps = Utils.gpsToText gps,
+                  Spec.locationState = Just $ Spec.State stop.address.state,
+                  Spec.locationId = Just stop.id.getId
                 },
-          stopType = Just $ show Enums.INTERMEDIATE_STOP,
-          stopAuthorization = Nothing,
-          stopTime = Nothing,
-          stopId = Just $ show id,
-          stopParentStopId = Just $ show parentStopId
+          Spec.stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          Spec.stopId = Just $ show id,
+          Spec.stopParentStopId = Just $ show parentStopId
         }
 
 mkIntermediateStopSearch :: Maps.LatLong -> Int -> Int -> Spec.Stop
 mkIntermediateStopSearch stop id parentStopId =
   let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
-   in Spec.Stop
-        { stopLocation =
-            Just $
-              Spec.Location
-                { locationAddress = Nothing,
-                  locationAreaCode = Nothing,
-                  locationCity = Nothing,
-                  locationCountry = Nothing,
-                  locationGps = Utils.gpsToText gps,
-                  locationState = Nothing,
-                  locationId = Nothing,
-                  locationUpdatedAt = Nothing
-                },
-          stopType = Just $ show Enums.INTERMEDIATE_STOP,
-          stopAuthorization = Nothing,
-          stopTime = Nothing,
-          stopId = Just $ show id,
-          stopParentStopId = Just $ show parentStopId
+   in emptyStop
+        { Spec.stopLocation =
+            Just $ emptyLocation { Spec.locationGps = Utils.gpsToText gps },
+          Spec.stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          Spec.stopId = Just $ show id,
+          Spec.stopParentStopId = Just $ show parentStopId
         }
 
 data DriverInfo = DriverInfo
@@ -466,49 +420,43 @@ mkStopsOUS booking ride rideOtp =
    in Just $
         catMaybes
           [ Just $
-              Spec.Stop
-                { stopLocation =
+              emptyStop
+                { Spec.stopLocation =
                     Just $
-                      Spec.Location
-                        { locationAddress = Just $ mkAddress origin.address,
-                          locationAreaCode = origin.address.areaCode,
-                          locationCity = Just $ Spec.City Nothing origin.address.city,
-                          locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                          locationGps = Utils.gpsToText originGps,
-                          locationState = Just $ Spec.State origin.address.state,
-                          locationId = Nothing,
-                          locationUpdatedAt = Nothing
+                      emptyLocation
+                        { Spec.locationAddress = Just $ mkAddress origin.address,
+                          Spec.locationAreaCode = origin.address.areaCode,
+                          Spec.locationCity = Just $ Spec.City Nothing origin.address.city,
+                          Spec.locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                          Spec.locationGps = Utils.gpsToText originGps,
+                          Spec.locationState = Just $ Spec.State origin.address.state
                         },
-                  stopType = Just $ show Enums.START,
-                  stopId = Just "0",
-                  stopParentStopId = Nothing,
-                  stopAuthorization =
+                  Spec.stopType = Just $ show Enums.START,
+                  Spec.stopId = Just "0",
+                  Spec.stopAuthorization =
                     Just $
                       Spec.Authorization
                         { authorizationToken = Just rideOtp,
                           authorizationType = Just $ show Enums.OTP
                         },
-                  stopTime = ride.tripStartTime <&> \tripStartTime' -> Spec.Time {timeTimestamp = Just tripStartTime', timeDuration = Nothing}
+                  Spec.stopTime = ride.tripStartTime <&> \tripStartTime' -> Spec.Time {timeTimestamp = Just tripStartTime', timeDuration = Nothing}
                 },
             Just $
-              Spec.Stop
-                { stopLocation =
+              emptyStop
+                { Spec.stopLocation =
                     Just $
-                      Spec.Location
-                        { locationAddress = (\dest -> Just $ mkAddress dest.address) =<< mbDestination,
-                          locationAreaCode = (\dest -> dest.address.areaCode) =<< mbDestination,
-                          locationCity = (\dest -> Just $ Spec.City Nothing $ dest.address.city) =<< mbDestination,
-                          locationCountry = (\dest -> Just $ Spec.Country Nothing $ dest.address.country) =<< mbDestination,
-                          locationGps = (\dest -> Utils.gpsToText (destinationGps dest)) =<< mbDestination,
-                          locationState = (\dest -> Just $ Spec.State dest.address.state) =<< mbDestination,
-                          locationId = Nothing,
-                          locationUpdatedAt = Nothing
+                      emptyLocation
+                        { Spec.locationAddress = (\dest -> Just $ mkAddress dest.address) =<< mbDestination,
+                          Spec.locationAreaCode = (\dest -> dest.address.areaCode) =<< mbDestination,
+                          Spec.locationCity = (\dest -> Just $ Spec.City Nothing $ dest.address.city) =<< mbDestination,
+                          Spec.locationCountry = (\dest -> Just $ Spec.Country Nothing $ dest.address.country) =<< mbDestination,
+                          Spec.locationGps = (\dest -> Utils.gpsToText (destinationGps dest)) =<< mbDestination,
+                          Spec.locationState = (\dest -> Just $ Spec.State dest.address.state) =<< mbDestination
                         },
-                  stopType = Just $ show Enums.END,
-                  stopAuthorization = Nothing,
-                  stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime', timeDuration = Nothing},
-                  stopId = Just $ show (length intermediateStops + 1),
-                  stopParentStopId = Just $ show (length intermediateStops)
+                  Spec.stopType = Just $ show Enums.END,
+                  Spec.stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime', timeDuration = Nothing},
+                  Spec.stopId = Just $ show (length intermediateStops + 1),
+                  Spec.stopParentStopId = Just $ show (length intermediateStops)
                 }
           ]
           <> (map (\(location, order) -> mkIntermediateStop location order (order - 1)) $ zip intermediateStops [1 ..])
@@ -548,53 +496,31 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
             Spec.Agent
               { agentContact =
                   mbDInfo >>= \dInfo ->
-                    Just $
-                      Spec.Contact
-                        { contactPhone = Just dInfo.mobileNumber
-                        },
+                    Just $ Spec.Contact { contactPhone = Just dInfo.mobileNumber },
                 agentPerson =
                   Just $
-                    Spec.Person
-                      { personId = Nothing,
-                        personImage =
+                    emptyPerson
+                      { Spec.personImage =
                           mbImage <&> \mbImage' ->
-                            Spec.Image
-                              { imageHeight = Nothing,
-                                imageSizeType = Nothing,
-                                imageUrl = Just mbImage',
-                                imageWidth = Nothing
-                              },
-                        personName = mbDInfo >>= Just . (.name),
-                        personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
+                            emptyImage { Spec.imageUrl = Just mbImage' },
+                        Spec.personName = mbDInfo >>= Just . (.name),
+                        Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
                       }
               },
         fulfillmentVehicle =
           mbVehicle >>= \vehicle -> do
             let (category, variant) = castVariant vehicle.variant
             Just $
-              Spec.Vehicle
-                { vehicleColor = Just vehicle.color,
-                  vehicleModel = Just vehicle.model,
-                  vehicleRegistration = Just vehicle.registrationNo,
-                  vehicleCategory = Just category,
-                  vehicleVariant = Just variant,
-                  vehicleMake = Nothing,
-                  vehicleCapacity = vehicle.capacity
+              emptyVehicle
+                { Spec.vehicleColor = Just vehicle.color,
+                  Spec.vehicleModel = Just vehicle.model,
+                  Spec.vehicleRegistration = Just vehicle.registrationNo,
+                  Spec.vehicleCategory = Just category,
+                  Spec.vehicleVariant = Just variant,
+                  Spec.vehicleCapacity = vehicle.capacity
                 },
         fulfillmentCustomer = tfCustomer riderPhone booking.riderName,
-        fulfillmentState =
-          mbEvent
-            >> ( Just $
-                   Spec.FulfillmentState
-                     { fulfillmentStateDescriptor =
-                         Just $
-                           Spec.Descriptor
-                             { descriptorCode = mbEvent,
-                               descriptorName = Nothing,
-                               descriptorShortDesc = Nothing
-                             }
-                     }
-               ),
+        fulfillmentState = mkFulfillmentStateCode <$> mbEvent,
         fulfillmentTags = mbTags
       }
   where
@@ -616,492 +542,70 @@ tfCustomer riderPhone riderName =
   Just
     Spec.Customer
       { customerContact =
-          Just
-            Spec.Contact
-              { contactPhone = riderPhone
-              },
-        customerPerson = do
-          Just $
-            Spec.Person
-              { personId = Nothing,
-                personImage = Nothing,
-                personName = riderName,
-                personTags = Nothing
-              }
+          Just Spec.Contact { contactPhone = riderPhone },
+        customerPerson =
+          Just $ emptyPerson { Spec.personName = riderName }
       }
 
 mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> BaseUrl -> Maybe Text -> Bool -> Int -> Bool -> Maybe [Spec.TagGroup]
 mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId driverTrackingUrl driverAlternateNumber isAlreadyFav favCount isSafetyPlus =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.DRIVER_DETAILS,
-                  descriptorName = Just "Driver Details",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just $
-              registeredAtSingleton
-                ++ driverRatingSingleton
-                ++ isDriverBirthDaySingleton
-                ++ isFreeRideSingleton
-                ++ driverAccountIdSingleton
-                ++ driverTrackingUrlSingleton
-                ++ driverAlternateNumberSingleton
-                ++ isAlreadyFavSingleton
-                ++ favCountSingleton
-                ++ isSafetyPlusSingleton
-        }
+  Tags.buildTagGroups
+    [ Tags.REGISTERED_AT ~= show driver.createdAt,
+      Tags.RATING ~=? (show <$> driverStats.rating),
+      Tags.IS_DRIVER_BIRTHDAY ~=| (isDriverBirthDay, show isDriverBirthDay),
+      Tags.IS_FREE_RIDE ~=| (isFreeRide, show isFreeRide),
+      Tags.DRIVER_ACCOUNT_ID ~=? driverAccountId,
+      Tags.DRIVER_TRACKING_URL ~= showBaseUrl driverTrackingUrl,
+      Tags.DRIVER_ALTERNATE_NUMBER ~=? driverAlternateNumber,
+      Tags.IS_ALREADY_FAVOURITE ~=| (isAlreadyFav, show isAlreadyFav),
+      Tags.FAVOURITE_COUNT ~= show favCount,
+      Tags.IS_SAFETY_PLUS ~=| (isSafetyPlus, show isSafetyPlus)
     ]
-  where
-    registeredAtSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.REGISTERED_AT,
-                    descriptorName = Just "Registered At",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show driver.createdAt
-          }
-
-    driverRatingSingleton
-      | isNothing driverStats.rating = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.RATING,
-                      descriptorName = Just "rating",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = show <$> driverStats.rating
-            }
-
-    isDriverBirthDaySingleton
-      | not isDriverBirthDay = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.IS_DRIVER_BIRTHDAY,
-                      descriptorName = Just "Is Driver BirthDay",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = Just $ show isDriverBirthDay
-            }
-
-    driverAccountIdSingleton
-      | isNothing driverAccountId = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.DRIVER_ACCOUNT_ID,
-                      descriptorName = Just "Driver Account Id",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = driverAccountId
-            }
-
-    isFreeRideSingleton
-      | not isFreeRide = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.IS_FREE_RIDE,
-                      descriptorName = Just "Is Free Ride",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = Just $ show isFreeRide
-            }
-
-    isAlreadyFavSingleton
-      | not isAlreadyFav = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.IS_ALREADY_FAVOURITE,
-                      descriptorName = Just "Is already favourite",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = Just $ show isAlreadyFav
-            }
-
-    favCountSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.FAVOURITE_COUNT,
-                    descriptorName = Just "Favourite Count",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show favCount
-          }
-
-    driverTrackingUrlSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.DRIVER_TRACKING_URL,
-                    descriptorName = Just "Driver Tracking Url",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ showBaseUrl driverTrackingUrl
-          }
-    driverAlternateNumberSingleton
-      | isNothing driverAlternateNumber = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.DRIVER_ALTERNATE_NUMBER,
-                      descriptorName = Just "Driver Alternate Number",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = driverAlternateNumber
-            }
-    isSafetyPlusSingleton
-      | not isSafetyPlus = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.IS_SAFETY_PLUS,
-                      descriptorName = Just "is safety plus driver",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = Just $ show isSafetyPlus
-            }
 
 mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
 mkLocationTagGroupV2 location' =
-  location' <&> \location ->
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.CURRENT_LOCATION,
-                  descriptorName = Just "Current Location",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.CURRENT_LOCATION_LAT,
-                            descriptorName = Just "Current Location Lat",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show location.lat
-                  },
-                Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.CURRENT_LOCATION_LON,
-                            descriptorName = Just "Current Location Lon",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show location.lon
-                  }
-              ]
-        }
-    ]
+  location' >>= \location ->
+    Tags.buildTagGroups
+      [ Tags.CURRENT_LOCATION_LAT ~= show location.lat,
+        Tags.CURRENT_LOCATION_LON ~= show location.lon
+      ]
 
 mkArrivalTimeTagGroupV2 :: Maybe UTCTime -> Maybe [Spec.TagGroup]
-mkArrivalTimeTagGroupV2 arrivalTime' =
-  arrivalTime' <&> \arrivalTime ->
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.DRIVER_ARRIVED_INFO,
-                  descriptorName = Just "Driver Arrived Info",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.ARRIVAL_TIME,
-                            descriptorName = Just "Arrival Time",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show arrivalTime
-                  }
-              ]
-        }
-    ]
+mkArrivalTimeTagGroupV2 = Tags.mkSingleTagGroup Tags.ARRIVAL_TIME
 
 mkEstimatedEndTimeRangeTagGroupV2 :: Maybe DRide.EstimatedEndTimeRange -> Maybe [Spec.TagGroup]
 mkEstimatedEndTimeRangeTagGroupV2 estimatedEndTimeRange' =
-  estimatedEndTimeRange' <&> \estimatedEndTimeRange ->
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.ESTIMATED_END_TIME_RANGE,
-                  descriptorName = Just "Estimated End Time Range",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.ESTIMATED_END_TIME_RANGE_START,
-                            descriptorName = Just "Estimated End Time Range Start",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show $ estimatedEndTimeRange.start
-                  },
-                Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.ESTIMATED_END_TIME_RANGE_END,
-                            descriptorName = Just "Estimated End Time Range End",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show $ estimatedEndTimeRange.end
-                  }
-              ]
-        }
-    ]
+  estimatedEndTimeRange' >>= \estimatedEndTimeRange ->
+    Tags.buildTagGroups
+      [ Tags.ESTIMATED_END_TIME_RANGE_START ~= show estimatedEndTimeRange.start,
+        Tags.ESTIMATED_END_TIME_RANGE_END ~= show estimatedEndTimeRange.end
+      ]
 
 mkParcelImageUploadedTag :: Maybe [Spec.TagGroup]
 mkParcelImageUploadedTag =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.DELIVERY,
-                  descriptorName = Just "Delivery Info",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.PARCEL_IMAGE_UPLOADED,
-                            descriptorName = Just "Parcel file uploaded info",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just "True"
-                  }
-              ]
-        }
+  Tags.buildTagGroups
+    [ Tags.PARCEL_IMAGE_UPLOADED ~= "True"
     ]
 
 mkVehicleTags :: Maybe Double -> Maybe Bool -> Maybe [Spec.TagGroup]
 mkVehicleTags vehicleServiceTierAirConditioned' isAirConditioned =
-  vehicleServiceTierAirConditioned' <&> \vehicleServiceTierAirConditioned ->
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just True,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.VEHICLE_INFO,
-                  descriptorName = Just "Vehicle Info",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just True,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.IS_AIR_CONDITIONED,
-                            descriptorName = Just "isAirConditioned",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show vehicleServiceTierAirConditioned
-                  },
-                Spec.Tag
-                  { tagDisplay = Just True,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.IS_AIR_CONDITIONED_VEHICLE,
-                            descriptorName = Just "isAirConditionedVehicle",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = show <$> isAirConditioned
-                  }
-              ]
-        }
-    ]
+  vehicleServiceTierAirConditioned' >>= \vehicleServiceTierAirConditioned ->
+    Tags.buildTagGroups
+      [ Tags.IS_AIR_CONDITIONED ~= show vehicleServiceTierAirConditioned,
+        Tags.IS_AIR_CONDITIONED_VEHICLE ~=? (show <$> isAirConditioned)
+      ]
 
 mkOdometerTagGroupV2 :: Maybe Centesimal -> Maybe [Spec.TagGroup]
-mkOdometerTagGroupV2 startOdometerReading' =
-  startOdometerReading' <&> \startOdometerReading ->
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.RIDE_ODOMETER_DETAILS,
-                  descriptorName = Just "Ride Odometer Details",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.START_ODOMETER_READING,
-                            descriptorName = Just "Start Odometer Reading",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show startOdometerReading
-                  }
-              ]
-        }
-    ]
+mkOdometerTagGroupV2 = Tags.mkSingleTagGroup Tags.START_ODOMETER_READING
 
 mkTollConfidenceTagGroupV2 :: Maybe Confidence -> Maybe [Spec.TagGroup]
-mkTollConfidenceTagGroupV2 tollConfidence' =
-  tollConfidence' <&> \tollConfidence ->
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.TOLL_CONFIDENCE_INFO,
-                  descriptorName = Just "Toll Confidence Info",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.TOLL_CONFIDENCE,
-                            descriptorName = Just "Toll Confidence (Sure/Unsure/Neutral)",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show tollConfidence
-                  }
-              ]
-        }
-    ]
+mkTollConfidenceTagGroupV2 = Tags.mkSingleTagGroup Tags.TOLL_CONFIDENCE
 
 mkRideDetailsTagGroup :: Maybe Bool -> Maybe [Spec.TagGroup]
-mkRideDetailsTagGroup rideDetails' =
-  rideDetails' <&> \rideDetails ->
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.RIDE_DETAILS_INFO,
-                  descriptorName = Just "Ride Details",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.IS_VALID_RIDE,
-                            descriptorName = Just "Is Valid Ride",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show rideDetails
-                  }
-              ]
-        }
-    ]
+mkRideDetailsTagGroup = Tags.mkSingleTagGroup Tags.IS_VALID_RIDE
 
 mkVehicleAgeTagGroupV2 :: Maybe Months -> Maybe [Spec.TagGroup]
-mkVehicleAgeTagGroupV2 vehicleAge' =
-  vehicleAge' <&> \vehicleAge ->
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.VEHICLE_AGE_INFO,
-                  descriptorName = Just "Vehicle Age Info",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.VEHICLE_AGE,
-                            descriptorName = Just "Vehicle Age",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show vehicleAge
-                  }
-              ]
-        }
-    ]
+mkVehicleAgeTagGroupV2 = Tags.mkSingleTagGroup Tags.VEHICLE_AGE
 
 buildAddressFromText :: MonadFlow m => Text -> m OS.Address
 buildAddressFromText fullAddress = do
@@ -1175,56 +679,37 @@ tfCancellationFee (Just price) = do
   where
     mkPrice =
       Just
-        Spec.Price
-          { priceComputedValue = Nothing,
-            priceCurrency = Just $ show price.currency,
-            priceMaximumValue = Nothing,
-            priceMinimumValue = Nothing,
-            priceOfferedValue = Nothing,
-            priceValue = Just $ encodeToText price.amount
+        emptyPrice
+          { Spec.priceCurrency = Just $ show price.currency,
+            Spec.priceValue = Just $ encodeToText price.amount
           }
 
 tfFulfillmentState :: Enums.FulfillmentState -> Maybe Spec.FulfillmentState
-tfFulfillmentState state =
-  Just $
-    Spec.FulfillmentState
-      { fulfillmentStateDescriptor =
-          Just $
-            Spec.Descriptor
-              { descriptorCode = Just $ show state,
-                descriptorName = Nothing,
-                descriptorShortDesc = Nothing
-              }
-      }
+tfFulfillmentState = Just . mkFulfillmentState
 
 tfQuotation :: DBooking.Booking -> Maybe Spec.Quotation
 tfQuotation booking =
   Just
-    Spec.Quotation
-      { quotationBreakup = mkQuotationBreakup booking.fareParams,
-        quotationPrice = tfQuotationPrice (HighPrecMoney $ toRational booking.estimatedFare) booking.currency,
-        quotationTtl = Nothing
+    emptyQuotation
+      { Spec.quotationBreakup = mkQuotationBreakup booking.fareParams,
+        Spec.quotationPrice = tfQuotationPrice (HighPrecMoney $ toRational booking.estimatedFare) booking.currency
       }
 
 tfQuotationSU :: DFParams.FareParameters -> HighPrecMoney -> Maybe Spec.Quotation
 tfQuotationSU fareParams estimatedFare =
   Just
-    Spec.Quotation
-      { quotationBreakup = mkQuotationBreakup fareParams,
-        quotationPrice = tfQuotationPrice estimatedFare fareParams.currency,
-        quotationTtl = Nothing
+    emptyQuotation
+      { Spec.quotationBreakup = mkQuotationBreakup fareParams,
+        Spec.quotationPrice = tfQuotationPrice estimatedFare fareParams.currency
       }
 
 tfQuotationPrice :: HighPrecMoney -> Currency -> Maybe Spec.Price
 tfQuotationPrice estimatedFare currency =
   Just
-    Spec.Price
-      { priceComputedValue = Nothing,
-        priceCurrency = Just $ show currency,
-        priceMaximumValue = Nothing,
-        priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText estimatedFare,
-        priceValue = Just $ encodeToText estimatedFare
+    emptyPrice
+      { Spec.priceCurrency = Just $ show currency,
+        Spec.priceOfferedValue = Just $ encodeToText estimatedFare,
+        Spec.priceValue = Just $ encodeToText estimatedFare
       }
 
 mkQuotationBreakup :: DFParams.FareParameters -> Maybe [Spec.QuotationBreakupInner]
@@ -1235,13 +720,10 @@ mkQuotationBreakup fareParams =
     mkPrice :: HighPrecMoney -> Maybe Spec.Price
     mkPrice money =
       Just
-        Spec.Price
-          { priceComputedValue = Nothing,
-            priceCurrency = Just $ show fareParams.currency,
-            priceMaximumValue = Nothing,
-            priceMinimumValue = Nothing,
-            priceOfferedValue = Just $ encodeToText money,
-            priceValue = Just $ encodeToText money
+        emptyPrice
+          { Spec.priceCurrency = Just $ show fareParams.currency,
+            Spec.priceOfferedValue = Just $ encodeToText money,
+            Spec.priceValue = Just $ encodeToText money
           }
 
     mkQuotationBreakupInner title price =
@@ -1320,17 +802,23 @@ mkQuotationBreakup fareParams =
 
 type MerchantShortId = Text
 
+-- | Map TripCategory to ONDC 2.1.0 category descriptor code
+tripCategoryToCategoryCode :: DT.TripCategory -> Text
+tripCategoryToCategoryCode = \case
+  DT.Rental _ -> "ON_DEMAND_RENTAL"
+  _ -> "ON_DEMAND_TRIP"
+
 tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> Maybe [Spec.Item]
 tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
   Just
-    [ Spec.Item
-        { itemDescriptor = tfItemDescriptor booking,
-          itemFulfillmentIds = Just [booking.quoteId],
-          itemId = Just $ maybe (Common.mkItemId shortId booking.vehicleServiceTier) getId (booking.estimateId),
-          itemLocationIds = Nothing,
-          itemPaymentIds = tfPaymentId mbPaymentId,
-          itemPrice = tfItemPrice booking.estimatedFare booking.currency,
-          itemTags = mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing
+    [ emptyItem
+        { Spec.itemDescriptor = tfItemDescriptor booking,
+          Spec.itemFulfillmentIds = Just [booking.quoteId],
+          Spec.itemId = Just $ maybe (Common.mkItemId shortId booking.vehicleServiceTier) getId (booking.estimateId),
+          Spec.itemCategoryIds = Just [tripCategoryToCategoryCode booking.tripCategory],
+          Spec.itemPaymentIds = tfPaymentId mbPaymentId,
+          Spec.itemPrice = tfItemPrice booking.estimatedFare booking.currency,
+          Spec.itemTags = mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing
         }
     ]
 
@@ -1338,14 +826,14 @@ tfItemsSoftUpdate :: DBooking.Booking -> MerchantShortId -> Maybe HighPrecMeters
 tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId updatedBooking rideId = do
   let estimatedDistance' = maybe Nothing (\dist -> Just $ highPrecMetersToMeters dist) estimatedDistance
   Just
-    [ Spec.Item
-        { itemDescriptor = tfItemDescriptor booking,
-          itemFulfillmentIds = Just [rideId],
-          itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
-          itemLocationIds = Nothing,
-          itemPaymentIds = tfPaymentId mbPaymentId,
-          itemPrice = tfItemPrice updatedBooking.estimatedFare booking.currency,
-          itemTags = mkRateCardTag estimatedDistance' booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing
+    [ emptyItem
+        { Spec.itemDescriptor = tfItemDescriptor booking,
+          Spec.itemFulfillmentIds = Just [rideId],
+          Spec.itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
+          Spec.itemCategoryIds = Just [tripCategoryToCategoryCode booking.tripCategory],
+          Spec.itemPaymentIds = tfPaymentId mbPaymentId,
+          Spec.itemPrice = tfItemPrice updatedBooking.estimatedFare booking.currency,
+          Spec.itemTags = mkRateCardTag estimatedDistance' booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing Nothing
         }
     ]
 
@@ -1357,13 +845,10 @@ tfPaymentId mbPaymentId = do
 tfItemPrice :: HighPrecMoney -> Currency -> Maybe Spec.Price
 tfItemPrice estimatedFare currency =
   Just
-    Spec.Price
-      { priceComputedValue = Nothing,
-        priceCurrency = Just $ show currency,
-        priceMaximumValue = Nothing,
-        priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice Nothing estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
-        priceValue = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice Nothing estimatedFare -- Sending Nothing here becuase priceCurrency in hardcoded to INR, TODO: make this logic dynamic based on country
+    emptyPrice
+      { Spec.priceCurrency = Just $ show currency,
+        Spec.priceOfferedValue = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice Nothing estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
+        Spec.priceValue = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice Nothing estimatedFare -- Sending Nothing here becuase priceCurrency in hardcoded to INR, TODO: make this logic dynamic based on country
       }
 
 tfItemDescriptor :: DBooking.Booking -> Maybe Spec.Descriptor
@@ -1447,239 +932,37 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
 
 mkGeneralInfoTagGroup :: Pricing -> Bool -> Maybe Spec.TagGroup
 mkGeneralInfoTagGroup pricing isValueAddNP =
-  Just $
-    Spec.TagGroup
-      { tagGroupDisplay = Just False,
-        tagGroupDescriptor =
-          Just
-            Spec.Descriptor
-              { descriptorCode = Just $ show Tags.INFO,
-                descriptorName = Just "Information",
-                descriptorShortDesc = Nothing
-              },
-        tagGroupList =
-          specialLocationTagSingleton pricing.specialLocationTag
-            <> specialLocationNameTag pricing.specialLocationName
-            <> businessDiscountTagSingleton
-            <> personalDiscountTagSingleton
-            <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
-            <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
-            <> isBlockedRouteSingleton pricing.isBlockedRoute
-            <> tollNamesSingleton pricing.tollNames
-            <> tipOptionSingleton pricing.tipOptions
-            <> durationToNearestDriverTagSingleton
-            <> smartTipSuggestionTagSingleton
-            <> smartTipReasonTagSingleton
-            <> qarTagSingleton
-      }
+  let guardVNP val = if isValueAddNP then val else Nothing
+      mkOptTag tag val = Tags.getFullTag tag val <$ val
+      tags = catMaybes
+        [ mkOptTag Tags.SPECIAL_LOCATION_TAG pricing.specialLocationTag,
+          mkOptTag Tags.SPECIAL_LOCATION_NAME pricing.specialLocationName,
+          mkOptTag Tags.BUSINESS_DISCOUNT (guardVNP (show <$> pricing.businessDiscount)),
+          mkOptTag Tags.PERSONAL_DISCOUNT (guardVNP (show <$> pricing.personalDiscount)),
+          mkOptTag Tags.DISTANCE_TO_NEAREST_DRIVER_METER (show . double2Int . realToFrac <$> pricing.distanceToNearestDriver),
+          mkOptTag Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE (guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute)),
+          mkOptTag Tags.IS_BLOCKED_SEARCH_ROUTE (guardVNP (show <$> pricing.isBlockedRoute)),
+          mkOptTag Tags.TOLL_NAMES (guardVNP (show <$> pricing.tollNames)),
+          mkOptTag Tags.TIP_OPTIONS (guardVNP (show <$> pricing.tipOptions)),
+          mkOptTag Tags.DURATION_TO_NEAREST_DRIVER_MINUTES (guardVNP (getDuration pricing.distanceToNearestDriver 25)),
+          mkOptTag Tags.SMART_TIP_SUGGESTION (guardVNP (show <$> pricing.smartTipSuggestion)),
+          mkOptTag Tags.SMART_TIP_REASON (guardVNP pricing.smartTipReason),
+          mkOptTag Tags.QAR (guardVNP (show <$> pricing.qar))
+        ]
+   in case tags of
+        [] -> Nothing
+        _ -> Just $ Tags.getFullTagGroup Tags.GENERAL_INFO tags
   where
-    smartTipSuggestionTagSingleton
-      | isNothing pricing.smartTipSuggestion || not isValueAddNP = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.SMART_TIP_SUGGESTION,
-                      descriptorName = Just "Smart Tip Suggestion",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = show <$> pricing.smartTipSuggestion
-            }
-    smartTipReasonTagSingleton
-      | isNothing pricing.smartTipReason || not isValueAddNP = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just True,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.SMART_TIP_REASON,
-                      descriptorName = Just "Smart Tip Reason",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = pricing.smartTipReason
-            }
-    businessDiscountTagSingleton
-      | isNothing pricing.businessDiscount || not isValueAddNP = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.BUSINESS_DISCOUNT,
-                      descriptorName = Just "Business Discount",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = show <$> pricing.businessDiscount
-            }
-    personalDiscountTagSingleton
-      | isNothing pricing.personalDiscount || not isValueAddNP = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.PERSONAL_DISCOUNT,
-                      descriptorName = Just "Personal Discount",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = show <$> pricing.personalDiscount
-            }
-    qarTagSingleton
-      | isNothing pricing.qar || not isValueAddNP = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.QAR,
-                      descriptorName = Just "QAR",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = show <$> pricing.qar
-            }
-    specialLocationTagSingleton specialLocationTag
-      | isNothing specialLocationTag = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just True,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.SPECIAL_LOCATION_TAG,
-                      descriptorName = Just "Special Location Tag",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = specialLocationTag
-            }
-    specialLocationNameTag specialLocationName
-      | isNothing specialLocationName = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.SPECIAL_LOCATION_NAME,
-                      descriptorName = Just "Special Location Name",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = specialLocationName
-            }
-    distanceToNearestDriverTagSingleton distanceToNearestDriver
-      | isNothing distanceToNearestDriver = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
-                      descriptorName = Just "Distance To Nearest Driver Meter",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = show . double2Int . realToFrac <$> distanceToNearestDriver
-            }
-    isCustomerPrefferedSearchRouteSingleton isCustomerPrefferedSearchRoute
-      | isNothing isCustomerPrefferedSearchRoute || not isValueAddNP = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE,
-                      descriptorName = Just "Is Customer Preffered Search Route",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = show <$> isCustomerPrefferedSearchRoute
-            }
-    isBlockedRouteSingleton isBlockedRoute
-      | isNothing isBlockedRoute || not isValueAddNP = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.IS_BLOCKED_SEARCH_ROUTE,
-                      descriptorName = Just "Is Blocked Search Route",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = show <$> isBlockedRoute
-            }
-    tollNamesSingleton tollNames
-      | isNothing tollNames || not isValueAddNP = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.TOLL_NAMES,
-                      descriptorName = Just "Toll Names",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = show <$> tollNames
-            }
-    tipOptionSingleton tipOptions
-      | isNothing tipOptions || not isValueAddNP = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.TIP_OPTIONS,
-                      descriptorName = Just "Tip Options",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = show <$> tipOptions
-            }
-    durationToNearestDriverTagSingleton
-      | isNothing pricing.distanceToNearestDriver || not isValueAddNP = Nothing
-      | otherwise =
-        Just . List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.DURATION_TO_NEAREST_DRIVER_MINUTES,
-                      descriptorName = Just $ show pricing.vehicleVariant,
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = getDuration pricing.distanceToNearestDriver 25 -- consider 25kmph as average speed
-            }
-      where
-        getDuration :: Maybe Meters -> Int -> Maybe Text
-        getDuration distance avgSpeed
-          | avgSpeed <= 0 = Nothing
-          -- lets return 60 seconds in case distance is 0
-          | distance == Just 0 = Just "60"
-          | otherwise = do
-            distance' <- distance
-            let distanceInMeters = realToFrac @_ @Double distance'
-                avgSpeedInMetersPerSec = realToFrac @_ @Double (avgSpeed * 5) / 18
-                estimatedTimeTakenInSeconds :: Int = ceiling $ (distanceInMeters / avgSpeedInMetersPerSec)
-            Just $ show estimatedTimeTakenInSeconds
+    getDuration :: Maybe Meters -> Int -> Maybe Text
+    getDuration distance avgSpeed
+      | avgSpeed <= 0 = Nothing
+      | distance == Just 0 = Just "60"
+      | otherwise = do
+        distance' <- distance
+        let distanceInMeters = realToFrac @_ @Double distance'
+            avgSpeedInMetersPerSec = realToFrac @_ @Double (avgSpeed * 5) / 18
+            estimatedTimeTakenInSeconds :: Int = ceiling $ (distanceInMeters / avgSpeedInMetersPerSec)
+        Just $ show estimatedTimeTakenInSeconds
 
 mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe Params.FareParameters -> Maybe Double -> Maybe [Spec.TagGroup]
 mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard fareParams mbGovtChargesRate = do
@@ -1691,19 +974,7 @@ mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare c
       filteredFareParamsBreakups = filter (not . findDup farePolicyBreakups) fareParamsBreakups
       combainedParams = farePolicyBreakups <> filteredFareParamsBreakups
       farePolicyBreakupsTags = buildRateCardTags <$> combainedParams
-  Just
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.FARE_POLICY,
-                  descriptorName = Just "Fare Policy",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList = Just farePolicyBreakupsTags
-        }
-    ]
+  Just [Tags.getFullTagGroup Tags.FARE_POLICY farePolicyBreakupsTags]
   where
     findDup :: [RateCardBreakupItem] -> RateCardBreakupItem -> Bool
     findDup [] _ = False
@@ -1712,35 +983,11 @@ mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare c
 
 mkVehicleIconTag :: Maybe BaseUrl -> Maybe [Spec.TagGroup]
 mkVehicleIconTag mbBaseUrl =
-  case mbBaseUrl of
-    Just baseUrl ->
-      Just $
-        [ Spec.TagGroup
-            { tagGroupDisplay = Just False,
-              tagGroupDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.VEHICLE_INFO,
-                      descriptorName = Just "Vehicle Icon",
-                      descriptorShortDesc = Nothing
-                    },
-              tagGroupList =
-                Just
-                  [ Spec.Tag
-                      { tagDisplay = Just False,
-                        tagDescriptor =
-                          Just
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.VEHICLE_ICON_URL,
-                                descriptorName = Just "Vehicle Icon URL",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagValue = Just $ showBaseUrl baseUrl
-                      }
-                  ]
-            }
-        ]
-    Nothing -> Nothing
+  mbBaseUrl <&> \baseUrl ->
+    [ (Tags.getFullTagGroup Tags.VEHICLE_INFO
+        [ Tags.mkTag Tags.VEHICLE_ICON_URL (Just $ showBaseUrl baseUrl)
+        ]) {Spec.tagGroupDisplay = Just False}
+    ]
 
 mkRateCardBreakupItem :: Text -> Text -> RateCardBreakupItem
 mkRateCardBreakupItem = RateCardBreakupItem
@@ -1781,7 +1028,8 @@ tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
 tfProvider becknConfig =
   return $
     Spec.Provider
-      { providerDescriptor = Nothing,
+      { providerCategories = Nothing, -- populated at call site if categories are known
+        providerDescriptor = Nothing,
         providerFulfillments = Nothing,
         providerId = Just $ becknConfig.subscriberId,
         providerItems = Nothing,
@@ -1827,47 +1075,28 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
                         },
                 agentPerson =
                   Just $
-                    Spec.Person
-                      { personId = Nothing,
-                        personImage =
+                    emptyPerson
+                      { Spec.personImage =
                           mbImage <&> \mbImage' ->
-                            Spec.Image
-                              { imageHeight = Nothing,
-                                imageSizeType = Nothing,
-                                imageUrl = Just mbImage',
-                                imageWidth = Nothing
-                              },
-                        personName = mbDInfo >>= Just . (.name),
-                        personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
+                            emptyImage { Spec.imageUrl = Just mbImage' },
+                        Spec.personName = mbDInfo >>= Just . (.name),
+                        Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
                       }
               },
         fulfillmentVehicle =
           mbVehicle >>= \vehicle -> do
             let (category, variant) = castVariant vehicle.variant
             Just $
-              Spec.Vehicle
-                { vehicleColor = Just vehicle.color,
-                  vehicleModel = Just vehicle.model,
-                  vehicleRegistration = Just vehicle.registrationNo,
-                  vehicleCategory = Just category,
-                  vehicleVariant = Just variant,
-                  vehicleMake = Nothing,
-                  vehicleCapacity = vehicle.capacity
+              emptyVehicle
+                { Spec.vehicleColor = Just vehicle.color,
+                  Spec.vehicleModel = Just vehicle.model,
+                  Spec.vehicleRegistration = Just vehicle.registrationNo,
+                  Spec.vehicleCategory = Just category,
+                  Spec.vehicleVariant = Just variant,
+                  Spec.vehicleCapacity = vehicle.capacity
                 },
         fulfillmentCustomer = Nothing,
-        fulfillmentState =
-          mbEvent
-            >> ( Just $
-                   Spec.FulfillmentState
-                     { fulfillmentStateDescriptor =
-                         Just $
-                           Spec.Descriptor
-                             { descriptorCode = mbEvent,
-                               descriptorName = Nothing,
-                               descriptorShortDesc = Nothing
-                             }
-                     }
-               ),
+        fulfillmentState = mkFulfillmentStateCode <$> mbEvent,
         fulfillmentTags = mbTags
       }
   where
@@ -1914,76 +1143,17 @@ castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"
 
 mkIsSafetyPlusTagGroupV2 :: Bool -> Maybe [Spec.TagGroup]
 mkIsSafetyPlusTagGroupV2 isSafetyPlus =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.DRIVER_DETAILS,
-                  descriptorName = Just "Driver Details",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just isSafetyPlusSingleton
-        }
+  Tags.buildTagGroups
+    [ Tags.IS_SAFETY_PLUS ~=| (isSafetyPlus, show isSafetyPlus)
     ]
-  where
-    isSafetyPlusSingleton
-      | not isSafetyPlus = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.IS_SAFETY_PLUS,
-                      descriptorName = Just "is safety plus driver",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = Just $ show isSafetyPlus
-            }
 
 mkForwardBatchTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
 mkForwardBatchTagGroupV2 previousRideDropLocation' =
-  previousRideDropLocation' <&> \previousRideDropLocation ->
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.FORWARD_BATCHING_REQUEST_INFO,
-                  descriptorName = Just "Forward Batching Request Info",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.PREVIOUS_RIDE_DROP_LOCATION_LAT,
-                            descriptorName = Just "Current Location Lat",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show previousRideDropLocation.lat
-                  },
-                Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.PREVIOUS_RIDE_DROP_LOCATION_LON,
-                            descriptorName = Just "Current Location Lon",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show previousRideDropLocation.lon
-                  }
-              ]
-        }
-    ]
+  previousRideDropLocation' >>= \previousRideDropLocation ->
+    Tags.buildTagGroups
+      [ Tags.PREVIOUS_RIDE_DROP_LOCATION_LAT ~= show previousRideDropLocation.lat,
+        Tags.PREVIOUS_RIDE_DROP_LOCATION_LON ~= show previousRideDropLocation.lon
+      ]
 
 getShouldFavouriteDriver :: Spec.Rating -> Maybe Bool
 getShouldFavouriteDriver req = do
@@ -2013,45 +1183,22 @@ getCancellationReason :: Spec.CancelReq -> Maybe Text
 getCancellationReason req = req.cancelReqMessage.cancelReqMessageDescriptor >>= (.descriptorShortDesc)
 
 mkFulfillmentState :: Enums.FulfillmentState -> Spec.FulfillmentState
-mkFulfillmentState stateCode =
+mkFulfillmentState = mkFulfillmentStateCode . show
+
+mkFulfillmentStateCode :: Text -> Spec.FulfillmentState
+mkFulfillmentStateCode code =
   Spec.FulfillmentState
     { fulfillmentStateDescriptor =
         Just $
           Spec.Descriptor
-            { descriptorCode = Just $ show stateCode,
+            { descriptorCode = Just code,
               descriptorShortDesc = Nothing,
               descriptorName = Nothing
             }
     }
 
 mkDestinationReachedTimeTagGroupV2 :: Maybe UTCTime -> Maybe [Spec.TagGroup]
-mkDestinationReachedTimeTagGroupV2 destinationArrivalTime' =
-  destinationArrivalTime' <&> \destinationArrivalTime ->
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.DRIVER_REACHED_DESTINATION_INFO,
-                  descriptorName = Just "Driver Reached Destination Info",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.DRIVER_REACHED_DESTINATION,
-                            descriptorName = Just "Destination Reached Time",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show destinationArrivalTime
-                  }
-              ]
-        }
-    ]
+mkDestinationReachedTimeTagGroupV2 = Tags.mkSingleTagGroup Tags.DRIVER_REACHED_DESTINATION
 
 validateSearchContext :: (HasFlowEnv m r '["_version" ::: Text], MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Spec.Context -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m ()
 validateSearchContext context merchantId merchantOperatingCityId = do

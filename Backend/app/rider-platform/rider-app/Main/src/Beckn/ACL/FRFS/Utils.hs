@@ -293,113 +293,40 @@ mkPaymentTags mSettlementType mAmount mbDelayInterest =
 
 mkBuyerFinderFeeTagGroup :: Spec.TagGroup
 mkBuyerFinderFeeTagGroup =
-  Spec.TagGroup
-    { tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just "BUYER_FINDER_FEES",
-              descriptorImages = Nothing,
-              descriptorName = Nothing
-            },
-      tagGroupDisplay = Just False,
-      tagGroupList = Just [feePercentage]
-    }
-  where
-    feePercentage =
-      Spec.Tag
-        { tagDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just "BUYER_FINDER_FEES_PERCENTAGE",
-                  descriptorImages = Nothing,
-                  descriptorName = Nothing
-                },
-          tagValue = Just "0"
-        }
+  mkFrfsTagGroup "BUYER_FINDER_FEES"
+    [ mkFrfsTag "BUYER_FINDER_FEES_PERCENTAGE" (Just "0")
+    ]
 
 mkSettlementTagGroup :: Maybe Text -> Maybe Text -> Maybe Text -> Spec.TagGroup
 mkSettlementTagGroup mAmount mSettlementType mbDelayInterest =
+  mkFrfsTagGroup "SETTLEMENT_TERMS" $
+    catMaybes
+      [ mkOptFrfsTag "SETTLEMENT_AMOUNT" mAmount,
+        mkOptFrfsTag "SETTLEMENT_TYPE" mSettlementType,
+        Just $ mkFrfsTag "SETTLEMENT_WINDOW" (Just "PT1D"),
+        mkOptFrfsTag "DELAY_INTEREST" mbDelayInterest,
+        Just $ mkFrfsTag "SETTLEMENT_BASIS" (Just "DELIVERY"),
+        Just $ mkFrfsTag "STATIC_TERMS" (Just "https://api.example-bap.com/booking/terms")
+      ]
+
+mkFrfsTagGroup :: Text -> [Spec.Tag] -> Spec.TagGroup
+mkFrfsTagGroup code tags =
   Spec.TagGroup
-    { tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just "SETTLEMENT_TERMS",
-              descriptorImages = Nothing,
-              descriptorName = Nothing
-            },
+    { tagGroupDescriptor = Just $ Spec.Descriptor {descriptorCode = Just code, descriptorImages = Nothing, descriptorName = Nothing},
       tagGroupDisplay = Just False,
-      tagGroupList = Just settlementTags
+      tagGroupList = Just tags
     }
-  where
-    settlementTags =
-      catMaybes
-        [ mAmount <&> \amount ->
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just "SETTLEMENT_AMOUNT",
-                        descriptorImages = Nothing,
-                        descriptorName = Nothing
-                      },
-                tagValue = Just amount
-              },
-          mSettlementType <&> \settlementType ->
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just "SETTLEMENT_TYPE",
-                        descriptorImages = Nothing,
-                        descriptorName = Nothing
-                      },
-                tagValue = Just settlementType
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just "SETTLEMENT_WINDOW",
-                        descriptorImages = Nothing,
-                        descriptorName = Nothing
-                      },
-                tagValue = Just "PT1D"
-              },
-          mbDelayInterest <&> \delayInterest ->
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just "DELAY_INTEREST",
-                        descriptorImages = Nothing,
-                        descriptorName = Nothing
-                      },
-                tagValue = Just delayInterest
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just "SETTLEMENT_BASIS",
-                        descriptorImages = Nothing,
-                        descriptorName = Nothing
-                      },
-                tagValue = Just "DELIVERY"
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just "STATIC_TERMS",
-                        descriptorImages = Nothing,
-                        descriptorName = Nothing
-                      },
-                tagValue = Just "https://api.example-bap.com/booking/terms" -- TODO: update with actual terms url
-              }
-        ]
+
+mkFrfsTag :: Text -> Maybe Text -> Spec.Tag
+mkFrfsTag code val =
+  Spec.Tag
+    { tagDescriptor = Just $ Spec.Descriptor {descriptorCode = Just code, descriptorImages = Nothing, descriptorName = Nothing},
+      tagValue = val
+    }
+
+mkOptFrfsTag :: Text -> Maybe Text -> Maybe Spec.Tag
+mkOptFrfsTag _ Nothing = Nothing
+mkOptFrfsTag code val = Just $ mkFrfsTag code val
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode

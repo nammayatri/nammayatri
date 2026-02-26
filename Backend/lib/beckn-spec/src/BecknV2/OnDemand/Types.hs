@@ -28,6 +28,7 @@ module BecknV2.OnDemand.Types
     Cancellation (..),
     CancellationTerm (..),
     Catalog (..),
+    Category (..),
     City (..),
     ConfirmReq (..),
     ConfirmReqMessage (..),
@@ -404,6 +405,33 @@ optionsCatalog =
     table =
       [ ("catalogDescriptor", "descriptor"),
         ("catalogProviders", "providers")
+      ]
+
+-- | Describes an item category
+data Category = Category
+  { -- |
+    categoryDescriptor :: Maybe Descriptor,
+    -- |
+    categoryId :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Category where
+  parseJSON = genericParseJSON optionsCategory
+
+instance ToJSON Category where
+  toJSON = genericToJSON optionsCategory
+
+optionsCategory :: Options
+optionsCategory =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("categoryDescriptor", "descriptor"),
+        ("categoryId", "id")
       ]
 
 -- | Describes a city
@@ -866,7 +894,9 @@ optionsInitReq =
 -- |
 -- | The intent to buy or avail a product or a service. The BAP can declare the intent of the consumer containing &lt;ul&gt;&lt;li&gt;What they want (A product, service, offer)&lt;/li&gt;&lt;li&gt;Who they want (A seller, service provider, agent etc)&lt;/li&gt;&lt;li&gt;Where they want it and where they want it from&lt;/li&gt;&lt;li&gt;When they want it (start and end time of fulfillment&lt;/li&gt;&lt;li&gt;How they want to pay for it&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;This has properties like descriptor,provider,fulfillment,payment,category,offer,item,tags&lt;br&gt;This is typically used by the BAP to send the purpose of the user&#39;s search to the BPP. This will be used by the BPP to find products or services it offers that may match the user&#39;s intent.&lt;br&gt;For example, in Mobility, the mobility consumer declares a mobility intent. In this case, the mobility consumer declares information that describes various aspects of their journey like,&lt;ul&gt;&lt;li&gt;Where would they like to begin their journey (intent.fulfillment.start.location)&lt;/li&gt;&lt;li&gt;Where would they like to end their journey (intent.fulfillment.end.location)&lt;/li&gt;&lt;li&gt;When would they like to begin their journey (intent.fulfillment.start.time)&lt;/li&gt;&lt;li&gt;When would they like to end their journey (intent.fulfillment.end.time)&lt;/li&gt;&lt;li&gt;Who is the transport service provider they would like to avail services from (intent.provider)&lt;/li&gt;&lt;li&gt;Who is traveling (This is not recommended in public networks) (intent.fulfillment.customer)&lt;/li&gt;&lt;li&gt;What kind of fare product would they like to purchase (intent.item)&lt;/li&gt;&lt;li&gt;What add-on services would they like to avail&lt;/li&gt;&lt;li&gt;What offers would they like to apply on their booking (intent.offer)&lt;/li&gt;&lt;li&gt;What category of services would they like to avail (intent.category)&lt;/li&gt;&lt;li&gt;What additional luggage are they carrying&lt;/li&gt;&lt;li&gt;How would they like to pay for their journey (intent.payment)&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;For example, in health domain, a consumer declares the intent for a lab booking the describes various aspects of their booking like,&lt;ul&gt;&lt;li&gt;Where would they like to get their scan/test done (intent.fulfillment.start.location)&lt;/li&gt;&lt;li&gt;When would they like to get their scan/test done (intent.fulfillment.start.time)&lt;/li&gt;&lt;li&gt;When would they like to get the results of their test/scan (intent.fulfillment.end.time)&lt;/li&gt;&lt;li&gt;Who is the service provider they would like to avail services from (intent.provider)&lt;/li&gt;&lt;li&gt;Who is getting the test/scan (intent.fulfillment.customer)&lt;/li&gt;&lt;li&gt;What kind of test/scan would they like to purchase (intent.item)&lt;/li&gt;&lt;li&gt;What category of services would they like to avail (intent.category)&lt;/li&gt;&lt;li&gt;How would they like to pay for their journey (intent.payment)&lt;/li&gt;&lt;/ul&gt;
 data Intent = Intent
-  { -- |
+  { -- | Category of the intent (e.g. ON_DEMAND_TRIP, ON_DEMAND_RENTAL) — new in 2.1.0
+    intentCategory :: Maybe Category,
+    -- |
     intentFulfillment :: Maybe Fulfillment,
     -- |
     intentPayment :: Maybe Payment,
@@ -889,14 +919,17 @@ optionsIntent =
     }
   where
     table =
-      [ ("intentFulfillment", "fulfillment"),
+      [ ("intentCategory", "category"),
+        ("intentFulfillment", "fulfillment"),
         ("intentPayment", "payment"),
         ("intentTags", "tags")
       ]
 
 -- | Describes a product or a service offered to the end consumer by the provider. In the mobility sector, it can represent a fare product like one way journey. In the logistics sector, it can represent the delivery service offering. In the retail domain it can represent a product like a grocery item.
 data Item = Item
-  { -- |
+  { -- | Category IDs this item belongs to — new in 2.1.0
+    itemCategoryIds :: Maybe [Text],
+    -- |
     itemDescriptor :: Maybe Descriptor,
     -- | Modes through which this item can be fulfilled
     itemFulfillmentIds :: Maybe [Text],
@@ -927,7 +960,8 @@ optionsItem =
     }
   where
     table =
-      [ ("itemDescriptor", "descriptor"),
+      [ ("itemCategoryIds", "category_ids"),
+        ("itemDescriptor", "descriptor"),
         ("itemFulfillmentIds", "fulfillment_ids"),
         ("itemId", "id"),
         ("itemLocationIds", "location_ids"),
@@ -1534,7 +1568,9 @@ optionsPrice =
 
 -- | Describes the catalog of a business.
 data Provider = Provider
-  { -- |
+  { -- | Categories offered by this provider (e.g. ON_DEMAND_TRIP, ON_DEMAND_RENTAL) — new in 2.1.0
+    providerCategories :: Maybe [Category],
+    -- |
     providerDescriptor :: Maybe Descriptor,
     -- |
     providerFulfillments :: Maybe [Fulfillment],
@@ -1563,7 +1599,8 @@ optionsProvider =
     }
   where
     table =
-      [ ("providerDescriptor", "descriptor"),
+      [ ("providerCategories", "categories"),
+        ("providerDescriptor", "descriptor"),
         ("providerFulfillments", "fulfillments"),
         ("providerId", "id"),
         ("providerItems", "items"),

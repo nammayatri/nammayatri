@@ -93,3 +93,37 @@ mkItemTags pricing isValueAddNP fareParametersInRateCard = do
   let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.customerCancellationDues)) (pricing.fareParams >>= (.tollCharges)) pricing.pricingMaxFare (pricing.fareParams >>= (.congestionChargeViaDp)) pricing.farePolicy fareParametersInRateCard pricing.fareParams Nothing
   let vehicleIconTag = CUtils.mkVehicleIconTag pricing.vehicleIconUrl
   vehicleIconTag <> rateCardTag <> (List.singleton <$> CUtils.mkGeneralInfoTagGroup pricing isValueAddNP)
+
+-- | Map TripCategory to ONDC 2.1.0 category descriptor code
+-- Re-exports from Common for backward compatibility
+tripCategoryToCategoryCode :: TripCategory -> Text
+tripCategoryToCategoryCode = CUtils.tripCategoryToCategoryCode
+
+-- | Human-readable name for category code
+categoryCodeToName :: Text -> Text
+categoryCodeToName = \case
+  "ON_DEMAND_TRIP" -> "On Demand Trip"
+  "ON_DEMAND_RENTAL" -> "On Demand Rental"
+  "SCHEDULED_TRIP" -> "Scheduled Trip"
+  "SCHEDULED_RENTAL" -> "Scheduled Rental"
+  other -> other
+
+-- | Build a Spec.Category from a category code
+mkCategory :: Text -> Spec.Category
+mkCategory code =
+  Spec.Category
+    { categoryDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just code,
+              descriptorName = Just $ categoryCodeToName code,
+              descriptorShortDesc = Nothing
+            },
+      categoryId = Just code
+    }
+
+-- | Build deduplicated list of categories from pricings
+mkTripCategories :: [CUtils.Pricing] -> [Spec.Category]
+mkTripCategories pricings =
+  let codes = List.nub $ map (tripCategoryToCategoryCode . (.tripCategory)) pricings
+   in map mkCategory codes

@@ -18,10 +18,10 @@ module Beckn.OnDemand.Utils.Common where
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
-import qualified Data.List as List
 import qualified Data.Text as T
 import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -56,45 +56,37 @@ mkStops origin stops startTime =
       destination = [KP.last stops | not (null stops)]
       intermediateStops = KP.safeInit stops
    in Just
-        ( [ Spec.Stop
-              { stopLocation =
+        ( [ emptyStop
+              { Spec.stopLocation =
                   Just $
-                    Spec.Location
-                      { locationAddress = Just $ mkAddress origin.address,
-                        locationAreaCode = origin.address.areaCode,
-                        locationCity = Just $ Spec.City Nothing origin.address.city,
-                        locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                        locationGps = Utils.gpsToText originGps,
-                        locationState = Just $ Spec.State origin.address.state,
-                        locationUpdatedAt = Nothing,
-                        locationId = Nothing
+                    emptyLocation
+                      { Spec.locationAddress = Just $ mkAddress origin.address,
+                        Spec.locationAreaCode = origin.address.areaCode,
+                        Spec.locationCity = Just $ Spec.City Nothing origin.address.city,
+                        Spec.locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                        Spec.locationGps = Utils.gpsToText originGps,
+                        Spec.locationState = Just $ Spec.State origin.address.state
                       },
-                stopType = Just $ show Enums.START,
-                stopAuthorization = Nothing,
-                stopId = Just "0",
-                stopParentStopId = Nothing,
-                stopTime = Just Spec.Time {timeTimestamp = Just startTime, timeDuration = Nothing}
+                Spec.stopType = Just $ show Enums.START,
+                Spec.stopId = Just "0",
+                Spec.stopTime = Just Spec.Time {timeTimestamp = Just startTime, timeDuration = Nothing}
               }
           ]
             <> ( ( \stop ->
-                     Spec.Stop
-                       { stopLocation =
+                     emptyStop
+                       { Spec.stopLocation =
                            Just $
-                             Spec.Location
-                               { locationAddress = Just $ mkAddress stop.address,
-                                 locationAreaCode = stop.address.areaCode,
-                                 locationCity = Just $ Spec.City Nothing stop.address.city,
-                                 locationCountry = Just $ Spec.Country Nothing stop.address.country,
-                                 locationGps = Utils.gpsToText $ destinationGps stop,
-                                 locationState = Just $ Spec.State stop.address.state,
-                                 locationId = Nothing,
-                                 locationUpdatedAt = Nothing
+                             emptyLocation
+                               { Spec.locationAddress = Just $ mkAddress stop.address,
+                                 Spec.locationAreaCode = stop.address.areaCode,
+                                 Spec.locationCity = Just $ Spec.City Nothing stop.address.city,
+                                 Spec.locationCountry = Just $ Spec.Country Nothing stop.address.country,
+                                 Spec.locationGps = Utils.gpsToText $ destinationGps stop,
+                                 Spec.locationState = Just $ Spec.State stop.address.state
                                },
-                         stopType = Just $ show Enums.END,
-                         stopAuthorization = Nothing,
-                         stopTime = Nothing,
-                         stopId = Just $ show (length intermediateStops + 1),
-                         stopParentStopId = Just $ show (length intermediateStops)
+                         Spec.stopType = Just $ show Enums.END,
+                         Spec.stopId = Just $ show (length intermediateStops + 1),
+                         Spec.stopParentStopId = Just $ show (length intermediateStops)
                        }
                  )
                    <$> destination
@@ -113,86 +105,15 @@ replaceEmpty string = if string == Just "" then Nothing else string
 mkPaymentTags :: Maybe [Spec.TagGroup]
 mkPaymentTags =
   Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.BUYER_FINDER_FEES,
-                  descriptorName = Nothing,
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList = Just buyerFinderFeesSingleton
-        },
-      Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.SETTLEMENT_TERMS,
-                  descriptorName = Nothing,
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just $
-              delayInterestSingleton
-                ++ settlementTypeSingleton
-                ++ staticTermsSingleton
-        }
+    [ Tags.getFullTagGroup Tags.BUYER_FINDER_FEES
+        [ Tags.mkTag Tags.BUYER_FINDER_FEES_PERCENTAGE (Just "0")
+        ],
+      Tags.getFullTagGroup Tags.SETTLEMENT_TERMS
+        [ Tags.mkTag Tags.DELAY_INTEREST (Just "0"),
+          Tags.mkTag Tags.SETTLEMENT_TYPE (Just "RSF"),
+          Tags.mkTag Tags.STATIC_TERMS (Just "https://example-test-bap.com/static-terms.txt")
+        ]
     ]
-  where
-    buyerFinderFeesSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.BUYER_FINDER_FEES_PERCENTAGE,
-                    descriptorName = Nothing,
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just "0"
-          }
-    delayInterestSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.DELAY_INTEREST,
-                    descriptorName = Nothing,
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just "0"
-          }
-    settlementTypeSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.SETTLEMENT_TYPE,
-                    descriptorName = Nothing,
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just "RSF"
-          }
-    staticTermsSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.STATIC_TERMS,
-                    descriptorName = Nothing,
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just "https://example-test-bap.com/static-terms.txt"
-          }
 
 castVehicleVariant :: VehVar.VehicleVariant -> (Text, Text)
 castVehicleVariant = \case
@@ -323,50 +244,41 @@ withTransactionIdLogTag = withTransactionIdLogTag'
 mkStops' :: Maybe DLoc.Location -> [DLoc.Location] -> Maybe DLoc.Location -> Maybe [Spec.Stop]
 mkStops' mbOrigin intermediateStops mDestination = do
   let stops =
-        ( catMaybes
+         ( catMaybes
             [ mbOrigin >>= \origin -> do
                 let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
                 Just $
-                  Spec.Stop
-                    { stopLocation =
+                  emptyStop
+                    { Spec.stopLocation =
                         Just $
-                          Spec.Location
-                            { locationAddress = Just $ mkAddress origin.address,
-                              locationAreaCode = origin.address.areaCode,
-                              locationCity = Just $ Spec.City Nothing origin.address.city,
-                              locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                              locationGps = Utils.gpsToText originGps,
-                              locationState = Just $ Spec.State origin.address.state,
-                              locationId = Nothing,
-                              locationUpdatedAt = Nothing
+                          emptyLocation
+                            { Spec.locationAddress = Just $ mkAddress origin.address,
+                              Spec.locationAreaCode = origin.address.areaCode,
+                              Spec.locationCity = Just $ Spec.City Nothing origin.address.city,
+                              Spec.locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                              Spec.locationGps = Utils.gpsToText originGps,
+                              Spec.locationState = Just $ Spec.State origin.address.state
                             },
-                      stopType = Just $ show Enums.START,
-                      stopAuthorization = Nothing,
-                      stopTime = Nothing,
-                      stopId = Just "0",
-                      stopParentStopId = Nothing
+                      Spec.stopType = Just $ show Enums.START,
+                      Spec.stopId = Just "0"
                     },
               mDestination >>= \destination -> do
                 let destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
                 Just $
-                  Spec.Stop
-                    { stopLocation =
+                  emptyStop
+                    { Spec.stopLocation =
                         Just $
-                          Spec.Location
-                            { locationAddress = Just $ mkAddress destination.address,
-                              locationAreaCode = destination.address.areaCode,
-                              locationCity = Just $ Spec.City Nothing destination.address.city,
-                              locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                              locationGps = Utils.gpsToText destinationGps,
-                              locationState = Just $ Spec.State destination.address.state,
-                              locationId = Nothing,
-                              locationUpdatedAt = Nothing
+                          emptyLocation
+                            { Spec.locationAddress = Just $ mkAddress destination.address,
+                              Spec.locationAreaCode = destination.address.areaCode,
+                              Spec.locationCity = Just $ Spec.City Nothing destination.address.city,
+                              Spec.locationCountry = Just $ Spec.Country Nothing destination.address.country,
+                              Spec.locationGps = Utils.gpsToText destinationGps,
+                              Spec.locationState = Just $ Spec.State destination.address.state
                             },
-                      stopType = Just $ show Enums.END,
-                      stopAuthorization = Nothing,
-                      stopTime = Nothing,
-                      stopId = Just $ show (length intermediateStops + 1),
-                      stopParentStopId = Just $ show (length intermediateStops)
+                      Spec.stopType = Just $ show Enums.END,
+                      Spec.stopId = Just $ show (length intermediateStops + 1),
+                      Spec.stopParentStopId = Just $ show (length intermediateStops)
                     }
             ]
         )
@@ -378,70 +290,59 @@ mkStops' mbOrigin intermediateStops mDestination = do
 makeStop :: DLoc.Location -> Spec.Stop
 makeStop stop =
   let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
-   in Spec.Stop
-        { stopLocation =
+   in emptyStop
+        { Spec.stopLocation =
             Just $
-              Spec.Location
-                { locationAddress = Just $ mkAddress stop.address,
-                  locationAreaCode = stop.address.areaCode,
-                  locationCity = Just $ Spec.City Nothing stop.address.city,
-                  locationCountry = Just $ Spec.Country Nothing stop.address.country,
-                  locationGps = Utils.gpsToText gps,
-                  locationState = Just $ Spec.State stop.address.state,
-                  locationId = Just stop.id.getId,
-                  locationUpdatedAt = Nothing
+              emptyLocation
+                { Spec.locationAddress = Just $ mkAddress stop.address,
+                  Spec.locationAreaCode = stop.address.areaCode,
+                  Spec.locationCity = Just $ Spec.City Nothing stop.address.city,
+                  Spec.locationCountry = Just $ Spec.Country Nothing stop.address.country,
+                  Spec.locationGps = Utils.gpsToText gps,
+                  Spec.locationState = Just $ Spec.State stop.address.state,
+                  Spec.locationId = Just stop.id.getId
                 },
-          stopType = Just $ show Enums.INTERMEDIATE_STOP,
-          stopAuthorization = Nothing,
-          stopTime = Nothing,
-          stopId = Just "0",
-          stopParentStopId = Nothing ---------used only for add stop in rental, no need to handle sequence.--------
+          Spec.stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          Spec.stopId = Just "0"
         }
 
 mkIntermediateStop :: DLoc.Location -> Int -> Int -> Spec.Stop
 mkIntermediateStop stop id parentStopId =
   let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
-   in Spec.Stop
-        { stopLocation =
+   in emptyStop
+        { Spec.stopLocation =
             Just $
-              Spec.Location
-                { locationAddress = Just $ mkAddress stop.address,
-                  locationAreaCode = stop.address.areaCode,
-                  locationCity = Just $ Spec.City Nothing stop.address.city,
-                  locationCountry = Just $ Spec.Country Nothing stop.address.country,
-                  locationGps = Utils.gpsToText gps,
-                  locationState = Just $ Spec.State stop.address.state,
-                  locationId = Just stop.id.getId,
-                  locationUpdatedAt = Nothing
+              emptyLocation
+                { Spec.locationAddress = Just $ mkAddress stop.address,
+                  Spec.locationAreaCode = stop.address.areaCode,
+                  Spec.locationCity = Just $ Spec.City Nothing stop.address.city,
+                  Spec.locationCountry = Just $ Spec.Country Nothing stop.address.country,
+                  Spec.locationGps = Utils.gpsToText gps,
+                  Spec.locationState = Just $ Spec.State stop.address.state,
+                  Spec.locationId = Just stop.id.getId
                 },
-          stopType = Just $ show Enums.INTERMEDIATE_STOP,
-          stopAuthorization = Nothing,
-          stopTime = Nothing,
-          stopId = Just $ show id,
-          stopParentStopId = Just $ show parentStopId
+          Spec.stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          Spec.stopId = Just $ show id,
+          Spec.stopParentStopId = Just $ show parentStopId
         }
 
 mkIntermediateStopSearch :: SLS.SearchReqLocation -> Int -> Int -> Spec.Stop
 mkIntermediateStopSearch stop id parentStopId =
   let gps = Gps.Gps {lat = stop.gps.lat, lon = stop.gps.lon}
-   in Spec.Stop
-        { stopLocation =
+   in emptyStop
+        { Spec.stopLocation =
             Just $
-              Spec.Location
-                { locationAddress = Just $ mkAddress stop.address,
-                  locationAreaCode = stop.address.areaCode,
-                  locationCity = Just $ Spec.City Nothing stop.address.city,
-                  locationCountry = Just $ Spec.Country Nothing stop.address.country,
-                  locationGps = Utils.gpsToText gps,
-                  locationState = Just $ Spec.State stop.address.state,
-                  locationId = Nothing,
-                  locationUpdatedAt = Nothing
+              emptyLocation
+                { Spec.locationAddress = Just $ mkAddress stop.address,
+                  Spec.locationAreaCode = stop.address.areaCode,
+                  Spec.locationCity = Just $ Spec.City Nothing stop.address.city,
+                  Spec.locationCountry = Just $ Spec.Country Nothing stop.address.country,
+                  Spec.locationGps = Utils.gpsToText gps,
+                  Spec.locationState = Just $ Spec.State stop.address.state
                 },
-          stopType = Just $ show Enums.INTERMEDIATE_STOP,
-          stopAuthorization = Nothing,
-          stopTime = Nothing,
-          stopId = Just $ show id,
-          stopParentStopId = Just $ show parentStopId
+          Spec.stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          Spec.stopId = Just $ show id,
+          Spec.stopParentStopId = Just $ show parentStopId
         }
 
 mapTextToVehicle :: Text -> Maybe Enums.VehicleCategory

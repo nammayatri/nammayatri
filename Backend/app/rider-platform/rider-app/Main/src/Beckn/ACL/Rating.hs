@@ -87,80 +87,9 @@ tfFeedbackForm DFeedback.FeedbackRes {..} = do
 
 mkRatingTags :: Maybe Bool -> Maybe Text -> Maybe Text -> Text -> Maybe [Spec.TagGroup]
 mkRatingTags mbShouldFavDriver mbPhoneNum mbFilePath riderName =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.RATING_TAGS,
-                  descriptorName = Just "Rating Information",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList = mkPersonTag mbShouldFavDriver <> mkPersonNumberTag mbPhoneNum <> mkFilePathTag mbFilePath <> mkPersonName riderName
-        }
-    ]
-
-mkPersonTag :: Maybe Bool -> Maybe [Spec.Tag]
-mkPersonTag mbShouldFavDriver =
-  mbShouldFavDriver <&> \shouldFavDriver ->
-    [ Spec.Tag
-        { tagDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.SHOULD_FAVOURITE_DRIVER,
-                  descriptorName = Just "Should Favourite Driver",
-                  descriptorShortDesc = Nothing
-                },
-          tagDisplay = Just False,
-          tagValue = Just $ show shouldFavDriver
-        }
-    ]
-
-mkPersonNumberTag :: Maybe Text -> Maybe [Spec.Tag]
-mkPersonNumberTag mbPhoneNum =
-  mbPhoneNum <&> \phoneNum ->
-    [ Spec.Tag
-        { tagDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.RIDER_PHONE_NUMBER,
-                  descriptorName = Just "Rider Phone Number",
-                  descriptorShortDesc = Nothing
-                },
-          tagDisplay = Just False,
-          tagValue = Just phoneNum
-        }
-    ]
-
-mkFilePathTag :: Maybe Text -> Maybe [Spec.Tag]
-mkFilePathTag mbFilePath =
-  mbFilePath <&> \filePath ->
-    [ Spec.Tag
-        { tagDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.MEDIA_FILE_PATH,
-                  descriptorName = Just "Media File Path",
-                  descriptorShortDesc = Nothing
-                },
-          tagDisplay = Just False,
-          tagValue = Just filePath
-        }
-    ]
-
-mkPersonName :: Text -> Maybe [Spec.Tag]
-mkPersonName riderName = do
-  Just
-    [ Spec.Tag
-        { tagDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.RIDER_NAME,
-                  descriptorName = Just "Rider Name",
-                  descriptorShortDesc = Nothing
-                },
-          tagDisplay = Just False,
-          tagValue = Just riderName
-        }
+  Tags.buildTagGroups
+    [ Tags.SHOULD_FAVOURITE_DRIVER Tags.~=? (show <$> mbShouldFavDriver),
+      Tags.RIDER_PHONE_NUMBER Tags.~=? mbPhoneNum,
+      Tags.MEDIA_FILE_PATH Tags.~=? mbFilePath,
+      Tags.RIDER_NAME Tags.~= riderName
     ]

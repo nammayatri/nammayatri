@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
@@ -63,33 +64,26 @@ mkConfirmMessageV2 res bapConfig = do
 
 tfOrder :: DOnInit.OnInitRes -> DBC.BecknConfig -> Spec.Order
 tfOrder res bapConfig = do
-  Spec.Order
-    { orderBilling = tfOrderBilling res,
-      orderCancellation = Nothing,
-      orderCancellationTerms = Nothing,
-      orderFulfillments = tfFulfillments res,
-      orderId = res.bppBookingId >>= Just . (.getId),
-      orderItems = tfItems res,
-      orderPayments = tfPayments res bapConfig,
-      orderProvider = tfProvider res,
-      orderQuote = tfQuotation res,
-      orderStatus = Nothing,
-      orderCreatedAt = Nothing,
-      orderUpdatedAt = Nothing
+  emptyOrder
+    { Spec.orderBilling = tfOrderBilling res,
+      Spec.orderCancellationTerms = Nothing,
+      Spec.orderFulfillments = tfFulfillments res,
+      Spec.orderId = res.bppBookingId >>= Just . (.getId),
+      Spec.orderItems = tfItems res,
+      Spec.orderPayments = tfPayments res bapConfig,
+      Spec.orderProvider = tfProvider res,
+      Spec.orderQuote = tfQuotation res
     }
 
 tfFulfillments :: DOnInit.OnInitRes -> Maybe [Spec.Fulfillment]
 tfFulfillments res =
   Just
-    [ Spec.Fulfillment
-        { fulfillmentAgent = Nothing,
-          fulfillmentCustomer = tfCustomer res,
-          fulfillmentId = res.fulfillmentId,
-          fulfillmentState = Nothing,
-          fulfillmentStops = Utils.mkStops' (Just res.fromLocation) stops res.mbToLocation,
-          fulfillmentTags = Nothing,
-          fulfillmentType = Utils.tripCategoryToFulfillmentType <$> res.tripCategory,
-          fulfillmentVehicle = tfVehicle res
+    [ emptyFulfillment
+        { Spec.fulfillmentCustomer = tfCustomer res,
+          Spec.fulfillmentId = res.fulfillmentId,
+          Spec.fulfillmentStops = Utils.mkStops' (Just res.fromLocation) stops res.mbToLocation,
+          Spec.fulfillmentType = Utils.tripCategoryToFulfillmentType <$> res.tripCategory,
+          Spec.fulfillmentVehicle = tfVehicle res
         }
     ]
   where
@@ -101,16 +95,7 @@ tfFulfillments res =
 tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]
 tfItems res =
   Just
-    [ Spec.Item
-        { itemDescriptor = Nothing,
-          itemFulfillmentIds = Nothing,
-          itemId = Just res.itemId,
-          itemLocationIds = Nothing,
-          itemPaymentIds = Nothing,
-          itemPrice = Nothing,
-          itemTags = Nothing
-        }
-    ]
+    [ emptyItem { Spec.itemId = Just res.itemId } ]
 
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DOnInit.OnInitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
@@ -122,23 +107,15 @@ tfPayments res bapConfig = do
 
 tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
 tfQuotation res =
-  Just $
-    Spec.Quotation
-      { quotationBreakup = Nothing,
-        quotationPrice = tfQuotationPrice res,
-        quotationTtl = Nothing
-      }
+  Just $ emptyQuotation { Spec.quotationPrice = tfQuotationPrice res }
 
 tfQuotationPrice :: DOnInit.OnInitRes -> Maybe Spec.Price
 tfQuotationPrice res =
   Just $
-    Spec.Price
-      { priceComputedValue = Nothing,
-        priceCurrency = Just $ show res.estimatedTotalFare.currency,
-        priceMaximumValue = Nothing,
-        priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText res.estimatedTotalFare.amount,
-        priceValue = Just $ encodeToText res.estimatedFare.amount
+    emptyPrice
+      { Spec.priceCurrency = Just $ show res.estimatedTotalFare.currency,
+        Spec.priceOfferedValue = Just $ encodeToText res.estimatedTotalFare.amount,
+        Spec.priceValue = Just $ encodeToText res.estimatedFare.amount
       }
 
 tfCustomer :: DOnInit.OnInitRes -> Maybe Spec.Customer
@@ -159,92 +136,32 @@ tfCustomer res =
 
     mkPerson = do
       return $
-        Spec.Person
-          { personId = Nothing,
-            personImage = Nothing,
-            personName = res.mbRiderName,
-            personTags = mkPersonTags
+        emptyPerson
+          { Spec.personName = res.mbRiderName,
+            Spec.personTags = mkPersonTags
           }
 
     mkPersonTags
       | not res.isValueAddNP = Nothing
       | otherwise =
-        Just
-          [ Spec.TagGroup
-              { tagGroupDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tags.CUSTOMER_INFO,
-                        descriptorName = Just "Customer Information",
-                        descriptorShortDesc = Nothing
-                      },
-                tagGroupDisplay = Just False,
-                tagGroupList = mkPersonTag
-              }
+        Tags.buildTagGroups
+          [ Tags.NIGHT_SAFETY_CHECK Tags.~= show res.nightSafetyCheck,
+            Tags.ENABLE_FREQUENT_LOCATION_UPDATES Tags.~= show res.enableFrequentLocationUpdates,
+            Tags.ENABLE_OTP_LESS_RIDE Tags.~= show res.enableOtpLessRide
           ]
-
-    mkPersonTag =
-      Just
-        [ Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.NIGHT_SAFETY_CHECK,
-                      descriptorName = Just "Night Safety Check",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = Just $ show res.nightSafetyCheck
-            },
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.ENABLE_FREQUENT_LOCATION_UPDATES,
-                      descriptorName = Just "Enable Frequent Location Updates",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = Just $ show res.enableFrequentLocationUpdates
-            },
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.ENABLE_OTP_LESS_RIDE,
-                      descriptorName = Just "Enable OTP Less Ride",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = Just $ show res.enableOtpLessRide
-            }
-        ]
 
 tfVehicle :: DOnInit.OnInitRes -> Maybe Spec.Vehicle
 tfVehicle res = do
   let (category, variant) = Utils.castVehicleVariant res.vehicleVariant
   Just $
-    Spec.Vehicle
-      { vehicleCategory = Just category,
-        vehicleVariant = Just variant,
-        vehicleColor = Nothing,
-        vehicleMake = Nothing,
-        vehicleModel = Nothing,
-        vehicleRegistration = Nothing,
-        vehicleCapacity = Nothing
+    emptyVehicle
+      { Spec.vehicleCategory = Just category,
+        Spec.vehicleVariant = Just variant
       }
 
 tfProvider :: DOnInit.OnInitRes -> Maybe Spec.Provider
 tfProvider res =
-  Just $
-    Spec.Provider
-      { providerId = Just res.bppId,
-        providerItems = Nothing,
-        providerLocations = Nothing,
-        providerPayments = Nothing,
-        providerDescriptor = Nothing,
-        providerFulfillments = Nothing
-      }
+  Just $ emptyProvider { Spec.providerId = Just res.bppId }
 
 tfOrderBilling :: DOnInit.OnInitRes -> Maybe Spec.Billing
 tfOrderBilling res =

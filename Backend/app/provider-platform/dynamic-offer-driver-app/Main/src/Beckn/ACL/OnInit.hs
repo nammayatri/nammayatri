@@ -18,6 +18,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
@@ -58,45 +59,19 @@ tfOrder res becknConfig mbFarePolicy = do
 mkCommissionTagGroup :: Maybe Common.HighPrecMoney -> Maybe [Spec.TagGroup]
 mkCommissionTagGroup mbCommission = do
   commission <- mbCommission
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.SETTLEMENT_DETAILS,
-                  descriptorName = Nothing,
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.COMMISSION,
-                            descriptorName = Nothing,
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ Common.highPrecMoneyToText commission,
-                    tagDisplay = Just False
-                  }
-              ]
-        }
+  Tags.buildTagGroups
+    [ Tags.COMMISSION Tags.~= Common.highPrecMoneyToText commission
     ]
 
 tfFulfillments :: DInit.InitRes -> Maybe [Spec.Fulfillment]
 tfFulfillments res =
   Just
-    [ Spec.Fulfillment
-        { fulfillmentAgent = Nothing,
-          fulfillmentCustomer = tfCustomer res,
-          fulfillmentId = Just res.booking.quoteId,
-          fulfillmentState = Nothing,
-          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops Nothing,
-          fulfillmentTags = Nothing,
-          fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
-          fulfillmentVehicle = tfVehicle res
+    [ emptyFulfillment
+        { Spec.fulfillmentCustomer = tfCustomer res,
+          Spec.fulfillmentId = Just res.booking.quoteId,
+          Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops Nothing,
+          Spec.fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
+          Spec.fulfillmentVehicle = tfVehicle res
         }
     ]
 
@@ -118,14 +93,9 @@ tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle
 tfVehicle res = do
   let (category, variant) = Utils.castVariant res.vehicleVariant
   Just
-    Spec.Vehicle
-      { vehicleCategory = Just category,
-        vehicleVariant = Just variant,
-        vehicleColor = Nothing,
-        vehicleMake = Nothing,
-        vehicleModel = Nothing,
-        vehicleRegistration = Nothing,
-        vehicleCapacity = Nothing
+    emptyVehicle
+      { Spec.vehicleCategory = Just category,
+        Spec.vehicleVariant = Just variant
       }
 
 tfCancellationTerms :: Maybe PriceAPIEntity -> [Spec.CancellationTerm]
@@ -142,17 +112,8 @@ tfCustomer res =
   return $
     Spec.Customer
       { customerContact =
-          Just
-            Spec.Contact
-              { contactPhone = Just res.riderPhoneNumber
-              },
+          Just Spec.Contact { contactPhone = Just res.riderPhoneNumber },
         customerPerson = do
           riderName <- res.riderName
-          Just
-            Spec.Person
-              { personId = Nothing,
-                personImage = Nothing,
-                personName = Just riderName,
-                personTags = Nothing
-              }
+          Just $ emptyPerson { Spec.personName = Just riderName }
       }

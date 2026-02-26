@@ -24,6 +24,7 @@ import qualified Data.Text as T
 import qualified Data.Time
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RefereeLink as DRL
+import qualified Domain.Types.RiderPreferredOption as DRPO
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
 import Kernel.Types.Common
@@ -246,8 +247,27 @@ getDriverIdentifier req = do
 getPaymentMode :: Spec.SearchReqMessage -> Maybe DMPM.PaymentMode
 getPaymentMode req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentPayment) >>= (.paymentTags)
-  isTestMode <- readMaybe . T.unpack =<< Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.STRIPE_TEST tagGroups
+  -- Try SETTLEMENT_TERMS first (v2.0.0), then BAP_TERMS (v2.1.0)
+  isTestMode <- readMaybe . T.unpack =<< (Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.STRIPE_TEST tagGroups
+                                           <|> Utils.getTagV2 Tag.BAP_TERMS Tag.STRIPE_TEST tagGroups)
   pure $ if isTestMode then DMPM.TEST else DMPM.LIVE
+
+-- | Extract category.descriptor.code from intent (v2.1.0 format)
+getCategoryCode :: Spec.SearchReqMessage -> Maybe Text
+getCategoryCode req =
+  req.searchReqMessageIntent
+    >>= (.intentCategory)
+    >>= (.categoryDescriptor)
+    >>= (.descriptorCode)
+
+-- | Map ONDC 2.1.0 category codes to RiderPreferredOption
+mapCategoryCodeToRiderPreferred :: Text -> DRPO.RiderPreferredOption
+mapCategoryCodeToRiderPreferred = \case
+  "ON_DEMAND_TRIP" -> DRPO.OneWay
+  "ON_DEMAND_RENTAL" -> DRPO.Rental
+  "SCHEDULED_TRIP" -> DRPO.OneWay
+  "SCHEDULED_RENTAL" -> DRPO.Rental
+  _ -> DRPO.OneWay
 
 firstStop :: [Spec.Stop] -> Maybe Spec.Stop
 firstStop = find (\stop -> Spec.stopType stop == Just (show Enums.START))

@@ -22,6 +22,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import BecknV2.OnDemand.Utils.Payment
@@ -147,15 +148,14 @@ tfFulfillments :: DRB.Booking -> Maybe Text -> Text -> Maybe RideStatus -> Maybe
 tfFulfillments booking driverName customerPhoneNo rideStatus mbVehicle driverPhone = do
   let stops = BUtils.mkStops' booking.fromLocation booking.toLocation booking.stops booking.specialZoneOtpCode
   Just
-    [ Spec.Fulfillment
-        { fulfillmentId = Just booking.quoteId,
-          fulfillmentState = mkFulfillmentState rideStatus,
-          fulfillmentStops = stops,
-          fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
-          fulfillmentAgent = tfAgent booking driverName driverPhone,
-          fulfillmentCustomer = tfCustomer booking customerPhoneNo,
-          fulfillmentTags = Nothing,
-          fulfillmentVehicle = tfVehicle mbVehicle
+    [ emptyFulfillment
+        { Spec.fulfillmentId = Just booking.quoteId,
+          Spec.fulfillmentState = mkFulfillmentState rideStatus,
+          Spec.fulfillmentStops = stops,
+          Spec.fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
+          Spec.fulfillmentAgent = tfAgent booking driverName driverPhone,
+          Spec.fulfillmentCustomer = tfCustomer booking customerPhoneNo,
+          Spec.fulfillmentVehicle = tfVehicle mbVehicle
         }
     ]
   where
@@ -163,33 +163,24 @@ tfFulfillments booking driverName customerPhoneNo rideStatus mbVehicle driverPho
       Just $
         Spec.FulfillmentState
           { fulfillmentStateDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = (Just . show . BUtils.mapRideStatus) rideStatus',
-                    descriptorName = Nothing,
-                    descriptorShortDesc = Nothing
-                  }
+              Just $ emptyDescriptor { Spec.descriptorCode = (Just . show . BUtils.mapRideStatus) rideStatus' }
           }
 
 tfQuotation :: DRB.Booking -> Maybe Spec.Quotation
 tfQuotation booking =
   Just
-    Spec.Quotation
-      { quotationBreakup = mkQuotationBreakup booking,
-        quotationPrice = tfQuotationPrice booking,
-        quotationTtl = Nothing
+    emptyQuotation
+      { Spec.quotationBreakup = mkQuotationBreakup booking,
+        Spec.quotationPrice = tfQuotationPrice booking
       }
 
 tfQuotationPrice :: DRB.Booking -> Maybe Spec.Price
 tfQuotationPrice booking =
   Just
-    Spec.Price
-      { priceComputedValue = Nothing,
-        priceCurrency = Just $ show booking.currency,
-        priceMaximumValue = Nothing,
-        priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText booking.estimatedFare,
-        priceValue = Just $ encodeToText booking.estimatedFare
+    emptyPrice
+      { Spec.priceCurrency = Just $ show booking.currency,
+        Spec.priceOfferedValue = Just $ encodeToText booking.estimatedFare,
+        Spec.priceValue = Just $ encodeToText booking.estimatedFare
       }
 
 mkQuotationBreakup :: DRB.Booking -> Maybe [Spec.QuotationBreakupInner]
@@ -200,13 +191,9 @@ mkQuotationBreakup booking =
   where
     mkPrice money =
       Just
-        Spec.Price
-          { priceComputedValue = Nothing,
-            priceCurrency = Just $ show booking.currency,
-            priceMaximumValue = Nothing,
-            priceMinimumValue = Nothing,
-            priceOfferedValue = Nothing,
-            priceValue = Just $ encodeToText money
+        emptyPrice
+          { Spec.priceCurrency = Just $ show booking.currency,
+            Spec.priceValue = Just $ encodeToText money
           }
 
     mkQuotationBreakupInner title price =
@@ -224,14 +211,14 @@ tfPayments estimatedFare merchant bppConfig mbPaymentId = do
 tfItems :: DRB.Booking -> DM.Merchant -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.Item]
 tfItems booking merchant mbFarePolicy =
   Just
-    [ Spec.Item
-        { itemDescriptor = BUtils.tfItemDescriptor booking,
-          itemFulfillmentIds = Just [booking.quoteId],
-          itemId = Just $ maybe (Common.mkItemId merchant.shortId.getShortId booking.vehicleServiceTier) getId (booking.estimateId),
-          itemLocationIds = Nothing,
-          itemPaymentIds = tfPaymentId booking.paymentId,
-          itemPrice = tfItemPrice booking,
-          itemTags = BUtils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing
+    [ emptyItem
+        { Spec.itemDescriptor = BUtils.tfItemDescriptor booking,
+          Spec.itemFulfillmentIds = Just [booking.quoteId],
+          Spec.itemId = Just $ maybe (Common.mkItemId merchant.shortId.getShortId booking.vehicleServiceTier) getId (booking.estimateId),
+          Spec.itemCategoryIds = Just [BUtils.tripCategoryToCategoryCode booking.tripCategory],
+          Spec.itemPaymentIds = tfPaymentId booking.paymentId,
+          Spec.itemPrice = tfItemPrice booking,
+          Spec.itemTags = BUtils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing
         }
     ]
 
@@ -243,13 +230,9 @@ tfPaymentId mbPaymentId = do
 tfItemPrice :: DRB.Booking -> Maybe Spec.Price
 tfItemPrice booking =
   Just
-    Spec.Price
-      { priceComputedValue = Nothing,
-        priceCurrency = Just $ show booking.currency,
-        priceMaximumValue = Nothing,
-        priceMinimumValue = Nothing,
-        priceOfferedValue = Nothing,
-        priceValue = Just $ encodeToText booking.estimatedFare
+    emptyPrice
+      { Spec.priceCurrency = Just $ show booking.currency,
+        Spec.priceValue = Just $ encodeToText booking.estimatedFare
       }
 
 tfVehicle :: Maybe DVeh.Vehicle -> Maybe Spec.Vehicle
@@ -257,14 +240,12 @@ tfVehicle mbVehicle =
   mbVehicle >>= \vehicle -> do
     let (category, variant) = BUtils.castVariant vehicle.variant
     Just $
-      Spec.Vehicle
-        { vehicleColor = Just vehicle.color,
-          vehicleModel = Just vehicle.model,
-          vehicleRegistration = Just vehicle.registrationNo,
-          vehicleCategory = Just category,
-          vehicleVariant = Just variant,
-          vehicleMake = Nothing,
-          vehicleCapacity = Nothing
+      emptyVehicle
+        { Spec.vehicleColor = Just vehicle.color,
+          Spec.vehicleModel = Just vehicle.model,
+          Spec.vehicleRegistration = Just vehicle.registrationNo,
+          Spec.vehicleCategory = Just category,
+          Spec.vehicleVariant = Just variant
         }
 
 tfAgent :: DRB.Booking -> Maybe Text -> Maybe Text -> Maybe Spec.Agent
@@ -272,14 +253,7 @@ tfAgent _booking driverName driverPhone = do
   Just $
     Spec.Agent
       { agentContact = Common.tfContact driverPhone,
-        agentPerson =
-          Just
-            Spec.Person
-              { personId = Nothing,
-                personImage = Nothing,
-                personName = driverName,
-                personTags = Nothing
-              }
+        agentPerson = Just $ emptyPerson { Spec.personName = driverName }
       }
 
 tfCustomer :: DRB.Booking -> Text -> Maybe Spec.Customer
@@ -287,18 +261,9 @@ tfCustomer booking customerPhoneNo = do
   Just $
     Spec.Customer
       { customerContact =
-          Just
-            Spec.Contact
-              { contactPhone = Just customerPhoneNo
-              },
+          Just Spec.Contact { contactPhone = Just customerPhoneNo },
         customerPerson =
-          Just
-            Spec.Person
-              { personId = Nothing,
-                personImage = Nothing,
-                personName = booking.riderName,
-                personTags = Nothing
-              }
+          Just $ emptyPerson { Spec.personName = booking.riderName }
       }
 
 tfCancellation :: SBCR.CancellationSource -> Maybe Spec.Cancellation
