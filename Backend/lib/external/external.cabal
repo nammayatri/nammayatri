@@ -50,6 +50,7 @@ library
       TransactionLogs.Interface.ONDC
       TransactionLogs.Interface.Types
       TransactionLogs.ONDC.Flow
+      TransactionLogs.ONDC.PPFLog
       TransactionLogs.ONDC.Types
       TransactionLogs.PushLogs
       TransactionLogs.Types

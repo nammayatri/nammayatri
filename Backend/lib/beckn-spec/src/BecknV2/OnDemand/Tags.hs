@@ -348,6 +348,18 @@ data BecknTag
   | DELAY_INTEREST
   | STATIC_TERMS
   | SETTLEMENT_AMOUNT
+  | -- ## PPF (Payment Protection Framework) tags ##
+    WITHHOLDING_AMOUNT
+  | TDS_AMOUNT
+  | TCS_AMOUNT
+  | HOLD_STATUS
+  | RELEASE_STATUS
+  | PPF_PAYMENT_STATUS
+  | SETTLEMENT_REF_NO
+  | SELLER_SHARE
+  | BUYER_APP_COMMISSION
+  | NETWORK_FEE
+  | GST_AMOUNT
   | -- Stripe tags --
     STRIPE_TEST
   | PAYMENT_INSTRUMENT
@@ -539,6 +551,17 @@ instance CompleteTag BecknTag where
     COURT_JURISDICTION -> (Just "Court Jurisdiction", Nothing)
     STATIC_TERMS -> (Just "Static Terms", Nothing)
     SETTLEMENT_TYPE -> (Just "Settlement Type", Nothing)
+    WITHHOLDING_AMOUNT -> (Just "Withholding Amount", Nothing)
+    TDS_AMOUNT -> (Just "TDS Amount", Nothing)
+    TCS_AMOUNT -> (Just "TCS Amount", Nothing)
+    HOLD_STATUS -> (Just "Hold Status", Nothing)
+    RELEASE_STATUS -> (Just "Release Status", Nothing)
+    PPF_PAYMENT_STATUS -> (Just "PPF Payment Status", Nothing)
+    SETTLEMENT_REF_NO -> (Just "Settlement Reference Number", Nothing)
+    SELLER_SHARE -> (Just "Seller Share", Nothing)
+    BUYER_APP_COMMISSION -> (Just "Buyer App Commission", Nothing)
+    NETWORK_FEE -> (Just "Network Fee", Nothing)
+    GST_AMOUNT -> (Just "GST Amount", Nothing)
     IS_REALLOCATION_ENABLED -> (Just "Is Reallocation Enabled", Nothing)
     IS_METER_RIDE_SEARCH -> (Just "Is Meter ride search", Nothing)
     IS_MULTIMODAL_SEARCH -> (Just "Is Multimodal Search", Nothing)

@@ -33,6 +33,7 @@ library
       API.Beckn.IGM.Issue
       API.Beckn.Init
       API.Beckn.Rating
+      API.Beckn.Recon
       API.Beckn.Search
       API.Beckn.Select
       API.Beckn.Status
@@ -118,12 +119,14 @@ library
       Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
+      Beckn.ACL.OnRecon
       Beckn.ACL.OnSearch
       Beckn.ACL.OnSelect
       Beckn.ACL.OnStatus
       Beckn.ACL.OnTrack
       Beckn.ACL.OnUpdate
       Beckn.ACL.Rating
+      Beckn.ACL.Recon
       Beckn.ACL.Search
       Beckn.ACL.Select
       Beckn.ACL.Status
@@ -229,6 +232,7 @@ library
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.ViolationDetection
+      Domain.Action.PPF.Recon
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
@@ -713,6 +717,7 @@ library
       Storage.Queries.Person.Internal
       Storage.Queries.PersonExtra
       Storage.Queries.PlanExtra
+      Storage.Queries.PPFReconExtra
       Storage.Queries.PurchaseHistoryExtra
       Storage.Queries.QueriesExtra.BookingLite
       Storage.Queries.QueriesExtra.RideLite
@@ -1089,6 +1094,7 @@ library
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
       Domain.Types.PlanTranslation
+      Domain.Types.PPFRecon
       Domain.Types.PurchaseHistory
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
@@ -1255,6 +1261,7 @@ library
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
+      Storage.Beam.PPFRecon
       Storage.Beam.PurchaseHistory
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
@@ -1481,6 +1488,7 @@ library
       Storage.Queries.OrphanInstances.PayoutConfig
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.Plan
+      Storage.Queries.OrphanInstances.PPFRecon
       Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RegistrationToken
@@ -1514,6 +1522,7 @@ library
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation
+      Storage.Queries.PPFRecon
       Storage.Queries.PurchaseHistory
       Storage.Queries.QuestionInformation
       Storage.Queries.QuestionModuleMapping

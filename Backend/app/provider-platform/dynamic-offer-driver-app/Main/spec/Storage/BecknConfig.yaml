@@ -33,6 +33,7 @@ BecknConfig:
     onUpdateTTLSec: Maybe Int
     onTrackTTLSec: Maybe Int
     onCancelTTLSec: Maybe Int
+    ppfEnabled: Maybe Bool
 
   types:
     PaymentCollectedBy:

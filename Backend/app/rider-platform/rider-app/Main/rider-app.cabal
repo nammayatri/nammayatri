@@ -40,6 +40,7 @@ library
       API.Beckn.OnCancel
       API.Beckn.OnConfirm
       API.Beckn.OnInit
+      API.Beckn.OnRecon
       API.Beckn.OnSearch
       API.Beckn.OnSelect
       API.Beckn.OnStatus
@@ -129,12 +130,14 @@ library
       Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
+      Beckn.ACL.OnRecon
       Beckn.ACL.OnSearch
       Beckn.ACL.OnSelect
       Beckn.ACL.OnStatus
       Beckn.ACL.OnTrack
       Beckn.ACL.OnUpdate
       Beckn.ACL.Rating
+      Beckn.ACL.Recon
       Beckn.ACL.Search
       Beckn.ACL.Select
       Beckn.ACL.Status
@@ -216,6 +219,7 @@ library
       Domain.Action.Internal.RideSearchExpired
       Domain.Action.Internal.StopEvents
       Domain.Action.Internal.ViolationDetection
+      Domain.Action.PPF.Recon
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AlertWebhook
       Domain.Action.UI.AppInstalls
@@ -464,6 +468,8 @@ library
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PickupETA
+      SharedLogic.PPF
+      SharedLogic.PPF.PaymentStateMachine
       SharedLogic.PTCircuitBreaker
       SharedLogic.PublicTransport
       SharedLogic.Quote
@@ -619,6 +625,7 @@ library
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
       Storage.Queries.PopularLocationExtra
+      Storage.Queries.PPFReconExtra
       Storage.Queries.PurchasedPassExtra
       Storage.Queries.PurchasedPassPaymentExtra
       Storage.Queries.QueriesExtra.RideLite
@@ -969,6 +976,7 @@ library
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.PlaceNameCache
       Domain.Types.PopularLocation
+      Domain.Types.PPFRecon
       Domain.Types.PTCircuitBreakerHistory
       Domain.Types.PurchasedPass
       Domain.Types.PurchasedPassPayment
@@ -1126,6 +1134,7 @@ library
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.PlaceNameCache
       Storage.Beam.PopularLocation
+      Storage.Beam.PPFRecon
       Storage.Beam.PTCircuitBreakerHistory
       Storage.Beam.PurchasedPass
       Storage.Beam.PurchasedPassPayment
@@ -1306,6 +1315,7 @@ library
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.PopularLocation
+      Storage.Queries.OrphanInstances.PPFRecon
       Storage.Queries.OrphanInstances.PurchasedPass
       Storage.Queries.OrphanInstances.PurchasedPassPayment
       Storage.Queries.OrphanInstances.Quote
@@ -1353,6 +1363,7 @@ library
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.PlaceNameCache
       Storage.Queries.PopularLocation
+      Storage.Queries.PPFRecon
       Storage.Queries.PTCircuitBreakerHistory
       Storage.Queries.PurchasedPass
       Storage.Queries.PurchasedPassPayment
@@ -1683,6 +1694,8 @@ test-suite rider-app-test
   main-is: Main.hs
   other-modules:
       FRFS.DirectQR
+      PPF.ReconTest
+      PPF.StateMachineTest
       Paths_rider_app
   hs-source-dirs:
       test

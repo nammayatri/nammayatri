@@ -73,6 +73,7 @@ library
       Beckn.Types.Core.Taxi.API.OnTrack
       Beckn.Types.Core.Taxi.API.OnUpdate
       Beckn.Types.Core.Taxi.API.Rating
+      Beckn.Types.Core.Taxi.API.Recon
       Beckn.Types.Core.Taxi.API.Search
       Beckn.Types.Core.Taxi.API.Select
       Beckn.Types.Core.Taxi.API.Status
@@ -207,6 +208,7 @@ library
       BecknV2.OnDemand.Enums
       BecknV2.OnDemand.Tags
       BecknV2.OnDemand.Types
+      BecknV2.OnDemand.Types.Recon
       BecknV2.OnDemand.Utils.Common
       BecknV2.OnDemand.Utils.Context
       BecknV2.OnDemand.Utils.Payment

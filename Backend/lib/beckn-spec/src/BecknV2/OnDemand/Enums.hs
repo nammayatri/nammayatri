@@ -279,3 +279,36 @@ instance ToJSON TLMethod where
   toJSON HttpGet = String "http/get"
   toJSON HttpPost = String "http/post"
   toJSON StripeSdk = String "stripe/sdk"
+
+-- ##################################################################
+-- PPF (Payment Protection Framework) Enums
+-- ##################################################################
+
+data PPFPaymentStatus
+  = PPF_INITIATED
+  | PPF_COLLECTED
+  | PPF_HELD
+  | PPF_RELEASED
+  | PPF_SETTLED
+  | PPF_REFUNDED
+  | PPF_FAILED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''PPFPaymentStatus)
+
+data PPFSettlementStatus
+  = PPF_SETTLEMENT_PENDING
+  | PPF_SETTLEMENT_IN_PROGRESS
+  | PPF_SETTLEMENT_SETTLED
+  | PPF_SETTLEMENT_FAILED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''PPFSettlementStatus)
+
+data PPFReconStatus
+  = RECON_ACCEPTED
+  | RECON_DISPUTED
+  | RECON_SETTLED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''PPFReconStatus)

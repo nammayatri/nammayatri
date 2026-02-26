@@ -15,6 +15,7 @@
 module BecknV2.OnDemand.Utils.Payment
   ( mkPayment,
     mkPayment',
+    mkPPFSettlementTags,
   )
 where
 
@@ -309,3 +310,103 @@ mkSettlementDetailsTagGroup mSettlementType = do
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode
+
+-- | Build PPF-specific settlement tags for inclusion in BECKN payment messages.
+-- These extend the standard settlement tags with PPF-required fields like
+-- withholding amount, TDS, TCS, and settlement reference.
+mkPPFSettlementTags ::
+  Maybe Text -> -- withholding amount
+  Maybe Text -> -- TDS amount
+  Maybe Text -> -- TCS amount
+  Maybe Text -> -- settlement reference number
+  Maybe Text -> -- seller share
+  Maybe Text -> -- buyer app commission
+  Maybe Text -> -- PPF payment status
+  [Spec.Tag]
+mkPPFSettlementTags mWithholding mTds mTcs mSettlementRef mSellerShare mBuyerAppCommission mPpfPaymentStatus =
+  catMaybes
+    [ mWithholding <&> \val ->
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tag.WITHHOLDING_AMOUNT,
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just val,
+            tagDisplay = Just False
+          },
+      mTds <&> \val ->
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tag.TDS_AMOUNT,
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just val,
+            tagDisplay = Just False
+          },
+      mTcs <&> \val ->
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tag.TCS_AMOUNT,
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just val,
+            tagDisplay = Just False
+          },
+      mSettlementRef <&> \val ->
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tag.SETTLEMENT_REF_NO,
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just val,
+            tagDisplay = Just False
+          },
+      mSellerShare <&> \val ->
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tag.SELLER_SHARE,
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just val,
+            tagDisplay = Just False
+          },
+      mBuyerAppCommission <&> \val ->
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tag.BUYER_APP_COMMISSION,
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just val,
+            tagDisplay = Just False
+          },
+      mPpfPaymentStatus <&> \val ->
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tag.PPF_PAYMENT_STATUS,
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just val,
+            tagDisplay = Just False
+          }
+    ]

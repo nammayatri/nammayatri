@@ -1,0 +1,177 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Price: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  mkPrice: Kernel.Types.Common
+
+PPFRecon:
+  tableName: ppf_recon
+  derives: "Generic,Show"
+
+  fields:
+    id: Id PPFRecon
+    domain: PPFDomain
+    networkOrderId: Text
+    transactionId: Text
+    collectorSubscriberId: Text
+    receiverSubscriberId: Text
+    paymentTransactionId: Maybe Text
+    paymentReference: Maybe Text
+    # Amounts
+    orderAmount: Price
+    paymentAmount: Price
+    sellerShare: Price
+    buyerAppCommission: Price
+    networkFee: Maybe Price
+    gstAmount: Maybe Price
+    withholdingAmount: Maybe Price
+    tds: Maybe Price
+    tcs: Maybe Price
+    # Status tracking
+    orderStatus: Text
+    paymentStatus: PPFPaymentStatus
+    settlementStatus: PPFSettlementStatus
+    # Settlement details
+    settlementRefNo: Maybe Text
+    settlementAmount: Maybe Price
+    settlementDate: Maybe UTCTime
+    # Timestamps
+    fulfilledTimestamp: Maybe UTCTime
+    settledTimestamp: Maybe UTCTime
+    # References
+    entityId: Text
+    entityType: PPFEntityType
+    # Collector bank details
+    collectorIFSC: Maybe Text
+    collectorBankAccount: Maybe Text
+    # Beneficiary bank details
+    beneficiaryIFSC: Maybe Text
+    beneficiaryBankAccount: Maybe Text
+    # Reconciliation
+    reconInitiatedAt: Maybe UTCTime
+    reconCompletedAt: Maybe UTCTime
+    differenceAmount: Maybe Price
+    message: Maybe Text
+    # Standard
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+
+  types:
+    PPFDomain:
+      enum: "MOBILITY,FRFS"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+    PPFPaymentStatus:
+      enum: "INITIATED,COLLECTED,HELD,RELEASED,SETTLED,REFUNDED,FAILED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+    PPFSettlementStatus:
+      enum: "PENDING,IN_PROGRESS,SETTLEMENT_SETTLED,SETTLEMENT_FAILED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+    PPFEntityType:
+      enum: "RIDE_BOOKING,FRFS_TICKET_BOOKING,BUS_PASS"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <PPFDomain>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PPFDomain>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <PPFPaymentStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PPFPaymentStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <PPFSettlementStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PPFSettlementStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <PPFEntityType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PPFEntityType>
+
+  queries:
+    findByNetworkOrderId:
+      kvFunction: findOneWithKV
+      where:
+        and: [networkOrderId]
+
+    findByTransactionId:
+      kvFunction: findAllWithKV
+      where:
+        and: [transactionId]
+
+    findByEntityIdAndEntityType:
+      kvFunction: findOneWithKV
+      where:
+        and: [entityId, entityType]
+
+    findPendingReconciliation:
+      kvFunction: findAllWithKV
+      where:
+        and: [settlementStatus, merchantId]
+
+    updateSettlementStatusById:
+      kvFunction: updateWithKV
+      params: [settlementStatus, settlementRefNo, settlementDate, settledTimestamp, updatedAt]
+      where: id
+
+    updatePaymentStatusById:
+      kvFunction: updateWithKV
+      params: [paymentStatus, updatedAt]
+      where: id
+
+    updateReconStatusById:
+      kvFunction: updateWithKV
+      params: [settlementStatus, reconInitiatedAt, reconCompletedAt, message, updatedAt]
+      where: id
+
+  beamFields:
+    orderAmount:
+      currency: Maybe Currency
+      orderAmount: HighPrecMoney
+    paymentAmount:
+      paymentAmount: HighPrecMoney
+    sellerShare:
+      sellerShare: HighPrecMoney
+    buyerAppCommission:
+      buyerAppCommission: HighPrecMoney
+    networkFee:
+      networkFee: Maybe HighPrecMoney
+    gstAmount:
+      gstAmount: Maybe HighPrecMoney
+    withholdingAmount:
+      withholdingAmount: Maybe HighPrecMoney
+    tds:
+      tds: Maybe HighPrecMoney
+    tcs:
+      tcs: Maybe HighPrecMoney
+    settlementAmount:
+      settlementAmount: Maybe HighPrecMoney
+    differenceAmount:
+      differenceAmount: Maybe HighPrecMoney
+
+  fromTType:
+    orderAmount: Kernel.Types.Common.mkPrice currency orderAmount|E
+    paymentAmount: Kernel.Types.Common.mkPrice currency paymentAmount|E
+    sellerShare: Kernel.Types.Common.mkPrice currency sellerShare|E
+    buyerAppCommission: Kernel.Types.Common.mkPrice currency buyerAppCommission|E
+    networkFee: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) networkFee|E
+    gstAmount: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) gstAmount|E
+    withholdingAmount: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) withholdingAmount|E
+    tds: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) tds|E
+    tcs: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) tcs|E
+    settlementAmount: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) settlementAmount|E
+    differenceAmount: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) differenceAmount|E
+
+  toTType:
+    orderAmount: (.amount)|I
+    paymentAmount: (.amount)|I
+    sellerShare: (.amount)|I
+    buyerAppCommission: (.amount)|I
+    networkFee: Kernel.Prelude.fmap (.amount)|I
+    gstAmount: Kernel.Prelude.fmap (.amount)|I
+    withholdingAmount: Kernel.Prelude.fmap (.amount)|I
+    tds: Kernel.Prelude.fmap (.amount)|I
+    tcs: Kernel.Prelude.fmap (.amount)|I
+    settlementAmount: Kernel.Prelude.fmap (.amount)|I
+    differenceAmount: Kernel.Prelude.fmap (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

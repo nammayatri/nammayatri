@@ -98,6 +98,7 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.PaymentInvoice as SPInvoice
+import qualified SharedLogic.PPF
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -124,6 +125,7 @@ import qualified Storage.Queries.PaymentInvoiceExtra as QPaymentInvoiceExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.RecentLocation as SQRL
+import qualified Storage.Queries.PPFRecon as QPPFRecon
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
 import Tools.Constants
@@ -135,6 +137,8 @@ import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as TP
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
+import qualified Storage.CachedQueries.BecknConfig as CQBC
+import TransactionLogs.PushLogs (pushPPFLog)
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
 
@@ -802,6 +806,20 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   QPFS.clearCache booking.riderId
   createRecentLocationForTaxi booking
   checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.COMPLETED
+
+  -- PPF (Payment Protection Framework) recon entry creation
+  fork "ppf recon entry creation" $ do
+    bapConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId booking.merchantId "MOBILITY" booking.merchantOperatingCityId
+    case listToMaybe bapConfigs of
+      Just bapConfig -> do
+        when (SharedLogic.PPF.isPPFEnabled bapConfig) $ do
+          logInfo $ "Creating PPF recon entry for ride: " <> updRide.id.getId
+          ppfReconEntry <- SharedLogic.PPF.buildMobilityPPFReconEntry bapConfig booking updRide totalFare
+          QPPFRecon.create ppfReconEntry
+          -- Push Network Observability log for payment status transition
+          let noLog = SharedLogic.PPF.buildPPFNetworkObservabilityLog ppfReconEntry
+          pushPPFLog noLog booking.merchantId.getId "MOBILITY"
+      Nothing -> pure ()
 
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do

@@ -42,6 +42,7 @@ BecknConfig:
     trackTTLSec: Maybe Int
     ratingTTLSec: Maybe Int
     cancelTTLSec: Maybe Int
+    ppfEnabled: Maybe Bool
 
   derives: "Generic,Show,FromJSON,ToJSON"
 
