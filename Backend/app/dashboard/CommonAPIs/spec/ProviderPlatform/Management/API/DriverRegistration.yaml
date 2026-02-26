@@ -348,6 +348,9 @@ types:
     - vehicleClass: Maybe Text
     - vehicleDetails: Maybe DriverVehicleDetails
     - udinNumber: Maybe Text
+    - engineNumber: Maybe Text
+    - chassisNumber: Maybe Text
+    - applicantMobile: Maybe Text
     - derive: "'HideSecrets"
   GenerateAadhaarOtpReq:
     - aadhaarNumber: Text

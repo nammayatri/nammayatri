@@ -84,7 +84,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
     callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyRC documentNum person verificationReq = do
       verifyRes <-
-        Verification.verifyRC person.merchantId person.merchantOperatingCityId Nothing (Verification.VerifyRCReq {rcNumber = documentNum, driverId = person.id.getId, token = Nothing, udinNo = Nothing})
+        Verification.verifyRC person.merchantId person.merchantOperatingCityId Nothing (Verification.VerifyRCReq {rcNumber = documentNum, driverId = person.id.getId, token = Nothing, udinNo = Nothing, engineNumber = Nothing, chassisNumber = Nothing, applicantMobile = Nothing})
       case verifyRes.verifyRCResp of
         Verification.AsyncResp res -> do
           case res.requestor of
@@ -92,7 +92,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
             VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId
             _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
           CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
-        Verification.SyncResp res -> void $ VehicleRegistrationCert.onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 (verificationReq.retryCount <&> (+ 1)) (Just "source_down_retrying") Nothing
+        Verification.SyncResp res -> void $ VehicleRegistrationCert.onVerifyRC person Nothing res.response (Just verifyRes.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 (verificationReq.retryCount <&> (+ 1)) (Just "source_down_retrying") Nothing verificationReq.vehicleCategory
     callVerifyDL :: VerificationFlow m r => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyDL documentNum person verificationReq = do
       whenJust verificationReq.driverDateOfBirth $ \dob -> do

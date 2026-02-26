@@ -58,7 +58,6 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import Data.Text as T hiding (elem, find, length, map, null, zip)
 import Data.Time (Day, utctDay)
-import Data.Time.Format
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverInformation as DI
@@ -98,6 +97,7 @@ import Kernel.Utils.Validation
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
+import SharedLogic.RCOcrCache
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
@@ -113,7 +113,9 @@ import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetDriverAssociationExtra as FDA
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
+import qualified Domain.Types.MorthRCVerification as MorthDomain
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
+import qualified Storage.Queries.MorthRCVerification as MorthRCQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
@@ -149,7 +151,10 @@ data DriverRCReq = DriverRCReq
     oxygen :: Maybe Bool,
     ventilator :: Maybe Bool,
     vehicleDetails :: Maybe DriverVehicleDetails,
-    isRCImageValidated :: Maybe Bool -- updatable
+    isRCImageValidated :: Maybe Bool, -- updatable
+    engineNumber :: Maybe Text,
+    chassisNumber :: Maybe Text,
+    applicantMobile :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -284,7 +289,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
         let mbVehicleVariant =
               (vehicleDetails <&> (.vehicleVariant)) <|> transporterConfig.missingMappingFallbackVariant
         void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel req.vehicleCategory req.vehicleClass) req.vehicleCategory mbAirConditioned req.imageId mbVehicleVariant vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.imageId Nothing Nothing
-      Nothing -> verifyRCFlow person merchantOpCityId req.vehicleRegistrationCertNumber req.imageId req.dateOfRegistration req.vehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation req.udinNumber
+      Nothing -> verifyRCFlow person merchantOpCityId req.vehicleRegistrationCertNumber req.imageId req.dateOfRegistration req.vehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation req.udinNumber req.engineNumber req.chassisNumber req.applicantMobile
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -347,6 +352,49 @@ imageS3Lock path = "image-s3-lock-" <> path
 makeDocumentVerificationLockKey :: Text -> Text
 makeDocumentVerificationLockKey personId = "DocumentVerificationLock:" <> personId
 
+-- | Enrich an RC verification response with OCR-extracted data cached during validateDocumentImage.
+-- This is used when the verification provider (e.g. Morth) returns only validity status and no
+-- vehicle details (vehicleClass, manufacturer, model, etc.).  In that case we fall back to the
+-- data that was extracted from the RC image via OCR earlier in the flow.
+enrichRCResponseWithOcrCache ::
+  (MonadFlow m, Redis.HedisFlow m r) =>
+  Id Person.Person ->
+  VT.RCVerificationResponse ->
+  m VT.RCVerificationResponse
+enrichRCResponseWithOcrCache personId res =
+  -- Only enrich when the provider returned no vehicle classification data
+  if isJust res.vehicleClass || isJust res.vehicleCategory || isJust res.manufacturer
+    then return res
+    else do
+      mbCachedRC <- getCachedExtractedRC personId
+      case mbCachedRC of
+        Nothing -> return res
+        Just cachedRC ->
+          -- Avoid record-update syntax: DuplicateRecordFields makes it ambiguous
+          -- (CreateRCInput shares these field names).  Full construction is unambiguous.
+          return $
+            VT.RCVerificationResponse
+              { registrationDate = res.registrationDate,
+                registrationNumber = res.registrationNumber,
+                fitnessUpto = res.fitnessUpto,
+                insuranceValidity = res.insuranceValidity,
+                vehicleClass = cachedRC.vehicleClass <|> res.vehicleClass,
+                vehicleCategory = res.vehicleCategory,
+                seatingCapacity = res.seatingCapacity,
+                manufacturer = cachedRC.manufacturer <|> res.manufacturer,
+                permitValidityFrom = res.permitValidityFrom,
+                permitValidityUpto = res.permitValidityUpto,
+                pucValidityUpto = res.pucValidityUpto,
+                manufacturerModel = cachedRC.model <|> res.manufacturerModel,
+                mYManufacturing = res.mYManufacturing,
+                color = cachedRC.colour <|> res.color,
+                fuelType = cachedRC.fuelType <|> res.fuelType,
+                bodyType = cachedRC.bodyType <|> res.bodyType,
+                status = res.status,
+                grossVehicleWeight = res.grossVehicleWeight,
+                unladdenWeight = res.unladdenWeight
+              }
+
 isNameComparePercentageValid :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Verification.NameCompareReq -> Flow Bool
 isNameComparePercentageValid merchantId merchantOpCityId req = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -371,14 +419,14 @@ getDocumentImage personId imageId_ expectedDocType = do
   Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
     S3.get $ T.unpack imageMetadata.s3Path
 
-verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Maybe Text -> Flow ()
-verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation mbUdinNumber = do
+verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
+verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation mbUdinNumber mbEngineNumber mbChassisNumber mbApplicantMobile = do
   now <- getCurrentTime
   verifyRes <-
     Verification.verifyRC person.merchantId
       merchantOpCityId
       Nothing
-      Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId, token = Nothing, udinNo = mbUdinNumber}
+      Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId, token = Nothing, udinNo = mbUdinNumber, engineNumber = mbEngineNumber, chassisNumber = mbChassisNumber, applicantMobile = mbApplicantMobile}
   case verifyRes.verifyRCResp of
     Verification.AsyncResp res -> do
       case res.requestor of
@@ -386,8 +434,10 @@ verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration mbVehic
         VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing res.transactionId
         _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> (show res.requestor))
       CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
-    Verification.SyncResp res -> do
-      void $ onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just imageExtractionValidation) (Just encryptedRC) imageId Nothing Nothing Nothing
+    Verification.SyncResp resp -> do
+      when (resp.requestor == VT.Morth && isNothing mbVehicleCategory) $
+        throwError (InvalidRequest "vehicleCategory is required when using Morth for RC verification")
+      void $ onVerifyRC person Nothing resp.response (Just verifyRes.remPriorityList) (Just imageExtractionValidation) (Just encryptedRC) imageId Nothing Nothing (Just resp.requestor) mbVehicleCategory
 
 mkIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m Domain.IdfyVerification
 mkIdfyVerificationEntity person requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus = do
@@ -448,18 +498,42 @@ mkHyperVergeVerificationEntity person requestId now imageExtractionValidation en
         ..
       }
 
-onVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r) => Person.Person -> Maybe VerificationReqRecord -> VT.RCVerificationResponse -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Id Image.Image -> Maybe Int -> Maybe Text -> Maybe VT.VerificationService -> m AckResponse
-onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbImageExtractionValidation mbEncryptedRC imageId mbRetryCnt mbReqStatus mbServiceName = do
+mkMorthRCVerificationEntity :: MonadFlow m => Person.Person -> Text -> VT.RCVerificationResponse -> UTCTime -> m MorthDomain.MorthRCVerification
+mkMorthRCVerificationEntity person rcNumber_ res now = do
+  id <- generateGUID
+  return $
+    MorthDomain.MorthRCVerification
+      { id,
+        driverId = person.id,
+        rcNumber = rcNumber_,
+        success = isJust res.status,
+        rcValidity = res.status,
+        rcValidUpto = res.fitnessUpto,
+        message = Nothing,
+        statusCode = Nothing,
+        merchantId = Just person.merchantId,
+        merchantOperatingCityId = Just person.merchantOperatingCityId,
+        createdAt = now,
+        updatedAt = now
+      }
+
+onVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r) => Person.Person -> Maybe VerificationReqRecord -> VT.RCVerificationResponse -> Maybe [VT.VerificationService] -> Maybe Domain.ImageExtractionValidation -> Maybe (EncryptedHashedField 'AsEncrypted Text) -> Id Image.Image -> Maybe Int -> Maybe Text -> Maybe VT.VerificationService -> Maybe DVC.VehicleCategory -> m AckResponse
+onVerifyRC person mbVerificationReq rcVerificationResponse mbRemPriorityList mbImageExtractionValidation mbEncryptedRC imageId mbRetryCnt mbReqStatus mbServiceName mbVehicleCategoryFromSyncRequest = do
   if maybe False (\req -> req.imageExtractionValidation == Domain.Skipped && compareRegistrationDates rcVerificationResponse.registrationDate req.issueDateOnDoc) mbVerificationReq
     then do
+      enrichedRes <- enrichRCResponseWithOcrCache person.id rcVerificationResponse
+      now <- getCurrentTime
       case mbServiceName of
         Just VT.Idfy -> IVQuery.updateExtractValidationStatus Domain.Failed (maybe "" (.requestId) mbVerificationReq)
         Just VT.HyperVergeRCDL -> HVQuery.updateExtractValidationStatus Domain.Failed (maybe "" (.requestId) mbVerificationReq)
+        Just VT.Morth -> whenJust rcVerificationResponse.registrationNumber $ \rcNum -> do
+          morthEntity <- mkMorthRCVerificationEntity person rcNum enrichedRes now
+          MorthRCQuery.create morthEntity
         Nothing -> logError "WARNING: Sync API call, this check is redundant still entered in this case!!!!!!"
         _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyRC. Name of provider : " <> show mbServiceName)
       return Ack
     else do
-      let mbVehicleCategory = mbVerificationReq >>= (.vehicleCategory)
+      let mbVehicleCategory = (mbVerificationReq >>= (.vehicleCategory)) <|> mbVehicleCategoryFromSyncRequest
           mbAirConditioned = mbVerificationReq >>= (.airConditioned)
           mbOxygen = mbVerificationReq >>= (.oxygen)
           mbVentilator = mbVerificationReq >>= (.ventilator)
@@ -515,7 +589,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
         \(imageExtractionValidation, encryptedRC, remPriorityList, rcNum) -> do
           logDebug $ "Calling verify RC with another provider as current provider resulted in MANUAL_VERIFICATION_REQUIRED. Remaining providers in priorityList : " <> show remPriorityList
-          resVerifyRes <- withTryCatch "verifyRC:onVerifyRCHandler" $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just remPriorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = person.id.getId, token = Nothing, udinNo = Nothing})
+          resVerifyRes <- withTryCatch "verifyRC:onVerifyRCHandler" $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just remPriorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = person.id.getId, token = Nothing, udinNo = Nothing, engineNumber = Nothing, chassisNumber = Nothing, applicantMobile = Nothing})
           case resVerifyRes of
             Left _ -> initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures
             Right verifyRes -> do
@@ -527,7 +601,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
                   CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
                 Verification.SyncResp resp -> do
-                  onVerifyRCHandler person resp mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC imageId mbRetryCnt mbReqStatus
+                  onVerifyRCHandler person resp.response mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC imageId mbRetryCnt mbReqStatus
     else initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures
   where
     createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> Maybe Float -> Maybe Float -> CreateRCInput
@@ -945,9 +1019,6 @@ rcVerificationLockKey rcNumber = "VehicleRC::RCNumber-" <> rcNumber
 
 makeFleetOwnerKey :: Text -> Text
 makeFleetOwnerKey vehicleNo = "FleetOwnerId:PersonId-" <> removeSpaceAndDash vehicleNo
-
-parseDateTime :: Text -> Maybe UTCTime
-parseDateTime = parseTimeM True defaultTimeLocale "%Y-%m-%d" . unpack
 
 -- Common function for name comparison
 compareNames :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Id Person.Person -> Flow Bool

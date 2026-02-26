@@ -514,6 +514,9 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
           vehicleClass = vehicleClassToPass,
           vehicleDetails = vehicleDetailsToPass,
           isRCImageValidated = Nothing,
+          engineNumber = req.engineNumber,
+          chassisNumber = req.chassisNumber,
+          applicantMobile = req.applicantMobile,
           ..
         }
     )

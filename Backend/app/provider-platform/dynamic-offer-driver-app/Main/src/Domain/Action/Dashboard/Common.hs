@@ -109,7 +109,10 @@ runVerifyRCFlow skipFleetChecks personId merchant merchantOpCityId operatingCity
             vehicleDetails = Nothing,
             vehicleCategory = req.vehicleCategory,
             vehicleClass = Nothing,
-            isRCImageValidated = Nothing
+            isRCImageValidated = Nothing,
+            engineNumber = Nothing,
+            chassisNumber = Nothing,
+            applicantMobile = Nothing
           }
   void $ DomainRC.verifyRC ((not isFleet) || skipFleetChecks) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq bulkUpload mbFleetOwnerId
 
