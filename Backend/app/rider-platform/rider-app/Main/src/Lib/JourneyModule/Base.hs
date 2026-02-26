@@ -749,10 +749,10 @@ addMetroLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers bl
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg,
+            isSingleMode = fromMaybe False journey.isSingleMode,
             upsertJourneyLegAction,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
-            isSingleMode = fromMaybe False journey.isSingleMode
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
           }
 
 addSubwayLeg ::
@@ -778,10 +778,10 @@ addSubwayLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers b
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg,
+            isSingleMode = fromMaybe False journey.isSingleMode,
             upsertJourneyLegAction,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
-            isSingleMode = fromMaybe False journey.isSingleMode
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
           }
 
 addBusLeg ::
@@ -808,11 +808,11 @@ addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedSer
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg,
+            isSingleMode = fromMaybe False journey.isSingleMode,
             upsertJourneyLegAction,
             serviceTier = mbServiceTier,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
-            isSingleMode = fromMaybe False journey.isSingleMode
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
           }
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
