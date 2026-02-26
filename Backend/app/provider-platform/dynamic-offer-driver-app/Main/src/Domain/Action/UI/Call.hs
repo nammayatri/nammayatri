@@ -130,7 +130,12 @@ newtype CallRes = CallRes
 -- | Simplified request for adding Ozonetel campaign data (only name and phoneNumber from frontend)
 data AddOzonetelCampaignDataReq = AddOzonetelCampaignDataReq
   { name :: Text,
-    phoneNumber :: Text
+    phoneNumber :: Text,
+    expiryDate :: Maybe Text,
+    priority :: Maybe Int,
+    skill :: Maybe Text,
+    agentId :: Maybe Text,
+    skipNameFieldValidation :: Maybe Bool
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
@@ -694,5 +699,10 @@ addCampaignData req merchantOpCityId = do
           checkDuplicate = ozonetelCfg.checkDuplicate,
           action = ozonetelCfg.action,
           phoneNumber = campaignReq.phoneNumber,
-          name = campaignReq.name
+          name = campaignReq.name,
+          expiryDate = campaignReq.expiryDate,
+          priority = campaignReq.priority,
+          skill = campaignReq.skill,
+          agentId = campaignReq.agentId,
+          skipNameFieldValidation = campaignReq.skipNameFieldValidation
         }
