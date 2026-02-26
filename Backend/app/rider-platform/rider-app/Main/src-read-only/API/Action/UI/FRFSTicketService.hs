@@ -330,6 +330,15 @@ type API =
       :> Post
            ('[JSON])
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "frfs"
+      :> "activeRoutes"
+      :> MandatoryQueryParam
+           "vehicleType"
+           BecknV2.FRFS.Enums.VehicleCategory
+      :> Get
+           ('[JSON])
+           [API.Types.UI.FRFSTicketService.ActiveRouteRes]
   )
 
 handler :: Environment.FlowServer API
