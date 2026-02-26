@@ -399,7 +399,7 @@ handler ValidatedDSearchReq {..} sReq = do
       case (mbFromSLId, mbToSLId) of
         (Just fromId, Just toId) -> return $ Just (SL.PickupDrop fromId toId)
         _ -> do
-          mbPickupSL <- QSpecialLocation.findPickupSpecialLocationByLatLong fromLoc
+          mbPickupSL <- Esq.runInReplica $ QSpecialLocation.findPickupSpecialLocationByLatLong fromLoc
           mbDropSL <- maybe (pure Nothing) (Esq.runInReplica . QSpecialLocation.findSpecialLocationByLatLong') mbToLoc
           return $ case (mbPickupSL, mbDropSL) of
             (Just pickupSL, Just dropSL) -> Just (SL.PickupDrop pickupSL.id dropSL.id)
