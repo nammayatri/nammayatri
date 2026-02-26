@@ -1440,4 +1440,59 @@ CommonDriverOnboardingDocuments:
     updateRejectReason:
       kvFunction: updateWithKV
       params: [rejectReason, verificationStatus, updatedAt]
+
+MorthVerification:
+  tableName: morth_verification
+  fields:
+    id: Id MorthVerification
+    driverId: Id Person
+    requestId: Maybe Text
+    docType: DocumentType
+    documentNumber: EncryptedHashedField e Text
+    status: Text
+    issueDateOnDoc: Maybe UTCTime
+    driverDateOfBirth: Maybe UTCTime
+    vehicleCategory: Maybe VehicleCategory
+    message: Maybe Text
+    statusCode: Maybe Int
+    morthResponse: Maybe Text
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    requestId: SecondaryKey
+    docType: SecondaryKey
+    documentNumberHash: "!SecondaryKey"
+  beamFields:
+    documentNumber:
+      documentNumberEncrypted: Text
+      documentNumberHash: DbHash
+  fromTType:
+    documentNumber: EncryptedHashed <$> (Encrypted <$> documentNumberEncrypted) <*> documentNumberHash|E
+  toTType:
+    documentNumberEncrypted: (documentNumber <&> unEncrypted . (.encrypted))|E
+    documentNumberHash: (documentNumber <&> (.hash))|E
+  queries:
+    findById:
+      kvFunction: findOneWithKV
       where: id
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findAllByDriverIdAndDocType:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, docType]
+    findLatestByDriverIdAndDocTypeAndDocumentNumber:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [driverId, docType, documentNumberHash|B]
+    findByRequestId:
+      kvFunction: findOneWithKV
+      where: requestId
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: driverId
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: driverId
