@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.DocumentVerificationConfig where
 
 import qualified Data.Aeson
+import qualified Data.Text
 import qualified Domain.Types.DocumentVerificationConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -17,7 +18,7 @@ import Storage.Queries.Transformers.DocumentVerificationConfig
 
 instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig where
   fromTType' (Beam.DocumentVerificationConfigT {..}) = do
-    supportedVehicleClasses' <- (getConfigFromJSON documentType) supportedVehicleClassesJSON
+    supportedVehicleClasses' <- getConfigFromJSON documentType supportedVehicleClassesJSON
     pure $
       Just
         Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig
@@ -45,6 +46,7 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             order = order,
             rcNumberPrefixList = rcNumberPrefixList,
+            rolesAllowedToUploadDocument = Kernel.Prelude.map (read . Data.Text.unpack) Kernel.Prelude.<$> rolesAllowedToUploadDocumentText,
             supportedVehicleClasses = supportedVehicleClasses',
             title = title,
             vehicleCategory = vehicleCategory,
@@ -80,6 +82,7 @@ instance ToTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificat
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.order = order,
         Beam.rcNumberPrefixList = rcNumberPrefixList,
+        Beam.rolesAllowedToUploadDocumentText = Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument,
         Beam.supportedVehicleClassesJSON = getConfigJSON supportedVehicleClasses,
         Beam.title = title,
         Beam.vehicleCategory = vehicleCategory,

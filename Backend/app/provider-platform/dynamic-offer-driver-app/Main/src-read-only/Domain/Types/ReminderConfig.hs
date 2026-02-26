@@ -20,6 +20,8 @@ data ReminderConfig = ReminderConfig
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     reminderIntervals :: [Kernel.Prelude.Int],
+    reminderOnRideRescheduleIntervalSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    reminderRescheduleIntervalSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     ridesThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime
   }

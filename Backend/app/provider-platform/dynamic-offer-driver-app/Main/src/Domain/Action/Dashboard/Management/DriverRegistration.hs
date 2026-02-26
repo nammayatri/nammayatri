@@ -321,15 +321,32 @@ postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> I
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  whenJust req.requestorId $ \requestorId -> do
-    entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, cast driverId_] merchantOpCityId
-    entity <- find (\e -> e.id == cast driverId_) entities & fromMaybeM (PersonDoesNotExist driverId_.getId)
-    requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
-    isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
-    unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
+  docType <- pure $ mapDocumentType req.imageType
+  docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId docType Nothing
+  -- Nothing or empty list = no role restriction (all allowed); non-empty = only those roles can upload (enforced in validateImageHandler)
+  let mbRolesAllowed = listToMaybe docConfigs >>= (.rolesAllowedToUploadDocument)
+  let isRoleRestricted = case mbRolesAllowed of Nothing -> False; Just roles -> not (Kernel.Prelude.null roles)
+  mbUploaderRole <-
+    if isRoleRestricted
+      then do
+        requestorId <- req.requestorId & fromMaybeM (InvalidRequest "This document can only be uploaded by operator or admin")
+        -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+        mbRequestor <- QPerson.findById (Id requestorId)
+        return (DP.role <$> mbRequestor)
+      else do
+        whenJust req.requestorId $ \requestorId -> do
+          entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, cast driverId_] merchantOpCityId
+          entity <- find (\e -> e.id == cast driverId_) entities & fromMaybeM (PersonDoesNotExist driverId_.getId)
+          -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+          whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+            isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
+            unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
+        return Nothing
   res <-
     validateImage
       True
+      mbUploaderRole
+      (Just docConfigs)
       (cast driverId_, cast merchant.id, merchantOpCityId)
       ImageValidateRequest
         { image = req.imageBase64,
@@ -383,9 +400,10 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
     Just requestorId -> do
       entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, cast personId] merchantOpCityId
       entity <- find (\e -> e.id == cast personId) entities & fromMaybeM (PersonDoesNotExist personId.getId)
-      requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
-      isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
-      unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
+      -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+      whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+        isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
+        unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
       pure entity
     Nothing -> runInReplica $ QPerson.findById (cast personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
   res <- unlinkPersonDocument merchantOpCityId person
@@ -1271,9 +1289,10 @@ postDriverRegistrationTriggerReminder merchantShortId opCity driverId_ mbRequest
   -- Validate authorization: only fleet owners, operators linked to driver, or admins can trigger reminders
   requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "requestorId is required")
   entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, driverPersonId] merchantOpCityId
-  requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
-  isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
-  unless isValid $ throwError (InvalidRequest "Only fleet owners, operators linked to the driver, or admins can trigger reminders")
+  -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+  whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+    isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
+    unless isValid $ throwError (InvalidRequest "Only fleet owners, operators linked to the driver, or admins can trigger reminders")
 
   reminderDocumentType <- maybe (throwError $ InvalidRequest $ "Document type " <> show documentType <> " does not support reminder triggers") pure $ mapDocumentTypeToReminderType documentType
   createReminder reminderDocumentType driverPersonId merchant.id merchantOpCityId Nothing dueDate intervals

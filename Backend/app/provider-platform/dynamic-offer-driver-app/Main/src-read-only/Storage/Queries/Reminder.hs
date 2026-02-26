@@ -31,6 +31,18 @@ findAllPendingByDriverId ::
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Reminder.ReminderStatus -> m [Domain.Types.Reminder.Reminder])
 findAllPendingByDriverId driverId status = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.status $ Se.Eq status]]
 
+findAllPendingByDriverIdAndDocumentType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.Reminder.ReminderStatus -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.Reminder.Reminder])
+findAllPendingByDriverIdAndDocumentType driverId status documentType = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.status $ Se.Eq status,
+          Se.Is Beam.documentType $ Se.Eq documentType
+        ]
+    ]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Reminder.Reminder -> m (Maybe Domain.Types.Reminder.Reminder))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 

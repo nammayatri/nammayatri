@@ -29,33 +29,22 @@ getOperationGetAllHubs (_, _, opCityId) = QOH.findAllByCityId opCityId
 postOperationCreateRequest :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> DriverOperationHubRequest -> Flow APISuccess
 postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req = do
   runRequestValidation validateDriverOperationHubRequest req
-  -- Validate based on request type
-  case req.requestType of
-    ONBOARDING_INSPECTION -> do
-      unless (isJust req.registrationNo) $
-        throwError $ InvalidRequest "registrationNo is required for ONBOARDING_INSPECTION"
-    REGULAR_INSPECTION -> do
-      unless (isJust req.registrationNo) $
-        throwError $ InvalidRequest "registrationNo is required for REGULAR_INSPECTION"
-    DRIVER_ONBOARDING_INSPECTION -> do
-      unless (isJust req.driverId) $
-        throwError $ InvalidRequest "driverId is required for DRIVER_ONBOARDING_INSPECTION"
-    DRIVER_REGULAR_INSPECTION -> do
-      unless (isJust req.driverId) $
-        throwError $ InvalidRequest "driverId is required for DRIVER_REGULAR_INSPECTION"
   let creatorId = fromMaybe (Id req.creatorId) mbPersonId
-  Redis.whenWithLockRedis (opsHubDriverLockKey creatorId.getId) 60 $ do
+  -- Lock and duplicate check by entity (driver or RC), not creator: so same driver/RC cannot have duplicate PENDING from any creator
+  lockKey <- case req.requestType of
+    DRIVER_ONBOARDING_INSPECTION -> req.driverId & fromMaybeM (InvalidRequest "driverId is required for DRIVER_ONBOARDING_INSPECTION") <&> (\d -> opsHubDriverLockKey d.getId)
+    DRIVER_REGULAR_INSPECTION -> req.driverId & fromMaybeM (InvalidRequest "driverId is required for DRIVER_REGULAR_INSPECTION") <&> (\d -> opsHubDriverLockKey d.getId)
+    ONBOARDING_INSPECTION -> req.registrationNo & fromMaybeM (InvalidRequest "registrationNo is required for ONBOARDING_INSPECTION") <&> opsHubVehicleLockKey
+    REGULAR_INSPECTION -> req.registrationNo & fromMaybeM (InvalidRequest "registrationNo is required for REGULAR_INSPECTION") <&> opsHubVehicleLockKey
+  Redis.whenWithLockRedis lockKey 60 $ do
     id <- generateGUID
     now <- getCurrentTime
-    -- Check for duplicate requests based on creator, status, type, and either registrationNo or driverId
-    opsHubReqs <- QOHR.findByCreatorStatusAndType creatorId PENDING req.requestType
-    let duplicateReg = case req.registrationNo of
-          Just rcNo -> any (\r -> r.registrationNo == Just rcNo) opsHubReqs
-          Nothing -> False
-    let duplicateDriver = case req.driverId of
-          Just driverId -> any (\r -> r.driverId == Just driverId) opsHubReqs
-          Nothing -> False
-    let isDuplicate = duplicateReg || duplicateDriver
+    -- Duplicate: any PENDING request for this driver (driver inspection) or this RC (vehicle inspection), regardless of creator
+    isDuplicate <- case req.requestType of
+      DRIVER_ONBOARDING_INSPECTION -> maybe (pure False) (\d -> isJust <$> QOHRE.findPendingByDriverIdAndRequestType d req.requestType) req.driverId
+      DRIVER_REGULAR_INSPECTION -> maybe (pure False) (\d -> isJust <$> QOHRE.findPendingByDriverIdAndRequestType d req.requestType) req.driverId
+      ONBOARDING_INSPECTION -> maybe (pure False) (\rc -> isJust <$> QOHRE.findPendingByRegistrationNoAndRequestType rc req.requestType) req.registrationNo
+      REGULAR_INSPECTION -> maybe (pure False) (\rc -> isJust <$> QOHRE.findPendingByRegistrationNoAndRequestType rc req.requestType) req.registrationNo
     when isDuplicate $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
     void $ QOH.findByPrimaryKey req.operationHubId >>= fromMaybeM (OperationHubDoesNotExist req.operationHubId.getId)
     let operationHubReq =
@@ -103,6 +92,9 @@ getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus
 
 opsHubDriverLockKey :: Text -> Text
 opsHubDriverLockKey driverId = "opsHub:driver:Id-" <> driverId
+
+opsHubVehicleLockKey :: Text -> Text
+opsHubVehicleLockKey rcNo = "opsHub:vehicle:rc-" <> rcNo
 
 validateDriverOperationHubRequest :: Validate DriverOperationHubRequest
 validateDriverOperationHubRequest DriverOperationHubRequest {..} =

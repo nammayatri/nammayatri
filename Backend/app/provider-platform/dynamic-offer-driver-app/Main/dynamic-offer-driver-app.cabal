@@ -812,6 +812,7 @@ library
       Tools.Payment
       Tools.PaymentNudge
       Tools.Payout
+      Tools.Plasma
       Tools.SignatureAuth
       Tools.SMS
       Tools.Ticket

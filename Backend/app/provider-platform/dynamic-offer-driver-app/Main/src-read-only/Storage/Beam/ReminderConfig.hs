@@ -20,6 +20,8 @@ data ReminderConfigT f = ReminderConfigT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     reminderIntervals :: B.C f [Kernel.Prelude.Int],
+    reminderOnRideRescheduleIntervalSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    reminderRescheduleIntervalSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     ridesThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

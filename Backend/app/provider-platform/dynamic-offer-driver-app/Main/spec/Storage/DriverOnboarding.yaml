@@ -589,6 +589,7 @@ DocumentVerificationConfig:
     applicableTo: DocumentApplicableType
     documentFields: Maybe [FieldInfo]
     allowLicenseTransfer: Maybe Bool
+    rolesAllowedToUploadDocument: Maybe [Role]
   default:
     order: "0"
     doStrictVerifcation: "true"
@@ -605,6 +606,7 @@ DocumentVerificationConfig:
     dependencyDocumentType: text[]
     supportedVehicleClassesJSON: json
     documentFieldsJSON: json
+    rolesAllowedToUploadDocumentText: text[]
   beamFields:
     supportedVehicleClasses:
       supportedVehicleClassesJSON: Value
@@ -612,15 +614,19 @@ DocumentVerificationConfig:
       applicableTo: Maybe DocumentApplicableType
     documentFields:
       documentFieldsJSON: Maybe Value
+    rolesAllowedToUploadDocument:
+      rolesAllowedToUploadDocumentText: Maybe [Text]
   toTType:
     supportedVehicleClassesJSON: getConfigJSON
     documentFieldsJSON: Data.Aeson.toJSON <$> documentFields|E
     applicableTo: Kernel.Prelude.Just applicableTo|E
+    rolesAllowedToUploadDocumentText: (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument|E
 
   fromTType:
     supportedVehicleClasses: (getConfigFromJSON documentType)|M
     documentFields: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< documentFieldsJSON|E
     applicableTo: fromMaybe Domain.Types.DocumentVerificationConfig.FLEET_AND_INDIVIDUAL applicableTo|E
+    rolesAllowedToUploadDocument: (Kernel.Prelude.map (read . Data.Text.unpack)) Kernel.Prelude.<$> rolesAllowedToUploadDocumentText|E
 
   queries:
     findAllByMerchantOpCityId:
