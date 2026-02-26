@@ -2416,6 +2416,17 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         DJourneyLeg.finalBoardedScheduleNo = vehicleLiveRouteInfo.scheduleNo,
         DJourneyLeg.finalBoardedBusServiceTierType = Just vehicleLiveRouteInfo.serviceType
       }
+  -- Sync journey leg data to frfs_ticket_booking for analytics
+  QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataBySearchId
+    (Just vehicleLiveRouteInfo.vehicleNumber)
+    (Just DJourneyLeg.UserActivated)
+    vehicleLiveRouteInfo.waybillId
+    vehicleLiveRouteInfo.scheduleNo
+    vehicleLiveRouteInfo.depot
+    (Just vehicleLiveRouteInfo.serviceType)
+    journeyLeg.busConductorId
+    journeyLeg.busDriverId
+    legSearchId
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
   where

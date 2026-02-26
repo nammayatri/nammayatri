@@ -129,5 +129,20 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_mock_payment boolean ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN final_boarded_waybill_id text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN final_boarded_schedule_no text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN final_boarded_depot_no text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN final_boarded_vehicle_service_tier_type text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN final_boarded_vehicle_number_source text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN final_boarded_vehicle_number text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN driver_id text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN conductor_id text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_type text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_name text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_code text ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN ondc_on_init_received_at timestamp with time zone ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN ondc_on_init_received boolean ;
