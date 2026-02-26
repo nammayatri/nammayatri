@@ -35,6 +35,7 @@ imports:
   VerifyNammaTagRequest: Lib.Yudhishthira.Types
   VerifyNammaTagResponse: Lib.Yudhishthira.Types
   Value: Data.Aeson
+  NammaTagEventsOrNammaTagNamesResp: Lib.Yudhishthira.Types
 
 
 module: NammaTag
@@ -195,6 +196,13 @@ apis:
         type: AppDynamicLogicDomainResp
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - GET:
+      endpoint: /appDynamicLogic/domainsAndEvents
+      auth: ApiAuthV2
+      query:
+        fetchNammaTagNames: Bool
+      response:
+        type: NammaTagEventsOrNammaTagNamesResp
   - GET:
       endpoint: /appDynamicLogic/getDomainSchema
       auth: ApiAuthV2

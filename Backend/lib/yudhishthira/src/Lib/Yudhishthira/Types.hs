@@ -72,6 +72,7 @@ module Lib.Yudhishthira.Types
     UiConfigGetVersionResponse (..),
     GetPatchedElementReq (..),
     GetPatchedElementResp (..),
+    NammaTagEventsOrNammaTagNamesResp (..),
   )
 where
 
@@ -101,6 +102,14 @@ import qualified Text.Show (show)
 
 class Enumerable a where
   allValues :: [a]
+
+instance Enumerable ApplicationEvent where
+  allValues = [minBound .. maxBound]
+
+data NammaTagEventsOrNammaTagNamesResp
+  = NammaTagEvents [ApplicationEvent]
+  | NammaTagNames [Text]
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Source
   = Application ApplicationEvent
