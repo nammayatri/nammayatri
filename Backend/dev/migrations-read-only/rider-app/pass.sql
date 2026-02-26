@@ -71,3 +71,11 @@ ALTER TABLE atlas_app.pass ADD COLUMN verification_validity integer ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN pricing_tiers jsonb ;
+ALTER TABLE atlas_app.pass ADD COLUMN min_fare double precision ;
+ALTER TABLE atlas_app.pass ADD COLUMN max_fare double precision ;

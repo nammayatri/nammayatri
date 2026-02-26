@@ -289,6 +289,8 @@ data PassError
   | PassTypeNotFound Text
   | PurchasedPassNotFound Text
   | PurchasedPassPaymentNotFound Text
+  | PassDetailsNotFound Text
+  | PassOrganizationNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''PassError
@@ -299,6 +301,8 @@ instance IsBaseError PassError where
   toMessage (PassTypeNotFound typeId) = Just $ "Pass type not found: " <> show typeId
   toMessage (PurchasedPassNotFound purchasedPassId) = Just $ "Purchased pass not found: " <> show purchasedPassId
   toMessage (PurchasedPassPaymentNotFound purchasedPassPaymentId) = Just $ "Purchased pass payment not found: " <> show purchasedPassPaymentId
+  toMessage (PassDetailsNotFound passDetailId) = Just $ "Pass details not found for the (PersonId | PassDetailId) : id" <> show passDetailId
+  toMessage (PassOrganizationNotFound organizationId) = Just $ "Pass organization not found: " <> show organizationId
 
 instance IsHTTPError PassError where
   toErrorCode = \case
@@ -307,12 +311,16 @@ instance IsHTTPError PassError where
     PassTypeNotFound _ -> "PASS_TYPE_NOT_FOUND"
     PurchasedPassNotFound _ -> "PURCHASED_PASS_NOT_FOUND"
     PurchasedPassPaymentNotFound _ -> "PURCHASED_PASS_PAYMENT_NOT_FOUND"
+    PassDetailsNotFound _ -> "PASS_DETAILS_NOT_FOUND"
+    PassOrganizationNotFound _ -> "PASS_ORGANIZATION_NOT_FOUND"
   toHttpCode = \case
     PassNotFound _ -> E500
     PassCategoryNotFound _ -> E500
     PassTypeNotFound _ -> E500
     PurchasedPassNotFound _ -> E500
     PurchasedPassPaymentNotFound _ -> E500
+    PassDetailsNotFound _ -> E500
+    PassOrganizationNotFound _ -> E500
 
 instance IsAPIError PassError
 

@@ -54,6 +54,7 @@ PurchasedPass:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     profilePicture: Maybe Text
+    applicableRouteIds: "Maybe [Text]"
 
   beamType:
     deviceSwitchCount: Maybe Int
@@ -110,6 +111,7 @@ PurchasedPassPayment:
     merchantOperatingCityId: Id MerchantOperatingCity
     profilePicture: Maybe Text
     passEnum: Maybe PassEnum
+    applicableRouteIds: "Maybe [Text]"
 
   beamType:
     benefitDescription: Maybe Text

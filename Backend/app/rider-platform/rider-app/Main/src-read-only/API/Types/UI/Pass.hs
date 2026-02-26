@@ -9,6 +9,7 @@ import qualified Data.Text
 import qualified Data.Time
 import qualified Domain.Types.Pass
 import qualified Domain.Types.PassCategory
+import qualified Domain.Types.PassDetails
 import qualified Domain.Types.PassType
 import qualified Domain.Types.PurchasedPass
 import EulerHS.Prelude hiding (id)
@@ -31,12 +32,15 @@ data PassAPIEntity = PassAPIEntity
     eligibility :: Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
     maxDays :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    maxFare :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     maxTrips :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    minFare :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     name :: Data.Maybe.Maybe Data.Text.Text,
     offer :: Data.Maybe.Maybe SharedLogic.Offer.CumulativeOfferResp,
     originalAmount :: Kernel.Types.Common.HighPrecMoney,
     savings :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
-    vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType]
+    vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType],
+    verificationStatus :: Data.Maybe.Maybe Domain.Types.PassDetails.VerificationStatus
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

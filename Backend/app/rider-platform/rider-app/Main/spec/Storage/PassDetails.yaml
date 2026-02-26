@@ -1,0 +1,120 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  PassOrganization: Domain.Types.PassOrganization
+  UTCTime: Data.Time
+  Value: Data.Aeson
+  PassEnum: Domain.Types.PassType
+
+PassDetails:
+  tableName: pass_details
+
+  types:
+    VerificationStatus:
+      enum: "PENDING, VERIFIED, REJECTED, EXPIRED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+    RoutePair:
+      srcStopName: Text
+      srcStageName: Text
+      destStopName: Text
+      destStageName: Text
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VerificationStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <VerificationStatus>
+
+  fields:
+    id: Id PassDetails
+    personId: Id Person
+    passOrganizationId: Id PassOrganization
+    name: Text
+    registerNo: Maybe Text
+    studentClass: Maybe Text
+    age: Maybe Int
+    guardianName: Maybe Text
+    address: Maybe Text
+    idCardPicture: Maybe Text
+    verificationStatus: VerificationStatus
+    verificationDate: Maybe UTCTime
+    remark: Maybe Text
+    routePairs: "[RoutePair]"
+    graduationDate: Maybe UTCTime
+    numberOfStages: Maybe Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    passEnum: PassEnum
+    applicableRouteIds: "Maybe [Text]"
+
+  beamType:
+    routePairs: Maybe Value
+  fromTType:
+    routePairs: |-
+      fromMaybe [] ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< routePairs)|E
+  toTType:
+    routePairs: Just (Kernel.Prelude.toJSON routePairs)|E
+
+  constraints:
+    personId: PrimaryKey
+    id: SecondaryKey
+    passOrganizationId: SecondaryKey
+
+  sqlType:
+    name: text
+    idCardPicture: text
+    verificationStatus: text
+    address: text
+    guardianName: text
+    studentClass: text
+    routePairs: jsonb
+    remark: text
+    passEnum: text
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        id
+
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, passEnum]
+
+    findAllByPassOrganizationId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        passOrganizationId
+      limit: limit
+      offset: offset
+
+    findAllByPassOrganizationIdAndVerificationStatus:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [passOrganizationId, verificationStatus]
+      limit: limit
+      offset: offset
+
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, verificationDate, remark, graduationDate]
+      where:
+        in: [id]
+
+    updatePassDetails:
+      kvFunction: updateWithKV
+      params: [name, passOrganizationId, idCardPicture, address, age, guardianName, studentClass, routePairs, graduationDate, verificationStatus, numberOfStages, applicableRouteIds, updatedAt]
+      where:
+        and: [personId, passEnum]
+
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where:
+        and: [personId, passEnum]
+
+  extraOperations:
+    - GENERATE_INDEXES
+
+  excludedFields: [createdAt, updatedAt]

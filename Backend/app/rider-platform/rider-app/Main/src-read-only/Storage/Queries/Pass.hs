@@ -38,17 +38,19 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
       Se.Set Beam.description description,
       Se.Set Beam.documentsRequired documentsRequired,
       Se.Set Beam.enable enable,
+      Se.Set Beam.maxFare maxFare,
       Se.Set Beam.maxValidDays maxValidDays,
       Se.Set Beam.maxValidTrips maxValidTrips,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.minFare minFare,
       Se.Set Beam.name name,
       Se.Set Beam.order order,
       Se.Set Beam.passTypeId (Kernel.Types.Id.getId passTypeId),
+      Se.Set Beam.pricingTiers pricingTiers,
       Se.Set Beam.purchaseEligibilityJsonLogic purchaseEligibilityJsonLogic,
       Se.Set Beam.redeemEligibilityJsonLogic redeemEligibilityJsonLogic,
       Se.Set Beam.verificationValidity (Kernel.Prelude.Just verificationValidity),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

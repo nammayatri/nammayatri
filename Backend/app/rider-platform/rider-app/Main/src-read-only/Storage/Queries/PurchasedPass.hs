@@ -37,7 +37,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.applicableVehicleServiceTiers applicableVehicleServiceTiers,
+    [ Se.Set Beam.applicableRouteIds applicableRouteIds,
+      Se.Set Beam.applicableVehicleServiceTiers applicableVehicleServiceTiers,
       Se.Set Beam.benefitDescription benefitDescription,
       Se.Set Beam.benefitType benefitType,
       Se.Set Beam.benefitValue benefitValue,
