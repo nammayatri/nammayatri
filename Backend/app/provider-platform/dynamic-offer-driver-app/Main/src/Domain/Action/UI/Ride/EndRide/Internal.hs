@@ -532,6 +532,8 @@ createDriverWalletTransaction ride booking fareParams = do
                 supplierGSTIN = supplierGSTIN',
                 supplierId = supplierId',
                 gstinOfParty = Nothing,
+                panOfParty = Nothing,
+                tanOfDeductee = Nothing,
                 lineItems =
                   catMaybes
                     [ if baseFare > 0

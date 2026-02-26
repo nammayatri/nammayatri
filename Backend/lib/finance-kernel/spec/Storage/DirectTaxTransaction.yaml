@@ -1,0 +1,61 @@
+# Finance Kernel - Direct Tax Transaction Table (TDS)
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+
+DirectTaxTransaction:
+  tableName: direct_tax_transaction
+  derives: "Generic"
+
+  types:
+    TransactionType:
+      enum: "RideFare,Subscription,Incentive,Cancellation,BuyerCommission,CreditNote,DebitNote"
+      derive: "ToParamSchema"
+
+    TdsTreatment:
+      enum: "Deducted,Reimbursed"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id DirectTaxTransaction
+    transactionDate: UTCTime
+    transactionType: TransactionType
+    referenceId: Text
+    grossAmount: HighPrecMoney
+    tdsRate: Double
+    tdsAmount: HighPrecMoney
+    netAmountPaid: HighPrecMoney
+    tdsTreatment: TdsTreatment
+    counterpartyId: Text
+    panOfParty: Maybe Text
+    tanOfDeductee: Maybe Text
+    paymentDate: Maybe UTCTime
+    invoiceNumber: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    referenceId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByCounterparty:
+      kvFunction: findAllWithKV
+      where: counterpartyId
+
+    findByTransactionDate:
+      kvFunction: findAllWithKV
+      where: transactionDate
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TransactionType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TdsTreatment>

@@ -20,6 +20,7 @@ import qualified Lib.Finance.Storage.Beam.Account as BeamAccount
 import qualified Lib.Finance.Storage.Beam.AuditEntry as BeamAudit
 import qualified Lib.Finance.Storage.Beam.CurrentState as BeamCurrentState
 import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirectTax
+import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as BeamDirectTax
 import qualified Lib.Finance.Storage.Beam.Invoice as BeamInvoice
 import qualified Lib.Finance.Storage.Beam.InvoiceLedgerLink as BeamInvoiceLedger
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLedger
@@ -36,6 +37,9 @@ instance HasSchemaName BeamCurrentState.CurrentStateT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamIndirectTax.IndirectTaxTransactionT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamDirectTax.DirectTaxTransactionT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamInvoice.InvoiceT where

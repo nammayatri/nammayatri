@@ -44,6 +44,8 @@ data InvoiceInput = InvoiceInput
     supplierGSTIN :: Maybe Text,
     supplierId :: Maybe Text,
     gstinOfParty :: Maybe Text,
+    panOfParty :: Maybe Text,
+    tanOfDeductee :: Maybe Text,
     lineItems :: [InvoiceLineItem],
     currency :: Currency,
     dueAt :: Maybe UTCTime,

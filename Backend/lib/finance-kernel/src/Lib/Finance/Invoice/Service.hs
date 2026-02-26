@@ -34,6 +34,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
+import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction (..))
+import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.IndirectTaxTransaction
 import Lib.Finance.Domain.Types.Invoice
 import Lib.Finance.Domain.Types.InvoiceLedgerLink
@@ -43,6 +45,7 @@ import Lib.Finance.Invoice.Interface
 import Lib.Finance.Invoice.InvoiceNumber
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Account as QAccount
+import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QLink
@@ -117,6 +120,7 @@ createInvoice input entryIds = do
     QLink.create link
 
   -- Create IndirectTaxTransaction for GST entries (toAccount is GOVERNMENT_INDIRECT)
+  -- Create DirectTaxTransaction for TDS entries (toAccount is GOVERNMENT_DIRECT)
   entries <- catMaybes <$> mapM QLedger.findById entryIds
   forM_ entries $ \entry -> do
     mbToAccount <- QAccount.findById entry.toAccountId
@@ -157,6 +161,35 @@ createInvoice input entryIds = do
                     updatedAt = now
                   }
           QIndirectTax.create taxTxn
+        | toAccount.counterpartyType == Just GOVERNMENT_DIRECT -> do
+          taxTxnId <- generateGUID
+          let tdsAmount = entry.amount
+              grossAmount = subtotal
+              netAmountPaid = grossAmount - tdsAmount
+              tdsRate = if grossAmount > 0 then realToFrac (tdsAmount / grossAmount) * 100.0 else 0.0
+              txnType = invoiceTypeToDirectTransactionType input.invoiceType
+          let directTaxTxn =
+                DirectTaxTransaction
+                  { id = Id taxTxnId,
+                    transactionDate = now,
+                    transactionType = txnType,
+                    referenceId = entry.referenceId,
+                    grossAmount = grossAmount,
+                    tdsRate = tdsRate,
+                    tdsAmount = tdsAmount,
+                    netAmountPaid = netAmountPaid,
+                    tdsTreatment = DirectTax.Deducted,
+                    counterpartyId = input.issuedToId,
+                    panOfParty = input.panOfParty,
+                    tanOfDeductee = input.tanOfDeductee,
+                    paymentDate = Just now,
+                    invoiceNumber = Just invoiceNum,
+                    merchantId = input.merchantId,
+                    merchantOperatingCityId = input.merchantOperatingCityId,
+                    createdAt = now,
+                    updatedAt = now
+                  }
+          QDirectTax.create directTaxTxn
       _ -> pure ()
 
   pure $ Right invoice
@@ -212,12 +245,19 @@ findByIssuedTo ::
   m [Invoice]
 findByIssuedTo = QInvoice.findByIssuedTo
 
--- | Map invoiceType text to TransactionType
+-- | Map invoiceType text to TransactionType (Indirect Tax)
 invoiceTypeToTransactionType :: InvoiceType -> TransactionType
 invoiceTypeToTransactionType invoiceType = case invoiceType of
   SubscriptionPurchase -> Subscription
   Ride -> RideFare
   RideCancellation -> Cancellation
+
+-- | Map invoiceType to DirectTax TransactionType (Direct Tax / TDS)
+invoiceTypeToDirectTransactionType :: InvoiceType -> DirectTax.TransactionType
+invoiceTypeToDirectTransactionType invoiceType = case invoiceType of
+  SubscriptionPurchase -> DirectTax.Subscription
+  Ride -> DirectTax.RideFare
+  RideCancellation -> DirectTax.Cancellation
 
 -- | SAC code mapping per transaction type
 sacCodeForTransactionType :: TransactionType -> Text

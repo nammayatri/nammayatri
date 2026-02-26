@@ -448,6 +448,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                     supplierGSTIN = Nothing,
                     supplierId = Nothing,
                     gstinOfParty = invoiceParams.gstinOfParty,
+                    panOfParty = Nothing,
+                    tanOfDeductee = Nothing,
                     lineItems =
                       let gstAmount' = max 0 gstAmount
                           netAmount = max 0 (paidAmount - gstAmount')

@@ -1,0 +1,21 @@
+CREATE TABLE atlas_app.direct_tax_transaction ();
+
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN counterparty_id text NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN gross_amount double precision NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN invoice_number text ;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN merchant_id text NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN merchant_operating_city_id text NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN net_amount_paid double precision NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN pan_of_party text ;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN payment_date timestamp with time zone ;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN reference_id text NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN tan_of_deductee text ;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN tds_amount double precision NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN tds_rate double precision NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN tds_treatment text NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN transaction_date timestamp with time zone NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN transaction_type text NOT NULL;
+ALTER TABLE atlas_app.direct_tax_transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.direct_tax_transaction ADD PRIMARY KEY ( id);
