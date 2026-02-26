@@ -33,7 +33,8 @@ data PersonAPIEntity = PersonAPIEntity
     availableCitiesForMerchant :: Maybe [AvailableCitiesForMerchant],
     registeredAt :: UTCTime,
     verified :: Maybe Bool,
-    receiveNotification :: Maybe Bool
+    receiveNotification :: Maybe Bool,
+    enabled :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -43,8 +44,8 @@ data AvailableCitiesForMerchant = AvailableCitiesForMerchant
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-makePersonAPIEntity :: DecryptedPerson -> DRole.Role -> [ShortId DMerchant.Merchant] -> Maybe [AvailableCitiesForMerchant] -> PersonAPIEntity
-makePersonAPIEntity Person {..} personRole availableMerchants availableCitiesForMerchant =
+makePersonAPIEntity :: DecryptedPerson -> DRole.Role -> [ShortId DMerchant.Merchant] -> Maybe [AvailableCitiesForMerchant] -> Maybe Bool -> PersonAPIEntity
+makePersonAPIEntity Person {..} personRole availableMerchants availableCitiesForMerchant enabled =
   PersonAPIEntity
     { registeredAt = createdAt,
       role = DRole.mkRoleAPIEntity personRole,
