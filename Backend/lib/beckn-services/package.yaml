@@ -123,7 +123,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
   dependencies:
     - mobility-core
     - openapi3

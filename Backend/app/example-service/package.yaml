@@ -105,7 +105,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
 
 executables:
   example-service-exe:
@@ -129,7 +129,7 @@ executables:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
     dependencies:
       - example-service
       - mobility-core

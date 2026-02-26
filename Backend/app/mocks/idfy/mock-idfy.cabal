@@ -102,7 +102,7 @@ library
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j4
+    ghc-options: -O2 -j12
 
 executable mock-idfy-exe
   main-is: Main.hs
@@ -158,4 +158,4 @@ executable mock-idfy-exe
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j4
+    ghc-options: -O2 -j12

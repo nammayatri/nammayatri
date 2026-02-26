@@ -90,7 +90,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
   dependencies:
     - aeson
     - mobility-core
@@ -127,6 +127,6 @@ executables:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
     dependencies:
       - mock-fcm

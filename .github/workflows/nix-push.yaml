@@ -107,7 +107,25 @@ jobs:
       - name: Build all flake outputs
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
-          om ci run --systems "${{ matrix.system }}" --no-link -- -v
+          om ci run --systems "${{ matrix.system }}" -o ci-result -- -v 2>&1 | while IFS= read -r line; do
+            printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
+          done | tee build-log.txt
+
+      - name: Push to Cachix
+        if: steps.check-conditions.outputs.should_build == 'true' && github.ref == 'refs/heads/main'
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: |
+          # Extract all built store paths from om ci results and push to cachix
+          jq -r '.result[].build.outPaths[]' ci-result | cachix push nammayatri
+
+      - name: Upload build log
+        if: steps.check-conditions.outputs.should_build == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build-log.txt
+          retention-days: 1
 
       - name: Build And Push Docker image
         id: docker
@@ -125,6 +143,44 @@ jobs:
           # crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}-${{ matrix.arch }}" use this for multi arch builds, not needed for now
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
+    
+  analyze-build-times:
+    name: Analyze Build Times
+    needs: [build, check-conditions]
+    if: needs.check-conditions.outputs.should-proceed == 'true' && needs.check-conditions.outputs.has-backend == 'true'
+    runs-on: x86_64-linux
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build logs
+        uses: actions/download-artifact@v4
+        with:
+          path: build-logs
+
+      - name: Run build log analysis
+        run: |
+          cd buildtime-analysis
+          python3 analyze_build_log.py ../build-logs/build-log/build-log.txt
+
+      - name: Run build visualization
+        run: |
+          cd buildtime-analysis
+          python3 visualize_builds.py
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-analysis-results
+          path: |
+            buildtime-analysis/build_analysis.json
+            buildtime-analysis/build_analysis_report.md
+            buildtime-analysis/*.png
+            buildtime-analysis/*/*.png
+          retention-days: 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
   # create-manifest:
   #   needs: [build, check-conditions]

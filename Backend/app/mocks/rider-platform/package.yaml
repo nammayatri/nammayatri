@@ -98,7 +98,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
 
 executables:
   mock-rider-platform-exe:
@@ -122,7 +122,7 @@ executables:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
     dependencies:
       - mock-rider-platform
       - mobility-core

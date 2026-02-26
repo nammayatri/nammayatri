@@ -121,7 +121,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j4
+          - -j12
   dependencies:
     - dynamic-offer-driver-app
     - sessionizer-metrics
@@ -153,7 +153,7 @@ executables:
         else:
           ghc-options:
             - -O2
-            - -j4
+            - -j12
     dependencies:
       - driver-offer-allocator
       - mobility-core
