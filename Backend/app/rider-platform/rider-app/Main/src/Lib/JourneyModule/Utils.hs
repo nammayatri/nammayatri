@@ -253,7 +253,18 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
         return (flattenedLiveRouteStopTimes, nub $ routesWithoutLiveTimings ++ routesWithoutBuses)
       else do
         return ([], routeCodes)
-  staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode False False) "fetch route stop timing through graphql"
+  staticRouteStopTimes <- measureLatency
+    ( do
+        scheduleResults <- mapConcurrently
+          (\routeId -> do
+            busScheduleDetails <- OTPRest.getRouteBusSchedule routeId integratedBppConfig
+            results <- mapConcurrently (convertBusScheduleToRouteStopTimeTable routeId) busScheduleDetails
+            return $ concat results
+          )
+          routesWithoutBuses
+        return $ concat scheduleResults
+    )
+    "fetch route stop timing through getRouteBusSchedule"
   return $ flattenedLiveRouteStopTimes ++ staticRouteStopTimes
   where
     processRoute now routeWithBuses = do
@@ -288,15 +299,16 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
       let baseStopTimes = map (createStopTime serviceTierToShortNameMapping) validBuses
       return baseStopTimes
       where
-        createStopTime serviceTierToShortNameMapping ((vehicleNumber, eta), mapping) = createRouteStopTimeTable serviceTierToShortNameMapping routeWithBuses vehicleNumber eta mapping
+        createStopTime serviceTierToShortNameMapping' ((vehicleNumber, eta), mapping) =
+          let serviceTierName' = fromMaybe Nothing $ HM.lookup mapping serviceTierToShortNameMapping'
+              serviceTierType' = mapToServiceTierType mapping
+           in createRouteStopTimeTable routeWithBuses.routeId vehicleNumber eta serviceTierType' serviceTierName' LIVE
 
-    createRouteStopTimeTable serviceTierToShortNameMapping routeWithBuses vehicleNumber eta mapping =
+    createRouteStopTimeTable routeCode' vehicleNumber eta serviceTierType' serviceTierName' source' =
       let timeOfDay = timeToTimeOfDay $ utctDayTime eta.arrivalTime
-          serviceTierName = fromMaybe Nothing $ HM.lookup mapping serviceTierToShortNameMapping
-          serviceTierType = mapToServiceTierType mapping
        in RouteStopTimeTable
             { integratedBppConfigId = integratedBppConfig.id,
-              routeCode = routeWithBuses.routeId,
+              routeCode = routeCode',
               stopCode = stopCode,
               timeOfArrival = timeOfDay,
               timeOfDeparture = timeOfDay, -- Using arrival time as departure time since we don't have separate departure time
@@ -305,15 +317,21 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
               merchantOperatingCityId = Just mocid,
               createdAt = currentTime,
               updatedAt = currentTime,
-              serviceTierType = serviceTierType,
-              serviceTierName = serviceTierName,
+              serviceTierType = serviceTierType',
+              serviceTierName = serviceTierName',
               delay = Nothing,
-              source = LIVE,
+              source = source',
               stage = Nothing,
               platformCode = Nothing,
               providerStopCode = Nothing,
               isStageStop = Nothing
             }
+
+    convertBusScheduleToRouteStopTimeTable routeId busScheduleDetail = do
+      frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId busScheduleDetail.service_tier mocid integratedBppConfig.id
+      let serviceTierName' = frfsServiceTier <&> (.shortName)
+      let filteredEtas = filter (\eta -> eta.stopCode == stopCode) busScheduleDetail.eta
+      return $ map (\eta -> createRouteStopTimeTable routeId busScheduleDetail.vehicle_no eta busScheduleDetail.service_tier serviceTierName' GTFS) filteredEtas
 
 fetchLiveSubwayTimings ::
   ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
