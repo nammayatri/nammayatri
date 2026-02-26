@@ -23,6 +23,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Payment
 import BecknV2.Utils
@@ -70,32 +71,22 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectRe
   let paymentV2 = mkPaymentV2 bppConfig merchant driverQuote Nothing
   Spec.OnSelectReqMessage $
     Just
-      Spec.Order
-        { orderFulfillments = Just fulfillments,
-          orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote mbFarePolicy taggings) fulfillments,
-          orderQuote = Just $ mkQuoteV2 driverQuote req.now,
-          orderPayments = Just [paymentV2],
-          orderProvider = mkProvider bppConfig,
-          orderBilling = Nothing,
-          orderCancellation = Nothing,
-          orderCancellationTerms = Nothing,
-          orderId = Nothing,
-          orderStatus = Nothing,
-          orderCreatedAt = Nothing,
-          orderUpdatedAt = Nothing
+      emptyOrder
+        { Spec.orderFulfillments = Just fulfillments,
+          Spec.orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote mbFarePolicy taggings) fulfillments,
+          Spec.orderQuote = Just $ mkQuoteV2 driverQuote req.now,
+          Spec.orderPayments = Just [paymentV2],
+          Spec.orderProvider = mkProvider bppConfig
         }
 
 mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Spec.Fulfillment
 mkFulfillmentV2 dReq quote isValueAddNP = do
-  Spec.Fulfillment
-    { fulfillmentId = Just quote.id.getId,
-      fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation dReq.searchRequest.stops Nothing,
-      fulfillmentVehicle = Just $ mkVehicleV2 quote,
-      fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType quote.tripCategory,
-      fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP,
-      fulfillmentCustomer = Nothing,
-      fulfillmentState = Nothing,
-      fulfillmentTags = Nothing
+  emptyFulfillment
+    { Spec.fulfillmentId = Just quote.id.getId,
+      Spec.fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation dReq.searchRequest.stops Nothing,
+      Spec.fulfillmentVehicle = Just $ mkVehicleV2 quote,
+      Spec.fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType quote.tripCategory,
+      Spec.fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP
     }
 
 mkPaymentV2 :: DBC.BecknConfig -> DM.Merchant -> DQuote.DriverQuote -> Maybe Text -> Spec.Payment
@@ -107,78 +98,40 @@ mkPaymentV2 bppConfig merchant driverQuote mbPaymentId = do
 mkVehicleV2 :: DQuote.DriverQuote -> Spec.Vehicle
 mkVehicleV2 quote =
   let (category, variant) = Utils.castVariant quote.vehicleVariant
-   in Spec.Vehicle
-        { vehicleCategory = Just category,
-          vehicleVariant = Just variant,
-          vehicleColor = Nothing,
-          vehicleMake = Nothing,
-          vehicleModel = Nothing,
-          vehicleRegistration = Nothing,
-          vehicleCapacity = Nothing
+   in emptyVehicle
+        { Spec.vehicleCategory = Just category,
+          Spec.vehicleVariant = Just variant
         }
 
 mkAgentV2 :: DQuote.DriverQuote -> Bool -> Spec.Agent
 mkAgentV2 quote isValueAddNP =
-  Spec.Agent
-    { agentContact = Nothing,
-      agentPerson = Just $ mkAgentPersonV2 quote isValueAddNP
+  emptyAgent
+    { Spec.agentPerson = Just $ mkAgentPersonV2 quote isValueAddNP
     }
 
 mkAgentPersonV2 :: DQuote.DriverQuote -> Bool -> Spec.Person
 mkAgentPersonV2 quote isValueAddNP =
-  Spec.Person
-    { personId = Nothing,
-      personImage = Nothing,
-      personName = Just quote.driverName,
-      personTags = if isValueAddNP then mkAgentTagsV2 quote else Nothing
+  emptyPerson
+    { Spec.personName = Just quote.driverName,
+      Spec.personTags = if isValueAddNP then mkAgentTagsV2 quote else Nothing
     }
 
 mkAgentTagsV2 :: DQuote.DriverQuote -> Maybe [Spec.TagGroup]
-mkAgentTagsV2 quote = do
-  ratingTag <- mkDriverRatingTag quote
-  Just
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.AGENT_INFO,
-                  descriptorName = Just "Agent Info",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList = Just ratingTag
-        }
+mkAgentTagsV2 quote =
+  Tags.buildTagGroups
+    [ Tags.RATING Tags.~=? (show . (.getCenti) <$> quote.driverRating)
     ]
-
-mkDriverRatingTag :: DQuote.DriverQuote -> Maybe [Spec.Tag]
-mkDriverRatingTag quote
-  | isNothing quote.driverRating = Nothing
-  | otherwise =
-    Just
-      [ Spec.Tag
-          { tagDisplay = Just False,
-            tagDescriptor =
-              Just
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.RATING,
-                    descriptorName = Just "Agent Rating",
-                    descriptorShortDesc = Nothing
-                  },
-            tagValue = show . (.getCenti) <$> quote.driverRating
-          }
-      ]
 
 mkItemV2 :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.DriverQuote -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Spec.Item
 mkItemV2 fulfillment vehicleServiceTierItem quote mbFarePolicy taggings = do
   let fulfillmentId = fulfillment.fulfillmentId & fromMaybe (error $ "It should never happen as we have created fulfillment:-" <> show fulfillment)
-  Spec.Item
-    { itemId = Just quote.estimateId.getId,
-      itemFulfillmentIds = Just [fulfillmentId],
-      itemPrice = Just $ mkPriceV2 quote,
-      itemTags = mkItemTagsV2 quote.estimatedFare quote.fareParams.customerCancellationDues quote.fareParams.congestionChargeViaDp mbFarePolicy taggings,
-      itemDescriptor = mkItemDescriptor vehicleServiceTierItem,
-      itemLocationIds = Nothing,
-      itemPaymentIds = Nothing
+  emptyItem
+    { Spec.itemId = Just quote.estimateId.getId,
+      Spec.itemFulfillmentIds = Just [fulfillmentId],
+      Spec.itemPrice = Just $ mkPriceV2 quote,
+      Spec.itemTags = mkItemTagsV2 quote.estimatedFare quote.fareParams.customerCancellationDues quote.fareParams.congestionChargeViaDp mbFarePolicy taggings,
+      Spec.itemDescriptor = mkItemDescriptor vehicleServiceTierItem,
+      Spec.itemCategoryIds = Just [Utils.tripCategoryToCategoryCode quote.tripCategory]
     }
 
 mkItemDescriptor :: DVST.VehicleServiceTier -> Maybe Spec.Descriptor
@@ -192,13 +145,9 @@ mkItemDescriptor vehicleServiceTierItem =
 
 mkPriceV2 :: DQuote.DriverQuote -> Spec.Price
 mkPriceV2 quote =
-  Spec.Price
-    { priceCurrency = Just $ show quote.currency,
-      priceValue = Just $ show $ quote.estimatedFare,
-      priceMaximumValue = Nothing,
-      priceMinimumValue = Nothing,
-      priceOfferedValue = Nothing,
-      priceComputedValue = Nothing
+  emptyPrice
+    { Spec.priceCurrency = Just $ show quote.currency,
+      Spec.priceValue = Just $ show $ quote.estimatedFare
     }
 
 mkItemTagsV2 :: HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Maybe [Spec.TagGroup]
@@ -222,13 +171,9 @@ mkQuoteBreakupInner quote = do
   where
     mkBreakupPrice money =
       Just
-        Spec.Price
-          { priceComputedValue = Nothing,
-            priceCurrency = Just $ show quote.currency,
-            priceMaximumValue = Nothing,
-            priceMinimumValue = Nothing,
-            priceOfferedValue = Nothing,
-            priceValue = Just $ encodeToText money
+        emptyPrice
+          { Spec.priceCurrency = Just $ show quote.currency,
+            Spec.priceValue = Just $ encodeToText money
           }
     mkQuotationBreakupInner title price =
       Spec.QuotationBreakupInner
@@ -260,23 +205,12 @@ mkQuoteBreakupInner quote = do
 mkQuotationPrice :: DQuote.DriverQuote -> Maybe Spec.Price
 mkQuotationPrice quote =
   Just
-    Spec.Price
-      { priceComputedValue = Nothing,
-        priceCurrency = Just $ show quote.currency,
-        priceMaximumValue = Nothing,
-        priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText quote.estimatedFare,
-        priceValue = Just $ encodeToText quote.estimatedFare
+    emptyPrice
+      { Spec.priceCurrency = Just $ show quote.currency,
+        Spec.priceOfferedValue = Just $ encodeToText quote.estimatedFare,
+        Spec.priceValue = Just $ encodeToText quote.estimatedFare
       }
 
 mkProvider :: DBC.BecknConfig -> Maybe Spec.Provider
 mkProvider becknConfig = do
-  return $
-    Spec.Provider
-      { providerDescriptor = Nothing,
-        providerFulfillments = Nothing,
-        providerId = Just $ becknConfig.subscriberId,
-        providerItems = Nothing,
-        providerLocations = Nothing,
-        providerPayments = Nothing
-      }
+  return $ emptyProvider { Spec.providerId = Just $ becknConfig.subscriberId }

@@ -107,6 +107,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
             Just . List.singleton $
               Spec.Item
                 { itemId = Just estimateId.getId,
+                  itemCategoryIds = Just [Utils.tripCategoryToCategoryCode booking.tripCategory],
                   itemDescriptor = Nothing,
                   itemFulfillmentIds = Nothing,
                   itemLocationIds = Nothing,
@@ -267,6 +268,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
             Just . List.singleton $
               Spec.Item
                 { itemId = Just newBookingId.getId,
+                  itemCategoryIds = Just [Utils.tripCategoryToCategoryCode booking.tripCategory],
                   itemDescriptor = Nothing,
                   itemFulfillmentIds = Nothing,
                   itemLocationIds = Nothing,

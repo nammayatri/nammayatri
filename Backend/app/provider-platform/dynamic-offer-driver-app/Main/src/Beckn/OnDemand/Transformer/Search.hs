@@ -85,7 +85,9 @@ buildSearchReq messageId subscriber req context actualBapUri = do
   userBundleVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserBundleVersion req)
   userSdkVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserSdkVersion req)
   riderPreferredOption <- case Beckn.OnDemand.Utils.Search.buildRiderPreferredOption req of
-    Nothing -> pure DRPO.OneWay
+    Nothing -> pure $ fromMaybe DRPO.OneWay
+                 (Beckn.OnDemand.Utils.Search.mapCategoryCodeToRiderPreferred
+                   <$> Beckn.OnDemand.Utils.Search.getCategoryCode req)
     Just txt -> case readMaybe (T.unpack txt) of
       Just val -> pure val
       Nothing -> do

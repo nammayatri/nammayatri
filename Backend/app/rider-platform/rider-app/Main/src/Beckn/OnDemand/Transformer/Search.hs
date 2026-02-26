@@ -57,7 +57,7 @@ tfIntent res bapConfig = do
   let intentTags_ = Nothing
       intentFulfillment_ = tfFulfillment res
       intentPayment_ = tfPayment res bapConfig
-      returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
+      returnData = BecknV2.OnDemand.Types.Intent {intentCategory = Nothing, intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing

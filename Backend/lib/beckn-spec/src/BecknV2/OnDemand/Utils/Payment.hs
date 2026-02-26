@@ -122,190 +122,33 @@ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTerms
 
 mkBuyerFinderFeeTagGroup :: Maybe BuyerFinderFee -> Spec.TagGroup
 mkBuyerFinderFeeTagGroup mbff =
-  Spec.TagGroup
-    { tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tag.BUYER_FINDER_FEES,
-              descriptorName = Nothing,
-              descriptorShortDesc = Nothing
-            },
-      tagGroupDisplay = Just False,
-      tagGroupList = Just [feePercentage]
-    }
-  where
-    feePercentage =
-      Spec.Tag
-        { tagDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tag.BUYER_FINDER_FEES_PERCENTAGE,
-                  descriptorName = Nothing,
-                  descriptorShortDesc = Nothing
-                },
-          tagValue = Just $ fromMaybe "0" mbff,
-          tagDisplay = Just False
-        }
+  Tag.getFullTagGroup Tag.BUYER_FINDER_FEES
+    [ Tag.mkTag Tag.BUYER_FINDER_FEES_PERCENTAGE (Just $ fromMaybe "0" mbff)
+    ]
 
 mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe DPM.PaymentMode -> Maybe Text -> Spec.TagGroup
 mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl mPaymentMode mPaymentInstrument =
-  Spec.TagGroup
-    { tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tag.SETTLEMENT_TERMS,
-              descriptorName = Nothing,
-              descriptorShortDesc = Nothing
-            },
-      tagGroupDisplay = Just False,
-      tagGroupList = Just $ catMaybes [mStripeTestTag, mPaymentInstrumentTag] <> settlementTags
-    }
-  where
-    settlementTags =
-      catMaybes
-        [ mSettlementAmount <&> \samount ->
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.SETTLEMENT_AMOUNT,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just samount,
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.SETTLEMENT_WINDOW,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just $ fromMaybe "PT1D" mSettlementWindow,
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.DELAY_INTEREST,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just "0",
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.SETTLEMENT_BASIS,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just "INVOICE_RECIEPT",
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.MANDATORY_ARBITRATION,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just "TRUE",
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.COURT_JURISDICTION,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just txnCity,
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.STATIC_TERMS,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just $ maybe "https://api.example-bap.com/booking/terms" showBaseUrl mSettlementTermsUrl,
-                tagDisplay = Just False
-              }
+  Tag.getFullTagGroup Tag.SETTLEMENT_TERMS $
+    catMaybes
+      [ Tag.mkOptionalTag Tag.STRIPE_TEST (if mPaymentMode == Just DPM.TEST then Just (show True) else Nothing),
+        Tag.mkOptionalTag Tag.PAYMENT_INSTRUMENT mPaymentInstrument
+      ]
+      <> catMaybes
+        [ Tag.mkOptionalTag Tag.SETTLEMENT_AMOUNT mSettlementAmount,
+          Just $ Tag.mkTag Tag.SETTLEMENT_WINDOW (Just $ fromMaybe "PT1D" mSettlementWindow),
+          Just $ Tag.mkTag Tag.DELAY_INTEREST (Just "0"),
+          Just $ Tag.mkTag Tag.SETTLEMENT_BASIS (Just "INVOICE_RECIEPT"),
+          Just $ Tag.mkTag Tag.MANDATORY_ARBITRATION (Just "TRUE"),
+          Just $ Tag.mkTag Tag.COURT_JURISDICTION (Just txnCity),
+          Just $ Tag.mkTag Tag.STATIC_TERMS (Just $ maybe "https://api.example-bap.com/booking/terms" showBaseUrl mSettlementTermsUrl)
         ]
-    mStripeTestTag =
-      if mPaymentMode == Just DPM.TEST
-        then
-          Just
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.STRIPE_TEST,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just $ show True,
-                tagDisplay = Just False
-              }
-        else Nothing
-    mPaymentInstrumentTag =
-      mPaymentInstrument <&> \instrument ->
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tag.PAYMENT_INSTRUMENT,
-                    descriptorName = Nothing,
-                    descriptorShortDesc = Nothing
-                  },
-            tagValue = Just instrument,
-            tagDisplay = Just False
-          }
 
 mkSettlementDetailsTagGroup :: Maybe SettlementType -> Maybe Spec.TagGroup
 mkSettlementDetailsTagGroup mSettlementType = do
   st <- mSettlementType
-  return $
-    Spec.TagGroup
-      { tagGroupDescriptor =
-          Just $
-            Spec.Descriptor
-              { descriptorCode = Just $ show Tag.SETTLEMENT_DETAILS,
-                descriptorName = Nothing,
-                descriptorShortDesc = Nothing
-              },
-        tagGroupDisplay = Just False,
-        tagGroupList = Just [stTag st]
-      }
-  where
-    stTag st =
-      Spec.Tag
-        { tagDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tag.SETTLEMENT_TYPE,
-                  descriptorName = Nothing,
-                  descriptorShortDesc = Nothing
-                },
-          tagValue = Just st,
-          tagDisplay = Just False
-        }
+  return $ Tag.getFullTagGroup Tag.SETTLEMENT_DETAILS
+    [ Tag.mkTag Tag.SETTLEMENT_TYPE (Just st)
+    ]
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode

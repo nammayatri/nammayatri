@@ -84,7 +84,7 @@ tfOrderItems uiConfirm = do
   let itemPaymentIds_ = Nothing
   let itemPrice_ = Nothing
   let itemTags_ = Just $ mkItemTags uiConfirm
-  BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
+  BecknV2.OnDemand.Types.Item {itemCategoryIds = Nothing, itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 
 tfPrice :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Price
 tfPrice uiConfirm = do
@@ -104,6 +104,7 @@ tfProvider uiConfirm = do
       providerPayments = Nothing
       providerDescriptor = Nothing
       providerFulfillments = Nothing
+      providerCategories = Nothing
 
   BecknV2.OnDemand.Types.Provider {..}
 
@@ -143,95 +144,22 @@ mkItemTags res =
 
 mkDisplayBookingIdTagGroup :: Data.Text.Text -> Spec.TagGroup
 mkDisplayBookingIdTagGroup displayBookingId =
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tags.BOOKING_INFO,
-              descriptorName = Just "Booking Info",
-              descriptorShortDesc = Nothing
-            },
-      tagGroupList =
-        Just
-          [ Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tags.DISPLAY_BOOKING_ID,
-                        descriptorName = Just "Display Booking ID",
-                        descriptorShortDesc = Nothing
-                      },
-                tagDisplay = Just False,
-                tagValue = Just displayBookingId
-              }
-          ]
-    }
+  Tags.getFullTagGroup Tags.BOOKING_INFO
+    [ Tags.mkTag Tags.DISPLAY_BOOKING_ID (Just displayBookingId)
+    ]
 
 mkAdvancedBookingEnabledTagGroup :: SharedLogic.Confirm.DConfirmRes -> Spec.TagGroup
 mkAdvancedBookingEnabledTagGroup res =
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tags.FORWARD_BATCHING_REQUEST_INFO,
-              descriptorName = Just "Forward Batch Enabled",
-              descriptorShortDesc = Nothing
-            },
-      tagGroupList =
-        Just
-          [ Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tags.IS_FORWARD_BATCH_ENABLED,
-                        descriptorName = Just "Forward Batch Enabled",
-                        descriptorShortDesc = Nothing
-                      },
-                tagDisplay = Just False,
-                tagValue = Just $ show res.isAdvanceBookingEnabled
-              }
-          ]
-    }
+  Tags.getFullTagGroup Tags.FORWARD_BATCHING_REQUEST_INFO
+    [ Tags.mkTag Tags.IS_FORWARD_BATCH_ENABLED (Just $ show res.isAdvanceBookingEnabled)
+    ]
 
 mkInsuranceTagGroup :: SharedLogic.Confirm.DConfirmRes -> Spec.TagGroup
 mkInsuranceTagGroup res =
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tags.INSURANCE_INFO,
-              descriptorName = Just "Insurance Info",
-              descriptorShortDesc = Nothing
-            },
-      tagGroupList =
-        Just
-          [ Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tags.IS_INSURED,
-                        descriptorName = Just "Is Insured",
-                        descriptorShortDesc = Nothing
-                      },
-                tagDisplay = Just False,
-                tagValue = Just $ show $ fromMaybe False res.isInsured
-              },
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tags.INSURED_AMOUNT,
-                        descriptorName = Just "Insured Amount",
-                        descriptorShortDesc = Nothing
-                      },
-                tagDisplay = Just False,
-                tagValue = res.insuredAmount
-              }
-          ]
-    }
+  Tags.getFullTagGroup Tags.INSURANCE_INFO
+    [ Tags.mkTag Tags.IS_INSURED (Just $ show $ fromMaybe False res.isInsured),
+      Tags.mkTag Tags.INSURED_AMOUNT res.insuredAmount
+    ]
 
 mkDeliveryTagGroup :: SharedLogic.Confirm.DConfirmRes -> [Spec.TagGroup]
 mkDeliveryTagGroup res =
@@ -239,96 +167,15 @@ mkDeliveryTagGroup res =
     []
     ( \(SharedLogic.Confirm.DConfirmResDelivery (DTDD.DeliveryDetails {..})) ->
         pure $
-          Spec.TagGroup
-            { tagGroupDisplay = Just False,
-              tagGroupDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.DELIVERY,
-                      descriptorName = Just "Delivery Info",
-                      descriptorShortDesc = Nothing
-                    },
-              tagGroupList =
-                Just
-                  [ Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.INITIATED_AS,
-                                descriptorName = Just "Delivery Initiated As",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just $ show initiatedAs
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.SENDER_NAME,
-                                descriptorName = Just "Sender Name",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just senderDetails.name
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.SENDER_LOCATION_INSTRUCTIONS,
-                                descriptorName = Just "Sender Location Instructions",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just $ mkLocationInstructions senderDetails.address.instructions senderDetails.address.extras
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.SENDER_NUMBER,
-                                descriptorName = Just "Sender phone number",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just senderDetails.phoneNumber
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.RECEIVER_NAME,
-                                descriptorName = Just "Receiver Name",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just receiverDetails.name
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.RECEIVER_LOCATION_INSTRUCTIONS,
-                                descriptorName = Just "Receiver Location Instructions",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just $ mkLocationInstructions receiverDetails.address.instructions receiverDetails.address.extras
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.RECEIVER_NUMBER,
-                                descriptorName = Just "Receiver phone number",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just receiverDetails.phoneNumber
-                      }
-                  ]
-            }
+          Tags.getFullTagGroup Tags.DELIVERY
+            [ Tags.mkTag Tags.INITIATED_AS (Just $ show initiatedAs),
+              Tags.mkTag Tags.SENDER_NAME (Just senderDetails.name),
+              Tags.mkTag Tags.SENDER_LOCATION_INSTRUCTIONS (Just $ mkLocationInstructions senderDetails.address.instructions senderDetails.address.extras),
+              Tags.mkTag Tags.SENDER_NUMBER (Just senderDetails.phoneNumber),
+              Tags.mkTag Tags.RECEIVER_NAME (Just receiverDetails.name),
+              Tags.mkTag Tags.RECEIVER_LOCATION_INSTRUCTIONS (Just $ mkLocationInstructions receiverDetails.address.instructions receiverDetails.address.extras),
+              Tags.mkTag Tags.RECEIVER_NUMBER (Just receiverDetails.phoneNumber)
+            ]
     )
     res.confirmResDetails
   where

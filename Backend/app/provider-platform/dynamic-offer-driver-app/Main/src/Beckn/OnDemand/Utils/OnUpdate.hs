@@ -20,9 +20,9 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEv
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
+import BecknV2.OnDemand.Tags ((~=), (~=?))
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
-import qualified Data.List as List
 import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
@@ -221,97 +221,17 @@ mkDistanceTagGroup ride = do
   let traveledDistance :: HighPrecMeters = ride.traveledDistance
   let endOdometerReading :: Maybe Centesimal = (.value) <$> ride.endOdometerReading
   pure $
-    Just
-      [ Spec.TagGroup
-          { tagGroupDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.RIDE_DISTANCE_DETAILS,
-                    descriptorName = Just "Ride Distance Details",
-                    descriptorShortDesc = Nothing
-                  },
-            tagGroupDisplay = Just False,
-            tagGroupList =
-              Just $
-                chargeableDistanceSingleton chargeableDistance
-                  ++ traveledDistanceSingleton traveledDistance
-                  ++ endOdometerSingleton endOdometerReading
-          }
+    Tags.buildTagGroups
+      [ Tags.CHARGEABLE_DISTANCE ~= show chargeableDistance,
+        Tags.TRAVELED_DISTANCE ~= show traveledDistance,
+        Tags.END_ODOMETER_READING ~=? (show <$> endOdometerReading)
       ]
-  where
-    chargeableDistanceSingleton chargeableDistance =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.CHARGEABLE_DISTANCE,
-                    descriptorName = Just "Chargeable Distance",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show chargeableDistance
-          }
-
-    traveledDistanceSingleton traveledDistance =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.TRAVELED_DISTANCE,
-                    descriptorName = Just "Traveled Distance",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show traveledDistance
-          }
-
-    endOdometerSingleton endOdometerReading =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.END_ODOMETER_READING,
-                    descriptorName = Just "End Odometer Reading",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = show <$> endOdometerReading
-          }
 
 mkPreviousCancellationReasonsTags :: SBCR.CancellationSource -> Maybe [Spec.TagGroup]
 mkPreviousCancellationReasonsTags cancellationSource =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.PREVIOUS_CANCELLATION_REASONS,
-                  descriptorName = Just "Previous Cancellation Reasons",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just
-              cancellationSourceSingleton
-        }
+  Tags.buildTagGroups
+    [ Tags.CANCELLATION_REASON ~= show (castCancellationSource cancellationSource)
     ]
-  where
-    cancellationSourceSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.CANCELLATION_REASON,
-                    descriptorName = Just "Chargeable Distance",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just . show $ castCancellationSource cancellationSource
-          }
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource
 castCancellationSource = \case
@@ -324,99 +244,18 @@ castCancellationSource = \case
 
 mkNewMessageTags :: Text -> Maybe [Spec.TagGroup]
 mkNewMessageTags message =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.DRIVER_NEW_MESSAGE,
-                  descriptorName = Just "Driver New Message",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just
-              messageSingleton
-        }
+  Tags.buildTagGroups
+    [ Tags.MESSAGE ~= message
     ]
-  where
-    messageSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.MESSAGE,
-                    descriptorName = Just "New Message",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just message
-          }
 
 mkSafetyAlertTags :: Maybe Enums.SafetyReasonCode -> Maybe [Spec.TagGroup]
 mkSafetyAlertTags reason =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.SAFETY_ALERT,
-                  descriptorName = Just "Safety Alert",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just
-              safetyAlertTriggerSingleton
-        }
+  Tags.buildTagGroups
+    [ Tags.SAFETY_REASON_CODE ~= T.pack (maybe "" show reason)
     ]
-  where
-    safetyAlertTriggerSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.SAFETY_REASON_CODE,
-                    descriptorName = Just "Safety Alert Trigger",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just (T.pack $ maybe "" show reason)
-          }
 
 mkUpdatedDistanceTags :: Maybe HighPrecMeters -> Maybe [Spec.TagGroup]
-mkUpdatedDistanceTags mbDistance =
-  mbDistance >>= \distance ->
-    Just
-      [ Spec.TagGroup
-          { tagGroupDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.UPDATE_DETAILS,
-                    descriptorName = Just "Update Details",
-                    descriptorShortDesc = Nothing
-                  },
-            tagGroupDisplay = Just True,
-            tagGroupList =
-              Just $ updatedDistanceSingleton distance
-          }
-      ]
-  where
-    updatedDistanceSingleton distance =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.UPDATED_ESTIMATED_DISTANCE,
-                    descriptorName = Just "Updated Estimated Distance",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show distance
-          }
+mkUpdatedDistanceTags = Tags.mkSingleTagGroup Tags.UPDATED_ESTIMATED_DISTANCE
 
 tfItems :: DRide.Ride -> DBooking.Booking -> Utils.MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> Maybe [Spec.Item]
 tfItems ride booking shortId estimatedDistance mbFarePolicy mbPaymentId =
@@ -425,6 +264,7 @@ tfItems ride booking shortId estimatedDistance mbFarePolicy mbPaymentId =
         { itemDescriptor = Utils.tfItemDescriptor booking,
           itemFulfillmentIds = Just [ride.id.getId],
           itemId = Just $ maybe (Common.mkItemId shortId booking.vehicleServiceTier) getId (booking.estimateId),
+          itemCategoryIds = Just [Utils.tripCategoryToCategoryCode booking.tripCategory],
           itemLocationIds = Nothing,
           itemPaymentIds = Utils.tfPaymentId mbPaymentId,
           itemPrice = Utils.tfItemPrice booking.estimatedFare booking.currency,

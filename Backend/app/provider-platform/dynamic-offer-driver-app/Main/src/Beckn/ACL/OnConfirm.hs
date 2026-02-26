@@ -18,6 +18,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Enums as Enum
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
@@ -61,15 +62,13 @@ tfOrder res pricing bppConfig mbFarePolicy = do
 tfFulfillments :: DConfirm.DConfirmResp -> Maybe [Spec.Fulfillment]
 tfFulfillments res =
   Just
-    [ Spec.Fulfillment
-        { fulfillmentAgent = Nothing,
-          fulfillmentCustomer = tfCustomer res,
-          fulfillmentId = Just res.booking.quoteId,
-          fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
-          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops res.booking.specialZoneOtpCode,
-          fulfillmentTags = Nothing,
-          fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
-          fulfillmentVehicle = tfVehicle res
+    [ emptyFulfillment
+        { Spec.fulfillmentCustomer = tfCustomer res,
+          Spec.fulfillmentId = Just res.booking.quoteId,
+          Spec.fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
+          Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops res.booking.specialZoneOtpCode,
+          Spec.fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
+          Spec.fulfillmentVehicle = tfVehicle res
         }
     ]
 
@@ -84,14 +83,9 @@ tfVehicle :: DConfirm.DConfirmResp -> Maybe Spec.Vehicle
 tfVehicle res = do
   let (category, variant) = Utils.castVariant res.vehicleVariant
   Just
-    Spec.Vehicle
-      { vehicleCategory = Just category,
-        vehicleVariant = Just variant,
-        vehicleColor = Nothing,
-        vehicleMake = Nothing,
-        vehicleModel = Nothing,
-        vehicleRegistration = Nothing,
-        vehicleCapacity = Nothing
+    emptyVehicle
+      { Spec.vehicleCategory = Just category,
+        Spec.vehicleVariant = Just variant
       }
 
 tfCustomer :: DConfirm.DConfirmResp -> Maybe Spec.Customer
@@ -99,19 +93,10 @@ tfCustomer res =
   return $
     Spec.Customer
       { customerContact =
-          Just
-            Spec.Contact
-              { contactPhone = Just res.riderPhoneNumber -- TODO: Check with ONDC how to pass country code
-              },
+          Just Spec.Contact { contactPhone = Just res.riderPhoneNumber },
         customerPerson = do
           riderName <- res.riderName
-          Just $
-            Spec.Person
-              { personId = Nothing,
-                personImage = Nothing,
-                personName = Just riderName,
-                personTags = Nothing
-              }
+          Just $ emptyPerson { Spec.personName = Just riderName }
       }
 
 tfCancellationTerms :: DConfirm.DConfirmResp -> [Spec.CancellationTerm]

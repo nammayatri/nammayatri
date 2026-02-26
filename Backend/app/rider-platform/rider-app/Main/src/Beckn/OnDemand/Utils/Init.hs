@@ -100,33 +100,8 @@ castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT
 castDPaymentType DMPM.POSTPAID = show Enums.ON_FULFILLMENT
 
 mkFulfillmentTags :: Maybe Distance -> Maybe [Spec.TagGroup]
-mkFulfillmentTags mbMaxDistance = do
-  if isJust mbMaxDistance
-    then
-      Just
-        [ Spec.TagGroup
-            { tagGroupDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tag.ESTIMATIONS,
-                      descriptorName = Just $ show Tag.ESTIMATIONS,
-                      descriptorShortDesc = Nothing
-                    },
-              tagGroupDisplay = Just True,
-              tagGroupList =
-                Just
-                  [ Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = (\_ -> Just $ show Tag.MAX_ESTIMATED_DISTANCE) =<< mbMaxDistance,
-                                descriptorName = (\_ -> Just $ show Tag.MAX_ESTIMATED_DISTANCE) =<< mbMaxDistance,
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = (\_ -> Just True) =<< mbMaxDistance,
-                        tagValue = (Just . show . distanceToHighPrecMeters) =<< mbMaxDistance
-                      }
-                  ]
-            }
-        ]
-    else Nothing
+mkFulfillmentTags mbMaxDistance =
+  mbMaxDistance >>= \maxDistance ->
+    Tag.buildTagGroups
+      [ Tag.MAX_ESTIMATED_DISTANCE Tag.~= show (distanceToHighPrecMeters maxDistance)
+      ]
