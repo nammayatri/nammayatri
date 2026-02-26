@@ -10,6 +10,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
@@ -35,10 +36,18 @@ data FRFSTicketBooking = FRFSTicketBooking
     cancellationCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cashbackPayoutOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cashbackStatus :: Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus,
+    conductorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customerCancelled :: Kernel.Prelude.Bool,
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    driverId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    finalBoardedDepotNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    finalBoardedScheduleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    finalBoardedVehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    finalBoardedVehicleNumberSource :: Kernel.Prelude.Maybe Domain.Types.JourneyLeg.BusBoardingMethod,
+    finalBoardedVehicleServiceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    finalBoardedWaybillId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     frfsTicketBookingPaymentIdForTicketGeneration :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromStationAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromStationCode :: Kernel.Prelude.Text,
@@ -70,8 +79,11 @@ data FRFSTicketBooking = FRFSTicketBooking
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
+    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stationsJson :: Kernel.Prelude.Text,
     status :: Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,

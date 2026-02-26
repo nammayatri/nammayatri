@@ -516,7 +516,7 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId mbNewServ
       <> show finalServiceTier
       <> ", routeCode="
       <> show req.routeCode
-  postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes False -- the journey leg upsert function is not required here
+  postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes True -- the journey leg upsert function is not required here
 
 postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
@@ -587,6 +587,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             validTill = Just validTill,
             searchAsParentStops = searchAsParentStops,
             busLocationData = fromMaybe [] busLocationData,
+            isSingleMode = Just isSingleMode,
             ..
           }
   upsertJourneyLegAction searchReqId.getId
