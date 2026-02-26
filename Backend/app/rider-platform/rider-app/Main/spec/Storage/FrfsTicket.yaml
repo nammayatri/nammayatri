@@ -43,6 +43,7 @@ imports:
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
   QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
   BusLocation: API.Types.UI.RiderLocation
+  BusBoardingMethod: Domain.Types.JourneyLeg
   Value: Data.Aeson
 
 FRFSSearch:
@@ -75,6 +76,7 @@ FRFSSearch:
     searchAsParentStops: Maybe Bool
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
+    isSingleMode: Maybe Bool
 
   beamFields:
     fromStationCode:
@@ -398,9 +400,20 @@ FRFSTicketBooking:
     multimodalSearchRequestId: Maybe Text
     failureReason: Maybe Text
     isSingleMode: Maybe Bool
+    finalBoardedVehicleNumber: Maybe Text
+    finalBoardedVehicleNumberSource: Maybe BusBoardingMethod
+    finalBoardedDepotNo: Maybe Text
+    finalBoardedWaybillId: Maybe Text
+    finalBoardedScheduleNo: Maybe Text
+    finalBoardedVehicleServiceTierType: Maybe ServiceTierType
+    conductorId: Maybe Text
+    driverId: Maybe Text
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
     isMockPayment: Maybe Bool
+    routeCode: Maybe Text
+    routeName: Maybe Text
+    serviceTierType: Maybe ServiceTierType
     ondcOnInitReceived: Maybe Bool
     ondcOnInitReceivedAt: Maybe UTCTime
 
