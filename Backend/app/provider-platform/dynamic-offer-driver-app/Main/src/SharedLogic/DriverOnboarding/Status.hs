@@ -624,8 +624,7 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
       mbAssoc <- DRAQuery.findLatestLinkedByRCId rc.id entityImagesInfo.now
       pure [(maybe False (.isRcActive) mbAssoc, rc.id, rc)]
   processedVehicles `forM` \(isActive, rcId, processedVehicle) -> do
-    rcImages <- IQuery.findRecentByRcIdAndImageTypes entityImagesInfo.transporterConfig rcId vehicleDocsByRcIdList
-    let rcImagesInfo = IQuery.RcImagesInfo {rcId, rcImages, documentTypes = vehicleDocsByRcIdList}
+    rcImagesInfo <- IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsByRcIdList
     registrationNo <- decrypt processedVehicle.certificateNumber
     let dateOfUpload = processedVehicle.createdAt
     let verifiedVehicleCategory = DV.castVehicleVariantToVehicleCategory <$> processedVehicle.vehicleVariant
@@ -747,8 +746,7 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                   pure (iu, Just rc_.id)
                 Nothing -> pure ([], Nothing)
               mbRcImagesInfo <- forM mbRcId $ \rcId -> do
-                rcImages <- IQuery.findRecentByRcIdAndImageTypes entityImagesInfo.transporterConfig rcId vehicleDocsByRcIdList
-                pure IQuery.RcImagesInfo {rcId, rcImages, documentTypes = vehicleDocsByRcIdList}
+                IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsByRcIdList
               if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
                 then return []
                 else do

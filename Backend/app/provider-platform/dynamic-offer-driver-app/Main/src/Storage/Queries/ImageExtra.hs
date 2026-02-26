@@ -245,3 +245,49 @@ data RcImagesInfo = RcImagesInfo
 filterRecentByPersonRCAndImageType :: RcImagesInfo -> DocumentType -> [DImage.Image]
 filterRecentByPersonRCAndImageType RcImagesInfo {rcImages} imgType = do
   filter (\img -> img.imageType == imgType) rcImages
+
+-- Optimized function: tries to extract RcImagesInfo from EntityImagesInfo cache,
+-- falls back to DB query if cache doesn't contain suitable data
+-- Assumes that for VehicleInspectionForm these conditions will often be met,
+-- avoiding unnecessary DB queries
+getRcImagesInfoFromEntityImagesInfo ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  EntityImagesInfo ->
+  Id DReg.VehicleRegistrationCertificate ->
+  [DocumentType] ->
+  m RcImagesInfo
+getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId documentTypes = do
+  let EntityImagesInfo {entity, entityImages, transporterConfig, now} = entityImagesInfo
+      onboardingDocsCountLimit = fromMaybe 50 transporterConfig.onboardingDocsCountLimit
+      onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
+
+  -- 1. Check entity type
+  case entity of
+    -- 2. If PersonEntity, fallback to DB (Person can have multiple RCs, we don't know which images we need)
+    PersonEntity _ -> do
+      rcImages <- findRecentByRcIdAndImageTypes transporterConfig rcId documentTypes
+      pure $ RcImagesInfo {rcId, rcImages, documentTypes}
+    -- 3. If VehicleRCEntity, check if it's the RC we need
+    VehicleRCEntity rc -> do
+      -- 4. If not the RC we need, fallback to DB
+      if rc.id /= rcId
+        then do
+          rcImages <- findRecentByRcIdAndImageTypes transporterConfig rcId documentTypes
+          pure $ RcImagesInfo {rcId, rcImages, documentTypes}
+        else do
+          -- 5. If it's the right RC, check limit
+          let imagesCount = length entityImages
+              limitReached = imagesCount >= onboardingDocsCountLimit
+          -- 6. If limit reached, it might be due to other image types, log warning and fallback to DB
+          if limitReached
+            then do
+              logWarning $ "Onboarding docs count limit reached in cache, possible missing images due to other types: rcId: " <> show rcId <> "; count: " <> show imagesCount <> "; falling back to DB"
+              rcImages <- findRecentByRcIdAndImageTypes transporterConfig rcId documentTypes
+              pure $ RcImagesInfo {rcId, rcImages, documentTypes}
+            else do
+              -- 7. If limit not reached, filter by time and document types (same as findRecentByRcIdAndImageTypes)
+              let cutoffTime = hoursAgo onboardingRetryTimeInHours now
+                  filteredByTime = filter (\img -> img.createdAt >= cutoffTime) entityImages
+                  filteredByType = filter (\img -> img.imageType `elem` documentTypes) filteredByTime
+                  sortedImages = DL.sortBy (\a b -> compare b.createdAt a.createdAt) filteredByType
+              pure $ RcImagesInfo {rcId, rcImages = sortedImages, documentTypes}
