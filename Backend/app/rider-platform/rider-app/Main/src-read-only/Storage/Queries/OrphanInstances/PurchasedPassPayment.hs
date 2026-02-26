@@ -35,6 +35,7 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
             profilePicture = profilePicture,
             purchasedPassId = Kernel.Types.Id.Id purchasedPassId,
             startDate = startDate,
+            staticPersonId = staticPersonId,
             status = status,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -60,6 +61,7 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
         Beam.profilePicture = profilePicture,
         Beam.purchasedPassId = Kernel.Types.Id.getId purchasedPassId,
         Beam.startDate = startDate,
+        Beam.staticPersonId = staticPersonId,
         Beam.status = status,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

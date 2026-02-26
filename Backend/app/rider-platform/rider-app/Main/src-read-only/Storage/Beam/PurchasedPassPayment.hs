@@ -32,6 +32,7 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
     profilePicture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     purchasedPassId :: B.C f Kernel.Prelude.Text,
     startDate :: B.C f Data.Time.Calendar.Day,
+    staticPersonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Domain.Types.PurchasedPass.StatusType,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
