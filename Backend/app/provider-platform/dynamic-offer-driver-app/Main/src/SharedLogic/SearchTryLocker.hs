@@ -46,7 +46,7 @@ lockSearchTry ::
   m Bool
 lockSearchTry searchTryId = do
   k <- (<= 1) <$> Hedis.incr (mkCancelledKey' searchTryId)
-  Hedis.expire (mkCancelledKey' searchTryId) 5
+  when k $ Hedis.expire (mkCancelledKey' searchTryId) 5
   return k
 
 unlockSearchTry ::
