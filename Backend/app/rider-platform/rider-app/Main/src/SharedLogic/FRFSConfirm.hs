@@ -183,6 +183,11 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       mbSearch <- QFRFSSearch.findById searchId
 
       let isFareChanged = if isJust partnerOrgId then isJust oldCacheDump else False
+      let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< routeStationsJson
+      let mbFirstRouteStation = listToMaybe (fromMaybe [] routeStations)
+      let mbRouteCode = mbFirstRouteStation <&> (.code)
+      let mbRouteName = mbFirstRouteStation <&> (.longName)
+      let mbServiceTierType = mbFirstRouteStation >>= (.vehicleServiceTier) <&> (._type)
 
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking
@@ -218,6 +223,17 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 failureReason = Nothing,
                 isSingleMode = isSingleMode,
                 isMockPayment = mbMockPayment,
+                finalBoardedVehicleNumber = Nothing,
+                finalBoardedVehicleNumberSource = Nothing,
+                finalBoardedVehicleServiceTierType = Nothing,
+                finalBoardedDepotNo = Nothing,
+                finalBoardedScheduleNo = Nothing,
+                finalBoardedWaybillId = Nothing,
+                conductorId = Nothing,
+                driverId = Nothing,
+                routeCode = mbRouteCode,
+                routeName = mbRouteName,
+                serviceTierType = mbServiceTierType,
                 ondcOnInitReceived = Nothing,
                 ondcOnInitReceivedAt = Nothing,
                 holdId = mbHoldCtxForAll <&> (\(h, _, _) -> h),
@@ -229,10 +245,8 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       QFRFSTicketBooking.create booking
 
       -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json
-      let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< routeStationsJson
-      let mbFirstRouteStation = listToMaybe (fromMaybe [] routeStations)
       let mbBookedRouteShortName = mbFirstRouteStation <&> (.shortName)
-      let mbBookedServiceTierType = mbFirstRouteStation >>= (.vehicleServiceTier) <&> (._type)
+      let mbBookedServiceTierType = mbServiceTierType
       when (isJust mbBookedRouteShortName && isJust mbBookedServiceTierType) $ do
         mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
         whenJust mbJourneyLeg $ \journeyLeg -> do
@@ -532,6 +546,18 @@ buildJourneyAndLeg booking fareParameters = do
     QLocation.createMany [fromLocation, toLocation]
     QJourney.create journey
     QJourneyLeg.create journeyLeg
+    -- Sync journey leg data to frfs_ticket_booking for analytics
+    fork "FRFS Analytics: sync vehicle data to ticket booking" $
+      QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataBySearchId
+        journeyLeg.finalBoardedBusNumber
+        journeyLeg.finalBoardedBusNumberSource
+        journeyLeg.finalBoardedWaybillId
+        journeyLeg.finalBoardedScheduleNo
+        journeyLeg.finalBoardedDepotNo
+        journeyLeg.finalBoardedBusServiceTierType
+        journeyLeg.busConductorId
+        journeyLeg.busDriverId
+        booking.searchId.getId
   where
     mkBookingJourneyCreateKey = "booking:journey:create:bookingId-" <> booking.id.getId
 
