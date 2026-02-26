@@ -27,6 +27,6 @@ data ApplicationEvent
   | RideEndOffers
   | PenaltyCheck
   | UpgradeTier
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, Ord, Show, Read, Generic, Enum, Bounded, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''ApplicationEvent)

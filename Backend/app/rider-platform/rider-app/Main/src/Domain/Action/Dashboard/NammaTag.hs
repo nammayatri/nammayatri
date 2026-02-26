@@ -18,6 +18,7 @@ module Domain.Action.Dashboard.NammaTag
     getNammaTagTimeBounds,
     getNammaTagAppDynamicLogicVersions,
     getNammaTagAppDynamicLogicDomains,
+    getNammaTagAppDynamicLogicDomainsAndEvents,
     getNammaTagAppDynamicLogicGetDomainSchema,
     getNammaTagQueryAll,
     postNammaTagUpdateCustomerTag,
@@ -69,6 +70,7 @@ import qualified Lib.Yudhishthira.SchemaInstances ()
 import Lib.Yudhishthira.SchemaTH
 import Lib.Yudhishthira.SchemaUtils
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
+import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as QNammaTag
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYTU
@@ -305,6 +307,18 @@ getNammaTagAppDynamicLogicVersions _merchantShortId _opCity = YudhishthiraFlow.g
 
 getNammaTagAppDynamicLogicDomains :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow LYTU.AppDynamicLogicDomainResp
 getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return LYTU.allValues
+
+getNammaTagAppDynamicLogicDomainsAndEvents ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Bool ->
+  Environment.Flow LYTU.NammaTagEventsOrNammaTagNamesResp
+getNammaTagAppDynamicLogicDomainsAndEvents _merchantShortId _opCity mbFetchNammaTagNames =
+  case mbFetchNammaTagNames of
+    Just True -> do
+      tags <- QNammaTag.findAll
+      return $ LYTU.NammaTagNames (map (.name) tags)
+    _ -> return $ LYTU.NammaTagEvents LYTU.allValues
 
 getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.Chakra -> Environment.Flow LYTU.ChakraQueryResp
 getNammaTagQueryAll _merchantShortId _opCity = YudhishthiraFlow.getNammaTagQueryAll
