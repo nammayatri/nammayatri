@@ -356,6 +356,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         cancellationChargesOnCancel = Nothing,
         driverCancellationPenaltyWaivedReason = Nothing,
         finalFarePolicyId = Nothing,
+        subscriptionPurchaseIds = Nothing,
         cloudType = cloudType
       }
 

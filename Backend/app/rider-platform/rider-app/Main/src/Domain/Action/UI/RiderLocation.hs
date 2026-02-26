@@ -49,9 +49,10 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
       let nearbyBusSearchRadius :: Double = fromMaybe 0.1 riderConfig.nearbyBusSearchRadius
           maxNearbyBuses :: Int = fromMaybe 5 riderConfig.maxNearbyBuses
       cloudType <- asks (.cloudType)
-      busesBS <- mapM (pure . decodeUtf8) =<< case cloudType of
-        Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
-        _ -> CQMMB.withCrossAppRedisNew $ Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
+      busesBS <-
+        mapM (pure . decodeUtf8) =<< case cloudType of
+          Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
+          _ -> CQMMB.withCrossAppRedisNew $ Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
       logDebug $ "getNearbyBuses: busesBS: " <> show busesBS
       if null busesBS
         then do

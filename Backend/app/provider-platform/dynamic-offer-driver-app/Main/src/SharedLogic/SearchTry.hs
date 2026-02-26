@@ -29,6 +29,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.External.Maps
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -60,7 +61,6 @@ import qualified Tools.Metrics as Metrics
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
-import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 
 getNextScheduleTime ::
   ( MonadFlow m,

@@ -6,6 +6,7 @@ module Storage.Queries.Ride (module Storage.Queries.Ride, module ReExport) where
 
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Ride
+import qualified Domain.Types.SubscriptionPurchase
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -100,6 +101,13 @@ updateRideTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude
 updateRideTags rideTags id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.rideTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType rideTags), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateSubscriptionPurchaseIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.SubscriptionPurchase.SubscriptionPurchase] -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateSubscriptionPurchaseIds subscriptionPurchaseIds id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.subscriptionPurchaseIds ((Kernel.Types.Id.getId <$>) <$> subscriptionPurchaseIds), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTipAmountField :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateTipAmountField tipAmount id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.tipAmount tipAmount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

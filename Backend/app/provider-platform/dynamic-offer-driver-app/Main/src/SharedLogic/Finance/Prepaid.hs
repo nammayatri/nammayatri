@@ -629,23 +629,25 @@ handleSubscriptionExpiry purchase = do
 -- | After a ride debit, check if the oldest ACTIVE subscription should be marked EXHAUSTED.
 -- FIFO logic: if the current balance is at or below the sum of newer subscriptions' credits,
 -- the oldest subscription's credits are fully used up.
+-- Returns the list of subscription purchase IDs that contributed credits to the ride
+-- (both exhausted ones and the oldest remaining active one).
 checkAndMarkExhaustedSubscriptions ::
   (BeamFlow m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   DSP.SubscriptionOwnerType ->
-  m ()
+  m [Id DSP.SubscriptionPurchase]
 checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType = do
   allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
   mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId
   let currentBalance = fromMaybe 0 mbBalance
       -- Sort by purchaseTimestamp ASC (already from query), process FIFO
       sorted = DL.sortOn (.purchaseTimestamp) allActive
-  go sorted currentBalance
+  go sorted currentBalance []
   where
-    go [] _ = pure ()
-    go [_] _ = pure () -- Don't exhaust the last remaining subscription
-    go (oldest : rest) balance = do
+    go [] _ acc = pure acc
+    go [single] _ acc = pure (acc <> [single.id]) -- Last one is always contributing
+    go (oldest : rest) balance acc = do
       let restCredits = sum $ map (.planRideCredit) rest
       if balance <= restCredits
         then do
@@ -653,5 +655,5 @@ checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType = do
           QSP.updateStatusById DSP.EXHAUSTED oldest.id
           logInfo $ "Subscription " <> oldest.id.getId <> " marked EXHAUSTED"
           -- Continue checking (there might be more to exhaust)
-          go rest balance
-        else pure ()
+          go rest balance (acc <> [oldest.id])
+        else pure (acc <> [oldest.id]) -- Oldest is partially consumed

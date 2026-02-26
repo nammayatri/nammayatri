@@ -13,6 +13,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.VehicleVariant
 import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Maps
@@ -99,6 +100,7 @@ data Ride = Ride
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     status :: Domain.Types.Ride.RideStatus,
     stops :: [Domain.Types.Location.Location],
+    subscriptionPurchaseIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.SubscriptionPurchase.SubscriptionPurchase],
     tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

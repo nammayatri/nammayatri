@@ -617,7 +617,6 @@ updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch,
     toJsonText :: FRFSCachedQuote -> Text
     toJsonText cachedQuote = toStrict $ decodeUtf8 $ encode cachedQuote
 
-
 updateQuoteCategoriesFromOnSearch ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   ((Quote.FRFSQuote, [FRFSQuoteCategory]), (Quote.FRFSQuote, [FRFSQuoteCategory])) ->

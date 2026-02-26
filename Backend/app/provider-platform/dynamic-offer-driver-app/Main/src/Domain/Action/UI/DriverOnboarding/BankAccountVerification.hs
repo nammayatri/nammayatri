@@ -16,7 +16,7 @@ module Domain.Action.UI.DriverOnboarding.BankAccountVerification
   ( DriverBankAccountVerifyReq (..),
     verifyBankAccount,
     getInfoBankAccount,
-    deleteBankAccount
+    deleteBankAccount,
   )
 where
 
@@ -31,6 +31,7 @@ import qualified Kernel.External.Verification as KEV
 import Kernel.External.Verification.Interface.Types
 import qualified Kernel.External.Verification.Types as VerificationTypes
 import Kernel.Prelude
+import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, getCurrentTime, throwError)
@@ -40,7 +41,6 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Person as Person
 import qualified Tools.Verification as Verification
-import Kernel.Types.APISuccess
 
 data DriverBankAccountVerifyReq = DriverBankAccountVerifyReq
   { bankAccountNo :: Text,

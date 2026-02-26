@@ -59,6 +59,7 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Randomizer (randomizeList)
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
@@ -90,7 +91,6 @@ import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
 import Tools.Maps as Maps
 import Utils.Common.Cac.KeyNameConstants
-import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 
 isBatchNumExceedLimit ::
   ( CacheFlow m r

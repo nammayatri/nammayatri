@@ -1,4 +1,5 @@
 imports:
+  SubscriptionPurchase: Domain.Types.SubscriptionPurchase
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Location: Domain.Types.Location
@@ -136,6 +137,7 @@ Ride:
     commission: Maybe HighPrecMoney
     driverGpsTurnedOff: Maybe Bool
     finalFarePolicyId: Maybe (Id FarePolicy)
+    subscriptionPurchaseIds: Maybe [Id SubscriptionPurchase]
 
   sqlType:
     id: character(36)
@@ -155,6 +157,7 @@ Ride:
     deliveryFileIds: "text[]"
     rideTags: "text[]"
     finalFarePolicyId: character(36)
+    subscriptionPurchaseIds: "text[]"
 
   default:
     traveledDistance: '0'
@@ -334,6 +337,10 @@ Ride:
     updateFinalFarePolicyId:
       kvFunction: updateOneWithKV
       params: [finalFarePolicyId]
+      where: id
+    updateSubscriptionPurchaseIds:
+      kvFunction: updateOneWithKV
+      params: [subscriptionPurchaseIds]
       where: id
 
   excludedDefaultQueries:

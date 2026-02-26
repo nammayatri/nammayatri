@@ -82,6 +82,7 @@ import GHC.Num.Integer (integerFromInt, integerToInt)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude hiding (find, forM_, map, whenJust)
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -158,7 +159,6 @@ import Tools.Notifications
 import qualified Tools.PaymentNudge as PaymentNudge
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
-import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 
 endRideTransaction ::
   ( CacheFlow m r,
@@ -353,7 +353,9 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 booking.id.getId
                 Nothing
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
-            checkAndMarkExhaustedSubscriptions counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER
+            contributingPurchaseIds <- checkAndMarkExhaustedSubscriptions counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER
+            unless (null contributingPurchaseIds) $
+              QRide.updateSubscriptionPurchaseIds (Just contributingPurchaseIds) ride.id
             pure ()
         Nothing -> do
           Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
@@ -374,7 +376,9 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
             let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
                 balanceUpdatedTitle = "Subscription balance updated!"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
-            checkAndMarkExhaustedSubscriptions counterpartyDriver ride.driverId.getId DSP.DRIVER
+            contributingPurchaseIds <- checkAndMarkExhaustedSubscriptions counterpartyDriver ride.driverId.getId DSP.DRIVER
+            unless (null contributingPurchaseIds) $
+              QRide.updateSubscriptionPurchaseIds (Just contributingPurchaseIds) ride.id
             let subscriptionConfig = thresholdConfig.subscriptionConfig
             let prepaidSubscriptionThreshold = subscriptionConfig.prepaidSubscriptionThreshold
             when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do

@@ -1356,7 +1356,6 @@ getInfoBankAccount (mbPersonId, merchantId, merchantOpCityId) requestId _driverI
     BankAccountVerification.getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId
   return bankAccountVerificationResponse
 
-
 postDriverDeleteBankAccount ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
