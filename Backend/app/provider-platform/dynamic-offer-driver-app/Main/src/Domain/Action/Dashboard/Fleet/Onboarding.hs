@@ -181,6 +181,7 @@ castDocumentStatusItem SStatus.DocumentStatusItem {..} =
   CommonOnboarding.DocumentStatusItem
     { documentType = SDO.castDocumentType documentType,
       verificationStatus = castResponseStatus verificationStatus,
+      expiryDate = documentExpiry,
       ..
     }
 
@@ -198,6 +199,7 @@ castVehicleDocumentItem :: SStatus.VehicleDocumentItem -> CommonOnboarding.Vehic
 castVehicleDocumentItem SStatus.VehicleDocumentItem {..} =
   CommonOnboarding.VehicleDocumentItem
     { documents = castDocumentStatusItem <$> documents,
+      expiryDate = documentExpiry,
       ..
     }
 

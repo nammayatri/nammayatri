@@ -144,12 +144,21 @@ createPath driverId merchantId documentType mbExtension = do
 
 validateImageHandler ::
   Bool ->
+  Maybe Person.Role ->
+  Maybe [DVC.DocumentVerificationConfig] ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ImageValidateRequest ->
   Flow ImageValidateResponse
-validateImageHandler isDashboard (personId, _, merchantOpCityId) req@ImageValidateRequest {..} = do
+validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merchantOpCityId) req@ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
+  docConfigs <- maybe (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing) pure mbDocConfigs
+  -- Only restrict when rolesAllowedToUploadDocument is non-empty; Nothing or [] means all roles allowed
+  whenJust (listToMaybe docConfigs >>= (.rolesAllowedToUploadDocument)) $ \allowedRoles ->
+    when (not $ null allowedRoles) $ do
+      let uploaderRole = fromMaybe person.role mbUploaderRole
+      unless (uploaderRole `elem` allowedRoles) $
+        throwError (InvalidRequesterRole $ show uploaderRole)
   when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -214,12 +223,10 @@ validateImageHandler isDashboard (personId, _, merchantOpCityId) req@ImageValida
       -- skipping validation for rc as validation not available in idfy
       isImageValidationRequired <- case person.role of
         Person.FLEET_OWNER -> do
-          --------------- Image validation for fleet
-          docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
-          return $ maybe True (.isImageValidationRequired) docConfigs
-        _ -> do
-          docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory) Nothing
-          return $ maybe True (.isImageValidationRequired) docConfigs
+          --------------- Image validation for fleet (different config table than docConfigs)
+          fleetDocConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
+          return $ maybe True (.isImageValidationRequired) fleetDocConfigs
+        _ -> return $ maybe True (.isImageValidationRequired) $ find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
       if isImageValidationRequired && isNothing validationStatus
         then do
           validationOutput <-
@@ -254,15 +261,17 @@ validateImageHandler isDashboard (personId, _, merchantOpCityId) req@ImageValida
 
 validateImage ::
   Bool ->
+  Maybe Person.Role ->
+  Maybe [DVC.DocumentVerificationConfig] ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ImageValidateRequest ->
   Flow ImageValidateResponse
-validateImage isDashboard (personId, merchantId, merchantOpCityId) req@ImageValidateRequest {..} = do
+validateImage isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) req@ImageValidateRequest {..} = do
   isLocked <- withLockPersonId
   if isLocked
     then do
       finally
-        (validateImageHandler isDashboard (personId, merchantId, merchantOpCityId) req)
+        (validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) req)
         ( do
             Redis.unlockRedis mkLockKey
             logDebug $ "Create Image Lock for PersonId: " <> personId.getId <> " Unlocked"
@@ -310,12 +319,14 @@ castImageType _ = Verification.VehicleRegistrationCertificate -- Fix Later
 
 validateImageFile ::
   Bool ->
+  Maybe Person.Role ->
+  Maybe [DVC.DocumentVerificationConfig] ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ImageValidateFileRequest ->
   Flow ImageValidateResponse
-validateImageFile isDashboard (personId, merchantId, merchantOpCityId) ImageValidateFileRequest {..} = do
+validateImageFile isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber validationStatus workflowTransactionId Nothing Nothing Nothing
+  validateImage isDashboard mbUploaderRole mbDocConfigs (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber validationStatus workflowTransactionId Nothing Nothing Nothing
 
 mkImage ::
   (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>

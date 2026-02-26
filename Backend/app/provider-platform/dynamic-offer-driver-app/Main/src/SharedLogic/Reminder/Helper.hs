@@ -17,6 +17,7 @@ module SharedLogic.Reminder.Helper
     cancelRemindersForEntity,
     cancelRemindersForDriverByDocumentType,
     cancelRemindersForRCByDocumentType,
+    cancelPendingReminders,
     recordDocumentCompletion,
     checkAndCreateReminderIfNeeded,
     precomputeThresholdCheckData,

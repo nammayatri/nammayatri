@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Ride.CancelRide.Internal
   ( cancelRideImpl,
+    cancelRideTransaction,
     updateNammaTagsForCancelledRide,
     driverDistanceToPickup,
     getCancellationCharges,

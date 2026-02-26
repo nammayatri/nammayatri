@@ -121,3 +121,25 @@ findLatestByRegistrationNoAndRequestType registrationNo requestType = do
     (Just 1)
     Nothing
     <&> listToMaybe
+
+-- Duplicate check: any PENDING request for this driver (any creator)
+findPendingByDriverIdAndRequestType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> RequestType -> m (Maybe OperationHubRequests)
+findPendingByDriverIdAndRequestType driverId requestType =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamOHR.driverId $ Se.Eq (Just $ getId driverId),
+          Se.Is BeamOHR.requestType $ Se.Eq requestType,
+          Se.Is BeamOHR.requestStatus $ Se.Eq PENDING
+        ]
+    ]
+
+-- Duplicate check: any PENDING request for this RC (any creator)
+findPendingByRegistrationNoAndRequestType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> RequestType -> m (Maybe OperationHubRequests)
+findPendingByRegistrationNoAndRequestType registrationNo requestType =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamOHR.registrationNo $ Se.Eq (Just registrationNo),
+          Se.Is BeamOHR.requestType $ Se.Eq requestType,
+          Se.Is BeamOHR.requestStatus $ Se.Eq PENDING
+        ]
+    ]

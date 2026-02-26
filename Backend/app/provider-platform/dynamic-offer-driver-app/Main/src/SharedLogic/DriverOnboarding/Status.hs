@@ -18,6 +18,7 @@ module SharedLogic.DriverOnboarding.Status
     mkCommonDocumentItem,
     checkInspectionHubRequestCreated,
     getInspectionHubStatusForResponseStatus,
+    checkLMSTrainingStatus,
   )
 where
 
@@ -37,7 +38,6 @@ import qualified Domain.Types.HyperVergeVerification as HV
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as Plan
@@ -46,22 +46,21 @@ import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
+import GHC.Records.Extra (HasField)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Plasma as Plasma
-import Kernel.External.Types
+import Kernel.External.Types (Language, ServiceFlow)
 import qualified Kernel.External.Verification as KEV
-import Kernel.Prelude
+import Kernel.Prelude hiding (HasField)
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (HasField)
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
 import qualified Storage.Queries.DigilockerVerification as QDV
@@ -88,6 +87,7 @@ import qualified Storage.Queries.VehiclePermit as VPQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Tools.BackgroundVerification as BackgroundVerification
 import Tools.Error (DriverOnboardingError (ImageNotValid))
+import qualified Tools.Plasma as TPlasma
 import qualified Tools.SMS as Sms
 import qualified Tools.Verification as Verification
 
@@ -1005,26 +1005,17 @@ checkImageValidity driverImagesInfo docType = do
       | any (\img -> img.verificationStatus == Just Documents.MANUAL_VERIFICATION_REQUIRED) validImages = (Just MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
       | otherwise = (Nothing, Nothing, Nothing)
 
-checkLMSTrainingStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow (Maybe ResponseStatus)
+checkLMSTrainingStatus ::
+  ( ServiceFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DP.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe ResponseStatus)
 checkLMSTrainingStatus driverId merchantOpCityId = do
-  -- Get Plasma service config from merchant service config
-  mbPlasmaConfig <- QMSC.findByServiceAndCity (DMSC.PlasmaService Plasma.LMS) merchantOpCityId
-  case mbPlasmaConfig of
-    Nothing -> return Nothing -- No Plasma config found, return Nothing
-    Just plasmaServiceConfig -> do
-      case plasmaServiceConfig.serviceConfig of
-        DMSC.PlasmaServiceConfig plasmaConfig -> do
-          -- Call Plasma LMS API to get modules for the driver
-          -- getLMSModules takes PlasmaServiceConfig and driverId as Text
-          mbModules <- withTryCatch "checkLMSTrainingStatus" $ do
-            Plasma.getLMSModules plasmaConfig (driverId.getId)
-          case mbModules of
-            Right modules -> do
-              -- Check if all modules have status COMPLETED
-              let hasCompleted = all (\lmsModule -> lmsModule.status == Plasma.COMPLETED) modules
-              return $ if hasCompleted then Just VALID else Nothing
-            Left _ -> return Nothing -- API call failed, return Nothing
-        _ -> return Nothing -- Invalid service config type
+  hasCompleted <- TPlasma.allLMSTrainingCompleted merchantOpCityId (driverId.getId)
+  return $ hasCompleted >>= (\ok -> if ok then Just VALID else Nothing)
 
 checkVehiclePhotosStatusByRC :: Maybe IQuery.RcImagesInfo -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkVehiclePhotosStatusByRC mbRcImagesInfo = do

@@ -250,7 +250,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
             fileExtension = Just "pdf"
           }
 
-  Image.ImageValidateResponse {imageId} <- Image.validateImage False (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
+  Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
   logInfo $ "PullDocument - Uploaded DL PDF to S3 (DigiLocker verified), ImageId: " <> imageId.getId
 
   let vehicleCategory = session.vehicleCategory

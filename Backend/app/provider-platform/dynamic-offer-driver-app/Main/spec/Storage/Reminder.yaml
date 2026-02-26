@@ -43,6 +43,10 @@ Reminder:
       kvFunction: findAllWithKV
       where:
         and: [driverId, status]
+    findAllPendingByDriverIdAndDocumentType:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, status, documentType]
     findAllByEntityIdAndDocumentType:
       kvFunction: findAllWithKV
       where:

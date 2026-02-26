@@ -180,13 +180,13 @@ verifyAadhaar (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI 
   pure Success
 
 validateImage :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
-validateImage (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId, merchantOpCityId)
+validateImage (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImage False Nothing Nothing (personId, merchantId, merchantOpCityId)
 
 validateDocumentImage :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DocumentRegistration.ValidateDocumentImageRequest -> FlowHandler DocumentRegistration.ValidateDocumentImageResponse
 validateDocumentImage (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DocumentRegistration.validateDocument False (personId, merchantId, merchantOpCityId) req
 
 validateImageFile :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Image.ImageValidateFileRequest -> FlowHandler Image.ImageValidateResponse
-validateImageFile (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImageFile False (personId, merchantId, merchantOpCityId)
+validateImageFile (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImageFile False Nothing Nothing (personId, merchantId, merchantOpCityId)
 
 generateAadhaarOtp :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> AadhaarVerification.AadhaarOtpReq -> FlowHandler AadhaarVerification.AadhaarVerificationResp
 generateAadhaarOtp (personId, _, merchantOpCityId) = withFlowHandlerAPI . AV.generateAadhaarOtp False Nothing personId merchantOpCityId

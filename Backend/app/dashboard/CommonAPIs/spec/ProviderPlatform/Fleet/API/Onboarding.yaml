@@ -165,6 +165,8 @@ types:
     verificationStatus: ResponseStatus
     verificationMessage: Maybe Text
     verificationUrl: Maybe BaseUrl
+    s3Path: Maybe Text
+    expiryDate: Maybe UTCTime
   ResponseStatus:
     enum: "NO_DOC_AVAILABLE,PENDING,VALID,FAILED,INVALID,LIMIT_EXCEED,MANUAL_VERIFICATION_REQUIRED,UNAUTHORIZED,PULL_REQUIRED,CONSENT_DENIED"
   VehicleDocumentItem:
@@ -177,6 +179,8 @@ types:
     vehicleModel: Maybe Text
     documents: [DocumentStatusItem]
     dateOfUpload: UTCTime
+    s3Path: Maybe Text
+    expiryDate: Maybe UTCTime
   ReferralInfoRes:
     personId: Id Driver
     name: Text

@@ -1212,9 +1212,10 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
     when (entityId.getId /= requestorId) $ do
       entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, entityId] merchantOpCityId
       entity <- find (\e -> e.id == entityId) entities & fromMaybeM (PersonDoesNotExist entityId.getId)
-      requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
-      isValid <- isAssociationBetweenTwoPerson requestor entity
-      unless isValid $ throwError AccessDenied
+      -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+      whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+        isValid <- isAssociationBetweenTwoPerson requestor entity
+        unless isValid $ throwError AccessDenied
 
   let personId = cast @Common.Driver @DP.Person $ fromMaybe (Id requestorId) mbEntityId
   DDriver.findOnboardedDriversOrFleets personId merchantOpCityId mbFromDate mbToDate
@@ -1260,9 +1261,10 @@ getDriverEarnings merchantShortId opCity from to earningType dId requestorId = d
   let driverId = cast @Common.Driver @DP.Person dId
   entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, driverId] merchantOpCityId
   driver <- find (\e -> e.id == driverId) entities & fromMaybeM (PersonDoesNotExist driverId.getId)
-  requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
-  isValid <- isAssociationWithDriver requestor driver
-  unless isValid $ throwError AccessDenied
+  -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+  whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+    isValid <- isAssociationWithDriver requestor driver
+    unless isValid $ throwError AccessDenied
   DDriver.getEarnings (driverId, merchant.id, merchantOpCityId) from to earningType
   where
     isAssociationWithDriver :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
