@@ -90,9 +90,10 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
       entityImages <- IQuery.findAllByEntityId transporterConfig entity
       let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
       let shouldActivateRc = False
+          skipMessages = False -- Need translations for API response
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc Nothing
+          <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc Nothing skipMessages
       pure $
         Common.FleetInfo
           { id = ID.cast fleetOwnerPersonId,
