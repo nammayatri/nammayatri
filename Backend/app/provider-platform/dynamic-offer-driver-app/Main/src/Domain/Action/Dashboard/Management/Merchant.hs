@@ -162,6 +162,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.SpecialLocationUpsert as SLU
+import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIPC
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
@@ -3805,6 +3806,8 @@ postMerchantConfigVehicleServiceTierUpdate merchantShortId opCity serviceTierTyp
   whenJust updatedConfig.vehicleCategory $ \cat ->
     CQVST.clearCacheByVehicleCategory merchantOpCityId (Just cat)
 
+  VSTAR.clearVSTAreasCache updatedConfig
+
   logTagInfo "dashboard -> postMerchantConfigVehicleServiceTierUpdate : " $
     show merchant.id <> " serviceTierType: " <> show serviceTierType
 
@@ -3891,7 +3894,8 @@ applyVehicleServiceTierUpdate existing req =
       DVST.stopFcmSuppressCount = req.stopFcmSuppressCount <|> existing.stopFcmSuppressCount,
       DVST.scheduleBookingListEligibilityTags = req.scheduleBookingListEligibilityTags <|> existing.scheduleBookingListEligibilityTags,
       DVST.vehicleCategory = req.vehicleCategory <|> existing.vehicleCategory,
-      DVST.isEnabled = req.isEnabled <|> existing.isEnabled
+      DVST.isEnabled = req.isEnabled <|> existing.isEnabled,
+      DVST.allowedAreas = req.allowedAreas <|> existing.allowedAreas
     }
 
 getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.GeometryResp
@@ -3987,6 +3991,7 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         scheduleBookingListEligibilityTags = req.scheduleBookingListEligibilityTags,
         vehicleCategory = Just req.vehicleCategory,
         isEnabled = Just req.isEnabled,
+        allowedAreas = req.allowedAreas,
         createdAt = now,
         updatedAt = now
       }

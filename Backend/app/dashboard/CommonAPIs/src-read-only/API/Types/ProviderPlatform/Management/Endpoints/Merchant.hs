@@ -692,7 +692,8 @@ data VehicleServiceTierConfigCreateReq = VehicleServiceTierConfigCreateReq
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     vehicleCategory :: Dashboard.Common.VehicleCategory,
-    isEnabled :: Kernel.Prelude.Bool
+    isEnabled :: Kernel.Prelude.Bool,
+    allowedAreas :: Kernel.Prelude.Maybe [Dashboard.Common.VSTAllowedArea]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -725,7 +726,8 @@ data VehicleServiceTierConfigUpdateReq = VehicleServiceTierConfigUpdateReq
     stopFcmThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allowedAreas :: Kernel.Prelude.Maybe [Dashboard.Common.VSTAllowedArea]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -759,7 +761,8 @@ data VehicleServiceTierItem = VehicleServiceTierItem
     stopFcmThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allowedAreas :: Kernel.Prelude.Maybe [Dashboard.Common.VSTAllowedArea]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

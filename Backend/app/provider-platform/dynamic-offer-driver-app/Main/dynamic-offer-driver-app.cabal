@@ -494,6 +494,7 @@ library
       SharedLogic.Type
       SharedLogic.UserCancellationDues
       SharedLogic.VehicleServiceTier
+      SharedLogic.VehicleServiceTierAreaRestriction
       SharedLogic.WMB
       Storage.Beam.BecknRequest
       Storage.Beam.Coins.CoinHistory
