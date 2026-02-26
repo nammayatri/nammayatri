@@ -218,6 +218,10 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
             return 0
           else return $ round $ amountPaid / transporterConfig.cancellationFee
       QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - disputeChances)) (riderDetails.cancellationDues - amountPaid) riderDetails.id
+      QRD.updateCancellationDuesPaid amountPaid riderDetails.id.getId
+      QRD.updateNoOfTimesCanellationDuesPaid riderDetails.id.getId
+      QRD.updateValidCancellationsCount riderDetails.id.getId
+      QRD.decrementCancellationDueRidesCount riderDetails.id.getId
     (Nothing, Just disputeChancesUsedReq) -> do
       when (disputeChancesUsedReq > transporterConfig.cancellationFeeDisputeLimit || disputeChancesUsedReq < 0) $ do
         throwError (DisputeChancesLimitNotMet riderDetails.id.getId (show disputeChancesUsedReq) (show transporterConfig.cancellationFeeDisputeLimit))

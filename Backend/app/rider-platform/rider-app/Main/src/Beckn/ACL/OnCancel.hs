@@ -60,9 +60,11 @@ bookingCancelledEvent order = do
   let mbCancellationFee = order.orderCancellationTerms >>= listToMaybe >>= (.cancellationTermCancellationFee) >>= (.feeAmount)
   let cancellationFeeAmount = mbCancellationFee >>= (.priceValue) >>= highPrecMoneyFromText
   let cancellationFeeCurrency :: Maybe Currency = mbCancellationFee >>= (.priceCurrency) >>= readMaybe @Currency
+  let cancellationReasonCode = order.orderCancellation >>= (.cancellationReasonCode)
   return $
     DOnCancel.BookingCancelledReq
       { bppBookingId = Id bppBookingId,
         cancellationSource = cancellationSource,
-        cancellationFee = cancellationFeeAmount <&> \feeAmount -> PriceAPIEntity feeAmount (fromMaybe INR cancellationFeeCurrency)
+        cancellationFee = cancellationFeeAmount <&> \feeAmount -> PriceAPIEntity feeAmount (fromMaybe INR cancellationFeeCurrency),
+        cancellationReasonCode = cancellationReasonCode
       }
