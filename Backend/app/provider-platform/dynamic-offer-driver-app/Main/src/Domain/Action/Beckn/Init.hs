@@ -268,6 +268,7 @@ handler merchantId req validatedReq = do
             paymentMode = searchRequest.paymentMode,
             searchTryId = searchTryId,
             dqDurationToPickup = dqDurationToPickup,
+            reconciliationStatus = Nothing,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)

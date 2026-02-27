@@ -8,6 +8,7 @@ where
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.Prelude
 import Kernel.Utils.Common
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), ExpireSubscriptionPurchaseJobData (..))
@@ -16,7 +17,8 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 
 expireSubscriptionPurchase ::
-  ( MonadFlow m,
+  ( BeamFlow m r,
+    MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
     JobCreatorEnv r,

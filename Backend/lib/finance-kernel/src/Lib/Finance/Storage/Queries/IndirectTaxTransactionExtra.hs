@@ -13,3 +13,6 @@ import qualified Sequelize as Se
 
 findByInvoiceNumber :: (BeamFlow m r) => Text -> m [Domain.IndirectTaxTransaction]
 findByInvoiceNumber invoiceNumber = do findAllWithKV [Se.Is Beam.invoiceNumber $ Se.Eq (Just invoiceNumber)]
+
+findByReferenceId :: (BeamFlow m r) => Text -> m [Domain.IndirectTaxTransaction]
+findByReferenceId referenceId = findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]

@@ -63,7 +63,9 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance (getEntriesByReference)
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as FinanceIndirectTax
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -260,7 +262,8 @@ buildRideListItem item@QRide.RideItem {..} = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   -- Prefill finance and lifecycle fields when we have full ride and booking
-  (ondcOrderId, buyerAppOrderId, pickupLocationId, dropLocationId, grossRideValue, subscriptionOffsetAmount, netPayableToDriver, paymentModeText, paymentReferenceInternal, walletTransactionIds, rideStartedAt, rideCompletedAt, rideCancelledAt, rideStatus, customerIdMasked, tripDistanceKm, tripDurationMinutes) <-
+
+  (ondcOrderId, buyerAppOrderId, pickupLocationId, dropLocationId, grossRideValue, subscriptionOffsetAmount, netPayableToDriver, paymentModeText, paymentReferenceInternal, walletTransactionIds, rideStartedAt, rideCompletedAt, rideCancelledAt, rideStatus, customerIdMasked, tripDistanceKm, tripDurationMinutes, gstApplicableFlag, gstRate, gstAmount) <-
     case (item.ride, item.booking) of
       (Just r, Just b) -> do
         let bookingIdStr = b.id.getId
@@ -279,12 +282,19 @@ buildRideListItem item@QRide.RideItem {..} = do
         let rideCancelledAt' = if r.status == DRide.CANCELLED then Just r.updatedAt else Nothing
         let tripDistKm = Just (highPrecMetersToMeters r.traveledDistance)
         let tripDurMin = timeDiffInMinutes <$> r.tripStartTime <*> r.tripEndTime
+        -- Get GST and gross ride value from indirect tax transaction
+        indirectTaxTxns <- QIndirectTax.findByReferenceId bookingIdStr
+        let mbRideFareTxn = listToMaybe $ filter (\txn -> txn.transactionType == FinanceIndirectTax.RideFare) indirectTaxTxns
+        let grossRideValue' = mbRideFareTxn <&> (.taxableValue)
+        let gstApplicableFlag' = isJust mbRideFareTxn
+        let gstRate' = mbRideFareTxn <&> (.gstRate)
+        let gstAmount' = mbRideFareTxn <&> (.totalGstAmount)
         pure
           ( Just b.transactionId,
             Just b.bapId,
             Just (r.fromLocation.id.getId),
             (\loc -> loc.id.getId) <$> r.toLocation,
-            r.fare,
+            grossRideValue',
             subOffset,
             netPayable,
             payModeText,
@@ -296,7 +306,10 @@ buildRideListItem item@QRide.RideItem {..} = do
             castRideStatus' r.status,
             getId <$> b.riderId,
             tripDistKm,
-            tripDurMin
+            tripDurMin,
+            Just gstApplicableFlag',
+            gstRate',
+            gstAmount'
           )
       _ ->
         pure
@@ -314,6 +327,9 @@ buildRideListItem item@QRide.RideItem {..} = do
             Nothing,
             Nothing,
             bookingStatusToRideStatus bookingStatus,
+            Nothing,
+            Nothing,
+            Nothing,
             Nothing,
             Nothing,
             Nothing
@@ -355,9 +371,9 @@ buildRideListItem item@QRide.RideItem {..} = do
         subscriptionOffsetAmount,
         incentivesAmount = Nothing,
         penaltiesAmount = Nothing,
-        gstApplicableFlag = Nothing,
-        gstRate = Nothing,
-        gstAmount = Nothing,
+        gstApplicableFlag = gstApplicableFlag,
+        gstRate = gstRate,
+        gstAmount = gstAmount,
         tdsApplicableFlag = Nothing,
         tdsRate = Nothing,
         tdsAmount = Nothing,

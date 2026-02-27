@@ -23,3 +23,9 @@ ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN to_starting_balance double
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN void_reason text ;
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.finance_ledger_entry ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN reconciliation_status text ;

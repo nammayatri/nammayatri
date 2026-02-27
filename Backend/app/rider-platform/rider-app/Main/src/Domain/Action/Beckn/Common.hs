@@ -44,7 +44,6 @@ import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -92,7 +91,6 @@ import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
@@ -121,7 +119,6 @@ import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJL
-import qualified Storage.Queries.PaymentInvoice as QPaymentInvoice
 import qualified Storage.Queries.PaymentInvoiceExtra as QPaymentInvoiceExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
