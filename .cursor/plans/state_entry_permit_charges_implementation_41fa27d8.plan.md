@@ -52,11 +52,11 @@ After Phase 1: No static toll anywhere; dynamic toll is the only toll source in 
 - **Spec (new YAML**, e.g. `spec/Storage/StateEntryPermitCharges.yaml` in dynamic-offer-driver-app/Main):
   - **Table:** `state_entry_permit_charges`
   - **Fields:**  
-    - `id` (PK), `amount` (e.g. HighPrecMoney or Price), `city`, `state`, `merchant_operating_city_id`, `merchant_id`  
-    - **Bounding box:** Either (a) array of points (4 or 5) representing rectangle sides, or (b) store polygon in geometry table and reference it. Per plan: align with existing geo storage; use **geom_id** (FK to Geometry table) for the state boundary polygon used for containment/intersection. For RBB vs SBB, if we store bbox separately: add a field that can be used with existing helpers (`getBoundingBox`, `lineSegmentWithinBoundingBox`, `doIntersect`, `pointWithinBoundingBox`). Option A: `bounding_box` as array of points (consecutive = sides). Option B: only `geom_id` and derive bbox from geometry when needed (or add a cached bbox column). Recommend: **geom_id** (FK to Geometry) plus optional **bounding_box** (e.g. array type or JSON) for fast RBB/SBB filter without loading geom.
-  - **Queries:** e.g. `findByMerchantOperatingCityAndStateIn` (state in list), or `findAllByMerchantOperatingCity` then filter by state in allowed set.
-- **Geometry link:** Geometry table already has `id`, `city`, `state`, `region`, `geom`. StateEntryPermitCharges.geom_id → Geometry.id. Merchant_state / allowed_states: use [Domain.Types.MerchantState](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only/Domain/Types/MerchantState.hs) (`state`, `allowedDestinationStates`); filter SEPC rows by state ∈ allowedDestinationStates (or by source state depending on product; plan says “allowed_state of source” → get MerchantState by source, then allowed states list, then SEPC where state in that list).
-- **Migration:** Add table and FK; add index on (merchant_operating_city_id, state).
+    - `id` (PK), `amount` (e.g. HighPrecMoney or Price), `geom_id` (FK), optional `name` / description, and any SEPC-specific flags (e.g. vehicle applicability).  
+    - No `merchant_operating_city_id`, `city`, or `state` columns – state/city live in the referenced geometry row.
+  - **Queries:** Fetch SEPC by joining through geometry, e.g. “all SEPC whose geometry.state is in allowedDestinationStates for this ride’s source state”; filter by state (and city if needed) via the Geometry table, not via fields on SEPC.
+- **Geometry link and bounding box:** Geometry table holds the shapes per state (and “anycity” where applicable) and will also store a cached bounding box for each geometry. Columns: `id`, `state`, `city` (or `ANYCITY`), `region`, `geom`, and a **bounding_box** field derived from `geom` (used with helpers like `lineSegmentWithinBoundingBox`, `doIntersect`, etc.). `StateEntryPermitCharges.geom_id` → `Geometry.id`. Merchant_state / allowed_states: use [Domain.Types.MerchantState](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only/Domain/Types/MerchantState.hs) (`state`, `allowedDestinationStates`); filter SEPC rows by joining via `geom_id` to Geometry and then applying `state ∈ allowedDestinationStates` (and any city = ANYCITY rule, if used).
+- **Migration:** Add SEPC table and FK to Geometry; add appropriate indexes (e.g. on `geom_id`, and on `Geometry(state, city)` for SEPC lookups).
 
 ### 2.2 Ride
 
@@ -142,9 +142,17 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
     - **Unknown:** If areaSecond is “unknown” (no geom contains p2), do not charge. If areaFirst unknown and areaSecond in SEPC, charge (entry into permit state).
 8. **Return type:** `Maybe (HighPrecMoney, [Text], [Text])` (charges, names, ids) – same shape as toll for easy reuse in fare params and ride.
 
-**Geometry / point-in-polygon:** Use existing `findGeometriesContaining` / `findGeometriesContainingGps` only where cheap (e.g. after narrowing candidate geoms by state). Prefer: fetch candidate geoms once by geom_id, then in-memory point-in-polygon for each route point to avoid per-point DB cost. If no in-memory geom lib exists, use one bulk DB query that returns which geom contains each route point.
+**Geometry / point-in-polygon:** Use existing `findGeometriesContaining` / `findGeometriesContainingGps` only where cheap (e.g. after narrowing candidate geoms by state). Prefer: fetch candidate geoms once by geom_id, then in-memory point-in-polygon for each route point to avoid per-point DB cost.  
+**In-pod geom cache:** To avoid hitting Postgres for geoms on every request, cache SEPC geoms and their bounding boxes in-process using `IM.withInMemCache`, keyed by a **versioned** cache key, e.g. `["CACHED_SEPC_GEOMS", "geom:v3"]`, with a TTL (e.g. 12 hours). On first call for SEPC in a pod, load all SEPC rows + their geoms (or per-state slice), build in-memory structures, and store them under this key. When geom data changes (migration or manual update), bump the version (`geom:v3` → `geom:v4`) in config/code; this automatically invalidates old entries and forces a fresh load on the next request, while TTL provides an additional safety net.
 
-**Validation at end ride (no per-batch pending):** SEPC does not use a “pending crossing” Redis key like tolls (toll has entry-gate-detected-but-exit-not-found across batches). For SEPC, crossing is detected per segment (p1, p2) immediately, so there is no batch-to-batch “resume.” Implement `checkAndValidatePendingStateEntryPermits`: at end ride only, compare **estimated** state permit IDs (from booking/ride) with **detected** IDs (from Redis accumulation). Apply charges for **missing** estimated IDs only when pickup/drop is within threshold (route as expected) – this yields Neutral confidence. If tracking failed entirely, use estimated SEPC only (Unsure). Do not charge missing IDs without an estimate. No Redis key for “pending SEPC crossing” is required.
+**Validation at end ride (no per-batch pending):** SEPC does not use a “pending crossing” Redis key like tolls (toll has entry-gate-detected-but-exit-not-found across batches). For SEPC, crossing is detected per segment (p1, p2) immediately, so there is no batch-to-batch “resume.” Implement `checkAndValidatePendingStateEntryPermits`: at end ride only, compare **estimated** SEPC IDs (from booking/ride) with **detected** IDs (from Redis/ride accumulation), and combine them with distance-calculation status + pickup/drop threshold:  
+
+- If `estimatedIds == detectedIds` and tracking is healthy → **Sure**, use **detected** SEPC charges.  
+- If tracking/distance calculation clearly failed → **Unsure/Neutral**, use **estimated** SEPC charges only (conservative, estimate-based).  
+- If tracking is healthy and IDs differ:  
+  - When pickup/drop is **outside** threshold (route clearly changed) → **Sure**, use **detected** SEPC charges.  
+  - When pickup/drop is **within** threshold (route broadly as expected) → **Neutral**, prefer **estimated** SEPC (do not newly charge SEPC IDs that were never present in the estimate unless product explicitly allows).  
+  No Redis key for “pending SEPC crossing” is required.
 
 ---
 
@@ -205,12 +213,14 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
   - `finalDistanceCalculation` is called with estimated toll (charges, names, ids).  
   - After that, `checkAndValidatePendingTolls` runs; then `(tollCharges, tollNames, tollIds, tollConfidence)` are computed with Sure/Neutral/Unsure rules; ride is updated; fare params are recalculated with `tollCharges`.
 - **Change:**  
-  - Pass **estimated state permit** (charges, names, ids) into `finalDistanceCalculation` (extend signature) so that when waypoints are processed, SEPC is also accumulated (provider’s handler already accumulates SEPC in Redis; finalDistanceCalculation will have run the last batch and updated ride with detected SEPC via `updateStateEntryPermitChargesAndNamesAndIds`).  
+  - Pass **estimated state permit** (charges, names, ids) into `finalDistanceCalculation` (extend signature) so that when waypoints are processed, SEPC is also accumulated (provider’s handler already accumulates SEPC in Redis; `finalDistanceCalculation` will have run the last batch and updated ride with detected SEPC via `updateStateEntryPermitChargesAndNamesAndIds`).  
   - After `finalDistanceCalculation`, call `checkAndValidatePendingStateEntryPermits` (estimated SEPC IDs, detected SEPC IDs; no Redis pending – see Phase 4).  
-  - Compute `(stateEntryPermitCharges, stateEntryPermitNames, stateEntryPermitIds, stateEntryPermitConfidence)` with the **same Sure/Neutral/Unsure rules as toll**:  
-    - Sure: full route, all expected SEPC entries detected.  
-    - Neutral: some detected + apply missing estimated IDs when pickup/drop within threshold (estimated SEPC IDs that we didn’t see as “entry”).  
-    - Unsure: only estimated applied (e.g. tracking failed) or partial detection.
+  - Compute `(stateEntryPermitCharges, stateEntryPermitNames, stateEntryPermitIds, stateEntryPermitConfidence)` using SEPC-specific rules (mirroring toll structure but ID-based):  
+    - **IDs match & tracking healthy:** `estimatedIds == detectedIds` → **Sure**, use **detected** SEPC charges.  
+    - **Tracking/distance failed:** detector not trustworthy → **Unsure/Neutral**, use **estimated** SEPC charges only.  
+    - **Tracking healthy & IDs differ:**  
+      - Pickup/drop **outside** threshold (route clearly changed) → **Sure**, use **detected** SEPC charges.  
+      - Pickup/drop **within** threshold (route broadly as expected) → **Neutral**, prefer **estimated** SEPC; do not newly charge SEPC IDs that were never present in the estimate unless explicitly allowed.
   - Update ride with both toll and SEPC fields.  
   - Recalculate fare params with both `tollCharges` and `stateEntryPermitCharges`; pureFareSum / final fare = base + … + toll + stateEntryPermit.  
   - Clear the three SEPC Redis keys in end-ride cleanup (no pending cache for SEPC).  
