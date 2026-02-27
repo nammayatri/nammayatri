@@ -182,6 +182,7 @@ jobs:
           path: |
             buildtime-analysis/build_analysis.json
             buildtime-analysis/build_analysis_report.md
+            buildtime-analysis/dependency_analysis.json
             buildtime-analysis/*.png
             buildtime-analysis/*/*.png
           retention-days: 7

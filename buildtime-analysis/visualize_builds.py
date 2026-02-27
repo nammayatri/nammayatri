@@ -16,12 +16,44 @@ class BuildVisualizer:
             self.data = json.load(f)
 
         self.builds = self.data['builds']
-        self.timeline = self.data['timeline']
 
-        # Convert timestamp strings back to datetime objects
-        for event in self.timeline:
-            event['timestamp'] = datetime.fromisoformat(
-                event['timestamp'].replace('Z', '+00:00'))
+        # Timeline is optional - build from builds data if not present
+        self.timeline = self.data.get('timeline', [])
+        if self.timeline:
+            # Convert timestamp strings back to datetime objects
+            for event in self.timeline:
+                event['timestamp'] = datetime.fromisoformat(
+                    event['timestamp'].replace('Z', '+00:00'))
+        else:
+            # Build timeline from builds data
+            self.timeline = self._build_timeline_from_builds()
+
+        # parallel_groups may not be present
+        self.parallel_groups = self.data.get('parallel_groups', [])
+
+    def _build_timeline_from_builds(self):
+        """Build timeline events from builds data when timeline is not in JSON."""
+        timeline = []
+        for package, details in self.builds.items():
+            if details.get('start_time'):
+                start_dt = datetime.fromisoformat(details['start_time'].replace('Z', '+00:00'))
+                timeline.append({
+                    'timestamp': start_dt,
+                    'event_type': 'build_start',
+                    'package': package,
+                    'details': ''
+                })
+            if details.get('end_time'):
+                end_dt = datetime.fromisoformat(details['end_time'].replace('Z', '+00:00'))
+                timeline.append({
+                    'timestamp': end_dt,
+                    'event_type': 'build_end',
+                    'package': package,
+                    'details': ''
+                })
+        # Sort by timestamp
+        timeline.sort(key=lambda x: x['timestamp'])
+        return timeline
 
     def create_gantt_chart(self):
         """Create a Gantt chart showing build timeline and parallelization"""
@@ -136,16 +168,23 @@ class BuildVisualizer:
         ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
         # Bottom plot: Build durations histogram
-        completed_durations = [details['duration_minutes'] for details in self.builds.values()
-                               if not details.get('incomplete')]
+        # Calculate duration_minutes from duration_seconds if not present
+        completed_durations = []
+        for details in self.builds.values():
+            if not details.get('incomplete'):
+                if 'duration_minutes' in details:
+                    completed_durations.append(details['duration_minutes'])
+                elif 'duration_seconds' in details:
+                    completed_durations.append(details['duration_seconds'] / 60)
 
-        ax2.hist(completed_durations, bins=15, alpha=0.7,
-                 color='green', edgecolor='black')
-        ax2.set_xlabel('Build Duration (minutes)')
-        ax2.set_ylabel('Number of Builds')
-        ax2.set_title('Distribution of Build Times',
-                      fontsize=14, weight='bold')
-        ax2.grid(True, alpha=0.3)
+        if completed_durations:
+            ax2.hist(completed_durations, bins=15, alpha=0.7,
+                     color='green', edgecolor='black')
+            ax2.set_xlabel('Build Duration (minutes)')
+            ax2.set_ylabel('Number of Builds')
+            ax2.set_title('Distribution of Build Times',
+                          fontsize=14, weight='bold')
+            ax2.grid(True, alpha=0.3)
 
         plt.tight_layout()
         plt.savefig('./parallelization_analysis.png',
@@ -196,13 +235,23 @@ class BuildVisualizer:
         }
 
         for i, group in enumerate(parallel_groups):
+            # Helper to get duration in minutes
+            def get_duration_minutes(details):
+                if 'duration_minutes' in details:
+                    return details['duration_minutes']
+                elif 'duration_seconds' in details:
+                    return details['duration_seconds'] / 60
+                return 0
+
+            durations = [get_duration_minutes(details) for _, details in group]
+
             group_info = {
                 'phase': i + 1,
                 'packages': [pkg for pkg, _ in group],
                 'parallel_count': len(group),
-                'total_duration': sum(details['duration_minutes'] for _, details in group),
-                'max_duration': max(details['duration_minutes'] for _, details in group),
-                'avg_duration': sum(details['duration_minutes'] for _, details in group) / len(group)
+                'total_duration': sum(durations),
+                'max_duration': max(durations) if durations else 0,
+                'avg_duration': sum(durations) / len(durations) if durations else 0
             }
             report['parallel_groups'].append(group_info)
 
@@ -212,6 +261,126 @@ class BuildVisualizer:
 
         print("✅ Dependency analysis saved to dependency_analysis.json")
         return report
+
+    def create_module_compilation_chart(self):
+        """Create chart showing top longest module compilation times"""
+        print("📊 Creating module compilation time chart...")
+
+        modules = self.data.get('module_compilations', {})
+        if not modules:
+            print("⚠️  No module compilation data found, skipping chart")
+            return
+
+        # Sort modules by duration
+        sorted_modules = sorted(
+            modules.items(),
+            key=lambda x: x[1]['duration_seconds'],
+            reverse=True
+        )[:20]  # Top 20
+
+        # Prepare data
+        labels = []
+        durations = []
+        packages = []
+
+        for key, data in sorted_modules:
+            # Create a shortened label: Package.Module
+            module = data['module']
+            package = data['package']
+            # Truncate long module names
+            if len(module) > 30:
+                module = "..." + module[-27:]
+            labels.append(f"{package}\n{module}")
+            durations.append(data['duration_seconds'])
+            packages.append(package)
+
+        # Create figure
+        fig, ax = plt.subplots(figsize=(16, 10))
+
+        # Color by package
+        unique_packages = list(set(packages))
+        colors = plt.cm.Set3(np.linspace(0, 1, len(unique_packages)))
+        package_colors = {pkg: colors[i] for i, pkg in enumerate(unique_packages)}
+        bar_colors = [package_colors[pkg] for pkg in packages]
+
+        # Create horizontal bar chart
+        y_pos = np.arange(len(labels))
+        bars = ax.barh(y_pos, durations, color=bar_colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+
+        # Customize
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(labels, fontsize=8)
+        ax.invert_yaxis()  # Longest at top
+        ax.set_xlabel('Compilation Time (seconds)', fontsize=12)
+        ax.set_title('Top 20 Longest Module Compilation Times', fontsize=16, weight='bold')
+
+        # Add duration labels on bars
+        for i, (bar, duration) in enumerate(zip(bars, durations)):
+            width = bar.get_width()
+            label = f"{duration:.1f}s"
+            if duration >= 60:
+                label = f"{duration/60:.1f}m"
+            ax.text(width + 0.5, bar.get_y() + bar.get_height()/2,
+                   label, ha='left', va='center', fontsize=8)
+
+        # Add legend for packages
+        legend_elements = [plt.Rectangle((0,0),1,1, facecolor=package_colors[pkg], label=pkg, alpha=0.8)
+                          for pkg in unique_packages[:10]]  # Limit legend to first 10
+        ax.legend(handles=legend_elements, loc='lower right', fontsize=8)
+
+        plt.grid(axis='x', alpha=0.3)
+        plt.tight_layout()
+
+        # Save
+        plt.savefig('./module_compilation_times.png', dpi=300, bbox_inches='tight')
+        print("✅ Module compilation chart saved to module_compilation_times.png")
+        plt.close()
+
+    def create_cache_analysis_chart(self):
+        """Create chart showing cache usage breakdown"""
+        print("📊 Creating cache analysis chart...")
+
+        cache_stats = self.data.get('cache_stats', {})
+        cache_hits = self.data.get('cache_hits', [])
+
+        # Create figure with pie chart only
+        fig, ax = plt.subplots(figsize=(12, 8))
+
+        # Calculate totals: count hits per cache + local builds
+        cache_totals = {}
+
+        # Count cache hits by source
+        for hit in cache_hits:
+            cache_name = hit.get('cache', 'unknown')
+            if cache_name not in cache_totals:
+                cache_totals[cache_name] = 0
+            cache_totals[cache_name] += 1
+
+        # Add local builds
+        local_builds = cache_stats.get('local_build', {}).get('count', 0)
+        if local_builds > 0:
+            cache_totals['Local Build'] = local_builds
+
+        if cache_totals:
+            labels = list(cache_totals.keys())
+            sizes = list(cache_totals.values())
+            colors = plt.cm.Set2(np.linspace(0, 1, len(labels)))
+
+            wedges, texts, autotexts = ax.pie(
+                sizes, labels=labels, autopct='%1.1f%%',
+                colors=colors, startangle=90,
+                textprops={'fontsize': 11}
+            )
+            ax.set_title('Artifacts by Source (Cached vs Local Build)', fontsize=16, weight='bold')
+
+            # Add a legend with counts
+            legend_labels = [f'{label}: {size}' for label, size in zip(labels, sizes)]
+            ax.legend(wedges, legend_labels, title="Sources", loc="center left", bbox_to_anchor=(1, 0, 0.5, 1))
+
+        plt.tight_layout()
+        plt.savefig('./cache_analysis.png', dpi=300, bbox_inches='tight')
+        print("✅ Cache analysis chart saved to cache_analysis.png")
+        plt.close()
 
     def generate_summary_report(self):
         """Generate a comprehensive summary report"""
@@ -243,6 +412,16 @@ class BuildVisualizer:
         longest_builds = sorted(self.builds.items(),
                                 key=lambda x: x[1]['duration_seconds'], reverse=True)[:10]
 
+        # Module compilation stats
+        modules = self.data.get('module_compilations', {})
+        longest_modules = sorted(modules.items(),
+                                key=lambda x: x[1]['duration_seconds'], reverse=True)[:10] if modules else []
+
+        # Cache stats - only local builds
+        cache_stats = self.data.get('cache_stats', {})
+        local_builds = cache_stats.get('local_build', {}).get('count', 0)
+        cache_hits_count = len(self.data.get('cache_hits', []))
+
         # Create detailed report
         report = f"""
 # BUILD PERFORMANCE ANALYSIS REPORT
@@ -253,28 +432,50 @@ class BuildVisualizer:
 - **Parallelization Efficiency:** {parallelization_factor:.1f}x
 - **Builds Completed:** {completed_builds}/{total_builds}
 - **Average Build Duration:** {avg_duration / 60:.1f} minutes
+- **Cache Fetches:** {cache_hits_count}
+- **Local Builds:** {local_builds}
 
-## 🐌 Longest Build Times
+## 🐌 Longest Package Build Times
 """
 
         for i, (package, details) in enumerate(longest_builds, 1):
             status = " (INCOMPLETE)" if details.get('incomplete') else ""
-            report += f"{i:2d}. **{package}**: {details['duration_minutes']:.1f} minutes{status}\n"
+            # Get duration in minutes
+            if 'duration_minutes' in details:
+                duration_mins = details['duration_minutes']
+            elif 'duration_seconds' in details:
+                duration_mins = details['duration_seconds'] / 60
+            else:
+                duration_mins = 0
+            report += f"{i:2d}. **{package}**: {duration_mins:.1f} minutes{status}\n"
 
+        # Add module compilation section if available
+        if longest_modules:
+            report += "\n## 🐌 Longest Module Compilation Times\n"
+            for i, (key, data) in enumerate(longest_modules, 1):
+                report += f"{i:2d}. **{data['package']}** - `{data['module']}`: {data['duration_human']}\n"
+
+        # Add cache stats section - simplified
         report += f"""
+## 💾 Cache Statistics
+- **Artifacts Fetched from Cache:** {cache_hits_count}
+- **Artifacts Built Locally:** {local_builds}
 
 ## ⚡ Parallelization Analysis
-- **Maximum Concurrent Builds:** {len(max(self.data['parallel_groups'], key=lambda x: x['count'])['packages']) if self.data['parallel_groups'] else 1}
-- **Parallel Groups Identified:** {len(self.data['parallel_groups'])}
+- **Maximum Concurrent Builds:** {len(max(self.parallel_groups, key=lambda x: x['count'])['packages']) if self.parallel_groups else 1}
+- **Parallel Groups Identified:** {len(self.parallel_groups)}
 - **Estimated Parallel Efficiency:** {(parallelization_factor * 100):.1f}%
 
 ## 🔍 Key Insights
 
 ### Performance Bottlenecks:
-1. **{longest_builds[0][0]}** is the major bottleneck, taking {longest_builds[0][1]['duration_minutes']:.1f} minutes ({(longest_builds[0][1]['duration_seconds'] / wall_clock_time * 100):.1f}% of total time)
-2. Most other builds complete much faster (average {avg_duration / 60:.1f} minutes)
-3. Good parallelization achieved with up to {len(max(self.data['parallel_groups'], key=lambda x: x['count'])['packages']) if self.data['parallel_groups'] else 1} concurrent builds
+1. **{longest_builds[0][0]}** is the major bottleneck, taking {(longest_builds[0][1].get('duration_minutes') or longest_builds[0][1].get('duration_seconds', 0) / 60):.1f} minutes ({(longest_builds[0][1]['duration_seconds'] / wall_clock_time * 100):.1f}% of total time)
+"""
 
+        if longest_modules:
+            report += f"2. **Slowest module to compile**: `{longest_modules[0][1]['module']}` in package `{longest_modules[0][1]['package']}` taking {longest_modules[0][1]['duration_human']}\n"
+
+        report += f"""
 ### Recommendations:
 1. **Optimize the longest build** ({longest_builds[0][0]}) - consider splitting into smaller modules
 2. **Increase build cache usage** to avoid rebuilding unchanged dependencies  
@@ -291,6 +492,7 @@ class BuildVisualizer:
 - **Longest Build:** {max_duration / 60:.1f} minutes  
 - **Median Build Time:** {sorted(durations)[len(durations)//2] / 60:.1f} minutes
 - **Standard Deviation:** {np.std(durations) / 60:.1f} minutes
+- **Total Modules Compiled:** {len(modules)}
 """
 
         # Save the report
@@ -316,6 +518,8 @@ def main():
         # Create visualizations
         visualizer.create_gantt_chart()
         visualizer.create_parallel_analysis_chart()
+        visualizer.create_module_compilation_chart()
+        visualizer.create_cache_analysis_chart()
 
         # Generate analyses
         visualizer.create_dependency_analysis()
@@ -325,6 +529,8 @@ def main():
             f"\n🎉 Analysis complete! Check the following files in .:")
         print("   📊 build_gantt_chart.png - Visual timeline")
         print("   📈 parallelization_analysis.png - Parallelization metrics")
+        print("   📈 module_compilation_times.png - Module compilation times")
+        print("   📈 cache_analysis.png - Cache usage pie chart")
         print("   📋 build_analysis_report.md - Comprehensive report")
         print("   🔗 dependency_analysis.json - Dependency details")
 
