@@ -34,6 +34,7 @@ data SubscriptionPurchase = SubscriptionPurchase
     planId :: Kernel.Types.Id.Id Domain.Types.Plan.Plan,
     planRideCredit :: Kernel.Types.Common.HighPrecMoney,
     purchaseTimestamp :: Kernel.Prelude.UTCTime,
+    reconciliationStatus :: Kernel.Prelude.Maybe Data.Aeson.Value,
     serviceName :: Domain.Types.Extra.Plan.ServiceNames,
     status :: Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,

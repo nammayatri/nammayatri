@@ -4,6 +4,7 @@
 
 module Storage.Queries.SubscriptionPurchase (module Storage.Queries.SubscriptionPurchase, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.SubscriptionPurchase
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -38,6 +39,13 @@ findByPaymentOrderId ::
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m (Maybe Domain.Types.SubscriptionPurchase.SubscriptionPurchase))
 findByPaymentOrderId paymentOrderId = do findOneWithKV [Se.Is Beam.paymentOrderId $ Se.Eq (Kernel.Types.Id.getId paymentOrderId)]
 
+updateReconciliationStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Data.Aeson.Value -> Kernel.Types.Id.Id Domain.Types.SubscriptionPurchase.SubscriptionPurchase -> m ())
+updateReconciliationStatus reconciliationStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.reconciliationStatus reconciliationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus -> Kernel.Types.Id.Id Domain.Types.SubscriptionPurchase.SubscriptionPurchase -> m ())
@@ -65,6 +73,7 @@ updateByPrimaryKey (Domain.Types.SubscriptionPurchase.SubscriptionPurchase {..})
       Se.Set Beam.planId (Kernel.Types.Id.getId planId),
       Se.Set Beam.planRideCredit planRideCredit,
       Se.Set Beam.purchaseTimestamp purchaseTimestamp,
+      Se.Set Beam.reconciliationStatus reconciliationStatus,
       Se.Set Beam.serviceName serviceName,
       Se.Set Beam.status status,
       Se.Set Beam.vehicleCategory vehicleCategory,

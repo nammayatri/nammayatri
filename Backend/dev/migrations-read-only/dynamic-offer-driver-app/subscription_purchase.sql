@@ -29,3 +29,8 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD COLUMN finance_invoice_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_purchase ADD COLUMN reconciliation_status text ;

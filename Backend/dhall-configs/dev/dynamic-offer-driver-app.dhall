@@ -291,6 +291,7 @@ let AllocatorJobType =
       | SpecialZonePayout
       | ProcessReminder
       | ExpireSubscriptionPurchase
+      | Reconciliation
       >
 
 let jobInfoMapx =
@@ -348,6 +349,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.ExpireSubscriptionPurchase
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =

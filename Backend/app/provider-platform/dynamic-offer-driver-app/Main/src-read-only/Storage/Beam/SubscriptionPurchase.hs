@@ -3,6 +3,7 @@
 
 module Storage.Beam.SubscriptionPurchase where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.DriverPlan
@@ -31,6 +32,7 @@ data SubscriptionPurchaseT f = SubscriptionPurchaseT
     planId :: B.C f Kernel.Prelude.Text,
     planRideCredit :: B.C f Kernel.Types.Common.HighPrecMoney,
     purchaseTimestamp :: B.C f Kernel.Prelude.UTCTime,
+    reconciliationStatus :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     serviceName :: B.C f Domain.Types.Extra.Plan.ServiceNames,
     status :: B.C f Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus,
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),

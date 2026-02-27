@@ -31,7 +31,7 @@ apis:
 
   # ----- Fleet Operator -----
   - GET: # FleetOperatorListAPI
-      endpoint: /fleetOperator/list
+      endpoint: /fleetOperator/finance/list
       query:
         limit: Int
         offset: Int
@@ -57,6 +57,28 @@ apis:
       auth: ApiAuthV2
       response:
         type: InvoiceListRes
+
+  # ----- Reconciliation -----
+  - GET: # ReconciliationAPI
+      endpoint: /reconciliation
+      query:
+        fromDate: UTCTime
+        toDate: UTCTime
+        reconciliationType: Text
+        limit: Int
+        offset: Int
+      auth: ApiAuthV2
+      response:
+        type: ReconciliationRes
+
+  - POST: # ReconciliationTriggerAPI
+      endpoint: /reconciliation/trigger
+      auth: ApiAuthV2
+      request:
+        type: ReconciliationTriggerReq
+      response:
+        type: ReconciliationTriggerRes
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FINANCE RECONCILIATION_TRIGGER
 
 types:
   # ----- Subscription Purchase -----
@@ -129,6 +151,55 @@ types:
     - rideId: Maybe Text
     - subscriptionId: Maybe Text
     - generatedAt: Maybe UTCTime
+
+  # ----- Reconciliation -----
+  ReconciliationRes:
+    - summary: ReconciliationSummary
+    - exceptions: [ReconciliationEntry]
+    - completed: [ReconciliationEntry]
+  ReconciliationSummariesRes:
+    - summaries: [ReconciliationSummary]
+    - totalCount: Int
+  ReconciliationEntriesRes:
+    - entries: [ReconciliationEntry]
+    - pagination: PaginationInfo
+  ReconciliationTriggerReq:
+    - fromDate: UTCTime
+    - toDate: UTCTime
+    - reconciliationType: Maybe Text
+  ReconciliationTriggerRes:
+    - success: Bool
+    - message: Text
+  ReconciliationStatusRes:
+    - statuses: [ReconciliationStatusItem]
+  ReconciliationSummary:
+    - totalDiscrepancies: Int
+    - matchedRecords: Int
+    - matchRate: Text
+    - sourceTotal: HighPrecMoney
+    - targetTotal: HighPrecMoney
+    - varianceAmount: HighPrecMoney
+  ReconciliationEntry:
+    - bookingId: Maybe Text
+    - dcoId: Maybe Text
+    - status: Maybe Text
+    - mode: Maybe Text
+    - expectedDsrValue: Maybe HighPrecMoney
+    - actualLedgerValue: Maybe HighPrecMoney
+    - variance: Maybe HighPrecMoney
+    - reconStatus: Maybe Text
+    - mismatchReason: Maybe Text
+    - timestamp: Maybe UTCTime
+  PaginationInfo:
+    - total: Int
+    - limit: Int
+    - offset: Int
+    - hasMore: Bool
+  ReconciliationStatusItem:
+    - reconciliationType: Text
+    - status: Text
+    - lastCompletedDate: Maybe UTCTime
+    - errorMessage: Maybe Text
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

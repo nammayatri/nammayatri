@@ -51,6 +51,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -327,7 +328,7 @@ buildCurrentPlanResFromPurchase driverId merchantOperatingCityId purchase = do
         else return (Nothing, Nothing)
 
 class Subscription a where
-  getSubcriptionStatusWithPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> Id SP.Person -> m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
+  getSubcriptionStatusWithPlan :: (BeamFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> Id SP.Person -> m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
   updateSubscriptionStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DI.DriverAutoPayStatus -> Maybe Text -> m ()
   createDriverPlan :: a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Plan -> SubscriptionServiceRelatedData -> SubscriptionConfig -> Flow ()
   planSubscribe :: a -> Id Plan -> (Bool, Maybe MessageKey.MediaChannel) -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> SubscriptionServiceRelatedData -> Flow PlanSubscribeRes
@@ -407,7 +408,7 @@ getSubcriptionStatusWithPlanGeneric serviceName driverId = do
   return (autoPayStatus, driverPlan)
 
 getSubcriptionStatusWithPlanPrepaid ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (BeamFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id SP.Person ->
   m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
 getSubcriptionStatusWithPlanPrepaid driverId = do
@@ -494,6 +495,7 @@ getSubsriptionConfigAndPlanSubscription serviceName (driverId, _, merchantOpCity
 
 -- This API is for listing all the AUTO PAY plans
 planList ::
+  (BeamFlow Flow AppEnv) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceNames ->
   Maybe Int ->
@@ -1088,7 +1090,8 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             merchantId = merchantId,
             merchantOperatingCityId = merchantOpCityId,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            reconciliationStatus = Nothing
           }
   QSP.create subscriptionPurchase
   pure (createOrderResp', paymentOrderId)
