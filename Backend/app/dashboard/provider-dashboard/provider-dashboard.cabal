@@ -57,6 +57,7 @@ library
       Domain.Action.ProviderPlatform.Management.DriverReferral
       Domain.Action.ProviderPlatform.Management.DriverRegistration
       Domain.Action.ProviderPlatform.Management.EntityInfo
+      Domain.Action.ProviderPlatform.Management.FinanceManagement
       Domain.Action.ProviderPlatform.Management.FeedbackForm
       Domain.Action.ProviderPlatform.Management.Media
       Domain.Action.ProviderPlatform.Management.MediaFileDocument
@@ -111,6 +112,7 @@ library
       API.Action.ProviderPlatform.Management.DriverReferral
       API.Action.ProviderPlatform.Management.DriverRegistration
       API.Action.ProviderPlatform.Management.EntityInfo
+      API.Action.ProviderPlatform.Management.FinanceManagement
       API.Action.ProviderPlatform.Management.FeedbackForm
       API.Action.ProviderPlatform.Management.Media
       API.Action.ProviderPlatform.Management.MediaFileDocument

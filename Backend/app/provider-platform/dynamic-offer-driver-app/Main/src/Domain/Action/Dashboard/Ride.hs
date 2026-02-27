@@ -62,9 +62,13 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance (getEntriesByReference)
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
+import qualified SharedLogic.Finance.Wallet as FinanceWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -237,25 +241,134 @@ getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mb
     maxLimit = 20
     defaultLimit = 10
 
-buildRideListItem :: EncFlow m r => QRide.RideItem -> m Common.RideListItem
-buildRideListItem QRide.RideItem {..} = do
+-- | Reference types used for ride/booking in finance ledger (for wallet_transaction_ids).
+rideLedgerReferenceTypes :: [Text]
+rideLedgerReferenceTypes =
+  [ FinancePrepaid.prepaidRideDebitReferenceType, -- "RideSubscriptionDebit"
+    FinancePrepaid.subscriptionRideReferenceType, -- "RideRevenueRecognition"
+    FinanceWallet.walletReferenceBaseRide,
+    FinanceWallet.walletReferenceGSTOnline,
+    FinanceWallet.walletReferenceTollCharges,
+    FinanceWallet.walletReferenceParkingCharges,
+    FinanceWallet.walletReferenceTDSDeductionOnline,
+    FinanceWallet.walletReferenceGSTCash,
+    FinanceWallet.walletReferenceTDSDeductionCash
+  ]
+
+buildRideListItem :: (EncFlow m r, BeamFlow m r) => QRide.RideItem -> m Common.RideListItem
+buildRideListItem item@QRide.RideItem {..} = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
+  -- Prefill finance and lifecycle fields when we have full ride and booking
+  (ondcOrderId, buyerAppOrderId, pickupLocationId, dropLocationId, grossRideValue, subscriptionOffsetAmount, netPayableToDriver, paymentModeText, paymentReferenceInternal, walletTransactionIds, rideStartedAt, rideCompletedAt, rideCancelledAt, rideStatus, customerIdMasked, tripDistanceKm, tripDurationMinutes) <-
+    case (item.ride, item.booking) of
+      (Just r, Just b) -> do
+        let bookingIdStr = b.id.getId
+        -- Subscription offset: sum of RideSubscriptionDebit entries for this booking
+        subEntries <- getEntriesByReference FinancePrepaid.prepaidRideDebitReferenceType bookingIdStr
+        let subOffset = if null subEntries then Nothing else Just (sum (map (.amount) subEntries))
+        -- Net payable to driver: sum of RideRevenueRecognition entries
+        revEntries <- getEntriesByReference FinancePrepaid.subscriptionRideReferenceType bookingIdStr
+        let netPayable = if null revEntries then Nothing else Just (sum (map (.amount) revEntries))
+        -- All ledger entry IDs for this booking (wallet_transaction_ids)
+        allEntries <- concat <$> mapM (\refType -> getEntriesByReference refType bookingIdStr) rideLedgerReferenceTypes
+        let ledgerIds = map (.id.getId) allEntries
+        let payModeText = show <$> b.paymentMode
+        let rideStartedAt' = r.tripStartTime
+        let rideCompletedAt' = r.tripEndTime
+        let rideCancelledAt' = if r.status == DRide.CANCELLED then Just r.updatedAt else Nothing
+        let tripDistKm = Just (highPrecMetersToMeters r.traveledDistance)
+        let tripDurMin = timeDiffInMinutes <$> r.tripStartTime <*> r.tripEndTime
+        pure
+          ( Just b.transactionId,
+            Just b.bapId,
+            Just (r.fromLocation.id.getId),
+            (\loc -> loc.id.getId) <$> r.toLocation,
+            r.fare,
+            subOffset,
+            netPayable,
+            payModeText,
+            b.paymentId,
+            ledgerIds,
+            rideStartedAt',
+            rideCompletedAt',
+            rideCancelledAt',
+            castRideStatus' r.status,
+            getId <$> b.riderId,
+            tripDistKm,
+            tripDurMin
+          )
+      _ ->
+        pure
+          ( Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            [],
+            Nothing,
+            Nothing,
+            Nothing,
+            bookingStatusToRideStatus bookingStatus,
+            Nothing,
+            Nothing,
+            Nothing
+          )
   pure
     Common.RideListItem
       { rideId = cast @DRide.Ride @Common.Ride rideDetails.id,
         rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) rideShortId,
+        ondcOrderId,
+        buyerAppOrderId,
+        rideCreatedAt = rideCreatedAt,
+        rideStartedAt,
+        rideCompletedAt,
+        rideCancelledAt,
+        rideStatus,
+        fleetOperatorId = rideDetails.fleetOwnerId,
+        customerIdMasked,
+        pickupLocationId,
+        dropLocationId,
+        tripDistanceKm,
+        tripDurationMinutes,
         customerName,
         customerPhoneNo,
         driverName = rideDetails.driverName,
         driverPhoneNo,
-        vehicleNo = rideDetails.vehicleNumber,
         tripCategory = castTripCategory tripCategory, -- TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
         tripCategoryV2 = tripCategory,
+        vehicleNo = rideDetails.vehicleNumber,
         fareDiff = fareDiff <&> (.amountInt),
         fareDiffWithCurrency = mkPriceAPIEntity <$> fareDiff,
-        bookingStatus,
-        rideCreatedAt = rideCreatedAt
+        baseFare = Nothing,
+        distanceCharge = Nothing,
+        timeCharge = Nothing,
+        surgeMultiplier = Nothing,
+        surgeAmount = Nothing,
+        grossRideValue,
+        platformFee = Nothing,
+        platformFeeGst = Nothing,
+        subscriptionOffsetAmount,
+        incentivesAmount = Nothing,
+        penaltiesAmount = Nothing,
+        gstApplicableFlag = Nothing,
+        gstRate = Nothing,
+        gstAmount = Nothing,
+        tdsApplicableFlag = Nothing,
+        tdsRate = Nothing,
+        tdsAmount = Nothing,
+        netPayableToDriver,
+        netPlatformRevenue = Nothing,
+        paymentMode = paymentModeText,
+        paymentStatus = Nothing,
+        paymentReferenceInternal,
+        walletTransactionIds,
+        invoiceIds = [],
+        bookingStatus
       }
 
 buildRideListItemV2 :: EncFlow m r => QRide.RideItemV2 -> m Common.RideListItemV2
@@ -265,10 +378,45 @@ buildRideListItemV2 QRide.RideItemV2 {..} = do
     Common.RideListItemV2
       { rideId = cast @DRide.Ride @Common.Ride rideId,
         rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) rideShortId,
+        ondcOrderId = Nothing,
+        buyerAppOrderId = Nothing,
         rideCreatedAt = rideCreatedAt,
+        rideStartedAt = Nothing,
+        rideCompletedAt = Nothing,
+        rideCancelledAt = Nothing,
         rideStatus = castRideStatus' rideStatus,
+        fleetOperatorId = Nothing,
+        customerIdMasked = Nothing,
+        pickupLocationId = Nothing,
+        dropLocationId = Nothing,
+        tripDistanceKm = Nothing,
+        tripDurationMinutes = Nothing,
         driverName = driverName,
-        driverPhoneNo = driverPhoneNumber
+        driverPhoneNo = driverPhoneNumber,
+        baseFare = Nothing,
+        distanceCharge = Nothing,
+        timeCharge = Nothing,
+        surgeMultiplier = Nothing,
+        surgeAmount = Nothing,
+        grossRideValue = Nothing,
+        platformFee = Nothing,
+        platformFeeGst = Nothing,
+        subscriptionOffsetAmount = Nothing,
+        incentivesAmount = Nothing,
+        penaltiesAmount = Nothing,
+        gstApplicableFlag = Nothing,
+        gstRate = Nothing,
+        gstAmount = Nothing,
+        tdsApplicableFlag = Nothing,
+        tdsRate = Nothing,
+        tdsAmount = Nothing,
+        netPayableToDriver = Nothing,
+        netPlatformRevenue = Nothing,
+        paymentMode = Nothing,
+        paymentStatus = Nothing,
+        paymentReferenceInternal = Nothing,
+        walletTransactionIds = [],
+        invoiceIds = []
       }
 
 castRideStatus' :: DRide.RideStatus -> Common.RideStatus
@@ -278,6 +426,15 @@ castRideStatus' = \case
   DRide.INPROGRESS -> Common.RIDE_INPROGRESS
   DRide.COMPLETED -> Common.RIDE_COMPLETED
   DRide.CANCELLED -> Common.RIDE_CANCELLED
+
+bookingStatusToRideStatus :: Common.BookingStatus -> Common.RideStatus
+bookingStatusToRideStatus = \case
+  Common.COMPLETED -> Common.RIDE_COMPLETED
+  Common.CANCELLED -> Common.RIDE_CANCELLED
+  Common.UPCOMING -> Common.RIDE_UPCOMING
+  Common.UPCOMING_6HRS -> Common.RIDE_UPCOMING
+  Common.ONGOING -> Common.RIDE_INPROGRESS
+  Common.ONGOING_6HRS -> Common.RIDE_INPROGRESS
 
 ---------------------------------------------------------------------------------------------------
 ticketRideList :: ShortId DM.Merchant -> Context.City -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
