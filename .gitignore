@@ -34,4 +34,5 @@ docker-compose.yaml
 stack.yaml
 
 shared-kernel/
+ny-react-native/
 
