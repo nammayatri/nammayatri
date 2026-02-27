@@ -8,6 +8,7 @@ import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.ParcelType
+import qualified Domain.Types.RiderPreferredOption
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -67,6 +68,7 @@ data SearchRequestT f = SearchRequestT
     providerId :: B.C f Kernel.Prelude.Text,
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     riderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    riderPreferredOption :: (B.C f (Kernel.Prelude.Maybe Domain.Types.RiderPreferredOption.RiderPreferredOption)),
     roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     searchTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -79,6 +81,13 @@ data SearchRequestT f = SearchRequestT
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     transactionId :: B.C f Kernel.Prelude.Text,
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory),
+    userBackendAppVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    userBundleVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    userManufacturer :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    userModelName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    userOsType :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType)),
+    userOsVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    userSdkVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     validTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
@@ -89,6 +98,6 @@ instance B.Table SearchRequestT where
 
 type SearchRequest = SearchRequestT Identity
 
-$(enableKVPG ''SearchRequestT ['id] [['transactionId]])
+$(enableKVPG (''SearchRequestT) [('id)] [[('transactionId)]])
 
-$(mkTableInstances ''SearchRequestT "search_request")
+$(mkTableInstances (''SearchRequestT) "search_request")
