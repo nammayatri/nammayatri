@@ -7,6 +7,7 @@ import qualified "rider-app" API.Dashboard
 import qualified API.Types.RiderPlatform.Management.AlertIncident
 import qualified API.Types.RiderPlatform.Management.Booking
 import qualified API.Types.RiderPlatform.Management.Customer
+import qualified API.Types.RiderPlatform.Management.DeviceVehicleMapping
 import qualified API.Types.RiderPlatform.Management.FRFSAlerts
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.RiderPlatform.Management.Invoice
@@ -29,6 +30,7 @@ data ManagementAPIs = ManagementAPIs
   { alertIncidentDSL :: API.Types.RiderPlatform.Management.AlertIncident.AlertIncidentAPIs,
     bookingDSL :: API.Types.RiderPlatform.Management.Booking.BookingAPIs,
     customerDSL :: API.Types.RiderPlatform.Management.Customer.CustomerAPIs,
+    deviceVehicleMappingDSL :: API.Types.RiderPlatform.Management.DeviceVehicleMapping.DeviceVehicleMappingAPIs,
     fRFSAlertsDSL :: API.Types.RiderPlatform.Management.FRFSAlerts.FRFSAlertsAPIs,
     fRFSTicketDSL :: API.Types.RiderPlatform.Management.FRFSTicket.FRFSTicketAPIs,
     invoiceDSL :: API.Types.RiderPlatform.Management.Invoice.InvoiceAPIs,
@@ -46,6 +48,7 @@ mkManagementAPIs merchantId city token = do
   let alertIncidentDSL = API.Types.RiderPlatform.Management.AlertIncident.mkAlertIncidentAPIs alertIncidentClientDSL
   let bookingDSL = API.Types.RiderPlatform.Management.Booking.mkBookingAPIs bookingClientDSL
   let customerDSL = API.Types.RiderPlatform.Management.Customer.mkCustomerAPIs customerClientDSL
+  let deviceVehicleMappingDSL = API.Types.RiderPlatform.Management.DeviceVehicleMapping.mkDeviceVehicleMappingAPIs deviceVehicleMappingClientDSL
   let fRFSAlertsDSL = API.Types.RiderPlatform.Management.FRFSAlerts.mkFRFSAlertsAPIs fRFSAlertsClientDSL
   let fRFSTicketDSL = API.Types.RiderPlatform.Management.FRFSTicket.mkFRFSTicketAPIs fRFSTicketClientDSL
   let invoiceDSL = API.Types.RiderPlatform.Management.Invoice.mkInvoiceAPIs invoiceClientDSL
@@ -58,7 +61,7 @@ mkManagementAPIs merchantId city token = do
   let systemDSL = API.Types.RiderPlatform.Management.System.mkSystemAPIs systemClientDSL
   (ManagementAPIs {..})
   where
-    alertIncidentClientDSL :<|> bookingClientDSL :<|> customerClientDSL :<|> fRFSAlertsClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> rideClientDSL :<|> sosClientDSL :<|> sosMediaClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    alertIncidentClientDSL :<|> bookingClientDSL :<|> customerClientDSL :<|> deviceVehicleMappingClientDSL :<|> fRFSAlertsClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> rideClientDSL :<|> sosClientDSL :<|> sosMediaClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.

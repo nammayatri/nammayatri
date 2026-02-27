@@ -36,13 +36,26 @@ DeviceVehicleMapping:
           - vehicleNo
 
     upsertMapping:
-      kvFunction: upsertWithKV
+      kvFunction: updateWithKV
       params:
         - vehicleNo
         - gtfsId
       where:
         eq:
           - deviceId
+
+    findAllByGtfsId:
+      kvFunction: findAllWithKV
+      where:
+        eq:
+          - gtfsId
+
+    findByDeviceIdAndGtfsId:
+      kvFunction: findOneWithKV
+      where:
+        eq:
+          - deviceId
+          - gtfsId
 
   cachedQueries:
     findByDeviceIdCached:

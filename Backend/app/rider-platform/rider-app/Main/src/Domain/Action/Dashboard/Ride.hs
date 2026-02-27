@@ -200,7 +200,6 @@ castSosStatus = \case
   DSos.MockPending -> Common.MockPending
   DSos.MockResolved -> Common.MockResolved
 
-
 ---------------------------------------------------------------------
 
 getRideList ::

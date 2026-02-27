@@ -116,9 +116,11 @@ library
       API.Types.RiderPlatform.Management.AlertIncident
       API.Types.RiderPlatform.Management.Booking
       API.Types.RiderPlatform.Management.Customer
+      API.Types.RiderPlatform.Management.DeviceVehicleMapping
       API.Types.RiderPlatform.Management.Endpoints.AlertIncident
       API.Types.RiderPlatform.Management.Endpoints.Booking
       API.Types.RiderPlatform.Management.Endpoints.Customer
+      API.Types.RiderPlatform.Management.Endpoints.DeviceVehicleMapping
       API.Types.RiderPlatform.Management.Endpoints.FRFSAlerts
       API.Types.RiderPlatform.Management.Endpoints.FRFSTicket
       API.Types.RiderPlatform.Management.Endpoints.Invoice

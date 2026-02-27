@@ -1175,10 +1175,10 @@ select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories cr
     updateQuoteCategoriesWithSelections
       ( selectedQuoteCategories <&> \category ->
           QuoteCategorySelection
-            { qcQuoteCategoryId = category.quoteCategoryId
-            , qcQuantity = category.quantity
-            , qcSeatIds = category.seatIds
-            , qcSeatLabels = Nothing
+            { qcQuoteCategoryId = category.quoteCategoryId,
+              qcQuantity = category.quantity,
+              qcSeatIds = category.seatIds,
+              qcSeatLabels = Nothing
             }
       )
       quoteCategories

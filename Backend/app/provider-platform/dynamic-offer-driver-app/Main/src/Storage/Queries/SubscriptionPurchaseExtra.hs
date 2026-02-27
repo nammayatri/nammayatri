@@ -92,4 +92,3 @@ updateExpiryDateById newExpiryDate purchaseId = do
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.id $ Se.Eq (getId purchaseId)]
-

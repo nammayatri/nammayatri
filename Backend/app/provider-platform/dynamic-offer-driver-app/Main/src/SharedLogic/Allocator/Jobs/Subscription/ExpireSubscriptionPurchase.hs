@@ -49,5 +49,3 @@ expireSubscriptionPurchase Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> j
               { subscriptionPurchaseId = nextPurchaseId
               }
       pure Complete
-
-

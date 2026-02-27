@@ -42,6 +42,7 @@ library
       Domain.Action.RiderPlatform.Management.AlertIncident
       Domain.Action.RiderPlatform.Management.Booking
       Domain.Action.RiderPlatform.Management.Customer
+      Domain.Action.RiderPlatform.Management.DeviceVehicleMapping
       Domain.Action.RiderPlatform.Management.FRFSAlerts
       Domain.Action.RiderPlatform.Management.FRFSTicket
       Domain.Action.RiderPlatform.Management.Invoice
@@ -80,6 +81,7 @@ library
       API.Action.RiderPlatform.Management.AlertIncident
       API.Action.RiderPlatform.Management.Booking
       API.Action.RiderPlatform.Management.Customer
+      API.Action.RiderPlatform.Management.DeviceVehicleMapping
       API.Action.RiderPlatform.Management.FRFSAlerts
       API.Action.RiderPlatform.Management.FRFSTicket
       API.Action.RiderPlatform.Management.Invoice

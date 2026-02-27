@@ -1,0 +1,37 @@
+imports:
+  MerchantOperatingCity: Dashboard.Common
+  DeviceVehicleMapping: Domain.Types.DeviceVehicleMapping
+  FilePath: EulerHS.Prelude
+
+module: DeviceVehicleMapping
+
+types:
+  DeviceVehicleMappingListRes:
+    mappings: "[DeviceVehicleMappingItem]"
+  DeviceVehicleMappingItem:
+    deviceId: Text
+    vehicleNo: Text
+    gtfsId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  UpsertDeviceVehicleMappingReq:
+    recordType: NewType
+    file: FilePath
+    derive: "'HideSecrets"
+  UpsertDeviceVehicleMappingResp:
+    success: Text
+    totalInserted: Int
+
+apis:
+  - GET:
+      endpoint: /deviceVehicleMapping/list
+      auth: ApiAuthV2
+      response:
+        type: DeviceVehicleMappingListRes
+  - POST:
+      endpoint: /deviceVehicleMapping/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertDeviceVehicleMappingReq
+      response:
+        type: UpsertDeviceVehicleMappingResp
