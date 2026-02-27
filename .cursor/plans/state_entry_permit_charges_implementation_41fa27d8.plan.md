@@ -59,6 +59,7 @@ After Phase 1: No static toll anywhere; dynamic toll is the only toll source in 
 - **Migration:** Add SEPC table and FK to Geometry; add appropriate indexes (e.g. on `geom_id`, and on `Geometry(state, city)` for SEPC lookups).
 
 **Bounding-box representation and testing:**  
+
 - Store bounding boxes in Geometry as a JSON/array of **4 points** (topLeft, topRight, bottomRight, bottomLeft); consecutive points form the 4 sides. This matches how we’ll treat them in code (array-of-points → segments).  
 - For manual testing, you can draw rectangles in tools like geojson.io and copy the 4 corner coordinates into this JSON field; we **do not** create new `geom` rows for these boxes – we reuse existing `geom` shapes for states and only cache their bounding boxes alongside.
 
@@ -104,11 +105,12 @@ After Phase 2: Run NammaDSL generator; run migrations; fix any compile errors in
 **New keys (mirror toll keys; no "pending" key for SEPC):**
 
 
-| Key                                        | Purpose                             | TTL         |
-| ------------------------------------------ | ----------------------------------- | ----------- |
-| `OnRideStateEntryPermitCharges:<driverId>` | Accumulated SEPC amount during ride | 6h (21600s) |
-| `OnRideStateEntryPermitNames:<driverId>`   | List of SEPC names detected         | 6h          |
-| `OnRideStateEntryPermitIds:<driverId>`     | List of SEPC IDs detected           | 6h          |
+| Key                                        | Purpose                                     | TTL         |
+| ------------------------------------------ | ------------------------------------------- | ----------- |
+| `OnRideStateEntryPermitCharges:<driverId>` | Accumulated SEPC amount during ride         | 6h (21600s) |
+| `OnRideStateEntryPermitNames:<driverId>`   | List of SEPC names detected                 | 6h          |
+| `OnRideStateEntryPermitIds:<driverId>`     | List of SEPC IDs detected                   | 6h          |
+| `LastSnappedPointOnRide:<driverId>`        | Last snapped point from previous snap batch | 6h          |
 
 
 **Where to define:**  
@@ -141,8 +143,7 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
   - For each consecutive pair (p1, p2) of route:  
     - areaFirst = which state(s) contain p1 (point-in-polygon on fetched geoms).  
     - areaSecond = which state(s) contain p2.  
-    - **Overlap rule:** If either point is in more than one geom, skip this segment; move to next pair.  
-  - **Charge rule:** If areaSecond is in SEPC and areaSecond ≠ areaFirst, add areaSecond’s charge and record name/id – but only if this is the **first time** we are entering that SEPC state on this ride. Maintain a per-ride set of “already charged” SEPC state IDs and skip charges for subsequent zig-zag re-entries into the same state.  
+  - **Charge rule:** If areaSecond is in SEPC and areaSecond ≠ areaFirst, add areaSecond’s charge and record name/id – but only if this is the **first time** we are entering that SEPC state on this ride. Maintain a per-ride set of “already charged” SEPC state IDs and skip charges for subsequent zig-zag re-entries into the same state. In overlap cases where a point lies in more than one geom (e.g. shared boundary), pick the **second point’s** state that is different from the first point’s state (areaSecond \ areaFirst) rather than skipping the segment entirely.  
     - **Unknown:** If areaSecond is “unknown” (no geom contains p2), do not charge. If areaFirst unknown and areaSecond in SEPC, charge (entry into permit state).
 8. **Return type:** `Maybe (HighPrecMoney, [Text], [Text])` (charges, names, ids) – same shape as toll for easy reuse in fare params and ride.
 
@@ -202,14 +203,75 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
 
 ### 5.5 On-ride – Location updates ([Lib.LocationUpdates.Internal](Backend/lib/location-updates/src/Lib/LocationUpdates/Internal.hs) + provider)
 
-- **Current:** `recalcDistanceBatchStep` calls `interpolatePointsAndCalculateDistanceAndToll`; on result it pushes toll names/ids and increments toll charges in Redis; then `updateTollChargesAndNamesAndIds` is called. Handler has `getTollInfoOnTheRoute`, `getTravelledDistanceAndTollInfo` (estimated toll info).
-- **Change:**  
-  - Extend interpolation/toll step to also compute SEPC on the batch (or accept a combined “toll + SEPC” callback). Prefer: provider passes `getStateEntryPermitInfoOnRoute` and a new callback `updateStateEntryPermitChargesAndNamesAndIds`.  
-  - In the handler: for each batch, call toll detector and state permit detector; accumulate toll in existing Redis keys; accumulate SEPC in new Redis keys; when “exit/unknown without entry into known permit state”, accumulate SEPC in the three OnRide SEPC keys (no pending key).  
-  - `getTravelledDistanceAndTollInfo` can return both toll and SEPC info so end ride has full picture.  
-  - Cleanup: on ride end, clear SEPC Redis keys and pending (in provider’s end-ride flow and in location-updates cleanup if called).
+- **Current:** `processWaypoints` appends new GPS points into `waypoints:<driverId>` and then calls `recalcDistanceBatches`. Inside that:
+  - A threshold (`batchSize`, default 98) and flags (`snapToRoadCallCondition`) decide when to call snap-to-road.
+  - `recalcDistanceBatchStep` builds a batch of raw waypoints: `getFirstNwaypoints driverId (maxSnapToRoadReqPoints + 1)` (default 98+1 = 99 points).
+  - `interpolatePointsAndCalculateDistanceAndToll`:
+    - Calls `snapToRoad` once for those 99 raw points and gets back `response.snappedPoints` and `response.distance`.
+    - Calls `getTollInfoOnTheRoute (Just driverId) response.snappedPoints` to get batch toll info.
+  - Per batch, toll names/ids are appended to `OnRideTollNames/Ids:<driverId>`, charges are added to `OnRideTollCharges:<driverId>`, and then `updateTollChargesAndNamesAndIds` persists accumulated toll to the Ride row. After the batch, `deleteFirstNwaypoints driverId maxSnapToRoadReqPoints` drops 98 raw points, so the next batch overlaps by 1 point on the raw list.
+- **Change (SEPC on-ride):**
+  - **Handler inputs:** Extend `RideInterpolationHandler` to also accept:
+    - `getStateEntryPermitInfoOnRoute :: Maybe (Id Driver) -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], [Text]))`
+    - `updateStateEntryPermitChargesAndNamesAndIds :: Id Driver -> HighPrecMoney -> [Text] -> [Text] -> m ()`
+  - **Batch size and snap-to-road:** Keep the **same** batching as toll:
+    - Raw batch: `batchWaypoints <- getFirstNwaypoints driverId (maxSnapToRoadReqPoints + 1)` (≈99 raw points).
+    - One snap call per batch: `snapToRoad` on `batchWaypoints` gives `snappedPoints`.
+  - **Cross-batch continuity for SEPC:** Introduce a new Redis key per driver:
+    - `LastSnappedPointOnRide:<driverId>` – stores the **last snapped point** of the **previous snap batch**.
+    - After each successful snap:
+      - Read `mbPrevLastSnapped <- Redis.safeGet (LastSnappedPointOnRide:<driverId>)`.
+      - Build the SEPC route for this batch:
+        - If `mbPrevLastSnapped` is `Nothing` (first batch in ride): `sepcRoute = snappedPoints`.
+        - If `Just prevLast`: `sepcRoute = prevLast : snappedPoints`.
+      - Call **toll** detector as today on the batch route:  
+      `mbTollInfo <- getTollInfoOnTheRoute (Just driverId) snappedPoints`  
+      (toll continues to use its own pending key `TollGateTracking:DriverId-<driverId>` for entry-without-exit across batches).
+      - Call **SEPC** detector on the **stitched** route:  
+      `mbSepcInfo <- getStateEntryPermitInfoOnRoute (Just driverId) sepcRoute`.
+      - After both detectors run, if `snappedPoints` is non-empty, update `LastSnappedPointOnRide:<driverId>` with `last snappedPoints` (for the next batch).
+  - **Per-batch accumulation (mirroring toll):**
+    - When `mbSepcInfo = Just (sepcChargesBatch, sepcNamesBatch, sepcIdsBatch)`:
+      - Append `sepcNamesBatch` to `OnRideStateEntryPermitNames:<driverId>`.
+      - Append `sepcIdsBatch` to `OnRideStateEntryPermitIds:<driverId>`.
+      - Increment `OnRideStateEntryPermitCharges:<driverId>` by `sepcChargesBatch`.
+    - Toll accumulation remains unchanged and continues to use the existing OnRide toll keys.
+  - **Persisting to Ride row:**
+    - After each non-failed batch (similar to how toll is persisted today):
+      - Read accumulated SEPC from Redis:
+        - `mbSepcCharges <- Redis.safeGet (OnRideStateEntryPermitCharges:<driverId>)`
+        - `sepcNames <- Redis.lRange (OnRideStateEntryPermitNames:<driverId>) 0 (-1)`
+        - `sepcIds <- Redis.lRange (OnRideStateEntryPermitIds:<driverId>) 0 (-1)`
+      - When `mbSepcCharges` is `Just sepcCharges`, call:  
+      `updateStateEntryPermitChargesAndNamesAndIds driverId sepcCharges sepcNames sepcIds`  
+      so the Ride row always has the latest detected SEPC alongside toll.
+  - **Cleanup:** On ride end (in provider end-ride flow and `redisOnRideKeysCleanup`-like logic), clear:
+    - `OnRideStateEntryPermitCharges:<driverId>`, `OnRideStateEntryPermitNames:<driverId>`, `OnRideStateEntryPermitIds:<driverId>` (SEPC OnRide keys).
+    - `LastSnappedPointOnRide:<driverId>` (no need to carry stitching across rides).  
+    Toll keys continue to be cleared as today. TTLs (e.g. 6h) remain as a safety net only – the explicit ride-end delete is the primary cleanup.
 
-**Exact logic:** Mirror toll: per batch waypoints → getTollInfoOnRoute + getStateEntryPermitInfoOnRoute → accumulate toll (existing) and SEPC (new keys); update ride via `updateTollChargesAndNamesAndIds` and `updateStateEntryPermitChargesAndNamesAndIds`; pending SEPC when segment gives “unknown” or exit but no entry.
+**Exact logic (per snap batch):**  
+
+1. Build raw batch: `batchWaypoints <- getFirstNwaypoints driverId (maxSnapToRoadReqPoints + 1)`.
+2. Call `interpolatePointsAndCalculateDistanceAndToll` which:
+  - Snap-to-road: `response.snappedPoints = snappedPoints`.  
+  - Toll: `mbTollInfo <- getTollInfoOnTheRoute (Just driverId) snappedPoints`.
+3. For SEPC stitching:
+   - `mbPrevLastSnapped <- Redis.safeGet (LastSnappedPointOnRide:<driverId>)`.  
+  - `sepcRoute = maybe snappedPoints (: snappedPoints) mbPrevLastSnapped`.  
+  - `mbSepcInfo <- getStateEntryPermitInfoOnRoute (Just driverId) sepcRoute`.
+4. Accumulate results:
+  - Toll: update `OnRideToll`* keys as today.  
+  - SEPC: update `OnRideStateEntryPermit*` keys if `mbSepcInfo` is `Just`.
+5. Persist to Ride:
+  - Read accumulated toll from `OnRideToll*` and call `updateTollChargesAndNamesAndIds`.  
+  - Read accumulated SEPC from `OnRideStateEntryPermit*` and call `updateStateEntryPermitChargesAndNamesAndIds`.
+6. Maintain continuity:
+   - If `snappedPoints` non-empty, store `last snappedPoints` into `LastSnappedPointOnRide:<driverId>`.  
+7. Advance raw waypoint window:
+  - `deleteFirstNwaypoints driverId maxSnapToRoadReqPoints` (keep one raw overlap).
+
+This way SEPC runs on the **same snapped batches** as toll (≈99 raw points per snap), but with an extra stitched point from the previous batch so no cross-batch segment is missed; toll’s existing pending-key logic remains unchanged.
 
 ### 5.6 End ride ([Domain.Action.UI.Ride.EndRide](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Domain/Action/UI/Ride/EndRide.hs) + Internal)
 
@@ -246,6 +308,19 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
 - **DriverWallet / EndRide Internal:** [Domain.Action.UI.Ride.EndRide.Internal](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Domain/Action/UI/Ride/EndRide/Internal.hs) – invoice/line items: add state entry permit as separate line; use `fareParams.stateEntryPermitCharges` and ride’s stateEntryPermit* for display.
 - **GpsTollBehavior:** No change for SEPC unless product wants similar “GPS off on state permit route” behavior (out of scope unless specified).
 - **Rider app / BAP:** If rider app or BAP sends/expects toll in payloads, add separate stateEntryPermit fields in those payloads (two separate fields).
+
+---
+
+## Phase 6: FAQ / design clarifications (short)
+
+- **Are SEPC and toll using the same snapToRoad calls?**  
+  Yes. For each batch we call snapToRoad **once**, get `response.snappedPoints`, then run **toll** on `snappedPoints` and **SEPC** on a stitched route `sepcRoute` that prepends `LastSnappedPointOnRide` when present. No extra snap API calls for SEPC.
+
+- **Who deletes waypoints between batches?**  
+  The existing location-updates logic already calls `deleteFirstNwaypoints driverId maxSnapToRoadReqPoints` after each batch, keeping a one-point raw overlap. SEPC does **not** add any extra deletes; it reuses exactly the same batching behavior as toll.
+
+- **Is the on-ride SEPC flow the same as toll?**  
+  It shares the same pipeline (`processWaypoints` → `recalcDistanceBatches` → `recalcDistanceBatchStep` → snapToRoad) and Redis accumulation pattern, but adds SEPC-specific pieces: an extra detector (`getStateEntryPermitInfoOnRoute`), SEPC OnRide keys, a generic `LastSnappedPointOnRide` for stitched snapped routes, and SEPC-specific end-ride confidence rules.
 
 ---
 
