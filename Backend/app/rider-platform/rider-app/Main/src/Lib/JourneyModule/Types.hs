@@ -11,6 +11,7 @@ import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as M
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
@@ -46,7 +47,7 @@ import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.External.MultiModal.Interface.Types (MultiModalLegGate)
 import qualified Kernel.External.MultiModal.Interface.Types as KEMIT
 import qualified Kernel.External.Payment.Interface as Payment
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -96,6 +97,7 @@ import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics.Types
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
+import qualified UrlShortner.Common as UrlShortner
 
 type SearchRequestFlow m r c =
   ( MonadFlow m,
@@ -117,7 +119,18 @@ type SearchRequestFlow m r c =
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
-    HasFlowEnv m r '["cloudType" ::: Maybe CloudType]
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text],
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasLongDurationRetryCfg r c,
+    BeamFlow m r,
+    ServiceFlow m r,
+    SchedulerFlow r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String]
   )
 
 type ConfirmFlow m r c =

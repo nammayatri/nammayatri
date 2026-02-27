@@ -401,7 +401,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   frfsSearchReq <- buildFRFSSearchReq frfsRouteDetails
   let mbFare = journeyLeg.estimatedMinFare <|> journeyLeg.estimatedMaxFare
-  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing mbFare multimodalSearchRequestId upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode
+  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing mbFare multimodalSearchRequestId upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode Nothing
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq frfsRouteDetails = do
@@ -411,7 +411,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
           serviceTier = listToMaybe frfsRouteDetails >>= (.serviceTier)
           searchAsParentStops = Nothing
           busLocationData = Just journeyLeg.busLocationData
-      return $ API.FRFSSearchAPIReq {vehicleNumber = journeyLeg.finalBoardedBusNumber, platformType = Just DIBC.MULTIMODAL, ..}
+      return $ API.FRFSSearchAPIReq {vehicleNumber = journeyLeg.finalBoardedBusNumber, platformType = Just DIBC.MULTIMODAL, categorySelectionReq = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, skipBooking = Nothing, ..}
 
     getFrfsRouteDetails :: JT.SearchRequestFlow m r c => [RD.RouteDetails] -> m [FRFSRouteDetails]
     getFrfsRouteDetails routeDetails = do

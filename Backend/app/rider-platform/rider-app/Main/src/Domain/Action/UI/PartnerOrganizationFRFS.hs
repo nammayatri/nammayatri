@@ -578,6 +578,8 @@ mkQuoteRes (quote, quoteCategories) = do
         discountedTickets = quote.discountedTickets,
         eventDiscountAmount = quote.eventDiscountAmount,
         integratedBppConfigId = quote.integratedBppConfigId,
+        offer = Nothing,
+        sdkOrderPayload = Nothing,
         ..
       }
 
