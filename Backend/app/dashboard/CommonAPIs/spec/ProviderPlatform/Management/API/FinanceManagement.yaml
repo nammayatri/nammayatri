@@ -71,6 +71,15 @@ apis:
       response:
         type: ReconciliationRes
 
+  - POST: # ReconciliationTriggerAPI
+      endpoint: /reconciliation/trigger
+      auth: ApiAuthV2
+      request:
+        type: ReconciliationTriggerReq
+      response:
+        type: ReconciliationTriggerRes
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FINANCE RECONCILIATION_TRIGGER
+
 types:
   # ----- Subscription Purchase -----
   SubscriptionPurchaseListRes:

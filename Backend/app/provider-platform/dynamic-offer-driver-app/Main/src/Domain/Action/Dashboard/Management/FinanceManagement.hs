@@ -6,6 +6,7 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementInvoiceList,
     getReconciliation,
     getFinanceManagementReconciliation,
+    postFinanceManagementReconciliationTrigger,
   )
 where
 
@@ -42,6 +43,11 @@ import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvoiceLedger
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
 import qualified Lib.Finance.Storage.Queries.ReconciliationEntry as QReconEntry
 import qualified Lib.Finance.Storage.Queries.ReconciliationSummary as QReconSummary
+import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
+import qualified Lib.Scheduler.JobStorageType.DB.Table as SchedulerJobT
+import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
+import Storage.Beam.SchedulerJob ()
+import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
@@ -481,3 +487,40 @@ getReconciliation merchantShortId opCity mbFromDate mbLimit mbOffset mbReconcili
 
 getFinanceManagementReconciliation :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe UTCTime -> Flow API.ReconciliationRes
 getFinanceManagementReconciliation = getReconciliation
+
+-- | Trigger a reconciliation job on-demand
+postFinanceManagementReconciliationTrigger ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  API.ReconciliationTriggerReq ->
+  Flow API.ReconciliationTriggerRes
+postFinanceManagementReconciliationTrigger merchantShortId opCity req = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  -- Validate the reconciliation type
+  let reconciliationType = fromMaybe "DSR_VS_LEDGER" req.reconciliationType
+  case reconciliationType of
+    "DSR_VS_LEDGER" -> pure ()
+    "DSR_VS_SUBSCRIPTION" -> pure ()
+    "DSSR_VS_SUBSCRIPTION" -> pure ()
+    _ -> throwError $ InvalidRequest $ "Invalid reconciliation type: " <> reconciliationType
+
+  -- Create the reconciliation job data
+  let jobData =
+        SharedLogic.Allocator.ReconciliationJobData
+          { reconciliationType = reconciliationType,
+            merchantId = merchant.id,
+            merchantOperatingCityId = merchantOpCityId,
+            startTime = req.fromDate,
+            endTime = req.toDate
+          }
+
+  -- Create the job immediately
+  QSchedulerJob.createJobIn @_ @'Reconciliation (Just merchant.id) (Just merchantOpCityId) 0 jobData
+
+  pure $
+    API.ReconciliationTriggerRes
+      { success = True,
+        message = "Reconciliation job scheduled successfully for " <> reconciliationType <> " from " <> show req.fromDate <> " to " <> show req.toDate
+      }
