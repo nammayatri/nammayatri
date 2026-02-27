@@ -213,3 +213,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN dq_duration_to_pickup bigi
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN reconciliation_status text ;

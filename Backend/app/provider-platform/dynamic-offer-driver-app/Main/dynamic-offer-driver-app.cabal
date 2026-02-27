@@ -403,6 +403,7 @@ library
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
       SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout
+      SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation
       SharedLogic.Allocator.Jobs.Reminder.ProcessReminder
       SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
@@ -461,6 +462,7 @@ library
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
       SharedLogic.Finance.Prepaid
+      SharedLogic.Finance.Reconciliation
       SharedLogic.Finance.Wallet
       SharedLogic.Fleet
       SharedLogic.FleetOperatorStats

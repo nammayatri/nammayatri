@@ -63,6 +63,69 @@ data InvoiceListRes = InvoiceListRes {totalItems :: Kernel.Prelude.Int, summary 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PaginationInfo = PaginationInfo {total :: Kernel.Prelude.Int, limit :: Kernel.Prelude.Int, offset :: Kernel.Prelude.Int, hasMore :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReconciliationEntriesRes = ReconciliationEntriesRes {entries :: [ReconciliationEntry], pagination :: PaginationInfo}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReconciliationEntry = ReconciliationEntry
+  { bookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dcoId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    expectedDsrValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    actualLedgerValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    variance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    reconStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mismatchReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    timestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReconciliationRes = ReconciliationRes {summary :: ReconciliationSummary, exceptions :: [ReconciliationEntry], completed :: [ReconciliationEntry]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReconciliationStatusItem = ReconciliationStatusItem
+  { reconciliationType :: Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Text,
+    lastCompletedDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReconciliationStatusRes = ReconciliationStatusRes {statuses :: [ReconciliationStatusItem]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReconciliationSummariesRes = ReconciliationSummariesRes {summaries :: [ReconciliationSummary], totalCount :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReconciliationSummary = ReconciliationSummary
+  { totalDiscrepancies :: Kernel.Prelude.Int,
+    matchedRecords :: Kernel.Prelude.Int,
+    matchRate :: Kernel.Prelude.Text,
+    sourceTotal :: Kernel.Types.Common.HighPrecMoney,
+    targetTotal :: Kernel.Types.Common.HighPrecMoney,
+    varianceAmount :: Kernel.Types.Common.HighPrecMoney
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReconciliationTriggerReq = ReconciliationTriggerReq {fromDate :: Kernel.Prelude.UTCTime, toDate :: Kernel.Prelude.UTCTime, reconciliationType :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReconciliationTriggerRes = ReconciliationTriggerRes {success :: Kernel.Prelude.Bool, message :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SubscriptionPurchaseListItem = SubscriptionPurchaseListItem
   { subscriptionPurchaseId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     planName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -91,7 +154,7 @@ data SubscriptionPurchaseListRes = SubscriptionPurchaseListRes {totalItems :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFleetOperatorList :<|> GetFinanceManagementInvoiceList))
+type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFleetOperatorFinanceList :<|> GetFinanceManagementInvoiceList :<|> GetFinanceManagementReconciliation))
 
 type GetFinanceManagementSubscriptionPurchaseList =
   ( "subscriptionPurchase" :> "list" :> QueryParam "amountMax" Kernel.Prelude.Text
@@ -126,11 +189,12 @@ type GetFinanceManagementSubscriptionPurchaseList =
            SubscriptionPurchaseListRes
   )
 
-type GetFinanceManagementFleetOperatorList =
-  ( "fleetOperator" :> "list" :> QueryParam "fleetOperatorId" Kernel.Prelude.Text :> QueryParam "from" Kernel.Prelude.UTCTime
+type GetFinanceManagementFleetOperatorFinanceList =
+  ( "fleetOperator" :> "finance" :> "list" :> QueryParam "fleetOperatorId" Kernel.Prelude.Text
       :> QueryParam
-           "limit"
-           Kernel.Prelude.Int
+           "from"
+           Kernel.Prelude.UTCTime
+      :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
            "settlementStatus"
@@ -161,21 +225,35 @@ type GetFinanceManagementInvoiceList =
            InvoiceListRes
   )
 
+type GetFinanceManagementReconciliation =
+  ( "reconciliation" :> QueryParam "fromDate" Kernel.Prelude.UTCTime :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> QueryParam "reconciliationType" Kernel.Prelude.Text
+      :> QueryParam "toDate" Kernel.Prelude.UTCTime
+      :> Get
+           '[JSON]
+           ReconciliationRes
+  )
+
 data FinanceManagementAPIs = FinanceManagementAPIs
   { getFinanceManagementSubscriptionPurchaseList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient SubscriptionPurchaseListRes,
-    getFinanceManagementFleetOperatorList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient FleetOperatorListRes,
-    getFinanceManagementInvoiceList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient InvoiceListRes
+    getFinanceManagementFleetOperatorFinanceList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient FleetOperatorListRes,
+    getFinanceManagementInvoiceList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient InvoiceListRes,
+    getFinanceManagementReconciliation :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ReconciliationRes
   }
 
 mkFinanceManagementAPIs :: (Client EulerHS.Types.EulerClient API -> FinanceManagementAPIs)
 mkFinanceManagementAPIs financeManagementClient = (FinanceManagementAPIs {..})
   where
-    getFinanceManagementSubscriptionPurchaseList :<|> getFinanceManagementFleetOperatorList :<|> getFinanceManagementInvoiceList = financeManagementClient
+    getFinanceManagementSubscriptionPurchaseList :<|> getFinanceManagementFleetOperatorFinanceList :<|> getFinanceManagementInvoiceList :<|> getFinanceManagementReconciliation = financeManagementClient
 
 data FinanceManagementUserActionType
   = GET_FINANCE_MANAGEMENT_SUBSCRIPTION_PURCHASE_LIST
-  | GET_FINANCE_MANAGEMENT_FLEET_OPERATOR_LIST
+  | GET_FINANCE_MANAGEMENT_FLEET_OPERATOR_FINANCE_LIST
   | GET_FINANCE_MANAGEMENT_INVOICE_LIST
+  | GET_FINANCE_MANAGEMENT_RECONCILIATION
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

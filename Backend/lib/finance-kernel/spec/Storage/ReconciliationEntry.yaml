@@ -1,0 +1,119 @@
+# Finance Kernel - Reconciliation Entry Table
+# Individual reconciliation records per booking/subscription
+# Row-level line item matching - NOT summed aggregate
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  ReconciliationSummary: Lib.Finance.Domain.Types.ReconciliationSummary
+
+ReconciliationEntry:
+  tableName: finance_reconciliation_entry
+  derives: "Generic"
+
+  types:
+    # Matches TypeScript FinanceComponent
+    FinanceComponent:
+      enum: "GROSS_RIDE_FARE, GST, USER_CANCELLATION, DRIVER_CANCELLATION, DRIVER_TAKE_HOME_EARNINGS, SUBSCRIPTION_PURCHASE, EXPIRY"
+      derive: "ToParamSchema"
+
+    # Matches TypeScript ReconStatus
+    ReconciliationStatus:
+      enum: "MATCHED, HIGHER_IN_TARGET, LOWER_IN_TARGET, MISSING_IN_TARGET"
+      derive: "ToParamSchema"
+
+    # Matches JSON bookingId field
+    ReconciliationType:
+      enum: "DSR_VS_LEDGER, DSR_VS_SUBSCRIPTION, DSSR_VS_SUBSCRIPTION"
+      derive: "ToParamSchema"
+
+    # Matches JSON mode field
+    RideMode:
+      enum: "ONLINE, CASH"
+      derive: "ToParamSchema"
+
+    # Matches JSON status field (booking status)
+    RideStatus:
+      enum: "COMPLETED, CANCELLED"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id ReconciliationEntry
+    summaryId: Id ReconciliationSummary
+    reconciliationDate: UTCTime
+    reconciliationType: ReconciliationType
+
+    # Keys matching JSON output
+    bookingId: Text  # matches JSON "bookingId"
+    dcoId: Text  # matches JSON "dcoId" (driver/fleet owner ID)
+    status: RideStatus  # matches JSON "status" (COMPLETED/CANCELLED)
+    mode: Maybe RideMode  # matches JSON "mode" (ONLINE/CASH)
+
+    # Financial values matching JSON
+    expectedDsrValue: HighPrecMoney  # matches JSON "expectedDsrValue"
+    actualLedgerValue: HighPrecMoney  # matches JSON "actualLedgerValue"
+    variance: HighPrecMoney  # matches JSON "variance"
+
+    # Result matching JSON
+    reconStatus: ReconciliationStatus  # matches JSON "reconStatus"
+    mismatchReason: Maybe Text  # matches JSON "mismatchReason"
+    timestamp: UTCTime  # matches JSON "timestamp"
+
+    # Additional fields for detailed tracking
+    financeComponent: Maybe FinanceComponent  # Which component (GROSS_RIDE_FARE, GST, etc.)
+
+    # For debugging - store raw values as JSON
+    sourceDetails: Maybe Text
+    targetDetails: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    merchantId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    summaryId: SecondaryKey
+    bookingId: "!SecondaryKey"
+    dcoId: "!SecondaryKey"
+    reconStatus: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findBySummaryId:
+      kvFunction: findAllWithKV
+      where: summaryId
+
+    findByBookingId:
+      kvFunction: findAllWithKV
+      where: bookingId
+
+    findByDcoId:
+      kvFunction: findAllWithKV
+      where: dcoId
+
+    findByReconciliationStatus:
+      kvFunction: findAllWithKV
+      where: reconStatus
+
+    findByDateAndType:
+      kvFunction: findAllWithKV
+      where:
+        and: [reconciliationDate, reconciliationType]
+
+    findExceptions:
+      kvFunction: findAllWithKV
+      where:
+        and: [reconciliationDate, reconciliationType]
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReconciliationType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReconciliationStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <FinanceComponent>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <RideMode>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <RideStatus>

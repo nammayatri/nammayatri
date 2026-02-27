@@ -228,6 +228,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     recentScheduledBookingsSafeLimit :: Kernel.Prelude.Int,
     recomputeDistanceThresholds :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.DistanceRecomputeConfigs],
     recomputeIfPickupDropNotOutsideOfThreshold :: Kernel.Prelude.Bool,
+    reconciliationJobsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    reconciliationSchedulerTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     referralLinkPassword :: Kernel.Prelude.Text,
     refillVehicleModel :: Kernel.Prelude.Bool,
     reminderSystemEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -374,7 +376,8 @@ data DriverWalletConfig = DriverWalletConfig
 data FeedbackNotificationConfig = FeedbackNotificationConfig {allowNotificationOnEmptyBadge :: Kernel.Prelude.Bool, enableFeedbackNotification :: Kernel.Prelude.Bool, feedbackNotificationDelayInSec :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data PayoutFeeConfig = PayoutFeeConfig {feeType :: Domain.Types.TransporterConfig.PayoutFeeType, feeValue :: Kernel.Types.Common.HighPrecMoney} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq)
+data PayoutFeeConfig = PayoutFeeConfig {feeType :: Domain.Types.TransporterConfig.PayoutFeeType, feeValue :: Kernel.Types.Common.HighPrecMoney}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq)
 
 data PayoutFeeType = PERCENTAGE | FIXED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

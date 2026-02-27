@@ -1,7 +1,10 @@
 module Storage.Queries.BookingExtra where
 
+-- (Day, UTCTime (UTCTime), DT.secondsToDiffTime, utctDay, DT.addDays)
+
+import qualified Data.Aeson as A
 import Data.List.Extra (notNull)
-import qualified Data.Time as DT -- (Day, UTCTime (UTCTime), DT.secondsToDiffTime, utctDay, DT.addDays)
+import qualified Data.Time as DT
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.Booking
@@ -76,6 +79,17 @@ findByTransactionIdAndStatuses transactionId statusList =
     ]
     (Just (Se.Desc BeamB.createdAt))
     <&> listToMaybe
+
+findAllByStatusAndDateRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [BookingStatus] -> UTCTime -> UTCTime -> m [Booking]
+findAllByStatusAndDateRange merchantOpCityId statuses startTime endTime =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId),
+          Se.Is BeamB.status $ Se.In statuses,
+          Se.Is BeamB.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamB.startTime $ Se.LessThanOrEq endTime
+        ]
+    ]
 
 findByStatusTripCatSchedulingAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> Maybe Integer -> Maybe DT.Day -> Maybe DT.Day -> BookingStatus -> Maybe DTC.TripCategory -> [DVST.ServiceTierType] -> Bool -> Id DMOC.MerchantOperatingCity -> Seconds -> m [Booking]
 findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay status mbTripCategory serviceTiers isScheduled (Id cityId) timeDiffFromUtc = do
@@ -236,4 +250,11 @@ updateExotelCallDeclinedTime bookingId = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamB.exotelDeclinedCallStatusReceivingTime $ Just now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateReconciliationStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Maybe A.Value -> m ()
+updateReconciliationStatus bookingId reconciliationStatus = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.reconciliationStatus reconciliationStatus, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

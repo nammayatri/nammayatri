@@ -110,6 +110,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid
+import qualified SharedLogic.Finance.Reconciliation as Recon
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.FleetVehicleStats as FVS
 import SharedLogic.Reminder.Helper (checkAndCreateReminderIfNeeded, isDocumentExpiryType, precomputeThresholdCheckData)
@@ -547,6 +548,13 @@ createDriverWalletTransaction ride booking fareParams = do
                 merchantShortId = merchant.shortId.getShortId
               }
       _ <- createInvoice invoiceInput entryIds
+
+      -- Trigger reconciliation after ledger entries are created
+      fork "Reconcile booking with ledger entries" $ do
+        rides <- QRide.findRidesByBookingId [booking.id]
+        let mbRide = listToMaybe rides
+        void $ Recon.reconcileBookingWithLedgerEntries Recon.DSRvsLedger booking mbRide
+
       pure ()
     pure ()
 

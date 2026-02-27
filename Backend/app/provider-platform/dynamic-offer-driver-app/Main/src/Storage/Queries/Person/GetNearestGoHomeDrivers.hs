@@ -26,6 +26,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.VehicleServiceTier
@@ -93,7 +94,7 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
   deriving (Generic, Show, HasCoordinates)
 
 getNearestGoHomeDrivers ::
-  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, BeamFlow m r) =>
   NearestGoHomeDriversReq ->
   m [NearestGoHomeDriversResult]
 getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do

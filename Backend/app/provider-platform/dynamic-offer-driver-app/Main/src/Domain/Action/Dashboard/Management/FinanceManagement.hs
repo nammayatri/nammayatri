@@ -2,8 +2,10 @@
 
 module Domain.Action.Dashboard.Management.FinanceManagement
   ( getFinanceManagementSubscriptionPurchaseList,
-    getFinanceManagementFleetOperatorList,
+    getFinanceManagementFleetOperatorFinanceList,
     getFinanceManagementInvoiceList,
+    getReconciliation,
+    getFinanceManagementReconciliation,
   )
 where
 
@@ -13,6 +15,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Domain.Types.FleetOwnerInformation as FleetOwnerInfo
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.SubscriptionPurchase as DSP
@@ -24,20 +27,28 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..), ShortId, cast)
+import Kernel.Utils.Common (getCurrentTime)
 import Kernel.Utils.Error (fromMaybeM, throwError)
+import qualified Lib.Finance.Domain.Types.Account as Account
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
+import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationEntry
+import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
+import qualified Lib.Finance.Storage.Queries.Account as QAccount
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvoiceLedgerLink
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
+import qualified Lib.Finance.Storage.Queries.ReconciliationEntry as QReconEntry
+import qualified Lib.Finance.Storage.Queries.ReconciliationSummary as QReconSummary
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetOwnerInformation as QFleetOwnerInfo
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
 import Tools.Error
 
@@ -59,7 +70,7 @@ getFinanceManagementSubscriptionPurchaseList ::
   Flow API.SubscriptionPurchaseListRes
 getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _amountMin mbDriverId mbFleetOperatorId _mbFrom mbLimit mbOffset _mbStatus mbServiceName mbSubscriptionId _mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
-  _merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let limit = fromMaybe 20 mbLimit
       offset = fromMaybe 0 mbOffset
@@ -76,12 +87,15 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
     Nothing -> do
       case (mbDriverId, mbFleetOperatorId) of
         (Just driverId, _) ->
-          fetchSubscriptionsForOwner driverId DSP.DRIVER serviceName limit offset
+          fetchSubscriptionsForOwner driverId DSP.DRIVER serviceName limit offset merchantOpCityId
         (_, Just fleetOwnerId) ->
-          fetchSubscriptionsForOwner fleetOwnerId DSP.FLEET_OWNER serviceName limit offset
+          fetchSubscriptionsForOwner fleetOwnerId DSP.FLEET_OWNER serviceName limit offset merchantOpCityId
         _ -> do
-          -- TODO: Need query to fetch ALL subscriptions for merchant
-          pure []
+          QSubscriptionPurchase.findAllByMerchantOpCityIdAndServiceNameWithPagination
+            merchantOpCityId
+            serviceName
+            (Just limit)
+            (Just offset)
 
   -- Build response items
   items <- mapM (buildSubscriptionPurchaseItem serviceName limit offset) subscriptions
@@ -104,10 +118,12 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
     parseServiceName "DASHCAM_RENTAL_OWNED" = Just $ DPlan.DASHCAM_RENTAL DPlan.OWNED
     parseServiceName _ = Nothing
 
-    fetchSubscriptionsForOwner :: Text -> DSP.SubscriptionOwnerType -> DPlan.ServiceNames -> Int -> Int -> Flow [DSP.SubscriptionPurchase]
-    fetchSubscriptionsForOwner ownerId ownerType serviceName limit offset = do
+    fetchSubscriptionsForOwner :: Text -> DSP.SubscriptionOwnerType -> DPlan.ServiceNames -> Int -> Int -> (Id DMOC.MerchantOperatingCity) -> Flow [DSP.SubscriptionPurchase]
+    fetchSubscriptionsForOwner ownerId ownerType serviceName limit offset merchantOpCityId = do
       let _mbStatus = Nothing -- Convert Text to SubscriptionPurchaseStatus if needed
-      QSubscriptionPurchase.findAllByOwnerAndServiceNameWithPagination
+      -- Use merchantOpCityId filter for proper KV lookup
+      QSubscriptionPurchase.findAllByOwnerAndServiceNameWithPagination'
+        merchantOpCityId
         ownerId
         ownerType
         serviceName
@@ -117,11 +133,17 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
 
     buildSubscriptionPurchaseItem :: DPlan.ServiceNames -> Int -> Int -> DSP.SubscriptionPurchase -> Flow API.SubscriptionPurchaseListItem
     buildSubscriptionPurchaseItem serviceName _limit _offset subscription = do
-      -- Get plan details
+      -- Get plan details (cache first, then DB by id+mode+serviceName, then by primary key for seed/test data)
       plan <-
         CQPlan.findByIdAndPaymentModeWithServiceName subscription.planId DPlan.MANUAL serviceName >>= \case
           Just p -> pure p
-          Nothing -> throwError $ InvalidRequest "Plan not found"
+          Nothing ->
+            QPlan.findByIdAndPaymentModeWithServiceName subscription.planId DPlan.MANUAL serviceName >>= \case
+              Just p -> pure p
+              Nothing ->
+                QPlan.findByPrimaryKey subscription.planId >>= \case
+                  Just p -> pure p
+                  Nothing -> throwError $ InvalidRequest "Plan not found"
 
       -- Get owner details
       (driverId, fleetOperatorId) <- case subscription.ownerType of
@@ -136,21 +158,13 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
           _person <- QPerson.findById (Id subscription.ownerId) >>= fromMaybeM (PersonDoesNotExist subscription.ownerId)
           pure (Just subscription.ownerId, Just subscription.ownerId)
 
-      -- Get finance invoice details
-      (subAmount, gstRate, gstAmount, totalValue) <- case subscription.financeInvoiceId of
-        Just invId -> do
-          QFinanceInvoice.findById invId >>= \case
-            Just invoice -> do
-              -- Get GST details from indirect tax transaction
-              indirectTaxTxns <- QIndirectTax.findByInvoiceNumber invoice.invoiceNumber
-              let (_taxableVal, gstRt, gstAmt) = case indirectTaxTxns of
-                    (txn : _) -> (Just txn.taxableValue, Just txn.gstRate, Just txn.totalGstAmount)
-                    _ -> (Nothing, Nothing, Nothing)
-                  subAmt = invoice.subtotal
-                  totalAmt = invoice.totalAmount
-              pure (Just subAmt, gstRt, gstAmt, Just totalAmt)
-            Nothing -> pure (Nothing, Nothing, Nothing, Nothing)
-        Nothing -> pure (Nothing, Nothing, Nothing, Nothing)
+      -- Get GST details from indirect tax transaction using subscription purchase ID as reference
+      indirectTaxTxns <- QIndirectTax.findByReferenceId subscription.id.getId
+      let mbSubscriptionTxn = listToMaybe $ filter (\txn -> txn.transactionType == IndirectTax.Subscription) indirectTaxTxns
+      let gstRate = mbSubscriptionTxn <&> (.gstRate)
+      let gstAmount = mbSubscriptionTxn <&> (.totalGstAmount)
+      let subAmount = Just subscription.planFee
+      let totalValue = Just subscription.planRideCredit
 
       -- Calculate usage values from ledger entries
       -- Get Ride Credit account and calculate utilized amount
@@ -186,22 +200,37 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
 
     -- Calculate utilized value from Ride Credit account ledger entries
     calculateUtilizedValue :: Text -> Flow HighPrecMoney
-    calculateUtilizedValue _ownerId = do
-      -- This is a placeholder - actual implementation would:
-      -- 1. Find Ride Credit account for owner (finance_account where account_type = 'RideCredit' and counterparty_id = ownerId)
-      -- 2. Sum all debit amounts from ledger entries where reference_type = 'RideSubscriptionDebit'
-      pure 0 -- TODO: Implement actual calculation
+    calculateUtilizedValue ownerId = do
+      -- Find Ride Credit account for owner
+      let currency = INR -- Default currency, should come from context
+      mbRideCreditAccount <- QAccount.findByCounterpartyAndType Nothing (Just ownerId) Account.RideCredit currency
+      case mbRideCreditAccount of
+        Just account -> do
+          -- Get all ledger entries where fromAccountId = ride credit account (debits)
+          ledgerEntries <- QLedgerEntry.findByFromAccount account.id
+          -- Sum all amounts (these represent credits used for rides)
+          pure $ sum $ map (.amount) ledgerEntries
+        Nothing -> pure 0
 
     -- Get linked ride IDs from ledger entries
     getLinkedRideIds :: Id DSP.SubscriptionPurchase -> Flow [Text]
-    getLinkedRideIds _subId = do
-      -- This is a placeholder - actual implementation would:
-      -- 1. Find ledger entries where reference_id = subscription_purchase.id
-      -- 2. Get ride_id from metadata or reference_id
-      pure [] -- TODO: Implement actual logic
+    getLinkedRideIds subId = do
+      -- Find ledger entries where reference_id = subscription_purchase.id
+      -- and reference_type indicates a ride transaction
+      entries <- QLedgerEntry.findByReference "RideSubscriptionDebit" subId.getId
+      -- Extract ride IDs from metadata or reference
+      pure $ mapMaybe extractRideId entries
+
+    extractRideId :: LedgerEntry.LedgerEntry -> Maybe Text
+    extractRideId entry = do
+      -- Try to get ride ID from metadata if available
+      _metadata <- entry.metadata
+      -- Parse JSON metadata to extract ride_id
+      -- For now, return Nothing as this requires JSON parsing
+      Nothing
 
 -- | Get fleet operator list with filters
-getFinanceManagementFleetOperatorList ::
+getFinanceManagementFleetOperatorFinanceList ::
   ShortId DM.Merchant ->
   Context.City ->
   Maybe Text ->
@@ -211,7 +240,7 @@ getFinanceManagementFleetOperatorList ::
   Maybe Text ->
   Maybe UTCTime ->
   Flow API.FleetOperatorListRes
-getFinanceManagementFleetOperatorList merchantShortId opCity mbFleetOperatorId _mbFrom mbLimit mbOffset _mbSettlementStatus _mbTo = do
+getFinanceManagementFleetOperatorFinanceList merchantShortId opCity mbFleetOperatorId _mbFrom mbLimit mbOffset _mbSettlementStatus _mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   _merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
@@ -247,48 +276,35 @@ getFinanceManagementFleetOperatorList merchantShortId opCity mbFleetOperatorId _
     buildFleetOperatorItem (person, mbFleetInfo) = do
       -- Get linked drivers
       linkedDrivers <- QFleetDriver.findAllActiveByFleetOwnerId person.id.getId
-      let linkedDriverIds = map (\d -> d.driverId.getId) linkedDrivers
 
-      -- Get fleet owner info
-      let (legalName, pan, gstin) = case mbFleetInfo of
-            Just _fleetInfo -> (Just person.firstName, Nothing, Nothing) -- TODO: Get actual pan/gstin
-            Nothing -> (Just person.firstName, Nothing, Nothing)
+      -- Build full legal name
+      let legalName = T.intercalate " " $ catMaybes [Just person.firstName, person.middleName, person.lastName]
 
-      -- Calculate financials from ledger entries
-      (totalEarnings, totalDeductions) <- calculateFleetFinancials person.id.getId
-      outstandingBalance <- getOutstandingBalance person.id.getId
+      -- Get and decrypt PAN and GSTIN if available
+      let (pan, gstin) = case mbFleetInfo of
+            Just fleetInfo ->
+              ( fleetInfo.panNumberDec,
+                fleetInfo.gstNumberDec
+              )
+            Nothing -> (Nothing, Nothing)
 
       pure $
         API.FleetOperatorListItem
           { fleetOperatorId = Just person.id.getId,
-            legalName = legalName,
+            legalName = Just legalName,
             pan = pan,
             gstin = gstin,
             settlementPreference = Nothing,
-            linkedDriverIds = linkedDriverIds,
-            totalEarnings = Just totalEarnings,
-            totalDeductions = Just totalDeductions,
-            outstandingBalance = Just outstandingBalance,
-            payoutReference = Nothing, -- TODO: Get from payout table
+            linkedDriverIds = map (\d -> d.driverId.getId) linkedDrivers,
+            totalEarnings = Nothing,
+            totalDeductions = Nothing,
+            outstandingBalance = Nothing,
+            payoutReference = Nothing,
             payoutAmount = Nothing,
             payoutStatus = Nothing,
             createdAt = Just person.createdAt,
             updatedAt = Just person.updatedAt
           }
-
-    -- Calculate total earnings and deductions from ledger entries
-    calculateFleetFinancials :: Text -> Flow (HighPrecMoney, HighPrecMoney)
-    calculateFleetFinancials _fleetOwnerId = do
-      -- TODO: Implement based on SQL query:
-      -- Earnings: Sum of ledger entries where to_account is DRIVER_PAYABLE
-      -- Deductions: Sum of ledger entries where from_account is DRIVER_PAYABLE
-      pure (0, 0)
-
-    -- Get outstanding balance from finance_account
-    getOutstandingBalance :: Text -> Flow HighPrecMoney
-    getOutstandingBalance _fleetOwnerId = do
-      -- TODO: Find finance_account where counterparty_id = fleetOwnerId and account_type = 'Liability'
-      pure 0
 
 -- | Get invoice list with filters
 getFinanceManagementInvoiceList ::
@@ -375,3 +391,93 @@ getFinanceManagementInvoiceList merchantShortId opCity _mbFrom mbInvoiceId _mbIn
         "Ride" -> (entry.referenceId : rides, subs)
         "SubscriptionPurchase" -> (rides, entry.referenceId : subs)
         _ -> (rides, subs)
+
+-- | Get reconciliation data - just fetch from tables
+getReconciliation ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Flow API.ReconciliationRes
+getReconciliation merchantShortId opCity mbFromDate mbLimit mbOffset mbReconciliationType mbToDate = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  _merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  let limit = fromMaybe 20 mbLimit
+      offset = fromMaybe 0 mbOffset
+
+  -- Fetch summaries - use single date or merchant filter (generated API has findByDateAndType date type, findByMerchantId)
+  summaries <- case (mbReconciliationType, mbFromDate <|> mbToDate) of
+    (Just rType, Just d) -> QReconSummary.findByDateAndType d (caseToReconciliationType rType)
+    (Just rType, Nothing) -> do
+      now <- getCurrentTime
+      QReconSummary.findByDateAndType now (caseToReconciliationType rType)
+    (Nothing, _) -> do
+      allSummaries <- QReconSummary.findByMerchantId merchant.id.getId
+      pure $ filter (\s -> maybe True (s.reconciliationDate >=) mbFromDate && maybe True (s.reconciliationDate <=) mbToDate) allSummaries
+
+  let latestSummary = listToMaybe summaries
+
+  -- Build summary from latest summary (domain has totalDiscrepancies, matchedRecords, matchRate)
+  let summaryRes = case latestSummary of
+        Just s ->
+          API.ReconciliationSummary
+            { totalDiscrepancies = s.totalDiscrepancies,
+              matchedRecords = s.matchedRecords,
+              matchRate = s.matchRate,
+              sourceTotal = s.sourceTotal,
+              targetTotal = s.targetTotal,
+              varianceAmount = s.varianceAmount
+            }
+        Nothing ->
+          API.ReconciliationSummary
+            { totalDiscrepancies = 0,
+              matchedRecords = 0,
+              matchRate = "0%",
+              sourceTotal = 0,
+              targetTotal = 0,
+              varianceAmount = 0
+            }
+
+  -- Fetch entries from latest summary; paginate in memory (findBySummaryId returns list)
+  entries <- case latestSummary of
+    Just summary -> do
+      allEntries <- QReconEntry.findBySummaryId summary.id
+      pure $ take limit $ drop offset allEntries
+    Nothing -> pure []
+
+  entriesItems <- mapM buildReconciliationEntry entries
+
+  pure $
+    API.ReconciliationRes
+      { summary = summaryRes,
+        exceptions = entriesItems, -- Return all entries
+        completed = [] -- Already included in entries
+      }
+  where
+    buildReconciliationEntry :: ReconciliationEntry.ReconciliationEntry -> Flow API.ReconciliationEntry
+    buildReconciliationEntry entry =
+      pure
+        API.ReconciliationEntry
+          { bookingId = Just entry.bookingId,
+            dcoId = Just entry.dcoId,
+            status = Just (show entry.status),
+            mode = fmap show entry.mode,
+            expectedDsrValue = Just entry.expectedDsrValue,
+            actualLedgerValue = Just entry.actualLedgerValue,
+            variance = Just entry.variance,
+            reconStatus = Just (show entry.reconStatus),
+            mismatchReason = entry.mismatchReason,
+            timestamp = Just entry.timestamp
+          }
+    caseToReconciliationType :: Text -> ReconSummary.ReconciliationType
+    caseToReconciliationType "DSR_VS_LEDGER" = ReconSummary.DSR_VS_LEDGER
+    caseToReconciliationType "DSR_VS_SUBSCRIPTION" = ReconSummary.DSR_VS_SUBSCRIPTION
+    caseToReconciliationType "DSSR_VS_SUBSCRIPTION" = ReconSummary.DSSR_VS_SUBSCRIPTION
+    caseToReconciliationType _ = error "Invalid reconciliation type"
+
+getFinanceManagementReconciliation :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe UTCTime -> Flow API.ReconciliationRes
+getFinanceManagementReconciliation = getReconciliation

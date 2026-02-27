@@ -7,13 +7,15 @@ where
 
 import Kernel.Prelude
 import Kernel.Utils.Common
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.Finance.Prepaid (handleSubscriptionExpiry)
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 
 expireSubscriptionPurchase ::
-  ( MonadFlow m,
+  ( BeamFlow m r,
+    MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>

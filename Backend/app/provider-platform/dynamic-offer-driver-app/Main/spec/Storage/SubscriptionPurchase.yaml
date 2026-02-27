@@ -10,6 +10,7 @@ imports:
   WaiveOffMode: Domain.Types.DriverPlan
   ServiceNames: Domain.Types.Extra.Plan
   Invoice: Lib.Finance.Domain.Types.Invoice
+  Value: Data.Aeson
 
 SubscriptionPurchase:
   tableName: subscription_purchase
@@ -45,6 +46,7 @@ SubscriptionPurchase:
     serviceName: ServiceNames
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    reconciliationStatus: Maybe Value
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SubscriptionPurchaseStatus>
@@ -80,6 +82,10 @@ SubscriptionPurchase:
     updateStatusById:
       kvFunction: updateOneWithKV
       params: [status, updatedAt]
+      where: id
+    updateReconciliationStatus:
+      kvFunction: updateOneWithKV
+      params: [reconciliationStatus, updatedAt]
       where: id
 
   extraOperations:

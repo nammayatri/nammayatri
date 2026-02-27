@@ -80,6 +80,7 @@ data Booking = Booking
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     quoteId :: Kernel.Prelude.Text,
     receiverDetails :: Kernel.Prelude.Maybe Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
+    reconciliationStatus :: Kernel.Prelude.Maybe Data.Aeson.Value,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -112,8 +113,8 @@ data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED d
 
 data BookingType = SpecialZoneBooking | NormalBooking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
 
-$(mkHttpInstancesForEnum (''BookingStatus))
+$(mkHttpInstancesForEnum ''BookingStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingType)

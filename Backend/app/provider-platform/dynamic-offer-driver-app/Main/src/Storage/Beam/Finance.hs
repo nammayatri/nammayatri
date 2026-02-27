@@ -23,6 +23,8 @@ import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirect
 import qualified Lib.Finance.Storage.Beam.Invoice as BeamInvoice
 import qualified Lib.Finance.Storage.Beam.InvoiceLedgerLink as BeamInvoiceLedger
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLedger
+import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as BeamReconciliationEntry
+import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as BeamReconciliationSummary
 import qualified Lib.Finance.Storage.Beam.StateTransition as BeamStateTransition
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
@@ -45,6 +47,12 @@ instance HasSchemaName BeamInvoiceLedger.InvoiceLedgerLinkT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamLedger.LedgerEntryT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamReconciliationEntry.ReconciliationEntryT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamReconciliationSummary.ReconciliationSummaryT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamStateTransition.StateTransitionT where

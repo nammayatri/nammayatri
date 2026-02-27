@@ -224,6 +224,8 @@ data TransporterConfigT f = TransporterConfigT
     recentScheduledBookingsSafeLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     recomputeDistanceThresholds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     recomputeIfPickupDropNotOutsideOfThreshold :: B.C f Kernel.Prelude.Bool,
+    reconciliationJobsEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    reconciliationSchedulerTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     referralLinkPassword :: B.C f Kernel.Prelude.Text,
     refillVehicleModel :: B.C f Kernel.Prelude.Bool,
     reminderSystemEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

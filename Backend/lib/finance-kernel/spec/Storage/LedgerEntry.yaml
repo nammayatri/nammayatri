@@ -43,6 +43,7 @@ LedgerEntry:
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
+    reconciliationStatus: Maybe Value
 
   constraints:
     id: PrimaryKey
