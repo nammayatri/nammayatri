@@ -60,7 +60,7 @@ UPDATE atlas_driver_offer_bpp.issue_option SET issue_message_id = 'gh7a9119-c76f
 UPDATE atlas_driver_offer_bpp.issue_option SET issue_message_id = 'gh7a9119-c76f-42f2-8209-68fb00b875ef', priority = 4 WHERE id = '3d68dbe3-bc3a-44a0-939a-7ad166c4818b';
 UPDATE atlas_driver_offer_bpp.issue_option SET issue_message_id = 'gh7a9119-c76f-42f2-8209-68fb00b875ef', priority = 5 WHERE id = '5bed68d9-265c-4fb3-bdcc-22a4ed45de37';
 
-INSERT INTO atlas_driver_offer_bpp.issue_message VALUES ('32jn4n2t-nwsd-j124-4n45-5k6oyh0hmg4f', 'd8eee179-c34a-4d70-ba2e-1222962091cb', null, 'Please give some more details. You can also send images or voice notes to elaborate better', null, 1);
+INSERT INTO atlas_driver_offer_bpp.issue_message VALUES ('32jn4n2t-nwsd-j64-4n45-5k6oyh0hmg4f', 'd8eee179-c34a-4d70-ba2e-1222962091cb', null, 'Please give some more details. You can also send images or voice notes to elaborate better', null, 1);
 INSERT INTO atlas_driver_offer_bpp.issue_message VALUES ('8h9238yr-5yvy-nqi3-7g77-3nifg87483e2', '16bf2a0d-229e-4afc-be9d-a06fb1bd0581', null, 'Please give some more details. You can also send images or voice notes to elaborate better', null, 1);
 INSERT INTO atlas_driver_offer_bpp.issue_message VALUES ('42nsjh59-24pl-tdeu-4zra-1ubar1v49j6m', '9e8785e1-77d1-42c2-945e-15d398ed8e38', null, 'Please give some more details. You can also send images or voice notes to elaborate better', null, 1);
 INSERT INTO atlas_driver_offer_bpp.issue_message VALUES ('bsdfy12e-gy1d-7fgh-7y3f-yg2fbsdjfbdf', '3d68dbe3-bc3a-44a0-939a-7ad166c4818b', null, 'Please give some more details. You can also send images or voice notes to elaborate better', null, 1);

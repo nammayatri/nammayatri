@@ -123,7 +123,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j12
+          - -j4
   dependencies:
     - dynamic-offer-driver-app
     - rider-app
@@ -150,7 +150,7 @@ executables:
       else:
         ghc-options:
           - -O2
-          - -j12
+          - -j4
     dependencies:
       - kafka-consumers
       - mobility-core

@@ -131,7 +131,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j12
+          - -j4
   dependencies:
     - mobility-core
 
@@ -157,7 +157,7 @@ executables:
       else:
         ghc-options:
           - -O2
-          - -j12
+          - -j4
     dependencies:
       - dynamic-offer-driver-drainer
       - mobility-core

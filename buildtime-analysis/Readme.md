@@ -128,18 +128,18 @@ To customize, edit the `analyze-build-times` job in `nix-push.yaml`.
   jobs: 4
 
   **package.yaml ghc-options (for dynamic-offer-driver-app and rider-app)**
-  - -j12
+  - -j4
 
   **Rationale:**
   - Phase 1 (0-18m): dynamic-offer-driver-app + rider-app building in parallel = 2 × 12 = 24 cores, fully saturated
   - Phase 2 (18-25m): only dynamic-offer-driver-app left as heavy build — gets 12 cores. Rider-app dependents (scheduler, search-result-aggregator) are tiny (<1 min), the
   extra jobs slots let those trickle through on remaining cores
-  - Phase 3 (25-31m): 5+ small dependents burst in parallel — jobs: 4 lets 4 build at once with -j12 each but they're small so they won't actually use all 12
+  - Phase 3 (25-31m): 5+ small dependents burst in parallel — jobs: 4 lets 4 build at once with -j4 each but they're small so they won't actually use all 12
 
   If you want to be more aggressive for Phase 2 (avoid idle cores when only driver-app is left):
 
   jobs: 3
-  - -j12
+  - -j4
 
   This is slightly less parallel for the burst phase but 3 × 12 = 36 means Nix won't over-subscribe too badly on your 24 cores (GHC's -j is a hint, not a hard limit — it
   won't spawn 12 threads if there aren't 12 compilable modules at that moment).
@@ -150,9 +150,9 @@ To customize, edit the `analyze-build-times` job in `nix-push.yaml`.
   jobs: 3
 
   **package.yaml ghc-options**
-  - -j12
+  - -j4
 
-  Expected impact: dynamic-offer-driver-app goes from 25.1m (with -j4) to ~12-15m (with -j12), since 3x more module-level parallelism. Total wall clock drops from 31m →
+  Expected impact: dynamic-offer-driver-app goes from 25.1m (with -j4) to ~12-15m (with -j4), since 3x more module-level parallelism. Total wall clock drops from 31m →
   ~18-20m.
 
   The bottleneck is dynamic-offer-driver-app compilation speed, not inter-package parallelism. Throwing more cores at that single package is where your 24 cores pay off.
