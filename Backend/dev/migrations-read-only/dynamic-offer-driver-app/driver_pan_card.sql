@@ -39,69 +39,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN type text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN doc_type text ;
 
 
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN pan_aadhaar_linkage text ;
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
 
 
 

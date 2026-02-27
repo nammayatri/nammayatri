@@ -132,21 +132,3 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN docum
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN roles_allowed_to_upload_document_text text[] ;
 
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-

@@ -214,6 +214,7 @@ getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurr
           Just requestor ->
             case requestor.role of
               DP.FLEET_OWNER -> pure (False, Just requestorId)
+              DP.FLEET_BUSINESS -> pure (False, Just requestorId)
               DP.OPERATOR -> throwError AccessDenied
               _ -> pure (True, Nothing)
 

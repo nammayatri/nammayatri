@@ -46,7 +46,7 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             order = order,
             rcNumberPrefixList = rcNumberPrefixList,
-            rolesAllowedToUploadDocument = Kernel.Prelude.map (read . Data.Text.unpack) Kernel.Prelude.<$> rolesAllowedToUploadDocumentText,
+            rolesAllowedToUploadDocument = rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack),
             supportedVehicleClasses = supportedVehicleClasses',
             title = title,
             vehicleCategory = vehicleCategory,

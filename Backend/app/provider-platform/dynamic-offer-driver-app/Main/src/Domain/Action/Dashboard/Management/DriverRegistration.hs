@@ -321,7 +321,7 @@ postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> I
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  docType <- pure $ mapDocumentType req.imageType
+  let docType = mapDocumentType req.imageType
   docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId docType Nothing
   -- Nothing or empty list = no role restriction (all allowed); non-empty = only those roles can upload (enforced in validateImageHandler)
   let mbRolesAllowed = listToMaybe docConfigs >>= (.rolesAllowedToUploadDocument)
@@ -621,7 +621,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
         updatedInsurance.driverId
         mId
         mOpCityId
-        (Just $ updatedInsurance.id.getId)
+        (Just $ updatedInsurance.rcId.getId)
         (Just updatedInsurance.policyExpiry)
         Nothing
     Nothing -> do
@@ -655,7 +655,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
             insurance.driverId
             mId
             mOpCityId
-            (Just $ insurance.id.getId)
+            (Just $ insurance.rcId.getId)
             (Just insurance.policyExpiry)
             Nothing
         _ -> do
@@ -690,7 +690,7 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
         updatedpuc.driverId
         mId
         mOpCityId
-        (Just $ updatedpuc.id.getId)
+        (Just $ updatedpuc.rcId.getId)
         (Just updatedpuc.pucExpiry)
         Nothing
     Nothing -> do
@@ -717,7 +717,7 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
         puc.driverId
         mId
         mOpCityId
-        (Just $ puc.id.getId)
+        (Just $ puc.rcId.getId)
         (Just puc.pucExpiry)
         Nothing
 
@@ -751,7 +751,7 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
         updatedpermit.driverId
         mId
         mOpCityId
-        (Just $ updatedpermit.id.getId)
+        (Just $ updatedpermit.rcId.getId)
         (Just updatedpermit.permitExpiry)
         Nothing
     Nothing -> do
@@ -781,7 +781,7 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
         permit.driverId
         mId
         mOpCityId
-        (Just $ permit.id.getId)
+        (Just $ permit.rcId.getId)
         (Just permit.permitExpiry)
         Nothing
 
@@ -813,7 +813,7 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
         updatedFitnessCert.driverId
         mId
         mOpCityId
-        (Just $ updatedFitnessCert.id.getId)
+        (Just $ updatedFitnessCert.rcId.getId)
         (Just updatedFitnessCert.fitnessExpiry)
         Nothing
     Nothing -> do
@@ -841,7 +841,7 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
         fitnessCert.driverId
         mId
         mOpCityId
-        (Just $ fitnessCert.id.getId)
+        (Just $ fitnessCert.rcId.getId)
         (Just fitnessCert.fitnessExpiry)
         Nothing
 

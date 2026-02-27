@@ -35,6 +35,16 @@ findByCreatorStatusAndType creatorId requestStatus requestType = do
         ]
     ]
 
+findOneByRequestStatusAndDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.OperationHubRequests.RequestStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m (Maybe Domain.Types.OperationHubRequests.OperationHubRequests))
+findOneByRequestStatusAndDriverId requestStatus driverId = do findOneWithKV [Se.And [Se.Is Beam.requestStatus $ Se.Eq requestStatus, Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId)]]
+
+findOneByRequestStatusAndRegistrationNo ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.OperationHubRequests.RequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.OperationHubRequests.OperationHubRequests))
+findOneByRequestStatusAndRegistrationNo requestStatus registrationNo = do findOneWithKV [Se.And [Se.Is Beam.requestStatus $ Se.Eq requestStatus, Se.Is Beam.registrationNo $ Se.Eq registrationNo]]
+
 updateStatusWithDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.OperationHubRequests.RequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Types.Id.Id Domain.Types.OperationHubRequests.OperationHubRequests -> m ())
