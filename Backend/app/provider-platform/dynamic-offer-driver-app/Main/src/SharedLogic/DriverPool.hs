@@ -105,6 +105,7 @@ import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.Beckn.Common as DST
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
@@ -528,7 +529,8 @@ cacheBlockListedDrivers key driverId = do
   Redis.withCrossAppRedis $ Redis.rPushExp key [driverId] (round searchRequestExpirationSeconds)
 
 calculateGoHomeDriverPool ::
-  ( EncFlow m r,
+  ( BeamFlow m r,
+    EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     CoreMetrics m,
@@ -764,7 +766,8 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
   }
 
 calculateDriverPool ::
-  ( EncFlow m r,
+  ( BeamFlow m r,
+    EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
@@ -992,7 +995,8 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
            in timeDifference < scheduledRideFilterExclusionThresholdInSecs
 
 calculateDriverPoolCurrentlyOnRide ::
-  ( EncFlow m r,
+  ( BeamFlow m r,
+    EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,

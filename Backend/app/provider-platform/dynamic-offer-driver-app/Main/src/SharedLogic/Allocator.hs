@@ -84,6 +84,7 @@ data AllocatorJobType
   | SpecialZonePayout
   | ProcessReminder
   | ExpireSubscriptionPurchase
+  | Reconciliation
   | ScheduledBatchPayout
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
@@ -130,6 +131,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSpecialZonePayout jobData = AnyJobInfo <$> restoreJobInfo SSpecialZonePayout jobData
   restoreAnyJobInfo SProcessReminder jobData = AnyJobInfo <$> restoreJobInfo SProcessReminder jobData
   restoreAnyJobInfo SExpireSubscriptionPurchase jobData = AnyJobInfo <$> restoreJobInfo SExpireSubscriptionPurchase jobData
+  restoreAnyJobInfo SReconciliation jobData = AnyJobInfo <$> restoreJobInfo SReconciliation jobData
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
 
 instance JobInfoProcessor 'Daily
@@ -491,6 +493,19 @@ newtype ExpireSubscriptionPurchaseJobData = ExpireSubscriptionPurchaseJobData
 instance JobInfoProcessor 'ExpireSubscriptionPurchase
 
 type instance JobContent 'ExpireSubscriptionPurchase = ExpireSubscriptionPurchaseJobData
+
+data ReconciliationJobData = ReconciliationJobData
+  { reconciliationType :: Text,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    startTime :: UTCTime,
+    endTime :: UTCTime
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'Reconciliation
+
+type instance JobContent 'Reconciliation = ReconciliationJobData
 
 data ScheduledBatchPayoutJobData = ScheduledBatchPayoutJobData
   { merchantId :: Id DM.Merchant,

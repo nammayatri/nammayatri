@@ -31,12 +31,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.Finance.Prepaid
 import qualified Storage.Queries.BookingExtra as QBookingE
 import qualified Storage.Queries.Person as QP
 
 getSubscriptionTransactions ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   ( Maybe (Id Person),
     Id Merchant,
     Id MerchantOperatingCity
