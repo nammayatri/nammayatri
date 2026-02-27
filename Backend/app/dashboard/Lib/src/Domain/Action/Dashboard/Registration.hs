@@ -74,6 +74,20 @@ newtype Enable2FARes = Enable2FARes
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
+data Verify2FAReq = Verify2FAReq
+  { email :: Text,
+    password :: Text,
+    merchantId :: ShortId DMerchant.Merchant,
+    city :: Maybe City.City,
+    otp :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+newtype Verify2FARes = Verify2FARes
+  { message :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
 data LoginRes = LoginRes
   { authToken :: Text,
     is2faMandatory :: Bool,
@@ -149,7 +163,7 @@ login LoginReq {..} = do
               defaultCityPresent = elem merchant.defaultOperatingCity merchantWithCityList
               city' = if defaultCityPresent then merchant.defaultOperatingCity else head merchantWithCityList
           pure (merchant, city')
-  generateLoginRes person merchant' otp city'
+  generateLoginRes False person merchant' otp city'
 
 makeEmailHitsCountKey :: Maybe Text -> Text
 makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
@@ -168,7 +182,7 @@ switchMerchant authToken SwitchMerchantReq {..} = do
   merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
   merchantServerAccessCheck merchant
   person <- QP.findById authToken.personId >>= fromMaybeM (PersonDoesNotExist authToken.personId.getId)
-  generateLoginRes person merchant otp merchant.defaultOperatingCity
+  generateLoginRes True person merchant otp merchant.defaultOperatingCity
 
 switchMerchantAndCity ::
   ( BeamFlow m r,
@@ -184,7 +198,7 @@ switchMerchantAndCity authToken SwitchMerchantAndCityReq {..} = do
   merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
   merchantServerAccessCheck merchant
   person <- QP.findById authToken.personId >>= fromMaybeM (PersonDoesNotExist authToken.personId.getId)
-  generateLoginRes person merchant otp city
+  generateLoginRes True person merchant otp city
 
 generateLoginRes ::
   ( BeamFlow m r,
@@ -192,18 +206,24 @@ generateLoginRes ::
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     EncFlow m r
   ) =>
+  Bool ->
   DP.Person ->
   DMerchant.Merchant ->
   Maybe Text ->
   City.City ->
   m LoginRes
-generateLoginRes person merchant otp city = do
+generateLoginRes isSwitch person merchant otp city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
-  (isToken, msg) <- check2FA _merchantAccess merchant otp
+  (isToken, msg) <-
+    if isSwitch && DMerchant.is2faMandatory merchant && DMerchantAccess.is2faEnabled _merchantAccess
+      then pure (True, "Successfully switched merchant")
+      else check2FA _merchantAccess merchant otp
   token <-
     if isToken
       then generateToken person.id merchant city
-      else pure ""
+      else do
+        when isSwitch $ throwError (InvalidRequest msg)
+        pure ""
   pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg city merchant.shortId
 
 check2FA :: (EncFlow m r) => DMerchantAccess.MerchantAccess -> DMerchant.Merchant -> Maybe Text -> m (Bool, Text)
@@ -243,9 +263,27 @@ enable2fa Enable2FAReq {..} = do
   let city' = fromMaybe merchant.defaultOperatingCity city
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city' >>= fromMaybeM AccessDenied
   key <- L.runIO Utils.generateSecretKey
-  MA.updatePerson2faForMerchant person.id merchant.id key
+  MA.updatePerson2faForMerchant person.id merchant.id key False
   let qrCodeUri = Utils.generateAuthenticatorURI key email merchant.shortId
   pure $ Enable2FARes qrCodeUri
+
+verify2fa ::
+  ( BeamFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    EncFlow m r
+  ) =>
+  Verify2FAReq ->
+  m Verify2FARes
+verify2fa Verify2FAReq {..} = do
+  person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
+  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
+  let city' = fromMaybe merchant.defaultOperatingCity city
+  merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city' >>= fromMaybeM AccessDenied
+  secretKey <- merchantAccess.secretKey & fromMaybeM (InvalidRequest "2FA setup not started. Please enable 2FA first.")
+  (isValid, msg) <- handle2FA (Just secretKey) (Just otp)
+  unless isValid $ throwError (InvalidRequest msg)
+  MA.updatePerson2faForMerchant person.id merchant.id secretKey True
+  pure $ Verify2FARes "2FA enabled successfully"
 
 generateToken ::
   ( BeamFlow m r,

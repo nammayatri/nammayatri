@@ -86,11 +86,12 @@ updatePerson2faForMerchant ::
   Id DP.Person ->
   Id DMerchant.Merchant ->
   Text ->
+  Bool ->
   m ()
-updatePerson2faForMerchant personId merchantId secretKey =
+updatePerson2faForMerchant personId merchantId secretKey set2faEnabled =
   updateWithKV
     [ Se.Set BeamMA.secretKey $ Just secretKey,
-      Se.Set BeamMA.is2faEnabled True
+      Se.Set BeamMA.is2faEnabled set2faEnabled
     ]
     [ Se.And
         [ Se.Is BeamMA.personId $ Se.Eq $ getId personId,
