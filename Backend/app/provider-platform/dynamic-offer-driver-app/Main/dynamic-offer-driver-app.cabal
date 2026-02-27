@@ -481,6 +481,7 @@ library
       SharedLogic.Person
       SharedLogic.PersonBankAccount
       SharedLogic.Pricing
+      SharedLogic.RCOcrCache
       SharedLogic.Reminder.Helper
       SharedLogic.Ride
       SharedLogic.RiderDetails
@@ -1085,6 +1086,7 @@ library
       Domain.Types.MessageTranslation
       Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
+      Domain.Types.MorthRCVerification
       Domain.Types.Notification
       Domain.Types.OperationHub
       Domain.Types.OperationHubRequests
@@ -1252,6 +1254,7 @@ library
       Storage.Beam.MessageTranslation
       Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
+      Storage.Beam.MorthRCVerification
       Storage.Beam.Notification
       Storage.Beam.OperationHub
       Storage.Beam.OperationHubRequests
@@ -1423,6 +1426,7 @@ library
       Storage.Queries.MessageTranslation
       Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
+      Storage.Queries.MorthRCVerification
       Storage.Queries.Notification
       Storage.Queries.OperationHub
       Storage.Queries.OperationHubRequests

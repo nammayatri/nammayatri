@@ -24,7 +24,7 @@ import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistrat
 import Control.Applicative ((<|>))
 import qualified Data.List as DL
 import qualified Data.Text as T
-import Data.Time hiding (getCurrentTime)
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types as DVST
 import qualified Domain.Types.DocumentVerificationConfig
@@ -380,7 +380,11 @@ data CreateRCInput = CreateRCInput
     dateOfRegistration :: Maybe UTCTime,
     vehicleModelYear :: Maybe Int,
     grossVehicleWeight :: Maybe Float,
-    unladdenWeight :: Maybe Float
+    unladdenWeight :: Maybe Float,
+    -- | True when the RC was verified by Morth (validity-only check).
+    -- Skips vehicle-class mapping in validateRCStatus so that a valid Morth
+    -- response is not incorrectly marked INVALID due to missing class data.
+    morthVerified :: Bool
   }
 
 buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> [Text] -> m (Maybe VehicleRegistrationCertificate)
@@ -389,7 +393,16 @@ buildRC merchantId merchantOperatingCityId input failedRules = do
   id <- generateGUID
   rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe DVC.CAR input.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
   mEncryptedRC <- encrypt `mapM` input.registrationNumber
-  let mbFitnessExpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
+  -- For Morth-verified RCs the API may return `rcValidUpto = null` (vehicles
+  -- whose RC has no fixed expiry date, e.g. perpetually-valid commercial RCs).
+  -- In that case fall back to a far-future sentinel so the RC is not marked
+  -- expired immediately.  When Morth does return a date it is normalised to ISO
+  -- format in the interface and parsed by convertTextToUTC, so `fitnessUpto`
+  -- will be set correctly and this branch is never reached.
+  let morthFallbackExpiry = if input.morthVerified && isNothing input.fitnessUpto
+        then Just (addUTCTime (secondsToNominalDiffTime 788400000) now) -- ~25 years
+        else Nothing
+  let mbFitnessExpiry = input.fitnessUpto <|> morthFallbackExpiry <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
   mbRC <- case (mEncryptedRC, mbFitnessExpiry) of
     (Just certificateNumber, Just expiry) -> do
       rc <- createRC merchantId merchantOperatingCityId input rCConfigs id now failedRules certificateNumber expiry
@@ -418,7 +431,10 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         Just DVC.BUS -> if airConditioned == Just True then Just DV.BUS_AC else Just DV.BUS_NON_AC
         Just DVC.TRUCK -> Just $ DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight (fromMaybe DV.DELIVERY_LIGHT_GOODS_VEHICLE variant)
         _ -> variant
-      finalVerificationStatus = if null failedRules then verificationStatus else Documents.INVALID
+      -- For Morth-verified RCs, Morth's ACTIVE response is the authority —
+      -- bypass any merchant-side validation rule failures that would otherwise
+      -- downgrade the status.
+      finalVerificationStatus = if input.morthVerified || null failedRules then verificationStatus else Documents.INVALID
   pure
     VehicleRegistrationCertificate
       { id,
@@ -464,21 +480,32 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
 
 validateRCStatus :: VerificationFlow m r => CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> m (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
 validateRCStatus input rcconfigs now expiry = do
-  case rcconfigs.supportedVehicleClasses of
-    DVC.RCValidClasses [] -> pure (Documents.INVALID, Nothing, Nothing, Nothing)
-    DVC.RCValidClasses vehicleClassVariantMap -> do
-      let validCOVsCheck = rcconfigs.vehicleClassCheckType
-      let mbVehicleClassOrCategory = input.vehicleClass <|> input.vehicleClassCategory
-      logInfo $ "validateRCStatus: vehicleClass=" <> show input.vehicleClass <> ", vehicleClassCategory=" <> show input.vehicleClassCategory <> ", mbVehicleClassOrCategory=" <> show mbVehicleClassOrCategory <> ", vehicleClassCheckType=" <> show validCOVsCheck <> ", vehicleClassVariantMap size=" <> show (length vehicleClassVariantMap)
-      let (isCOVValid, reviewRequired, variant, mbVehicleModel) = maybe (False, Nothing, Nothing, Nothing) (isValidCOVRC input.airConditioned input.oxygen input.ventilator input.vehicleClassCategory input.seatingCapacity input.manufacturer input.bodyType input.manufacturerModel vehicleClassVariantMap validCOVsCheck) mbVehicleClassOrCategory
-      logDebug $ "validateRCStatus: reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel
-      logInfo $ "validateRCStatus: isCOVValid=" <> show isCOVValid <> ", checkExpiry=" <> show rcconfigs.checkExpiry <> ", expiry=" <> show expiry <> ", now < expiry=" <> show (now < expiry)
-      let validInsurance = True -- (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
-      let expiryCheck = (not rcconfigs.checkExpiry) || now < expiry
-      let finalStatus = if expiryCheck && isCOVValid && validInsurance then Documents.VALID else Documents.INVALID
-      logInfo $ "validateRCStatus: Setting verificationStatus=" <> show finalStatus <> " (expiryCheck=" <> show expiryCheck <> ", isCOVValid=" <> show isCOVValid <> ", validInsurance=" <> show validInsurance <> ")"
-      pure $ if finalStatus == Documents.VALID then (Documents.VALID, reviewRequired, variant, mbVehicleModel) else (Documents.INVALID, reviewRequired, variant, mbVehicleModel)
-    _ -> pure (Documents.INVALID, Nothing, Nothing, Nothing)
+  -- Morth only checks RC validity, not vehicle classification.
+  -- If Morth confirmed the RC is active, skip the class-mapping check entirely.
+  if input.morthVerified
+    then do
+      logInfo "validateRCStatus: morthVerified=True - bypassing vehicle class validation, returning VALID"
+      pure (Documents.VALID, Nothing, Nothing, Nothing)
+    else case rcconfigs.supportedVehicleClasses of
+      DVC.RCValidClasses [] -> pure (Documents.INVALID, Nothing, Nothing, Nothing)
+      DVC.RCValidClasses vehicleClassVariantMap -> do
+        let validCOVsCheck = rcconfigs.vehicleClassCheckType
+        let mbVehicleClassOrCategory = input.vehicleClass <|> input.vehicleClassCategory
+        logInfo $ "validateRCStatus: vehicleClass=" <> show input.vehicleClass <> ", vehicleClassCategory=" <> show input.vehicleClassCategory <> ", mbVehicleClassOrCategory=" <> show mbVehicleClassOrCategory <> ", vehicleClassCheckType=" <> show validCOVsCheck <> ", vehicleClassVariantMap size=" <> show (length vehicleClassVariantMap)
+        case mbVehicleClassOrCategory of
+          Nothing -> do
+            logInfo "validateRCStatus: vehicleClass and vehicleClassCategory are both absent – marking as INVALID"
+            pure (Documents.INVALID, Nothing, Nothing, Nothing)
+          Just cov -> do
+            let (isCOVValid, reviewRequired, variant, mbVehicleModel) = isValidCOVRC input.airConditioned input.oxygen input.ventilator input.vehicleClassCategory input.seatingCapacity input.manufacturer input.bodyType input.manufacturerModel vehicleClassVariantMap validCOVsCheck cov
+            logDebug $ "validateRCStatus: reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel
+            logInfo $ "validateRCStatus: isCOVValid=" <> show isCOVValid <> ", checkExpiry=" <> show rcconfigs.checkExpiry <> ", expiry=" <> show expiry <> ", now < expiry=" <> show (now < expiry)
+            let validInsurance = True -- (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
+            let expiryCheck = (not rcconfigs.checkExpiry) || now < expiry
+            let finalStatus = if expiryCheck && isCOVValid && validInsurance then Documents.VALID else Documents.INVALID
+            logInfo $ "validateRCStatus: Setting verificationStatus=" <> show finalStatus <> " (expiryCheck=" <> show expiryCheck <> ", isCOVValid=" <> show isCOVValid <> ", validInsurance=" <> show validInsurance <> ")"
+            pure $ if finalStatus == Documents.VALID then (Documents.VALID, reviewRequired, variant, mbVehicleModel) else (Documents.INVALID, reviewRequired, variant, mbVehicleModel)
+      _ -> pure (Documents.INVALID, Nothing, Nothing, Nothing)
 
 isValidCOVRC :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> [DVC.VehicleClassVariantMap] -> DVC.VehicleClassCheckType -> Text -> (Bool, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
 isValidCOVRC mbAirConditioned mbOxygen mbVentilator mVehicleCategory capacity manufacturer bodyType manufacturerModel vehicleClassVariantMap validCOVsCheck cov = do
@@ -573,6 +600,10 @@ convertTextToDay a = do
 
 convertUTCTimetoDate :: UTCTime -> Text
 convertUTCTimetoDate utctime = T.pack (formatTime defaultTimeLocale "%d/%m/%Y" utctime)
+
+-- | Parse a date string in "YYYY-MM-DD" format into a UTCTime (midnight UTC).
+parseDateTime :: Text -> Maybe UTCTime
+parseDateTime = parseTimeM True defaultTimeLocale "%Y-%m-%d" . T.unpack
 
 data VerificationReqRecord = VerificationReqRecord
   { airConditioned :: Maybe Bool,

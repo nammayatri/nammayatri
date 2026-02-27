@@ -59,6 +59,7 @@ getConfigJSON = \case
     Verification.HyperVergeVerificationConfigRCDL cfg -> toJSON cfg
     Verification.DigiLockerConfig cfg -> toJSON cfg
     Verification.TtenVerificationConfig cfg -> toJSON cfg
+    Verification.MorthConfig cfg -> toJSON cfg
   Domain.DriverBackgroundVerificationServiceConfig driverBackgroundVerificationCfg -> case driverBackgroundVerificationCfg of
     Verification.SafetyPortalConfig cfg -> toJSON cfg
   Domain.CallServiceConfig callCfg -> case callCfg of
@@ -146,6 +147,7 @@ getServiceName = \case
     Verification.HyperVergeVerificationConfigRCDL _ -> Domain.VerificationService Verification.HyperVergeRCDL
     Verification.DigiLockerConfig _ -> Domain.VerificationService Verification.DigiLocker
     Verification.TtenVerificationConfig _ -> Domain.VerificationService Verification.Tten
+    Verification.MorthConfig _ -> Domain.VerificationService Verification.Morth
   Domain.DriverBackgroundVerificationServiceConfig driverBackgroundVerificationCfg -> case driverBackgroundVerificationCfg of
     Verification.SafetyPortalConfig _ -> Domain.DriverBackgroundVerificationService Verification.SafetyPortal
   Domain.CallServiceConfig callCfg -> case callCfg of
@@ -229,6 +231,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.VerificationService Verification.HyperVergeRCDL -> Domain.VerificationServiceConfig . Verification.HyperVergeVerificationConfigRCDL <$> eitherValue configJSON
   Domain.VerificationService Verification.DigiLocker -> Domain.VerificationServiceConfig . Verification.DigiLockerConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.Tten -> Domain.VerificationServiceConfig . Verification.TtenVerificationConfig <$> eitherValue configJSON
+  Domain.VerificationService Verification.Morth -> Domain.VerificationServiceConfig . Verification.MorthConfig <$> eitherValue configJSON
   Domain.DriverBackgroundVerificationService Verification.SafetyPortal -> Domain.DriverBackgroundVerificationServiceConfig . Verification.SafetyPortalConfig <$> eitherValue configJSON
   Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> eitherValue configJSON
   Domain.CallService Call.TwillioCall -> Domain.CallServiceConfig . Call.TwillioCallConfig <$> eitherValue configJSON

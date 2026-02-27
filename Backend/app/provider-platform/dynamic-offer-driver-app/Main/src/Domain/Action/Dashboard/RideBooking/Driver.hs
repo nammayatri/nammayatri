@@ -888,7 +888,8 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} mbFleetOwnerId =
       dateOfRegistration = req.dateOfRegistration,
       vehicleModelYear = req.vehicleModelYear,
       grossVehicleWeight = Nothing,
-      unladdenWeight = Nothing
+      unladdenWeight = Nothing,
+      morthVerified = False
     }
 
 ---------------------------------------------------------------------
