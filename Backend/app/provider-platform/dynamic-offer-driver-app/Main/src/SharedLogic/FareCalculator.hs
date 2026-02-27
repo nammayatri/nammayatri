@@ -101,6 +101,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       petChargesCaption = show Enums.PET_CHARGES
       mbPetChargesItem = mkBreakupItem petChargesCaption . mkPrice <$> fareParams.petCharges
 
+      driverAllowanceCaption = show Enums.DRIVER_ALLOWANCE
+      mbDriverAllowanceItem = mkBreakupItem driverAllowanceCaption . mkPrice <$> fareParams.driverAllowance
+
       mkBusinessDiscountCaption = show Enums.BUSINESS_DISCOUNT
       mbBusinessDiscountItem = mkBreakupItem mkBusinessDiscountCaption . mkPrice <$> fareParams.businessDiscount
 
@@ -149,6 +152,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbPersonalDiscountItem,
       mbFixedGovtRateItem,
       mbPetChargesItem,
+      mbDriverAllowanceItem,
       mbPriorityChargesItem,
       mbServiceChargeItem,
       mbSelectedFareItem,
@@ -286,6 +290,7 @@ pureFareSum fareParams conditionalChargeCategories = do
     + fromMaybe 0.0 fareParams.rideExtraTimeFare
     + fromMaybe 0.0 fareParams.congestionCharge
     + fromMaybe 0.0 fareParams.petCharges
+    + fromMaybe 0.0 fareParams.driverAllowance
     + fromMaybe 0.0 fareParams.stopCharges
     + fromMaybe 0.0 fareParams.priorityCharges
     + partOfNightShiftCharge
@@ -407,6 +412,7 @@ calculateFareParameters params = do
           + fromMaybe 0.0 resultWaitingCharge
           + finalCongestionCharge ----------Needs to be changed to congestionChargeResult
           + fromMaybe 0.0 params.petCharges
+          + fromMaybe 0.0 fp.driverAllowance
           + fromMaybe 0.0 fp.serviceCharge
           + fromMaybe 0.0 fp.priorityCharges
           + fromMaybe 0.0 insuranceChargeResult
@@ -435,6 +441,7 @@ calculateFareParameters params = do
             parkingCharge = fp.parkingCharge,
             baseFare = baseFare,
             petCharges = params.petCharges,
+            driverAllowance = fp.driverAllowance,
             priorityCharges = fp.priorityCharges,
             congestionCharge = Just finalCongestionCharge,
             congestionChargeViaDp = congestionChargeByPerMin,
