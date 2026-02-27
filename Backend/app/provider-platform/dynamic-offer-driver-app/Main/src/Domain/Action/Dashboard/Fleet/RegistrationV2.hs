@@ -288,11 +288,11 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
     fork "initializing fleet analytics keys" $
       Analytics.updateFleetOwnerAnalyticsKeys person.id.getId (Just 0) (Just 0) (Just 0)
-  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId)
+  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) transporterConfig.driverWalletConfig.tdsRate
   pure person
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ()
-createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Flow ()
+createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTdsRate = do
   now <- getCurrentTime
   let fleetOwnerInfo =
         FOI.FleetOwnerInformation
@@ -317,6 +317,7 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId = do
             panImageId = Nothing,
             panNumber = Nothing,
             panNumberDec = Nothing,
+            tdsRate = mbTdsRate,
             stripeIdNumber = Nothing,
             createdAt = now,
             updatedAt = now,

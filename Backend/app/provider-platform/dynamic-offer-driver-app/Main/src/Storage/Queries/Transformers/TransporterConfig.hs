@@ -9,10 +9,11 @@ module Storage.Queries.Transformers.TransporterConfig
 where
 
 import qualified Data.Aeson as A
-import Domain.Types.TransporterConfig
+import Domain.Types.TransporterConfig hiding (SubscriptionConfig (..))
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Version
+import Storage.Queries.Transformers.SubscriptionConfigParser (parseSubscriptionConfig)
 import Tools.FieldParse as FieldParse
 
 fallbackVersion :: Version
@@ -53,6 +54,7 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
           { enableDriverWallet = False,
             driverWalletPayoutThreshold = 0,
             gstPercentage = 0.0,
+            tdsRate = Nothing,
             enableWalletPayout = False,
             enableWalletTopup = False,
             maxWalletPayoutsPerDay = Nothing,
@@ -62,10 +64,3 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             payoutFee = Nothing
           }
   parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def parseDriverWalletConfigWithDefault mbVal
-
-$(mkFieldParserWithDefault ''SubscriptionConfig)
-
-parseSubscriptionConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m SubscriptionConfig
-parseSubscriptionConfig merchantOperatingCityId mbVal = do
-  let def = SubscriptionConfig {prepaidSubscriptionThreshold = Nothing, fleetPrepaidSubscriptionThreshold = Nothing}
-  parseFieldWithDefaultM "transporterConfig" "subscriptionConfig" merchantOperatingCityId def parseSubscriptionConfigWithDefault mbVal

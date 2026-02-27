@@ -109,6 +109,7 @@ data DriverInformationT f = DriverInformationT
     softBlockStiers :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
     specialLocWarriorEnabledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     subscribed :: B.C f Kernel.Prelude.Bool,
+    tdsRate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     tollRelatedIssueCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     tollRouteBlockedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     totalReferred :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

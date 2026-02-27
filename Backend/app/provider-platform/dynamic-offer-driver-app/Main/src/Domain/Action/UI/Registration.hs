@@ -346,6 +346,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             driverFlowStatus = Just DriverFlowStatus.OFFLINE,
             onlineDurationRefreshedAt = Just now,
             panNumber = Nothing,
+            tdsRate = transporterConfig.driverWalletConfig.tdsRate,
             aadhaarNumber = Nothing,
             dlNumber = Nothing,
             maxPickupRadius = Nothing,

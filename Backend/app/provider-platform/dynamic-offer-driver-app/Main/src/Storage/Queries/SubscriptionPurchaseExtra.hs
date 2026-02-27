@@ -7,6 +7,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
+import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.SubscriptionPurchase as Beam
 import Storage.Queries.OrphanInstances.SubscriptionPurchase ()
@@ -76,3 +77,19 @@ findAllByOwnerAndServiceNameWithPagination ownerId ownerType serviceName mbStatu
     (Se.Desc Beam.createdAt)
     limit
     offset
+
+-- | Update the expiryDate for a specific subscription purchase.
+-- Used when activating a queued purchase's expiry timer (deferred FIFO logic).
+updateExpiryDateById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe UTCTime ->
+  Id SubscriptionPurchase ->
+  m ()
+updateExpiryDateById newExpiryDate purchaseId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.expiryDate newExpiryDate,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (getId purchaseId)]
+

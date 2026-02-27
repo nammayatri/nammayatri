@@ -24,6 +24,7 @@ imports:
   PersonIdsReq: Dashboard.Common
   PersonMobileNoReq: Dashboard.Common
   PersonRes: Dashboard.Common
+  Person: Dashboard.Common
   MandatoryQueryParam: Kernel.Utils.Common
   DriverFeeStatus: Dashboard.Common.Driver
   TagNameValue: Lib.Yudhishthira.Types
@@ -578,6 +579,14 @@ apis:
             response:
               type: EarningPeriodStatsRes
 
+  - POST: # UpdateTdsRateAPI
+      endpoint: /tdsRate/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateTdsRateReq
+      response:
+        type: APISuccess
+
   - POST: # UpdateDriverMerchantAPI
       endpoint: /{driverId}/updateMerchant
       auth: ApiAuthV2
@@ -809,6 +818,13 @@ types:
     - totalRides: Int
     - cancellationCharges: Money
     - tipAmount: Money
+  TdsOwnerType:
+    enum: "DRIVER, FLEET_OWNER"
+  UpdateTdsRateReq:
+    - ownerType: TdsOwnerType
+    - ownerId: Id Person
+    - tdsRate: Maybe Double
+    - derive: "'HideSecrets"
   UpdateDriverMerchantReq:
     - newMerchantId: Id Merchant
     - newMerchantOperatingCityId: Id MerchantOperatingCity

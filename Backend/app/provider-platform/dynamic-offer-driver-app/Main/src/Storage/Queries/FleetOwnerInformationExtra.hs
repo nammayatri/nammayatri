@@ -195,6 +195,7 @@ updateByPrimaryKey fleetOwnerInfo = do
           Se.Set Beam.panNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted panNumber),
           Se.Set Beam.panNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash panNumber),
           Se.Set Beam.panNumber Nothing,
+          Se.Set Beam.tdsRate tdsRate,
           Se.Set Beam.referredByOperatorId referredByOperatorId,
           Se.Set Beam.registeredAt registeredAt,
           Se.Set Beam.verified verified,

@@ -89,6 +89,7 @@ import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride (Cancel
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import Control.Applicative (liftA2, optional)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.Common as DCommonRole (Role (..))
 import Data.Char (isDigit)
 import Data.Coerce (coerce)
 import Data.Csv
@@ -897,7 +898,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
                 Just mobileNumber -> do
                   currProcessEntity <- case (mbFleetNo, mbDriverNo) of
                     (Nothing, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq mobileNumber Nothing (Just Common.FLEET) merchantOpCity -- Add vehicles under requested Fleet
-                    (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just mobileNumber) (Just Common.DRIVER) merchantOpCity -- Map driver <-> vehicle under requested fleet
+                    (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just mobileNumber) (Just DCommonRole.DRIVER) merchantOpCity -- Map driver <-> vehicle under requested fleet
                     (_, _) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Invalid request"
                   case currProcessEntity of
                     Left err -> return $ unprocessedEntities <> [err]
@@ -914,8 +915,8 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
               currProcessEntity <- case (mbFleetNo, mbDriverNo) of
                 (Nothing, Nothing) -> pure $ Left $ "Unable to add Vehicle (" <> registerRcReq.vehicleRegistrationCertNumber <> "): Neither fleet nor driver phone number provided"
                 (Just fleetNo, Nothing) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq fleetNo (Just fleetNo) (Just Common.FLEET) merchantOpCity -- Add vehicles under Fleet
-                (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo Nothing (Just Common.DRIVER) merchantOpCity -- Add vehicles under DCO
-                (Just fleetNo, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just fleetNo) (Just Common.DRIVER) merchantOpCity -- Map driver <-> vehicle under fleer
+                (Nothing, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo Nothing (Just DCommonRole.DRIVER) merchantOpCity -- Add vehicles under DCO
+                (Just fleetNo, Just driverNo) -> handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq driverNo (Just fleetNo) (Just DCommonRole.DRIVER) merchantOpCity -- Map driver <-> vehicle under fleer
               case currProcessEntity of
                 Left err -> return $ unprocessedEntities <> [err]
                 Right _ -> return unprocessedEntities

@@ -57,6 +57,7 @@ import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverPanCard as DPan
 import Domain.Types.DriverPlan
 import Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.FareParameters as DFare
@@ -91,6 +92,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common hiding (getCurrentTime)
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
@@ -134,6 +136,7 @@ import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverPanCard as QPanCard
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
@@ -334,7 +337,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
 
   -- 2. Wallet Flow
   when (isPrepaidSubscriptionAndWalletEnabled && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
-    createDriverWalletTransaction ride booking newFareParams
+    createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig
   where
     processEndRidePrepaidSubscription fare = do
       case ride.fleetOwnerId of
@@ -353,9 +356,21 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 booking.id.getId
                 Nothing
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
-            contributingPurchaseIds <- checkAndMarkExhaustedSubscriptions counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER
+            (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER
             unless (null contributingPurchaseIds) $
               QRide.updateSubscriptionPurchaseIds (Just contributingPurchaseIds) ride.id
+            when anyExhausted $ do
+              mbActivated <- activateNextQueuedPurchaseExpiry fleetOwnerId.getId DSP.FLEET_OWNER
+              whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
+                now <- getCurrentTime
+                let delay = diffUTCTime expiry now
+                createJobIn @_ @'ExpireSubscriptionPurchase
+                  (Just booking.providerId)
+                  (Just booking.merchantOperatingCityId)
+                  delay
+                  $ ExpireSubscriptionPurchaseJobData
+                    { subscriptionPurchaseId = nextPurchaseId
+                    }
             pure ()
         Nothing -> do
           Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
@@ -376,9 +391,21 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
             let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
                 balanceUpdatedTitle = "Subscription balance updated!"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
-            contributingPurchaseIds <- checkAndMarkExhaustedSubscriptions counterpartyDriver ride.driverId.getId DSP.DRIVER
+            (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyDriver ride.driverId.getId DSP.DRIVER
             unless (null contributingPurchaseIds) $
               QRide.updateSubscriptionPurchaseIds (Just contributingPurchaseIds) ride.id
+            when anyExhausted $ do
+              mbActivated <- activateNextQueuedPurchaseExpiry ride.driverId.getId DSP.DRIVER
+              whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
+                now' <- getCurrentTime
+                let delay = diffUTCTime expiry now'
+                createJobIn @_ @'ExpireSubscriptionPurchase
+                  (Just booking.providerId)
+                  (Just booking.merchantOperatingCityId)
+                  delay
+                  $ ExpireSubscriptionPurchaseJobData
+                    { subscriptionPurchaseId = nextPurchaseId
+                    }
             let subscriptionConfig = thresholdConfig.subscriptionConfig
             let prepaidSubscriptionThreshold = subscriptionConfig.prepaidSubscriptionThreshold
             when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do
@@ -421,8 +448,10 @@ createDriverWalletTransaction ::
   Ride.Ride ->
   SRB.Booking ->
   DFare.FareParameters ->
+  DI.DriverInformation ->
+  TransporterConfig ->
   m ()
-createDriverWalletTransaction ride booking fareParams = do
+createDriverWalletTransaction ride booking fareParams driverInfo transporterConfig = do
   let totalFare = fromMaybe 0 ride.fare
       gstAmount = fromMaybe 0 fareParams.govtCharges
       tollAmount = fromMaybe 0 fareParams.tollCharges
@@ -449,10 +478,11 @@ createDriverWalletTransaction ride booking fareParams = do
     let mocid = merchantOpCityId.getId
 
     -- Determine counterparty: Driver or FleetOwner
-    let (driverOrFleetCounterparty, driverOrFleetId) =
+    let (driverOrFleetCounterparty, driverOrFleetPersonId) =
           case ride.fleetOwnerId of
-            Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId.getId)
-            Nothing -> (DRIVER, ride.driverId.getId)
+            Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId)
+            Nothing -> (DRIVER, ride.driverId)
+        driverOrFleetId = driverOrFleetPersonId.getId
 
     -- Create accounts
     buyerAsset <- getOrCreateBuyerAssetAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Buyer asset account not found: " <> show err))
@@ -465,6 +495,42 @@ createDriverWalletTransaction ride booking fareParams = do
         >>= fromEitherM (\err -> InternalError ("Driver/FleetOwner liability account not found: " <> show err))
     govtIndirect <- getOrCreateGovtIndirectLiabilityAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Government indirect liability account not found: " <> show err))
     govtDirect <- getOrCreateGovtDirectLiabilityAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Government direct liability account not found: " <> show err))
+
+    let configTdsRate = transporterConfig.driverWalletConfig.tdsRate
+    mbTdsRate <- case ride.fleetOwnerId of
+      Just fleetOwnerId -> do
+        mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+        let currentRate = mbFleetInfo >>= (.tdsRate)
+        whenJust mbFleetInfo $ \_ ->
+          when (isNothing currentRate) $
+            whenJust configTdsRate $ \rate ->
+              QFOI.updateTdsRate (Just rate) (cast fleetOwnerId)
+        pure (currentRate <|> configTdsRate)
+      Nothing -> do
+        let currentRate = driverInfo.tdsRate
+        when (isNothing currentRate) $
+          whenJust configTdsRate $ \rate ->
+            QDI.updateTdsRate (Just rate) ride.driverId
+        pure (currentRate <|> configTdsRate)
+
+    mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
+    let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
+        panType = mbPanCard >>= (.docType)
+        earningsEligible = True
+        panTypeEligible = case panType of
+          Just DPan.BUSINESS -> True
+          _ -> earningsEligible
+        isPanValid = hasValidPan && panTypeEligible
+        defaultTdsRateForInvalidPan = 0.05 :: Double -- 5% TDS when PAN is not valid
+        effectiveTdsRate =
+          if isPanValid
+            then mbTdsRate -- use configured rate for valid PAN
+            else Just defaultTdsRateForInvalidPan -- 5% for invalid/missing PAN
+        baseFareForTds = max 0 baseFare
+        mbTdsAmount = do
+          rate <- effectiveTdsRate
+          let amount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
+          if amount > 0 then Just amount else Nothing
 
     entryIds <-
       if isOnline
@@ -480,15 +546,23 @@ createDriverWalletTransaction ride booking fareParams = do
           parkingEntryId <- createLedgerTransfer buyerExternal driverOrFleetLiability parkingAmount walletReferenceParkingCharges booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create ParkingCharges external->liability entry: " <> show err))
           -- Step 3: External(BUYER) -> Liability(GOVERNMENT_INDIRECT) for GST
           gstEntryId <- createLedgerTransfer buyerExternal govtIndirect gstAmount walletReferenceGSTOnline booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GSTOnline external->govt_indirect entry: " <> show err))
-          -- Step 4: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT) for TDS (0 amount placeholder)
-          _ <- createLedgerTransferAllowZero driverOrFleetLiability govtDirect 0 walletReferenceTDSDeductionOnline booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create TDSDeductionOnline entry: " <> show err))
-          pure $ catMaybes [baseFareEntryId, tollEntryId, parkingEntryId, gstEntryId]
+          -- Step 4: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT) for TDS
+          tdsEntryId <- case mbTdsAmount of
+            Just tdsAmount ->
+              createLedgerTransfer driverOrFleetLiability govtDirect tdsAmount walletReferenceTDSDeductionOnline booking.id.getId
+                >>= fromEitherM (\err -> InternalError ("Failed to create TDSDeductionOnline entry: " <> show err))
+            Nothing -> pure Nothing
+          pure $ catMaybes [baseFareEntryId, tollEntryId, parkingEntryId, gstEntryId, tdsEntryId]
         else do
           -- Cash: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_INDIRECT) for GST
           gstEntryId <- createLedgerTransfer driverOrFleetLiability govtIndirect gstAmount walletReferenceGSTCash booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GSTCash entry: " <> show err))
-          -- Cash: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT) for TDS (0 amount placeholder)
-          _ <- createLedgerTransferAllowZero driverOrFleetLiability govtDirect 0 walletReferenceTDSDeductionCash booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create TDSDeductionCash entry: " <> show err))
-          pure $ catMaybes [gstEntryId]
+          -- Cash: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT) for TDS
+          tdsEntryId <- case mbTdsAmount of
+            Just tdsAmount ->
+              createLedgerTransfer driverOrFleetLiability govtDirect tdsAmount walletReferenceTDSDeductionCash booking.id.getId
+                >>= fromEitherM (\err -> InternalError ("Failed to create TDSDeductionCash entry: " <> show err))
+            Nothing -> pure Nothing
+          pure $ catMaybes [gstEntryId, tdsEntryId]
 
     -- Create invoice for the ride with linked entries
     when (not $ null entryIds) $ do

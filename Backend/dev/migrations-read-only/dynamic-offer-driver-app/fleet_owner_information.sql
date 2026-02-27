@@ -104,3 +104,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN merchant_o
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ALTER COLUMN referred_by_operator_id TYPE character varying (36);
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN fleet_name character varying (255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN tds_rate double precision ;

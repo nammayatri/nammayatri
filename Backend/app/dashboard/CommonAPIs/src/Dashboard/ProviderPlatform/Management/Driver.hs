@@ -20,8 +20,8 @@ module Dashboard.ProviderPlatform.Management.Driver
 where
 
 import API.Types.ProviderPlatform.Management.Endpoints.Driver as Reexport
-import Dashboard.Common as Reexport
-import Dashboard.Common.Driver as Reexport
+import Dashboard.Common as Reexport hiding (Role (..))
+import Dashboard.Common.Driver as Reexport hiding (Role (..))
 import Kernel.Prelude
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P

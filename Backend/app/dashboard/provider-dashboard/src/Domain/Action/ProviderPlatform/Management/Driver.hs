@@ -59,6 +59,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverVehicleAppendSelectedServiceTiers,
     postDriverVehicleUpsertSelectedServiceTiers,
     postDriverUpdateRCInvalidStatusByRCNumber,
+    postDriverTdsRateUpdate,
   )
 where
 
@@ -393,3 +394,10 @@ postDriverUpdateRCInvalidStatusByRCNumber merchantShortId opCity apiTokenInfo re
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateRCInvalidStatusByRCNumber) req)
+
+postDriverTdsRateUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateTdsRateReq -> Environment.Flow APISuccess
+postDriverTdsRateUpdate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverTdsRateUpdate) req

@@ -132,6 +132,7 @@ DriverInformation:
     onboardingVehicleCategory: Maybe VehicleCategory
     servicesEnabledForSubscription: "[ServiceNames]"
     panNumber: Maybe (EncryptedHashedField e Text)
+    tdsRate: Maybe Double
     aadhaarNumber: Maybe (EncryptedHashedField e Text)
     dlNumber: Maybe (EncryptedHashedField e Text)
     driverFlowStatus: Maybe DriverFlowStatus
@@ -294,6 +295,10 @@ DriverInformation:
     updateDriverDob:
       kvFunction: updateOneWithKV
       params: [driverDob]
+      where: driverId
+    updateTdsRate:
+      kvFunction: updateOneWithKV
+      params: [tdsRate]
       where: driverId
     updateDriverDowngradeForSuv: #check
       kvFunction: updateOneWithKV

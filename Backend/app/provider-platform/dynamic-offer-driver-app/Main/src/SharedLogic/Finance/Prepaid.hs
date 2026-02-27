@@ -19,6 +19,7 @@ module SharedLogic.Finance.Prepaid
     debitPrepaidBalance,
     handleSubscriptionExpiry,
     checkAndMarkExhaustedSubscriptions,
+    activateNextQueuedPurchaseExpiry,
     InvoiceCreationParams (..),
   )
 where
@@ -30,11 +31,12 @@ import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.Prelude
 import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import Kernel.Types.Id
-import Kernel.Utils.Common (logInfo)
+import Kernel.Utils.Common (addUTCTime, getCurrentTime, logInfo)
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 
@@ -76,6 +78,9 @@ expiryRevenueRecognitionReferenceType = "ExpiryRevenueRecognition"
 
 expiryCreditTransferReferenceType :: Text
 expiryCreditTransferReferenceType = "ExpiryCreditTransfer"
+
+tdsReimbursementReferenceType :: Text
+tdsReimbursementReferenceType = "TDSReimbursement"
 
 getPrepaidAccountByOwner ::
   (BeamFlow m r) =>
@@ -185,6 +190,42 @@ getOrCreateGovernmentLiabilityAccount currency merchantId merchantOperatingCityI
         AccountInput
           { accountType = Liability,
             counterpartyType = Just GOVERNMENT_INDIRECT,
+            counterpartyId = Just merchantId,
+            currency = currency,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId
+          }
+  getOrCreateAccount input
+
+getOrCreateGovtDirectAssetAccount ::
+  (BeamFlow m r) =>
+  Currency ->
+  Text ->
+  Text ->
+  m (Either FinanceError Account)
+getOrCreateGovtDirectAssetAccount currency merchantId merchantOperatingCityId = do
+  let input =
+        AccountInput
+          { accountType = Asset,
+            counterpartyType = Just GOVERNMENT_DIRECT,
+            counterpartyId = Just merchantId,
+            currency = currency,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId
+          }
+  getOrCreateAccount input
+
+getOrCreateGovtDirectExpenseAccount ::
+  (BeamFlow m r) =>
+  Currency ->
+  Text ->
+  Text ->
+  m (Either FinanceError Account)
+getOrCreateGovtDirectExpenseAccount currency merchantId merchantOperatingCityId = do
+  let input =
+        AccountInput
+          { accountType = Expense,
+            counterpartyType = Just GOVERNMENT_DIRECT,
             counterpartyId = Just merchantId,
             currency = currency,
             merchantId = merchantId,
@@ -342,6 +383,7 @@ creditPrepaidBalance ::
   HighPrecMoney -> -- Ride credit amount
   HighPrecMoney -> -- Paid amount
   HighPrecMoney -> -- GST amount
+  Maybe Double -> -- TDS rate (%)
   Currency ->
   Text -> -- Merchant ID
   Text -> -- Merchant operating city ID
@@ -349,49 +391,60 @@ creditPrepaidBalance ::
   Maybe Value ->
   Maybe InvoiceCreationParams -> -- Optional invoice creation params
   m (Either FinanceError (HighPrecMoney, Maybe (Id FInvoice.Invoice)))
-creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount currency merchantId merchantOperatingCityId referenceId metadata mbInvoiceParams = do
+creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount mbTdsRate currency merchantId merchantOperatingCityId referenceId metadata mbInvoiceParams = do
   mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
   mbSellerAsset <- getOrCreateSellerAssetAccount currency merchantId merchantOperatingCityId
   mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
   mbGovernmentLiability <- getOrCreateGovernmentLiabilityAccount currency merchantId merchantOperatingCityId
   mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
-  case (mbOwnerAccount, mbSellerAsset, mbSellerLiability, mbGovernmentLiability, mbSellerRideCredit) of
-    (Right ownerAccount, Right sellerAsset, Right sellerLiability, Right governmentLiability, Right sellerRideCredit) -> do
+  mbGovtDirectAsset <- getOrCreateGovtDirectAssetAccount currency merchantId merchantOperatingCityId
+  mbGovtDirectExpense <- getOrCreateGovtDirectExpenseAccount currency merchantId merchantOperatingCityId
+  case (mbOwnerAccount, mbSellerAsset, mbSellerLiability, mbGovernmentLiability, mbSellerRideCredit, mbGovtDirectAsset, mbGovtDirectExpense) of
+    (Right ownerAccount, Right sellerAsset, Right sellerLiability, Right governmentLiability, Right sellerRideCredit, Right govtDirectAsset, Right govtDirectExpense) -> do
+      existingPurchaseEntries <- getEntriesByReference subscriptionPurchaseReferenceType referenceId
+      existingCreditEntries <- getEntriesByReference subscriptionCreditReferenceType referenceId
+      existingTdsEntries <- getEntriesByReference tdsReimbursementReferenceType referenceId
+      let gstAmount' = max 0 gstAmount
+          netAmount = max 0 (paidAmount - gstAmount')
+      let purchaseEntryExists fromId toId amount =
+            any
+              ( \entry ->
+                  entry.fromAccountId == fromId
+                    && entry.toAccountId == toId
+                    && entry.amount == amount
+                    && entry.status == SETTLED
+              )
+              existingPurchaseEntries
+          creditEntryExists =
+            any
+              ( \entry ->
+                  entry.fromAccountId == sellerRideCredit.id
+                    && entry.toAccountId == ownerAccount.id
+                    && entry.amount == creditAmount
+                    && entry.status == SETTLED
+              )
+              existingCreditEntries
+          tdsEntryExists fromId toId amount =
+            any
+              ( \entry ->
+                  entry.fromAccountId == fromId
+                    && entry.toAccountId == toId
+                    && entry.amount == amount
+                    && entry.status == SETTLED
+              )
+              existingTdsEntries
       -- Create GST entry
       gstEntryId <-
-        if paidAmount > 0 && max 0 gstAmount > 0
+        if paidAmount > 0 && gstAmount' > 0
           then do
-            let gstAmount' = max 0 gstAmount
-                gstEntry =
-                  LedgerEntryInput
-                    { fromAccountId = sellerAsset.id,
-                      toAccountId = governmentLiability.id,
-                      amount = gstAmount',
-                      currency = currency,
-                      entryType = LiabilityCreated,
-                      status = SETTLED,
-                      referenceType = subscriptionPurchaseReferenceType,
-                      referenceId = referenceId,
-                      metadata = Nothing,
-                      merchantId = merchantId,
-                      merchantOperatingCityId = merchantOperatingCityId
-                    }
-            result <- createEntryWithBalanceUpdate gstEntry
-            pure $ either (const Nothing) (Just . (.id)) result
-          else pure Nothing
-      -- Create liability entry
-      liabilityEntryId <-
-        if paidAmount > 0
-          then do
-            let gstAmount' = max 0 gstAmount
-                netAmount = max 0 (paidAmount - gstAmount')
-            if netAmount > 0
-              then do
-                let liabilityEntry =
+            if purchaseEntryExists sellerAsset.id governmentLiability.id gstAmount'
+              then pure Nothing
+              else do
+                let gstEntry =
                       LedgerEntryInput
                         { fromAccountId = sellerAsset.id,
-                          toAccountId = sellerLiability.id,
-                          amount = netAmount,
+                          toAccountId = governmentLiability.id,
+                          amount = gstAmount',
                           currency = currency,
                           entryType = LiabilityCreated,
                           status = SETTLED,
@@ -401,36 +454,93 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                           merchantId = merchantId,
                           merchantOperatingCityId = merchantOperatingCityId
                         }
-                result <- createEntryWithBalanceUpdate liabilityEntry
+                result <- createEntryWithBalanceUpdate gstEntry
                 pure $ either (const Nothing) (Just . (.id)) result
+          else pure Nothing
+      -- Create liability entry
+      liabilityEntryId <-
+        if paidAmount > 0
+          then do
+            if netAmount > 0
+              then do
+                if purchaseEntryExists sellerAsset.id sellerLiability.id netAmount
+                  then pure Nothing
+                  else do
+                    let liabilityEntry =
+                          LedgerEntryInput
+                            { fromAccountId = sellerAsset.id,
+                              toAccountId = sellerLiability.id,
+                              amount = netAmount,
+                              currency = currency,
+                              entryType = LiabilityCreated,
+                              status = SETTLED,
+                              referenceType = subscriptionPurchaseReferenceType,
+                              referenceId = referenceId,
+                              metadata = Nothing,
+                              merchantId = merchantId,
+                              merchantOperatingCityId = merchantOperatingCityId
+                            }
+                    result <- createEntryWithBalanceUpdate liabilityEntry
+                    pure $ either (const Nothing) (Just . (.id)) result
               else pure Nothing
           else pure Nothing
+      -- Create TDS reimbursement entry
+      tdsEntryId <-
+        case mbTdsRate of
+          Just rate | rate > 0 && netAmount > 0 -> do
+            let tdsAmount = netAmount * realToFrac rate
+            if tdsAmount > 0
+              then
+                if tdsEntryExists govtDirectAsset.id govtDirectExpense.id tdsAmount
+                  then pure Nothing
+                  else do
+                    let tdsEntry =
+                          LedgerEntryInput
+                            { fromAccountId = govtDirectAsset.id,
+                              toAccountId = govtDirectExpense.id,
+                              amount = tdsAmount,
+                              currency = currency,
+                              entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
+                              status = SETTLED,
+                              referenceType = tdsReimbursementReferenceType,
+                              referenceId = referenceId,
+                              metadata = Nothing,
+                              merchantId = merchantId,
+                              merchantOperatingCityId = merchantOperatingCityId
+                            }
+                    result <- createEntryWithBalanceUpdate tdsEntry
+                    pure $ either (const Nothing) (Just . (.id)) result
+              else pure Nothing
+          _ -> pure Nothing
       -- Create credit entry
       _ <-
         if creditAmount > 0
           then do
-            let creditEntry =
-                  LedgerEntryInput
-                    { fromAccountId = sellerRideCredit.id,
-                      toAccountId = ownerAccount.id,
-                      amount = creditAmount,
-                      currency = currency,
-                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
-                      status = SETTLED,
-                      referenceType = subscriptionCreditReferenceType,
-                      referenceId = referenceId,
-                      metadata = metadata,
-                      merchantId = merchantId,
-                      merchantOperatingCityId = merchantOperatingCityId
-                    }
-            result <- createEntryWithBalanceUpdate creditEntry
-            pure $ either (const Nothing) (Just . (.id)) result
+            if creditEntryExists
+              then pure Nothing
+              else do
+                let creditEntry =
+                      LedgerEntryInput
+                        { fromAccountId = sellerRideCredit.id,
+                          toAccountId = ownerAccount.id,
+                          amount = creditAmount,
+                          currency = currency,
+                          entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
+                          status = SETTLED,
+                          referenceType = subscriptionCreditReferenceType,
+                          referenceId = referenceId,
+                          metadata = metadata,
+                          merchantId = merchantId,
+                          merchantOperatingCityId = merchantOperatingCityId
+                        }
+                result <- createEntryWithBalanceUpdate creditEntry
+                pure $ either (const Nothing) (Just . (.id)) result
           else pure Nothing
       -- Collect all entry IDs
-      let entryIds = catMaybes [gstEntryId, liabilityEntryId]
+      let entryIds = catMaybes [gstEntryId, liabilityEntryId, tdsEntryId]
       -- Create invoice for subscription purchases
       mbInvoiceId <- case mbInvoiceParams of
-        Just invoiceParams -> do
+        Just invoiceParams | not (null entryIds) -> do
           let invoiceInput =
                 InvoiceInput
                   { invoiceType = SubscriptionPurchase,
@@ -451,28 +561,28 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                     panOfParty = Nothing,
                     tanOfDeductee = Nothing,
                     lineItems =
-                      let gstAmount' = max 0 gstAmount
-                          netAmount = max 0 (paidAmount - gstAmount')
+                      let lineItemGstAmount = max 0 gstAmount
+                          lineItemNetAmount = max 0 (paidAmount - lineItemGstAmount)
                        in catMaybes
-                            [ if netAmount > 0
+                            [ if lineItemNetAmount > 0
                                 then
                                   Just
                                     InvoiceLineItem
                                       { description = "Subscription Plan Fee",
                                         quantity = 1,
-                                        unitPrice = netAmount,
-                                        lineTotal = netAmount,
+                                        unitPrice = lineItemNetAmount,
+                                        lineTotal = lineItemNetAmount,
                                         isExternalCharge = False
                                       }
                                 else Nothing,
-                              if gstAmount' > 0
+                              if lineItemGstAmount > 0
                                 then
                                   Just
                                     InvoiceLineItem
                                       { description = "GST",
                                         quantity = 1,
-                                        unitPrice = gstAmount',
-                                        lineTotal = gstAmount',
+                                        unitPrice = lineItemGstAmount,
+                                        lineTotal = lineItemGstAmount,
                                         isExternalCharge = False
                                       }
                                 else Nothing
@@ -487,14 +597,16 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
           case invoiceResult of
             Right invoice -> pure (Just invoice.id)
             Left _err -> pure Nothing
-        Nothing -> pure Nothing
+        _ -> pure Nothing
       mbBal <- getBalance ownerAccount.id
       pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") (\bal -> Right (bal, mbInvoiceId)) mbBal
-    (Left err, _, _, _, _) -> pure $ Left err
-    (_, Left err, _, _, _) -> pure $ Left err
-    (_, _, Left err, _, _) -> pure $ Left err
-    (_, _, _, Left err, _) -> pure $ Left err
-    (_, _, _, _, Left err) -> pure $ Left err
+    (Left err, _, _, _, _, _, _) -> pure $ Left err
+    (_, Left err, _, _, _, _, _) -> pure $ Left err
+    (_, _, Left err, _, _, _, _) -> pure $ Left err
+    (_, _, _, Left err, _, _, _) -> pure $ Left err
+    (_, _, _, _, Left err, _, _) -> pure $ Left err
+    (_, _, _, _, _, Left err, _) -> pure $ Left err
+    (_, _, _, _, _, _, Left err) -> pure $ Left err
 
 debitPrepaidBalance ::
   (BeamFlow m r) =>
@@ -543,7 +655,8 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
 
 -- | Handle subscription expiry: compute expired credits, create revenue recognition
 -- and credit transfer entries, then mark the subscription as EXPIRED.
--- This is the shared handler used by both the scheduler job and the inline fallback.
+-- NOTE: Does NOT activate the next queued purchase's expiry timer.
+-- The caller is responsible for calling activateNextQueuedPurchaseExpiry if needed.
 handleSubscriptionExpiry ::
   (BeamFlow m r) =>
   DSP.SubscriptionPurchase ->
@@ -631,25 +744,26 @@ handleSubscriptionExpiry purchase = do
 -- | After a ride debit, check if the oldest ACTIVE subscription should be marked EXHAUSTED.
 -- FIFO logic: if the current balance is at or below the sum of newer subscriptions' credits,
 -- the oldest subscription's credits are fully used up.
--- Returns the list of subscription purchase IDs that contributed credits to the ride
--- (both exhausted ones and the oldest remaining active one).
+-- Returns (contributing purchase IDs, whether any were exhausted).
+-- If any were exhausted, the caller should call activateNextQueuedPurchaseExpiry
+-- and schedule follow-up jobs.
 checkAndMarkExhaustedSubscriptions ::
   (BeamFlow m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   DSP.SubscriptionOwnerType ->
-  m [Id DSP.SubscriptionPurchase]
+  m ([Id DSP.SubscriptionPurchase], Bool)
 checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType = do
   allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
   mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId
   let currentBalance = fromMaybe 0 mbBalance
       -- Sort by purchaseTimestamp ASC (already from query), process FIFO
       sorted = DL.sortOn (.purchaseTimestamp) allActive
-  go sorted currentBalance []
+  go sorted currentBalance [] False
   where
-    go [] _ acc = pure acc
-    go [single] _ acc = pure (acc <> [single.id]) -- Last one is always contributing
-    go (oldest : rest) balance acc = do
+    go [] _ acc exhausted = pure (acc, exhausted)
+    go [single] _ acc exhausted = pure (acc <> [single.id], exhausted) -- Last one is always contributing
+    go (oldest : rest) balance acc exhausted = do
       let restCredits = sum $ map (.planRideCredit) rest
       if balance <= restCredits
         then do
@@ -657,5 +771,35 @@ checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType = do
           QSP.updateStatusById DSP.EXHAUSTED oldest.id
           logInfo $ "Subscription " <> oldest.id.getId <> " marked EXHAUSTED"
           -- Continue checking (there might be more to exhaust)
-          go rest balance (acc <> [oldest.id])
-        else pure (acc <> [oldest.id]) -- Oldest is partially consumed
+          go rest balance (acc <> [oldest.id]) True
+        else pure (acc <> [oldest.id], exhausted) -- Oldest is partially consumed
+
+-- | Activate the expiry timer for the next queued subscription purchase.
+-- A queued purchase is ACTIVE but has expiryDate = Nothing (its timer hasn't started).
+-- Called after an exhaustion or expiry event to cascade to the next FIFO purchase.
+-- Returns Just (purchaseId, expiryDate) if a purchase was activated, Nothing otherwise.
+-- The caller is responsible for scheduling the ExpireSubscriptionPurchase job.
+activateNextQueuedPurchaseExpiry ::
+  (BeamFlow m r) =>
+  Text -> -- Owner ID
+  DSP.SubscriptionOwnerType ->
+  m (Maybe (Id DSP.SubscriptionPurchase, UTCTime))
+activateNextQueuedPurchaseExpiry ownerId ownerType = do
+  allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+  let sorted = DL.sortOn (.purchaseTimestamp) allActive
+      -- Find first ACTIVE purchase with no expiryDate (queued)
+      queued = filter (\p -> isNothing p.expiryDate) sorted
+  case queued of
+    (nextPurchase : _) -> do
+      mbPlan <- QPlan.findByPrimaryKey nextPurchase.planId
+      case mbPlan of
+        Just plan -> do
+          now <- getCurrentTime
+          let expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
+          QSPE.updateExpiryDateById expiryDate nextPurchase.id
+          logInfo $ "Activated expiry for queued subscription " <> nextPurchase.id.getId <> " with expiryDate: " <> show expiryDate
+          pure $ (nextPurchase.id,) <$> expiryDate
+        Nothing -> do
+          logInfo $ "Plan not found for queued subscription: " <> nextPurchase.planId.getId
+          pure Nothing
+    [] -> pure Nothing

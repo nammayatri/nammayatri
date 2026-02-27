@@ -45,6 +45,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     stripeAddress :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     stripeIdNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     stripeIdNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    tdsRate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     ticketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     verified :: B.C f Kernel.Prelude.Bool,
     createdAt :: B.C f Kernel.Prelude.UTCTime,

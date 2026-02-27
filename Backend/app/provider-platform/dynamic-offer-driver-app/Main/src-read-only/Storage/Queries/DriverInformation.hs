@@ -336,6 +336,9 @@ updateSubscription subscribed driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.subscribed subscribed, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateTdsRate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateTdsRate tdsRate driverId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.tdsRate tdsRate, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateTollRelatedIssueCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateTollRelatedIssueCount tollRelatedIssueCount driverId = do
   _now <- getCurrentTime
@@ -460,6 +463,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.softBlockStiers softBlockStiers,
       Se.Set Beam.specialLocWarriorEnabledAt specialLocWarriorEnabledAt,
       Se.Set Beam.subscribed subscribed,
+      Se.Set Beam.tdsRate tdsRate,
       Se.Set Beam.tollRelatedIssueCount tollRelatedIssueCount,
       Se.Set Beam.tollRouteBlockedTill tollRouteBlockedTill,
       Se.Set Beam.totalReferred totalReferred,

@@ -480,84 +480,98 @@ processSubscriptionPurchasePayment ::
 processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
   when (subscriptionPurchase.status == DSP.PENDING) $
     Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey person.id.getId) 10 10 $ do
-      now <- getCurrentTime
-      currency <- SMerchant.getCurrencyByMerchantOpCity subscriptionPurchase.merchantOperatingCityId
-      plan <- QPlan.findByPrimaryKey subscriptionPurchase.planId >>= fromMaybeM (PlanNotFound subscriptionPurchase.planId.getId)
-      let (_platformFee, cgst, sgst) = SLDriverFee.calculatePlatformFeeAttr subscriptionPurchase.planFee plan
-          gstAmount = cgst + sgst
-          creditAmount = subscriptionPurchase.planRideCredit
-          paidAmount = subscriptionPurchase.planFee
-          referenceId = subscriptionPurchase.id.getId
-          isFleetOwner = DCommon.checkFleetOwnerRole person.role
-          counterpartyType = if isFleetOwner then counterpartyFleetOwner else counterpartyDriver
-          expiryDate = fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
-      -- Fetch merchant for issuedByName and issuedByAddress
-      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-      -- Fetch operating city for issuedToAddress
-      merchantOperatingCity <- CQMOC.findById subscriptionPurchase.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist subscriptionPurchase.merchantOperatingCityId.getId)
-      let issuedToAddress = Just $ show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
-          issuedByAddress = Just $ show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country
-      -- Fetch fleet owner GSTIN if applicable
-      gstinOfParty <-
-        if isFleetOwner
-          then do
-            mbFleetInfo <- QFOI.findByPrimaryKey person.id
-            case mbFleetInfo of
-              Just fleetInfo -> mapM decrypt fleetInfo.gstNumber
-              Nothing -> pure Nothing
-          else pure Nothing
-      let invoiceParams =
-            InvoiceCreationParams
-              { paymentOrderId = subscriptionPurchase.paymentOrderId.getId,
-                issuedToType = if isFleetOwner then "FLEET_OWNER" else "DRIVER",
-                issuedToName = Just person.firstName,
-                issuedToAddress = issuedToAddress,
-                issuedByType = "SELLER",
-                issuedById = merchantId.getId,
-                issuedByName = Just merchant.name,
-                issuedByAddress = issuedByAddress,
-                gstinOfParty = gstinOfParty,
-                merchantShortId = getShortId merchant.shortId
+      latestPurchase <-
+        QSP.findByPrimaryKey subscriptionPurchase.id
+          >>= fromMaybeM (InternalError $ "Subscription purchase not found: " <> subscriptionPurchase.id.getId)
+      when (latestPurchase.status == DSP.PENDING) $ do
+        now <- getCurrentTime
+        currency <- SMerchant.getCurrencyByMerchantOpCity latestPurchase.merchantOperatingCityId
+        plan <- QPlan.findByPrimaryKey latestPurchase.planId >>= fromMaybeM (PlanNotFound latestPurchase.planId.getId)
+        transporterConfig <- SCTC.findByMerchantOpCityId latestPurchase.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound latestPurchase.merchantOperatingCityId.getId)
+        let (_platformFee, cgst, sgst) = SLDriverFee.calculatePlatformFeeAttr latestPurchase.planFee plan
+            gstAmount = cgst + sgst
+            creditAmount = latestPurchase.planRideCredit
+            paidAmount = latestPurchase.planFee
+            referenceId = latestPurchase.id.getId
+            isFleetOwner = DCommon.checkFleetOwnerRole person.role
+            counterpartyType = if isFleetOwner then counterpartyFleetOwner else counterpartyDriver
+        -- Check if there are other ACTIVE purchases with expiry already set (deferred FIFO)
+        let ownerType = if isFleetOwner then DSP.FLEET_OWNER else DSP.DRIVER
+        existingActive <- QSPE.findAllActiveByOwnerAndServiceName person.id.getId ownerType DP.PREPAID_SUBSCRIPTION
+        let hasActiveWithExpiry = any (\p -> isJust p.expiryDate) existingActive
+            -- Only set expiry if no other active purchase has one (this is the first/only active plan)
+            expiryDate =
+              if hasActiveWithExpiry
+                then Nothing -- Queued: timer starts when predecessor exhausts/expires
+                else fmap (\days -> addUTCTime (fromIntegral (days * 60 * 60 * 24)) now) plan.validityInDays
+        -- Fetch merchant for issuedByName and issuedByAddress
+        merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+        -- Fetch operating city for issuedToAddress
+        merchantOperatingCity <- CQMOC.findById latestPurchase.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist latestPurchase.merchantOperatingCityId.getId)
+        let issuedToAddress = Just $ show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
+            issuedByAddress = Just $ show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country
+        -- Fetch fleet owner GSTIN if applicable
+        gstinOfParty <-
+          if isFleetOwner
+            then do
+              mbFleetInfo <- QFOI.findByPrimaryKey person.id
+              case mbFleetInfo of
+                Just fleetInfo -> mapM decrypt fleetInfo.gstNumber
+                Nothing -> pure Nothing
+            else pure Nothing
+        let invoiceParams =
+              InvoiceCreationParams
+                { paymentOrderId = latestPurchase.paymentOrderId.getId,
+                  issuedToType = if isFleetOwner then "FLEET_OWNER" else "DRIVER",
+                  issuedToName = Just person.firstName,
+                  issuedToAddress = issuedToAddress,
+                  issuedByType = "SELLER",
+                  issuedById = merchantId.getId,
+                  issuedByName = Just merchant.name,
+                  issuedByAddress = issuedByAddress,
+                  gstinOfParty = gstinOfParty,
+                  merchantShortId = getShortId merchant.shortId
+                }
+        (_newBalance, mbInvoiceId) <-
+          creditPrepaidBalance
+            counterpartyType
+            person.id.getId
+            creditAmount
+            paidAmount
+            gstAmount
+            transporterConfig.subscriptionConfig.tdsRate
+            currency
+            merchantId.getId
+            latestPurchase.merchantOperatingCityId.getId
+            referenceId
+            Nothing
+            (Just invoiceParams)
+            >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
+        let updatedPurchase =
+              latestPurchase
+                { status = DSP.ACTIVE,
+                  purchaseTimestamp = now,
+                  expiryDate = expiryDate,
+                  financeInvoiceId = mbInvoiceId
+                }
+        QSP.updateByPrimaryKey updatedPurchase
+        -- Schedule expiry job only if expiry was set (not queued)
+        whenJust expiryDate $ \expiry -> do
+          let delay = diffUTCTime expiry now
+          createJobIn @_ @'ExpireSubscriptionPurchase
+            (Just merchantId)
+            (Just latestPurchase.merchantOperatingCityId)
+            delay
+            $ ExpireSubscriptionPurchaseJobData
+              { subscriptionPurchaseId = latestPurchase.id
               }
-      (_newBalance, mbInvoiceId) <-
-        creditPrepaidBalance
-          counterpartyType
-          person.id.getId
-          creditAmount
-          paidAmount
-          gstAmount
-          currency
-          merchantId.getId
-          subscriptionPurchase.merchantOperatingCityId.getId
-          referenceId
-          Nothing
-          (Just invoiceParams)
-          >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
-      let updatedPurchase =
-            subscriptionPurchase
-              { status = DSP.ACTIVE,
-                purchaseTimestamp = now,
-                expiryDate = expiryDate,
-                financeInvoiceId = mbInvoiceId
-              }
-      QSP.updateByPrimaryKey updatedPurchase
-      -- Schedule expiry job
-      whenJust expiryDate $ \expiry -> do
-        let delay = diffUTCTime expiry now
-        createJobIn @_ @'ExpireSubscriptionPurchase
-          (Just merchantId)
-          (Just subscriptionPurchase.merchantOperatingCityId)
-          delay
-          $ ExpireSubscriptionPurchaseJobData
-            { subscriptionPurchaseId = subscriptionPurchase.id
-            }
-      unless isFleetOwner $ do
-        let prepaidRechargeMessage =
-              "Your recharge worth Rs."
-                <> show (SPayment.roundToTwoDecimalPlaces creditAmount)
-                <> " is successful"
-            prepaidRechargeTitle = "Recharge Successful!"
-        sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+        unless isFleetOwner $ do
+          let prepaidRechargeMessage =
+                "Your recharge worth Rs."
+                  <> show (SPayment.roundToTwoDecimalPlaces creditAmount)
+                  <> " is successful"
+              prepaidRechargeTitle = "Recharge Successful!"
+          sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
 
 updatePrepaidBalanceAndExpiry ::
   ( MonadFlow m,
@@ -583,6 +597,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           creditAmount
           paidAmount
           gstAmount
+          Nothing
           driverFee.currency
           merchantId.getId
           person.merchantOperatingCityId.getId
@@ -599,6 +614,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           creditAmount
           paidAmount
           gstAmount
+          Nothing
           driverFee.currency
           merchantId.getId
           person.merchantOperatingCityId.getId

@@ -151,7 +151,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   void $ QP.create person
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
-  createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id)
+  createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id) transporterConfig.driverWalletConfig.tdsRate
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
     fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFOA.create fleetOperatorAssData
@@ -171,8 +171,8 @@ createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just pa
   void $ Registration.postDriverRegisterPancardHelper (Just personId, merchantId, merchantOperatingCityId) True False panReq
 createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this as Pan info is optional
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ()
-createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGstNumber mbReferredByOperatorId mbTicketPlaceId mbMerchantOperatingCityId = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Flow ()
+createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGstNumber mbReferredByOperatorId mbTicketPlaceId mbMerchantOperatingCityId mbTdsRate = do
   now <- getCurrentTime
   mbGstNumberEnc <- forM mbGstNumber encrypt
   let fleetType = fromMaybe NORMAL_FLEET mbFleetType
@@ -196,6 +196,7 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             panImageId = Nothing,
             panNumber = Nothing,
             panNumberDec = Nothing,
+            tdsRate = mbTdsRate,
             aadhaarBackImageId = Nothing,
             aadhaarFrontImageId = Nothing,
             aadhaarNumber = Nothing,

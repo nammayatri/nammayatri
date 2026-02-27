@@ -5,17 +5,22 @@ module SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase
   )
 where
 
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Lib.Scheduler
-import SharedLogic.Allocator (AllocatorJobType (..))
-import SharedLogic.Finance.Prepaid (handleSubscriptionExpiry)
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.Allocator (AllocatorJobType (..), ExpireSubscriptionPurchaseJobData (..))
+import SharedLogic.Finance.Prepaid (activateNextQueuedPurchaseExpiry, handleSubscriptionExpiry)
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 
 expireSubscriptionPurchase ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    JobCreatorEnv r,
+    HasField "schedulerType" r SchedulerType
   ) =>
   Job 'ExpireSubscriptionPurchase ->
   m ExecutionResult
@@ -30,4 +35,19 @@ expireSubscriptionPurchase Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> j
       pure Complete
     Just purchase -> do
       handleSubscriptionExpiry purchase
+      -- After expiry, activate the next queued purchase's expiry timer (deferred FIFO)
+      when (purchase.status == DSP.ACTIVE) $ do
+        mbActivated <- activateNextQueuedPurchaseExpiry purchase.ownerId purchase.ownerType
+        whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
+          now <- getCurrentTime
+          let delay = diffUTCTime expiry now
+          createJobIn @_ @'ExpireSubscriptionPurchase
+            (Just purchase.merchantId)
+            (Just purchase.merchantOperatingCityId)
+            delay
+            $ ExpireSubscriptionPurchaseJobData
+              { subscriptionPurchaseId = nextPurchaseId
+              }
       pure Complete
+
+

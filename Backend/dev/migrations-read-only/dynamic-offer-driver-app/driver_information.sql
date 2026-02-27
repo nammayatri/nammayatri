@@ -336,3 +336,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ALTER COLUMN driver_bank_a
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN tds_rate double precision ;

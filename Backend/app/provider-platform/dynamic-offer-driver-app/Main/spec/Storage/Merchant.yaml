@@ -876,6 +876,7 @@ TransporterConfig:
       enableDriverWallet: Bool
       driverWalletPayoutThreshold: HighPrecMoney
       gstPercentage: Double
+      tdsRate: Maybe Double
       enableWalletPayout: Bool
       enableWalletTopup: Bool
       maxWalletPayoutsPerDay: Maybe Int
@@ -887,6 +888,7 @@ TransporterConfig:
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
       fleetPrepaidSubscriptionThreshold: Maybe HighPrecMoney
+      tdsRate: Maybe Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool

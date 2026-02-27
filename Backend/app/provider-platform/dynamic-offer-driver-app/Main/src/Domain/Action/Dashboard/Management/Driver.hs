@@ -60,6 +60,7 @@ module Domain.Action.Dashboard.Management.Driver
     isAssociationBetweenTwoPerson,
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
+    postDriverTdsRateUpdate,
     postDriverVehicleAppendSelectedServiceTiers,
     postDriverVehicleUpsertSelectedServiceTiers,
     postDriverUpdateRCInvalidStatusByRCNumber,
@@ -155,6 +156,7 @@ import qualified Storage.Queries.DriverRCAssociation as QDriverRCAssociation
 import qualified Storage.Queries.DriverReferral as QDriverReferral
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperator
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.HyperVergeSdkLogs as QHyperVergeSdkLogs
 import qualified Storage.Queries.HyperVergeVerification as QHyperVergeVerification
 import qualified Storage.Queries.IdfyVerification as QIdfyVerification
@@ -1271,6 +1273,27 @@ getDriverEarnings merchantShortId opCity from to earningType dId requestorId = d
         (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation driverDetails.id requestedPersonDetails.id
         (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
         _ -> return False
+
+---------------------------------------------------------------------
+postDriverTdsRateUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateTdsRateReq -> Flow APISuccess
+postDriverTdsRateUpdate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let Common.UpdateTdsRateReq {ownerType, ownerId, tdsRate} = req
+  let personId = cast @Dashboard.Common.Person @DP.Person ownerId
+  person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  unless (merchant.id == person.merchantId && merchantOpCityId == person.merchantOperatingCityId) $
+    throwError (PersonDoesNotExist personId.getId)
+
+  case (ownerType :: Common.TdsOwnerType) of
+    Common.DRIVER -> do
+      _ <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+      QDriverInfo.updateTdsRate tdsRate personId
+    Common.FLEET_OWNER -> do
+      _ <- QFOI.findByPrimaryKey personId >>= fromMaybeM (FleetOwnerNotFound personId.getId)
+      QFOI.updateTdsRate tdsRate personId
+  pure Success
 
 ---------------------------------------------------------------------
 -- Update merchant for a driver (handles duplicate driver migration)

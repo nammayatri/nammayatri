@@ -21,6 +21,7 @@ FleetOwnerInformation:
     gstNumberDec: Maybe Text # for backward compatibilty
     panNumber: Maybe (EncryptedHashedField e Text)
     panNumberDec: Maybe Text # for backward compatibilty
+    tdsRate: Maybe Double
     fleetType: FleetType
     gstImageId : Maybe Text
     panImageId: Maybe Text
@@ -124,6 +125,10 @@ FleetOwnerInformation:
     updateReferredByOperatorId:
       kvFunction: updateOneWithKV
       params: [referredByOperatorId]
+      where: fleetOwnerPersonId
+    updateTdsRate:
+      kvFunction: updateOneWithKV
+      params: [tdsRate]
       where: fleetOwnerPersonId
     deleteByFleetOwnerPersonId:
       kvFunction: deleteWithKV

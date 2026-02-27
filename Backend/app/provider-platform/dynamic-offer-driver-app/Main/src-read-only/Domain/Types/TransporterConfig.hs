@@ -371,7 +371,8 @@ data DriverWalletConfig = DriverWalletConfig
     minWalletAmountForCashRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minimumWalletPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
     payoutCutOffDays :: Kernel.Prelude.Int,
-    payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig
+    payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig,
+    tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
@@ -388,7 +389,8 @@ data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForC
 
 data SubscriptionConfig = SubscriptionConfig
   { fleetPrepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+    prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 

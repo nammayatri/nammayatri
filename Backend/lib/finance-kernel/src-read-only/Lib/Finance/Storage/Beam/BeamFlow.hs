@@ -13,8 +13,8 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Storage.Beam.Account as BeamAccount
 import qualified Lib.Finance.Storage.Beam.AuditEntry as BeamAudit
 import qualified Lib.Finance.Storage.Beam.CurrentState as BeamCurrentState
-import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirectTax
 import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as BeamDirectTax
+import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirectTax
 import qualified Lib.Finance.Storage.Beam.Invoice as BeamInvoice
 import qualified Lib.Finance.Storage.Beam.InvoiceLedgerLink as BeamInvoiceLedger
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLedger
