@@ -2326,7 +2326,7 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
         return (dfees, Nothing)
 
   --------- to crub up cases related to double debit ----------
-  successfulInvoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.SUCCESS)) dueDriverFees'
+  successfulInvoices <- mapM (\fee -> runInReplica (QINV.findInvoiceByFeeIdAndStatus fee.id Domain.SUCCESS)) dueDriverFees'
   let allPaidFeeNotMarkedCleared = nub $ map INV.driverFeeId (concat successfulInvoices)
   forM_ allPaidFeeNotMarkedCleared $ \feeId -> QDF.updateStatus DDF.CLEARED feeId now
   let dueDriverFees = filter (\fee -> not $ fee.id `elem` allPaidFeeNotMarkedCleared) dueDriverFees'

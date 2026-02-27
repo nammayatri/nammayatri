@@ -205,8 +205,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 due = sum $ map (\fee -> if (fee.startTime /= startTime && fee.endTime /= endTime) then roundToHalf driverFee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst + fromMaybe 0 fee.cancellationPenaltyAmount else 0) dueDriverFees
             if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
               then do
-                mapM_ updateDriverFeeToManual driverFeeIds
-                updateDriverFeeToManual driverFee.id
+                updateDriverFeeToManual $ driverFeeIds <> [driverFee.id]
                 when (fromMaybe plan.subscribedFlagToggleAllowed isPlanToggleAllowedAtPlanLevel) $ do
                   updateSubscription False (cast driverFee.driverId)
                   SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
@@ -364,7 +363,7 @@ processDriverFee paymentMode driverFee subscriptionConfig transporterConfig = do
             )
           else
             ( do
-                updateDriverFeeToManual driverFee.id
+                updateDriverFeeToManual [driverFee.id]
             )
         )
     AUTOPAY -> do
