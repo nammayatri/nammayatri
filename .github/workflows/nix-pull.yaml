@@ -27,7 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
-      has-backend: ${{ steps.check-labels.outputs.has_backend }}
       should-push-docker: ${{ steps.check-docker-push.outputs.should_push_docker }}
     steps:
       - name: Apply labels
@@ -47,21 +46,7 @@ jobs:
           else
             echo "should_proceed=false" >> $GITHUB_OUTPUT
           fi
-      
-      - name: Check for backend label
-        id: check-labels
-        run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            sleep 5 # Small delay to ensure labels are applied
-            response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels")
-            has_backend=$(echo "$response" | jq 'map(select(.name == "backend")) | length > 0')
-          else
-            # For direct pushes to main/prodHotPush-Common, assume backend changes
-            has_backend=true
-          fi
-          echo "has_backend=${has_backend}" >> $GITHUB_OUTPUT
-          echo "Label check result: ${has_backend}"
+
       - name: Check docker push conditions
         id: check-docker-push
         run: |
@@ -80,7 +65,7 @@ jobs:
     name: ${{ matrix.name }}
     needs: [check-conditions]
     continue-on-error: ${{ matrix.continue-on-error }}
-    if: needs.check-conditions.outputs.should-proceed == 'true' && needs.check-conditions.outputs.has-backend == 'true' && github.event_name == 'pull_request' && github.event.action != 'closed'
+    if: needs.check-conditions.outputs.should-proceed == 'true' && github.event_name == 'pull_request' && github.event.action != 'closed'
     strategy:
       matrix:
         include:
@@ -114,18 +99,27 @@ jobs:
       - name: Build all flake outputs
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
-          om ci run --systems "${{ matrix.system }}" -o ci-result -- -v 2>&1 | while IFS= read -r line; do
+          nix build github:srid/devour-flake#default --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee build-log.txt
 
-      - name: Push to Cachix
+      - name: Push to Cache
         if: steps.check-conditions.outputs.should_build == 'true'
         continue-on-error: true
         env:
+          ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
           CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
         run: |
-          # Extract all built store paths from om ci results and push to cachix
-          jq -r '.result[].build.outPaths[]' ci-result | cachix push nammayatri
+          echo "result=$(cat result)" >> $GITHUB_OUTPUT          
+          PATHS=$(jq -r '.[].outPaths[]' ./result)
+          # Try attic (both login AND push must succeed)
+          if attic login cache-nixos-asia https://cache.nixos.asia/oss "$ATTIC_TOKEN" 2>/dev/null && \
+            echo "$PATHS" | attic push cache-nixos-asia 2>/dev/null; then
+            echo "✅ Pushed to attic"
+          else
+            echo "⚠️ Attic failed, using cachix..."
+            echo "$PATHS" | cachix push nammayatri
+          fi
 
       - name: Upload build log
         if: steps.check-conditions.outputs.should_build == 'true'
@@ -156,7 +150,7 @@ jobs:
   analyze-build-times:
     name: Analyze Build Times
     needs: [build, check-conditions]
-    if: needs.check-conditions.outputs.should-proceed == 'true' && needs.check-conditions.outputs.has-backend == 'true'
+    if: needs.check-conditions.outputs.should-proceed == 'true'
     runs-on: x86_64-linux
     steps:
       - name: Checkout repository

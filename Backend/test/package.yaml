@@ -136,7 +136,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j12
+          - -j4
 
   dependencies:
     - lens
@@ -162,4 +162,4 @@ tests:
       else:
         ghc-options:
           - -O2
-          - -j12
+          - -j4

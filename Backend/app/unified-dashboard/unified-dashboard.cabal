@@ -211,7 +211,7 @@ library
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j12
+    ghc-options: -O2 -j4
 
 executable unified-dashboard-exe
   main-is: Main.hs
@@ -302,4 +302,4 @@ executable unified-dashboard-exe
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j12
+    ghc-options: -O2 -j4

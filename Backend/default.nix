@@ -31,7 +31,40 @@
         "safety-dashboard"
         "search-result-aggregator"
         "beckn-cli"
+        "alchemist"
+        "arion"
+        "load-test-dev"
+        "load-test-prepare"
+        "mock-fcm"
+        "mock-sms"
+        "osrm-server"
+        "osrm-data"
+        "run-mobility-stack-dev"
+        "run-mobility-stack-nix"
+      ];
+      # Apps to exclude from CI builds (devour-flake via om ci run)
+      ciExcludedApps = [
         "hunit-tests"
+        "beckn-cli-exe"
+        "image-api-helper-exe"
+        "route-extractor-exe"
+        "mock-public-transport-provider-platform-exe"
+        "public-transport-rider-platform-exe"
+        "public-transport-search-consumer-exe"
+        "mock-idfy-exe"
+        "mock-payment-exe"
+        "mock-google-exe"
+        "kafka-consumers-exe"
+        "mock-rider-platform-exe"
+        "sdk-event-pipeline-exe"
+        "special-zone-exe"
+        "example-service-exe"
+        "safety-dashboard-exe"
+        "search-result-aggregator-exe"
+        "mock-fcm-exe"
+        "mock-sms-exe"
+        "trace"
+        "alchemist-generator-exe"
       ];
       cacConfig = p: p.overrideAttrs (oa: {
         inherit (config.haskellProjects.default.outputs.finalPackages) cac_client;
@@ -81,9 +114,9 @@
           # inputs.namma-dsl.haskellFlakeProjectModules.output
           inputs.haskell-cac.haskellFlakeProjectModules.output
         ];
-        # "packages" is excluded from autoWire so we can filter out ciExcludedPackages
-        # from the flake's top-level packages output (used by devour-flake in om ci run).
-        autoWire = [ "checks" "apps" ];
+        # "packages" and "apps" are excluded from autoWire so we can filter out
+        # ciExcludedPackages from the flake's top-level outputs (used by devour-flake in om ci run).
+        autoWire = [ "checks" ];
         devShell.tools = _: {
           inherit (self'.packages)
             arion;
@@ -195,6 +228,12 @@
             '';
           };
         };
+
+      apps =
+        let
+          allHaskellApps = config.haskellProjects.default.outputs.apps;
+        in
+        lib.filterAttrs (name: _: !(builtins.elem name ciExcludedApps)) allHaskellApps;
 
       devShells.backend = pkgs.mkShell {
         name = builtins.traceVerbose "devShells.backend" "ny-backend";
