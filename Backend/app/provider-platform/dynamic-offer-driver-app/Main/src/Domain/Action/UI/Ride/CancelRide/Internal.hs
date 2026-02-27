@@ -454,6 +454,7 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
             cancelledRides = riderDetails.cancelledRides,
             totalBookings = riderDetails.totalBookings,
             completedRides = riderDetails.completedRides,
+            estimatedBookingFare = booking.estimatedFare,
             validCancellations = riderDetails.validCancellations,
             cancellationDueRides = riderDetails.cancellationDueRides,
             serviceTier = booking.vehicleServiceTier,
