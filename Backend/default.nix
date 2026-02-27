@@ -31,6 +31,7 @@
         "safety-dashboard"
         "search-result-aggregator"
         "beckn-cli"
+        "hunit-tests"
       ];
       cacConfig = p: p.overrideAttrs (oa: {
         inherit (config.haskellProjects.default.outputs.finalPackages) cac_client;

@@ -1,129 +1,257 @@
 #!/usr/bin/env python3
+"""
+Optimized build log analyzer for Nix builds with Haskell compilation tracking.
+"""
 
 import re
 import sys
-from datetime import datetime
-from collections import defaultdict, namedtuple
 import json
-
-# Data structures
-BuildEvent = namedtuple(
-    'BuildEvent', ['timestamp', 'event_type', 'package', 'details'])
-BuildPhase = namedtuple(
-    'BuildPhase', ['package', 'start_time', 'end_time', 'duration_seconds', 'phase'])
+from datetime import datetime
+from collections import defaultdict
 
 
 class BuildAnalyzer:
     def __init__(self, log_file):
         self.log_file = log_file
-        self.events = []
         self.builds = {}
-        self.parallel_groups = []
+        self.module_compilations = {}
+        self.cache_stats = defaultdict(lambda: {'hits': 0, 'misses': 0})
+        self.cache_hits = []
+        self.pending_cache_queries = {}  # store_path -> [cache_names]
+        self.current_compilations = {}
+        self.events_count = 0
+        self.compilation_count = 0
+        self.cache_event_count = 0
 
     def parse_timestamp(self, ts_str):
-        """Parse GitHub Actions timestamp"""
-        # Format: 2026-02-24T13:38:19.5012063Z
-        return datetime.strptime(ts_str.split('.')[0], "%Y-%m-%dT%H:%M:%S")
+        """Parse GitHub Actions timestamp format: 2026-02-24T13:38:19.5012063Z"""
+        try:
+            return datetime.strptime(ts_str[:19], "%Y-%m-%dT%H:%M:%S")
+        except:
+            return None
 
     def extract_package_name(self, drv_path):
-        """Extract package name from derivation path"""
-        # /nix/store/hash-package-name-version.drv -> package-name
-        match = re.search(
-            r'/nix/store/[a-z0-9]+-(.+?)(?:-\d+\.\d+\.\d+(?:\.\d+)?)?\.drv', drv_path)
-        if match:
-            return match.group(1)
-        return drv_path.split('/')[-1].replace('.drv', '')
+        """Extract package name from derivation path.
+
+        Extracts package name without version for consistent matching.
+        e.g., 'rider-app-source-0.1.0.0' -> 'rider-app-source'
+        """
+        # Get the filename without path and .drv extension
+        filename = drv_path.split('/')[-1].replace('.drv', '')
+        # Remove the hash prefix (32 characters + first dash)
+        name = filename[33:] if len(filename) > 33 else filename
+        # Remove version suffix (-X.Y.Z or -X.Y.Z.W) - version must start with digit
+        # Don't remove things like "-source", "-lib", etc.
+        name = re.sub(r'-\d+\.\d+\.\d+(?:\.\d+)?$', '', name)
+        return name
+
+    def extract_cache_name(self, url):
+        """Extract cache name from URL."""
+        if 'cache.nixos.org' in url:
+            return 'cache.nixos.org'
+        elif 'cache.nixos.asia' in url:
+            return 'cache.nixos.asia'
+        elif 'nammayatri.cachix.org' in url:
+            return 'nammayatri.cachix.org'
+        return url
 
     def parse_log(self):
-        """Parse the build log and extract events"""
+        """Parse the build log using efficient line-by-line processing."""
         print("📊 Parsing build log...")
 
+        # Pre-compiled regex patterns for performance
+        ts_pattern = re.compile(r'^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)')
+        build_start_pattern = re.compile(r"building '(/nix/store/[^']+)'")
+        build_end_pattern = re.compile(r'(\S+)>\s+post-installation fixup')
+        comp_pattern = re.compile(r'(\S+)>\s*\[(\d+)\s+of\s+(\d+)\]\s+Compiling\s+(\S+)')
+        linking_pattern = re.compile(r'(\S+)>\s+Linking\s')
+        cache_query_pattern = re.compile(r"querying info about '(/nix/store/[^']+)'\s+on\s+'([^']+)'")
+        cache_download_pattern = re.compile(r"downloading\s+'https://([^/]+)/(.+\.narinfo)'")
+        derivations_pattern = re.compile(r'these (\d+) derivations will be built')
+
+        build_starts = {}
+        local_build_count = 0
+        last_timestamp = None
+
         with open(self.log_file, 'r') as f:
-            for line_num, line in enumerate(f, 1):
-                line = line.strip()
+            for line in f:
+                line = line.rstrip('\n')
                 if not line:
                     continue
 
                 # Extract timestamp
-                ts_match = re.match(
-                    r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)', line)
+                ts_match = ts_pattern.match(line)
                 if not ts_match:
                     continue
 
                 timestamp = self.parse_timestamp(ts_match.group(1))
+                if not timestamp:
+                    continue
 
-                # Build start events
-                if "building '/nix/store/" in line:
-                    drv_match = re.search(
-                        r"building '(/nix/store/[^']+)'", line)
-                    if drv_match:
-                        drv_path = drv_match.group(1)
+                # Track the last timestamp seen in the log
+                last_timestamp = timestamp
+
+                content = line[ts_match.end():].lstrip()
+
+                # Fast path: check for common patterns first
+                # Build start
+                if "building '/nix/store/" in content:
+                    match = build_start_pattern.search(content)
+                    if match:
+                        drv_path = match.group(1)
                         package = self.extract_package_name(drv_path)
-                        self.events.append(BuildEvent(
-                            timestamp, 'build_start', package, drv_path))
+                        # Skip *-source packages
+                        if package.endswith('-source'):
+                            continue
+                        build_starts[package] = (timestamp, drv_path)
+                        local_build_count += 1
+                        self.events_count += 1
+                    continue
 
-                # Build completion events
-                elif "post-installation fixup" in line:
-                    pkg_match = re.search(
-                        r'(\S+)>\s+post-installation fixup', line)
-                    if pkg_match:
-                        package = pkg_match.group(1)
-                        self.events.append(BuildEvent(
-                            timestamp, 'build_end', package, ''))
+                # Build end
+                if "post-installation fixup" in content:
+                    match = build_end_pattern.search(content)
+                    if match:
+                        end_package = match.group(1)
+                        # Skip *-source packages
+                        if end_package.endswith('-source'):
+                            continue
+                        # Find matching start by normalized package name
+                        # The end log uses short name, start uses drv path
+                        for pkg, (start_time, drv_path) in list(build_starts.items()):
+                            # Check if the end package name is a prefix or matches
+                            if end_package in drv_path or drv_path.endswith(f"-{end_package}.drv") or drv_path.endswith(f"-{end_package}-"):
+                                duration = (timestamp - start_time).total_seconds()
+                                self.builds[pkg] = {
+                                    'start_time': start_time.isoformat(),
+                                    'end_time': timestamp.isoformat(),
+                                    'duration_seconds': duration,
+                                    'duration_human': self.format_duration(duration)
+                                }
+                                del build_starts[pkg]
+                                self.events_count += 1
+                                break
+                    continue
 
-                # Other interesting events
-                elif "these " in line and "derivations will be built" in line:
-                    count_match = re.search(
-                        r'these (\d+) derivations will be built', line)
-                    if count_match:
-                        count = int(count_match.group(1))
-                        self.events.append(BuildEvent(
-                            timestamp, 'build_plan', f'{count}_derivations', ''))
+                # Haskell compilation - skip *-source packages
+                if "Compiling" in content and "> [" in content:
+                    match = comp_pattern.search(content)
+                    if match:
+                        package = match.group(1)
 
-        print(f"✅ Parsed {len(self.events)} events")
+                        # Skip *-source packages (they are source bundles, not actual compilation)
+                        if package.endswith('-source'):
+                            continue
 
-    def analyze_build_durations(self):
-        """Calculate build durations for each package"""
-        print("⏱️  Analyzing build durations...")
+                        idx = int(match.group(2))
+                        total = int(match.group(3))
+                        module = match.group(4)
 
-        # Track start times
-        start_times = {}
+                        # Close previous compilation for this package (if any)
+                        if package in self.current_compilations:
+                            prev = self.current_compilations[package]
+                            duration = (timestamp - prev['timestamp']).total_seconds()
+                            key = f"{package}:{prev['module']}"
+                            self.module_compilations[key] = {
+                                'package': package,
+                                'module': prev['module'],
+                                'start_time': prev['timestamp'].isoformat(),
+                                'end_time': timestamp.isoformat(),
+                                'duration_seconds': duration,
+                                'duration_human': self.format_duration(duration)
+                            }
 
-        for event in self.events:
-            if event.event_type == 'build_start':
-                start_times[event.package] = event.timestamp
-            elif event.event_type == 'build_end':
-                if event.package in start_times:
-                    start_time = start_times[event.package]
-                    duration = (event.timestamp - start_time).total_seconds()
+                        # Track the start of this compilation
+                        self.current_compilations[package] = {
+                            'timestamp': timestamp,
+                            'module': module,
+                            'index': idx,
+                            'total': total
+                        }
+                        self.compilation_count += 1
+                    continue
 
-                    self.builds[event.package] = {
-                        'start_time': start_time,
-                        'end_time': event.timestamp,
+                # Linking marks the end of the last module compilation
+                if "Linking" in content:
+                    match = linking_pattern.search(content)
+                    if match:
+                        package = match.group(1)
+
+                        # Skip *-source packages
+                        if package.endswith('-source'):
+                            continue
+
+                        # Close the last compilation for this package
+                        if package in self.current_compilations:
+                            prev = self.current_compilations[package]
+                            duration = (timestamp - prev['timestamp']).total_seconds()
+                            key = f"{package}:{prev['module']}"
+                            self.module_compilations[key] = {
+                                'package': package,
+                                'module': prev['module'],
+                                'start_time': prev['timestamp'].isoformat(),
+                                'end_time': timestamp.isoformat(),
+                                'duration_seconds': duration,
+                                'duration_human': self.format_duration(duration)
+                            }
+                            del self.current_compilations[package]
+                    continue
+
+                # Cache hit: downloading narinfo means cache has the path
+                if "downloading" in content and ".narinfo" in content:
+                    match = cache_download_pattern.search(content)
+                    if match:
+                        cache_name = self.extract_cache_name(match.group(1))
+                        narinfo_path = match.group(2)
+
+                        # Record the hit for this cache
+                        self.cache_stats[cache_name]['hits'] += 1
+                        self.cache_hits.append({
+                            'cache': cache_name,
+                            'path': narinfo_path,
+                            'timestamp': timestamp.isoformat()
+                        })
+                        self.cache_event_count += 1
+                    continue
+
+        # Close any remaining compilations using the last timestamp from the log
+        # Skip *-source packages
+        if self.current_compilations and self.compilation_count > 0 and last_timestamp:
+            for package, current in list(self.current_compilations.items()):
+                if package.endswith('-source'):
+                    continue
+                duration = (last_timestamp - current['timestamp']).total_seconds()
+                key = f"{package}:{current['module']}"
+                if key not in self.module_compilations:
+                    self.module_compilations[key] = {
+                        'package': package,
+                        'module': current['module'],
+                        'start_time': current['timestamp'].isoformat(),
+                        'end_time': last_timestamp.isoformat(),
                         'duration_seconds': duration,
-                        'duration_minutes': duration / 60,
                         'duration_human': self.format_duration(duration)
                     }
 
-                    del start_times[event.package]
-
-        # Handle incomplete builds (started but not finished)
-        for package, start_time in start_times.items():
-            if self.events:
-                last_event_time = max(e.timestamp for e in self.events)
-                duration = (last_event_time - start_time).total_seconds()
-
+        # Handle incomplete builds
+        for package, (start_time, drv_path) in build_starts.items():
+            if self.events_count > 0:
+                duration = 0  # We don't have end time
                 self.builds[package] = {
-                    'start_time': start_time,
+                    'start_time': start_time.isoformat(),
                     'end_time': None,
-                    'duration_seconds': duration,
-                    'duration_minutes': duration / 60,
-                    'duration_human': self.format_duration(duration) + ' (incomplete)',
+                    'duration_seconds': 0,
+                    'duration_human': 'unknown (incomplete)',
                     'incomplete': True
                 }
 
+        self.cache_stats['local_build'] = {'count': local_build_count}
+
+        print(f"✅ Parsed {self.events_count} build events")
+        print(f"✅ Parsed {self.compilation_count} compilation events")
+        print(f"✅ Parsed {self.cache_event_count} cache events")
+
     def format_duration(self, seconds):
-        """Format duration in human readable form"""
+        """Format duration in human readable form."""
         if seconds < 60:
             return f"{seconds:.1f}s"
         elif seconds < 3600:
@@ -131,158 +259,84 @@ class BuildAnalyzer:
         else:
             return f"{seconds/3600:.1f}h {(seconds % 3600)/60:.1f}m"
 
-    def identify_parallel_builds(self):
-        """Identify which builds happened in parallel"""
-        print("🔄 Analyzing parallel builds...")
+    def calculate_summary(self):
+        """Calculate summary statistics."""
+        completed_builds = [b for b in self.builds.values() if b.get('end_time')]
 
-        # Get all ongoing builds at each point in time
-        ongoing_builds = []
-
-        for event in sorted(self.events, key=lambda x: x.timestamp):
-            if event.event_type == 'build_start':
-                ongoing_builds.append(event.package)
-            elif event.event_type == 'build_end' and event.package in ongoing_builds:
-                ongoing_builds.remove(event.package)
-
-            # If we have multiple builds ongoing, record this parallel group
-            if len(ongoing_builds) > 1:
-                parallel_group = {
-                    'timestamp': event.timestamp,
-                    'packages': ongoing_builds.copy(),
-                    'count': len(ongoing_builds)
-                }
-
-                # Only add if this is a new combination
-                if not any(set(pg['packages']) == set(parallel_group['packages'])
-                           for pg in self.parallel_groups):
-                    self.parallel_groups.append(parallel_group)
-
-    def get_build_timeline(self):
-        """Get chronological build timeline"""
-        timeline = []
-        for event in sorted(self.events, key=lambda x: x.timestamp):
-            if event.event_type in ['build_start', 'build_end']:
-                timeline.append(event)
-        return timeline
-
-    def analyze_total_time(self):
-        """Calculate total build time vs wall clock time"""
-        if not self.events:
+        if not completed_builds:
             return None
 
-        start_time = min(
-            e.timestamp for e in self.events if e.event_type == 'build_start')
-        end_time = max(
-            e.timestamp for e in self.events if e.event_type == 'build_end')
+        durations = [b['duration_seconds'] for b in completed_builds]
+        start_times = [datetime.fromisoformat(b['start_time']) for b in completed_builds]
+        end_times = [datetime.fromisoformat(b['end_time']) for b in completed_builds]
 
-        wall_clock_time = (end_time - start_time).total_seconds()
-
-        # Calculate total CPU time (sum of all build durations)
-        total_cpu_time = sum(build['duration_seconds']
-                             for build in self.builds.values())
-
-        # Calculate parallelization efficiency
-        efficiency = (total_cpu_time /
-                      wall_clock_time) if wall_clock_time > 0 else 0
+        wall_clock = (max(end_times) - min(start_times)).total_seconds()
+        total_cpu = sum(durations)
 
         return {
-            'wall_clock_seconds': wall_clock_time,
-            'wall_clock_human': self.format_duration(wall_clock_time),
-            'total_cpu_seconds': total_cpu_time,
-            'total_cpu_human': self.format_duration(total_cpu_time),
-            'parallelization_factor': efficiency,
-            'start_time': start_time,
-            'end_time': end_time
+            'wall_clock_seconds': wall_clock,
+            'wall_clock_human': self.format_duration(wall_clock),
+            'total_cpu_seconds': total_cpu,
+            'total_cpu_human': self.format_duration(total_cpu),
+            'parallelization_factor': total_cpu / wall_clock if wall_clock > 0 else 0,
+            'start_time': min(start_times).isoformat(),
+            'end_time': max(end_times).isoformat()
         }
 
     def print_summary(self):
-        """Print comprehensive analysis summary"""
+        """Print comprehensive analysis summary."""
+        summary = self.calculate_summary()
+
         print("\n" + "="*80)
         print("📈 BUILD ANALYSIS SUMMARY")
         print("="*80)
 
-        # Overall timing
-        timing = self.analyze_total_time()
-        if timing:
+        if summary:
             print(f"\n⏰ OVERALL TIMING:")
-            print(f"   Wall Clock Time: {timing['wall_clock_human']}")
-            print(f"   Total CPU Time:  {timing['total_cpu_human']}")
-            print(
-                f"   Parallelization: {timing['parallelization_factor']:.1f}x")
-            print(
-                f"   Build Period:    {timing['start_time'].strftime('%H:%M:%S')} → {timing['end_time'].strftime('%H:%M:%S')}")
+            print(f"   Wall Clock Time: {summary['wall_clock_human']}")
+            print(f"   Total CPU Time:  {summary['total_cpu_human']}")
+            print(f"   Parallelization: {summary['parallelization_factor']:.1f}x")
 
-        # Top longest builds
-        print(f"\n🐌 LONGEST BUILD TIMES:")
+        # Cache statistics
+        print(f"\n💾 CACHE STATISTICS:")
+        for cache, stats in self.cache_stats.items():
+            if isinstance(stats, dict):
+                if 'hits' in stats:
+                    print(f"   {cache}: {stats['hits']} hits, {stats.get('misses', 0)} misses")
+                elif 'count' in stats:
+                    print(f"   {cache}: {stats['count']} builds")
+
+        # Top longest package builds
+        print(f"\n🐌 LONGEST PACKAGE BUILD TIMES:")
         sorted_builds = sorted(self.builds.items(),
-                               key=lambda x: x[1]['duration_seconds'], reverse=True)
+                              key=lambda x: x[1].get('duration_seconds', 0), reverse=True)
         for i, (package, data) in enumerate(sorted_builds[:10]):
             status = " (INCOMPLETE)" if data.get('incomplete') else ""
-            print(
-                f"   {i+1:2d}. {package:<35} {data['duration_human']:>10}{status}")
+            print(f"   {i+1:2d}. {package:<45} {data['duration_human']:>10}{status}")
 
-        # Parallelization analysis
-        print(f"\n⚡ PARALLELIZATION ANALYSIS:")
-        max_parallel = max((len(pg['packages'])
-                           for pg in self.parallel_groups), default=1)
-        print(f"   Maximum Parallel Builds: {max_parallel}")
-        print(f"   Parallel Groups Found:   {len(self.parallel_groups)}")
+        # Top longest module compilations
+        if self.module_compilations:
+            print(f"\n🐌 LONGEST MODULE COMPILATION TIMES:")
+            sorted_modules = sorted(self.module_compilations.items(),
+                                   key=lambda x: x[1]['duration_seconds'], reverse=True)
+            for i, (key, data) in enumerate(sorted_modules[:15]):
+                module_short = data['module'][-35:] if len(data['module']) > 35 else data['module']
+                print(f"   {i+1:2d}. {data['package']:<20} {module_short:<35} {data['duration_human']:>10}")
 
-        # Show some parallel groups
-        if self.parallel_groups:
-            print(f"\n   Sample Parallel Groups:")
-            for i, pg in enumerate(self.parallel_groups[:5]):
-                packages_str = ", ".join(pg['packages'][:3])
-                if len(pg['packages']) > 3:
-                    packages_str += f" +{len(pg['packages'])-3} more"
-                print(f"     {i+1}. [{pg['count']} builds] {packages_str}")
-
-        # Build phases analysis
+        # Build statistics
         print(f"\n📊 BUILD STATISTICS:")
-        total_builds = len(self.builds)
-        completed_builds = len(
-            [b for b in self.builds.values() if not b.get('incomplete')])
-        incomplete_builds = total_builds - completed_builds
-
-        print(f"   Total Packages Built:     {total_builds}")
-        print(f"   Completed Builds:         {completed_builds}")
-        print(f"   Incomplete Builds:        {incomplete_builds}")
-
-        if self.builds:
-            durations = [b['duration_seconds'] for b in self.builds.values()]
-            avg_duration = sum(durations) / len(durations)
-            print(
-                f"   Average Build Time:       {self.format_duration(avg_duration)}")
-
-    def print_detailed_timeline(self, limit=20):
-        """Print detailed build timeline"""
-        print(f"\n📅 BUILD TIMELINE (showing first {limit} events):")
-        print("-" * 80)
-
-        timeline = self.get_build_timeline()
-        for i, event in enumerate(timeline[:limit]):
-            time_str = event.timestamp.strftime('%H:%M:%S')
-            event_type = "🚀 START" if event.event_type == 'build_start' else "✅ END  "
-            print(f"   {time_str} {event_type} {event.package}")
-
-        if len(timeline) > limit:
-            print(f"   ... and {len(timeline) - limit} more events")
+        print(f"   Total Packages:           {len(self.builds)}")
+        print(f"   Total Modules Compiled:   {len(self.module_compilations)}")
+        print(f"   Cache Hits:               {len(self.cache_hits)}")
 
     def export_json(self, filename):
-        """Export analysis results to JSON"""
+        """Export analysis results to JSON."""
         data = {
-            'summary': self.analyze_total_time(),
+            'summary': self.calculate_summary(),
             'builds': self.builds,
-            'parallel_groups': self.parallel_groups,
-            'timeline': [
-                {
-                    'timestamp': event.timestamp.isoformat(),
-                    'event_type': event.event_type,
-                    'package': event.package,
-                    'details': event.details
-                }
-                for event in self.events
-            ]
+            'module_compilations': self.module_compilations,
+            'cache_stats': dict(self.cache_stats),
+            'cache_hits': self.cache_hits
         }
 
         with open(filename, 'w') as f:
@@ -293,27 +347,20 @@ class BuildAnalyzer:
 
 def main():
     if len(sys.argv) != 2:
-        print("Usage: python analyze_build_log.py <build_log_file>")
+        print("Usage: python3 analyze_build_log.py <build_log_file>")
         sys.exit(1)
 
     log_file = sys.argv[1]
-
     analyzer = BuildAnalyzer(log_file)
 
     try:
         analyzer.parse_log()
-        analyzer.analyze_build_durations()
-        analyzer.identify_parallel_builds()
-
         analyzer.print_summary()
-        analyzer.print_detailed_timeline()
-
-        # Export detailed results
-        output_file = "build_analysis.json"
-        analyzer.export_json(output_file)
-
+        analyzer.export_json("build_analysis.json")
     except Exception as e:
         print(f"❌ Error analyzing build log: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 
