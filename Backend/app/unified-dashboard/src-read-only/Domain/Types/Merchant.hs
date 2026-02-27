@@ -18,6 +18,7 @@ data MerchantE e = Merchant
     createdAt :: Kernel.Prelude.UTCTime,
     defaultOperatingCity :: Kernel.Types.Beckn.Context.City,
     domain :: Kernel.Prelude.Maybe Data.Text.Text,
+    enableGetRequestAuditLogs :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     hasFleetMemberHierarchy :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -34,9 +35,9 @@ data MerchantE e = Merchant
   }
   deriving (Generic)
 
-type Merchant = MerchantE ('AsEncrypted)
+type Merchant = MerchantE 'AsEncrypted
 
-type DecryptedMerchant = MerchantE ('AsUnencrypted)
+type DecryptedMerchant = MerchantE 'AsUnencrypted
 
 instance EncryptedItem Merchant where
   type Unencrypted Merchant = (DecryptedMerchant, HashSalt)
@@ -48,6 +49,7 @@ instance EncryptedItem Merchant where
           createdAt = createdAt entity,
           defaultOperatingCity = defaultOperatingCity entity,
           domain = domain entity,
+          enableGetRequestAuditLogs = enableGetRequestAuditLogs entity,
           enabled = enabled entity,
           hasFleetMemberHierarchy = hasFleetMemberHierarchy entity,
           id = id entity,
@@ -70,6 +72,7 @@ instance EncryptedItem Merchant where
             createdAt = createdAt entity,
             defaultOperatingCity = defaultOperatingCity entity,
             domain = domain entity,
+            enableGetRequestAuditLogs = enableGetRequestAuditLogs entity,
             enabled = enabled entity,
             hasFleetMemberHierarchy = hasFleetMemberHierarchy entity,
             id = id entity,

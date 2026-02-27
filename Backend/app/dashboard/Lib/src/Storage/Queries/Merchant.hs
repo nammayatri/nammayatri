@@ -96,6 +96,7 @@ instance FromTType' BeamM.Merchant Domain.Merchant where
             authToken = case (authTokenEncrypted, authTokenHash) of
               (Just token, Just hash) -> Just $ EncryptedHashed (Encrypted token) hash
               _ -> Nothing,
+            enableGetRequestAuditLogs = enableGetRequestAuditLogs,
             ..
           }
 

@@ -18,12 +18,14 @@ module SharedLogic.Transaction
     buildTransaction,
     withTransactionStoring,
     withResponseTransactionStoring,
+    withGetTransactionStoring,
     buildTransactionForSafetyDashboard,
   )
 where
 
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified Data.Text as Text
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -31,6 +33,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (encodeToText, logError, throwError)
 import Storage.Beam.BeamFlow
+import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Transaction as QT
 import Tools.Auth
 import qualified Tools.Error as E
@@ -124,6 +127,58 @@ withResponseTransactionStoring' responseModifier transaction clientCall = handle
     errorHandler (err :: E.Error) = do
       QT.create transaction{responseError = Just $ show err}
       throwError err
+
+withGetTransactionAudit ::
+  ( BeamFlow m r,
+    MonadCatch m
+  ) =>
+  DT.Transaction ->
+  m response ->
+  m response
+withGetTransactionAudit transaction clientCall =
+  handle errorHandler $ do
+    response <- clientCall
+    QT.create transaction{response = Nothing}
+    pure response
+  where
+    errorHandler (err :: E.Error) = do
+      QT.create transaction{responseError = Just $ show err}
+      throwError err
+
+withGetTransactionAuditIfEnabled ::
+  ( BeamFlow m r,
+    MonadCatch m
+  ) =>
+  Id DM.Merchant ->
+  DT.Transaction ->
+  m response ->
+  m response
+withGetTransactionAuditIfEnabled merchantId transaction clientCall = do
+  mMerchant <- QMerchant.findById merchantId
+  let enabled =
+        fromMaybe False (mMerchant >>= DM.enableGetRequestAuditLogs)
+  if enabled
+    then withGetTransactionAudit transaction clientCall
+    else clientCall
+
+withGetTransactionStoring ::
+  ( BeamFlow m r,
+    MonadCatch m,
+    MonadFlow m
+  ) =>
+  DT.Endpoint ->
+  Maybe ServerName ->
+  Maybe ApiTokenInfo ->
+  Maybe (Id Common.Driver) ->
+  Maybe (Id Common.Ride) ->
+  m response ->
+  m response
+withGetTransactionStoring endpoint serverName apiTokenInfo commonDriverId commonRideId clientCall = do
+  transaction <- buildTransaction endpoint serverName apiTokenInfo commonDriverId commonRideId emptyRequest
+  case apiTokenInfo of
+    Nothing -> clientCall
+    Just info ->
+      withGetTransactionAuditIfEnabled info.merchant.id transaction clientCall
 
 buildTransactionForSafetyDashboard ::
   ( MonadFlow m

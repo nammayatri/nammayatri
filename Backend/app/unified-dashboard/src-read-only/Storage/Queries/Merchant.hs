@@ -22,7 +22,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Merchant.Merchant] -> m ())
 createMany = traverse_ create
 
-findAllByShortIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant] -> m ([Domain.Types.Merchant.Merchant]))
+findAllByShortIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant] -> m [Domain.Types.Merchant.Merchant])
 findAllByShortIds shortId = do findAllWithKV [Se.Is Beam.shortId $ Se.In (Kernel.Types.Id.getShortId <$> shortId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Merchant.Merchant))
@@ -43,10 +43,11 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.authTokenEncrypted (((authToken <&> unEncrypted . (.encrypted)))),
-      Se.Set Beam.authTokenHash ((authToken <&> (.hash))),
+    [ Se.Set Beam.authTokenEncrypted (authToken <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.authTokenHash (authToken <&> (.hash)),
       Se.Set Beam.defaultOperatingCity defaultOperatingCity,
       Se.Set Beam.domain domain,
+      Se.Set Beam.enableGetRequestAuditLogs enableGetRequestAuditLogs,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.hasFleetMemberHierarchy hasFleetMemberHierarchy,
       Se.Set Beam.is2faMandatory is2faMandatory,
