@@ -1432,8 +1432,8 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
       let (fdaList, personList, driverInfoList) = listOfAllDrivers
       vehicles <- QVehicle.findAllByDriverIds (map (.id) personList)
       let vehicleMap = Map.fromList [(v.driverId, v) | v <- vehicles]
-      let keep = map (\(_fda, person, _info) -> maybe False (\v -> any (\st -> show st == tierText) v.selectedServiceTiers) (Map.lookup person.id vehicleMap)) (zip3 fdaList personList driverInfoList)
-      let filteredTriples = map snd $ filter fst $ zip keep (zip3 fdaList personList driverInfoList)
+      let keepFunc (_fda, person, _info) = maybe False (\v -> any (\st -> show st == tierText) v.selectedServiceTiers) (Map.lookup person.id vehicleMap)
+      let filteredTriples = filter keepFunc (zip3 fdaList personList driverInfoList)
       pure $ unzip3 filteredTriples
   listItems <- createFleetDriverAssociationListItem fleetOwnerNameMap filteredDrivers
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
@@ -1645,7 +1645,7 @@ getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehi
             case (mbVehicle, mbPerson) of
               (Just vehicle, Just person) -> do
                 cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
-                pure $ map (\st -> fromMaybe (show st) ((\vst -> vst.name) <$> find (\vst -> vst.serviceTierType == st) cityVehicleServiceTiers)) vehicle.selectedServiceTiers
+                pure $ map (\st -> maybe (show st) (.name) (find (\vst -> vst.serviceTierType == st) cityVehicleServiceTiers)) vehicle.selectedServiceTiers
               _ -> pure []
         let ls =
               Common.DriveVehicleAssociationListItemT
@@ -4135,9 +4135,8 @@ postDriverFleetScheduledBookingReassign ::
   Text ->
   Common.ReassignScheduledBookingReq ->
   Flow APISuccess
-postDriverFleetScheduledBookingReassign merchantShortId opCity fleetOwnerId Common.ReassignScheduledBookingReq {..} = do
+postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Common.ReassignScheduledBookingReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   -- 1. Get old ride and validate old driver belongs to fleet
   oldRide <- QRide.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
@@ -4154,6 +4153,7 @@ postDriverFleetScheduledBookingReassign merchantShortId opCity fleetOwnerId Comm
   -- 2b. New driver's selected service tiers must include booking's service tier (drivers can downgrade variant)
   newDriverVehicle <- QVehicle.findById newDriverPersonId >>= fromMaybeM (VehicleNotFound newDriverPersonId.getId)
   unless (oldBooking.vehicleServiceTier `elem` newDriverVehicle.selectedServiceTiers) $ throwError (InvalidRequest "Booking's service tier is not in driver's selected service tiers")
+  newDriver <- QPerson.findById newDriverPersonId >>= fromMaybeM (PersonNotFound newDriverPersonId.getId)
 
   -- 3. Validate ride status
   unless (oldRide.status `elem` [DRide.NEW, DRide.UPCOMING]) $ throwError (RideInvalidStatus "Ride must be in NEW or UPCOMING status to reassign")
@@ -4165,21 +4165,20 @@ postDriverFleetScheduledBookingReassign merchantShortId opCity fleetOwnerId Comm
 
   -- 5. Cancel old ride using cancelRideTransaction
   now <- getCurrentTime
-  bookingCReason <-
-    return $
-      SBCR.BookingCancellationReason
-        { driverId = Just oldRide.driverId,
-          bookingId = oldBooking.id,
-          rideId = Just oldRide.id,
-          merchantId = Just merchant.id,
-          source = SBCR.ByFleetOwner,
-          reasonCode = Nothing,
-          additionalInfo = Nothing,
-          driverCancellationLocation = Nothing,
-          driverDistToPickup = Nothing,
-          distanceUnit = oldBooking.distanceUnit,
-          merchantOperatingCityId = Just oldBooking.merchantOperatingCityId
-        }
+  let bookingCReason =
+        SBCR.BookingCancellationReason
+          { driverId = Just oldRide.driverId,
+            bookingId = oldBooking.id,
+            rideId = Just oldRide.id,
+            merchantId = Just merchant.id,
+            source = SBCR.ByFleetOwner,
+            reasonCode = Nothing,
+            additionalInfo = Nothing,
+            driverCancellationLocation = Nothing,
+            driverDistToPickup = Nothing,
+            distanceUnit = oldBooking.distanceUnit,
+            merchantOperatingCityId = Just oldBooking.merchantOperatingCityId
+          }
   RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing transporterConfig
 
   -- 6. Create new booking and quote (similar to performStaticOfferReallocation)
@@ -4197,7 +4196,7 @@ postDriverFleetScheduledBookingReassign merchantShortId opCity fleetOwnerId Comm
   QRB.createBooking newBooking
   when newBooking.isScheduled $ void $ SBooking.addScheduledBookingInRedis newBooking
 
-  -- 8. Assign to new driver immediately
-  void $ UIDriver.acceptScheduledBooking (newDriverPersonId, merchant.id, merchantOpCityId) clientId newBooking.id
+  -- 8. Assign to new driver immediately (reuse merchant, transporterConfig, newBooking to avoid duplicate queries)
+  void $ UIDriver.acceptScheduledBookingWithPreFetched merchant transporterConfig newBooking newDriver clientId
 
   pure Success

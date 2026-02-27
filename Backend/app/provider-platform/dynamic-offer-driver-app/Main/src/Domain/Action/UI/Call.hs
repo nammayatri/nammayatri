@@ -97,7 +97,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Text.XML as XML
 import Tools.Call hiding (addCampaignData)
 import Tools.Error
-import Tools.Notifications
+import Tools.Notifications hiding (priority)
 import TransactionLogs.Types
 import Web.JWT (Algorithm (HS256), ClaimsMap (..), JOSEHeader (..), JWTClaimsSet (..), encodeSigned, hmacSecret, numericDate, stringOrURI)
 

@@ -155,7 +155,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
   docConfigs <- maybe (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing) pure mbDocConfigs
   -- Only restrict when rolesAllowedToUploadDocument is non-empty; Nothing or [] means all roles allowed
   whenJust (listToMaybe docConfigs >>= (.rolesAllowedToUploadDocument)) $ \allowedRoles ->
-    when (not $ null allowedRoles) $ do
+    unless (null allowedRoles) $ do
       let uploaderRole = fromMaybe person.role mbUploaderRole
       unless (uploaderRole `elem` allowedRoles) $
         throwError (InvalidRequesterRole $ show uploaderRole)

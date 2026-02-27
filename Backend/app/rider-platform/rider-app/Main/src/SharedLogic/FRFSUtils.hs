@@ -25,6 +25,7 @@ import Control.Monad.Extra (mapMaybeM)
 import Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, nub, sort, sortBy)
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -115,7 +116,6 @@ import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
-import qualified Data.Map.Strict as M
 
 adjustCfgMapForPreferredTier ::
   Ord Spec.ServiceTierType =>

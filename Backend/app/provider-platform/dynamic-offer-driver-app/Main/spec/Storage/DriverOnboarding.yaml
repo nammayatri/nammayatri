@@ -472,6 +472,11 @@ Image:
       kvFunction: updateOneWithKV
       params: [verificationStatus, documentExpiry, imageType]
       where: id
+    updateVerificationStatusAndFailureReasonByRcIdAndImageType:
+      kvFunction: updateWithKV
+      params: [verificationStatus, failureReason]
+      where:
+        and: [rcId, imageType]
     deleteById:
       kvFunction: deleteWithKV
       where: id
@@ -626,7 +631,7 @@ DocumentVerificationConfig:
     supportedVehicleClasses: (getConfigFromJSON documentType)|M
     documentFields: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< documentFieldsJSON|E
     applicableTo: fromMaybe Domain.Types.DocumentVerificationConfig.FLEET_AND_INDIVIDUAL applicableTo|E
-    rolesAllowedToUploadDocument: (Kernel.Prelude.map (read . Data.Text.unpack)) Kernel.Prelude.<$> rolesAllowedToUploadDocumentText|E
+    rolesAllowedToUploadDocument: rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack)|E
 
   queries:
     findAllByMerchantOpCityId:
@@ -667,6 +672,10 @@ VehiclePermit:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
       where: documentImageId
+    updateVerificationStatusByRcId:
+      kvFunction: updateWithKV
+      params: [verificationStatus]
+      where: rcId
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId
@@ -701,6 +710,10 @@ VehicleInsurance:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
       where: documentImageId
+    updateVerificationStatusAndRejectReasonByRcId:
+      kvFunction: updateWithKV
+      params: [verificationStatus, rejectReason]
+      where: rcId
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId
@@ -734,6 +747,10 @@ VehicleFitnessCertificate:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
       where: documentImageId
+    updateVerificationStatusByRcId:
+      kvFunction: updateWithKV
+      params: [verificationStatus]
+      where: rcId
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId
@@ -817,6 +834,10 @@ VehiclePUC:
         and: [rcId, driverId]
     findByRcId:
       kvFunction: findAllWithKV
+      where: rcId
+    updateVerificationStatusByRcId:
+      kvFunction: updateWithKV
+      params: [verificationStatus]
       where: rcId
     findByImageId:
       kvFunction: findOneWithKV

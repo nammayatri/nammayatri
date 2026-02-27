@@ -20,7 +20,6 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as QOHR
-import qualified Storage.Queries.OperationHubRequestsExtra as QOHRE
 import Tools.Error
 
 getOperationGetAllHubs :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> Flow [OperationHub]
@@ -39,12 +38,12 @@ postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req
   Redis.whenWithLockRedis lockKey 60 $ do
     id <- generateGUID
     now <- getCurrentTime
-    -- Duplicate: any PENDING request for this driver (driver inspection) or this RC (vehicle inspection), regardless of creator
+    -- Duplicate: any PENDING request for this entity (driver or RC), regardless of request type or creator
     isDuplicate <- case req.requestType of
-      DRIVER_ONBOARDING_INSPECTION -> maybe (pure False) (\d -> isJust <$> QOHRE.findPendingByDriverIdAndRequestType d req.requestType) req.driverId
-      DRIVER_REGULAR_INSPECTION -> maybe (pure False) (\d -> isJust <$> QOHRE.findPendingByDriverIdAndRequestType d req.requestType) req.driverId
-      ONBOARDING_INSPECTION -> maybe (pure False) (\rc -> isJust <$> QOHRE.findPendingByRegistrationNoAndRequestType rc req.requestType) req.registrationNo
-      REGULAR_INSPECTION -> maybe (pure False) (\rc -> isJust <$> QOHRE.findPendingByRegistrationNoAndRequestType rc req.requestType) req.registrationNo
+      DRIVER_ONBOARDING_INSPECTION -> maybe (pure False) (\d -> isJust <$> QOHR.findOneByRequestStatusAndDriverId PENDING (Just d)) req.driverId
+      DRIVER_REGULAR_INSPECTION -> maybe (pure False) (\d -> isJust <$> QOHR.findOneByRequestStatusAndDriverId PENDING (Just d)) req.driverId
+      ONBOARDING_INSPECTION -> maybe (pure False) (\rc -> isJust <$> QOHR.findOneByRequestStatusAndRegistrationNo PENDING (Just rc)) req.registrationNo
+      REGULAR_INSPECTION -> maybe (pure False) (\rc -> isJust <$> QOHR.findOneByRequestStatusAndRegistrationNo PENDING (Just rc)) req.registrationNo
     when isDuplicate $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
     void $ QOH.findByPrimaryKey req.operationHubId >>= fromMaybeM (OperationHubDoesNotExist req.operationHubId.getId)
     let operationHubReq =
@@ -86,7 +85,7 @@ getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus
   -- At least one of mbRcNo or mbDriverId must be provided
   unless (isJust mbRcNo || isJust mbDriverId) $
     throwError $ InvalidRequest "Either rcNo or driverId must be provided"
-  requests <- QOHRE.findAllRequestsInRange from to limit offset Nothing mbStatus mbType (Just driverId.getId) Nothing Nothing mbRcNo mbDriverId
+  requests <- QOHR.findAllRequestsInRange from to limit offset Nothing mbStatus mbType (Just driverId.getId) Nothing Nothing mbRcNo mbDriverId
   reqs <- mapM castHubRequests requests
   pure (OperationHubRequestsResp reqs)
 

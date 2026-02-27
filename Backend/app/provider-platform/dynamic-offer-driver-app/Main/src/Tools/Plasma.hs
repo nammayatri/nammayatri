@@ -48,4 +48,4 @@ allLMSTrainingCompleted ::
   m (Maybe Bool)
 allLMSTrainingCompleted merchantOpCityId driverIdText = do
   mbModules <- getLMSModules merchantOpCityId driverIdText
-  return $ fmap (\modules -> all (\lmsModule -> lmsModule.status == KernelPlasma.COMPLETED) modules) mbModules
+  return $ fmap (all (\lmsModule -> lmsModule.status == KernelPlasma.COMPLETED)) mbModules
