@@ -28,6 +28,7 @@ module SharedLogic.FareCalculator
     calculateCancellationCharges,
     calculateNoShowCharges,
     computeRideDiscount,
+    computeTotalGstRate,
   )
 where
 
@@ -44,6 +45,7 @@ import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as DFP
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.TransporterConfig as DTC
 import EulerHS.Prelude hiding (elem, id, map, sum)
 import GHC.Float (int2Double)
 import Kernel.Prelude as KP
@@ -353,7 +355,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     shouldApplyPersonalDiscount :: Bool,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
-    numberOfLuggages :: Maybe Int
+    numberOfLuggages :: Maybe Int,
+    govtChargesRate :: Maybe DTC.GstBreakup -- from TaxConfig.rideGst; summed inside calculateFareParameters
   }
 
 calculateFareParameters :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
@@ -417,8 +420,9 @@ calculateFareParameters params = do
           + fromMaybe 0.0 fp.priorityCharges
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
+      govtChargesRate' = params.govtChargesRate >>= computeTotalGstRate
       govtCharges =
-        HighPrecMoney . (fullRideCostN.getHighPrecMoney *) . toRational <$> fp.govtCharges
+        HighPrecMoney . (fullRideCostN.getHighPrecMoney *) . toRational <$> govtChargesRate'
       stopCharges =
         HighPrecMoney . ((toRational params.noOfStops) *) . toRational <$> fp.perStopCharge
       extraTimeFareInfo = calculateExtraTimeFare params.estimatedRideDuration fp.rideExtraTimeChargeGracePeriod fp.perMinuteRideExtraTimeCharge params.actualRideDuration
@@ -917,3 +921,14 @@ calculateNoShowCharges mbDriverArrivalTime mbCancellationAndNoShowConfigs now = 
            in Just cancellationFee
         else Nothing
     _ -> Nothing
+
+-- | Compute total GST rate as a fractional Double from TaxConfig GstBreakup.
+--   E.g. cgstPercentage=9, sgstPercentage=9 → total = 0.18
+--   Returns Nothing if the total percentage is 0 or all sub-rates are Nothing.
+computeTotalGstRate :: DTC.GstBreakup -> Maybe Double
+computeTotalGstRate gstBreakup =
+  let cgst = maybe 0 (fromRational . (.getHighPrecMoney)) gstBreakup.cgstPercentage
+      sgst = maybe 0 (fromRational . (.getHighPrecMoney)) gstBreakup.sgstPercentage
+      igst = maybe 0 (fromRational . (.getHighPrecMoney)) gstBreakup.igstPercentage
+      total = cgst + sgst + igst
+   in if total > 0 then Just (total / 100.0) else Nothing

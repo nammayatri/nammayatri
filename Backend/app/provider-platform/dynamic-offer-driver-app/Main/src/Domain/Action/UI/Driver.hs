@@ -1817,6 +1817,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               merchantOperatingCityId = Just merchantOpCityId,
               mbAdditonalChargeCategories = Just sReqFD.conditionalCharges,
               numberOfLuggages = searchReq.numberOfLuggages,
+              govtChargesRate = Just transporterConfig.taxConfig.rideGst,
               ..
             }
       driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice'
@@ -2880,12 +2881,14 @@ buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
   let pickup = LatLong {lat = fromLocation.lat, lon = fromLocation.lon}
       distanceToPickup' = highPrecMetersToMeters . (`distanceBetweenInMeters` pickup) <$> mbDriverLocation
   mbQuote <- QQuote.findById (Id quoteId)
+  mbTransporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing
+  let govtChargesRate = mbTransporterConfig >>= (computeTotalGstRate . (.taxConfig.rideGst))
   case mbQuote of
     Nothing -> do
       fork "Error in case of no quote - Potential drainer lag" $ throwError (ShouldNotHappen $ "Quote with quoteId = \"" <> quoteId <> "\" not found.")
       pure Nothing
     Just quote -> do
-      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp) quote.farePolicy
+      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp govtChargesRate) quote.farePolicy
       return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, ..} (catMaybes farePolicyBreakups)
 
 mkBreakupItem :: Currency -> Text -> Text -> Maybe DOVT.RateCardItem

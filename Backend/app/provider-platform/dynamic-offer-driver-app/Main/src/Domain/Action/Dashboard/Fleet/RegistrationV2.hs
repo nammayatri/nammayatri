@@ -288,7 +288,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
     fork "initializing fleet analytics keys" $
       Analytics.updateFleetOwnerAnalyticsKeys person.id.getId (Just 0) (Just 0) (Just 0)
-  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) transporterConfig.driverWalletConfig.tdsRate
+  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) transporterConfig.taxConfig.defaultTdsRate
   pure person
 
 createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Flow ()

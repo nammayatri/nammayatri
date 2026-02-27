@@ -129,8 +129,16 @@ createInvoice input entryIds = do
         | toAccount.counterpartyType == Just GOVERNMENT_INDIRECT -> do
           taxTxnId <- generateGUID
           let gstAmount = entry.amount
-              cgstAmount = gstAmount / 2.0
-              sgstAmount = gstAmount - cgstAmount
+              -- Use caller-provided breakdown; fall back to 50/50 if not provided
+              (cgstAmt, sgstAmt, igstAmt) = case input.gstBreakdown of
+                Just breakdown ->
+                  ( fromMaybe 0 breakdown.cgstAmount,
+                    fromMaybe 0 breakdown.sgstAmount,
+                    fromMaybe 0 breakdown.igstAmount
+                  )
+                Nothing ->
+                  let cg = gstAmount / 2.0
+                   in (cg, gstAmount - cg, 0)
               extCharges = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
               taxableValue = subtotal - gstAmount - extCharges
               gstRate = if taxableValue > 0 then realToFrac (gstAmount / taxableValue) * 100.0 else 0.0
@@ -143,9 +151,9 @@ createInvoice input entryIds = do
                     referenceId = entry.referenceId,
                     taxableValue = taxableValue,
                     gstRate = gstRate,
-                    cgstAmount,
-                    sgstAmount,
-                    igstAmount = 0,
+                    cgstAmount = cgstAmt,
+                    sgstAmount = sgstAmt,
+                    igstAmount = igstAmt,
                     totalGstAmount = gstAmount,
                     gstCreditType = Output,
                     counterpartyId = input.issuedToId,

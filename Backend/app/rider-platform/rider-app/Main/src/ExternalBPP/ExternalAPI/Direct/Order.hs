@@ -71,7 +71,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
       qrRefreshAt = config.qrRefreshTtl <&> (\ttl -> addUTCTime (secondsToNominalDiffTime ttl) now)
       seatLabels =
         let labels = concatMap (fromMaybe [] . (.seatLabels)) quoteCategories
-        in if null labels then Nothing else Just labels
+         in if null labels then Nothing else Just labels
   logInfo $ "DirectOrder:createOrder bookingId=" <> booking.id.getId <> " seatLabels=" <> show seatLabels
   qrData <-
     generateQR config $

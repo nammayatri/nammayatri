@@ -257,6 +257,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     subscription :: Kernel.Prelude.Bool,
     subscriptionConfig :: Domain.Types.TransporterConfig.SubscriptionConfig,
     subscriptionStartTime :: Kernel.Prelude.UTCTime,
+    taxConfig :: Domain.Types.TransporterConfig.TaxConfig,
     thresholdCancellationPercentageToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     thresholdCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
@@ -371,12 +372,18 @@ data DriverWalletConfig = DriverWalletConfig
     minWalletAmountForCashRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minimumWalletPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
     payoutCutOffDays :: Kernel.Prelude.Int,
-    payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig,
-    tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+    payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data FeedbackNotificationConfig = FeedbackNotificationConfig {allowNotificationOnEmptyBadge :: Kernel.Prelude.Bool, enableFeedbackNotification :: Kernel.Prelude.Bool, feedbackNotificationDelayInSec :: Kernel.Prelude.Int}
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data GstBreakup = GstBreakup
+  { cgstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    igstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    sgstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+  }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data PayoutFeeConfig = PayoutFeeConfig {feeType :: Domain.Types.TransporterConfig.PayoutFeeType, feeValue :: Kernel.Types.Common.HighPrecMoney}
@@ -389,8 +396,16 @@ data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForC
 
 data SubscriptionConfig = SubscriptionConfig
   { fleetPrepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+    prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data TaxConfig = TaxConfig
+  { defaultTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    invalidPanTdsRate :: Kernel.Prelude.Double,
+    rideGst :: Domain.Types.TransporterConfig.GstBreakup,
+    securityDepositGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
+    subscriptionTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 

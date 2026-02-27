@@ -747,13 +747,13 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
         map
           ( \category ->
               Utils.QuoteCategorySelection
-                { qcQuoteCategoryId = category.id
-                , qcQuantity =
+                { qcQuoteCategoryId = category.id,
+                  qcQuantity =
                     if category.category == ADULT
                       then req.numberOfPassengers
-                      else category.selectedQuantity
-                , qcSeatIds = Nothing
-                , qcSeatLabels = Nothing
+                      else category.selectedQuantity,
+                  qcSeatIds = Nothing,
+                  qcSeatLabels = Nothing
                 }
           )
           quoteCategories

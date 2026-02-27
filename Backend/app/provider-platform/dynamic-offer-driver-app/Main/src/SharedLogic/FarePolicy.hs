@@ -323,6 +323,8 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
   distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOperatingCityId
   now <- getCurrentTime
+  mbTransporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId Nothing
+  let gstBreakup = mbTransporterConfig <&> (.taxConfig.rideGst)
   let params =
         SFC.CalculateFareParametersParams
           { farePolicy = fullFarePolicy,
@@ -352,12 +354,13 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
             distanceUnit,
             merchantOperatingCityId = Just merchantOperatingCityId,
             mbAdditonalChargeCategories = Nothing,
-            numberOfLuggages = Nothing
+            numberOfLuggages = Nothing,
+            govtChargesRate = gstBreakup
           }
   SFC.calculateFareParameters params
 
-mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
-mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTollCharges estimatedTotalFare congestionChargeViaDp farePolicy = do
+mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe Double -> FarePolicyD.FarePolicy -> [breakupItem]
+mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTollCharges estimatedTotalFare congestionChargeViaDp mbGovtChargesRate farePolicy = do
   let distance = fromMaybe 0 mbDistance -- TODO: Fix Later
       driverExtraFeeBounds = FarePolicyD.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
       nightShiftBounds = farePolicy.nightShiftBounds
@@ -420,7 +423,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           Nothing -> (Nothing, Nothing)
 
       governmentChargeCaption = show Tags.GOVERNMENT_CHARGE
-      governmentChargeItem = mkBreakupItem governmentChargeCaption . (mkValue . show) <$> farePolicy.govtCharges
+      governmentChargeItem = mkBreakupItem governmentChargeCaption . (mkValue . show) <$> mbGovtChargesRate
 
       mbDriverExtraFeeBoundSections = farePolicy.driverExtraFeeBounds <&> \driverExtraFeeBound -> NE.sortBy (comparing (.startDistance)) driverExtraFeeBound
       driverExtraFeeBoundsMinFeeItems = maybe [] (\driverExtraFeeBoundSections -> mkDriverExtraFeeBoundsMinFeeItem [] (toList driverExtraFeeBoundSections) 0) mbDriverExtraFeeBoundSections
@@ -464,7 +467,6 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       serviceChargeItem,
       cancellationChargeItem,
       parkingChargeItem,
-      governmentChargeItem,
       driverMinExtraFeeItem,
       businessDiscountItem,
       personalDiscountItem,
@@ -485,7 +487,8 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       boothChargeFixedItem,
       boothChargePercentageItem,
       returnFeeFixedItem,
-      returnFeePercentageItem
+      returnFeePercentageItem,
+      governmentChargeItem
     ]
     <> additionalDetailsBreakups
     <> driverExtraFeeBoundsMinFeeItems

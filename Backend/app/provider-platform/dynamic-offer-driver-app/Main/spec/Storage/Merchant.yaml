@@ -768,6 +768,7 @@ DriverIntelligentPoolConfig:
     numRidesWeightage: int
     maxNumRides: int
     cancellationAndRideFrequencyRatioWindowOption: json
+    tax_config: json
 
   default:
     speedNormalizer: "28"
@@ -876,7 +877,6 @@ TransporterConfig:
       enableDriverWallet: Bool
       driverWalletPayoutThreshold: HighPrecMoney
       gstPercentage: Double
-      tdsRate: Maybe Double
       enableWalletPayout: Bool
       enableWalletTopup: Bool
       maxWalletPayoutsPerDay: Maybe Int
@@ -888,7 +888,18 @@ TransporterConfig:
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
       fleetPrepaidSubscriptionThreshold: Maybe HighPrecMoney
-      tdsRate: Maybe Double
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    GstBreakup:
+      cgstPercentage: Maybe HighPrecMoney
+      sgstPercentage: Maybe HighPrecMoney
+      igstPercentage: Maybe HighPrecMoney
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    TaxConfig:
+      rideGst: GstBreakup
+      securityDepositGst: Maybe GstBreakup
+      defaultTdsRate: Maybe Double
+      subscriptionTdsRate: Maybe Double
+      invalidPanTdsRate: Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool
@@ -1131,6 +1142,7 @@ TransporterConfig:
     subscriptionConfig: SubscriptionConfig
     analyticsConfig: AnalyticsConfig
     driverWalletConfig: DriverWalletConfig
+    taxConfig: TaxConfig
     cancellationFeeCycle: Maybe Seconds
     cancellationFeeDisputeWindow: Maybe Seconds
     cancellationFeeVendor: Maybe Text
@@ -1227,6 +1239,8 @@ TransporterConfig:
       analyticsConfig: Maybe Value
     subscriptionConfig:
       subscriptionConfig: Maybe Value
+    taxConfig:
+      taxConfig: Maybe Value
 
   toTType:
     currency: Just currency|E
@@ -1294,6 +1308,7 @@ TransporterConfig:
     analyticsConfig: Just . Data.Aeson.toJSON|I
     driverWalletConfig: Just . Data.Aeson.toJSON|I
     subscriptionConfig: Just . Data.Aeson.toJSON|I
+    taxConfig: Just . Data.Aeson.toJSON|I
     feedbackNotificationConfig: Data.Aeson.toJSON <$> feedbackNotificationConfig|E
     vehicleCategoryExcludedFromVerification: (Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification|E
 
@@ -1376,6 +1391,7 @@ TransporterConfig:
     analyticsConfig: Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId|IM
     driverWalletConfig: Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId|IM
     subscriptionConfig: Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId|IM
+    taxConfig: Storage.Queries.Transformers.TransporterConfig.parseTaxConfig merchantOperatingCityId|IM
     vehicleCategoryExcludedFromVerification: (mapMaybe (readMaybe . Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
 
   constraints:

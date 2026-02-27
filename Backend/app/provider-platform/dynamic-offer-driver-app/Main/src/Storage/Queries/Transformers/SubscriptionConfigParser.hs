@@ -13,5 +13,5 @@ $(mkFieldParserWithDefault ''SubscriptionConfig)
 
 parseSubscriptionConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m SubscriptionConfig
 parseSubscriptionConfig merchantOperatingCityId mbVal = do
-  let def = SubscriptionConfig {prepaidSubscriptionThreshold = Nothing, fleetPrepaidSubscriptionThreshold = Nothing, tdsRate = Nothing}
+  let def = SubscriptionConfig {prepaidSubscriptionThreshold = Nothing, fleetPrepaidSubscriptionThreshold = Nothing}
   parseFieldWithDefaultM "transporterConfig" "subscriptionConfig" merchantOperatingCityId def parseSubscriptionConfigWithDefault mbVal

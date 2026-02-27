@@ -34,6 +34,11 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DMerc
+-- import qualified Lib.Yudhishthira.Event as Yudhishthira
+
+-- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+
+import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.TransporterConfig as DTC
@@ -41,10 +46,6 @@ import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map, notElem)
--- import qualified Lib.Yudhishthira.Event as Yudhishthira
-
--- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
-
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
@@ -58,6 +59,8 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.Finance (InvoiceLineItem (..))
+import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -71,6 +74,7 @@ import SharedLogic.Cancel
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
@@ -180,7 +184,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
             vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
-            cancelRideTransaction booking ride bookingCReason merchant rideEndedBy userNoShowCharges transporterConfig
+            cancelRideTransaction booking ride bookingCReason merchant rideEndedBy userNoShowCharges transporterConfig driver
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
 
             fork "DriverRideCancelledCoin Event : " $ do
@@ -197,7 +201,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
               when (bookingCReason.source == SBCR.ByDriver) $ do
                 DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {rideTags, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
-                DCP.accumulateCancellationPenalty booking ride rideTags transporterConfig
+                DCP.accumulateCancellationPenalty (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet) booking ride rideTags transporterConfig driver
               Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
@@ -239,8 +243,9 @@ cancelRideTransaction ::
   DRide.RideEndedBy ->
   Maybe PriceAPIEntity ->
   DTC.TransporterConfig ->
+  SP.Person ->
   m ()
-cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellationFee transporterConfig = do
+cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellationFee transporterConfig driver = do
   let driverId = cast ride.driverId
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   when (isPrepaidSubscriptionAndWalletEnabled && isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ releaseLien booking ride
@@ -258,6 +263,41 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
       riderDetails <- QRiderDetails.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
       void $ QRiderDetails.updateCancellationDues (fee.amount + riderDetails.cancellationDues) rid
       QRiderDetails.updateValidCancellationsCount rid.getId
+      -- Customer cancellation ledger entries (wallet path)
+      when (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet && fee.amount > 0) $ do
+        let rideGst = transporterConfig.taxConfig.rideGst
+            gstPct = fromMaybe 0 rideGst.cgstPercentage + fromMaybe 0 rideGst.sgstPercentage + fromMaybe 0 rideGst.igstPercentage
+            gstOnCancellation = if gstPct > 0 then fee.amount * gstPct / (1 + gstPct) else 0
+            baseCancellation = fee.amount - gstOnCancellation
+            cancellationComponents =
+              [ LedgerChargeComponent {amount = baseCancellation, referenceType = walletReferenceCustomerCancellationCharges, destination = ToDriverOrFleetLiability},
+                LedgerChargeComponent {amount = gstOnCancellation, referenceType = walletReferenceCustomerCancellationGST, destination = ToGovtIndirect}
+              ]
+        entryIds <- createOnlineLedgerEntries booking ride cancellationComponents
+        -- Create invoice
+        createWalletInvoice
+          booking
+          ride
+          (Just driver)
+          WalletInvoiceParams
+            { invoiceType = Invoice.RideCancellation,
+              issuedToType = "CUSTOMER",
+              issuedToId = rid.getId,
+              issuedToName = booking.riderName,
+              issuedToAddress = booking.fromLocation.address.fullAddress,
+              gstBreakdown = computeGstBreakdown rideGst gstOnCancellation,
+              lineItems =
+                catMaybes
+                  [ if baseCancellation > 0
+                      then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
+                      else Nothing,
+                    if gstOnCancellation > 0
+                      then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
+                      else Nothing
+                  ]
+            }
+          entryIds
+        logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation
     _ -> do
       logError "cancelRideTransaction: riderId in booking or cancellationFee is not present"
 

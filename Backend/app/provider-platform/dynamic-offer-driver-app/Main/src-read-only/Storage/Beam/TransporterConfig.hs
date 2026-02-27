@@ -253,6 +253,7 @@ data TransporterConfigT f = TransporterConfigT
     subscription :: B.C f Kernel.Prelude.Bool,
     subscriptionConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     subscriptionStartTime :: B.C f Kernel.Prelude.UTCTime,
+    taxConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     thresholdCancellationPercentageToUnlist :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     thresholdCancellationScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,

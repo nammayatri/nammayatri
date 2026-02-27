@@ -26,6 +26,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
     analyticsConfig' <- Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId analyticsConfig
     driverWalletConfig' <- Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId driverWalletConfig
     subscriptionConfig' <- Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId subscriptionConfig
+    taxConfig' <- Storage.Queries.Transformers.TransporterConfig.parseTaxConfig merchantOperatingCityId taxConfig
     pure $
       Just
         Domain.Types.TransporterConfig.TransporterConfig
@@ -259,6 +260,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             subscription = subscription,
             subscriptionConfig = subscriptionConfig',
             subscriptionStartTime = subscriptionStartTime,
+            taxConfig = taxConfig',
             thresholdCancellationPercentageToUnlist = thresholdCancellationPercentageToUnlist,
             thresholdCancellationScore = thresholdCancellationScore,
             timeDiffFromUtc = timeDiffFromUtc,
@@ -519,6 +521,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.subscription = subscription,
         Beam.subscriptionConfig = (Just . Data.Aeson.toJSON) subscriptionConfig,
         Beam.subscriptionStartTime = subscriptionStartTime,
+        Beam.taxConfig = (Just . Data.Aeson.toJSON) taxConfig,
         Beam.thresholdCancellationPercentageToUnlist = thresholdCancellationPercentageToUnlist,
         Beam.thresholdCancellationScore = thresholdCancellationScore,
         Beam.timeDiffFromUtc = timeDiffFromUtc,

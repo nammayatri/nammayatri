@@ -72,6 +72,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance.Invoice.Interface (GstAmountBreakdown (..))
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -489,7 +490,6 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         plan <- QPlan.findByPrimaryKey latestPurchase.planId >>= fromMaybeM (PlanNotFound latestPurchase.planId.getId)
         transporterConfig <- SCTC.findByMerchantOpCityId latestPurchase.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound latestPurchase.merchantOperatingCityId.getId)
         let (_platformFee, cgst, sgst) = SLDriverFee.calculatePlatformFeeAttr latestPurchase.planFee plan
-            gstAmount = cgst + sgst
             creditAmount = latestPurchase.planRideCredit
             paidAmount = latestPurchase.planFee
             referenceId = latestPurchase.id.getId
@@ -532,14 +532,21 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   gstinOfParty = gstinOfParty,
                   merchantShortId = getShortId merchant.shortId
                 }
+        let subscriptionGstBreakdown =
+              Just
+                GstAmountBreakdown
+                  { cgstAmount = Just cgst,
+                    sgstAmount = Just sgst,
+                    igstAmount = Nothing
+                  }
         (_newBalance, mbInvoiceId) <-
           creditPrepaidBalance
             counterpartyType
             person.id.getId
             creditAmount
             paidAmount
-            gstAmount
-            transporterConfig.subscriptionConfig.tdsRate
+            transporterConfig.taxConfig.subscriptionTdsRate
+            subscriptionGstBreakdown
             currency
             merchantId.getId
             latestPurchase.merchantOperatingCityId.getId
@@ -586,18 +593,24 @@ updatePrepaidBalanceAndExpiry ::
 updatePrepaidBalanceAndExpiry merchantId person driverFee = do
   let creditAmount = driverFee.totalEarnings
   let paidAmount = driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
-  let gstAmount = driverFee.platformFee.cgst + driverFee.platformFee.sgst
   let referenceId = fromMaybe driverFee.id.getId ((.getId) <$> driverFee.planId)
   if DCommon.checkFleetOwnerRole person.role
     then do
+      let fleetGstBreakdown =
+            Just
+              GstAmountBreakdown
+                { cgstAmount = Just driverFee.platformFee.cgst,
+                  sgstAmount = Just driverFee.platformFee.sgst,
+                  igstAmount = Nothing
+                }
       newBalance <-
         creditPrepaidBalance
           counterpartyFleetOwner
           person.id.getId
           creditAmount
           paidAmount
-          gstAmount
           Nothing
+          fleetGstBreakdown
           driverFee.currency
           merchantId.getId
           person.merchantOperatingCityId.getId
@@ -607,14 +620,21 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       pure (fst newBalance, Just person.id)
     else do
+      let driverGstBreakdown =
+            Just
+              GstAmountBreakdown
+                { cgstAmount = Just driverFee.platformFee.cgst,
+                  sgstAmount = Just driverFee.platformFee.sgst,
+                  igstAmount = Nothing
+                }
       newBalance <-
         creditPrepaidBalance
           counterpartyDriver
           person.id.getId
           creditAmount
           paidAmount
-          gstAmount
           Nothing
+          driverGstBreakdown
           driverFee.currency
           merchantId.getId
           person.merchantOperatingCityId.getId

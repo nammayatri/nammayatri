@@ -382,8 +382,8 @@ creditPrepaidBalance ::
   Text -> -- Owner ID
   HighPrecMoney -> -- Ride credit amount
   HighPrecMoney -> -- Paid amount
-  HighPrecMoney -> -- GST amount
   Maybe Double -> -- TDS rate (%)
+  Maybe GstAmountBreakdown -> -- Explicit CGST/SGST/IGST breakdown (gstAmount computed from this)
   Currency ->
   Text -> -- Merchant ID
   Text -> -- Merchant operating city ID
@@ -391,7 +391,10 @@ creditPrepaidBalance ::
   Maybe Value ->
   Maybe InvoiceCreationParams -> -- Optional invoice creation params
   m (Either FinanceError (HighPrecMoney, Maybe (Id FInvoice.Invoice)))
-creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount mbTdsRate currency merchantId merchantOperatingCityId referenceId metadata mbInvoiceParams = do
+creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate mbGstBreakdown currency merchantId merchantOperatingCityId referenceId metadata mbInvoiceParams = do
+  let gstAmount = case mbGstBreakdown of
+        Just breakdown -> fromMaybe 0 breakdown.cgstAmount + fromMaybe 0 breakdown.sgstAmount + fromMaybe 0 breakdown.igstAmount
+        Nothing -> 0
   mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
   mbSellerAsset <- getOrCreateSellerAssetAccount currency merchantId merchantOperatingCityId
   mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
@@ -587,6 +590,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount gstAmount 
                                       }
                                 else Nothing
                             ],
+                    gstBreakdown = mbGstBreakdown, -- explicit CGST/SGST/IGST from caller, falls back to 50/50 in Service.hs if Nothing
                     currency = currency,
                     dueAt = Nothing,
                     merchantId = merchantId,

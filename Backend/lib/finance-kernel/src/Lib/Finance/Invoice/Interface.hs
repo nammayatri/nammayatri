@@ -9,6 +9,7 @@
 module Lib.Finance.Invoice.Interface
   ( InvoiceInput (..),
     InvoiceLineItem (..),
+    GstAmountBreakdown (..),
   )
 where
 
@@ -47,10 +48,20 @@ data InvoiceInput = InvoiceInput
     panOfParty :: Maybe Text,
     tanOfDeductee :: Maybe Text,
     lineItems :: [InvoiceLineItem],
+    gstBreakdown :: Maybe GstAmountBreakdown, -- caller-provided CGST/SGST/IGST amounts
     currency :: Currency,
     dueAt :: Maybe UTCTime,
     merchantId :: Text,
     merchantOperatingCityId :: Text,
     merchantShortId :: Text
+  }
+  deriving (Eq, Show, Generic)
+
+-- | Pre-computed GST amount breakdown from the caller.
+--   Avoids re-deriving the split inside the invoice service.
+data GstAmountBreakdown = GstAmountBreakdown
+  { cgstAmount :: Maybe HighPrecMoney,
+    sgstAmount :: Maybe HighPrecMoney,
+    igstAmount :: Maybe HighPrecMoney
   }
   deriving (Eq, Show, Generic)
