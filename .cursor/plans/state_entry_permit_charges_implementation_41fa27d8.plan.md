@@ -58,6 +58,10 @@ After Phase 1: No static toll anywhere; dynamic toll is the only toll source in 
 - **Geometry link and bounding box:** Geometry table holds the shapes per state (and “anycity” where applicable) and will also store a cached bounding box for each geometry. Columns: `id`, `state`, `city` (or `ANYCITY`), `region`, `geom`, and a **bounding_box** field derived from `geom` (used with helpers like `lineSegmentWithinBoundingBox`, `doIntersect`, etc.). `StateEntryPermitCharges.geom_id` → `Geometry.id`. Merchant_state / allowed_states: use [Domain.Types.MerchantState](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only/Domain/Types/MerchantState.hs) (`state`, `allowedDestinationStates`); filter SEPC rows by joining via `geom_id` to Geometry and then applying `state ∈ allowedDestinationStates` (and any city = ANYCITY rule, if used).
 - **Migration:** Add SEPC table and FK to Geometry; add appropriate indexes (e.g. on `geom_id`, and on `Geometry(state, city)` for SEPC lookups).
 
+**Bounding-box representation and testing:**  
+- Store bounding boxes in Geometry as a JSON/array of **4 points** (topLeft, topRight, bottomRight, bottomLeft); consecutive points form the 4 sides. This matches how we’ll treat them in code (array-of-points → segments).  
+- For manual testing, you can draw rectangles in tools like geojson.io and copy the 4 corner coordinates into this JSON field; we **do not** create new `geom` rows for these boxes – we reuse existing `geom` shapes for states and only cache their bounding boxes alongside.
+
 ### 2.2 Ride
 
 - **YAML:** [spec/Storage/ride.yaml](Backend/app/provider-platform/dynamic-offer-driver-app/Main/spec/Storage/ride.yaml)  
@@ -113,7 +117,7 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
 
 - In **location-updates** lib ([Lib/LocationUpdates/Internal.hs](Backend/lib/location-updates/src/Lib/LocationUpdates/Internal.hs)): on-ride SEPC keys and accumulation (same pattern as OnRideTollCharges/Names/Ids). Location-updates is used by provider; it currently takes `updateTollChargesAndNamesAndIds` and similar from the app. So either: (a) extend the handler to also accept `updateStateEntryPermitChargesAndNamesAndIds` and new keys, or (b) keep SEPC accumulation in provider and call into location-updates with a combined “toll + SEPC” result. Prefer (a) for symmetry: add SEPC keys and an update callback in the same way as toll.
 
-**Cleanup:** On ride end, clear SEPC keys and pending (same as `clearTollStartGateBatchCache` and `redisOnRideKeysCleanup`).
+**Cleanup:** On ride end, clear SEPC keys and pending (same as `clearTollStartGateBatchCache` and `redisOnRideKeysCleanup`). TTLs (e.g. 6h) on the per-driver SEPC Redis keys are a safety net only – the **primary** cleanup is the explicit delete at ride end, so a driver’s keys won’t be shared across multiple rides even if they drive for a very long time.
 
 ---
 
@@ -138,7 +142,7 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
     - areaFirst = which state(s) contain p1 (point-in-polygon on fetched geoms).  
     - areaSecond = which state(s) contain p2.  
     - **Overlap rule:** If either point is in more than one geom, skip this segment; move to next pair.  
-    - **Charge rule:** If areaSecond is in SEPC and areaSecond ≠ areaFirst, add areaSecond’s charge and record name/id.  
+  - **Charge rule:** If areaSecond is in SEPC and areaSecond ≠ areaFirst, add areaSecond’s charge and record name/id – but only if this is the **first time** we are entering that SEPC state on this ride. Maintain a per-ride set of “already charged” SEPC state IDs and skip charges for subsequent zig-zag re-entries into the same state.  
     - **Unknown:** If areaSecond is “unknown” (no geom contains p2), do not charge. If areaFirst unknown and areaSecond in SEPC, charge (entry into permit state).
 8. **Return type:** `Maybe (HighPrecMoney, [Text], [Text])` (charges, names, ids) – same shape as toll for easy reuse in fare params and ride.
 
