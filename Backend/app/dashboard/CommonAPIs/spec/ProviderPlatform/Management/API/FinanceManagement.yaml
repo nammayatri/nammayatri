@@ -1,0 +1,135 @@
+# 1. Subscription Purchase list – track subscription revenue and usage
+# 2. Fleet Operator list – fleet operator master data and financials
+# 3. Invoice list – invoice metadata and compliance
+# All response fields Maybe so missing data does not break the API.
+
+imports:
+  Summary: Dashboard.Common
+  Driver: Dashboard.Common
+
+module: FinanceManagement
+
+apis:
+  # ----- Subscription Purchase -----
+  - GET: # SubscriptionPurchaseListAPI
+      endpoint: /subscriptionPurchase/list
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        status: Text
+        driverId: Text
+        fleetOperatorId: Text
+        amountMin: Text
+        amountMax: Text
+        subscriptionId: Text
+        serviceName: Text
+      auth: ApiAuthV2
+      response:
+        type: SubscriptionPurchaseListRes
+
+  # ----- Fleet Operator -----
+  - GET: # FleetOperatorListAPI
+      endpoint: /fleetOperator/list
+      query:
+        limit: Int
+        offset: Int
+        fleetOperatorId: Text
+        from: UTCTime
+        to: UTCTime
+        settlementStatus: Text
+      auth: ApiAuthV2
+      response:
+        type: FleetOperatorListRes
+
+  # ----- Invoice -----
+  - GET: # InvoiceListAPI
+      endpoint: /invoice/list
+      query:
+        limit: Int
+        offset: Int
+        invoiceId: Text
+        from: UTCTime
+        to: UTCTime
+        invoiceType: Text
+        status: Text
+      auth: ApiAuthV2
+      response:
+        type: InvoiceListRes
+
+types:
+  # ----- Subscription Purchase -----
+  SubscriptionPurchaseListRes:
+    - totalItems: Int
+    - summary: Summary
+    - subscriptions: [SubscriptionPurchaseListItem]
+  SubscriptionPurchaseListItem:
+    - subscriptionPurchaseId: Maybe Text
+    - planName: Maybe Text
+    - planType: Maybe Text
+    - subscriptionStartDate: Maybe UTCTime
+    - subscriptionEndDate: Maybe UTCTime
+    - subscriptionStatus: Maybe Text
+    - driverId: Maybe Text
+    - fleetOperatorId: Maybe Text
+    - subscriptionAmount: Maybe HighPrecMoney
+    - gstRate: Maybe Double
+    - gstAmount: Maybe HighPrecMoney
+    - totalSubscriptionValue: Maybe HighPrecMoney
+    - totalEntitledValue: Maybe HighPrecMoney
+    - utilizedValue: Maybe HighPrecMoney
+    - remainingValue: Maybe HighPrecMoney
+    - linkedRideIds: [Text]
+    - invoiceIds: [Text]
+    - createdAt: Maybe UTCTime
+    - updatedAt: Maybe UTCTime
+
+  # ----- Fleet Operator -----
+  FleetOperatorListRes:
+    - totalItems: Int
+    - summary: Summary
+    - fleetOperators: [FleetOperatorListItem]
+  FleetOperatorListItem:
+    - fleetOperatorId: Maybe Text
+    - legalName: Maybe Text
+    - pan: Maybe Text
+    - gstin: Maybe Text
+    - settlementPreference: Maybe Text
+    - linkedDriverIds: [Text]
+    - totalEarnings: Maybe HighPrecMoney
+    - totalDeductions: Maybe HighPrecMoney
+    - outstandingBalance: Maybe HighPrecMoney
+    - payoutReference: Maybe Text
+    - payoutAmount: Maybe HighPrecMoney
+    - payoutStatus: Maybe Text
+    - createdAt: Maybe UTCTime
+    - updatedAt: Maybe UTCTime
+
+  # ----- Invoice -----
+  InvoiceListRes:
+    - totalItems: Int
+    - summary: Summary
+    - invoices: [InvoiceListItem]
+  InvoiceListItem:
+    - invoiceId: Maybe Text
+    - invoiceNumber: Maybe Text
+    - invoiceType: Maybe Text
+    - invoiceDate: Maybe UTCTime
+    - invoiceStatus: Maybe Text
+    - counterpartyType: Maybe Text
+    - counterpartyId: Maybe Text
+    - taxableValue: Maybe HighPrecMoney
+    - gstRate: Maybe Double
+    - gstAmount: Maybe HighPrecMoney
+    - totalInvoiceValue: Maybe HighPrecMoney
+    - tdsReference: Maybe Text
+    - irn: Maybe Text
+    - qrCode: Maybe Text
+    - rideId: Maybe Text
+    - subscriptionId: Maybe Text
+    - generatedAt: Maybe UTCTime
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE
