@@ -25,11 +25,15 @@ module Domain.Action.RiderPlatform.AppManagement.TransitOperator
     transitOperatorUpdateWaybillTablet,
     transitOperatorGetWaybills,
     transitOperatorQueryRows,
+    transitOperatorGetDeviceVehicleMappingList,
+    transitOperatorUpsertDeviceVehicleMapping,
   )
 where
 
 import qualified API.Client.RiderPlatform.AppManagement
+import qualified "rider-app" API.Types.Dashboard.AppManagement.TransitOperator
 import qualified "beckn-spec" BecknV2.OnDemand.Enums
+import qualified Dashboard.Common
 import qualified Data.Aeson
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
@@ -170,3 +174,14 @@ transitOperatorQueryRows merchantShortId opCity apiTokenInfo table vehicleCatego
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorQueryRows) table vehicleCategory req)
+
+transitOperatorGetDeviceVehicleMappingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow API.Types.Dashboard.AppManagement.TransitOperator.DeviceVehicleMappingListRes)
+transitOperatorGetDeviceVehicleMappingList merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorGetDeviceVehicleMappingList)
+
+transitOperatorUpsertDeviceVehicleMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.TransitOperator.UpsertDeviceVehicleMappingReq -> Environment.Flow API.Types.Dashboard.AppManagement.TransitOperator.UpsertDeviceVehicleMappingResp)
+transitOperatorUpsertDeviceVehicleMapping merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.transitOperatorDSL.transitOperatorUpsertDeviceVehicleMapping)) req)
