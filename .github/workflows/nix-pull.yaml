@@ -120,6 +120,7 @@ jobs:
 
       - name: Push to Cachix
         if: steps.check-conditions.outputs.should_build == 'true'
+        continue-on-error: true
         env:
           CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
         run: |
@@ -128,6 +129,7 @@ jobs:
 
       - name: Upload build log
         if: steps.check-conditions.outputs.should_build == 'true'
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: build-log

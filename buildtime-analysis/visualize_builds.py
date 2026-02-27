@@ -79,6 +79,11 @@ class BuildVisualizer:
         # Sort by start time
         build_data.sort(key=lambda x: x['start'])
 
+        # Check if we have any build data
+        if not build_data:
+            print("⚠️  No completed build data found, skipping Gantt chart")
+            return
+
         # Create figure
         fig, ax = plt.subplots(figsize=(16, max(12, len(build_data) * 0.4)))
 
