@@ -61,6 +61,7 @@ default-extensions:
 
 dependencies:
   - aeson
+  - async
   - base >= 4.7 && < 5
   - mobility-core
   - bytestring
@@ -94,6 +95,7 @@ dependencies:
   - warp
   - uuid
   - beckn-spec
+  - passetto-client
 
 ghc-options:
   - -Wall

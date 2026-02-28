@@ -106,6 +106,40 @@ updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
 findAdminsByMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [Person]
 findAdminsByMerchantId (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
 
+-- | Find persons by merchant, operating city, and roles. Includes persons with null merchantOperatingCityId when merchant.city matches.
+findAllByMerchantIdAndOpCityAndRoles ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Merchant ->
+  DMOC.MerchantOperatingCity ->
+  [Person.Role] ->
+  Int ->
+  Int ->
+  m [Person]
+findAllByMerchantIdAndOpCityAndRoles merchant opCity roles limit offset =
+  if null roles
+    then pure []
+    else do
+      dbConf <- getReplicaBeamConfig
+      result <- L.runDB dbConf $
+        L.findRows $
+          B.select $
+            B.limit_ (fromIntegral limit) $
+              B.offset_ (fromIntegral offset) $
+                B.filter_'
+                  ( \person ->
+                      person.merchantId B.==?. B.val_ (getId merchant.id)
+                        B.&&?. ( person.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id)
+                                   B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city)))
+                               )
+                        B.&&?. B.sqlBool_ (person.role `B.in_` (B.val_ <$> roles))
+                  )
+                  do
+                    B.all_ (BeamCommon.person BeamCommon.atlasDB)
+      case result of
+        Right persons -> catMaybes <$> mapM fromTType' persons
+        Left _ -> pure []
+
+-- | Cursor-based pagination for operators. Returns (Person, createdAt, id) for cursor extraction.
 findAllByPersonIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Person]
 findAllByPersonIds ids = findAllWithDb [Se.Is BeamP.id $ Se.In ids]
 

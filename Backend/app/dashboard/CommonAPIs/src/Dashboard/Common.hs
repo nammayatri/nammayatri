@@ -62,6 +62,8 @@ data Sos
 
 data Message
 
+data Communication
+
 data File
 
 data Receiver

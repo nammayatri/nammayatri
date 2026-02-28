@@ -34,6 +34,7 @@ library
       Consumer.AvailabilityTime.Types
       Consumer.BroadcastMessage.Processor
       Consumer.CustomerStats.Processor
+      Consumer.FleetCommunication.Processor
       Consumer.Flow
       Consumer.LocationUpdate.Processor
       Consumer.LocationUpdate.Types
@@ -85,6 +86,7 @@ library
   ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
+    , async
     , base >=4.7 && <5
     , beam-core
     , beam-mysql
@@ -102,6 +104,7 @@ library
     , mobility-core
     , monad-control
     , openapi3
+    , passetto-client
     , persistent
     , persistent-postgresql
     , postgresql-simple
@@ -171,6 +174,7 @@ executable kafka-consumers-exe
   ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
+    , async
     , base >=4.7 && <5
     , beam-core
     , beam-mysql
@@ -188,6 +192,7 @@ executable kafka-consumers-exe
     , mobility-core
     , monad-control
     , openapi3
+    , passetto-client
     , persistent
     , persistent-postgresql
     , postgresql-simple

@@ -54,17 +54,32 @@ findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messa
         ]
     ]
 
+findByMerchantOpCityIdDomainAndChannel ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain -> Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
+findByMerchantOpCityIdDomainAndChannel merchantOperatingCityId domain channel = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.channel $ Se.Eq channel
+        ]
+    ]
+
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantMessage.MerchantMessage -> m ())
 updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.containsUrlButton containsUrlButton,
+    [ Se.Set Beam.channel channel,
+      Se.Set Beam.containsUrlButton containsUrlButton,
+      Se.Set Beam.domain domain,
       Se.Set Beam.jsonData (Just $ Data.Aeson.toJSON jsonData),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.message message,
       Se.Set Beam.messageType messageType,
       Se.Set Beam.senderHeader senderHeader,
       Se.Set Beam.templateId (Just templateId),
+      Se.Set Beam.templateName templateName,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleCategory vehicleCategory
     ]
@@ -75,8 +90,10 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
     pure $
       Just
         Domain.Types.MerchantMessage.MerchantMessage
-          { containsUrlButton = containsUrlButton,
+          { channel = channel,
+            containsUrlButton = containsUrlButton,
             createdAt = createdAt,
+            domain = domain,
             jsonData = fromMaybe Data.Default.Class.def (Storage.Queries.Transformers.MerchantMessage.valueToJsonData =<< jsonData),
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -85,6 +102,7 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
             messageType = messageType,
             senderHeader = senderHeader,
             templateId = fromMaybe "" templateId,
+            templateName = templateName,
             updatedAt = updatedAt,
             vehicleCategory = vehicleCategory
           }
@@ -92,8 +110,10 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
 instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
   toTType' (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
     Beam.MerchantMessageT
-      { Beam.containsUrlButton = containsUrlButton,
+      { Beam.channel = channel,
+        Beam.containsUrlButton = containsUrlButton,
         Beam.createdAt = createdAt,
+        Beam.domain = domain,
         Beam.jsonData = Just $ Data.Aeson.toJSON jsonData,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
@@ -102,6 +122,7 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
         Beam.messageType = messageType,
         Beam.senderHeader = senderHeader,
         Beam.templateId = Just templateId,
+        Beam.templateName = templateName,
         Beam.updatedAt = updatedAt,
         Beam.vehicleCategory = vehicleCategory
       }

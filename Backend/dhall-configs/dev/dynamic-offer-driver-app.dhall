@@ -474,6 +474,7 @@ in  { esqDBCfg
     , cacheTranslationConfig
     , driverLocationUpdateTopic = "location-updates"
     , broadcastMessageTopic = "broadcast-messages"
+    , fleetCommunicationDispatchTopic = "fleet-communication-dispatch"
     , kafkaProducerCfg
     , secondaryKafkaProducerCfg
     , snapToRoadSnippetThreshold = +300
