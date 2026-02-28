@@ -48,9 +48,17 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI do
     whenJust mbDOnUpdateReq $ \onUpdateReq ->
       Redis.whenWithLockRedis (onUpdateLockKey messageId) 60 $ do
         validatedOnUpdateReq <- DOnUpdate.validateRequest onUpdateReq
-        fork "on update processing" $ do
-          Redis.whenWithLockRedis (onUpdateProcessngLockKey messageId) 60 $
-            DOnUpdate.onUpdate validatedOnUpdateReq
+        let onUpdateProcessAction =
+              Redis.whenWithLockRedis (onUpdateProcessngLockKey messageId) 60 $
+                DOnUpdate.onUpdate validatedOnUpdateReq
+        case validatedOnUpdateReq of
+          DOnUpdate.OUValidatedRideAssignedReq req -> do
+            -- Have made Ride assigned as Synchronous as for Ride OTP Flow for On Us,
+            -- the Ride Assigned and Ride Started is triggered together, it assumes that Ride Assigned should be synchronous.
+            if req.isSynchronousOnUpdateProcessing
+              then onUpdateProcessAction
+              else fork "on update processing" $ onUpdateProcessAction
+          _ -> fork "on update processing" $ onUpdateProcessAction
         fork "on update received pushing ondc logs" do
           booking <- case validatedOnUpdateReq of
             DOnUpdate.OUValidatedScheduledRideAssignedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
