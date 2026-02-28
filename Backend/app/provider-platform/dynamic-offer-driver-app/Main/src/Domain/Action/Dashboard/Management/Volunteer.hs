@@ -57,15 +57,15 @@ postVolunteerCreate merchantShortId opCity req = do
       }
 
 ---------------------------------------------------------------------
-getVolunteerList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Environment.Flow Common.VolunteerListRes
-getVolunteerList merchantShortId opCity mbLimit mbOffset mbVolunteerId mbVendorId mbIsActive = do
+getVolunteerList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Environment.Flow Common.VolunteerListRes
+getVolunteerList merchantShortId opCity mbLimit mbOffset mbVolunteerId mbVendorId mbIsActive mbPlace = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
 
-  volunteers <- QVolunteerExtra.findAllWithFilters merchantOpCityId limit offset mbVolunteerId mbVendorId mbIsActive
+  volunteers <- QVolunteerExtra.findAllWithFilters merchantOpCityId limit offset mbVolunteerId mbVendorId mbIsActive mbPlace
 
   let items = map buildVolunteerListItem volunteers
 
