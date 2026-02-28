@@ -25,3 +25,10 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN vehicle_category 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN message_type character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN template_name character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN domain character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN channel character varying(255) ;

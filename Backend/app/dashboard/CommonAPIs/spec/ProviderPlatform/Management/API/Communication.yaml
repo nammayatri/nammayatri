@@ -1,0 +1,251 @@
+imports:
+  Communication: Dashboard.Common
+  File: Dashboard.Common
+  Person: Dashboard.Common
+  Summary: Dashboard.Common
+
+module: Communication
+
+apis:
+  - POST:
+      endpoint: /create
+      mandatoryQuery:
+        - personId: Id Person
+      request:
+        type: CreateCommunicationRequest
+      auth: ApiAuthV2
+      response:
+        type: CreateCommunicationResponse
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION CREATE_COMMUNICATION
+  - GET:
+      endpoint: /list
+      mandatoryQuery:
+        - personId: Id Person
+      query:
+        - listType: CommunicationListType
+        - channel: CommunicationChannelType
+        - domain: CommunicationDomainType
+        - search: Text
+        - limit: Int
+        - offset: Int
+      auth: ApiAuthV2
+      response:
+        type: CommunicationListResponse
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION LIST_COMMUNICATION
+  - GET:
+      endpoint: /{communicationId}/info
+      params:
+        communicationId: Id Communication
+      auth: ApiAuthV2
+      response:
+        type: CommunicationInfoResponse
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION INFO_COMMUNICATION
+  - POST:
+      endpoint: /{communicationId}/send
+      params:
+        communicationId: Id Communication
+      request:
+        type: SendCommunicationRequest
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION SEND_COMMUNICATION
+  - PUT:
+      endpoint: /{communicationId}/edit
+      params:
+        communicationId: Id Communication
+      request:
+        type: EditCommunicationRequest
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION EDIT_COMMUNICATION
+  - DELETE:
+      endpoint: /{communicationId}/delete
+      params:
+        communicationId: Id Communication
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION DELETE_COMMUNICATION
+  - GET:
+      endpoint: /{communicationId}/deliveryStatus
+      params:
+        communicationId: Id Communication
+      query:
+        - channel: CommunicationChannelType
+        - status: CommunicationDeliveryStatusType
+        - limit: Int
+        - offset: Int
+      auth: ApiAuthV2
+      response:
+        type: DeliveryStatusResponse
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION DELIVERY_STATUS_COMMUNICATION
+  - GET:
+      endpoint: /recipients
+      query:
+        - role: CommunicationRoleType
+        - fleetOwnerId: Text
+        - operatorId: Text
+        - search: Text
+        - selectAll: Bool
+        - limit: Int
+        - offset: Int
+      auth: ApiAuthV2
+      response:
+        type: RecipientsResponse
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION RECIPIENTS_COMMUNICATION
+  - GET:
+      endpoint: /template
+      mandatoryQuery:
+        - domain: CommunicationDomainType
+        - channel: CommunicationChannelType
+      auth: ApiAuthV2
+      response:
+        type: CommunicationTemplateResponse
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION GET_COMMUNICATION_TEMPLATE
+
+types:
+  CommunicationMessageStatus:
+    - enum: "SEND_NOW, SAVE_AS_DRAFT"
+  CommunicationChannelType:
+    - enum: "CH_PUSH, CH_SMS, CH_EMAIL, CH_WHATSAPP, CH_WEB"
+    - derive: "HttpInstance"
+  CommunicationDomainType:
+    - enum: "COMM_FLEET, COMM_RIDE_HAILING, COMM_GENERAL"
+    - derive: "HttpInstance"
+  CommunicationContentTypeEnum:
+    - enum: "CONTENT_TEXT, CONTENT_IMAGE, CONTENT_VIDEO"
+    - derive: "HttpInstance"
+  CommunicationRoleType:
+    - enum: "ROLE_DRIVER, ROLE_FLEET_OWNER, ROLE_OPERATOR, ROLE_ADMIN"
+    - derive: "HttpInstance"
+  CommunicationStatusType:
+    - enum: "CS_DRAFT, CS_QUEUED, CS_SENDING, CS_SENT, CS_FAILED, CS_SCHEDULED"
+    - derive: "HttpInstance"
+  CommunicationDeliveryStatusType:
+    - enum: "DLV_PENDING, DLV_SENT, DLV_DELIVERED, DLV_READ, DLV_FAILED"
+    - derive: "HttpInstance"
+  CommunicationListType:
+    - enum: "LIST_SENT, LIST_RECEIVED, LIST_DRAFT"
+    - derive: "HttpInstance"
+  CTAButtonReq:
+    - label: Text
+    - url: Text
+    - linkType: Text
+  CreateCommunicationRequest:
+    - title: Text
+    - body: Text
+    - htmlBody: Maybe Text
+    - msgContentType: CommunicationContentTypeEnum
+    - mediaFileIds: Maybe [Id File]
+    - channels: [CommunicationChannelType]
+    - ctaButton: Maybe CTAButtonReq
+    - variables: Maybe [Text]
+    - domain: CommunicationDomainType
+    - recipientIds: Maybe [Text]
+    - selectAll: Maybe Bool
+    - selectAllRoles: Maybe [CommunicationRoleType]
+    - fleetOwnerId: Maybe Text
+    - operatorId: Maybe Text
+    - messageStatus: CommunicationMessageStatus
+    - templateId: Maybe Text
+    - templateName: Maybe Text
+    - derive: "'HideSecrets"
+  CreateCommunicationResponse:
+    - communicationId: Id Communication
+    - status: CommunicationStatusType
+  SendCommunicationRequest:
+    - recipientIds: Maybe [Text]
+    - selectAll: Maybe Bool
+    - selectAllRoles: Maybe [CommunicationRoleType]
+    - fleetOwnerId: Maybe Text
+    - operatorId: Maybe Text
+    - derive: "'HideSecrets"
+  EditCommunicationRequest:
+    - title: Maybe Text
+    - body: Maybe Text
+    - htmlBody: Maybe Text
+    - msgContentType: Maybe CommunicationContentTypeEnum
+    - mediaFileIds: Maybe [Id File]
+    - channels: Maybe [CommunicationChannelType]
+    - ctaButton: Maybe CTAButtonReq
+    - variables: Maybe [Text]
+    - derive: "'HideSecrets"
+  CommunicationListResponse:
+    - communications: [CommunicationListItem]
+    - summary: Summary
+  CommunicationListItem:
+    - id: Id Communication
+    - title: Text
+    - body: Text
+    - msgContentType: CommunicationContentTypeEnum
+    - channels: [CommunicationChannelType]
+    - status: CommunicationStatusType
+    - domain: CommunicationDomainType
+    - senderName: Maybe Text
+    - senderRole: CommunicationRoleType
+    - deliverySummary: Maybe DeliverySummary
+    - isRead: Maybe Bool
+    - channel: Maybe CommunicationChannelType
+    - createdAt: UTCTime
+    - sentAt: Maybe UTCTime
+  DeliverySummary:
+    - total: Int
+    - sent: Int
+    - delivered: Int
+    - read: Int
+    - failed: Int
+  CommunicationInfoResponse:
+    - id: Id Communication
+    - title: Text
+    - body: Text
+    - htmlBody: Maybe Text
+    - msgContentType: CommunicationContentTypeEnum
+    - mediaUrls: Maybe [CommunicationMediaFile]
+    - channels: [CommunicationChannelType]
+    - ctaButton: Maybe CTAButtonReq
+    - variables: Maybe [Text]
+    - domain: CommunicationDomainType
+    - senderName: Maybe Text
+    - senderRole: CommunicationRoleType
+    - status: CommunicationStatusType
+    - deliverySummary: Maybe DeliverySummary
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  CommunicationMediaFile:
+    - url: Text
+    - fileType: Text
+    - thumbnailUrl: Maybe Text
+  DeliveryStatusResponse:
+    - deliveries: [DeliveryStatusItem]
+    - summary: Summary
+  DeliveryStatusItem:
+    - id: Text
+    - recipientId: Text
+    - recipientName: Maybe Text
+    - recipientRole: CommunicationRoleType
+    - channel: CommunicationChannelType
+    - status: CommunicationDeliveryStatusType
+    - failureReason: Maybe Text
+    - deliveredAt: Maybe UTCTime
+    - readAt: Maybe UTCTime
+    - createdAt: UTCTime
+  RecipientsResponse:
+    - recipients: [RecipientItem]
+    - summary: Summary
+  RecipientItem:
+    - id: Text
+    - name: Text
+    - role: CommunicationRoleType
+    - phone: Maybe Text
+    - email: Maybe Text
+    - fleetOwnerName: Maybe Text
+    - operatorName: Maybe Text
+  CommunicationTemplateResponse:
+    - templateId: Text
+    - messageBody: Text
+    - templateName: Maybe Text
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

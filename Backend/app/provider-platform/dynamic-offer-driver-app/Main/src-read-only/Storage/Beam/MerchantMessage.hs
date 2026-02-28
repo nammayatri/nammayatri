@@ -14,8 +14,10 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantMessageT f = MerchantMessageT
-  { containsUrlButton :: B.C f Kernel.Prelude.Bool,
+  { channel :: B.C f (Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel),
+    containsUrlButton :: B.C f Kernel.Prelude.Bool,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    domain :: B.C f (Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain),
     jsonData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
@@ -24,6 +26,7 @@ data MerchantMessageT f = MerchantMessageT
     messageType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     senderHeader :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     templateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    templateName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)
   }

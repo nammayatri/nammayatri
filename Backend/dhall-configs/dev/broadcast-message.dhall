@@ -102,4 +102,5 @@ in  { hedisCfg
     , cacConfig
     , kvConfigUpdateFrequency
     , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
+    , smsCfg = appCfg.smsCfg
     }
