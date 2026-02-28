@@ -12,8 +12,8 @@ import qualified API.Types.ProviderPlatform.Management.DriverGoHome
 import qualified API.Types.ProviderPlatform.Management.DriverReferral
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified API.Types.ProviderPlatform.Management.EntityInfo
-import qualified API.Types.ProviderPlatform.Management.FinanceManagement
 import qualified API.Types.ProviderPlatform.Management.FeedbackForm
+import qualified API.Types.ProviderPlatform.Management.FinanceManagement
 import qualified API.Types.ProviderPlatform.Management.Media
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
 import qualified API.Types.ProviderPlatform.Management.Merchant
@@ -43,8 +43,8 @@ data ManagementUserActionType
   | DRIVER_REFERRAL API.Types.ProviderPlatform.Management.DriverReferral.DriverReferralUserActionType
   | DRIVER_REGISTRATION API.Types.ProviderPlatform.Management.DriverRegistration.DriverRegistrationUserActionType
   | ENTITY_INFO API.Types.ProviderPlatform.Management.EntityInfo.EntityInfoUserActionType
-  | FINANCE_MANAGEMENT API.Types.ProviderPlatform.Management.FinanceManagement.FinanceManagementUserActionType
   | FEEDBACK_FORM API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormUserActionType
+  | FINANCE_MANAGEMENT API.Types.ProviderPlatform.Management.FinanceManagement.FinanceManagementUserActionType
   | MEDIA API.Types.ProviderPlatform.Management.Media.MediaUserActionType
   | MEDIA_FILE_DOCUMENT API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentUserActionType
   | MERCHANT API.Types.ProviderPlatform.Management.Merchant.MerchantUserActionType
@@ -71,8 +71,8 @@ instance Text.Show.Show ManagementUserActionType where
     DRIVER_REFERRAL e -> "DRIVER_REFERRAL/" <> show e
     DRIVER_REGISTRATION e -> "DRIVER_REGISTRATION/" <> show e
     ENTITY_INFO e -> "ENTITY_INFO/" <> show e
-    FINANCE_MANAGEMENT e -> "FINANCE_MANAGEMENT/" <> show e
     FEEDBACK_FORM e -> "FEEDBACK_FORM/" <> show e
+    FINANCE_MANAGEMENT e -> "FINANCE_MANAGEMENT/" <> show e
     MEDIA e -> "MEDIA/" <> show e
     MEDIA_FILE_DOCUMENT e -> "MEDIA_FILE_DOCUMENT/" <> show e
     MERCHANT e -> "MERCHANT/" <> show e
@@ -161,19 +161,19 @@ instance Text.Read.Read ManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
-            ++ [ ( FINANCE_MANAGEMENT v1,
+            ++ [ ( FEEDBACK_FORM v1,
                    r2
                  )
-                 | r1 <- stripPrefix "FINANCE_MANAGEMENT/" r,
+                 | r1 <- stripPrefix "FEEDBACK_FORM/" r,
                    ( v1,
                      r2
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
-            ++ [ ( FEEDBACK_FORM v1,
+            ++ [ ( FINANCE_MANAGEMENT v1,
                    r2
                  )
-                 | r1 <- stripPrefix "FEEDBACK_FORM/" r,
+                 | r1 <- stripPrefix "FINANCE_MANAGEMENT/" r,
                    ( v1,
                      r2
                      ) <-
@@ -292,4 +292,4 @@ instance Text.Read.Read ManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])
+$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])

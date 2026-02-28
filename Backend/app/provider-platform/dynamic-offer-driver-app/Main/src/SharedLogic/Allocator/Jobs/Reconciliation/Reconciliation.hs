@@ -371,11 +371,22 @@ processDsrVsLedger booking ledgerEntries now = do
         _ -> (ReconSummary.MISSING_IN_TARGET, Just "Unsupported booking status")
       reconStatus = toReconEntryStatus reconStatusSum
 
-  -- Calculate variance
+  -- Calculate variance; for CASH completed we compare GST, so store GST-aligned values
   let actualValue = getActualValue baseRideEntry gstOnlineEntry gstCashEntry userCancellationEntry driverCancellationEntry rideMode booking.status
-      variance = case (expectedGross, actualValue) of
-        (Just expV, Just act) -> expV - act
-        _ -> 0
+      (expectedStored, actualStored, variance) =
+        case (booking.status, rideMode) of
+          (DB.COMPLETED, Just ReconEntry.CASH) ->
+            ( fromMaybe 0 expectedGst,
+              fromMaybe 0 actualValue,
+              maybe 0 (\expG -> expG - fromMaybe 0 actualValue) expectedGst
+            )
+          _ ->
+            ( fromMaybe 0 expectedGross,
+              fromMaybe 0 actualValue,
+              case (expectedGross, actualValue) of
+                (Just expV, Just act) -> expV - act
+                _ -> 0
+            )
 
   entryId <- generateGUID
 
@@ -390,8 +401,8 @@ processDsrVsLedger booking ledgerEntries now = do
           dcoId = dcoId,
           status = mapBookingStatus booking.status,
           mode = rideMode,
-          expectedDsrValue = fromMaybe 0 expectedGross,
-          actualLedgerValue = fromMaybe 0 actualValue,
+          expectedDsrValue = expectedStored,
+          actualLedgerValue = actualStored,
           variance = variance,
           reconStatus = reconStatus,
           mismatchReason = mismatchReason,

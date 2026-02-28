@@ -11,8 +11,8 @@ import qualified API.Action.ProviderPlatform.Management.DriverGoHome
 import qualified API.Action.ProviderPlatform.Management.DriverReferral
 import qualified API.Action.ProviderPlatform.Management.DriverRegistration
 import qualified API.Action.ProviderPlatform.Management.EntityInfo
-import qualified API.Action.ProviderPlatform.Management.FinanceManagement
 import qualified API.Action.ProviderPlatform.Management.FeedbackForm
+import qualified API.Action.ProviderPlatform.Management.FinanceManagement
 import qualified API.Action.ProviderPlatform.Management.Media
 import qualified API.Action.ProviderPlatform.Management.MediaFileDocument
 import qualified API.Action.ProviderPlatform.Management.Merchant

@@ -29,23 +29,10 @@ apis:
       response:
         type: SubscriptionPurchaseListRes
 
-  # ----- Fleet Operator -----
-  - GET: # FleetOperatorListAPI
-      endpoint: /fleetOperator/finance/list
-      query:
-        limit: Int
-        offset: Int
-        fleetOperatorId: Text
-        from: UTCTime
-        to: UTCTime
-        settlementStatus: Text
-      auth: ApiAuthV2
-      response:
-        type: FleetOperatorListRes
 
   # ----- Invoice -----
   - GET: # InvoiceListAPI
-      endpoint: /invoice/list
+      endpoint: /finance/invoice/list
       query:
         limit: Int
         offset: Int
@@ -60,7 +47,7 @@ apis:
 
   # ----- Reconciliation -----
   - GET: # ReconciliationAPI
-      endpoint: /reconciliation
+      endpoint: /finance/reconciliation
       query:
         fromDate: UTCTime
         toDate: UTCTime
@@ -70,6 +57,47 @@ apis:
       auth: ApiAuthV2
       response:
         type: ReconciliationRes
+
+  # ----- Payout list -----
+  - GET: # PayoutListAPI
+      endpoint: /finance/payout/list
+      query:
+        limit: Int
+        offset: Int
+        driverId: Text
+        fleetOperatorId: Text
+        from: UTCTime
+        to: UTCTime
+      auth: ApiAuthV2
+      response:
+        type: PayoutListRes
+
+  # ----- Wallet ledger (balance + ledger entries combined) -----
+  - GET: # WalletLedgerAPI
+      endpoint: /finance/wallet/ledger
+      query:
+        - limit: Int
+        - offset: Int
+        - driverId: Text
+        - fleetOperatorId: Text
+        - from: UTCTime
+        - to: UTCTime
+        - sourceType: Text
+      auth: ApiAuthV2
+      response:
+        type: WalletLedgerRes
+
+  # ----- Earnings Summary -----
+  - GET: # EarningSummaryAPI
+      endpoint: /finance/earning/summary
+      auth: ApiAuthV2
+      query:
+        - driverId: Text
+        - fleetOwnerId: Text
+        - from: UTCTime
+        - to: UTCTime
+      response:
+        type: EarningsSummaryRes
 
   - POST: # ReconciliationTriggerAPI
       endpoint: /reconciliation/trigger
@@ -88,24 +116,49 @@ types:
     - subscriptions: [SubscriptionPurchaseListItem]
   SubscriptionPurchaseListItem:
     - subscriptionPurchaseId: Maybe Text
+    - purchasedAt: Maybe UTCTime
+    - driverName: Maybe Text
+    - fleetOwnerName: Maybe Text
+    - driverPhoneNumber: Maybe Text
+    - fleetOwnerPhoneNumber: Maybe Text
+    - driverId: Maybe Text
+    - fleetOwnerId: Maybe Text
+    - status: Maybe Text
+    - amount: Maybe HighPrecMoney
     - planName: Maybe Text
     - planType: Maybe Text
+    - planAmount: Maybe HighPrecMoney
+    - planRideCredits: Maybe HighPrecMoney
+    - planStatus: Maybe Text
+    - planValidityDays: Maybe Int
+    - planGeography: Maybe Text
+    - planVehicleCategory: Maybe Text
     - subscriptionStartDate: Maybe UTCTime
     - subscriptionEndDate: Maybe UTCTime
     - subscriptionStatus: Maybe Text
-    - driverId: Maybe Text
-    - fleetOperatorId: Maybe Text
-    - subscriptionAmount: Maybe HighPrecMoney
+    - baseAmount: Maybe HighPrecMoney
+    - discountAmount: Maybe HighPrecMoney
+    - totalAmount: Maybe HighPrecMoney
+    - grossSubscriptionAmount: Maybe HighPrecMoney
     - gstRate: Maybe Double
     - gstAmount: Maybe HighPrecMoney
-    - totalSubscriptionValue: Maybe HighPrecMoney
+    - totalSubscriptionAmount: Maybe HighPrecMoney
+    - invoiceId: Maybe Text
     - totalEntitledValue: Maybe HighPrecMoney
     - utilizedValue: Maybe HighPrecMoney
     - remainingValue: Maybe HighPrecMoney
+    - revenueRecognized: Maybe HighPrecMoney
     - linkedRideIds: [Text]
-    - invoiceIds: [Text]
+    - linkedBookingIds: [Text]
+    - rideUsageDetails: [RideUsageDetail]
     - createdAt: Maybe UTCTime
     - updatedAt: Maybe UTCTime
+
+  RideUsageDetail:
+    - bookingId: Text
+    - rideId: Text
+    - rideDate: UTCTime
+    - deductedAmount: HighPrecMoney
 
   # ----- Fleet Operator -----
   FleetOperatorListRes:
@@ -200,6 +253,43 @@ types:
     - status: Text
     - lastCompletedDate: Maybe UTCTime
     - errorMessage: Maybe Text
+
+  # ----- Payout list -----
+  PayoutListRes:
+    - totalItems: Int
+    - payouts: [PayoutListItem]
+  PayoutListItem:
+    - payoutReference: Maybe Text
+    - payoutAmount: Maybe HighPrecMoney
+    - payoutDate: Maybe UTCTime
+    - payoutStatus: Maybe Text
+
+  # ----- Wallet ledger (balance + ledger combined) -----
+  WalletLedgerRes:
+    - availableWalletBalance: Maybe HighPrecMoney
+    - lockedWalletBalance: Maybe HighPrecMoney
+    - lastWalletUpdatedAt: Maybe UTCTime
+    - totalItems: Int
+    - ledgerEntries: [WalletLedgerItem]
+  WalletLedgerItem:
+    - walletTxnId: Maybe Text
+    - walletTxnDate: Maybe UTCTime
+    - sourceType: Maybe Text
+    - sourceReferenceId: Maybe Text
+    - creditAmount: Maybe HighPrecMoney
+    - debitAmount: Maybe HighPrecMoney
+    - openingBalance: Maybe HighPrecMoney
+    - closingBalance: Maybe HighPrecMoney
+
+  # ----- Earnings Summary -----
+  EarningsSummaryRes:
+    - totalRideEarnings: HighPrecMoney
+    - totalIncentives: HighPrecMoney
+    - totalPenalties: HighPrecMoney
+    - grossEarnings: HighPrecMoney
+    - totalTdsDeducted: HighPrecMoney
+    - totalGstDeducted: HighPrecMoney
+    - netEarnings: HighPrecMoney
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

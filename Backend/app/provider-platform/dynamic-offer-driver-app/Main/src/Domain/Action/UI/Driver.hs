@@ -147,6 +147,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverHomeLocation as DDHL
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.DriverPlan as DPlan
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
@@ -214,6 +215,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.SlidingWindowLimiter
@@ -230,6 +232,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Finance.Account.Service as FAccount
 import qualified Lib.Finance.Domain.Types.Account as FAccountTypes
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -257,6 +260,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import SharedLogic.FarePolicy
+import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
@@ -286,9 +290,11 @@ import qualified Storage.Queries.DailyStats as SQDS
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.DriverGstinExtra as QDGExtra
 import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverOperatorAssociationExtra as QDOA
+import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDriverPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
@@ -440,7 +446,17 @@ data DriverInformationRes = DriverInformationRes
     activeFleet :: Maybe FleetInfo,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
     vehicleImageUploadedAt :: Maybe UTCTime,
-    subscriptionCreditBalance :: Maybe HighPrecMoney
+    subscriptionCreditBalance :: Maybe HighPrecMoney,
+    fleetOwnerName :: Maybe Text,
+    pan :: Maybe Text,
+    panAadhaarLinkedFlag :: Maybe Bool,
+    gstinApplicableFlag :: Maybe Bool,
+    tdsApplicableFlag :: Maybe Bool,
+    walletId :: Maybe Text,
+    bankAccountNumber :: Maybe Text,
+    bankIfsc :: Maybe Text,
+    bankVerificationStatus :: Maybe Text,
+    upiId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1452,9 +1468,9 @@ buildFleetInfo person fda = do
         createdAt = fda.createdAt
       }
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash operatorReferral operatorId mbInactiveFda mbActiveFda mbFleetInfo = do
-  (activeFleet, fleetRequest) <-
+  (activeFleet, fleetRequest, fleetOwnerName') <-
     if mbFleetInfo == Just True
       then do
         let fleetOwnerIds = catMaybes [(.fleetOwnerId) <$> mbActiveFda, (.fleetOwnerId) <$> mbInactiveFda]
@@ -1474,8 +1490,16 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
               Nothing -> return Nothing
           Nothing -> return Nothing
 
-        return (activeFleetInfo, fleetRequestInfo)
-      else return (Nothing, Nothing)
+        -- Get fleet owner name from the already fetched fleetOwners list
+        let fleetOwnerNameVal = case mbActiveFda of
+              Just activeFda ->
+                case find (\p -> p.id.getId == activeFda.fleetOwnerId) fleetOwners of
+                  Just fleetOwner -> Just $ fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.lastName
+                  Nothing -> Nothing
+              Nothing -> Nothing
+
+        return (activeFleetInfo, fleetRequestInfo, fleetOwnerNameVal)
+      else return (Nothing, Nothing, Nothing)
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   mbVehicle <- QVehicle.findById id
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
@@ -1501,10 +1525,21 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
             else pure drc
   mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just id.getId) FAccountTypes.RideCredit merchantOperatingCity.currency
   let subsCreditBalance = (.balance) <$> mbRideCreditAccount
+  mbPanCard <- QPanCard.findByDriverId id
+  panDec <- traverse (decrypt . (.panCardNumber)) mbPanCard
+  mbGstin <- QDGExtra.findGSTInByDriverId id
+  mbWalletAccount <- FWallet.getWalletAccountByOwner FAccountTypes.DRIVER id.getId
+  mbDriverBankAccountForRes <- QDBA.findByPrimaryKey id
+  let panAadhaarLinkedFlag' = (== DPanCard.PAN_AADHAAR_LINKED) <$> (mbPanCard >>= (.panAadhaarLinkage))
+  let gstinApplicableFlag' = (== Documents.VALID) . (.verificationStatus) <$> mbGstin
+  let bankAccountNumber' = mbDriverBankAccountForRes <&> (.accountId)
+  let bankIfsc' = mbDriverBankAccountForRes >>= (.ifscCode)
+  let bankVerificationStatus' = mbDriverBankAccountForRes <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
   CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast id))) >>= \cfg ->
     return $
       DriverInformationRes
         { organization = DM.makeMerchantAPIEntity merchant,
+          fleetOwnerName = fleetOwnerName',
           referralCode = refCode <&> (.getId),
           dynamicReferralCode = dynamicReferralCode,
           numberOfRides = driverStats.totalRides,
@@ -1535,6 +1570,15 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           fleetOwnerId = (.fleetOwnerId) <$> mbActiveFda,
           onboardingAs = driverInfo.onboardingAs,
           subscriptionCreditBalance = subsCreditBalance,
+          pan = panDec,
+          panAadhaarLinkedFlag = panAadhaarLinkedFlag',
+          gstinApplicableFlag = gstinApplicableFlag',
+          tdsApplicableFlag = Nothing,
+          walletId = (\acc -> acc.id.getId) <$> mbWalletAccount,
+          bankAccountNumber = bankAccountNumber',
+          bankIfsc = bankIfsc',
+          bankVerificationStatus = bankVerificationStatus',
+          upiId = payoutVpa,
           ..
         }
 

@@ -32,6 +32,7 @@ import Domain.Types.Ride as Ride
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, elem, forM_, id, length, null, sum, traverse_, whenJust)
 import IssueManagement.Domain.Types.MediaFile as DMF
@@ -1002,3 +1003,12 @@ findByIds ::
   m [Ride]
 findByIds rideIds = do
   findAllWithKV [Se.Is BeamR.id $ Se.In $ getId <$> rideIds]
+
+-- | Find all rides linked to a subscription purchase ID
+-- The subscriptionPurchaseIds field is an array, so we check if the given ID is in that array
+findAllBySubscriptionPurchaseId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DSP.SubscriptionPurchase ->
+  m [Ride]
+findAllBySubscriptionPurchaseId (Id subPurchaseId) = do
+  findAllWithKV [Se.Is BeamR.subscriptionPurchaseIds $ Se.Eq (Just [subPurchaseId])]

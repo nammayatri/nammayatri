@@ -43,6 +43,7 @@ library
       Lib.Finance.StateMachine.Service
       Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra
       Lib.Finance.Storage.Queries.InvoiceExtra
+      Lib.Finance.Storage.Queries.LedgerEntryExtra
       Lib.Finance.Tax.Interface
       Lib.Finance.Tax.Types
       Lib.Finance.Domain.Types.Account

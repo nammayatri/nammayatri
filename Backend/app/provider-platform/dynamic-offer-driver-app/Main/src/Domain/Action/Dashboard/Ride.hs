@@ -281,7 +281,7 @@ buildRideListItem item@QRide.RideItem {..} = do
         let rideCompletedAt' = r.tripEndTime
         let rideCancelledAt' = if r.status == DRide.CANCELLED then Just r.updatedAt else Nothing
         let tripDistKm = Just (highPrecMetersToMeters r.traveledDistance)
-        let tripDurMin = timeDiffInMinutes <$> r.tripStartTime <*> r.tripEndTime
+        let tripDurMin = timeDiffInMinutes <$> r.tripEndTime <*> r.tripStartTime
         -- Get GST and gross ride value from indirect tax transaction
         indirectTaxTxns <- QIndirectTax.findByReferenceId bookingIdStr
         let mbRideFareTxn = listToMaybe $ filter (\txn -> txn.transactionType == FinanceIndirectTax.RideFare) indirectTaxTxns
