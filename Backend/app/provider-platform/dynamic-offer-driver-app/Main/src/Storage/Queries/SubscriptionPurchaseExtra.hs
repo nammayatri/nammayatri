@@ -1,6 +1,7 @@
 module Storage.Queries.SubscriptionPurchaseExtra where
 
-import Data.List (partition)
+import Data.List (partition, sortBy)
+import Data.Ord (comparing)
 import Domain.Types.Extra.Plan (ServiceNames)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.SubscriptionPurchase
@@ -8,7 +9,6 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
-import Kernel.Types.Id (Id)
 import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.SubscriptionPurchase as Beam
@@ -133,14 +133,15 @@ findActiveByDateRange ::
   UTCTime ->
   m [SubscriptionPurchase]
 findActiveByDateRange merchantOpCityId startTime endTime =
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
-          Se.Is Beam.status $ Se.Eq ACTIVE,
-          Se.Is Beam.purchaseTimestamp $ Se.GreaterThanOrEq startTime,
-          Se.Is Beam.purchaseTimestamp $ Se.LessThanOrEq endTime
-        ]
-    ]
+  sortBy (comparing (.purchaseTimestamp))
+    <$> findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+            Se.Is Beam.status $ Se.Eq ACTIVE,
+            Se.Is Beam.purchaseTimestamp $ Se.GreaterThanOrEq startTime,
+            Se.Is Beam.purchaseTimestamp $ Se.LessThanOrEq endTime
+          ]
+      ]
 
 -- | Update the expiryDate for a specific subscription purchase.
 -- Used when activating a queued purchase's expiry timer (deferred FIFO logic).

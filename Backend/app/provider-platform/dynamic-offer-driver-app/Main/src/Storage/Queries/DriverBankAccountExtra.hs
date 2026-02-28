@@ -19,6 +19,10 @@ import Storage.Queries.OrphanInstances.DriverBankAccount ()
 getDriverBankAccounts :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> m [Domain.Types.DriverBankAccount.DriverBankAccount])
 getDriverBankAccounts driverIds = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.In (Kernel.Types.Id.getId <$> driverIds)]]
 
+findDriverBankAccountByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> m (Maybe DriverBankAccount)
+findDriverBankAccountByDriverId driverId = do
+  findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId.getId]
+
 getDriverOrFleetBankAccounts ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe DMPM.PaymentMode ->
