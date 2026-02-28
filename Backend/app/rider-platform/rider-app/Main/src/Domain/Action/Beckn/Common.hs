@@ -31,6 +31,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Action.UI.Cancel (makeCustomerBlockingKey)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.RidePayment as Reexport
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingStatus as BT
@@ -189,7 +190,8 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     driverTrackingUrl :: Maybe BaseUrl,
     isAlreadyFav :: Bool,
     favCount :: Maybe Int,
-    isSafetyPlus :: Bool
+    isSafetyPlus :: Bool,
+    isSynchronousOnUpdateProcessing :: Bool
   }
 
 data RideStartedReq = RideStartedReq
@@ -1152,6 +1154,16 @@ validateRideAssignedReq ::
 validateRideAssignedReq RideAssignedReq {..} = do
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
   mbMerchant <- CQM.findById booking.merchantId
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  let isSynchronousOnUpdateProcessing =
+        isValueAddNP &&
+          case booking.tripCategory of
+            Just (Trip.OneWay Trip.OneWayRideOtp) -> True
+            Just (Trip.InterCity Trip.OneWayRideOtp _) -> True
+            Just (Trip.CrossCity Trip.OneWayRideOtp _) -> True
+            Just (Trip.Ambulance Trip.OneWayRideOtp) -> True
+            Just (Trip.Delivery Trip.OneWayRideOtp) -> True
+            _ -> False
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   -- TODO: Should we put 'TRIP_ASSIGNED' status check in the 'isAssignable' function for normal booking Or Handle for crone Job in Different Way?
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
