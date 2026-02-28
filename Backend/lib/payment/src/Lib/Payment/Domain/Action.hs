@@ -201,9 +201,8 @@ createPaymentIntentService ::
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   m CreatePaymentIntentServiceResp
 createPaymentIntentService merchantId mbMerchantOpCityId personId mbExistingOrderId createPaymentIntentServiceReq createPaymentIntentCall cancelPaymentIntentCall = do
-  mbExistingOrder <- case mbExistingOrderId of
-    Just orderId -> QOrder.findById orderId
-    Nothing -> pure Nothing
+  mbExistingOrder <- forM mbExistingOrderId $ \orderId ->
+    QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
 
   case mbExistingOrder of
     Nothing -> do

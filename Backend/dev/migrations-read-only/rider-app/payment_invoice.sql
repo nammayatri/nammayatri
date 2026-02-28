@@ -15,3 +15,18 @@ ALTER TABLE atlas_app.payment_invoice ADD COLUMN merchant_operating_city_id char
 ALTER TABLE atlas_app.payment_invoice ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.payment_invoice ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.payment_invoice ADD PRIMARY KEY ( id);
+
+
+
+
+
+------- SQL updates -------
+
+CREATE INDEX payment_invoice_idx_invoice_number ON atlas_app.payment_invoice USING btree (invoice_number);
+CREATE INDEX payment_invoice_idx_payment_order_id ON atlas_app.payment_invoice USING btree (payment_order_id);
+CREATE INDEX payment_invoice_idx_ride_id ON atlas_app.payment_invoice USING btree (ride_id);
+
+
+------- SQL updates -------
+
+CREATE INDEX payment_invoice_idx_created_at ON atlas_app.payment_invoice USING btree (created_at);
