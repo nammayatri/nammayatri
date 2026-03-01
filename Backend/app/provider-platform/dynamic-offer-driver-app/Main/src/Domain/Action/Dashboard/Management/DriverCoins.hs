@@ -35,12 +35,12 @@ import qualified Domain.Types.VehicleVariant as VecVarient
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Storage.Clickhouse.Config
 import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
 import SharedLogic.Merchant (findMerchantByShortId)

@@ -30,6 +30,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude as KP
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.Cac
 import Kernel.Types.Common
@@ -43,7 +44,6 @@ import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.DriverPool.Config as DPC
 import SharedLogic.DriverPool.Types as Reexport
-import Kernel.Storage.Clickhouse.Config
 import qualified Storage.Beam.DriverPoolConfig as SBMDPC
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as CTC

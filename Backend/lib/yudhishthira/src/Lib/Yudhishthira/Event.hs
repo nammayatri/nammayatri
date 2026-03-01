@@ -14,6 +14,8 @@ import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as SQNTV2
 import Lib.Yudhishthira.Tools.Utils (mkTagNameValue, mkTagNameValueExpiry)
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.NammaTagV2 as DNTv2
+-- import qualified Lib.Yudhishthira.Types.NammaTag as DNT
+-- import Kernel.Types.Id
 
 yudhishthiraDecide ::
   ( MonadFlow m,
@@ -72,7 +74,7 @@ yudhishthiraDecide req = do
         Just (A.Number number) -> do
           let doubleValue = toRealFloat number -- :: Maybe Int = toBoundedInteger number
           return $ Just (NumberValue doubleValue)
-        Just (A.Array arr') -> return (ArrayValue <$> (mapM extractText (toList arr')))
+        Just (A.Array arr') -> return (ArrayValue <$> mapM extractText (toList arr'))
         value -> do
           logError $ "Invalid value for tag: " <> show value
           return Nothing
@@ -99,7 +101,7 @@ computeNammaTags ::
     HasYudhishthiraTablesSchema,
     ToJSON a
   ) =>
-  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Id MerchantOperatingCity ->
   ApplicationEvent ->
   a ->
   m [TagNameValue]
@@ -117,7 +119,7 @@ computeNammaTagsWithExpiry ::
     HasYudhishthiraTablesSchema,
     ToJSON a
   ) =>
-  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Id MerchantOperatingCity ->
   ApplicationEvent ->
   a ->
   m [TagNameValueExpiry]
