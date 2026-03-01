@@ -20,3 +20,8 @@ ALTER TABLE atlas_driver_offer_bpp.fare_product ADD COLUMN search_source text NO
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fare_product ADD COLUMN disable_recompute boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fare_product ADD COLUMN disable_toll_recompute boolean ;

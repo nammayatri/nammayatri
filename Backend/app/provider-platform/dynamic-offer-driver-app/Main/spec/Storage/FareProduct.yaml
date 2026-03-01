@@ -26,6 +26,7 @@ FareProduct:
     searchSource: SearchSource
     enabled : Bool
     disableRecompute : Maybe Bool
+    disableTollRecompute : Maybe Bool
 
   beamFields:
     vehicleServiceTier:
