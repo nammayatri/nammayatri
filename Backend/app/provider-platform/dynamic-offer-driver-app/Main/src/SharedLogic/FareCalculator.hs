@@ -421,8 +421,8 @@ calculateFareParameters params = do
         fullRideCostN
           + fromMaybe 0 govtCharges
       cardChargeOnFare = countCardChargeOnFare fullCompleteRideCost <$> (fp.cardCharge >>= (.perDistanceUnitMultiplier))
-      businessDiscount = if params.shouldApplyBusinessDiscount then fp.businessDiscountPercentage >>= computeRideDiscount fareParametersDetails baseFare (Just finalCongestionCharge) resultNightShiftCharge stopCharges params.petCharges luggageCharge else Nothing
-      personalDiscount = if params.shouldApplyPersonalDiscount then fp.personalDiscountPercentage >>= computeRideDiscount fareParametersDetails baseFare (Just finalCongestionCharge) resultNightShiftCharge stopCharges params.petCharges luggageCharge else Nothing
+      businessDiscount = if params.shouldApplyBusinessDiscount then fp.businessDiscountPercentage >>= computeRideDiscount fareParametersDetails baseFare (Just finalCongestionCharge) resultNightShiftCharge stopCharges else Nothing
+      personalDiscount = if params.shouldApplyPersonalDiscount then fp.personalDiscountPercentage >>= computeRideDiscount fareParametersDetails baseFare (Just finalCongestionCharge) resultNightShiftCharge stopCharges else Nothing
       fareParams =
         FareParameters
           { id,
@@ -751,10 +751,11 @@ calculateFareParameters params = do
     countCardChargeOnFare fullCompleteRideCost cardCharge =
       HighPrecMoney (fullCompleteRideCost.getHighPrecMoney * toRational (max 1 cardCharge)) - fullCompleteRideCost
 
-computeRideDiscount :: DFParams.FareParametersDetails -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Double -> Maybe HighPrecMoney
-computeRideDiscount fareParametersDetails baseFare congestionCharge nightShiftCharge stopCharges petCharges luggageCharge discountPercentage = do
+----------- Discount includes Base Fare, Night Shift Charge, Congestion Charge, pickup charges, Duration Fare, stop charges and distance Fare
+computeRideDiscount :: DFParams.FareParametersDetails -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Double -> Maybe HighPrecMoney
+computeRideDiscount fareParametersDetails baseFare congestionCharge nightShiftCharge stopCharges discountPercentage = do
   let (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
-  let fullRideCost = baseFare + partOfNightShiftCharge + notPartOfNightShiftCharge + fromMaybe 0.0 congestionCharge + fromMaybe 0.0 nightShiftCharge + fromMaybe 0.0 stopCharges + fromMaybe 0.0 petCharges + fromMaybe 0.0 luggageCharge
+  let fullRideCost = baseFare + partOfNightShiftCharge + notPartOfNightShiftCharge + fromMaybe 0.0 congestionCharge + fromMaybe 0.0 nightShiftCharge + fromMaybe 0.0 stopCharges
   return $ HighPrecMoney (fullRideCost.getHighPrecMoney * toRational discountPercentage / 100)
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
