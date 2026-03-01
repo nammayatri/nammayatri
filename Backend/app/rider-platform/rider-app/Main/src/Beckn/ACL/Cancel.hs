@@ -52,17 +52,29 @@ buildCancelReqV2 res reallocate = do
 mkCancelMessageV2 :: DCancel.CancelRes -> Maybe Bool -> Spec.CancelReqMessage
 mkCancelMessageV2 res reallocate =
   Spec.CancelReqMessage
-    { cancelReqMessageCancellationReasonId = Just (show Enums.CANCELLED_BY_CUSTOMER),
+    { cancelReqMessageCancellationReasonId = Just $ mapCancellationReasonId res.cancellationReason,
       cancelReqMessageOrderId = res.bppBookingId.getId,
       cancelReqMessageReallocate = reallocate,
       cancelReqMessageDescriptor =
         Just $
           Spec.Descriptor
             { descriptorName = Just "Cancel Ride",
-              descriptorCode = Just res.cancelStatus, -- TODO::Beckn, confirm mapping according to spec.
+              descriptorCode = Just res.cancelStatus,
               descriptorShortDesc = res.cancellationReason
             }
     }
+  where
+    -- Map rider cancellation reason text to BECKN CancellationReasonId codes (ONDC v2.1.0)
+    mapCancellationReasonId :: Maybe Text -> Text
+    mapCancellationReasonId (Just reason)
+      | T.toUpper reason == "DRIVER_NOT_MOVING" = show Enums.DRIVER_NOT_MOVING
+      | T.toUpper reason == "DRIVER_NOT_REACHABLE" = show Enums.DRIVER_NOT_REACHABLE
+      | T.toUpper reason == "DRIVER_ASKED_TO_CANCEL" = show Enums.DRIVER_ASKED_TO_CANCEL
+      | T.toUpper reason == "INCORRECT_PICKUP_LOCATION" = show Enums.INCORRECT_PICKUP_LOCATION
+      | T.toUpper reason == "BOOKED_BY_MISTAKE" = show Enums.BOOKED_BY_MISTAKE
+      | T.toUpper reason == "TECHNICAL_CANCELLATION" = show Enums.TECHNICAL_CANCELLATION
+      | otherwise = show Enums.DRIVER_ASKED_TO_CANCEL -- fallback for unknown reason codes: "003"
+    mapCancellationReasonId Nothing = show Enums.DRIVER_ASKED_TO_CANCEL -- default for non-ValueAddNP: "003"
 
 buildCancelSearchReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>

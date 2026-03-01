@@ -5,6 +5,7 @@ import Beckn.OnDemand.Utils.OnSearch
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Context
+import qualified BecknV2.Utils as BUtils
 import qualified Data.List
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Search
@@ -57,7 +58,9 @@ tfCatalogProviders res bppConfig isValueAddNP = do
       pricings = (map (Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.specialLocationName) res.estimates) <> (map (Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.specialLocationName) res.quotes)
       providerFulfillments_ = map (tfProviderFulfillments res) pricings & Just
       providerItems_ = Just $ map (tfProviderItems res isValueAddNP) pricings
-  BecknV2.OnDemand.Types.Provider {providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_}
+      allTripCategories = Data.List.nubBy (\a b -> BecknV2.OnDemand.Utils.Common.tripCategoryToCategoryCode a == BecknV2.OnDemand.Utils.Common.tripCategoryToCategoryCode b) $ map (.tripCategory) pricings
+      providerCategories_ = Just $ map BecknV2.OnDemand.Utils.Common.mkCategory allTripCategories
+  BecknV2.OnDemand.Types.Provider {providerCategories = providerCategories_, providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_}
 
 tfItemPrice :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Price
 tfItemPrice pricing = do
@@ -79,7 +82,11 @@ tfProviderFulfillments res pricing = do
       fulfillmentCustomer_ = Nothing
       fulfillmentId_ = Just pricing.pricingId
       fulfillmentState_ = Nothing
-      fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops res.fromLocation res.toLocation res.stops
+      -- ONDC v2.1.0: For scheduled rides (startTime > now), include pickup time window
+      -- duration so the BAP knows this is a scheduled fulfillment with a pickup window.
+      isScheduled = res.startTime > res.now
+      mbScheduledPickupDuration = if isScheduled then Just (BUtils.formatTimeDifference res.transporterConfig.scheduleRideBufferTime) else Nothing
+      fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops res.fromLocation res.toLocation res.stops res.startTime mbScheduledPickupDuration
       fulfillmentTags_ = Beckn.OnDemand.Utils.Common.mkVehicleTags pricing.vehicleServiceTierAirConditioned pricing.isAirConditioned
       fulfillmentType_ = Just pricing.fulfillmentType
       fulfillmentVehicle_ = tfVehicle pricing
@@ -94,7 +101,9 @@ tfProviderItems res isValueAddNP pricing = do
       itemPaymentIds_ = Nothing
       itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing isValueAddNP res.fareParametersInRateCard
       itemPrice_ = tfItemPrice pricing
-  BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
+      itemCategoryIds_ = Just [BecknV2.OnDemand.Utils.Common.tripCategoryToCategoryCode pricing.tripCategory]
+  let itemAddOns_ = Beckn.OnDemand.Utils.OnSearch.mkRentalAddOns pricing
+  BecknV2.OnDemand.Types.Item {itemAddOns = itemAddOns_, itemCategoryIds = itemCategoryIds_, itemCancellationTerms = Just Beckn.OnDemand.Utils.Common.mkItemCancellationTerms, itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 
 tfVehicle :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Vehicle
 tfVehicle pricing = do
@@ -106,7 +115,8 @@ tfVehicle pricing = do
       vehicleRegistration_ = Nothing
       vehicleVariant_ = Just variant
       vehicleCapacity_ = pricing.vehicleServiceTierSeatingCapacity
-      returnData = BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_, vehicleCapacity = vehicleCapacity_}
+      vehicleEnergyType_ = Nothing -- TODO: populate when Pricing includes energy_type
+      returnData = BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleEnergyType = vehicleEnergyType_, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_, vehicleCapacity = vehicleCapacity_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing

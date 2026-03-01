@@ -38,6 +38,16 @@ getTagV2 tagGroupCode tagCode mbTagGroups = do
     descriptorCode (Just desc) = desc.descriptorCode
     descriptorCode Nothing = Nothing
 
+-- | Version-aware tag parsing with fallback for v2.0.0 -> v2.1.0 transition.
+-- Tries the primary tag group first, then falls back to legacy tag group names.
+getTagV2Compat :: BecknTagGroup -> BecknTag -> Maybe [Spec.TagGroup] -> Maybe Text
+getTagV2Compat tagGroupCode tagCode mbTagGroups =
+  getTagV2 tagGroupCode tagCode mbTagGroups
+    <|> case tagGroupCode of
+      BAP_TERMS -> getTagV2 BUYER_FINDER_FEES tagCode mbTagGroups
+      BPP_TERMS -> getTagV2 SETTLEMENT_TERMS tagCode mbTagGroups
+      _ -> Nothing
+
 parseISO8601Duration :: Text -> Maybe NominalDiffTime
 parseISO8601Duration durationStr = do
   (calenderDiffernceTime :: CalendarDiffTime) <- iso8601ParseM $ T.unpack durationStr
@@ -48,6 +58,24 @@ formatTimeDifference duration = T.pack $ iso8601Show $ calendarTimeTime duration
 
 addDurationToUTCTime :: UTCTime -> NominalDiffTime -> UTCTime
 addDurationToUTCTime time duration = addUTCTime duration time
+
+-- | Build a Descriptor for stop instructions (ONDC v2.1.0)
+mkStopInstructions :: Maybe Text -> Maybe Spec.Descriptor
+mkStopInstructions mInstructions =
+  mInstructions <&> \inst ->
+    Spec.Descriptor
+      { descriptorCode = Nothing,
+        descriptorName = Just inst,
+        descriptorShortDesc = Nothing
+      }
+
+-- | Compute an ISO 8601 duration string for the scheduled pickup window.
+--   Returns Nothing for immediate rides.
+mkScheduledPickupDuration :: Bool -> Maybe Text
+mkScheduledPickupDuration isScheduled =
+  if isScheduled
+    then Just (formatTimeDifference 600) -- 10-minute pickup window
+    else Nothing
 
 maskNumber :: Text -> Text
 maskNumber billingNumber = do

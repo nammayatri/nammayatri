@@ -102,7 +102,10 @@ tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]
 tfItems res =
   Just
     [ Spec.Item
-        { itemDescriptor = Nothing,
+        { itemAddOns = Nothing,
+          itemCategoryIds = Nothing,
+          itemCancellationTerms = Nothing,
+          itemDescriptor = Nothing,
           itemFulfillmentIds = Nothing,
           itemId = Just res.itemId,
           itemLocationIds = Nothing,
@@ -160,7 +163,8 @@ tfCustomer res =
     mkPerson = do
       return $
         Spec.Person
-          { personId = Nothing,
+          { personGender = Nothing, -- TODO: ONDC v2.1.0 - populate rider gender when available in OnInitRes
+            personId = Nothing,
             personImage = Nothing,
             personName = res.mbRiderName,
             personTags = mkPersonTags
@@ -228,6 +232,7 @@ tfVehicle res = do
       { vehicleCategory = Just category,
         vehicleVariant = Just variant,
         vehicleColor = Nothing,
+        vehicleEnergyType = Nothing,
         vehicleMake = Nothing,
         vehicleModel = Nothing,
         vehicleRegistration = Nothing,
@@ -238,7 +243,8 @@ tfProvider :: DOnInit.OnInitRes -> Maybe Spec.Provider
 tfProvider res =
   Just $
     Spec.Provider
-      { providerId = Just res.bppId,
+      { providerCategories = Nothing,
+        providerId = Just res.bppId,
         providerItems = Nothing,
         providerLocations = Nothing,
         providerPayments = Nothing,

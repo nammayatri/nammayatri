@@ -19,6 +19,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified BecknV2.Utils as BUtils
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import qualified Data.List as List
@@ -49,8 +50,8 @@ import Tools.Error
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
 
-mkStops :: SLS.SearchReqLocation -> [SLS.SearchReqLocation] -> UTCTime -> Maybe [Spec.Stop]
-mkStops origin stops startTime =
+mkStops :: SLS.SearchReqLocation -> [SLS.SearchReqLocation] -> UTCTime -> Maybe T.Text -> Maybe [Spec.Stop]
+mkStops origin stops startTime mbScheduledPickupDuration =
   let originGps = Gps.Gps {lat = origin.gps.lat, lon = origin.gps.lon}
       destinationGps dest = Gps.Gps {lat = dest.gps.lat, lon = dest.gps.lon}
       destination = [KP.last stops | not (null stops)]
@@ -71,9 +72,10 @@ mkStops origin stops startTime =
                       },
                 stopType = Just $ show Enums.START,
                 stopAuthorization = Nothing,
+                stopInstructions = mkStopInstructions origin.address.instructions,
                 stopId = Just "0",
                 stopParentStopId = Nothing,
-                stopTime = Just Spec.Time {timeTimestamp = Just startTime, timeDuration = Nothing}
+                stopTime = Just Spec.Time {timeTimestamp = Just startTime, timeDuration = mbScheduledPickupDuration}
               }
           ]
             <> ( ( \stop ->
@@ -92,6 +94,7 @@ mkStops origin stops startTime =
                                },
                          stopType = Just $ show Enums.END,
                          stopAuthorization = Nothing,
+                         stopInstructions = mkStopInstructions stop.address.instructions,
                          stopTime = Nothing,
                          stopId = Just $ show (length intermediateStops + 1),
                          stopParentStopId = Just $ show (length intermediateStops)
@@ -107,8 +110,16 @@ mkAddress DLoc.LocationAddress {..} =
   let res = map replaceEmpty [door, building, street, area, city, state, country]
    in T.intercalate ", " $ catMaybes res
 
+-- | Re-export from shared library for backward compatibility
+mkStopInstructions :: Maybe Text -> Maybe Spec.Descriptor
+mkStopInstructions = BUtils.mkStopInstructions
+
 replaceEmpty :: Maybe Text -> Maybe Text
 replaceEmpty string = if string == Just "" then Nothing else string
+
+-- | Re-export from shared library for backward compatibility
+mkScheduledPickupDuration :: Bool -> Maybe T.Text
+mkScheduledPickupDuration = BUtils.mkScheduledPickupDuration
 
 mkPaymentTags :: Maybe [Spec.TagGroup]
 mkPaymentTags =
@@ -117,7 +128,7 @@ mkPaymentTags =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just $ show Tags.BUYER_FINDER_FEES,
+                { descriptorCode = Just $ show Tags.BAP_TERMS,
                   descriptorName = Nothing,
                   descriptorShortDesc = Nothing
                 },
@@ -128,7 +139,7 @@ mkPaymentTags =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just $ show Tags.SETTLEMENT_TERMS,
+                { descriptorCode = Just $ show Tags.BPP_TERMS,
                   descriptorName = Nothing,
                   descriptorShortDesc = Nothing
                 },
@@ -342,6 +353,7 @@ mkStops' mbOrigin intermediateStops mDestination = do
                             },
                       stopType = Just $ show Enums.START,
                       stopAuthorization = Nothing,
+                      stopInstructions = mkStopInstructions origin.address.instructions,
                       stopTime = Nothing,
                       stopId = Just "0",
                       stopParentStopId = Nothing
@@ -364,6 +376,7 @@ mkStops' mbOrigin intermediateStops mDestination = do
                             },
                       stopType = Just $ show Enums.END,
                       stopAuthorization = Nothing,
+                      stopInstructions = mkStopInstructions destination.address.instructions,
                       stopTime = Nothing,
                       stopId = Just $ show (length intermediateStops + 1),
                       stopParentStopId = Just $ show (length intermediateStops)
@@ -393,6 +406,7 @@ makeStop stop =
                 },
           stopType = Just $ show Enums.INTERMEDIATE_STOP,
           stopAuthorization = Nothing,
+          stopInstructions = mkStopInstructions stop.address.instructions,
           stopTime = Nothing,
           stopId = Just "0",
           stopParentStopId = Nothing ---------used only for add stop in rental, no need to handle sequence.--------
@@ -416,6 +430,7 @@ mkIntermediateStop stop id parentStopId =
                 },
           stopType = Just $ show Enums.INTERMEDIATE_STOP,
           stopAuthorization = Nothing,
+          stopInstructions = mkStopInstructions stop.address.instructions,
           stopTime = Nothing,
           stopId = Just $ show id,
           stopParentStopId = Just $ show parentStopId
@@ -439,6 +454,7 @@ mkIntermediateStopSearch stop id parentStopId =
                 },
           stopType = Just $ show Enums.INTERMEDIATE_STOP,
           stopAuthorization = Nothing,
+          stopInstructions = mkStopInstructions stop.address.instructions,
           stopTime = Nothing,
           stopId = Just $ show id,
           stopParentStopId = Just $ show parentStopId

@@ -347,7 +347,8 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
         orderCancellation =
           Just $
             Spec.Cancellation
-              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
+              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource,
+                cancellationReasonDescriptor = Nothing
               },
         orderBilling = Nothing,
         orderCancellationTerms = Just $ Utils.tfCancellationTerms cancellationFee (Just EventEnum.RIDE_CANCELLED),

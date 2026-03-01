@@ -79,7 +79,7 @@ tfStops mbFromStation mbToStation =
     [ Spec.Stop
         { stopAuthorization = Nothing,
           stopId = Nothing,
-          stopInstructions = Nothing,
+          stopInstructions = Nothing, -- TODO: Populate when Station type includes zone-specific instructions
           stopLocation = tfLocation $ mbFromStation,
           stopType = Utils.encodeToText' Spec.START,
           stopParentStopId = Nothing
@@ -87,7 +87,7 @@ tfStops mbFromStation mbToStation =
       Spec.Stop
         { stopAuthorization = Nothing,
           stopId = Nothing,
-          stopInstructions = Nothing,
+          stopInstructions = Nothing, -- TODO: Populate when Station type includes zone-specific instructions
           stopLocation = tfLocation $ mbToStation,
           stopType = Utils.encodeToText' Spec.END,
           stopParentStopId = Nothing

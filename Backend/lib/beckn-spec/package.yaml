@@ -167,3 +167,15 @@ library:
         ghc-options:
           - -O2
           - -j4
+
+tests:
+  beckn-spec-test:
+    main: Main.hs
+    source-dirs:
+      - test
+    dependencies:
+      - beckn-spec
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N

@@ -73,7 +73,7 @@ castPaymentInstrument params mPaymentTags = do
 -- Helper to extract payment instrument from tags
 getPaymentInstrumentFromTags :: Maybe [Spec.TagGroup] -> Maybe DMPM.PaymentInstrument
 getPaymentInstrumentFromTags mTags = do
-  tagValue <- Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.PAYMENT_INSTRUMENT mTags
+  tagValue <- Utils.getTagV2Compat Tag.BPP_TERMS Tag.PAYMENT_INSTRUMENT mTags
   readMaybe $ T.unpack tagValue
 
 getMaxEstimateDistance :: [Spec.TagGroup] -> Maybe HighPrecMeters
@@ -98,5 +98,5 @@ mkPaymentMethodInfo Spec.Payment {..} = do
 
 mkPaymentMode :: Spec.Payment -> Maybe DMPM.PaymentMode
 mkPaymentMode Spec.Payment {paymentTags} = do
-  isTestMode <- readMaybe . T.unpack =<< Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.STRIPE_TEST paymentTags
+  isTestMode <- readMaybe . T.unpack =<< Utils.getTagV2Compat Tag.BPP_TERMS Tag.STRIPE_TEST paymentTags
   pure $ if isTestMode then DMPM.TEST else DMPM.LIVE

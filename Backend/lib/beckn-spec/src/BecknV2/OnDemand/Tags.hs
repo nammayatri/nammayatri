@@ -99,6 +99,15 @@ data BecknTagGroup
   | INSURANCE_INFO
   | BOOKING_INFO
   | EMAIL_DOMAIN_INFO
+  | -- v2.1.0 tag groups
+    BAP_TERMS -- consolidation of BUYER_FINDER_FEES + settlement info
+  | BPP_TERMS -- provider-side terms
+  | FEATURE_LIST -- item features (AC, etc.)
+  | DISABILITY_VIS -- visual disability
+  | DISABILITY_HEA -- hearing disability
+  | DISABILITY_MOB -- mobility disability
+  | DISABILITY_COG -- cognitive disability
+  | DISABILITY_OTH -- other disability
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -116,6 +125,14 @@ instance CompleteTagGroup BecknTagGroup where
     FARE_PARAMETERS_IN_RATECARD_INFO -> (Just "Fare Parametes in RateCard information", Nothing)
     DELIVERY -> (Just "Delivery Information", Nothing)
     DRIVER_REACHED_DESTINATION_INFO -> (Just "Driver Reached Destination Information", Nothing)
+    BAP_TERMS -> (Just "BAP Terms", Nothing)
+    BPP_TERMS -> (Just "BPP Terms", Nothing)
+    FEATURE_LIST -> (Just "Feature List", Nothing)
+    DISABILITY_VIS -> (Just "Visual Disability Information", Nothing)
+    DISABILITY_HEA -> (Just "Hearing Disability Information", Nothing)
+    DISABILITY_MOB -> (Just "Mobility Disability Information", Nothing)
+    DISABILITY_COG -> (Just "Cognitive Disability Information", Nothing)
+    DISABILITY_OTH -> (Just "Other Disability Information", Nothing)
     _ -> (Just $ convertToSentence tagGroup, Nothing) -- TODO: move all the tagGroups to this function and remove (_ -> case statement)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
@@ -509,6 +526,17 @@ data BecknTag
   | DISPLAY_BOOKING_ID -- Human-readable booking ID shared between BAP and BPP
   | EMAIL_DOMAIN
   | BUSINESS_EMAIL_DOMAIN
+  | -- v2.1.0 tags
+    BUYER_FINDER_FEE_TYPE -- BAP_TERMS
+  | BUYER_FINDER_FEE_AMOUNT -- BAP_TERMS
+  | STATIC_TERMS_URL -- BPP_TERMS
+  | FEATURE_NAME -- FEATURE_LIST
+  | FEATURE_VALUE -- FEATURE_LIST
+  | DISABILITY_TYPE -- DISABILITY_* groups
+  | DISABILITY_LEVEL -- DISABILITY_* groups
+  | DISABILITY_ASSISTANCE -- DISABILITY_* groups
+  | CANCELLATION_FEE_PERCENTAGE -- FARE_POLICY
+  | CANCELLATION_FEE_AMOUNT -- FARE_POLICY
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -578,16 +606,16 @@ instance CompleteTag BecknTag where
     MULTIPLE_ROUTES -> ROUTE_INFO
     NUMBER_OF_LUGGAGE -> SEARCH_REQUEST_INFO
     DRIVER_IDENTITY -> DRIVER_IDENTIFIER
-    BUYER_FINDER_FEES_PERCENTAGE -> BUYER_FINDER_FEES
-    SETTLEMENT_AMOUNT -> SETTLEMENT_TERMS
-    SETTLEMENT_WINDOW -> SETTLEMENT_TERMS
-    STRIPE_TEST -> SETTLEMENT_TERMS
-    PAYMENT_INSTRUMENT -> SETTLEMENT_TERMS
-    DELAY_INTEREST -> SETTLEMENT_TERMS
-    SETTLEMENT_BASIS -> SETTLEMENT_TERMS
-    MANDATORY_ARBITRATION -> SETTLEMENT_TERMS
-    COURT_JURISDICTION -> SETTLEMENT_TERMS
-    STATIC_TERMS -> SETTLEMENT_TERMS
+    BUYER_FINDER_FEES_PERCENTAGE -> BAP_TERMS
+    SETTLEMENT_AMOUNT -> BPP_TERMS
+    SETTLEMENT_WINDOW -> BPP_TERMS
+    STRIPE_TEST -> BPP_TERMS
+    PAYMENT_INSTRUMENT -> BPP_TERMS
+    DELAY_INTEREST -> BPP_TERMS
+    SETTLEMENT_BASIS -> BPP_TERMS
+    MANDATORY_ARBITRATION -> BPP_TERMS
+    COURT_JURISDICTION -> BPP_TERMS
+    STATIC_TERMS -> BPP_TERMS
     SETTLEMENT_TYPE -> SETTLEMENT_DETAILS
     COMMISSION -> SETTLEMENT_DETAILS
     IS_REALLOCATION_ENABLED -> REALLOCATION_INFO
@@ -638,6 +666,17 @@ instance CompleteTag BecknTag where
     DISPLAY_BOOKING_ID -> BOOKING_INFO
     EMAIL_DOMAIN -> EMAIL_DOMAIN_INFO
     BUSINESS_EMAIL_DOMAIN -> EMAIL_DOMAIN_INFO
+    -- v2.1.0 tag -> group mappings
+    BUYER_FINDER_FEE_TYPE -> BAP_TERMS
+    BUYER_FINDER_FEE_AMOUNT -> BAP_TERMS
+    STATIC_TERMS_URL -> BPP_TERMS
+    FEATURE_NAME -> FEATURE_LIST
+    FEATURE_VALUE -> FEATURE_LIST
+    DISABILITY_TYPE -> DISABILITY_VIS -- default; caller should use specific group
+    DISABILITY_LEVEL -> DISABILITY_VIS
+    DISABILITY_ASSISTANCE -> DISABILITY_VIS
+    CANCELLATION_FEE_PERCENTAGE -> FARE_POLICY
+    CANCELLATION_FEE_AMOUNT -> FARE_POLICY
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text
@@ -665,3 +704,24 @@ convertToTagGroup = go . filter (isJust . snd)
               mempty
               tagList
       M.elems $ MP.mapWithKey getFullTagGroup tagsWithGroup
+
+-- | Map a disability tag string (from the disability table) to the
+--   corresponding ONDC v2.1.0 disability tag group.
+disabilityTagToGroup :: T.Text -> BecknTagGroup
+disabilityTagToGroup = \case
+  "BLIND_LOW_VISION" -> DISABILITY_VIS
+  "HEAR_IMPAIRMENT" -> DISABILITY_HEA
+  "LOCOMOTOR_DISABILITY" -> DISABILITY_MOB
+  "COGNITIVE_DISABILITY" -> DISABILITY_COG
+  _ -> DISABILITY_OTH
+
+-- | Build ONDC v2.1.0 per-type disability tag groups from a disability tag
+--   string.  Returns an empty list when no disability is present.
+mkDisabilityTagGroups :: Maybe T.Text -> [Spec.TagGroup]
+mkDisabilityTagGroups Nothing = []
+mkDisabilityTagGroups (Just disabilityTag) =
+  let grp = disabilityTagToGroup disabilityTag
+      tags =
+        [ getFullTag DISABILITY_TYPE (Just disabilityTag)
+        ]
+   in [getFullTagGroup grp tags]

@@ -74,7 +74,7 @@ tfOrder res endLoc isValueAddNP bapConfig riderConfig =
       orderId = Nothing
       orderPayments = tfPayments res bapConfig riderConfig
       orderProvider = Just $ tfProvider res
-      orderQuote = Nothing
+      orderQuote = tfQuote res
       orderStatus = Nothing
       startLoc = res.searchRequest.fromLocation
       orderItem = tfOrderItem res isValueAddNP
@@ -117,6 +117,7 @@ tfVehicle :: DSelect.DSelectRes -> Spec.Vehicle
 tfVehicle res =
   let (category, variant) = UCommon.castVehicleVariant res.variant
       vehicleColor = Nothing
+      vehicleEnergyType = Nothing
       vehicleMake = Nothing
       vehicleModel = Nothing
       vehicleRegistration = Nothing
@@ -127,7 +128,10 @@ tfVehicle res =
 
 tfOrderItem :: DSelect.DSelectRes -> Bool -> Spec.Item
 tfOrderItem res isValueAddNP =
-  let itemDescriptor = Nothing
+  let itemAddOns = Nothing
+      itemCategoryIds = Nothing
+      itemCancellationTerms = Nothing
+      itemDescriptor = Nothing
       itemFulfillmentIds = Nothing
       itemLocationIds = Nothing
       itemPaymentIds = Nothing
@@ -488,8 +492,60 @@ tfPrice res =
       priceComputedValue = Nothing
       priceMaximumValue = Nothing
       priceMinimumValue = Nothing
-      priceOfferedValue = Nothing
+      priceOfferedValue = show . (.getMoney) <$> res.customerExtraFee
    in Spec.Price {..}
+
+-- | Build a quote with CUSTOMER_SELECTED_FARE and BUYER_ADDITIONAL_AMOUNT breakups
+--   for v2.1.0 bidding flow. When the customer proposes a fare (customerExtraFee),
+--   include it as quote breakup items so the BPP can parse it per the ONDC v2.1.0 spec.
+--   CUSTOMER_SELECTED_FARE = base estimate + extra (total proposed fare).
+--   BUYER_ADDITIONAL_AMOUNT = just the extra amount (tip/premium).
+tfQuote :: DSelect.DSelectRes -> Maybe Spec.Quotation
+tfQuote res =
+  case res.customerExtraFee of
+    Nothing -> Nothing
+    Just customerFare ->
+      let currency = res.estimate.estimatedFare.currency
+          baseFare = res.estimate.estimatedFare.amount
+          extraFare = fromIntegral customerFare.getMoney :: HighPrecMoney
+          totalProposedFare = baseFare + extraFare
+          mkBreakupPrice val =
+            Just
+              Spec.Price
+                { priceCurrency = Just $ show currency,
+                  priceValue = Just $ show val,
+                  priceComputedValue = Nothing,
+                  priceMaximumValue = Nothing,
+                  priceMinimumValue = Nothing,
+                  priceOfferedValue = Nothing
+                }
+          customerSelectedFareBreakup =
+            Spec.QuotationBreakupInner
+              { quotationBreakupInnerTitle = Just $ show Enums.CUSTOMER_SELECTED_FARE,
+                quotationBreakupInnerPrice = mkBreakupPrice totalProposedFare
+              }
+          -- v2.1.0: BUYER_ADDITIONAL_AMOUNT = just the extra amount above base fare
+          buyerAdditionalAmountBreakup =
+            Spec.QuotationBreakupInner
+              { quotationBreakupInnerTitle = Just $ show Enums.BUYER_ADDITIONAL_AMOUNT,
+                quotationBreakupInnerPrice = mkBreakupPrice extraFare
+              }
+          quotationPrice =
+            Just
+              Spec.Price
+                { priceCurrency = Just $ show currency,
+                  priceValue = Just $ show baseFare,
+                  priceComputedValue = Nothing,
+                  priceMaximumValue = Nothing,
+                  priceMinimumValue = Nothing,
+                  priceOfferedValue = Just $ show totalProposedFare
+                }
+       in Just
+            Spec.Quotation
+              { quotationBreakup = Just [customerSelectedFareBreakup, buyerAdditionalAmountBreakup],
+                quotationPrice = quotationPrice,
+                quotationTtl = Nothing
+              }
 
 tfPayments :: DSelect.DSelectRes -> BecknConfig -> RiderConfig -> Maybe [Spec.Payment]
 tfPayments res bapConfig riderConfig = do
@@ -499,7 +555,8 @@ tfPayments res bapConfig riderConfig = do
 
 tfProvider :: DSelect.DSelectRes -> Spec.Provider
 tfProvider res =
-  let providerDescriptor = Nothing
+  let providerCategories = Nothing
+      providerDescriptor = Nothing
       providerFulfillments = Nothing
       providerItems = Nothing
       providerLocations = Nothing

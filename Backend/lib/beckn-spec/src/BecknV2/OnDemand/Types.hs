@@ -20,6 +20,7 @@ module BecknV2.OnDemand.Types
   ( Ack (..),
     AckMessage (..),
     AckResponse (..),
+    AddOn (..),
     Agent (..),
     Authorization (..),
     Billing (..),
@@ -28,6 +29,7 @@ module BecknV2.OnDemand.Types
     Cancellation (..),
     CancellationTerm (..),
     Catalog (..),
+    Category (..),
     City (..),
     ConfirmReq (..),
     ConfirmReqMessage (..),
@@ -326,9 +328,11 @@ optionsCancelReqMessage =
       ]
 
 -- | Describes a cancellation event
-newtype Cancellation = Cancellation
+data Cancellation = Cancellation
   { -- |
-    cancellationCancelledBy :: Maybe Text
+    cancellationCancelledBy :: Maybe Text,
+    -- | Reason descriptor for the cancellation (ONDC v2.1.0)
+    cancellationReasonDescriptor :: Maybe Descriptor
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -346,7 +350,8 @@ optionsCancellation =
     }
   where
     table =
-      [ ("cancellationCancelledBy", "cancelled_by")
+      [ ("cancellationCancelledBy", "cancelled_by"),
+        ("cancellationReasonDescriptor", "reason")
       ]
 
 -- | Describes the cancellation terms of an item or an order. This can be referenced at an item or order level. Item-level cancellation terms can override the terms at the order level.
@@ -377,6 +382,63 @@ optionsCancellationTerm =
       [ ("cancellationTermCancellationFee", "cancellation_fee"),
         ("cancellationTermFulfillmentState", "fulfillment_state"),
         ("cancellationTermReasonRequired", "reason_required")
+      ]
+
+-- | Describes a category of items
+data Category = Category
+  { -- |
+    categoryDescriptor :: Maybe Descriptor,
+    -- |
+    categoryId :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Category where
+  parseJSON = genericParseJSON optionsCategory
+
+instance ToJSON Category where
+  toJSON = genericToJSON optionsCategory
+
+optionsCategory :: Options
+optionsCategory =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("categoryDescriptor", "descriptor"),
+        ("categoryId", "id")
+      ]
+
+-- | Describes an add-on to an item
+data AddOn = AddOn
+  { -- |
+    addOnDescriptor :: Maybe Descriptor,
+    -- |
+    addOnId :: Maybe Text,
+    -- |
+    addOnPrice :: Maybe Price
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON AddOn where
+  parseJSON = genericParseJSON optionsAddOn
+
+instance ToJSON AddOn where
+  toJSON = genericToJSON optionsAddOn
+
+optionsAddOn :: Options
+optionsAddOn =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("addOnDescriptor", "descriptor"),
+        ("addOnId", "id"),
+        ("addOnPrice", "price")
       ]
 
 -- | Describes the products or services offered by a BPP. This is typically sent as the response to a search intent from a BAP. The payment terms, offers and terms of fulfillment supported by the BPP can also be included here. The BPP can show hierarchical nature of products/services in its catalog using the parent_category_id in categories. The BPP can also send a ttl (time to live) in the context which is the duration for which a BAP can cache the catalog and use the cached catalog.  &lt;br&gt;This has properties like bbp/descriptor,bbp/categories,bbp/fulfillments,bbp/payments,bbp/offers,bbp/providers and exp&lt;br&gt;This is used in the following situations.&lt;br&gt;&lt;ul&gt;&lt;li&gt;This is typically used in the discovery stage when the BPP sends the details of the products and services it offers as response to a search intent from the BAP. &lt;/li&gt;&lt;/ul&gt;
@@ -867,6 +929,8 @@ optionsInitReq =
 -- | The intent to buy or avail a product or a service. The BAP can declare the intent of the consumer containing &lt;ul&gt;&lt;li&gt;What they want (A product, service, offer)&lt;/li&gt;&lt;li&gt;Who they want (A seller, service provider, agent etc)&lt;/li&gt;&lt;li&gt;Where they want it and where they want it from&lt;/li&gt;&lt;li&gt;When they want it (start and end time of fulfillment&lt;/li&gt;&lt;li&gt;How they want to pay for it&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;This has properties like descriptor,provider,fulfillment,payment,category,offer,item,tags&lt;br&gt;This is typically used by the BAP to send the purpose of the user&#39;s search to the BPP. This will be used by the BPP to find products or services it offers that may match the user&#39;s intent.&lt;br&gt;For example, in Mobility, the mobility consumer declares a mobility intent. In this case, the mobility consumer declares information that describes various aspects of their journey like,&lt;ul&gt;&lt;li&gt;Where would they like to begin their journey (intent.fulfillment.start.location)&lt;/li&gt;&lt;li&gt;Where would they like to end their journey (intent.fulfillment.end.location)&lt;/li&gt;&lt;li&gt;When would they like to begin their journey (intent.fulfillment.start.time)&lt;/li&gt;&lt;li&gt;When would they like to end their journey (intent.fulfillment.end.time)&lt;/li&gt;&lt;li&gt;Who is the transport service provider they would like to avail services from (intent.provider)&lt;/li&gt;&lt;li&gt;Who is traveling (This is not recommended in public networks) (intent.fulfillment.customer)&lt;/li&gt;&lt;li&gt;What kind of fare product would they like to purchase (intent.item)&lt;/li&gt;&lt;li&gt;What add-on services would they like to avail&lt;/li&gt;&lt;li&gt;What offers would they like to apply on their booking (intent.offer)&lt;/li&gt;&lt;li&gt;What category of services would they like to avail (intent.category)&lt;/li&gt;&lt;li&gt;What additional luggage are they carrying&lt;/li&gt;&lt;li&gt;How would they like to pay for their journey (intent.payment)&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;For example, in health domain, a consumer declares the intent for a lab booking the describes various aspects of their booking like,&lt;ul&gt;&lt;li&gt;Where would they like to get their scan/test done (intent.fulfillment.start.location)&lt;/li&gt;&lt;li&gt;When would they like to get their scan/test done (intent.fulfillment.start.time)&lt;/li&gt;&lt;li&gt;When would they like to get the results of their test/scan (intent.fulfillment.end.time)&lt;/li&gt;&lt;li&gt;Who is the service provider they would like to avail services from (intent.provider)&lt;/li&gt;&lt;li&gt;Who is getting the test/scan (intent.fulfillment.customer)&lt;/li&gt;&lt;li&gt;What kind of test/scan would they like to purchase (intent.item)&lt;/li&gt;&lt;li&gt;What category of services would they like to avail (intent.category)&lt;/li&gt;&lt;li&gt;How would they like to pay for their journey (intent.payment)&lt;/li&gt;&lt;/ul&gt;
 data Intent = Intent
   { -- |
+    intentCategory :: Maybe Category,
+    -- |
     intentFulfillment :: Maybe Fulfillment,
     -- |
     intentPayment :: Maybe Payment,
@@ -889,7 +953,8 @@ optionsIntent =
     }
   where
     table =
-      [ ("intentFulfillment", "fulfillment"),
+      [ ("intentCategory", "category"),
+        ("intentFulfillment", "fulfillment"),
         ("intentPayment", "payment"),
         ("intentTags", "tags")
       ]
@@ -897,6 +962,12 @@ optionsIntent =
 -- | Describes a product or a service offered to the end consumer by the provider. In the mobility sector, it can represent a fare product like one way journey. In the logistics sector, it can represent the delivery service offering. In the retail domain it can represent a product like a grocery item.
 data Item = Item
   { -- |
+    itemAddOns :: Maybe [AddOn],
+    -- | Category IDs this item belongs to
+    itemCategoryIds :: Maybe [Text],
+    -- |
+    itemCancellationTerms :: Maybe [CancellationTerm],
+    -- |
     itemDescriptor :: Maybe Descriptor,
     -- | Modes through which this item can be fulfilled
     itemFulfillmentIds :: Maybe [Text],
@@ -927,7 +998,10 @@ optionsItem =
     }
   where
     table =
-      [ ("itemDescriptor", "descriptor"),
+      [ ("itemAddOns", "add_ons"),
+        ("itemCategoryIds", "category_ids"),
+        ("itemCancellationTerms", "cancellation_terms"),
+        ("itemDescriptor", "descriptor"),
         ("itemFulfillmentIds", "fulfillment_ids"),
         ("itemId", "id"),
         ("itemLocationIds", "location_ids"),
@@ -1462,7 +1536,9 @@ optionsPaymentParams =
 
 -- | Describes a person as any individual
 data Person = Person
-  { -- | Describes the identity of the person
+  { -- | Gender of the person
+    personGender :: Maybe Text,
+    -- | Describes the identity of the person
     personId :: Maybe Text,
     -- |
     personImage :: Maybe Image,
@@ -1487,7 +1563,8 @@ optionsPerson =
     }
   where
     table =
-      [ ("personId", "id"),
+      [ ("personGender", "gender"),
+        ("personId", "id"),
         ("personImage", "image"),
         ("personName", "name"),
         ("personTags", "tags")
@@ -1535,6 +1612,8 @@ optionsPrice =
 -- | Describes the catalog of a business.
 data Provider = Provider
   { -- |
+    providerCategories :: Maybe [Category],
+    -- |
     providerDescriptor :: Maybe Descriptor,
     -- |
     providerFulfillments :: Maybe [Fulfillment],
@@ -1563,7 +1642,8 @@ optionsProvider =
     }
   where
     table =
-      [ ("providerDescriptor", "descriptor"),
+      [ ("providerCategories", "categories"),
+        ("providerDescriptor", "descriptor"),
         ("providerFulfillments", "fulfillments"),
         ("providerId", "id"),
         ("providerItems", "items"),
@@ -1900,6 +1980,8 @@ data Stop = Stop
   { -- |
     stopAuthorization :: Maybe Authorization,
     -- |
+    stopInstructions :: Maybe Descriptor,
+    -- |
     stopLocation :: Maybe Location,
     -- |
     stopId :: Maybe String,
@@ -1927,6 +2009,7 @@ optionsStop =
   where
     table =
       [ ("stopAuthorization", "authorization"),
+        ("stopInstructions", "instructions"),
         ("stopLocation", "location"),
         ("stopId", "id"),
         ("stopParentStopId", "parent_stop_id"),
@@ -2165,6 +2248,8 @@ data Vehicle = Vehicle
     -- |
     vehicleColor :: Maybe Text,
     -- |
+    vehicleEnergyType :: Maybe Text,
+    -- |
     vehicleMake :: Maybe Text,
     -- |
     vehicleModel :: Maybe Text,
@@ -2193,6 +2278,7 @@ optionsVehicle =
     table =
       [ ("vehicleCategory", "category"),
         ("vehicleColor", "color"),
+        ("vehicleEnergyType", "energy_type"),
         ("vehicleMake", "make"),
         ("vehicleModel", "model"),
         ("vehicleRegistration", "registration"),

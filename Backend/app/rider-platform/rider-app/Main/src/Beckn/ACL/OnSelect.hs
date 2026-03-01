@@ -16,6 +16,8 @@ module Beckn.ACL.OnSelect where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
+import Control.Applicative ((<|>))
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -152,6 +154,8 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
       isUpgradedToCab = getIsUpgradedToCab itemTags
       rating = getDriverRatingV2 agentTags
       isSafetyPlus = fromMaybe False $ getIsSafetyPlusV2 agentTags
+      -- v2.1.0: try breakup first, then fall back to item priceOfferedValue
+      driverSelectedFare = getDriverSelectedFareFromBreakup quote <|> getDriverOfferedFareFromItemPrice item
   let validTill = (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybe onSelectTtl
   logDebug $ "on_select ttl request rider: " <> show validTill
   bppQuoteId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest $ "Missing fulfillmentId, fulfillment:-" <> show fulfillment)
@@ -202,3 +206,24 @@ getBillingCategoryTag tagGroups = do
     "personal" -> SLT.PERSONAL
     "business" -> SLT.BUSINESS
     _ -> SLT.PERSONAL
+
+-- | Parse DRIVER_SELECTED_FARE from the on_select quote breakup.
+--   This supports the v2.1.0 bidding payload format where the driver's
+--   counter-offer fare is included as a quote breakup item.
+getDriverSelectedFareFromBreakup :: Spec.Quotation -> Maybe HighPrecMoney
+getDriverSelectedFareFromBreakup quotation = do
+  breakups <- quotation.quotationBreakup
+  let driverFareBreakup = find (\b -> b.quotationBreakupInnerTitle == Just (show Enums.DRIVER_SELECTED_FARE)) breakups
+  breakup <- driverFareBreakup
+  price <- breakup.quotationBreakupInnerPrice
+  priceVal <- price.priceValue
+  highPrecMoneyFromText priceVal
+
+-- | Parse driver's counter-offer fare from the item's priceOfferedValue.
+--   In v2.1.0 bidding flow, the BPP sets priceOfferedValue on the item price
+--   to the driver's driverSelectedFare when it differs from the base estimate.
+getDriverOfferedFareFromItemPrice :: Spec.Item -> Maybe HighPrecMoney
+getDriverOfferedFareFromItemPrice item = do
+  price <- item.itemPrice
+  offeredVal <- price.priceOfferedValue
+  highPrecMoneyFromText offeredVal

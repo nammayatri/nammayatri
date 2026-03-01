@@ -16,6 +16,7 @@ module Beckn.ACL.Select (buildSelectReqV2) where
 
 import Beckn.OnDemand.Utils.Init
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -23,6 +24,7 @@ import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.Select as DSelect
+import Control.Applicative ((<|>))
 import Kernel.Prelude hiding (error, setField)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -60,7 +62,9 @@ buildSelectReqV2 subscriber req = do
     _ -> throwError $ InvalidRequest "There should be only one item"
   logDebug $ "item: select request" <> show item <> "transactionId: " <> transactionId
   logDebug $ "item.itemTags: select request" <> show item.itemTags <> "transactionId: " <> transactionId
-  let customerExtraFee = getCustomerExtraFeeV2 item.itemTags
+  let customerExtraFeeFromTag = getCustomerExtraFeeV2 item.itemTags
+      customerExtraFeeFromBreakup = getCustomerSelectedFareFromBreakup order.orderQuote
+      customerExtraFee = customerExtraFeeFromTag <|> customerExtraFeeFromBreakup
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
       isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
       disabilityDisable = buildDisableDisabilityTag item.itemTags
@@ -199,3 +203,19 @@ getParcelDetails tagGroups = (parcelType, parcelQuantity)
   where
     parcelType = Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_TYPE tagGroups
     parcelQuantity = Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_QUANTITY tagGroups >>= \pq -> readMaybe @Int $ T.unpack pq
+
+-- | Parse customer's proposed fare from the quote breakup in the select message.
+--   Checks CUSTOMER_SELECTED_FARE first, then falls back to BUYER_ADDITIONAL_AMOUNT
+--   (v2.1.0 bidding payload format) where the customer's proposed tip/extra fare
+--   is included as a quote breakup item.
+getCustomerSelectedFareFromBreakup :: Maybe Spec.Quotation -> Maybe HighPrecMoney
+getCustomerSelectedFareFromBreakup mbQuotation = do
+  quotation <- mbQuotation
+  breakups <- quotation.quotationBreakup
+  let getBreakupValue title = do
+        let matchingBreakup = find (\b -> b.quotationBreakupInnerTitle == Just (show title)) breakups
+        breakup <- matchingBreakup
+        price <- breakup.quotationBreakupInnerPrice
+        priceVal <- price.priceValue
+        highPrecMoneyFromText priceVal
+  getBreakupValue Enums.CUSTOMER_SELECTED_FARE <|> getBreakupValue Enums.BUYER_ADDITIONAL_AMOUNT

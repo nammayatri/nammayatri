@@ -186,6 +186,30 @@ tripCategoryToFulfillmentType = \case
   OneWay MeterRide -> show Enums.METER_RIDE
   _ -> show Enums.DELIVERY
 
+-- | Map internal trip category to ONDC v2.1.0 category code
+tripCategoryToCategoryCode :: TripCategory -> Text
+tripCategoryToCategoryCode = \case
+  OneWay _ -> "ON_DEMAND_TRIP"
+  CrossCity _ _ -> "ON_DEMAND_TRIP"
+  RideShare _ -> "ON_DEMAND_TRIP"
+  Rental _ -> "ON_DEMAND_RENTAL"
+  InterCity _ _ -> "INTERCITY_TRIP"
+  Ambulance _ -> "ON_DEMAND_TRIP"
+  Delivery _ -> "ON_DEMAND_TRIP"
+
+mkCategory :: TripCategory -> Spec.Category
+mkCategory tc =
+  Spec.Category
+    { categoryDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just (tripCategoryToCategoryCode tc),
+              descriptorName = Just (tripCategoryToCategoryCode tc),
+              descriptorShortDesc = Nothing
+            },
+      categoryId = Just (tripCategoryToCategoryCode tc)
+    }
+
 -- TODO :: To be removed after released ---- ENDS HERE
 -- On-us Domain-tripCategory -- TODO :: TO BE UNCOMMENTED AFTER RELEASE
 -- tripCategory -> show tripCategory

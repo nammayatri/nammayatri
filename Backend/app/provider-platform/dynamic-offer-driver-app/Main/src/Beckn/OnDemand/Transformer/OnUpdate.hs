@@ -106,7 +106,10 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderItems =
             Just . List.singleton $
               Spec.Item
-                { itemId = Just estimateId.getId,
+                { itemAddOns = Nothing,
+                  itemCategoryIds = Nothing,
+                  itemCancellationTerms = Nothing,
+                  itemId = Just estimateId.getId,
                   itemDescriptor = Nothing,
                   itemFulfillmentIds = Nothing,
                   itemLocationIds = Nothing,
@@ -266,7 +269,10 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderItems =
             Just . List.singleton $
               Spec.Item
-                { itemId = Just newBookingId.getId,
+                { itemAddOns = Nothing,
+                  itemCategoryIds = Nothing,
+                  itemCancellationTerms = Nothing,
+                  itemId = Just newBookingId.getId,
                   itemDescriptor = Nothing,
                   itemFulfillmentIds = Nothing,
                   itemLocationIds = Nothing,

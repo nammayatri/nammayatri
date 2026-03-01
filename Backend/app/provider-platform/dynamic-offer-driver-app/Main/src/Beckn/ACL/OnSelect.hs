@@ -89,7 +89,7 @@ mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Spec.Fulfillmen
 mkFulfillmentV2 dReq quote isValueAddNP = do
   Spec.Fulfillment
     { fulfillmentId = Just quote.id.getId,
-      fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation dReq.searchRequest.stops Nothing,
+      fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation dReq.searchRequest.stops Nothing Nothing (Just dReq.searchRequest.startTime) (Utils.mkScheduledPickupDuration dReq.searchRequest.isScheduled),
       fulfillmentVehicle = Just $ mkVehicleV2 quote,
       fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType quote.tripCategory,
       fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP,
@@ -114,7 +114,8 @@ mkVehicleV2 quote =
           vehicleMake = Nothing,
           vehicleModel = Nothing,
           vehicleRegistration = Nothing,
-          vehicleCapacity = Nothing
+          vehicleCapacity = Nothing,
+          vehicleEnergyType = Nothing -- TODO: populate when DriverQuote includes energy_type
         }
 
 mkAgentV2 :: DQuote.DriverQuote -> Bool -> Spec.Agent
@@ -130,7 +131,8 @@ mkAgentPersonV2 quote isValueAddNP =
     { personId = Nothing,
       personImage = Nothing,
       personName = Just quote.driverName,
-      personTags = if isValueAddNP then mkAgentTagsV2 quote else Nothing
+      personTags = if isValueAddNP then mkAgentTagsV2 quote else Nothing,
+      personGender = Nothing -- TODO: ONDC v2.1.0 - populate driver gender when available in DriverQuote
     }
 
 mkAgentTagsV2 :: DQuote.DriverQuote -> Maybe [Spec.TagGroup]
@@ -178,7 +180,10 @@ mkItemV2 fulfillment vehicleServiceTierItem quote mbFarePolicy taggings = do
       itemTags = mkItemTagsV2 quote.estimatedFare quote.fareParams.customerCancellationDues quote.fareParams.congestionChargeViaDp mbFarePolicy taggings,
       itemDescriptor = mkItemDescriptor vehicleServiceTierItem,
       itemLocationIds = Nothing,
-      itemPaymentIds = Nothing
+      itemPaymentIds = Nothing,
+      itemAddOns = Nothing,
+      itemCategoryIds = Nothing,
+      itemCancellationTerms = Nothing
     }
 
 mkItemDescriptor :: DVST.VehicleServiceTier -> Maybe Spec.Descriptor
@@ -190,14 +195,17 @@ mkItemDescriptor vehicleServiceTierItem =
         descriptorName = Just vehicleServiceTierItem.name
       }
 
+-- | Build item price for on_select. In v2.1.0 bidding flow, priceOfferedValue
+--   carries the driver's counter-offer fare (driverSelectedFare from fareParams)
+--   so the BAP can distinguish the base fare from the driver's offered fare.
 mkPriceV2 :: DQuote.DriverQuote -> Spec.Price
 mkPriceV2 quote =
   Spec.Price
     { priceCurrency = Just $ show quote.currency,
-      priceValue = Just $ show $ quote.estimatedFare,
+      priceValue = Just $ show quote.estimatedFare,
       priceMaximumValue = Nothing,
       priceMinimumValue = Nothing,
-      priceOfferedValue = Nothing,
+      priceOfferedValue = show <$> quote.fareParams.driverSelectedFare,
       priceComputedValue = Nothing
     }
 
@@ -278,5 +286,6 @@ mkProvider becknConfig = do
         providerId = Just $ becknConfig.subscriberId,
         providerItems = Nothing,
         providerLocations = Nothing,
-        providerPayments = Nothing
+        providerPayments = Nothing,
+        providerCategories = Nothing
       }

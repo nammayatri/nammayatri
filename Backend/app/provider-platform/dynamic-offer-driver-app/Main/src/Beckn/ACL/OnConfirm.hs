@@ -29,7 +29,7 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState
-bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED
+bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_CONFIRMED -- ONDC v2.1.0: phased confirmation, driver details sent via on_update RIDE_ASSIGNED
 bookingStatusCode _ = Just Enum.NEW
 
 buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
@@ -66,7 +66,7 @@ tfFulfillments res =
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = Just res.booking.quoteId,
           fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
-          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops res.booking.specialZoneOtpCode,
+          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops res.booking.specialZoneOtpCode Nothing (Just res.booking.startTime) (Utils.mkScheduledPickupDuration res.booking.isScheduled),
           fulfillmentTags = Nothing,
           fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
           fulfillmentVehicle = tfVehicle res
@@ -91,7 +91,8 @@ tfVehicle res = do
         vehicleMake = Nothing,
         vehicleModel = Nothing,
         vehicleRegistration = Nothing,
-        vehicleCapacity = Nothing
+        vehicleCapacity = Nothing,
+        vehicleEnergyType = Nothing -- TODO: populate when DConfirmResp includes energy_type
       }
 
 tfCustomer :: DConfirm.DConfirmResp -> Maybe Spec.Customer
@@ -110,7 +111,8 @@ tfCustomer res =
               { personId = Nothing,
                 personImage = Nothing,
                 personName = Just riderName,
-                personTags = Nothing
+                personTags = Nothing,
+                personGender = Nothing -- TODO: ONDC v2.1.0 - populate rider gender when available in DConfirmResp
               }
       }
 

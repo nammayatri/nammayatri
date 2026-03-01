@@ -126,7 +126,7 @@ mkBuyerFinderFeeTagGroup mbff =
     { tagGroupDescriptor =
         Just $
           Spec.Descriptor
-            { descriptorCode = Just $ show Tag.BUYER_FINDER_FEES,
+            { descriptorCode = Just $ show Tag.BAP_TERMS,
               descriptorName = Nothing,
               descriptorShortDesc = Nothing
             },
@@ -153,7 +153,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
     { tagGroupDescriptor =
         Just $
           Spec.Descriptor
-            { descriptorCode = Just $ show Tag.SETTLEMENT_TERMS,
+            { descriptorCode = Just $ show Tag.BPP_TERMS,
               descriptorName = Nothing,
               descriptorShortDesc = Nothing
             },

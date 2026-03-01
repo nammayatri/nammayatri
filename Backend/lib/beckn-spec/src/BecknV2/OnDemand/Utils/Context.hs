@@ -72,7 +72,7 @@ buildContextV2' now action domain messageId transactionId bapId bapUri bppId bpp
       contextTimestamp = Just $ UTCTimeRFC3339 now,
       contextTransactionId = UUID.fromText =<< transactionId,
       contextTtl = ttl,
-      contextVersion = Just "2.0.0"
+      contextVersion = Just "2.1.0"
     }
 
 buildContextV2 :: (MonadFlow m) => Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> m Spec.Context
@@ -92,7 +92,7 @@ buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri c
         contextTimestamp = UTCTimeRFC3339 <$> now,
         contextTransactionId = UUID.fromText =<< transactionId,
         contextTtl = ttl,
-        contextVersion = Just "2.0.0"
+        contextVersion = Just "2.1.0"
       }
 
 mapToCbAction :: Text -> Maybe Text
@@ -139,7 +139,8 @@ validateCoreVersion :: (HasFlowEnv m r '["_version" ::: Text], Log m) => Spec.Co
 validateCoreVersion context = do
   supportedVersion <- asks (._version)
   version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
-  unless (version == supportedVersion) $
+  let supportedVersions = [supportedVersion, "2.0.0"] -- Accept both v2.0.0 and v2.1.0 during transition
+  unless (version `elem` supportedVersions) $
     throwError Error.UnsupportedCoreVer
 
 validateTTL :: (MonadFlow m, Log m) => Spec.Context -> m ()

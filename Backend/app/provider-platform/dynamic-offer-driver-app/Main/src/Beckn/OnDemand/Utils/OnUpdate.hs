@@ -63,9 +63,11 @@ mkRideCompletedQuote ride fareParams = do
             priceMinimumValue = Nothing,
             priceOfferedValue = Nothing
           }
-      breakup =
+      fareBreakup =
         Fare.mkFareParamsBreakups (mkPrice' currency) mkBreakupItem fareParams
           & filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams)
+      tipBreakup = mkTipBreakup currency ride.tipAmount
+      breakup = fareBreakup <> tipBreakup
   pure
     Spec.Quotation
       { quotationBreakup = Just breakup,
@@ -89,6 +91,25 @@ mkRideCompletedQuote ride fareParams = do
         { quotationBreakupInnerTitle = Just title,
           quotationBreakupInnerPrice = Just price
         }
+
+    mkTipBreakup :: Text -> Maybe HighPrecMoney -> [Spec.QuotationBreakupInner]
+    mkTipBreakup currency mTipAmount = maybeToList $ do
+      tipAmt <- mTipAmount
+      guard (tipAmt > 0)
+      pure $
+        Spec.QuotationBreakupInner
+          { quotationBreakupInnerTitle = Just (show Enums.BUYER_ADDITIONAL_AMOUNT),
+            quotationBreakupInnerPrice =
+              Just $
+                Spec.Price
+                  { priceCurrency = Just currency,
+                    priceValue = Just $ highPrecMoneyToText tipAmt,
+                    priceComputedValue = Nothing,
+                    priceMaximumValue = Nothing,
+                    priceMinimumValue = Nothing,
+                    priceOfferedValue = Nothing
+                  }
+          }
 
     filterRequiredBreakups fParamsType breakup = do
       let title = breakup.quotationBreakupInnerTitle -- TODO::Beckn, all the titles are not present in spec.
@@ -428,6 +449,9 @@ tfItems ride booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemLocationIds = Nothing,
           itemPaymentIds = Utils.tfPaymentId mbPaymentId,
           itemPrice = Utils.tfItemPrice booking.estimatedFare booking.currency,
-          itemTags = Utils.mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
+          itemTags = Utils.mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing,
+          itemAddOns = Nothing,
+          itemCategoryIds = Nothing,
+          itemCancellationTerms = Nothing
         }
     ]

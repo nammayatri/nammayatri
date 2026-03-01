@@ -16,8 +16,10 @@ module Beckn.ACL.Common where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
+import Control.Applicative ((<|>))
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -185,6 +187,10 @@ parseRideStartedEvent order msgId txnId = do
   bookingDetails <- parseBookingDetails order msgId
   stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideStarted Event.")
   start <- Utils.getStartLocation stops & fromMaybeM (InvalidRequest "pickup stop is not present in RideStarted Event.")
+  let endStopOtp =
+        Utils.getDropLocation stops
+          >>= (.stopAuthorization)
+          >>= \auth -> if auth.authorizationType == Just (show Enums.OTP) then auth.authorizationToken else Nothing
   let rideStartTime = start.stopTime >>= (.timeTimestamp)
       personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
       tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
@@ -197,7 +203,7 @@ parseRideStartedEvent order msgId txnId = do
     Common.RideStartedReq
       { bookingDetails,
         transactionId = txnId,
-        endOtp_ = Just bookingDetails.otp,
+        endOtp_ = endStopOtp <|> Just bookingDetails.otp,
         startOdometerReading,
         ..
       }

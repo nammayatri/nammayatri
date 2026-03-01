@@ -93,7 +93,7 @@ tfFulfillments res =
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = Just res.booking.quoteId,
           fulfillmentState = Nothing,
-          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops Nothing,
+          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops Nothing Nothing (Just res.booking.startTime) (Utils.mkScheduledPickupDuration res.booking.isScheduled),
           fulfillmentTags = Nothing,
           fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
           fulfillmentVehicle = tfVehicle res
@@ -125,7 +125,8 @@ tfVehicle res = do
         vehicleMake = Nothing,
         vehicleModel = Nothing,
         vehicleRegistration = Nothing,
-        vehicleCapacity = Nothing
+        vehicleCapacity = Nothing,
+        vehicleEnergyType = Nothing -- TODO: populate when InitRes includes energy_type
       }
 
 tfCancellationTerms :: Maybe PriceAPIEntity -> [Spec.CancellationTerm]
@@ -153,6 +154,7 @@ tfCustomer res =
               { personId = Nothing,
                 personImage = Nothing,
                 personName = Just riderName,
-                personTags = Nothing
+                personTags = Nothing,
+                personGender = Nothing -- TODO: ONDC v2.1.0 - populate rider gender when available in InitRes
               }
       }

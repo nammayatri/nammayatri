@@ -111,8 +111,8 @@ data RateCardBreakupItem = RateCardBreakupItem
     value :: Text
   }
 
-mkStops :: Maps.LatLong -> Maybe Maps.LatLong -> [Maps.LatLong] -> Maybe [Spec.Stop]
-mkStops origin mbDestination intermediateStops = do
+mkStops :: Maps.LatLong -> Maybe Maps.LatLong -> [Maps.LatLong] -> UTCTime -> Maybe Text -> Maybe [Spec.Stop]
+mkStops origin mbDestination intermediateStops startTime mbScheduledPickupDuration = do
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps destination = Gps.Gps {lat = destination.lat, lon = destination.lon}
   Just $
@@ -133,7 +133,8 @@ mkStops origin mbDestination intermediateStops = do
                     },
               stopType = Just $ show Enums.START,
               stopAuthorization = Nothing,
-              stopTime = Nothing,
+              stopInstructions = Nothing, -- TODO: Populate when LocationAddress instructions are available in search flow (only Maps.LatLong here)
+              stopTime = Just Spec.Time {timeTimestamp = Just startTime, timeDuration = mbScheduledPickupDuration},
               stopId = Just "0",
               stopParentStopId = Nothing
             },
@@ -153,6 +154,7 @@ mkStops origin mbDestination intermediateStops = do
                       },
                 stopType = Just $ show Enums.END,
                 stopAuthorization = Nothing,
+                stopInstructions = Nothing, -- TODO: Populate when LocationAddress instructions are available in search flow (only Maps.LatLong here)
                 stopTime = Nothing,
                 stopId = Just $ show (length intermediateStops + 1),
                 stopParentStopId = Just $ show (length intermediateStops)
@@ -161,6 +163,10 @@ mkStops origin mbDestination intermediateStops = do
           <$> mbDestination
       ]
       <> (map (\(location, order) -> mkIntermediateStopSearch location order (order - 1)) $ zip intermediateStops [1 ..])
+
+-- | Re-export from shared library for backward compatibility
+mkScheduledPickupDuration :: Bool -> Maybe T.Text
+mkScheduledPickupDuration = Utils.mkScheduledPickupDuration
 
 parseLatLong :: MonadFlow m => Text -> m Maps.LatLong
 parseLatLong a =
@@ -335,8 +341,8 @@ parseAddress loc@Spec.Location {..} = do
     isEmpty :: Maybe Text -> Bool
     isEmpty = maybe True (T.null . T.replace " " "")
 
-mkStops' :: DLoc.Location -> Maybe DLoc.Location -> [DLoc.Location] -> Maybe Text -> Maybe [Spec.Stop]
-mkStops' origin mbDestination intermediateStops mAuthorization =
+mkStops' :: DLoc.Location -> Maybe DLoc.Location -> [DLoc.Location] -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> Maybe [Spec.Stop]
+mkStops' origin mbDestination intermediateStops mAuthorization mEndAuthorization mbStartTime mbScheduledPickupDuration =
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps dest = Gps.Gps {lat = dest.lat, lon = dest.lon}
    in Just $
@@ -357,7 +363,8 @@ mkStops' origin mbDestination intermediateStops mAuthorization =
                         },
                   stopType = Just $ show Enums.START,
                   stopAuthorization = mAuthorization >>= mkAuthorization,
-                  stopTime = Nothing,
+                  stopInstructions = mkStopInstructions origin.address.instructions,
+                  stopTime = mbStartTime <&> \t -> Spec.Time {timeTimestamp = Just t, timeDuration = mbScheduledPickupDuration},
                   stopId = Just "0",
                   stopParentStopId = Nothing
                 },
@@ -376,7 +383,8 @@ mkStops' origin mbDestination intermediateStops mAuthorization =
                             locationUpdatedAt = Nothing
                           },
                     stopType = Just $ show Enums.END,
-                    stopAuthorization = Nothing,
+                    stopAuthorization = mEndAuthorization >>= mkAuthorization,
+                    stopInstructions = mkStopInstructions destination.address.instructions,
                     stopTime = Nothing,
                     stopId = Just $ show (length intermediateStops + 1),
                     stopParentStopId = Just $ show (length intermediateStops)
@@ -399,6 +407,10 @@ mkAddress DLoc.LocationAddress {..} =
   let res = map replaceEmpty [door, building, street, area, city, state, country]
    in T.intercalate ", " $ catMaybes res
 
+-- | Re-export from shared library for backward compatibility
+mkStopInstructions :: Maybe Text -> Maybe Spec.Descriptor
+mkStopInstructions = Utils.mkStopInstructions
+
 mkIntermediateStop :: DLoc.Location -> Int -> Int -> Spec.Stop
 mkIntermediateStop stop id parentStopId =
   let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
@@ -417,6 +429,7 @@ mkIntermediateStop stop id parentStopId =
                 },
           stopType = Just $ show Enums.INTERMEDIATE_STOP,
           stopAuthorization = Nothing,
+          stopInstructions = mkStopInstructions stop.address.instructions,
           stopTime = Nothing,
           stopId = Just $ show id,
           stopParentStopId = Just $ show parentStopId
@@ -440,6 +453,7 @@ mkIntermediateStopSearch stop id parentStopId =
                 },
           stopType = Just $ show Enums.INTERMEDIATE_STOP,
           stopAuthorization = Nothing,
+          stopInstructions = Nothing, -- TODO: Populate when LocationAddress instructions are available in search flow (only Maps.LatLong here)
           stopTime = Nothing,
           stopId = Just $ show id,
           stopParentStopId = Just $ show parentStopId
@@ -456,13 +470,17 @@ showVariant :: Variant.VehicleVariant -> Maybe Text
 showVariant = A.decode . A.encode
 
 -- common for on_update & on_status
-mkStopsOUS :: DBooking.Booking -> DRide.Ride -> Text -> Maybe [Spec.Stop]
-mkStopsOUS booking ride rideOtp =
+mkStopsOUS :: DBooking.Booking -> DRide.Ride -> Text -> Maybe Text -> Maybe [Spec.Stop]
+mkStopsOUS booking ride rideOtp mEndOtp =
   let origin = booking.fromLocation
       mbDestination = booking.toLocation
       intermediateStops = booking.stops
       originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps dest = Gps.Gps {lat = dest.lat, lon = dest.lon}
+      -- ONDC v2.1.0: For scheduled rides where the trip hasn't started yet, use
+      -- the booking's scheduled start time so the payload includes the pickup time window.
+      effectiveStartTime = ride.tripStartTime <|> if booking.isScheduled then Just booking.startTime else Nothing
+      mbScheduledDuration = mkScheduledPickupDuration booking.isScheduled
    in Just $
         catMaybes
           [ Just $
@@ -488,7 +506,8 @@ mkStopsOUS booking ride rideOtp =
                         { authorizationToken = Just rideOtp,
                           authorizationType = Just $ show Enums.OTP
                         },
-                  stopTime = ride.tripStartTime <&> \tripStartTime' -> Spec.Time {timeTimestamp = Just tripStartTime', timeDuration = Nothing}
+                  stopInstructions = mkStopInstructions origin.address.instructions,
+                  stopTime = effectiveStartTime <&> \t -> Spec.Time {timeTimestamp = Just t, timeDuration = mbScheduledDuration}
                 },
             Just $
               Spec.Stop
@@ -505,7 +524,13 @@ mkStopsOUS booking ride rideOtp =
                           locationUpdatedAt = Nothing
                         },
                   stopType = Just $ show Enums.END,
-                  stopAuthorization = Nothing,
+                  stopAuthorization =
+                    mEndOtp <&> \endOtp ->
+                      Spec.Authorization
+                        { authorizationToken = Just endOtp,
+                          authorizationType = Just $ show Enums.OTP
+                        },
+                  stopInstructions = mkStopInstructions $ mbDestination >>= (.address.instructions),
                   stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime', timeDuration = Nothing},
                   stopId = Just $ show (length intermediateStops + 1),
                   stopParentStopId = Just $ show (length intermediateStops)
@@ -541,7 +566,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
-        fulfillmentStops = mkStopsOUS booking ride rideOtp,
+        fulfillmentStops = mkStopsOUS booking ride rideOtp ride.endOtp,
         fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
         fulfillmentAgent =
           Just $
@@ -556,6 +581,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
                   Just $
                     Spec.Person
                       { personId = Nothing,
+                        personGender = mbDriver <&> \driver -> show driver.gender, -- ONDC v2.1.0: populate driver gender
                         personImage =
                           mbImage <&> \mbImage' ->
                             Spec.Image
@@ -579,9 +605,10 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
                   vehicleCategory = Just category,
                   vehicleVariant = Just variant,
                   vehicleMake = Nothing,
+                  vehicleEnergyType = vehicle.energyType,
                   vehicleCapacity = vehicle.capacity
                 },
-        fulfillmentCustomer = tfCustomer riderPhone booking.riderName,
+        fulfillmentCustomer = tfCustomer riderPhone booking.riderName, -- TODO: ONDC v2.1.0 - populate rider gender when available in booking data
         fulfillmentState =
           mbEvent
             >> ( Just $
@@ -611,6 +638,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
             tags = if isValueAddNP then dTags else Nothing
           }
 
+-- TODO: ONDC v2.1.0 - accept rider gender parameter when available in booking/rider data flow
 tfCustomer :: Maybe Text -> Maybe Text -> Maybe Spec.Customer
 tfCustomer riderPhone riderName =
   Just
@@ -624,6 +652,7 @@ tfCustomer riderPhone riderName =
           Just $
             Spec.Person
               { personId = Nothing,
+                personGender = Nothing, -- TODO: ONDC v2.1.0 - populate rider gender when available
                 personImage = Nothing,
                 personName = riderName,
                 personTags = Nothing
@@ -1330,7 +1359,10 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice booking.estimatedFare booking.currency,
-          itemTags = mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
+          itemTags = mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing,
+          itemAddOns = Nothing,
+          itemCategoryIds = Nothing,
+          itemCancellationTerms = Nothing
         }
     ]
 
@@ -1345,7 +1377,10 @@ tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId upd
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice updatedBooking.estimatedFare booking.currency,
-          itemTags = mkRateCardTag estimatedDistance' booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
+          itemTags = mkRateCardTag estimatedDistance' booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing,
+          itemAddOns = Nothing,
+          itemCategoryIds = Nothing,
+          itemCancellationTerms = Nothing
         }
     ]
 
@@ -1771,6 +1806,28 @@ tfCancellationTerms cancellationFee state =
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }
 
+-- | Build static cancellation terms for ONDC v2.1.0 item-level declaration.
+--   Declares that cancellation reason is required at each fulfillment state.
+--   Fee is not declared statically as it varies by fare policy.
+mkItemCancellationTerms :: [Spec.CancellationTerm]
+mkItemCancellationTerms =
+  map
+    (\state -> mkCancellationTermForState state True)
+    [ Enums.RIDE_CONFIRMED,
+      Enums.RIDE_ASSIGNED,
+      Enums.RIDE_ENROUTE_PICKUP,
+      Enums.RIDE_ARRIVED_PICKUP,
+      Enums.RIDE_STARTED
+    ]
+
+mkCancellationTermForState :: Enums.FulfillmentState -> Bool -> Spec.CancellationTerm
+mkCancellationTermForState state reasonRequired =
+  Spec.CancellationTerm
+    { cancellationTermCancellationFee = Nothing,
+      cancellationTermFulfillmentState = Just $ mkFulfillmentState state,
+      cancellationTermReasonRequired = Just reasonRequired
+    }
+
 tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments booking transporter bppConfig = do
   let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
@@ -1786,7 +1843,8 @@ tfProvider becknConfig =
         providerId = Just $ becknConfig.subscriberId,
         providerItems = Nothing,
         providerLocations = Nothing,
-        providerPayments = Nothing
+        providerPayments = Nothing,
+        providerCategories = Nothing
       }
 
 mkFulfillmentV2SoftUpdate ::
@@ -1814,7 +1872,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
-        fulfillmentStops = mkStops' booking.fromLocation (Just newDestination) booking.stops (Just rideOtp),
+        fulfillmentStops = mkStops' booking.fromLocation (Just newDestination) booking.stops (Just rideOtp) ride.endOtp (Just booking.startTime) (mkScheduledPickupDuration booking.isScheduled),
         fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
         fulfillmentAgent =
           Just $
@@ -1829,6 +1887,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
                   Just $
                     Spec.Person
                       { personId = Nothing,
+                        personGender = mbDriver <&> \driver -> show driver.gender, -- ONDC v2.1.0: populate driver gender
                         personImage =
                           mbImage <&> \mbImage' ->
                             Spec.Image
@@ -1852,6 +1911,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
                   vehicleCategory = Just category,
                   vehicleVariant = Just variant,
                   vehicleMake = Nothing,
+                  vehicleEnergyType = vehicle.energyType,
                   vehicleCapacity = vehicle.capacity
                 },
         fulfillmentCustomer = Nothing,
