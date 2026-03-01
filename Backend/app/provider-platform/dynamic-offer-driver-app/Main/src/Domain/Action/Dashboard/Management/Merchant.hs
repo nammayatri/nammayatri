@@ -2054,7 +2054,6 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     serviceCharge = maybe "" showT farePolicy.serviceCharge,
                     tollCharges = maybe "" showT farePolicy.tollCharges,
                     petCharges = maybe "" showT farePolicy.petCharges,
-                    driverAllowance = maybe "" showT farePolicy.driverAllowance,
                     businessDiscountPercentage = maybe "" showT farePolicy.businessDiscountPercentage,
                     personalDiscountPercentage = maybe "" showT farePolicy.personalDiscountPercentage,
                     priorityCharges = maybe "" showT farePolicy.priorityCharges,

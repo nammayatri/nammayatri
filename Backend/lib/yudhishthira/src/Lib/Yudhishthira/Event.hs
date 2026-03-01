@@ -13,6 +13,7 @@ import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTrigger as SQNTT
 import Lib.Yudhishthira.Tools.Utils (mkTagNameValue, mkTagNameValueExpiry)
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.NammaTag as DNT
+import Kernel.Types.Id
 
 yudhishthiraDecide ::
   ( MonadFlow m,
@@ -70,7 +71,7 @@ yudhishthiraDecide req = do
         Just (A.Number number) -> do
           let doubleValue = toRealFloat number -- :: Maybe Int = toBoundedInteger number
           return $ Just (NumberValue doubleValue)
-        Just (A.Array arr') -> return (ArrayValue <$> (mapM extractText (toList arr')))
+        Just (A.Array arr') -> return (ArrayValue <$> mapM extractText (toList arr'))
         value -> do
           logError $ "Invalid value for tag: " <> show value
           return Nothing
@@ -97,12 +98,13 @@ computeNammaTags ::
     HasYudhishthiraTablesSchema,
     ToJSON a
   ) =>
+  Id MerchantOperatingCity ->
   ApplicationEvent ->
   a ->
   m [TagNameValue]
-computeNammaTags event sourceData_ = do
+computeNammaTags merchantOpCityId event sourceData_ = do
   let sourceData = A.toJSON sourceData_
-  let req = YudhishthiraDecideReq {source = Application event, sourceData}
+  let req = YudhishthiraDecideReq {merchantOperatingCityId = merchantOpCityId, source = Application event, sourceData}
   resp <- yudhishthiraDecide req
   pure $ resp.tags <&> (\tag -> mkTagNameValue (TagName tag.tagName) tag.tagValue)
 
@@ -114,12 +116,13 @@ computeNammaTagsWithExpiry ::
     HasYudhishthiraTablesSchema,
     ToJSON a
   ) =>
+  Id MerchantOperatingCity ->
   ApplicationEvent ->
   a ->
   m [TagNameValueExpiry]
-computeNammaTagsWithExpiry event sourceData_ = do
+computeNammaTagsWithExpiry merchantOpCityId event sourceData_ = do
   let sourceData = A.toJSON sourceData_
-  let req = YudhishthiraDecideReq {source = Application event, sourceData}
+  let req = YudhishthiraDecideReq {merchantOperatingCityId = merchantOpCityId, source = Application event, sourceData}
   resp <- yudhishthiraDecide req
   now <- getCurrentTime
   pure $ resp.tags <&> (\tag -> mkTagNameValueExpiry (TagName tag.tagName) tag.tagValue tag.tagValidity now)

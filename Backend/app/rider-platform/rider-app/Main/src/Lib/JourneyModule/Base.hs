@@ -45,6 +45,7 @@ import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude as KP
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
@@ -98,7 +99,6 @@ import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
-import Kernel.Storage.Clickhouse.Config
 
 filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Domain.Types.RiderConfig.RiderConfig -> [MultiModalRoute] -> m [MultiModalRoute]
 filterTransitRoutes riderConfig routes = do
@@ -177,7 +177,7 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
 
   let journeyFareLegs@(mbTotalFares, journeyLeg) = unzip legsAndFares
   logDebug $ "[Multimodal - Legs] : Is Multimodal Testing => " <> show riderConfig.multimodalTesting <> ", " <> show journeyFareLegs
-  if not riderConfig.multimodalTesting && (any (\(isFareMandatory, mbLegFare) -> isFareMandatory && isNothing mbLegFare) mbTotalFares)
+  if not riderConfig.multimodalTesting && any (\(isFareMandatory, mbLegFare) -> isFareMandatory && isNothing mbLegFare) mbTotalFares
     then do return Nothing
     else do
       forM_ journeyLeg QJourneyLeg.create
@@ -300,7 +300,7 @@ checkAndMarkTerminalJourneyStatus ::
   m ()
 checkAndMarkTerminalJourneyStatus journey allLegStates = do
   let flattenedLegStates = concatLegStates allLegStates
-      isSingleTaxiJourneyLeg = length flattenedLegStates == 1 && ((KP.listToMaybe flattenedLegStates) <&> (.mode)) == Just DTrip.Taxi -- This Would Be A Single Leg Journey With Only A Taxi Leg.
+      isSingleTaxiJourneyLeg = length flattenedLegStates == 1 && (KP.listToMaybe flattenedLegStates <&> (.mode)) == Just DTrip.Taxi -- This Would Be A Single Leg Journey With Only A Taxi Leg.
   go flattenedLegStates isSingleTaxiJourneyLeg
   where
     concatLegStates =
@@ -525,7 +525,7 @@ startJourneyLeg legInfo isSingleMode = do
       JL.Subway legExtraInfo -> do
         mbBooking <- QTBooking.findBySearchId (Id legInfo.searchId)
         let crisSdkResponse =
-              case ((mbBooking >>= (.bookingAuthCode)), (mbBooking >>= (.osType)), (mbBooking >>= (.osBuildVersion))) of
+              case (mbBooking >>= (.bookingAuthCode), mbBooking >>= (.osType), mbBooking >>= (.osBuildVersion)) of
                 (Just bookingAuthCode, Just osType, Just osBuildVersion) -> Just APITypes.CrisSdkResponse {bookAuthCode = bookingAuthCode, osType = osType, osBuildVersion = osBuildVersion, latency = Nothing}
                 _ -> Nothing
         return (legExtraInfo.categories, crisSdkResponse)
@@ -1367,7 +1367,7 @@ getJourneyChangeLogCounter journeyId = do
   mbJourneyChangeLogCounter <- Redis.safeGet (mkJourneyChangeLogKey journeyId.getId)
   return $ fromMaybe 0 mbJourneyChangeLogCounter
 
-generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m, ClickhouseFlow m r ) => DJourney.Journey -> [JL.LegInfo] -> m APITypes.JourneyInfoResp
+generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m, ClickhouseFlow m r) => DJourney.Journey -> [JL.LegInfo] -> m APITypes.JourneyInfoResp
 generateJourneyInfoResponse journey legs = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
