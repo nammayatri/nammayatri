@@ -64,6 +64,7 @@ import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..))
 import Kernel.External.MultiModal.Interface.Types (MultiModalAgency (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
@@ -104,7 +105,6 @@ import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import Tools.Error
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
-import Kernel.Storage.Clickhouse.Config
 
 type SelectFlow m r c =
   ( CacheFlow m r,

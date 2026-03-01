@@ -82,6 +82,7 @@ import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Payment.Juspay.Types.Common
 import Kernel.Prelude hiding (find, forM_, map, whenJust)
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -151,7 +152,6 @@ import Tools.Notifications
 import qualified Tools.PaymentNudge as PaymentNudge
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
-import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 
 endRideTransaction ::
   ( CacheFlow m r,
