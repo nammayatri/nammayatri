@@ -31,7 +31,7 @@ module Domain.Action.ProviderPlatform.Management.NammaTag
     getNammaTagConfigPilotUiConfigDetails,
     getNammaTagConfigPilotGetUiTableData,
     postNammaTagConfigPilotGetPatchedElement,
-    getNammaTagAppDynamicLogicDomainsAndEvents
+    getNammaTagAppDynamicLogicDomainsAndEvents,
   )
 where
 
@@ -109,7 +109,7 @@ deleteNammaTagTimeBoundsDelete merchantShortId opCity apiTokenInfo domain name =
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.deleteNammaTagTimeBoundsDelete) domain name)
 
-getNammaTagAppDynamicLogicGetLogicRollout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.LogicRolloutObject])
+getNammaTagAppDynamicLogicGetLogicRollout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.LogicRolloutObject])
 getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity apiTokenInfo timeBound domain = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicGetLogicRollout) timeBound domain
@@ -126,7 +126,7 @@ getNammaTagTimeBounds merchantShortId opCity apiTokenInfo domain = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagTimeBounds) domain
 
-getNammaTagAppDynamicLogicVersions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicVersionResp)
+getNammaTagAppDynamicLogicVersions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicVersionResp)
 getNammaTagAppDynamicLogicVersions merchantShortId opCity apiTokenInfo limit offset domain = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicVersions) limit offset domain
@@ -192,7 +192,7 @@ deleteNammaTagQueryDelete merchantShortId opCity apiTokenInfo req = do
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.deleteNammaTagQueryDelete) req)
 
-getNammaTagConfigPilotAllUiConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.Flow [Lib.Yudhishthira.Types.LogicDomain])
+getNammaTagConfigPilotAllUiConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow [Lib.Yudhishthira.Types.LogicDomain])
 getNammaTagConfigPilotAllUiConfigs merchantShortId opCity apiTokenInfo underExperiment = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotAllUiConfigs) underExperiment
@@ -218,8 +218,7 @@ getNammaTagAppDynamicLogicGetDomainSchema merchantShortId opCity apiTokenInfo do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicGetDomainSchema) domain
 
-
-getNammaTagAppDynamicLogicDomainsAndEvents :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.Flow Lib.Yudhishthira.Types.NammaTagEventsOrNammaTagNamesResp)
+getNammaTagAppDynamicLogicDomainsAndEvents :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow Lib.Yudhishthira.Types.NammaTagEventsOrNammaTagNamesResp)
 getNammaTagAppDynamicLogicDomainsAndEvents merchantShortId opCity apiTokenInfo fetchNammaTagNames = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicDomainsAndEvents) fetchNammaTagNames

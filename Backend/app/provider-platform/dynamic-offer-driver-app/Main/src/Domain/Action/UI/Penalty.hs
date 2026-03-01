@@ -55,7 +55,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
   (isApplicable, penaltyAmount) <- case booking.fareParams.driverCancellationPenaltyAmount of
     Just penaltyAmount -> do
       tagData <- CancelRideInternal.buildPenaltyCheckContext booking ride req.point
-      tagsE <- withTryCatch "computeNammaTags:PenaltyCheck" $ LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) YA.PenaltyCheck tagData
+      tagsE <- withTryCatch "computeNammaTags:PenaltyCheck" $ LYDL.computeNammaTagsWithDebugLog LYDL.Driver (Kernel.Types.Id.cast booking.merchantOperatingCityId) YA.PenaltyCheck tagData
       let tags = fromMaybe [] $ eitherToMaybe tagsE
           isPenaltyApplicable = validCancellationPenaltyApplicable `elem` tags
           existingTags = fromMaybe [] ride.rideTags
@@ -98,7 +98,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
               driverArrivalTime = driverArrivalTime,
               merchantOperatingCityId = booking.merchantOperatingCityId
             }
-    tagsE <- withTryCatch "computeNammaTags:RideCancel" $ LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) YA.RideCancel tagData
+    tagsE <- withTryCatch "computeNammaTags:RideCancel" $ LYDL.computeNammaTagsWithDebugLog LYDL.Driver (Kernel.Types.Id.cast booking.merchantOperatingCityId) YA.RideCancel tagData
     let tags = fromMaybe [] $ eitherToMaybe tagsE
         isValid = validDriverCancellation `elem` tags
         isInvalid = invalidDriverCancellation `elem` tags
