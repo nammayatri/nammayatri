@@ -168,7 +168,10 @@ checkIfDashboardSearch req = do
 buildDisabilityTag :: Spec.SearchReqMessage -> Maybe Text
 buildDisabilityTag req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
-  Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_DISABILITY tagGroups
+  -- ONDC v2.1.0: try per-type disability tag groups first, then fall back to legacy CUSTOMER_DISABILITY tag
+  let disabilityGroups = [Tag.DISABILITY_VIS, Tag.DISABILITY_HEA, Tag.DISABILITY_MOB, Tag.DISABILITY_COG, Tag.DISABILITY_OTH]
+      fromNewGroups = asum $ map (\grp -> Utils.getTagV2 grp Tag.DISABILITY_TYPE tagGroups) disabilityGroups
+  fromNewGroups <|> Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_DISABILITY tagGroups
 
 buildCustomerPhoneNumber :: Spec.SearchReqMessage -> Maybe Text
 buildCustomerPhoneNumber req = do

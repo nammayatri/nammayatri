@@ -31,8 +31,8 @@ import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Utils.Common
 import qualified SharedLogic.MerchantPaymentMethod as SLMPM
 
-mkStops :: Location.Location -> Maybe Location.Location -> Maybe Text -> [Location.Location] -> Maybe [Spec.Stop]
-mkStops origin mDestination mStartOtp intermediateStops =
+mkStops :: Location.Location -> Maybe Location.Location -> Maybe Text -> Maybe Text -> [Location.Location] -> UTCTime -> Maybe Text -> Maybe [Spec.Stop]
+mkStops origin mDestination mStartOtp mEndOtp intermediateStops startTime mbScheduledPickupDuration =
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps d = Gps.Gps {lat = d.lat, lon = d.lon}
    in Just $
@@ -58,10 +58,12 @@ mkStops origin mDestination mStartOtp intermediateStops =
                       else
                         Just $
                           Spec.Authorization
-                            { authorizationType = Just $ show Enums.OTP,
+                            { authorizationStatus = Just "UNCLAIMED",
+                              authorizationType = Just $ show Enums.OTP,
                               authorizationToken = mStartOtp
                             },
-                  stopTime = Nothing,
+                  stopInstructions = UCommon.mkStopInstructions origin.address.instructions,
+                  stopTime = Just Spec.Time {timeTimestamp = Just startTime, timeDuration = mbScheduledPickupDuration},
                   stopId = Just "0",
                   stopParentStopId = Nothing
                 },
@@ -80,7 +82,14 @@ mkStops origin mDestination mStartOtp intermediateStops =
                             locationUpdatedAt = Nothing
                           },
                     stopType = Just $ show Enums.END,
-                    stopAuthorization = Nothing,
+                    stopAuthorization =
+                      mEndOtp <&> \endOtp ->
+                        Spec.Authorization
+                          { authorizationStatus = Just "UNCLAIMED",
+                            authorizationType = Just $ show Enums.OTP,
+                            authorizationToken = Just endOtp
+                          },
+                    stopInstructions = UCommon.mkStopInstructions destination.address.instructions,
                     stopTime = Nothing,
                     stopId = Just $ show (length intermediateStops + 1),
                     stopParentStopId = Just $ show (length intermediateStops)

@@ -79,8 +79,8 @@ tfOrder rider booking txnId mPaymentParams mSettlementType categories =
       orderPayments = tfPayments booking categories txnId mPaymentParams mSettlementType,
       orderProvider = tfProvider booking,
       orderQuote = Nothing,
-      orderStatus = Nothing,
       orderTags = Nothing,
+      orderStatus = Nothing,
       orderUpdatedAt = Nothing
     }
 

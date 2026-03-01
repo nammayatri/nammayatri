@@ -76,8 +76,8 @@ tfOrder rider tBooking mSettlementType categories =
       orderPayments = tfPayments tBooking categories mSettlementType,
       orderProvider = tfProvider tBooking,
       orderQuote = Nothing,
-      orderStatus = Nothing,
       orderTags = Nothing,
+      orderStatus = Nothing,
       orderUpdatedAt = Nothing
     }
 

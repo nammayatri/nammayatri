@@ -208,10 +208,10 @@ confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfi
             Just boardingStopEta -> do
               currentTime <- getCurrentTime
               let extraTtlSeconds =
-                    (nominalDiffTimeToSeconds $
-                      diffUTCTime
-                        (unixToUTC boardingStopEta.arrivalTimeUnix)
-                        currentTime
+                    ( nominalDiffTimeToSeconds $
+                        diffUTCTime
+                          (unixToUTC boardingStopEta.arrivalTimeUnix)
+                          currentTime
                     ).getSeconds
               let addedTtl = max extraTtlSeconds 0
               return $ Seconds (baseQrTtl.getSeconds + addedTtl)

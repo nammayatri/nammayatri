@@ -51,7 +51,8 @@ data SearchRes = SearchRes
     fareParametersInRateCard :: Maybe Bool,
     multipleRoutes :: Maybe [Maps.RouteInfo],
     taggings :: Maybe Beckn.Taggings,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    riderGender :: Maybe Text
   }
 
 data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq | PTSearch PublicTransportSearchReq | FixedRouteSearch FixedRouteSearchReq

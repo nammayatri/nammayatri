@@ -176,15 +176,40 @@ tripCategoryToFulfillmentType = \case
   OneWay OneWayOnDemandDynamicOffer -> show Enums.DELIVERY
   OneWay OneWayOnDemandStaticOffer -> show Enums.SCHEDULED_TRIP
   d@(Delivery _) -> show d
-  OneWay OneWayRideOtp -> show Enums.RIDE_OTP
-  CrossCity OneWayRideOtp _ -> show Enums.RIDE_OTP
-  RideShare RideOtp -> show Enums.RIDE_OTP
+  OneWay OneWayRideOtp -> show Enums.SELF_PICKUP -- v2.1.0: ride-OTP → SELF_PICKUP
+  CrossCity OneWayRideOtp _ -> show Enums.SELF_PICKUP -- v2.1.0: ride-OTP → SELF_PICKUP
+  RideShare RideOtp -> show Enums.SELF_PICKUP -- v2.1.0: ride-OTP → SELF_PICKUP
   Rental _ -> show Enums.RENTAL
   i@(InterCity OneWayRideOtp _) -> show i
   InterCity _ _ -> show Enums.INTER_CITY
   Ambulance _ -> show Enums.AMBULANCE_FLOW
   OneWay MeterRide -> show Enums.METER_RIDE
   _ -> show Enums.DELIVERY
+
+-- | Map internal trip category to ONDC v2.1.0 category code
+tripCategoryToCategoryCode :: TripCategory -> Text
+tripCategoryToCategoryCode = \case
+  OneWay _ -> "ON_DEMAND_TRIP"
+  CrossCity _ _ -> "ON_DEMAND_TRIP"
+  RideShare _ -> "ON_DEMAND_TRIP"
+  Rental _ -> "ON_DEMAND_RENTAL"
+  InterCity _ _ -> "INTERCITY_TRIP"
+  Ambulance _ -> "ON_DEMAND_TRIP"
+  Delivery _ -> "ON_DEMAND_TRIP"
+
+mkCategory :: TripCategory -> Spec.Category
+mkCategory tc =
+  Spec.Category
+    { categoryDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorLongDesc = Nothing,
+              descriptorCode = Just (tripCategoryToCategoryCode tc),
+              descriptorName = Just (tripCategoryToCategoryCode tc),
+              descriptorShortDesc = Nothing
+            },
+      categoryId = Just (tripCategoryToCategoryCode tc)
+    }
 
 -- TODO :: To be removed after released ---- ENDS HERE
 -- On-us Domain-tripCategory -- TODO :: TO BE UNCOMMENTED AFTER RELEASE
@@ -199,6 +224,7 @@ fulfillmentTypeToTripCategory fulfillmentType =
       case readMaybe @Enums.FulfillmentType $ T.unpack fulfillmentType of
         Just Enums.DELIVERY -> OneWay OneWayOnDemandDynamicOffer
         Just Enums.RIDE_OTP -> OneWay OneWayRideOtp
+        Just Enums.SELF_PICKUP -> OneWay OneWayRideOtp -- v2.1.0: SELF_PICKUP → ride-OTP
         Just Enums.RENTAL -> Rental OnDemandStaticOffer
         Just Enums.INTER_CITY -> InterCity OneWayOnDemandStaticOffer Nothing
         Just Enums.AMBULANCE_FLOW -> Ambulance OneWayOnDemandDynamicOffer

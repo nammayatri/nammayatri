@@ -74,7 +74,7 @@ buildContextV2' now action domain messageId transactionId bapId bapUri bppId bpp
       contextTimestamp = Just $ UTCTimeRFC3339 now,
       contextTransactionId = UUID.fromText =<< transactionId,
       contextTtl = ttl,
-      contextVersion = Just "2.0.0"
+      contextVersion = Just "2.1.0"
     }
 
 buildContextV2_1' :: UTCTime -> Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> Spec.Context
@@ -112,7 +112,7 @@ buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri c
         contextTimestamp = UTCTimeRFC3339 <$> now,
         contextTransactionId = UUID.fromText =<< transactionId,
         contextTtl = ttl,
-        contextVersion = Just "2.0.0"
+        contextVersion = Just "2.1.0"
       }
 
 buildContextV2_1 :: (MonadFlow m) => Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> m Spec.Context

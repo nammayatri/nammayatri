@@ -54,6 +54,7 @@ data FulfillmentType
   | AMBULANCE_FLOW
   | METER_RIDE
   | SCHEDULED_TRIP
+  | SELF_PICKUP -- v2.1.0: ride-OTP flow for off-us
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
 
 data StopType
@@ -76,6 +77,7 @@ data FulfillmentState
   | RIDE_STARTED
   | SCHEDULED_RIDE_ASSIGNED
   | RIDE_ASSIGNED
+  | RIDE_CONFIRMED -- v2.1.0: phased confirmation (no driver details yet)
   | RIDE_ENROUTE_PICKUP
   | RIDE_ARRIVED_PICKUP
   | NEW -- Custom type only used for on-us transaction
@@ -84,7 +86,6 @@ data FulfillmentState
   | ADD_STOP -- Custom type only used for on-us transaction
   | EDIT_STOP -- Custom type only used for on-us transaction
   | DRIVER_REACHED_DESTINATION
-  | RIDE_CONFIRMED -- New in 2.1.0
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data PaymentStatus
@@ -202,33 +203,46 @@ data QuoteBreakupTitle
   | PER_STOP_CHARGES
   | NYREGULAR_SUBSCRIPTION_CHARGE
   | COMMISSION
+  | BUYER_ADDITIONAL_AMOUNT -- v2.1.0: mid-ride tolls, tips
+  | REFUND -- v2.1.0: refund amount
+  | TAX -- v2.1.0: combined tax (CGST+SGST)
+  | DRIVER_BATA -- v2.1.0: driver bata/allowance
+  | NIGHT_CHARGES -- v2.1.0: night shift charges (spec name)
+  | WAITING_CHARGES -- v2.1.0: waiting charges (spec name)
+  | PARKING_CHARGES -- v2.1.0: parking charges (spec name)
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId
   = -- message.cancellation_reason_id -- sent by BAP in cancel
-    DRIVER_NOT_MOVING --001
+    TECHNICAL_CANCELLATION -- 000 (v2.1.0)
+  | DRIVER_NOT_MOVING --001
   | DRIVER_NOT_REACHABLE -- 002
-  | DRIVER_ASKED_TO_CANCEL -- 003 -- Do we have this in frontend?
+  | DRIVER_ASKED_TO_CANCEL -- 003
   | INCORRECT_PICKUP_LOCATION -- 004
+  | BOOKED_BY_MISTAKE -- 005 (v2.1.0)
   deriving (Eq, Generic, ToJSON, FromJSON)
 
 instance Show CancellationReasonId where
+  show TECHNICAL_CANCELLATION = "000"
   show DRIVER_NOT_MOVING = "001"
   show DRIVER_NOT_REACHABLE = "002"
   show DRIVER_ASKED_TO_CANCEL = "003"
   show INCORRECT_PICKUP_LOCATION = "004"
+  show BOOKED_BY_MISTAKE = "005"
 
 data CancellationReasonCode
   = -- message.order.cancellation.reason.descriptor.code -- sent by BPP in cancel
     NO_DRIVERS_AVAILABLE -- 011
   | COULD_NOT_FIND_CUSTOMER -- 012
   | RIDE_ACCEPTED_MISTAKENLY -- 013
+  | UNABLE_TO_CONTACT_RIDER -- 014 (v2.1.0)
   deriving (Eq, Generic, ToJSON, FromJSON)
 
 instance Show CancellationReasonCode where
   show NO_DRIVERS_AVAILABLE = "011"
   show COULD_NOT_FIND_CUSTOMER = "012"
   show RIDE_ACCEPTED_MISTAKENLY = "013"
+  show UNABLE_TO_CONTACT_RIDER = "014"
 
 data CancelReqMessageCancellationReasonId
   = CANCELLED_BY_CUSTOMER -- 001
@@ -285,3 +299,31 @@ instance ToJSON TLMethod where
   toJSON HttpGet = String "http/get"
   toJSON HttpPost = String "http/post"
   toJSON StripeSdk = String "stripe/sdk"
+
+-- | ONDC v2.1.0 standard error codes (from protocol drafts)
+data BecknErrorCode
+  = DRIVER_NOT_ASSIGNED -- 90203 (v2.1.0)
+  deriving (Eq, Generic)
+
+instance Show BecknErrorCode where
+  show DRIVER_NOT_ASSIGNED = "90203"
+
+instance FromJSON BecknErrorCode where
+  parseJSON (String "90203") = return DRIVER_NOT_ASSIGNED
+  parseJSON wrongVal = typeMismatch "Invalid BecknErrorCode" wrongVal
+
+instance ToJSON BecknErrorCode where
+  toJSON DRIVER_NOT_ASSIGNED = String "90203"
+
+-- | Vehicle energy type as per ONDC v2.1.0 spec
+data EnergyType
+  = ELECTRIC
+  | PETROL
+  | DIESEL
+  | HYDROGEN
+  | BIOFUELS
+  | CNG
+  | LPG
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
+
+$(mkHttpInstancesForEnum ''EnergyType)

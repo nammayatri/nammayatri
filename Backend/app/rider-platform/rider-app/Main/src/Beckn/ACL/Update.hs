@@ -127,6 +127,7 @@ mkUpdateMessage req (UPaymentCompletedBuildReqDetails details) = do
             orderCreatedAt = Nothing,
             orderUpdatedAt = Nothing,
             orderQuote = Nothing,
+            orderTags = Nothing,
             orderStatus = Nothing,
             orderPayments =
               Just
@@ -152,7 +153,8 @@ mkUpdateMessage req (UPaymentCompletedBuildReqDetails details) = do
                             { fulfillmentStateDescriptor =
                                 Just $
                                   Spec.Descriptor
-                                    { descriptorCode = Just $ show Enums.PAYMENT_COMPLETED,
+                                    { descriptorLongDesc = Nothing,
+                                      descriptorCode = Just $ show Enums.PAYMENT_COMPLETED,
                                       descriptorName = Nothing,
                                       descriptorShortDesc = Nothing
                                     }
@@ -179,6 +181,7 @@ mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
             orderQuote = Nothing,
             orderCreatedAt = Nothing,
             orderUpdatedAt = Nothing,
+            orderTags = Nothing,
             orderStatus = Just $ show details.status,
             orderPayments = Nothing,
             orderFulfillments =
@@ -194,7 +197,8 @@ mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
                             { fulfillmentStateDescriptor =
                                 Just $
                                   Spec.Descriptor
-                                    { descriptorCode = Just $ show Enums.EDIT_LOCATION,
+                                    { descriptorLongDesc = Nothing,
+                                      descriptorCode = Just $ show Enums.EDIT_LOCATION,
                                       descriptorName = Nothing,
                                       descriptorShortDesc = Nothing
                                     }
@@ -220,6 +224,7 @@ mkUpdateMessage req (UAddStopBuildReqDetails details) = do
             orderQuote = Nothing,
             orderCreatedAt = Nothing,
             orderUpdatedAt = Nothing,
+            orderTags = Nothing,
             orderStatus = Nothing,
             orderPayments = Nothing,
             orderFulfillments =
@@ -235,7 +240,8 @@ mkUpdateMessage req (UAddStopBuildReqDetails details) = do
                             { fulfillmentStateDescriptor =
                                 Just $
                                   Spec.Descriptor
-                                    { descriptorCode = Just $ show Enums.ADD_STOP,
+                                    { descriptorLongDesc = Nothing,
+                                      descriptorCode = Just $ show Enums.ADD_STOP,
                                       descriptorName = Nothing,
                                       descriptorShortDesc = Nothing
                                     }
@@ -259,6 +265,7 @@ mkUpdateMessage req (UEditStopBuildReqDetails details) = do
             orderItems = Nothing,
             orderProvider = Nothing,
             orderQuote = Nothing,
+            orderTags = Nothing,
             orderStatus = Nothing,
             orderPayments = Nothing,
             orderCreatedAt = Nothing,
@@ -276,7 +283,8 @@ mkUpdateMessage req (UEditStopBuildReqDetails details) = do
                             { fulfillmentStateDescriptor =
                                 Just $
                                   Spec.Descriptor
-                                    { descriptorCode = Just $ show Enums.EDIT_STOP,
+                                    { descriptorLongDesc = Nothing,
+                                      descriptorCode = Just $ show Enums.EDIT_STOP,
                                       descriptorName = Nothing,
                                       descriptorShortDesc = Nothing
                                     }

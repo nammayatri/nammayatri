@@ -51,6 +51,7 @@ tfOrder res becknConfig mbFarePolicy = do
       orderPayments = tfPayments res becknConfig,
       orderProvider = Utils.tfProvider becknConfig,
       orderQuote = Utils.tfQuotation res.booking,
+      orderTags = Nothing,
       orderStatus = Nothing,
       orderCreatedAt = Just res.booking.createdAt,
       orderUpdatedAt = Just res.booking.updatedAt
@@ -69,7 +70,7 @@ tfFulfillments res =
     [ emptyFulfillment
         { Spec.fulfillmentCustomer = tfCustomer res,
           Spec.fulfillmentId = Just res.booking.quoteId,
-          Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops Nothing,
+          Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops Nothing Nothing (Just res.booking.startTime) (Utils.mkScheduledPickupDuration res.booking.isScheduled),
           Spec.fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
           Spec.fulfillmentVehicle = tfVehicle res
         }
@@ -115,5 +116,5 @@ tfCustomer res =
           Just Spec.Contact {contactPhone = Just res.riderPhoneNumber},
         customerPerson = do
           riderName <- res.riderName
-          Just $ emptyPerson {Spec.personName = Just riderName}
+          Just $ emptyPerson {Spec.personName = Just riderName, Spec.personGender = res.riderGender}
       }

@@ -85,11 +85,23 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       nightShiftCaption = show Enums.NIGHT_SHIFT_CHARGE
       mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
 
+      -- ONDC v2.1.0: duplicate with new title for spec compliance
+      nightChargesCaption = show Enums.NIGHT_CHARGES
+      mbNightChargesItem = fmap (mkBreakupItem nightChargesCaption) (mkPrice <$> fareParams.nightShiftCharge)
+
       parkingChargeCaption = show Enums.PARKING_CHARGE
       mbParkingChargeItem = mkBreakupItem parkingChargeCaption . mkPrice <$> fareParams.parkingCharge
 
+      -- ONDC v2.1.0: duplicate with new title for spec compliance
+      parkingChargesCaption = show Enums.PARKING_CHARGES
+      mbParkingChargesItem = mkBreakupItem parkingChargesCaption . mkPrice <$> fareParams.parkingCharge
+
       waitingChargesCaption = show Enums.WAITING_OR_PICKUP_CHARGES
       mbWaitingChargesItem = mkBreakupItem waitingChargesCaption . mkPrice <$> fareParams.waitingCharge
+
+      -- ONDC v2.1.0: duplicate with new title for spec compliance
+      waitingChargesCaption2 = show Enums.WAITING_CHARGES
+      mbWaitingChargesItem2 = mkBreakupItem waitingChargesCaption2 . mkPrice <$> fareParams.waitingCharge
 
       mbFixedGovtRateCaption = show Enums.FIXED_GOVERNMENT_RATE
       mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
@@ -148,8 +160,11 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
     [ Just baseFareItem,
       mbCongestionChargeItem,
       mbNightShiftChargeItem,
+      mbNightChargesItem,
       mbParkingChargeItem,
+      mbParkingChargesItem,
       mbWaitingChargesItem,
+      mbWaitingChargesItem2,
       mbBusinessDiscountItem,
       mbPersonalDiscountItem,
       mbFixedGovtRateItem,

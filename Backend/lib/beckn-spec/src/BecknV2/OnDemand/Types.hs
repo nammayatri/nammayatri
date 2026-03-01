@@ -20,6 +20,7 @@ module BecknV2.OnDemand.Types
   ( Ack (..),
     AckMessage (..),
     AckResponse (..),
+    AddOn (..),
     Agent (..),
     Authorization (..),
     Billing (..),
@@ -216,7 +217,9 @@ data Authorization = Authorization
   { -- | Token used for authorization. This is typically generated at the BPP. The BAP can send this value to the user via any channel that it uses to authenticate the user like SMS, Email, Push notification, or in-app rendering.
     authorizationToken :: Maybe Text,
     -- | Type of authorization mechanism used. The allowed values for this field can be published as part of the network policy.
-    authorizationType :: Maybe Text
+    authorizationType :: Maybe Text,
+    -- | ONDC v2.1.0: Status of the authorization token (CLAIMED/UNCLAIMED)
+    authorizationStatus :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -235,7 +238,8 @@ optionsAuthorization =
   where
     table =
       [ ("authorizationToken", "token"),
-        ("authorizationType", "type")
+        ("authorizationType", "type"),
+        ("authorizationStatus", "status")
       ]
 
 -- | Describes the billing details of an entity.&lt;br&gt;This has properties like name,organization,address,email,phone,time,tax_number, created_at,updated_at
@@ -327,9 +331,11 @@ optionsCancelReqMessage =
       ]
 
 -- | Describes a cancellation event
-newtype Cancellation = Cancellation
+data Cancellation = Cancellation
   { -- |
-    cancellationCancelledBy :: Maybe Text
+    cancellationCancelledBy :: Maybe Text,
+    -- | Reason descriptor for the cancellation (ONDC v2.1.0)
+    cancellationReasonDescriptor :: Maybe Descriptor
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -347,7 +353,8 @@ optionsCancellation =
     }
   where
     table =
-      [ ("cancellationCancelledBy", "cancelled_by")
+      [ ("cancellationCancelledBy", "cancelled_by"),
+        ("cancellationReasonDescriptor", "reason")
       ]
 
 -- | Describes the cancellation terms of an item or an order. This can be referenced at an item or order level. Item-level cancellation terms can override the terms at the order level.
@@ -380,6 +387,63 @@ optionsCancellationTerm =
         ("cancellationTermReasonRequired", "reason_required")
       ]
 
+-- | Describes a category of items
+data Category = Category
+  { -- |
+    categoryDescriptor :: Maybe Descriptor,
+    -- |
+    categoryId :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Category where
+  parseJSON = genericParseJSON optionsCategory
+
+instance ToJSON Category where
+  toJSON = genericToJSON optionsCategory
+
+optionsCategory :: Options
+optionsCategory =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("categoryDescriptor", "descriptor"),
+        ("categoryId", "id")
+      ]
+
+-- | Describes an add-on to an item
+data AddOn = AddOn
+  { -- |
+    addOnDescriptor :: Maybe Descriptor,
+    -- |
+    addOnId :: Maybe Text,
+    -- |
+    addOnPrice :: Maybe Price
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON AddOn where
+  parseJSON = genericParseJSON optionsAddOn
+
+instance ToJSON AddOn where
+  toJSON = genericToJSON optionsAddOn
+
+optionsAddOn :: Options
+optionsAddOn =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("addOnDescriptor", "descriptor"),
+        ("addOnId", "id"),
+        ("addOnPrice", "price")
+      ]
+
 -- | Describes the products or services offered by a BPP. This is typically sent as the response to a search intent from a BAP. The payment terms, offers and terms of fulfillment supported by the BPP can also be included here. The BPP can show hierarchical nature of products/services in its catalog using the parent_category_id in categories. The BPP can also send a ttl (time to live) in the context which is the duration for which a BAP can cache the catalog and use the cached catalog.  &lt;br&gt;This has properties like bbp/descriptor,bbp/categories,bbp/fulfillments,bbp/payments,bbp/offers,bbp/providers and exp&lt;br&gt;This is used in the following situations.&lt;br&gt;&lt;ul&gt;&lt;li&gt;This is typically used in the discovery stage when the BPP sends the details of the products and services it offers as response to a search intent from the BAP. &lt;/li&gt;&lt;/ul&gt;
 data Catalog = Catalog
   { -- |
@@ -405,33 +469,6 @@ optionsCatalog =
     table =
       [ ("catalogDescriptor", "descriptor"),
         ("catalogProviders", "providers")
-      ]
-
--- | Describes an item category
-data Category = Category
-  { -- |
-    categoryDescriptor :: Maybe Descriptor,
-    -- |
-    categoryId :: Maybe Text
-  }
-  deriving (Show, Eq, Generic, Data, Read)
-
-instance FromJSON Category where
-  parseJSON = genericParseJSON optionsCategory
-
-instance ToJSON Category where
-  toJSON = genericToJSON optionsCategory
-
-optionsCategory :: Options
-optionsCategory =
-  defaultOptions
-    { omitNothingFields = True,
-      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
-    }
-  where
-    table =
-      [ ("categoryDescriptor", "descriptor"),
-        ("categoryId", "id")
       ]
 
 -- | Describes a city
@@ -655,6 +692,8 @@ optionsCustomer =
 data Descriptor = Descriptor
   { -- |
     descriptorCode :: Maybe Text,
+    -- | ONDC v2.1.0: Long description (used in stop instructions)
+    descriptorLongDesc :: Maybe Text,
     -- |
     descriptorName :: Maybe Text,
     -- |
@@ -677,6 +716,7 @@ optionsDescriptor =
   where
     table =
       [ ("descriptorCode", "code"),
+        ("descriptorLongDesc", "long_desc"),
         ("descriptorName", "name"),
         ("descriptorShortDesc", "short_desc")
       ]
@@ -927,8 +967,12 @@ optionsIntent =
 
 -- | Describes a product or a service offered to the end consumer by the provider. In the mobility sector, it can represent a fare product like one way journey. In the logistics sector, it can represent the delivery service offering. In the retail domain it can represent a product like a grocery item.
 data Item = Item
-  { -- | Category IDs this item belongs to — new in 2.1.0
+  { -- |
+    itemAddOns :: Maybe [AddOn],
+    -- | Category IDs this item belongs to
     itemCategoryIds :: Maybe [Text],
+    -- |
+    itemCancellationTerms :: Maybe [CancellationTerm],
     -- |
     itemDescriptor :: Maybe Descriptor,
     -- | Modes through which this item can be fulfilled
@@ -960,7 +1004,9 @@ optionsItem =
     }
   where
     table =
-      [ ("itemCategoryIds", "category_ids"),
+      [ ("itemAddOns", "add_ons"),
+        ("itemCategoryIds", "category_ids"),
+        ("itemCancellationTerms", "cancellation_terms"),
         ("itemDescriptor", "descriptor"),
         ("itemFulfillmentIds", "fulfillment_ids"),
         ("itemId", "id"),
@@ -1383,6 +1429,8 @@ data Order = Order
     orderQuote :: Maybe Quotation,
     -- | Status of the order. Allowed values can be defined by the network policy
     orderStatus :: Maybe Text,
+    -- | ONDC v2.1.0: Order-level tags (BAP_TERMS, BPP_TERMS for settlement/finder fees)
+    orderTags :: Maybe [TagGroup],
     -- | The date-time of updated of this order
     orderUpdatedAt :: Maybe UTCTime
   }
@@ -1413,6 +1461,7 @@ optionsOrder =
         ("orderProvider", "provider"),
         ("orderQuote", "quote"),
         ("orderStatus", "status"),
+        ("orderTags", "tags"),
         ("orderUpdatedAt", "updated_at")
       ]
 
@@ -1496,7 +1545,9 @@ optionsPaymentParams =
 
 -- | Describes a person as any individual
 data Person = Person
-  { -- | Describes the identity of the person
+  { -- | Gender of the person
+    personGender :: Maybe Text,
+    -- | Describes the identity of the person
     personId :: Maybe Text,
     -- |
     personImage :: Maybe Image,
@@ -1521,7 +1572,8 @@ optionsPerson =
     }
   where
     table =
-      [ ("personId", "id"),
+      [ ("personGender", "gender"),
+        ("personId", "id"),
         ("personImage", "image"),
         ("personName", "name"),
         ("personTags", "tags")
@@ -1937,6 +1989,8 @@ data Stop = Stop
   { -- |
     stopAuthorization :: Maybe Authorization,
     -- |
+    stopInstructions :: Maybe Descriptor,
+    -- |
     stopLocation :: Maybe Location,
     -- |
     stopId :: Maybe String,
@@ -1964,6 +2018,7 @@ optionsStop =
   where
     table =
       [ ("stopAuthorization", "authorization"),
+        ("stopInstructions", "instructions"),
         ("stopLocation", "location"),
         ("stopId", "id"),
         ("stopParentStopId", "parent_stop_id"),
@@ -2202,6 +2257,8 @@ data Vehicle = Vehicle
     -- |
     vehicleColor :: Maybe Text,
     -- |
+    vehicleEnergyType :: Maybe Text,
+    -- |
     vehicleMake :: Maybe Text,
     -- |
     vehicleModel :: Maybe Text,
@@ -2230,6 +2287,7 @@ optionsVehicle =
     table =
       [ ("vehicleCategory", "category"),
         ("vehicleColor", "color"),
+        ("vehicleEnergyType", "energy_type"),
         ("vehicleMake", "make"),
         ("vehicleModel", "model"),
         ("vehicleRegistration", "registration"),
