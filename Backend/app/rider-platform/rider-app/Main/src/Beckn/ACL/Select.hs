@@ -70,6 +70,7 @@ buildSelectReqMessage res endLoc isValueAddNP bapConfig riderConfig =
 tfOrder :: DSelect.DSelectRes -> Location.Location -> Bool -> BecknConfig -> RiderConfig -> Spec.Order
 tfOrder res endLoc isValueAddNP bapConfig riderConfig =
   let orderPayments = tfPayments res bapConfig riderConfig
+      orderQuote = tfQuote res
       startLoc = res.searchRequest.fromLocation
       orderItem = tfOrderItem res isValueAddNP
       orderFulfillment = tfFulfillment res startLoc endLoc isValueAddNP res.searchRequest.stops
@@ -77,6 +78,7 @@ tfOrder res endLoc isValueAddNP bapConfig riderConfig =
         { Spec.orderFulfillments = Just [orderFulfillment],
           Spec.orderItems = Just [orderItem],
           Spec.orderPayments = orderPayments,
+          Spec.orderQuote = orderQuote,
           Spec.orderProvider = Just $ tfProvider res
         }
 
@@ -161,6 +163,58 @@ tfPrice res =
     { Spec.priceCurrency = Just $ show res.estimate.estimatedFare.currency,
       Spec.priceValue = Just $ show res.estimate.estimatedFare.amount
     }
+
+-- | Build a quote with CUSTOMER_SELECTED_FARE and BUYER_ADDITIONAL_AMOUNT breakups
+--   for v2.1.0 bidding flow. When the customer proposes a fare (customerExtraFee),
+--   include it as quote breakup items so the BPP can parse it per the ONDC v2.1.0 spec.
+--   CUSTOMER_SELECTED_FARE = base estimate + extra (total proposed fare).
+--   BUYER_ADDITIONAL_AMOUNT = just the extra amount (tip/premium).
+tfQuote :: DSelect.DSelectRes -> Maybe Spec.Quotation
+tfQuote res =
+  case res.customerExtraFee of
+    Nothing -> Nothing
+    Just customerFare ->
+      let currency = res.estimate.estimatedFare.currency
+          baseFare = res.estimate.estimatedFare.amount
+          extraFare = fromIntegral customerFare.getMoney :: HighPrecMoney
+          totalProposedFare = baseFare + extraFare
+          mkBreakupPrice val =
+            Just
+              Spec.Price
+                { priceCurrency = Just $ show currency,
+                  priceValue = Just $ show val,
+                  priceComputedValue = Nothing,
+                  priceMaximumValue = Nothing,
+                  priceMinimumValue = Nothing,
+                  priceOfferedValue = Nothing
+                }
+          customerSelectedFareBreakup =
+            Spec.QuotationBreakupInner
+              { quotationBreakupInnerTitle = Just $ show Enums.CUSTOMER_SELECTED_FARE,
+                quotationBreakupInnerPrice = mkBreakupPrice totalProposedFare
+              }
+          -- v2.1.0: BUYER_ADDITIONAL_AMOUNT = just the extra amount above base fare
+          buyerAdditionalAmountBreakup =
+            Spec.QuotationBreakupInner
+              { quotationBreakupInnerTitle = Just $ show Enums.BUYER_ADDITIONAL_AMOUNT,
+                quotationBreakupInnerPrice = mkBreakupPrice extraFare
+              }
+          quotationPrice =
+            Just
+              Spec.Price
+                { priceCurrency = Just $ show currency,
+                  priceValue = Just $ show baseFare,
+                  priceComputedValue = Nothing,
+                  priceMaximumValue = Nothing,
+                  priceMinimumValue = Nothing,
+                  priceOfferedValue = Just $ show totalProposedFare
+                }
+       in Just
+            Spec.Quotation
+              { quotationBreakup = Just [customerSelectedFareBreakup, buyerAdditionalAmountBreakup],
+                quotationPrice = quotationPrice,
+                quotationTtl = Nothing
+              }
 
 tfPayments :: DSelect.DSelectRes -> BecknConfig -> RiderConfig -> Maybe [Spec.Payment]
 tfPayments res bapConfig riderConfig = do

@@ -216,6 +216,7 @@ tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConf
   pure
     Spec.Order
       { orderId = Just bookingId.getId,
+        orderTags = Nothing,
         orderStatus = Just $ show NewBookingOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
         orderFulfillments = Nothing,
         orderBilling = Nothing,
@@ -241,12 +242,14 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
+        orderTags = Nothing,
         orderStatus = Just $ show BookingReallocationOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
         orderFulfillments = Just [fulfillment],
         orderCancellation =
           Just $
             Spec.Cancellation
-              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
+              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource,
+                cancellationReasonDescriptor = Nothing
               },
         orderBilling = Nothing,
         orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing Nothing,

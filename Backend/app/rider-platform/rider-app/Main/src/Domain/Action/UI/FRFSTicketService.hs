@@ -1246,7 +1246,7 @@ getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mb
     applyQuotaLogic fromIdx toIdx seatWithStatus =
       if JMU.meetsSeatQuota fromIdx toIdx seatWithStatus.seat
         then seatWithStatus
-        else seatWithStatus { status = BLOCKED }
+        else seatWithStatus {status = BLOCKED}
 
 getFrfsRouteSeatLayout ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

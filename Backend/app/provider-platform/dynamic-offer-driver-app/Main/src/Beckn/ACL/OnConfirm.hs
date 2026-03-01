@@ -30,7 +30,7 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState
-bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED
+bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED -- ONDC v2.1.0: phased confirmation, driver details sent via on_update RIDE_ASSIGNED
 bookingStatusCode _ = Just Enum.NEW
 
 buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
@@ -54,6 +54,7 @@ tfOrder res pricing bppConfig mbFarePolicy = do
       orderPayments = tfPayments res bppConfig,
       orderProvider = Utils.tfProvider bppConfig,
       orderQuote = Utils.tfQuotation res.booking,
+      orderTags = Nothing,
       orderStatus = Just "ACTIVE",
       orderCreatedAt = Just res.booking.createdAt,
       orderUpdatedAt = Just res.booking.updatedAt
@@ -66,7 +67,7 @@ tfFulfillments res =
         { Spec.fulfillmentCustomer = tfCustomer res,
           Spec.fulfillmentId = Just res.booking.quoteId,
           Spec.fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
-          Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops res.booking.specialZoneOtpCode,
+          Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops res.booking.specialZoneOtpCode Nothing Nothing Nothing,
           Spec.fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
           Spec.fulfillmentVehicle = tfVehicle res
         }

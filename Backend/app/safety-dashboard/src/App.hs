@@ -28,6 +28,7 @@ import Kernel.Beam.Types (KafkaConn (..), Tables (..))
 import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import qualified Kernel.Tools.Metrics.Init as Metrics
 import Kernel.Types.Flow
 import Kernel.Types.Logging (LogLevel (..))
 import Kernel.Utils.App
@@ -35,7 +36,6 @@ import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import Kernel.Utils.IOLogging (logOutputIO)
 import Kernel.Utils.Servant.Server (runServerWithHealthCheckAndSlackNotification)
-import qualified Kernel.Tools.Metrics.Init as Metrics
 import Network.HTTP.Types (status408)
 import qualified Network.Wai as Wai
 import Servant (Context (..))

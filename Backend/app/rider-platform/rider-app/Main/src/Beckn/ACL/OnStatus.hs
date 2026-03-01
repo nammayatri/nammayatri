@@ -60,6 +60,10 @@ buildOnStatusReqV2 req txnId = do
             "RIDE_ASSIGNED" -> do
               assignedReq <- Common.parseRideAssignedEvent order messageId txnId
               return $ DOnStatus.RideAssignedDetails assignedReq
+            "RIDE_CONFIRMED" -> do
+              -- ONDC v2.1.0: handle phased confirmation
+              assignedReq <- Common.parseRideAssignedEvent order messageId txnId
+              return $ DOnStatus.RideAssignedDetails assignedReq
             "RIDE_ENROUTE_PICKUP" -> pure DOnStatus.RideEnroutePickupDetails
             "RIDE_ARRIVED_PICKUP" -> do
               arrivedReq <- Common.parseDriverArrivedEvent order messageId txnId
@@ -69,6 +73,13 @@ buildOnStatusReqV2 req txnId = do
               return $ DOnStatus.RideStartedDetails startedReq
             _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
         "COMPLETE" -> do
+          case eventType of
+            "RIDE_ENDED" -> do
+              completedReq <- Common.parseRideCompletedEvent order messageId txnId
+              return $ DOnStatus.RideCompletedDetails completedReq
+            _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
+        "COMPLETED" -> do
+          -- ONDC v2.1.0: handle new order status
           case eventType of
             "RIDE_ENDED" -> do
               completedReq <- Common.parseRideCompletedEvent order messageId txnId

@@ -86,7 +86,8 @@ data InitReq = InitReq
     isInsured :: Maybe Bool,
     insuredAmount :: Maybe Text,
     paymentMode :: Maybe DMPM.PaymentMode,
-    displayBookingId :: Maybe Text
+    displayBookingId :: Maybe Text,
+    riderGender :: Maybe Text
   }
 
 data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
@@ -110,7 +111,8 @@ data InitRes = InitRes
     vehicleVariant :: Veh.VehicleVariant,
     paymentId :: Text,
     cancellationFee :: Maybe PriceAPIEntity,
-    estimateId :: Text
+    estimateId :: Text,
+    riderGender :: Maybe Text
   }
 
 handler ::
@@ -156,6 +158,7 @@ handler merchantId req validatedReq = do
       bppSubscriberId = req.bppSubscriberId
       estimateId = req.estimateId
       cancellationFee = Nothing
+      riderGender = req.riderGender
   pure InitRes {vehicleVariant = req.vehicleVariant, ..}
   where
     buildBooking ::

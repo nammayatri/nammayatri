@@ -113,8 +113,8 @@ data RateCardBreakupItem = RateCardBreakupItem
     value :: Text
   }
 
-mkStops :: Maps.LatLong -> Maybe Maps.LatLong -> [Maps.LatLong] -> Maybe [Spec.Stop]
-mkStops origin mbDestination intermediateStops = do
+mkStops :: Maps.LatLong -> Maybe Maps.LatLong -> [Maps.LatLong] -> UTCTime -> Maybe Text -> Maybe [Spec.Stop]
+mkStops origin mbDestination intermediateStops startTime mbScheduledPickupDuration = do
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps destination = Gps.Gps {lat = destination.lat, lon = destination.lon}
   Just $
@@ -124,7 +124,8 @@ mkStops origin mbDestination intermediateStops = do
             { Spec.stopLocation =
                 Just $ emptyLocation {Spec.locationGps = Utils.gpsToText originGps},
               Spec.stopType = Just $ show Enums.START,
-              Spec.stopId = Just "0"
+              Spec.stopId = Just "0",
+              Spec.stopTime = Just Spec.Time {timeTimestamp = Just startTime, timeDuration = mbScheduledPickupDuration}
             },
         ( \destination ->
             emptyStop
@@ -138,6 +139,10 @@ mkStops origin mbDestination intermediateStops = do
           <$> mbDestination
       ]
       <> (map (\(location, order) -> mkIntermediateStopSearch location order (order - 1)) $ zip intermediateStops [1 ..])
+
+-- | Re-export from shared library for backward compatibility
+mkScheduledPickupDuration :: Bool -> Maybe T.Text
+mkScheduledPickupDuration = Utils.mkScheduledPickupDuration
 
 parseLatLong :: MonadFlow m => Text -> m Maps.LatLong
 parseLatLong a =
@@ -312,8 +317,8 @@ parseAddress loc@Spec.Location {..} = do
     isEmpty :: Maybe Text -> Bool
     isEmpty = maybe True (T.null . T.replace " " "")
 
-mkStops' :: DLoc.Location -> Maybe DLoc.Location -> [DLoc.Location] -> Maybe Text -> Maybe [Spec.Stop]
-mkStops' origin mbDestination intermediateStops mAuthorization =
+mkStops' :: DLoc.Location -> Maybe DLoc.Location -> [DLoc.Location] -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> Maybe [Spec.Stop]
+mkStops' origin mbDestination intermediateStops mAuthorization mEndAuthorization mbStartTime mbScheduledPickupDuration =
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps dest = Gps.Gps {lat = dest.lat, lon = dest.lon}
    in Just $
@@ -332,6 +337,8 @@ mkStops' origin mbDestination intermediateStops mAuthorization =
                         },
                   Spec.stopType = Just $ show Enums.START,
                   Spec.stopAuthorization = mAuthorization >>= mkAuthorization,
+                  Spec.stopInstructions = mkStopInstructions origin.address.instructions,
+                  Spec.stopTime = mbStartTime <&> \t -> Spec.Time {timeTimestamp = Just t, timeDuration = mbScheduledPickupDuration},
                   Spec.stopId = Just "0"
                 },
             ( \destination ->
@@ -347,6 +354,8 @@ mkStops' origin mbDestination intermediateStops mAuthorization =
                             Spec.locationState = Just $ Spec.State destination.address.state
                           },
                     Spec.stopType = Just $ show Enums.END,
+                    Spec.stopAuthorization = mEndAuthorization >>= mkAuthorization,
+                    Spec.stopInstructions = mkStopInstructions destination.address.instructions,
                     Spec.stopId = Just $ show (length intermediateStops + 1),
                     Spec.stopParentStopId = Just $ show (length intermediateStops)
                   }
@@ -360,6 +369,7 @@ mkStops' origin mbDestination intermediateStops mAuthorization =
       Just $
         Spec.Authorization
           { authorizationToken = Just auth,
+            authorizationStatus = Just "UNCLAIMED",
             authorizationType = Just $ show Enums.OTP
           }
 
@@ -367,6 +377,10 @@ mkAddress :: DLoc.LocationAddress -> Text
 mkAddress DLoc.LocationAddress {..} =
   let res = map replaceEmpty [door, building, street, area, city, state, country]
    in T.intercalate ", " $ catMaybes res
+
+-- | Re-export from shared library for backward compatibility
+mkStopInstructions :: Maybe Text -> Maybe Spec.Descriptor
+mkStopInstructions = Utils.mkStopInstructions
 
 mkIntermediateStop :: DLoc.Location -> Int -> Int -> Spec.Stop
 mkIntermediateStop stop id parentStopId =
@@ -385,6 +399,7 @@ mkIntermediateStop stop id parentStopId =
                 },
           Spec.stopType = Just $ show Enums.INTERMEDIATE_STOP,
           Spec.stopId = Just $ show id,
+          Spec.stopInstructions = mkStopInstructions stop.address.instructions,
           Spec.stopParentStopId = Just $ show parentStopId
         }
 
@@ -410,13 +425,17 @@ showVariant :: Variant.VehicleVariant -> Maybe Text
 showVariant = A.decode . A.encode
 
 -- common for on_update & on_status
-mkStopsOUS :: DBooking.Booking -> DRide.Ride -> Text -> Maybe [Spec.Stop]
-mkStopsOUS booking ride rideOtp =
+mkStopsOUS :: DBooking.Booking -> DRide.Ride -> Text -> Maybe Text -> Maybe [Spec.Stop]
+mkStopsOUS booking ride rideOtp mEndOtp =
   let origin = booking.fromLocation
       mbDestination = booking.toLocation
       intermediateStops = booking.stops
       originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps dest = Gps.Gps {lat = dest.lat, lon = dest.lon}
+      -- ONDC v2.1.0: For scheduled rides where the trip hasn't started yet, use
+      -- the booking's scheduled start time so the payload includes the pickup time window.
+      effectiveStartTime = ride.tripStartTime <|> if booking.isScheduled then Just booking.startTime else Nothing
+      mbScheduledDuration = mkScheduledPickupDuration booking.isScheduled
    in Just $
         catMaybes
           [ Just $
@@ -437,9 +456,11 @@ mkStopsOUS booking ride rideOtp =
                     Just $
                       Spec.Authorization
                         { authorizationToken = Just rideOtp,
+                          authorizationStatus = Just "UNCLAIMED",
                           authorizationType = Just $ show Enums.OTP
                         },
-                  Spec.stopTime = ride.tripStartTime <&> \tripStartTime' -> Spec.Time {timeTimestamp = Just tripStartTime', timeDuration = Nothing}
+                  Spec.stopTime = effectiveStartTime <&> \t -> Spec.Time {timeTimestamp = Just t, timeDuration = mbScheduledDuration},
+                  Spec.stopInstructions = mkStopInstructions origin.address.instructions
                 },
             Just $
               emptyStop
@@ -454,6 +475,14 @@ mkStopsOUS booking ride rideOtp =
                           Spec.locationState = (\dest -> Just $ Spec.State dest.address.state) =<< mbDestination
                         },
                   Spec.stopType = Just $ show Enums.END,
+                  Spec.stopAuthorization =
+                    mEndOtp <&> \endOtp ->
+                      Spec.Authorization
+                        { authorizationToken = Just endOtp,
+                          authorizationStatus = Just "UNCLAIMED",
+                          authorizationType = Just $ show Enums.OTP
+                        },
+                  Spec.stopInstructions = mkStopInstructions $ mbDestination >>= (.address.instructions),
                   Spec.stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime', timeDuration = Nothing},
                   Spec.stopId = Just $ show (length intermediateStops + 1),
                   Spec.stopParentStopId = Just $ show (length intermediateStops)
@@ -489,7 +518,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
-        fulfillmentStops = mkStopsOUS booking ride rideOtp,
+        fulfillmentStops = mkStopsOUS booking ride rideOtp ride.endOtp,
         fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
         fulfillmentAgent =
           Just $
@@ -503,6 +532,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
                       { Spec.personImage =
                           mbImage <&> \mbImage' ->
                             emptyImage {Spec.imageUrl = Just mbImage'},
+                        Spec.personGender = mbDriver <&> \driver -> show driver.gender,
                         Spec.personName = mbDInfo >>= Just . (.name),
                         Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
                       }
@@ -517,6 +547,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
                   Spec.vehicleRegistration = Just vehicle.registrationNo,
                   Spec.vehicleCategory = Just category,
                   Spec.vehicleVariant = Just variant,
+                  Spec.vehicleEnergyType = vehicle.energyType,
                   Spec.vehicleCapacity = vehicle.capacity
                 },
         fulfillmentCustomer = tfCustomer riderPhone booking.riderName,
@@ -537,6 +568,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
             tags = if isValueAddNP then dTags else Nothing
           }
 
+-- ONDC v2.1.0: rider gender populated from BAP init payload
 tfCustomer :: Maybe Text -> Maybe Text -> Maybe Spec.Customer
 tfCustomer riderPhone riderName =
   Just
@@ -855,7 +887,8 @@ tfItemDescriptor :: DBooking.Booking -> Maybe Spec.Descriptor
 tfItemDescriptor booking =
   Just
     Spec.Descriptor
-      { descriptorCode = Just "RIDE",
+      { descriptorLongDesc = Nothing,
+        descriptorCode = Just "RIDE",
         descriptorShortDesc = Just $ show booking.vehicleServiceTier,
         descriptorName = Just $ show booking.vehicleServiceTier
       }
@@ -1007,7 +1040,8 @@ buildRateCardTags RateCardBreakupItem {..} =
       tagDescriptor =
         Just
           Spec.Descriptor
-            { descriptorCode = Just title,
+            { descriptorLongDesc = Nothing,
+              descriptorCode = Just title,
               descriptorName = Just title,
               descriptorShortDesc = Nothing
             },
@@ -1022,6 +1056,28 @@ tfCancellationTerms cancellationFee state =
         cancellationTermFulfillmentState = mkFulfillmentState <$> state,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }
+
+-- | Build static cancellation terms for ONDC v2.1.0 item-level declaration.
+--   Declares that cancellation reason is required at each fulfillment state.
+--   Fee is not declared statically as it varies by fare policy.
+mkItemCancellationTerms :: [Spec.CancellationTerm]
+mkItemCancellationTerms =
+  map
+    (\state -> mkCancellationTermForState state True)
+    [ Enums.RIDE_CONFIRMED,
+      Enums.RIDE_ASSIGNED,
+      Enums.RIDE_ENROUTE_PICKUP,
+      Enums.RIDE_ARRIVED_PICKUP,
+      Enums.RIDE_STARTED
+    ]
+
+mkCancellationTermForState :: Enums.FulfillmentState -> Bool -> Spec.CancellationTerm
+mkCancellationTermForState state reasonRequired =
+  Spec.CancellationTerm
+    { cancellationTermCancellationFee = Nothing,
+      cancellationTermFulfillmentState = Just $ mkFulfillmentState state,
+      cancellationTermReasonRequired = Just reasonRequired
+    }
 
 tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments booking transporter bppConfig = do
@@ -1067,7 +1123,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
-        fulfillmentStops = mkStops' booking.fromLocation (Just newDestination) booking.stops (Just rideOtp),
+        fulfillmentStops = mkStops' booking.fromLocation (Just newDestination) booking.stops (Just rideOtp) ride.endOtp (Just booking.startTime) (mkScheduledPickupDuration booking.isScheduled),
         fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
         fulfillmentAgent =
           Just $
@@ -1084,6 +1140,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
                       { Spec.personImage =
                           mbImage <&> \mbImage' ->
                             emptyImage {Spec.imageUrl = Just mbImage'},
+                        Spec.personGender = mbDriver <&> \driver -> show driver.gender, -- ONDC v2.1.0: populate driver gender
                         Spec.personName = mbDInfo >>= Just . (.name),
                         Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
                       }
@@ -1098,6 +1155,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
                   Spec.vehicleRegistration = Just vehicle.registrationNo,
                   Spec.vehicleCategory = Just category,
                   Spec.vehicleVariant = Just variant,
+                  Spec.vehicleEnergyType = vehicle.energyType,
                   Spec.vehicleCapacity = vehicle.capacity
                 },
         fulfillmentCustomer = Nothing,
@@ -1198,7 +1256,8 @@ mkFulfillmentStateCode code =
           Spec.Descriptor
             { descriptorCode = Just code,
               descriptorShortDesc = Nothing,
-              descriptorName = Nothing
+              descriptorName = Nothing,
+              descriptorLongDesc = Nothing
             }
     }
 

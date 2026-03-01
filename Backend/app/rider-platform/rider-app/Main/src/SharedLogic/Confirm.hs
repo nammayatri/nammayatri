@@ -109,7 +109,8 @@ data DConfirmRes = DConfirmRes
     isAdvanceBookingEnabled :: Maybe Bool,
     isInsured :: Maybe Bool,
     insuredAmount :: Maybe Text,
-    paymentMode :: Maybe DMPM.PaymentMode
+    paymentMode :: Maybe DMPM.PaymentMode,
+    riderGender :: Maybe Text
   }
   deriving (Show, Generic)
 
@@ -223,6 +224,7 @@ confirm DConfirmReq {..} = do
         isInsured = Just $ booking.isInsured,
         insuredAmount = booking.driverInsuredAmount,
         paymentMode = booking.paymentMode,
+        riderGender = Just (show person.gender),
         ..
       }
   where

@@ -40,13 +40,16 @@ import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified BecknV2.OnDemand.Enums as EventEnum
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
+import BecknV2.OnDemand.Utils.Payment (mkPaymentTags)
 import qualified Data.List as L
 import qualified Domain.Action.UI.Person as SP
+import Domain.Types (BknPaymentParams)
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.FarePolicy as FarePolicyD
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OnUpdate as OU
 import qualified Domain.Types.Person as SP
@@ -255,10 +258,12 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig fulfi
       items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
       payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
   logDebug $ "currentRideDropLocation: " <> show currentRideDropLocation
+  let orderSettlementTags = mkOrderSettlementTags bppConfig merchant
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image tagGroups Nothing isDriverBirthDay isFreeRide driverAccountId (Just $ show fulfillmentState) isValueAddNP riderPhone isAlreadyFav favCount
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
+        orderTags = Just orderSettlementTags,
         orderStatus = Just $ show EventEnum.ACTIVE,
         orderFulfillments = Just [fulfillment],
         orderBilling = Nothing,
@@ -283,10 +288,12 @@ tfStartReqToOrder Common.DRideStartedReq {..} mbFarePolicy becknConfig = do
       quote = Utils.tfQuotation booking
       farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
       items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
+  let orderSettlementTags = mkOrderSettlementTags bppConfig merchant
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> odometerTag <> estimatedEndTimeRangeTagGroup) personTag False False Nothing (Just $ show EventEnum.RIDE_STARTED) isValueAddNP riderPhone False 0
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
+        orderTags = Just orderSettlementTags,
         orderStatus = Just $ show EventEnum.ACTIVE,
         orderFulfillments = Just [fulfillment],
         orderBilling = Nothing,
@@ -314,10 +321,12 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
   let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
   let items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
   let payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
+  let orderSettlementTags = mkOrderSettlementTags bppConfig merchant
   pure $
     Spec.Order
       { orderId = Just $ booking.id.getId,
-        orderStatus = Just $ show EventEnum.COMPLETE,
+        orderTags = Just orderSettlementTags,
+        orderStatus = Just $ show EventEnum.COMPLETE, -- Keep COMPLETE for backward compat until all BAPs upgraded
         orderFulfillments = Just [fulfillment],
         orderPayments = Just [payment],
         orderQuote = Just quote,
@@ -342,12 +351,14 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
+        orderTags = Nothing,
         orderStatus = Just $ show EventEnum.CANCELLED,
         orderFulfillments = Just $ maybeToList fulfillment,
         orderCancellation =
           Just $
             Spec.Cancellation
-              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
+              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource,
+                cancellationReasonDescriptor = Nothing
               },
         orderBilling = Nothing,
         orderCancellationTerms = Just $ Utils.tfCancellationTerms cancellationFee (Just EventEnum.RIDE_CANCELLED),
@@ -367,6 +378,7 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
       driverArrivedInfoTags = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 arrivalTime else Nothing
       farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
       items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
+  let orderSettlementTags = mkOrderSettlementTags bppConfig merchant
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing driverArrivedInfoTags Nothing False False Nothing (Just $ show EventEnum.RIDE_ARRIVED_PICKUP) isValueAddNP riderPhone False 0
   pure $
     Spec.Order
@@ -379,6 +391,7 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
         orderPayments = Just [payment],
         orderProvider = Utils.tfProvider becknConfig,
         orderQuote = quote,
+        orderTags = Just orderSettlementTags,
         orderStatus = Just $ show EventEnum.ACTIVE,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
@@ -400,7 +413,15 @@ tfReachedDestinationReqToOrder OU.DDriverReachedDestinationReq {..} = do
         orderPayments = Nothing,
         orderProvider = Nothing,
         orderQuote = Nothing,
+        orderTags = Nothing,
         orderStatus = Nothing,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
       }
+
+-- | Build order-level settlement tags (BAP_TERMS/BPP_TERMS) per ONDC v2.1.0.
+-- Mirrors the same tags sent on payment.tags for backward compatibility.
+mkOrderSettlementTags :: DBC.BecknConfig -> DM.Merchant -> [Spec.TagGroup]
+mkOrderSettlementTags bppCfg merch = do
+  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppCfg.paymentParamsJson
+  mkPaymentTags (show merch.city) bppCfg.settlementType Nothing bppCfg.settlementWindow bppCfg.staticTermsUrl bppCfg.buyerFinderFee mkParams Nothing Nothing
