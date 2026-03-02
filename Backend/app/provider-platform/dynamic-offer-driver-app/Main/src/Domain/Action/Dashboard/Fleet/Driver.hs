@@ -412,6 +412,7 @@ validateFleetDriverAssociation fleetOwnerId personId = do
 checkRCAssociationForFleet :: Text -> DVRC.VehicleRegistrationCertificate -> Flow ()
 checkRCAssociationForFleet fleetOwnerId vehicleRC = do
   when (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
+  when (vehicleRC.fleetOwnerId == Just fleetOwnerId) $ throwError VehicleBelongsToFleet
   activeAssociationsOfRC <- DRCAE.findAllActiveAssociationByRCId vehicleRC.id
   let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
   forM_ rcAssociatedDriverIds $ \driverId -> do
