@@ -18,11 +18,11 @@ module Beckn.OnDemand.Utils.Common where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import qualified BecknV2.OnDemand.Enums as Enums
-import qualified BecknV2.OnDemand.Tags as Tags
 import BecknV2.OnDemand.Tags ((~=), (~=?), (~=|))
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
-import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import BecknV2.OnDemand.Utils.Constructors
 import BecknV2.OnDemand.Utils.Context as ContextUtils
 import BecknV2.OnDemand.Utils.Payment
 import qualified BecknV2.Utils as Utils
@@ -122,14 +122,14 @@ mkStops origin mbDestination intermediateStops = do
       [ Just $
           emptyStop
             { Spec.stopLocation =
-                Just $ emptyLocation { Spec.locationGps = Utils.gpsToText originGps },
+                Just $ emptyLocation {Spec.locationGps = Utils.gpsToText originGps},
               Spec.stopType = Just $ show Enums.START,
               Spec.stopId = Just "0"
             },
         ( \destination ->
             emptyStop
               { Spec.stopLocation =
-                  Just $ emptyLocation { Spec.locationGps = Utils.gpsToText $ destinationGps destination },
+                  Just $ emptyLocation {Spec.locationGps = Utils.gpsToText $ destinationGps destination},
                 Spec.stopType = Just $ show Enums.END,
                 Spec.stopId = Just $ show (length intermediateStops + 1),
                 Spec.stopParentStopId = Just $ show (length intermediateStops)
@@ -393,7 +393,7 @@ mkIntermediateStopSearch stop id parentStopId =
   let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
    in emptyStop
         { Spec.stopLocation =
-            Just $ emptyLocation { Spec.locationGps = Utils.gpsToText gps },
+            Just $ emptyLocation {Spec.locationGps = Utils.gpsToText gps},
           Spec.stopType = Just $ show Enums.INTERMEDIATE_STOP,
           Spec.stopId = Just $ show id,
           Spec.stopParentStopId = Just $ show parentStopId
@@ -496,13 +496,13 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
             Spec.Agent
               { agentContact =
                   mbDInfo >>= \dInfo ->
-                    Just $ Spec.Contact { contactPhone = Just dInfo.mobileNumber },
+                    Just $ Spec.Contact {contactPhone = Just dInfo.mobileNumber},
                 agentPerson =
                   Just $
                     emptyPerson
                       { Spec.personImage =
                           mbImage <&> \mbImage' ->
-                            emptyImage { Spec.imageUrl = Just mbImage' },
+                            emptyImage {Spec.imageUrl = Just mbImage'},
                         Spec.personName = mbDInfo >>= Just . (.name),
                         Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
                       }
@@ -542,9 +542,9 @@ tfCustomer riderPhone riderName =
   Just
     Spec.Customer
       { customerContact =
-          Just Spec.Contact { contactPhone = riderPhone },
+          Just Spec.Contact {contactPhone = riderPhone},
         customerPerson =
-          Just $ emptyPerson { Spec.personName = riderName }
+          Just $ emptyPerson {Spec.personName = riderName}
       }
 
 mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> BaseUrl -> Maybe Text -> Bool -> Int -> Bool -> Maybe [Spec.TagGroup]
@@ -934,21 +934,22 @@ mkGeneralInfoTagGroup :: Pricing -> Bool -> Maybe Spec.TagGroup
 mkGeneralInfoTagGroup pricing isValueAddNP =
   let guardVNP val = if isValueAddNP then val else Nothing
       mkOptTag tag val = Tags.getFullTag tag val <$ val
-      tags = catMaybes
-        [ mkOptTag Tags.SPECIAL_LOCATION_TAG pricing.specialLocationTag,
-          mkOptTag Tags.SPECIAL_LOCATION_NAME pricing.specialLocationName,
-          mkOptTag Tags.BUSINESS_DISCOUNT (guardVNP (show <$> pricing.businessDiscount)),
-          mkOptTag Tags.PERSONAL_DISCOUNT (guardVNP (show <$> pricing.personalDiscount)),
-          mkOptTag Tags.DISTANCE_TO_NEAREST_DRIVER_METER (show . double2Int . realToFrac <$> pricing.distanceToNearestDriver),
-          mkOptTag Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE (guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute)),
-          mkOptTag Tags.IS_BLOCKED_SEARCH_ROUTE (guardVNP (show <$> pricing.isBlockedRoute)),
-          mkOptTag Tags.TOLL_NAMES (guardVNP (show <$> pricing.tollNames)),
-          mkOptTag Tags.TIP_OPTIONS (guardVNP (show <$> pricing.tipOptions)),
-          mkOptTag Tags.DURATION_TO_NEAREST_DRIVER_MINUTES (guardVNP (getDuration pricing.distanceToNearestDriver 25)),
-          mkOptTag Tags.SMART_TIP_SUGGESTION (guardVNP (show <$> pricing.smartTipSuggestion)),
-          mkOptTag Tags.SMART_TIP_REASON (guardVNP pricing.smartTipReason),
-          mkOptTag Tags.QAR (guardVNP (show <$> pricing.qar))
-        ]
+      tags =
+        catMaybes
+          [ mkOptTag Tags.SPECIAL_LOCATION_TAG pricing.specialLocationTag,
+            mkOptTag Tags.SPECIAL_LOCATION_NAME pricing.specialLocationName,
+            mkOptTag Tags.BUSINESS_DISCOUNT (guardVNP (show <$> pricing.businessDiscount)),
+            mkOptTag Tags.PERSONAL_DISCOUNT (guardVNP (show <$> pricing.personalDiscount)),
+            mkOptTag Tags.DISTANCE_TO_NEAREST_DRIVER_METER (show . double2Int . realToFrac <$> pricing.distanceToNearestDriver),
+            mkOptTag Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE (guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute)),
+            mkOptTag Tags.IS_BLOCKED_SEARCH_ROUTE (guardVNP (show <$> pricing.isBlockedRoute)),
+            mkOptTag Tags.TOLL_NAMES (guardVNP (show <$> pricing.tollNames)),
+            mkOptTag Tags.TIP_OPTIONS (guardVNP (show <$> pricing.tipOptions)),
+            mkOptTag Tags.DURATION_TO_NEAREST_DRIVER_MINUTES (guardVNP (getDuration pricing.distanceToNearestDriver 25)),
+            mkOptTag Tags.SMART_TIP_SUGGESTION (guardVNP (show <$> pricing.smartTipSuggestion)),
+            mkOptTag Tags.SMART_TIP_REASON (guardVNP pricing.smartTipReason),
+            mkOptTag Tags.QAR (guardVNP (show <$> pricing.qar))
+          ]
    in case tags of
         [] -> Nothing
         _ -> Just $ Tags.getFullTagGroup Tags.GENERAL_INFO tags
@@ -984,9 +985,13 @@ mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare c
 mkVehicleIconTag :: Maybe BaseUrl -> Maybe [Spec.TagGroup]
 mkVehicleIconTag mbBaseUrl =
   mbBaseUrl <&> \baseUrl ->
-    [ (Tags.getFullTagGroup Tags.VEHICLE_INFO
-        [ Tags.mkTag Tags.VEHICLE_ICON_URL (Just $ showBaseUrl baseUrl)
-        ]) {Spec.tagGroupDisplay = Just False}
+    [ ( Tags.getFullTagGroup
+          Tags.VEHICLE_INFO
+          [ Tags.mkTag Tags.VEHICLE_ICON_URL (Just $ showBaseUrl baseUrl)
+          ]
+      )
+        { Spec.tagGroupDisplay = Just False
+        }
     ]
 
 mkRateCardBreakupItem :: Text -> Text -> RateCardBreakupItem
@@ -1078,7 +1083,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
                     emptyPerson
                       { Spec.personImage =
                           mbImage <&> \mbImage' ->
-                            emptyImage { Spec.imageUrl = Just mbImage' },
+                            emptyImage {Spec.imageUrl = Just mbImage'},
                         Spec.personName = mbDInfo >>= Just . (.name),
                         Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
                       }

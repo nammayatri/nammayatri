@@ -23,8 +23,8 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
-import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
+import BecknV2.OnDemand.Utils.Constructors
 import BecknV2.OnDemand.Utils.Payment
 import BecknV2.Utils
 import qualified Data.Text as T
@@ -213,4 +213,4 @@ mkQuotationPrice quote =
 
 mkProvider :: DBC.BecknConfig -> Maybe Spec.Provider
 mkProvider becknConfig = do
-  return $ emptyProvider { Spec.providerId = Just $ becknConfig.subscriberId }
+  return $ emptyProvider {Spec.providerId = Just $ becknConfig.subscriberId}

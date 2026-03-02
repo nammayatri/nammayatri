@@ -293,7 +293,8 @@ mkPaymentTags mSettlementType mAmount mbDelayInterest =
 
 mkBuyerFinderFeeTagGroup :: Spec.TagGroup
 mkBuyerFinderFeeTagGroup =
-  mkFrfsTagGroup "BUYER_FINDER_FEES"
+  mkFrfsTagGroup
+    "BUYER_FINDER_FEES"
     [ mkFrfsTag "BUYER_FINDER_FEES_PERCENTAGE" (Just "0")
     ]
 

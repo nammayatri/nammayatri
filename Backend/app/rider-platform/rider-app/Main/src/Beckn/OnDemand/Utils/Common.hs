@@ -18,8 +18,8 @@ module Beckn.OnDemand.Utils.Common where
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
-import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import BecknV2.OnDemand.Utils.Constructors
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import qualified Data.Text as T
@@ -105,10 +105,12 @@ replaceEmpty string = if string == Just "" then Nothing else string
 mkPaymentTags :: Maybe [Spec.TagGroup]
 mkPaymentTags =
   Just
-    [ Tags.getFullTagGroup Tags.BUYER_FINDER_FEES
+    [ Tags.getFullTagGroup
+        Tags.BUYER_FINDER_FEES
         [ Tags.mkTag Tags.BUYER_FINDER_FEES_PERCENTAGE (Just "0")
         ],
-      Tags.getFullTagGroup Tags.SETTLEMENT_TERMS
+      Tags.getFullTagGroup
+        Tags.SETTLEMENT_TERMS
         [ Tags.mkTag Tags.DELAY_INTEREST (Just "0"),
           Tags.mkTag Tags.SETTLEMENT_TYPE (Just "RSF"),
           Tags.mkTag Tags.STATIC_TERMS (Just "https://example-test-bap.com/static-terms.txt")
@@ -244,7 +246,7 @@ withTransactionIdLogTag = withTransactionIdLogTag'
 mkStops' :: Maybe DLoc.Location -> [DLoc.Location] -> Maybe DLoc.Location -> Maybe [Spec.Stop]
 mkStops' mbOrigin intermediateStops mDestination = do
   let stops =
-         ( catMaybes
+        ( catMaybes
             [ mbOrigin >>= \origin -> do
                 let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
                 Just $

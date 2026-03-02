@@ -19,9 +19,9 @@ import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
-import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as UCommonV2
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
+import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.OnDemand.Utils.Payment
 import Control.Lens ((%~))
@@ -169,4 +169,4 @@ tfPayments res bapConfig riderConfig = do
   Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee False res.paymentMode Nothing
 
 tfProvider :: DSelect.DSelectRes -> Spec.Provider
-tfProvider res = emptyProvider { Spec.providerId = Just res.providerId }
+tfProvider res = emptyProvider {Spec.providerId = Just res.providerId}

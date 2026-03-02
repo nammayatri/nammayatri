@@ -248,8 +248,11 @@ getPaymentMode :: Spec.SearchReqMessage -> Maybe DMPM.PaymentMode
 getPaymentMode req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentPayment) >>= (.paymentTags)
   -- Try SETTLEMENT_TERMS first (v2.0.0), then BAP_TERMS (v2.1.0)
-  isTestMode <- readMaybe . T.unpack =<< (Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.STRIPE_TEST tagGroups
-                                           <|> Utils.getTagV2 Tag.BAP_TERMS Tag.STRIPE_TEST tagGroups)
+  isTestMode <-
+    readMaybe . T.unpack
+      =<< ( Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.STRIPE_TEST tagGroups
+              <|> Utils.getTagV2 Tag.BAP_TERMS Tag.STRIPE_TEST tagGroups
+          )
   pure $ if isTestMode then DMPM.TEST else DMPM.LIVE
 
 -- | Extract category.descriptor.code from intent (v2.1.0 format)

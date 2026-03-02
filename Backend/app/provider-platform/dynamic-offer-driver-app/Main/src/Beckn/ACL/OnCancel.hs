@@ -22,8 +22,8 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
-import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
@@ -163,7 +163,7 @@ tfFulfillments booking driverName customerPhoneNo rideStatus mbVehicle driverPho
       Just $
         Spec.FulfillmentState
           { fulfillmentStateDescriptor =
-              Just $ emptyDescriptor { Spec.descriptorCode = (Just . show . BUtils.mapRideStatus) rideStatus' }
+              Just $ emptyDescriptor {Spec.descriptorCode = (Just . show . BUtils.mapRideStatus) rideStatus'}
           }
 
 tfQuotation :: DRB.Booking -> Maybe Spec.Quotation
@@ -253,7 +253,7 @@ tfAgent _booking driverName driverPhone = do
   Just $
     Spec.Agent
       { agentContact = Common.tfContact driverPhone,
-        agentPerson = Just $ emptyPerson { Spec.personName = driverName }
+        agentPerson = Just $ emptyPerson {Spec.personName = driverName}
       }
 
 tfCustomer :: DRB.Booking -> Text -> Maybe Spec.Customer
@@ -261,9 +261,9 @@ tfCustomer booking customerPhoneNo = do
   Just $
     Spec.Customer
       { customerContact =
-          Just Spec.Contact { contactPhone = Just customerPhoneNo },
+          Just Spec.Contact {contactPhone = Just customerPhoneNo},
         customerPerson =
-          Just $ emptyPerson { Spec.personName = booking.riderName }
+          Just $ emptyPerson {Spec.personName = booking.riderName}
       }
 
 tfCancellation :: SBCR.CancellationSource -> Maybe Spec.Cancellation

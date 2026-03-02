@@ -22,8 +22,8 @@ module BecknV2.OnDemand.Utils.Version
   )
 where
 
-import Data.Text (Text)
 import qualified BecknV2.OnDemand.Types as Spec
+import Data.Text (Text)
 import Prelude
 
 -- | Supported Beckn protocol spec versions
