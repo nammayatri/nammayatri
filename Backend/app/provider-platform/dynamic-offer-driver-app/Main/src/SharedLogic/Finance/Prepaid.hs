@@ -599,7 +599,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                   }
           invoiceResult <- createInvoice invoiceInput entryIds
           case invoiceResult of
-            Right invoice -> pure (Just invoice.id)
+            Right inv -> pure (Just inv.id)
             Left _err -> pure Nothing
         _ -> pure Nothing
       mbBal <- getBalance ownerAccount.id

@@ -59,6 +59,7 @@ dependencies:
   - text
   - time
   - aeson
+  - mtl
   - exceptions
   - containers
   - unordered-containers

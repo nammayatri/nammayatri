@@ -96,9 +96,9 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate = do
   mbAccount <- getWalletAccountByOwner counterparty driverId.getId
   case mbAccount of
     Nothing -> pure emptyWalletSummary
-    Just account -> do
+    Just acc -> do
       currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty driverId.getId
-      (additions, deductions, nonRedeemableBalance) <- classifyEntries account.id fromDate toDate cutoff
+      (additions, deductions, nonRedeemableBalance) <- classifyEntries acc.id fromDate toDate cutoff
       let redeemableBalance = max 0 (currentBalance - nonRedeemableBalance)
       pure $
         DriverWallet.WalletSummaryResponse

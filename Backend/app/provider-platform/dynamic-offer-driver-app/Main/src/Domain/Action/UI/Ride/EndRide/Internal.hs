@@ -99,7 +99,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (CounterpartyType (..), InvoiceLineItem (..))
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), runFinance, transfer, transfer_, invoice)
 import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -476,17 +476,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
             BoothOnline -> pure False
             _ -> pure True
 
-    let merchantId = fromMaybe booking.providerId ride.merchantId
-    let merchantOpCityId = ride.merchantOperatingCityId
-    let mid = merchantId.getId
-    let mocid = merchantOpCityId.getId
-
-    -- Determine counterparty: Driver or FleetOwner
-    let (driverOrFleetCounterparty, driverOrFleetPersonId) =
-          case ride.fleetOwnerId of
-            Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId)
-            Nothing -> (DRIVER, ride.driverId)
-        driverOrFleetId = driverOrFleetPersonId.getId
+    let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
 
     let configTdsRate = transporterConfig.taxConfig.defaultTdsRate
     mbTdsRate <- case ride.fleetOwnerId of
@@ -524,81 +514,57 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           let amount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
           if amount > 0 then Just amount else Nothing
 
-    entryIds <-
+    ctx <- buildFinanceCtx booking ride mbDriver
+    let invoiceConfig =
+          InvoiceConfig
+            { invoiceType = Invoice.Ride,
+              issuedToType = "CUSTOMER",
+              issuedToId = maybe "" (.getId) booking.riderId,
+              issuedToName = booking.riderName,
+              issuedToAddress = booking.fromLocation.address.fullAddress,
+              lineItems =
+                catMaybes
+                  [ if baseFare > 0
+                      then Just InvoiceLineItem {description = "Base Fare", quantity = 1, unitPrice = baseFare, lineTotal = baseFare, isExternalCharge = False}
+                      else Nothing,
+                    if gstAmount > 0
+                      then Just InvoiceLineItem {description = "GST", quantity = 1, unitPrice = gstAmount, lineTotal = gstAmount, isExternalCharge = False}
+                      else Nothing,
+                    if tollAmount > 0
+                      then Just InvoiceLineItem {description = "Toll Charges", quantity = 1, unitPrice = tollAmount, lineTotal = tollAmount, isExternalCharge = True}
+                      else Nothing,
+                    if parkingAmount > 0
+                      then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount, isExternalCharge = True}
+                      else Nothing
+                  ],
+              gstBreakdown = computeGstBreakdown transporterConfig.taxConfig.rideGst gstAmount
+            }
+    result <- runFinance ctx $ do
       if isOnline
         then do
-          -- Online: Asset(BUYER) -> External(BUYER) -> Liability/GovtIndirect for base, GST, toll, parking
+          -- Online: Asset(BUYER) -> External(BUYER) -> destination for each component
           let onlineComponents =
-                [ LedgerChargeComponent {amount = baseFare, referenceType = walletReferenceBaseRide, destination = ToDriverOrFleetLiability},
-                  LedgerChargeComponent {amount = gstAmount, referenceType = walletReferenceGSTOnline, destination = ToGovtIndirect},
-                  LedgerChargeComponent {amount = tollAmount, referenceType = walletReferenceTollCharges, destination = ToDriverOrFleetLiability},
-                  LedgerChargeComponent {amount = parkingAmount, referenceType = walletReferenceParkingCharges, destination = ToDriverOrFleetLiability}
+                [ (baseFare, walletReferenceBaseRide, OwnerLiability),
+                  (gstAmount, walletReferenceGSTOnline, GovtIndirect),
+                  (tollAmount, walletReferenceTollCharges, OwnerLiability),
+                  (parkingAmount, walletReferenceParkingCharges, OwnerLiability)
                 ]
-          onlineEntryIds <- createOnlineLedgerEntries booking ride onlineComponents
+          forM_ onlineComponents $ \(amt, ref, dest) -> do
+            transfer_ BuyerAsset BuyerExternal amt ref
+            transfer BuyerExternal dest amt ref
           -- TDS: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT)
-          tdsEntryId <- case mbTdsAmount of
-            Just tdsAmount -> do
-              driverOrFleetLiability <-
-                ( if driverOrFleetCounterparty == FLEET_OWNER
-                    then getOrCreateFleetOwnerLiabilityAccount ride.currency driverOrFleetId mid mocid
-                    else getOrCreateDriverLiabilityAccount ride.currency driverOrFleetId mid mocid
-                  )
-                  >>= fromEitherM (\err -> InternalError ("Driver/FleetOwner liability account not found: " <> show err))
-              govtDirect <- getOrCreateGovtDirectLiabilityAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Government direct liability account not found: " <> show err))
-              createLedgerTransfer driverOrFleetLiability govtDirect tdsAmount walletReferenceTDSDeductionOnline booking.id.getId
-                >>= fromEitherM (\err -> InternalError ("Failed to create TDSDeductionOnline entry: " <> show err))
-            Nothing -> pure Nothing
-          pure $ onlineEntryIds <> catMaybes [tdsEntryId]
+          whenJust mbTdsAmount $ \tdsAmount ->
+            void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionOnline
         else do
-          -- Cash: need accounts for Liability -> Liability transfers
-          driverOrFleetLiability <-
-            ( if driverOrFleetCounterparty == FLEET_OWNER
-                then getOrCreateFleetOwnerLiabilityAccount ride.currency driverOrFleetId mid mocid
-                else getOrCreateDriverLiabilityAccount ride.currency driverOrFleetId mid mocid
-              )
-              >>= fromEitherM (\err -> InternalError ("Driver/FleetOwner liability account not found: " <> show err))
-          govtIndirect <- getOrCreateGovtIndirectLiabilityAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Government indirect liability account not found: " <> show err))
-          govtDirect <- getOrCreateGovtDirectLiabilityAccount ride.currency mid mocid >>= fromEitherM (\err -> InternalError ("Government direct liability account not found: " <> show err))
-          -- Cash: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_INDIRECT) for GST
-          gstEntryId <- createLedgerTransfer driverOrFleetLiability govtIndirect gstAmount walletReferenceGSTCash booking.id.getId >>= fromEitherM (\err -> InternalError ("Failed to create GSTCash entry: " <> show err))
-          -- Cash: Liability(DRIVER/FLEET_OWNER) -> Liability(GOVERNMENT_DIRECT) for TDS
-          tdsEntryId <- case mbTdsAmount of
-            Just tdsAmount ->
-              createLedgerTransfer driverOrFleetLiability govtDirect tdsAmount walletReferenceTDSDeductionCash booking.id.getId
-                >>= fromEitherM (\err -> InternalError ("Failed to create TDSDeductionCash entry: " <> show err))
-            Nothing -> pure Nothing
-          pure $ catMaybes [gstEntryId, tdsEntryId]
-
-    -- Create invoice for the ride with linked entries
-    createWalletInvoice
-      booking
-      ride
-      mbDriver
-      WalletInvoiceParams
-        { invoiceType = Invoice.Ride,
-          issuedToType = "CUSTOMER",
-          issuedToId = maybe "" (.getId) booking.riderId,
-          issuedToName = booking.riderName,
-          issuedToAddress = booking.fromLocation.address.fullAddress,
-          gstBreakdown = computeGstBreakdown transporterConfig.taxConfig.rideGst gstAmount,
-          lineItems =
-            catMaybes
-              [ if baseFare > 0
-                  then Just InvoiceLineItem {description = "Base Fare", quantity = 1, unitPrice = baseFare, lineTotal = baseFare, isExternalCharge = False}
-                  else Nothing,
-                if gstAmount > 0
-                  then Just InvoiceLineItem {description = "GST", quantity = 1, unitPrice = gstAmount, lineTotal = gstAmount, isExternalCharge = False}
-                  else Nothing,
-                if tollAmount > 0
-                  then Just InvoiceLineItem {description = "Toll Charges", quantity = 1, unitPrice = tollAmount, lineTotal = tollAmount, isExternalCharge = True}
-                  else Nothing,
-                if parkingAmount > 0
-                  then Just InvoiceLineItem {description = "Parking Charges", quantity = 1, unitPrice = parkingAmount, lineTotal = parkingAmount, isExternalCharge = True}
-                  else Nothing
-              ]
-        }
-      entryIds
-    pure ()
+          -- Cash: Liability -> Liability transfers
+          _ <- transfer OwnerLiability GovtIndirect gstAmount walletReferenceGSTCash
+          whenJust mbTdsAmount $ \tdsAmount ->
+            void $ transfer OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCash
+      -- Invoice is created inside FinanceM using auto-collected entry IDs
+      invoice invoiceConfig
+    case result of
+      Left err -> fromEitherM (\e -> InternalError ("Failed to create wallet transaction: " <> show e)) (Left err)
+      Right _ -> pure ()
 
 makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId

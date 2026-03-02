@@ -164,48 +164,23 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
       Just penaltyAmount ->
         if isWalletEnabled
           then do
-            -- Wallet path: settle via ledger directly, skip DriverFee
-            let merchantId = booking.providerId
-                merchantOpCityId = booking.merchantOperatingCityId
-                mid = merchantId.getId
-                mocid = merchantOpCityId.getId
-                (driverOrFleetCounterparty, driverOrFleetId) =
-                  case ride.fleetOwnerId of
-                    Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId.getId)
-                    Nothing -> (DRIVER, ride.driverId.getId)
-            driverOrFleetLiability <-
-              ( if driverOrFleetCounterparty == FLEET_OWNER
-                  then getOrCreateFleetOwnerLiabilityAccount booking.currency driverOrFleetId mid mocid
-                  else getOrCreateDriverLiabilityAccount booking.currency driverOrFleetId mid mocid
-                )
-                >>= fromEitherM (\err -> InternalError ("Driver/FleetOwner liability account not found: " <> show err))
-            driverOrFleetExpense <-
-              ( if driverOrFleetCounterparty == FLEET_OWNER
-                  then getOrCreateFleetOwnerExpenseAccount booking.currency driverOrFleetId mid mocid
-                  else getOrCreateDriverExpenseAccount booking.currency driverOrFleetId mid mocid
-                )
-                >>= fromEitherM (\err -> InternalError ("Driver/FleetOwner expense account not found: " <> show err))
-            penaltyEntryId <-
-              createLedgerTransfer driverOrFleetLiability driverOrFleetExpense penaltyAmount walletReferenceDriverCancellationCharges booking.id.getId
-                >>= fromEitherM (\err -> InternalError ("Failed to create DriverCancellationCharges ledger entry: " <> show err))
-            -- Create invoice for driver cancellation penalty
-            let entryIds = catMaybes [penaltyEntryId]
-            createWalletInvoice
-              booking
-              ride
-              (Just driver)
-              WalletInvoiceParams
+            ctx <- buildFinanceCtx booking ride (Just driver)
+            result <- runFinance ctx $ do
+              _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges
+              invoice InvoiceConfig
                 { invoiceType = Invoice.RideCancellation,
                   issuedToType = "DRIVER",
-                  issuedToId = driverOrFleetId,
+                  issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
                   issuedToName = Nothing,
                   issuedToAddress = Nothing,
-                  gstBreakdown = Nothing, -- no GST on driver cancellation penalty
+                  gstBreakdown = Nothing,
                   lineItems =
                     [ InvoiceLineItem {description = "Driver Cancellation Penalty", quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False}
                     ]
                 }
-              entryIds
+            case result of
+              Left err -> fromEitherM (\e -> InternalError ("Failed to create DriverCancellationCharges: " <> show e)) (Left err)
+              Right _ -> pure ()
             logInfo $
               "Created DriverCancellationCharges ledger entry for ₹"
                 <> show penaltyAmount

@@ -34,6 +34,7 @@ library
       Lib.Finance.Core.Money
       Lib.Finance.Core.Types
       Lib.Finance.Error.Types
+      Lib.Finance.FinanceM
       Lib.Finance.Invoice.Interface
       Lib.Finance.Invoice.InvoiceNumber
       Lib.Finance.Invoice.Service
@@ -125,6 +126,7 @@ library
     , containers
     , exceptions
     , mobility-core
+    , mtl
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield

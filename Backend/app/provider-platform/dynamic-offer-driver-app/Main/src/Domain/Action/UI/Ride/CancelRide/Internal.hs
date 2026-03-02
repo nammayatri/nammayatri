@@ -46,7 +46,7 @@ import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
-import Kernel.Prelude hiding (any, elem, map, notElem)
+import Kernel.Prelude hiding (any, elem, map, mapM_, notElem)
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
@@ -60,7 +60,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (InvoiceLineItem (..))
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), runFinance, transfer, transfer_, invoice)
 import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
@@ -271,16 +271,16 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
             gstOnCancellation = if gstPct > 0 then fee.amount * gstPct / (1 + gstPct) else 0
             baseCancellation = fee.amount - gstOnCancellation
             cancellationComponents =
-              [ LedgerChargeComponent {amount = baseCancellation, referenceType = walletReferenceCustomerCancellationCharges, destination = ToDriverOrFleetLiability},
-                LedgerChargeComponent {amount = gstOnCancellation, referenceType = walletReferenceCustomerCancellationGST, destination = ToGovtIndirect}
-              ]
-        entryIds <- createOnlineLedgerEntries booking ride cancellationComponents
-        -- Create invoice
-        createWalletInvoice
-          booking
-          ride
-          (Just driver)
-          WalletInvoiceParams
+                [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
+                  (gstOnCancellation, walletReferenceCustomerCancellationGST, GovtIndirect)
+                ]
+        ctx <- buildFinanceCtx booking ride (Just driver)
+        result <- runFinance ctx $ do
+          mapM_ (\(amt, ref, dest) -> do
+            transfer_ BuyerAsset BuyerExternal amt ref
+            void $ transfer BuyerExternal dest amt ref
+            ) cancellationComponents
+          invoice InvoiceConfig
             { invoiceType = Invoice.RideCancellation,
               issuedToType = "CUSTOMER",
               issuedToId = rid.getId,
@@ -297,7 +297,9 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
                       else Nothing
                   ]
             }
-          entryIds
+        case result of
+          Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
+          Right _ -> pure ()
         logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation
     _ -> do
       logError "cancelRideTransaction: riderId in booking or cancellationFee is not present"

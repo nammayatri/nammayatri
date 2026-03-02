@@ -49,6 +49,9 @@ module Lib.Finance
 
     -- * Error
     module Lib.Finance.Error.Types,
+
+    -- * FinanceM Monad
+    module Lib.Finance.FinanceM,
   )
 where
 
@@ -68,6 +71,7 @@ import Lib.Finance.Domain.Types.CurrentState
 import Lib.Finance.Domain.Types.Invoice
 import Lib.Finance.Domain.Types.LedgerEntry hiding (Expense, Revenue)
 import Lib.Finance.Error.Types
+import Lib.Finance.FinanceM
 import Lib.Finance.Invoice.Interface
 import Lib.Finance.Invoice.Service
 import Lib.Finance.Ledger.Interface
