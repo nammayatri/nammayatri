@@ -4143,6 +4143,7 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
   oldRide <- QRide.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
   oldBooking <- QRB.findById oldRide.bookingId >>= fromMaybeM (BookingNotFound oldRide.bookingId.getId)
   let oldDriverPersonId = oldRide.driverId
+  oldDriver <- QPerson.findById oldDriverPersonId >>= fromMaybeM (PersonNotFound oldDriverPersonId.getId)
   oldFleetAssociation <- QFDAExtra.findByDriverId oldDriverPersonId True >>= fromMaybeM (InvalidRequest "Old driver not associated with fleet")
   unless (oldFleetAssociation.fleetOwnerId == fleetOwnerId) $ throwError (InvalidRequest "Old driver does not belong to this fleet owner")
 
@@ -4180,7 +4181,7 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
             distanceUnit = oldBooking.distanceUnit,
             merchantOperatingCityId = Just oldBooking.merchantOperatingCityId
           }
-  RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing transporterConfig
+  RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing transporterConfig oldDriver
 
   -- 6. Create new booking and quote (similar to performStaticOfferReallocation)
   newBookingId <- generateGUID
