@@ -153,6 +153,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.amount amount,
+      Se.Set Beam.applicableRouteIds applicableRouteIds,
       Se.Set Beam.benefitDescription (Kernel.Prelude.Just benefitDescription),
       Se.Set Beam.benefitType benefitType,
       Se.Set Beam.benefitValue benefitValue,
