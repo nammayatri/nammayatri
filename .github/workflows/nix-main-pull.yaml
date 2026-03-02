@@ -75,16 +75,14 @@ jobs:
           ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
           CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
         run: |
-          echo "result=$(cat result)" >> $GITHUB_OUTPUT          
           PATHS=$(jq -r '.[].outPaths[]' ./result)
-          # Try attic (both login AND push must succeed)
-          if attic login cache-nixos-asia https://cache.nixos.asia/oss "$ATTIC_TOKEN" 2>/dev/null && \
-            echo "$PATHS" | attic push cache-nixos-asia 2>/dev/null; then
-            echo "✅ Pushed to attic"
-          else
-            echo "⚠️ Attic failed, using cachix..."
-            echo "$PATHS" | cachix push nammayatri
-          fi
+          echo "Paths to push: $(echo "$PATHS" | wc -l)"
+
+          # Try attic, fall back to cachix on any failure
+          attic login cache-nixos-asia https://cache.nixos.asia "$ATTIC_TOKEN" && \
+            echo "$PATHS" | attic push cache-nixos-asia:oss && \
+            echo "✅ Pushed to attic" || \
+            { echo "⚠️ Attic failed, falling back to cachix..."; echo "$PATHS" | cachix push nammayatri; }
 
       - name: Upload build log
         continue-on-error: true
