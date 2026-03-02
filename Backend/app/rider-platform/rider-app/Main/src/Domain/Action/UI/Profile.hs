@@ -225,7 +225,8 @@ data MarketingParams = MarketingParams
     utmSource :: Maybe Text,
     utmTerm :: Maybe Text,
     userType :: Maybe UserType,
-    appName :: Maybe Text
+    appName :: Maybe Text,
+    deviceId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -428,7 +429,7 @@ marketingEvents :: (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap Ba
 marketingEvents req = do
   let params = req.marketingParams
   now <- getCurrentTime
-  let marketingParams = MarketingParamsEventPreLoginData params.gclId params.utmCampaign params.utmContent params.utmCreativeFormat params.utmMedium params.utmSource params.utmTerm params.appName params.userType now now
+  let marketingParams = MarketingParamsEventPreLoginData params.gclId params.utmCampaign params.utmContent params.utmCreativeFormat params.utmMedium params.utmSource params.utmTerm params.appName  params.deviceId params.userType now now
   triggerMarketingParamEventPreLogin marketingParams
   pure APISuccess.Success
 
@@ -445,7 +446,7 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
     case req.marketingParams of
       Just params -> do
         now <- getCurrentTime
-        let marketingParams = MarketingParamsEventData person.id params.gclId params.utmCampaign params.utmContent params.utmCreativeFormat params.utmMedium params.utmSource params.utmTerm params.appName merchantId person.merchantOperatingCityId params.userType now now
+        let marketingParams = MarketingParamsEventData person.id params.gclId params.utmCampaign params.utmContent params.utmCreativeFormat params.utmMedium params.utmSource params.utmTerm params.appName params.deviceId merchantId person.merchantOperatingCityId params.userType now now
         triggerMarketingParamEvent marketingParams
       Nothing -> pure ()
   -- TODO: Remove this part from here once UI stops using updatePerson api to apply referral code
