@@ -24,6 +24,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Payment.API.Payout (VerifyVpaFlow (..))
 import qualified Lib.Payment.API.Payout.Types as PayoutTypes
 import qualified Lib.Payment.Domain.Action as Payout
@@ -80,7 +81,7 @@ verifyVpaForUpdateImpl req = do
       unless (response.status == "VALID") $
         throwError $ InvalidRequest $ "Invalid VPA Updation: " <> show response
 
-refundRegistrationAmount :: Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> PayoutTypes.RefundRegAmountReq -> Environment.Flow APISuccess
+refundRegistrationAmount :: (BeamFlow Environment.Flow Environment.AppEnv) => Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> PayoutTypes.RefundRegAmountReq -> Environment.Flow APISuccess
 refundRegistrationAmount merchantShortId opCity req = do
   let driverId = (Id.Id req.personId) :: Id.Id DP.Person
   driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)

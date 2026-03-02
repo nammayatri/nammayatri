@@ -1,7 +1,9 @@
 module Storage.Queries.SubscriptionPurchaseExtra where
 
-import Data.List (partition)
+import Data.List (partition, sortBy)
+import Data.Ord (comparing)
 import Domain.Types.Extra.Plan (ServiceNames)
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.SubscriptionPurchase
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -77,6 +79,69 @@ findAllByOwnerAndServiceNameWithPagination ownerId ownerType serviceName mbStatu
     (Se.Desc Beam.createdAt)
     limit
     offset
+
+-- | Find subscriptions by owner with merchant operating city filter (for dashboard APIs)
+findAllByOwnerAndServiceNameWithPagination' ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  SubscriptionOwnerType ->
+  ServiceNames ->
+  Maybe SubscriptionPurchaseStatus ->
+  Maybe Int ->
+  Maybe Int ->
+  m [SubscriptionPurchase]
+findAllByOwnerAndServiceNameWithPagination' merchantOpCityId ownerId ownerType serviceName mbStatus limit offset =
+  findAllWithOptionsKV
+    [ Se.And
+        ( [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+            Se.Is Beam.ownerId $ Se.Eq ownerId,
+            Se.Is Beam.ownerType $ Se.Eq ownerType,
+            Se.Is Beam.serviceName $ Se.Eq serviceName
+          ]
+            <> [Se.Is Beam.status $ Se.Eq status | Just status <- [mbStatus]]
+        )
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
+-- | Find subscription purchases by merchant operating city and service name (for dashboard list-all)
+findAllByMerchantOpCityIdAndServiceNameWithPagination ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  ServiceNames ->
+  Maybe Int ->
+  Maybe Int ->
+  m [SubscriptionPurchase]
+findAllByMerchantOpCityIdAndServiceNameWithPagination merchantOpCityId serviceName limit offset =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+          Se.Is Beam.serviceName $ Se.Eq serviceName
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
+-- | Find ACTIVE subscription purchases for a merchant operating city whose purchaseTimestamp falls in the date range
+findActiveByDateRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m [SubscriptionPurchase]
+findActiveByDateRange merchantOpCityId startTime endTime =
+  sortBy (comparing (.purchaseTimestamp))
+    <$> findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+            Se.Is Beam.status $ Se.Eq ACTIVE,
+            Se.Is Beam.purchaseTimestamp $ Se.GreaterThanOrEq startTime,
+            Se.Is Beam.purchaseTimestamp $ Se.LessThanOrEq endTime
+          ]
+      ]
 
 -- | Update the expiryDate for a specific subscription purchase.
 -- Used when activating a queued purchase's expiry timer (deferred FIFO logic).

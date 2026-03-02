@@ -102,7 +102,8 @@ data BookingT f = BookingT
     vehicleVariant :: B.C f Domain.Types.Common.ServiceTierType,
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
+    vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    reconciliationStatus :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)
   }
   deriving (Generic, B.Beamable)
 

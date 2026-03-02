@@ -232,6 +232,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     recentScheduledBookingsSafeLimit :: Kernel.Prelude.Int,
     recomputeDistanceThresholds :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.DistanceRecomputeConfigs],
     recomputeIfPickupDropNotOutsideOfThreshold :: Kernel.Prelude.Bool,
+    reconciliationJobsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    reconciliationSchedulerTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     referralLinkPassword :: Kernel.Prelude.Text,
     refillVehicleModel :: Kernel.Prelude.Bool,
     reminderSystemEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

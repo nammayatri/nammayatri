@@ -39,6 +39,10 @@ findByGstNumberAndNotInValid personId = do
         ]
     ]
 
+findGSTInByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe DriverGstin)
+findGSTInByDriverId personId = do
+  findOneWithKV [Se.Is Beam.driverId $ Se.Eq personId.getId]
+
 upsertGstinRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DriverGstin -> m ()
 upsertGstinRecord a@DriverGstin {..} =
   findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId.getId] >>= \case

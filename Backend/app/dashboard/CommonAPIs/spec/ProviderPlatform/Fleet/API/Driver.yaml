@@ -1926,6 +1926,15 @@ types:
     - stripeAddress: Maybe StripeAddress
     - stripeIdNumber: Maybe Text
     - updatedAt: UTCTime
+    - panAadhaarLinkedFlag: Maybe Bool
+    - gstinApplicableFlag: Maybe Bool
+    - tdsApplicableFlag: Maybe Bool
+    - walletId: Maybe Text
+    - bankAccountNumber: Maybe Text
+    - bankIfsc: Maybe Text
+    - bankVerificationStatus: Maybe Text
+    - upiId: Maybe Text
+    - linkedDriverIds: "[Text]"
     - derive: "'HideSecrets"
   FleetConfig:
     - allowAutomaticRoundTripAssignment: Bool

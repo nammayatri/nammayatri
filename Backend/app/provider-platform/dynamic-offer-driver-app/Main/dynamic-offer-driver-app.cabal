@@ -177,6 +177,7 @@ library
       Domain.Action.Dashboard.Management.DriverRegistration
       Domain.Action.Dashboard.Management.EntityInfo
       Domain.Action.Dashboard.Management.FeedbackForm
+      Domain.Action.Dashboard.Management.FinanceManagement
       Domain.Action.Dashboard.Management.Media
       Domain.Action.Dashboard.Management.MediaFileDocument
       Domain.Action.Dashboard.Management.Merchant
@@ -406,6 +407,7 @@ library
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
       SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout
+      SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation
       SharedLogic.Allocator.Jobs.Reminder.ProcessReminder
       SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
@@ -464,6 +466,7 @@ library
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
       SharedLogic.Finance.Prepaid
+      SharedLogic.Finance.Reconciliation
       SharedLogic.Finance.Wallet
       SharedLogic.Fleet
       SharedLogic.FleetOperatorStats
@@ -844,6 +847,7 @@ library
       API.Action.Dashboard.Management.DriverRegistration
       API.Action.Dashboard.Management.EntityInfo
       API.Action.Dashboard.Management.FeedbackForm
+      API.Action.Dashboard.Management.FinanceManagement
       API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.MediaFileDocument
       API.Action.Dashboard.Management.Merchant

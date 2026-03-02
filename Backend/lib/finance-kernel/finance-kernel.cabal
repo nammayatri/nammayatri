@@ -41,7 +41,9 @@ library
       Lib.Finance.Ledger.Service
       Lib.Finance.StateMachine.Interface
       Lib.Finance.StateMachine.Service
+      Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra
       Lib.Finance.Storage.Queries.InvoiceExtra
+      Lib.Finance.Storage.Queries.LedgerEntryExtra
       Lib.Finance.Tax.Interface
       Lib.Finance.Tax.Types
       Lib.Finance.Domain.Types.Account
@@ -52,6 +54,8 @@ library
       Lib.Finance.Domain.Types.Invoice
       Lib.Finance.Domain.Types.InvoiceLedgerLink
       Lib.Finance.Domain.Types.LedgerEntry
+      Lib.Finance.Domain.Types.ReconciliationEntry
+      Lib.Finance.Domain.Types.ReconciliationSummary
       Lib.Finance.Domain.Types.StateTransition
       Lib.Finance.Storage.Beam.Account
       Lib.Finance.Storage.Beam.AuditEntry
@@ -62,6 +66,8 @@ library
       Lib.Finance.Storage.Beam.Invoice
       Lib.Finance.Storage.Beam.InvoiceLedgerLink
       Lib.Finance.Storage.Beam.LedgerEntry
+      Lib.Finance.Storage.Beam.ReconciliationEntry
+      Lib.Finance.Storage.Beam.ReconciliationSummary
       Lib.Finance.Storage.Beam.StateTransition
       Lib.Finance.Storage.Queries.Account
       Lib.Finance.Storage.Queries.AuditEntry
@@ -72,6 +78,8 @@ library
       Lib.Finance.Storage.Queries.InvoiceLedgerLink
       Lib.Finance.Storage.Queries.LedgerEntry
       Lib.Finance.Storage.Queries.OrphanInstances.Invoice
+      Lib.Finance.Storage.Queries.ReconciliationEntry
+      Lib.Finance.Storage.Queries.ReconciliationSummary
       Lib.Finance.Storage.Queries.StateTransition
   other-modules:
       Paths_finance_kernel

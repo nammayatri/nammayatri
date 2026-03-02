@@ -1,0 +1,88 @@
+# Finance Kernel - Reconciliation Summary Table
+# Daily reconciliation summary per reconciliation type
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+ReconciliationSummary:
+  tableName: finance_reconciliation_summary
+  derives: "Generic"
+
+  types:
+    # Matches TypeScript ReconStatus
+    ReconciliationStatus:
+      enum: "MATCHED, HIGHER_IN_TARGET, LOWER_IN_TARGET, MISSING_IN_TARGET"
+      derive: "ToParamSchema"
+
+    # Reconciliation types
+    ReconciliationType:
+      enum: "DSR_VS_LEDGER, DSR_VS_SUBSCRIPTION, DSSR_VS_SUBSCRIPTION"
+      derive: "ToParamSchema"
+
+    JobStatus:
+      enum: "COMPLETED, FAILED, IN_PROGRESS"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id ReconciliationSummary
+    reconciliationDate: UTCTime
+    reconciliationType: ReconciliationType
+
+    # Record counts (matching JSON output)
+    totalDiscrepancies: Int  # totalRecords with issues
+    matchedRecords: Int  # MATCHED count
+    matchRate: Text  # "99.9%"
+
+    # Financial totals
+    sourceTotal: HighPrecMoney  # Expected total (from DSR/DSSR)
+    targetTotal: HighPrecMoney  # Actual total (from Ledger)
+    varianceAmount: HighPrecMoney  # sourceTotal - targetTotal
+
+    # Status
+    status: JobStatus
+    errorMessage: Maybe Text
+
+    # Metadata
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    reconciliationDate: SecondaryKey
+    reconciliationType: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByDateAndType:
+      kvFunction: findAllWithKV
+      where:
+        and: [reconciliationDate, reconciliationType]
+
+    findByDateRange:
+      kvFunction: findAllWithKV
+      where:
+        and: [reconciliationDate, reconciliationType]
+
+    findByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: id
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReconciliationType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReconciliationStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <JobStatus>

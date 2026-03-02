@@ -687,7 +687,16 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
     fleetDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stripeAddress :: Kernel.Prelude.Maybe Dashboard.Common.Driver.StripeAddress,
     stripeIdNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    panAadhaarLinkedFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    gstinApplicableFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    tdsApplicableFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    walletId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankAccountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankIfsc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankVerificationStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    upiId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    linkedDriverIds :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

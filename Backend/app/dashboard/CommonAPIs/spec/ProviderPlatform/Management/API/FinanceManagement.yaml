@@ -1,0 +1,296 @@
+# 1. Subscription Purchase list – track subscription revenue and usage
+# 2. Fleet Operator list – fleet operator master data and financials
+# 3. Invoice list – invoice metadata and compliance
+# All response fields Maybe so missing data does not break the API.
+
+imports:
+  Summary: Dashboard.Common
+  Driver: Dashboard.Common
+
+module: FinanceManagement
+
+apis:
+  # ----- Subscription Purchase -----
+  - GET: # SubscriptionPurchaseListAPI
+      endpoint: /subscriptionPurchase/list
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        status: Text
+        driverId: Text
+        fleetOperatorId: Text
+        amountMin: Text
+        amountMax: Text
+        subscriptionId: Text
+        serviceName: Text
+      auth: ApiAuthV2
+      response:
+        type: SubscriptionPurchaseListRes
+
+
+  # ----- Invoice -----
+  - GET: # InvoiceListAPI
+      endpoint: /finance/invoice/list
+      query:
+        limit: Int
+        offset: Int
+        invoiceId: Text
+        from: UTCTime
+        to: UTCTime
+        invoiceType: Text
+        status: Text
+      auth: ApiAuthV2
+      response:
+        type: InvoiceListRes
+
+  # ----- Reconciliation -----
+  - GET: # ReconciliationAPI
+      endpoint: /finance/reconciliation
+      query:
+        fromDate: UTCTime
+        toDate: UTCTime
+        reconciliationType: Text
+        limit: Int
+        offset: Int
+      auth: ApiAuthV2
+      response:
+        type: ReconciliationRes
+
+  # ----- Payout list -----
+  - GET: # PayoutListAPI
+      endpoint: /finance/payout/list
+      query:
+        limit: Int
+        offset: Int
+        driverId: Text
+        fleetOperatorId: Text
+        from: UTCTime
+        to: UTCTime
+      auth: ApiAuthV2
+      response:
+        type: PayoutListRes
+
+  # ----- Wallet ledger (balance + ledger entries combined) -----
+  - GET: # WalletLedgerAPI
+      endpoint: /finance/wallet/ledger
+      query:
+        - limit: Int
+        - offset: Int
+        - driverId: Text
+        - fleetOperatorId: Text
+        - from: UTCTime
+        - to: UTCTime
+        - sourceType: Text
+      auth: ApiAuthV2
+      response:
+        type: WalletLedgerRes
+
+  # ----- Earnings Summary -----
+  - GET: # EarningSummaryAPI
+      endpoint: /finance/earning/summary
+      auth: ApiAuthV2
+      query:
+        - driverId: Text
+        - fleetOwnerId: Text
+        - from: UTCTime
+        - to: UTCTime
+      response:
+        type: EarningsSummaryRes
+
+  - POST: # ReconciliationTriggerAPI
+      endpoint: /reconciliation/trigger
+      auth: ApiAuthV2
+      request:
+        type: ReconciliationTriggerReq
+      response:
+        type: ReconciliationTriggerRes
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FINANCE RECONCILIATION_TRIGGER
+
+types:
+  # ----- Subscription Purchase -----
+  SubscriptionPurchaseListRes:
+    - totalItems: Int
+    - summary: Summary
+    - subscriptions: [SubscriptionPurchaseListItem]
+  SubscriptionPurchaseListItem:
+    - subscriptionPurchaseId: Maybe Text
+    - purchasedAt: Maybe UTCTime
+    - driverName: Maybe Text
+    - fleetOwnerName: Maybe Text
+    - driverPhoneNumber: Maybe Text
+    - fleetOwnerPhoneNumber: Maybe Text
+    - driverId: Maybe Text
+    - fleetOwnerId: Maybe Text
+    - status: Maybe Text
+    - amount: Maybe HighPrecMoney
+    - planName: Maybe Text
+    - planType: Maybe Text
+    - planAmount: Maybe HighPrecMoney
+    - planRideCredits: Maybe HighPrecMoney
+    - planStatus: Maybe Text
+    - planValidityDays: Maybe Int
+    - planGeography: Maybe Text
+    - planVehicleCategory: Maybe Text
+    - subscriptionStartDate: Maybe UTCTime
+    - subscriptionEndDate: Maybe UTCTime
+    - subscriptionStatus: Maybe Text
+    - baseAmount: Maybe HighPrecMoney
+    - discountAmount: Maybe HighPrecMoney
+    - totalAmount: Maybe HighPrecMoney
+    - grossSubscriptionAmount: Maybe HighPrecMoney
+    - gstRate: Maybe Double
+    - gstAmount: Maybe HighPrecMoney
+    - totalSubscriptionAmount: Maybe HighPrecMoney
+    - invoiceId: Maybe Text
+    - totalEntitledValue: Maybe HighPrecMoney
+    - utilizedValue: Maybe HighPrecMoney
+    - remainingValue: Maybe HighPrecMoney
+    - revenueRecognized: Maybe HighPrecMoney
+    - linkedRideIds: [Text]
+    - linkedBookingIds: [Text]
+    - rideUsageDetails: [RideUsageDetail]
+    - createdAt: Maybe UTCTime
+    - updatedAt: Maybe UTCTime
+
+  RideUsageDetail:
+    - bookingId: Text
+    - rideId: Text
+    - rideDate: UTCTime
+    - deductedAmount: HighPrecMoney
+
+  # ----- Fleet Operator -----
+  FleetOperatorListRes:
+    - totalItems: Int
+    - summary: Summary
+    - fleetOperators: [FleetOperatorListItem]
+  FleetOperatorListItem:
+    - fleetOperatorId: Maybe Text
+    - legalName: Maybe Text
+    - pan: Maybe Text
+    - gstin: Maybe Text
+    - settlementPreference: Maybe Text
+    - linkedDriverIds: [Text]
+    - totalEarnings: Maybe HighPrecMoney
+    - totalDeductions: Maybe HighPrecMoney
+    - outstandingBalance: Maybe HighPrecMoney
+    - payoutReference: Maybe Text
+    - payoutAmount: Maybe HighPrecMoney
+    - payoutStatus: Maybe Text
+    - createdAt: Maybe UTCTime
+    - updatedAt: Maybe UTCTime
+
+  # ----- Invoice -----
+  InvoiceListRes:
+    - totalItems: Int
+    - summary: Summary
+    - invoices: [InvoiceListItem]
+  InvoiceListItem:
+    - invoiceId: Maybe Text
+    - invoiceNumber: Maybe Text
+    - invoiceType: Maybe Text
+    - invoiceDate: Maybe UTCTime
+    - invoiceStatus: Maybe Text
+    - counterpartyType: Maybe Text
+    - counterpartyId: Maybe Text
+    - taxableValue: Maybe HighPrecMoney
+    - gstRate: Maybe Double
+    - gstAmount: Maybe HighPrecMoney
+    - totalInvoiceValue: Maybe HighPrecMoney
+    - tdsReference: Maybe Text
+    - irn: Maybe Text
+    - qrCode: Maybe Text
+    - rideId: Maybe Text
+    - subscriptionId: Maybe Text
+    - generatedAt: Maybe UTCTime
+
+  # ----- Reconciliation -----
+  ReconciliationRes:
+    - summary: ReconciliationSummary
+    - exceptions: [ReconciliationEntry]
+    - completed: [ReconciliationEntry]
+  ReconciliationSummariesRes:
+    - summaries: [ReconciliationSummary]
+    - totalCount: Int
+  ReconciliationEntriesRes:
+    - entries: [ReconciliationEntry]
+    - pagination: PaginationInfo
+  ReconciliationTriggerReq:
+    - fromDate: UTCTime
+    - toDate: UTCTime
+    - reconciliationType: Maybe Text
+  ReconciliationTriggerRes:
+    - success: Bool
+    - message: Text
+  ReconciliationStatusRes:
+    - statuses: [ReconciliationStatusItem]
+  ReconciliationSummary:
+    - totalDiscrepancies: Int
+    - matchedRecords: Int
+    - matchRate: Text
+    - sourceTotal: HighPrecMoney
+    - targetTotal: HighPrecMoney
+    - varianceAmount: HighPrecMoney
+  ReconciliationEntry:
+    - bookingId: Maybe Text
+    - dcoId: Maybe Text
+    - status: Maybe Text
+    - mode: Maybe Text
+    - expectedDsrValue: Maybe HighPrecMoney
+    - actualLedgerValue: Maybe HighPrecMoney
+    - variance: Maybe HighPrecMoney
+    - reconStatus: Maybe Text
+    - mismatchReason: Maybe Text
+    - timestamp: Maybe UTCTime
+  PaginationInfo:
+    - total: Int
+    - limit: Int
+    - offset: Int
+    - hasMore: Bool
+  ReconciliationStatusItem:
+    - reconciliationType: Text
+    - status: Text
+    - lastCompletedDate: Maybe UTCTime
+    - errorMessage: Maybe Text
+
+  # ----- Payout list -----
+  PayoutListRes:
+    - totalItems: Int
+    - payouts: [PayoutListItem]
+  PayoutListItem:
+    - payoutReference: Maybe Text
+    - payoutAmount: Maybe HighPrecMoney
+    - payoutDate: Maybe UTCTime
+    - payoutStatus: Maybe Text
+
+  # ----- Wallet ledger (balance + ledger combined) -----
+  WalletLedgerRes:
+    - availableWalletBalance: Maybe HighPrecMoney
+    - lockedWalletBalance: Maybe HighPrecMoney
+    - lastWalletUpdatedAt: Maybe UTCTime
+    - totalItems: Int
+    - ledgerEntries: [WalletLedgerItem]
+  WalletLedgerItem:
+    - walletTxnId: Maybe Text
+    - walletTxnDate: Maybe UTCTime
+    - sourceType: Maybe Text
+    - sourceReferenceId: Maybe Text
+    - creditAmount: Maybe HighPrecMoney
+    - debitAmount: Maybe HighPrecMoney
+    - openingBalance: Maybe HighPrecMoney
+    - closingBalance: Maybe HighPrecMoney
+
+  # ----- Earnings Summary -----
+  EarningsSummaryRes:
+    - totalRideEarnings: HighPrecMoney
+    - totalIncentives: HighPrecMoney
+    - totalPenalties: HighPrecMoney
+    - grossEarnings: HighPrecMoney
+    - totalTdsDeducted: HighPrecMoney
+    - totalGstDeducted: HighPrecMoney
+    - netEarnings: HighPrecMoney
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE

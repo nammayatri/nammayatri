@@ -125,6 +125,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DDoc
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLocation as DDL
+import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.DriverRidePayoutBankAccount as DRPB
 import qualified Domain.Types.FleetBadge as DFB
@@ -165,6 +166,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
@@ -172,6 +174,7 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LTST
+import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoMerchantBased)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -193,6 +196,7 @@ import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverBankAccount as QDBA
+import qualified Storage.Queries.DriverGstinExtra as QDGExtra
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
@@ -2028,7 +2032,16 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             fleetDob = Nothing,
             stripeAddress = Nothing,
             stripeIdNumber = Nothing,
-            updatedAt = person.updatedAt
+            updatedAt = person.updatedAt,
+            panAadhaarLinkedFlag = Nothing,
+            gstinApplicableFlag = Nothing,
+            tdsApplicableFlag = Nothing,
+            walletId = Nothing,
+            bankAccountNumber = Nothing,
+            bankIfsc = Nothing,
+            bankVerificationStatus = Nothing,
+            upiId = Nothing,
+            linkedDriverIds = []
           }
     Just fleetOwnerInfo -> do
       fleetConfig <- QFC.findByPrimaryKey personId
@@ -2072,11 +2085,44 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
       stripeIdNumber' <- forM stripeIdNumber decrypt
       let name = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.middleName <> maybe "" (" " <>) fleetOwner.lastName
       mobileNo' <- mapM decrypt fleetOwner.mobileNumber
+
+      -- Fetch DriverInformation for upiId
+      mbDriverInfo <- QDriverInfo.findById fleetOwnerPersonId
+
+      -- Fetch GSTIN details for gstinApplicableFlag and gstImageId
+      mbGstin <- QDGExtra.findGSTInByDriverId fleetOwnerPersonId
+      let gstinApplicableFlag = mbGstin <&> \gstin -> gstin.verificationStatus == Documents.VALID
+      let gstImageIdVal = mbGstin <&> \gstin -> gstin.documentImageId1.getId
+
+      -- Fetch DriverPanCard for panAadhaarLinkedFlag
+      mbPanCard <- QPanCard.findByDriverId fleetOwnerPersonId
+      let panAadhaarLinkedFlag =
+            (== DPanCard.PAN_AADHAAR_LINKED) <$> (mbPanCard >>= (.panAadhaarLinkage))
+
+      -- tdsApplicableFlag - check from FleetOwnerInfo or config (defaulting to Nothing for now)
+      let tdsApplicableFlag = Nothing
+
+      -- Fetch bank account details (similar to Driver info)
+      mbBankAccount <- QDBA.findByPrimaryKey fleetOwnerPersonId
+      let bankAccountNumber' = mbBankAccount <&> (.accountId)
+      let bankIfsc' = mbBankAccount >>= (.ifscCode)
+      -- wallet_id = Account_id from Finance_account where counterparty_id = fleet_owner_id AND AccountType = Liability
+      mbWalletAccount <- FWallet.getWalletAccountByOwner FLEET_OWNER fleetOwnerPersonId.getId
+      let walletId' = (\acc -> acc.id.getId) <$> mbWalletAccount
+      let bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+
+      -- upiId from DriverInformation
+      let upiId' = mbDriverInfo >>= (.payoutVpa)
+
+      -- Fetch linked drivers
+      linkedDrivers <- FDV.findAllActiveByFleetOwnerId fleetOwnerPersonId.getId
+
       return $
         Common.FleetOwnerInfoRes
           { fleetType = show fleetType,
             referralCode = (.referralCode.getId) <$> referral,
             gstNumber = gstNumber',
+            gstImageId = gstImageIdVal,
             panNumber = panNumber',
             aadhaarNumber = aadhaarNumber',
             businessLicenseNumber = businessLicenseNumber',
@@ -2090,6 +2136,15 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             operatorName = operatorName,
             operatorContact = operatorContact,
             operators = operatorsList,
+            bankAccountNumber = bankAccountNumber',
+            bankIfsc = bankIfsc',
+            bankVerificationStatus = bankVerificationStatus',
+            walletId = walletId',
+            panAadhaarLinkedFlag = panAadhaarLinkedFlag,
+            gstinApplicableFlag = gstinApplicableFlag,
+            tdsApplicableFlag = tdsApplicableFlag,
+            upiId = upiId',
+            linkedDriverIds = map (\assoc -> assoc.driverId.getId) linkedDrivers,
             ..
           }
 
