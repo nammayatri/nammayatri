@@ -11,7 +11,6 @@ module SharedLogic.DriverOnboarding.Status
     getRCAndStatus,
     getAadhaarStatus,
     mapStatus,
-    checkAllDriverVehicleDocsVerified,
     checkAllVehicleDocsVerifiedForRC,
     checkAllDriverDocsVerifiedForDriver,
     activateRCAutomatically,
@@ -187,69 +186,24 @@ data RCDetails = RCDetails
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
-checkAllDriverVehicleDocsVerified ::
-  DP.Person ->
-  DMOC.MerchantOperatingCity ->
-  DTC.TransporterConfig ->
-  Language ->
-  Text ->
-  Flow Bool
-checkAllDriverVehicleDocsVerified person merchantOperatingCity transporterConfig language reqRegistrationNo = do
-  let personId = person.id
-  let onlyMandatoryDocs = Just True
-  let useHVSdkForDL = Just True
-  driverImages <- IQuery.findAllByPersonId transporterConfig personId
-  now <- getCurrentTime
-  let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just personId, merchantOperatingCity, driverImages, transporterConfig, now}
-  allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
-  vehicleDocumentsUnverified <-
-    if isFleetRole person.role
-      then pure []
-      else fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs
-
-  let possibleVehicleCategoriesRaw = nub $ do
-        vehicleDocumentsUnverified <&> \vehicleDoc -> do
-          fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
-      -- Ensure at least one category is provided to avoid empty list bug
-      -- If no vehicle categories found, use CAR as fallback (same as vehicleCategory fallback used later)
-      possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
-  driverDocuments <- fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs
-  vehicleDoc <-
-    find (\doc -> doc.registrationNo == reqRegistrationNo) vehicleDocumentsUnverified
-      & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> reqRegistrationNo)
-  let makeSelfieAadhaarPanMandatory = Nothing
-      vehicleCategory = fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
-      allVehicleDocsVerified = checkAllVehicleDocsVerified allDocumentVerificationConfigs vehicleDoc makeSelfieAadhaarPanMandatory
-      allDriverDocsVerified = checkAllDriverDocsVerified allDocumentVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
-  pure $ allVehicleDocsVerified && allDriverDocsVerified
-
 -- Check only vehicle docs for a specific RC (used for vehicle inspection approval)
 -- mbPerson = Nothing for vehicle inspection, without driver linked to vehicle
 checkAllVehicleDocsVerifiedForRC ::
-  Maybe DP.Person ->
+  RC.VehicleRegistrationCertificate ->
   DMOC.MerchantOperatingCity ->
   DTC.TransporterConfig ->
   Language ->
   Text ->
   Flow Bool
-checkAllVehicleDocsVerifiedForRC mbPerson merchantOperatingCity transporterConfig language reqRegistrationNo = do
-  let mbPersonId = mbPerson <&> (.id)
+checkAllVehicleDocsVerifiedForRC rc merchantOperatingCity transporterConfig language reqRegistrationNo = do
   let onlyMandatoryDocs = Just True
-  driverImages <- case mbPersonId of
-    Just personId -> IQuery.findAllByPersonId transporterConfig personId
-    Nothing -> do
-      mbRc <- RCQuery.findLastVehicleRCWrapper reqRegistrationNo
-      case mbRc of
-        Nothing -> pure []
-        Just rc -> IQuery.findAllByRcId (Just rc.id.getId) -- TODO refactor later
+  let entity = IQuery.VehicleRCEntity rc
+  entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
-  let driverImagesInfo = IQuery.DriverImagesInfo {driverId = mbPersonId, merchantOperatingCity, driverImages, transporterConfig, now}
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
   allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
-  let personRole = maybe DP.DRIVER (.role) mbPerson
-  vehicleDocumentsUnverified <-
-    if isFleetRole personRole
-      then pure []
-      else fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs
+  let skipMessages = True -- Skip translations, only need status check for inspection
+  vehicleDocumentsUnverified <- fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs skipMessages
   vehicleDoc <-
     find (\doc -> doc.registrationNo == reqRegistrationNo) vehicleDocumentsUnverified
       & fromMaybeM (InvalidRequest $ "Vehicle doc not found for vehicle with registartionNo " <> reqRegistrationNo)
@@ -264,25 +218,26 @@ checkAllDriverDocsVerifiedForDriver ::
   Language ->
   Flow Bool
 checkAllDriverDocsVerifiedForDriver person merchantOperatingCity transporterConfig language = do
-  let personId = person.id
   let onlyMandatoryDocs = Just True
   let useHVSdkForDL = Just True
-  driverImages <- IQuery.findAllByPersonId transporterConfig personId
+  let entity = IQuery.PersonEntity person
+  entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
-  let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just personId, merchantOperatingCity, driverImages, transporterConfig, now}
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
   allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
+  let skipMessages = True -- Skip translations, only need status check for inspection
   -- Get vehicle categories from any associated vehicles to determine required driver docs
   vehicleDocumentsUnverified <-
     if isFleetRole person.role
       then pure []
-      else fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs
+      else fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs skipMessages
   let possibleVehicleCategoriesRaw = nub $ do
         vehicleDocumentsUnverified <&> \vehicleDoc -> do
           fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
       -- Ensure at least one category is provided to avoid empty list bug
       -- If no vehicle categories found, use CAR as fallback (same as vehicleCategory fallback below)
       possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
-  driverDocuments <- fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs
+  driverDocuments <- fetchDriverDocuments entityImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages
   let makeSelfieAadhaarPanMandatory = Nothing
       -- Use first vehicle doc category if available, otherwise use CAR as default (only needed for determining required driver docs)
       vehicleCategory = case vehicleDocumentsUnverified of
@@ -292,7 +247,7 @@ checkAllDriverDocsVerifiedForDriver person merchantOperatingCity transporterConf
 
 statusHandler' ::
   DP.Person ->
-  IQuery.DriverImagesInfo ->
+  IQuery.EntityImagesInfo ->
   Maybe Bool ->
   Maybe Bool ->
   Maybe DVC.VehicleCategory ->
@@ -300,12 +255,13 @@ statusHandler' ::
   Maybe Bool ->
   Bool ->
   Maybe Bool ->
+  Bool ->
   Flow StatusRes'
-statusHandler' person driverImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs = do
-  let merchantId = driverImagesInfo.merchantOperatingCity.merchantId
-      merchantOperatingCity = driverImagesInfo.merchantOperatingCity
+statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages = do
+  let merchantId = entityImagesInfo.merchantOperatingCity.merchantId
+      merchantOperatingCity = entityImagesInfo.merchantOperatingCity
       merchantOpCityId = merchantOperatingCity.id
-      transporterConfig = driverImagesInfo.transporterConfig
+      transporterConfig = entityImagesInfo.transporterConfig
       personId = person.id
   let language = fromMaybe merchantOperatingCity.language person.language
 
@@ -314,7 +270,7 @@ statusHandler' person driverImagesInfo makeSelfieAadhaarPanMandatory prefillData
   vehicleDocumentsUnverified <-
     if isFleetRole person.role
       then pure []
-      else fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language mbReqRegistrationNo onlyMandatoryDocs
+      else fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages
 
   let vehicleCategoryWithoutMandatoryConfigs = case onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory)) of
         Just vehicleCategory -> do
@@ -331,7 +287,7 @@ statusHandler' person driverImagesInfo makeSelfieAadhaarPanMandatory prefillData
       -- If no vehicle categories found, use CAR as fallback (same as fallback used later in vehicleCategory)
       possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
 
-  driverDocuments <- fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs
+  driverDocuments <- fetchDriverDocuments entityImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages
 
   -- Conditional logic based on separateDriverVehicleEnablement flag
   vehicleDocuments <-
@@ -366,7 +322,7 @@ statusHandler' person driverImagesInfo makeSelfieAadhaarPanMandatory prefillData
   (dlDetails, rcDetails) <-
     case prefillData of
       Just True -> do
-        let vehRegImgIds = map (.id) $ IQuery.filterImagesByPersonAndType driverImagesInfo merchantOperatingCity.merchantId DVC.VehicleRegistrationCertificate
+        let vehRegImgIds = map (.id) $ IQuery.filterImagesByEntityAndType entityImagesInfo merchantOperatingCity.merchantId DVC.VehicleRegistrationCertificate
         dl <- runInReplica $ DLQuery.findByDriverId personId <&> maybeToList
         allRCImgs <- runInReplica $ RCQuery.findAllByImageId vehRegImgIds
         allDLDetails <- mapM convertDLToDLDetails dl
@@ -418,20 +374,20 @@ statusHandler' person driverImagesInfo makeSelfieAadhaarPanMandatory prefillData
         -- Activate RC if vehicle docs are verified and inspection is not required/approved
         mbVehicle <- QVehicle.findById personId
         when (shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER) $ do
-          void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId driverImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
+          void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
           -- Enable driver when RC is activated (only when flow is NOT separated)
           -- When separated, driver enablement is handled separately in the driver enablement section
           unless separateEnablement $ do
             when checkToActivateRC $ do
               case (isVehicleCategoryExcludedFromVerification, mDL) of
-                (True, _) -> enableDriver merchantOpCityId personId Nothing driverImagesInfo.transporterConfig driverImagesInfo.merchantOperatingCity.merchantId
-                (False, Just dl) -> enableDriver merchantOpCityId personId dl.driverName driverImagesInfo.transporterConfig driverImagesInfo.merchantOperatingCity.merchantId
+                (True, _) -> enableDriver merchantOpCityId personId Nothing entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId
+                (False, Just dl) -> enableDriver merchantOpCityId personId dl.driverName entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId
                 (_, _) -> return ()
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
     convertDLToDLDetails dl = do
       driverLicenseNumberDec <- decrypt dl.licenseNumber
-      let images = driverImagesInfo.driverImages
+      let images = entityImagesInfo.entityImages
           mbImage1 = find (\img -> img.id == dl.documentImageId1) images
           mbImage2 = dl.documentImageId2 >>= \imgId2 -> find (\img -> img.id == imgId2) images
           s3Path1 = mbImage1 <&> (.s3Path)
@@ -440,7 +396,7 @@ statusHandler' person driverImagesInfo makeSelfieAadhaarPanMandatory prefillData
         DLDetails
           { driverName = dl.driverName,
             driverLicenseNumber = driverLicenseNumberDec,
-            operatingCity = show driverImagesInfo.merchantOperatingCity.city,
+            operatingCity = show entityImagesInfo.merchantOperatingCity.city,
             driverDateOfBirth = dl.driverDob,
             classOfVehicles = dl.classOfVehicles,
             imageId1 = dl.documentImageId1.getId,
@@ -453,13 +409,13 @@ statusHandler' person driverImagesInfo makeSelfieAadhaarPanMandatory prefillData
           }
     convertRCToRCDetails rc = do
       certificateNumberDec <- decrypt rc.certificateNumber
-      let mbRcImage = find (\img -> img.id == rc.documentImageId) driverImagesInfo.driverImages
+      let mbRcImage = find (\img -> img.id == rc.documentImageId) entityImagesInfo.entityImages
           s3Path = mbRcImage <&> (.s3Path)
       pure $
         RCDetails
           { vehicleRegistrationCertNumber = certificateNumberDec,
             imageId = rc.documentImageId.getId,
-            operatingCity = show driverImagesInfo.merchantOperatingCity.city,
+            operatingCity = show entityImagesInfo.merchantOperatingCity.city,
             vehicleCategory = show <$> rc.userPassedVehicleCategory,
             airConditioned = rc.airConditioned,
             vehicleManufacturer = rc.vehicleManufacturer,
@@ -484,19 +440,20 @@ isFleetRole DP.FLEET_BUSINESS = True
 isFleetRole _ = False
 
 fetchDriverDocuments ::
-  IQuery.DriverImagesInfo ->
+  IQuery.EntityImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
   [DVC.VehicleCategory] ->
   DP.Person ->
   Language ->
   Maybe Bool ->
   Maybe Bool ->
+  Bool ->
   Flow [DocumentStatusItem]
-fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs = do
+fetchDriverDocuments entityImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages = do
   let role = person.role
-      merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
+      merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       driverId = person.id
-      transporterConfig = driverImagesInfo.transporterConfig
+      transporterConfig = entityImagesInfo.transporterConfig
       isDigiLockerEnabled = fromMaybe False transporterConfig.digilockerEnabled
 
   digilockerDocStatusMap <- if isDigiLockerEnabled then getDigilockerDocStatusMap driverId else pure DocStatus.emptyDocStatusMap
@@ -507,51 +464,54 @@ fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVeh
         responseCode = mbDocStatus >>= (.responseCode)
         mbDocVerificationStatus = mbDocStatus >>= (mapDigilockerToResponseStatus . (.status))
 
-    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path) <- getProcessedDriverDocuments person.id driverImagesInfo docType useHVSdkForDL
+    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path) <- getProcessedDriverDocuments person.id entityImagesInfo docType useHVSdkForDL
     (status, mbReason, mbUrl, mbExpiryFinal, mbS3PathFinal) <- case mbProcessedStatus of
       Just VALID -> pure (VALID, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path)
       Just s -> pure (s, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path)
       Nothing -> case mbDocVerificationStatus of
         Just docStatus -> pure (docStatus, Nothing, Nothing, Nothing, Nothing)
-        Nothing -> getInProgressDriverDocuments driverId driverImagesInfo docType
+        Nothing -> getInProgressDriverDocuments driverId entityImagesInfo docType
 
-    message <- documentStatusMessage status mbReason docType mbUrl language
-    let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> Just message
+    mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
+    let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
     return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl, s3Path = mbS3PathFinal, documentExpiry = mbExpiryFinal}
 
 fetchVehicleDocuments ::
-  IQuery.DriverImagesInfo ->
+  IQuery.EntityImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
   Language ->
   Maybe Text ->
   Maybe Bool ->
+  Bool ->
   Flow [VehicleDocumentItem]
-fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs = do
+fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs skipMessages = do
   -- All items required
-  processedVehicleDocumentsWithRC <- fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs
-  processedVehicleDocumentsWithoutRC <- fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo allDocumentVerificationConfigs processedVehicleDocumentsWithRC Nothing onlyMandatoryDocs
+  processedVehicleDocumentsWithRC <- fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs skipMessages
+  processedVehicleDocumentsWithoutRC <- fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerificationConfigs processedVehicleDocumentsWithRC Nothing onlyMandatoryDocs
   let processedVehicleDocuments = processedVehicleDocumentsWithoutRC <> processedVehicleDocumentsWithRC
-  inprogressVehicleDocuments <- fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language processedVehicleDocuments Nothing onlyMandatoryDocs
+  inprogressVehicleDocuments <- fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language processedVehicleDocuments Nothing onlyMandatoryDocs skipMessages
   pure $ processedVehicleDocuments <> inprogressVehicleDocuments
-fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs = do
+fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs skipMessages = do
   -- Only one item required with specific registrationNo
-  processedVehicleDocumentsWithRC <- fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs
-  let driverId = driverImagesInfo.driverId
+  processedVehicleDocumentsWithRC <- fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs skipMessages
+  let (entityTxt, entityId) = case entityImagesInfo.entity of
+        IQuery.PersonEntity driver -> ("driverId", driver.id.getId)
+        IQuery.VehicleRCEntity rc -> ("rcId", rc.id.getId)
   if null processedVehicleDocumentsWithRC
     then do
-      processedVehicleDocumentsWithoutRC <- fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo allDocumentVerificationConfigs processedVehicleDocumentsWithRC (Just reqRegistrationNo) onlyMandatoryDocs
+      processedVehicleDocumentsWithoutRC <- fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerificationConfigs processedVehicleDocumentsWithRC (Just reqRegistrationNo) onlyMandatoryDocs
       if null processedVehicleDocumentsWithoutRC
         then do
-          docs <- fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language [] (Just reqRegistrationNo) onlyMandatoryDocs
+          docs <- fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language [] (Just reqRegistrationNo) onlyMandatoryDocs skipMessages
           if null docs
-            then logWarning $ "No docs found for rcNo and driverId: " <> show driverId
-            else logInfo $ "Inprogress vehicle docs found for rcNo and driverId: " <> show driverId
+            then logWarning $ "No docs found for rcNo and " <> entityTxt <> ": " <> entityId
+            else logInfo $ "Inprogress vehicle docs found for rcNo and " <> entityTxt <> ": " <> entityId
           pure docs
         else do
-          logInfo $ "Processed vehicle docs without RC found for rcNo and driverId: " <> show driverId
+          logInfo $ "Processed vehicle docs without RC found for rcNo and " <> entityTxt <> ": " <> entityId
           pure processedVehicleDocumentsWithoutRC
     else do
-      logInfo $ "Processed vehicle documents with RC found for rcNo and driverId: " <> show driverId
+      logInfo $ "Processed vehicle documents with RC found for rcNo and " <> entityTxt <> ": " <> entityId
       pure processedVehicleDocumentsWithRC
 
 getVehicleDocTypes ::
@@ -605,18 +565,18 @@ getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicl
         else pure SDO.defaultDriverDocumentTypes
 
 fetchProcessedVehicleDocumentsWithRC ::
-  IQuery.DriverImagesInfo ->
+  IQuery.EntityImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
   Language ->
   Maybe Text ->
   Maybe Bool ->
+  Bool ->
   Flow [VehicleDocumentItem]
-fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationConfigs language mbReqRegistrationNo onlyMandatoryDocs = do
-  let mbPersonId = driverImagesInfo.driverId
-      merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
-  processedVehicles <- case mbPersonId of
-    Just personId -> do
-      associations <- DRAQuery.findAllLinkedByDriverId personId
+fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages = do
+  let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
+  processedVehicles <- case entityImagesInfo.entity of
+    IQuery.PersonEntity person -> do
+      associations <- DRAQuery.findAllLinkedByDriverId person.id
       (catMaybes <$>) $
         forM associations $ \assoc -> do
           mbRc <- RCQuery.findById assoc.rcId
@@ -628,20 +588,11 @@ fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationCon
               return if wrongRcNo then Nothing else Just rc
             Nothing -> return Nothing
           return $ (assoc.isRcActive,assoc.rcId,) <$> mbFilteredRc
-    Nothing ->
-      case mbReqRegistrationNo of
-        Nothing -> pure []
-        Just reqRegistrationNo -> do
-          -- fetch vehicle separately from driver
-          mbRc <- RCQuery.findLastVehicleRCWrapper reqRegistrationNo
-          case mbRc of
-            Nothing -> pure []
-            Just rc -> do
-              mbAssoc <- DRAQuery.findLatestLinkedByRCId rc.id driverImagesInfo.now
-              pure [(maybe False (.isRcActive) mbAssoc, rc.id, rc)]
+    IQuery.VehicleRCEntity rc -> do
+      mbAssoc <- DRAQuery.findLatestLinkedByRCId rc.id entityImagesInfo.now
+      pure [(maybe False (.isRcActive) mbAssoc, rc.id, rc)]
   processedVehicles `forM` \(isActive, rcId, processedVehicle) -> do
-    rcImages <- IQuery.findRecentByRcIdAndImageTypes driverImagesInfo.transporterConfig rcId vehicleDocsByRcIdList
-    let rcImagesInfo = IQuery.RcImagesInfo {rcId, rcImages, documentTypes = vehicleDocsByRcIdList}
+    rcImagesInfo <- IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsByRcIdList
     registrationNo <- decrypt processedVehicle.certificateNumber
     let dateOfUpload = processedVehicle.createdAt
     let verifiedVehicleCategory = DV.castVehicleVariantToVehicleCategory <$> processedVehicle.vehicleVariant
@@ -650,17 +601,17 @@ fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationCon
     vehicleDocumentTypes <- getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs
     documents <-
       vehicleDocumentTypes `forM` \docType -> do
-        (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path) <- getProcessedVehicleDocuments driverImagesInfo docType processedVehicle (Just rcImagesInfo)
+        (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo)
         case mbStatus of
           Just status -> do
-            message <- documentStatusMessage status Nothing docType mbProcessedUrl language
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, documentExpiry = mbExpiry}
+            mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl language skipMessages
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, documentExpiry = mbExpiry}
           Nothing -> do
-            (status, mbReason, mbUrl, _, mbS3PathInProgress) <- getInProgressVehicleDocuments driverImagesInfo (Just rcImagesInfo) docType
-            message <- documentStatusMessage status mbReason docType mbUrl language
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, documentExpiry = Nothing}
+            (status, mbReason, mbUrl, _, mbS3PathInProgress) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType
+            mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, documentExpiry = Nothing}
 
-    let mbRcImage = find (\img -> img.id == processedVehicle.documentImageId) driverImagesInfo.driverImages
+    let mbRcImage = find (\img -> img.id == processedVehicle.documentImageId) entityImagesInfo.entityImages
         rcS3Path = mbRcImage <&> (.s3Path)
         rcExpiry = Just processedVehicle.fitnessExpiry
     return
@@ -679,15 +630,15 @@ fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationCon
         }
 
 fetchProcessedVehicleDocumentsWithoutRC ::
-  IQuery.DriverImagesInfo ->
+  IQuery.EntityImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
   [VehicleDocumentItem] ->
   Maybe Text ->
   Maybe Bool ->
   Flow [VehicleDocumentItem]
-fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo allDocumentVerificationConfigs processedVehicleDocumentsWithRC mbReqRegistrationNo onlyMandatoryDocs = do
-  let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
-      mbPersonId = driverImagesInfo.driverId
+fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerificationConfigs processedVehicleDocumentsWithRC mbReqRegistrationNo onlyMandatoryDocs = do
+  let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
+      mbPersonId = IQuery.getPersonEntityId entityImagesInfo
   mbVehicle <- maybe (pure Nothing) QVehicle.findById mbPersonId
   case mbVehicle of
     Just vehicle -> do
@@ -722,22 +673,27 @@ fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo allDocumentVerification
     Nothing -> return []
 
 fetchInprogressVehicleDocuments ::
-  IQuery.DriverImagesInfo ->
+  IQuery.EntityImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
   Language ->
   [VehicleDocumentItem] ->
   Maybe Text ->
   Maybe Bool ->
+  Bool ->
   Flow [VehicleDocumentItem]
-fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language processedVehicleDocuments mbReqRegistrationNo onlyMandatoryDocs = do
-  let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
-      mbPersonId = driverImagesInfo.driverId
-  mbVerificationReqRecord <- case mbPersonId of
-    Just personId -> do
-      inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
-      inprogressVehicleHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
+fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language processedVehicleDocuments mbReqRegistrationNo onlyMandatoryDocs skipMessages = do
+  let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
+      mbPersonId = IQuery.getPersonEntityId entityImagesInfo
+  mbVerificationReqRecord <- case entityImagesInfo.entity of
+    IQuery.PersonEntity person -> do
+      -- Driver inspection or status handle
+      inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id DVC.VehicleRegistrationCertificate
+      inprogressVehicleHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id DVC.VehicleRegistrationCertificate
       pure $ getLatestVerificationRecord inprogressVehicleIdfy inprogressVehicleHV
-    Nothing -> pure Nothing
+    IQuery.VehicleRCEntity _rc -> do
+      -- Vehicle inspection
+      -- Inprogress rc doc for Vehicle inspection case not required, because we already have processed rc
+      pure Nothing
   case mbVerificationReqRecord of
     Just verificationReqRecord -> do
       registrationNoEither <- withTryCatch "decryptDocumentNumber:fetchInprogressVehicleDocuments" (decrypt verificationReqRecord.documentNumber)
@@ -759,8 +715,7 @@ fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs 
                   pure (iu, Just rc_.id)
                 Nothing -> pure ([], Nothing)
               mbRcImagesInfo <- forM mbRcId $ \rcId -> do
-                rcImages <- IQuery.findRecentByRcIdAndImageTypes driverImagesInfo.transporterConfig rcId vehicleDocsByRcIdList
-                pure IQuery.RcImagesInfo {rcId, rcImages, documentTypes = vehicleDocsByRcIdList}
+                IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsByRcIdList
               if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || not (null isUnlinked)
                 then return []
                 else do
@@ -770,10 +725,10 @@ fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs 
                   vehicleDocumentTypes <- getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs
                   documents <-
                     vehicleDocumentTypes `forM` \docType -> do
-                      (status, mbReason, mbUrl, _, mbS3Path) <- getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType
-                      message <- documentStatusMessage status mbReason docType mbUrl language
-                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl, s3Path = mbS3Path, documentExpiry = Nothing}
-                  let mbRcImage = find (\img -> img.imageType == DVC.VehicleRegistrationCertificate) driverImagesInfo.driverImages
+                      (status, mbReason, mbUrl, _, mbS3Path) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType
+                      mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
+                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, documentExpiry = Nothing}
+                  let mbRcImage = find (\img -> img.imageType == DVC.VehicleRegistrationCertificate) entityImagesInfo.entityImages
                       rcS3Path = mbRcImage <&> (.s3Path)
                   return
                     [ VehicleDocumentItem
@@ -857,10 +812,10 @@ checkIfDocumentValid allDocumentVerificationConfigs docType category status make
         else True
     Nothing -> True
 
-getProcessedDriverDocuments :: Id DP.Person -> IQuery.DriverImagesInfo -> DVC.DocumentType -> Maybe Bool -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
-getProcessedDriverDocuments driverId driverImagesInfo docType useHVSdkForDL = do
-  let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
-      mbS3Path = getS3PathFromLatestImage driverImagesInfo docType
+getProcessedDriverDocuments :: Id DP.Person -> IQuery.EntityImagesInfo -> DVC.DocumentType -> Maybe Bool -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
+getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
+  let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
+      mbS3Path = getS3PathFromLatestImage entityImagesInfo docType
   case docType of
     DVC.DriverLicense -> do
       mbDL <- DLQuery.findByDriverId driverId -- add failure reason in dl and rc
@@ -879,10 +834,10 @@ getProcessedDriverDocuments driverId driverImagesInfo docType useHVSdkForDL = do
       mbSSN <- QDSSN.findByDriverId driverId
       return (mapStatus <$> (mbSSN <&> (.verificationStatus)), mbSSN >>= (.rejectReason), Nothing, Nothing, mbS3Path)
     DVC.ProfilePhoto -> do
-      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.ProfilePhoto
+      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.ProfilePhoto
       return (status, reason, url, Nothing, mbS3Path)
     DVC.UploadProfile -> do
-      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.UploadProfile
+      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.UploadProfile
       return (status, reason, url, Nothing, mbS3Path)
     DVC.PanCard -> do
       mbPanCard <- QDPC.findByDriverId driverId
@@ -897,13 +852,13 @@ getProcessedDriverDocuments driverId driverImagesInfo docType useHVSdkForDL = do
         then return (Just VALID, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path)
         else return (Nothing, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path)
     DVC.DrivingSchoolCertificate -> do
-      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.DrivingSchoolCertificate
+      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.DrivingSchoolCertificate
       return (status, reason, url, Nothing, mbS3Path)
     DVC.PoliceVerificationCertificate -> do
-      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.PoliceVerificationCertificate
+      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.PoliceVerificationCertificate
       return (status, reason, url, Nothing, mbS3Path)
     DVC.LocalResidenceProof -> do
-      let (status, reason, url) = checkImageValidity driverImagesInfo DVC.LocalResidenceProof
+      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.LocalResidenceProof
       return (status, reason, url, Nothing, mbS3Path)
     DVC.TrainingForm -> do
       status <- checkLMSTrainingStatus driverId merchantOpCityId
@@ -915,7 +870,7 @@ getProcessedDriverDocuments driverId driverImagesInfo docType useHVSdkForDL = do
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
 callGetDLGetStatus driverId merchantOpCityId = do
-  latestReq <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId DVC.DriverLicense
+  latestReq <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId DVC.DriverLicense
   whenJust latestReq $ \verificationReq -> do
     when (verificationReq.status == "pending" || verificationReq.status == "source_down_retrying") $ do
       rsp <- Verification.getTask merchantOpCityId KEV.HyperVergeRCDL (KEV.GetTaskReq (Just "checkDL") verificationReq.requestId) HVQuery.updateResponse
@@ -925,37 +880,37 @@ callGetDLGetStatus driverId merchantOpCityId = do
           unless ("still being processed" `T.isInfixOf` (fromMaybe "" resp.message)) (void $ DDL.onVerifyDL (SDO.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL)
         _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
 
-getProcessedVehicleDocuments :: IQuery.DriverImagesInfo -> DVC.DocumentType -> RC.VehicleRegistrationCertificate -> Maybe IQuery.RcImagesInfo -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
-getProcessedVehicleDocuments driverImagesInfo docType vehicleRC mbRcImagesInfo = do
-  let mbDriverId = driverImagesInfo.driverId
-      mbS3Path = getS3PathFromVehicleImage driverImagesInfo docType mbRcImagesInfo
+getProcessedVehicleDocuments :: IQuery.EntityImagesInfo -> DVC.DocumentType -> RC.VehicleRegistrationCertificate -> Maybe IQuery.RcImagesInfo -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
+getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo = do
+  let entity = entityImagesInfo.entity
+      mbS3Path = getS3PathFromVehicleImage entityImagesInfo docType mbRcImagesInfo
   case docType of
     DVC.VehicleRegistrationCertificate ->
       return (Just $ mapStatus vehicleRC.verificationStatus, vehicleRC.rejectReason, Nothing, Just vehicleRC.fitnessExpiry, mbS3Path)
     DVC.VehiclePermit -> do
-      mbDoc <- case mbDriverId of
-        Just driverId -> listToMaybe <$> VPQuery.findByRcIdAndDriverId vehicleRC.id driverId
-        Nothing -> listToMaybe <$> VPQuery.findByRcId vehicleRC.id
+      mbDoc <- case entity of
+        IQuery.PersonEntity person -> listToMaybe <$> VPQuery.findByRcIdAndDriverId vehicleRC.id person.id
+        IQuery.VehicleRCEntity _rc -> listToMaybe <$> VPQuery.findByRcId (Just 1) Nothing vehicleRC.id
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.permitExpiry, mbS3Path)
     DVC.VehicleFitnessCertificate -> do
-      mbDoc <- case mbDriverId of
-        Just driverId -> listToMaybe <$> VFCQuery.findByRcIdAndDriverId vehicleRC.id driverId
-        Nothing -> listToMaybe <$> VFCQuery.findByRcId vehicleRC.id
+      mbDoc <- case entity of
+        IQuery.PersonEntity person -> listToMaybe <$> VFCQuery.findByRcIdAndDriverId vehicleRC.id person.id
+        IQuery.VehicleRCEntity _rc -> listToMaybe <$> VFCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, Just vehicleRC.fitnessExpiry, mbS3Path)
     DVC.VehicleInsurance -> do
-      mbDoc <- case mbDriverId of
-        Just driverId -> listToMaybe <$> VIQuery.findByRcIdAndDriverId vehicleRC.id driverId
-        Nothing -> listToMaybe <$> VIQuery.findByRcId vehicleRC.id
+      mbDoc <- case entity of
+        IQuery.PersonEntity person -> listToMaybe <$> VIQuery.findByRcIdAndDriverId vehicleRC.id person.id
+        IQuery.VehicleRCEntity _rc -> listToMaybe <$> VIQuery.findByRcId (Just 1) Nothing vehicleRC.id
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, mbS3Path)
     DVC.VehiclePUC -> do
-      mbDoc <- case mbDriverId of
-        Just driverId -> listToMaybe <$> VPUCQuery.findByRcIdAndDriverId vehicleRC.id driverId
-        Nothing -> listToMaybe <$> VPUCQuery.findByRcId vehicleRC.id
+      mbDoc <- case entity of
+        IQuery.PersonEntity person -> listToMaybe <$> VPUCQuery.findByRcIdAndDriverId vehicleRC.id person.id
+        IQuery.VehicleRCEntity _rc -> listToMaybe <$> VPUCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, mbS3Path)
     DVC.VehicleNOC -> do
-      mbDoc <- case mbDriverId of
-        Just driverId -> listToMaybe <$> VNOCQuery.findByRcIdAndDriverId vehicleRC.id driverId
-        Nothing -> listToMaybe <$> VNOCQuery.findByRcId vehicleRC.id
+      mbDoc <- case entity of
+        IQuery.PersonEntity person -> listToMaybe <$> VNOCQuery.findByRcIdAndDriverId vehicleRC.id person.id
+        IQuery.VehicleRCEntity _rc -> listToMaybe <$> VNOCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), mbS3Path)
     DVC.VehicleInspectionForm -> do
       -- Check all vehicle photos based on RC, not driver
@@ -965,11 +920,11 @@ getProcessedVehicleDocuments driverImagesInfo docType vehicleRC mbRcImagesInfo =
       registrationNo <- decrypt vehicleRC.certificateNumber
       status <- getInspectionHubStatusForResponseStatus DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
       return (status, Nothing, Nothing, Nothing, Nothing)
-    DVC.SubscriptionPlan -> case mbDriverId of
-      Just driverId -> do
-        mbPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION driverId -- fix later on basis of vehicle category
+    DVC.SubscriptionPlan -> case entity of
+      IQuery.PersonEntity person -> do
+        mbPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION person.id -- fix later on basis of vehicle category
         return (Just $ boolToStatus (isJust mbPlan), Nothing, Nothing, Nothing, Nothing)
-      Nothing -> return (Nothing, Nothing, Nothing, Nothing, Nothing)
+      IQuery.VehicleRCEntity _rc -> return (Nothing, Nothing, Nothing, Nothing, Nothing)
     _ -> return (Nothing, Nothing, Nothing, Nothing, mbS3Path)
   where
     boolToStatus :: Bool -> ResponseStatus
@@ -977,27 +932,27 @@ getProcessedVehicleDocuments driverImagesInfo docType vehicleRC mbRcImagesInfo =
       True -> VALID
       False -> NO_DOC_AVAILABLE
 
-getS3PathFromLatestImage :: IQuery.DriverImagesInfo -> DVC.DocumentType -> Maybe Text
-getS3PathFromLatestImage driverImagesInfo docType =
-  let images = IQuery.filterRecentByPersonIdAndImageType driverImagesInfo docType
+getS3PathFromLatestImage :: IQuery.EntityImagesInfo -> DVC.DocumentType -> Maybe Text
+getS3PathFromLatestImage entityImagesInfo docType =
+  let images = IQuery.filterRecentByEntityIdAndImageType entityImagesInfo docType
       mbLatestImage = listToMaybe images
    in mbLatestImage <&> (.s3Path)
 
-getS3PathFromVehicleImage :: IQuery.DriverImagesInfo -> DVC.DocumentType -> Maybe IQuery.RcImagesInfo -> Maybe Text
-getS3PathFromVehicleImage driverImagesInfo docType mbRcImagesInfo =
+getS3PathFromVehicleImage :: IQuery.EntityImagesInfo -> DVC.DocumentType -> Maybe IQuery.RcImagesInfo -> Maybe Text
+getS3PathFromVehicleImage entityImagesInfo docType mbRcImagesInfo =
   let images = case docType of
         DVC.VehicleRegistrationCertificate ->
-          let merchantId = driverImagesInfo.merchantOperatingCity.merchantId
-           in IQuery.filterImagesByPersonAndType driverImagesInfo merchantId docType
+          let merchantId = entityImagesInfo.merchantOperatingCity.merchantId
+           in IQuery.filterImagesByEntityAndType entityImagesInfo merchantId docType
         _ -> case mbRcImagesInfo of
           Just rcImagesInfo -> IQuery.filterRecentByPersonRCAndImageType rcImagesInfo docType
           Nothing -> []
       mbLatestImage = listToMaybe images
    in mbLatestImage <&> (.s3Path)
 
-checkImageValidity :: IQuery.DriverImagesInfo -> DVC.DocumentType -> (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl)
-checkImageValidity driverImagesInfo docType = do
-  let validImages = IQuery.filterImageByPersonIdAndImageTypeAndVerificationStatus driverImagesInfo docType [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
+checkImageValidity :: IQuery.EntityImagesInfo -> DVC.DocumentType -> (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkImageValidity entityImagesInfo docType = do
+  let validImages = IQuery.filterImageByEntityIdAndImageTypeAndVerificationStatus entityImagesInfo docType [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
   checkValidity validImages
   where
     checkValidity validImages
@@ -1098,28 +1053,28 @@ checkBackgroundVerificationStatus driverId merchantId merchantOpCityId = do
 
 getInProgressDriverDocuments ::
   Id DP.Person ->
-  IQuery.DriverImagesInfo ->
+  IQuery.EntityImagesInfo ->
   DDVC.DocumentType ->
   Flow (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
-getInProgressDriverDocuments driverId driverImagesInfo docType = do
-  let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
-      merchantId = driverImagesInfo.merchantOperatingCity.merchantId
-      mbS3Path = getS3PathFromLatestImage driverImagesInfo docType
+getInProgressDriverDocuments driverId entityImagesInfo docType = do
+  let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
+      merchantId = entityImagesInfo.merchantOperatingCity.merchantId
+      mbS3Path = getS3PathFromLatestImage entityImagesInfo docType
   (status, mbReason, mbUrl) <- case docType of
-    DDVC.DriverLicense -> checkIfUnderProgress driverImagesInfo DDVC.DriverLicense
+    DDVC.DriverLicense -> checkIfUnderProgress entityImagesInfo DDVC.DriverLicense
     DDVC.BackgroundVerification -> checkBackgroundVerificationStatus driverId merchantId merchantOpCityId
-    DDVC.AadhaarCard -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.AadhaarCard
-    DDVC.PanCard -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.PanCard
-    DDVC.GSTCertificate -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.GSTCertificate
+    DDVC.AadhaarCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.AadhaarCard
+    DDVC.PanCard -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PanCard
+    DDVC.GSTCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.GSTCertificate
     DDVC.Permissions -> return (VALID, Nothing, Nothing)
     DDVC.ProfilePhoto -> do
-      let mbImages = IQuery.filterRecentLatestByPersonIdAndImageType driverImagesInfo DDVC.ProfilePhoto
+      let mbImages = IQuery.filterRecentLatestByEntityIdAndImageType entityImagesInfo DDVC.ProfilePhoto
       return (fromMaybe NO_DOC_AVAILABLE (mapStatus <$> (mbImages >>= (.verificationStatus))), Nothing, Nothing)
-    DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.UploadProfile
-    DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.DrivingSchoolCertificate
-    DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.PoliceVerificationCertificate
-    DDVC.LocalResidenceProof -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.LocalResidenceProof
-    DDVC.TrainingForm -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.TrainingForm
+    DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.UploadProfile
+    DDVC.DrivingSchoolCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.DrivingSchoolCertificate
+    DDVC.PoliceVerificationCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.PoliceVerificationCertificate
+    DDVC.LocalResidenceProof -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.LocalResidenceProof
+    DDVC.TrainingForm -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TrainingForm
     DDVC.DriverInspectionHub -> do
       mbStatus <- getInspectionHubStatusForResponseStatus DOHR.DRIVER_ONBOARDING_INSPECTION (Just driverId) Nothing
       let status = fromMaybe INVALID mbStatus
@@ -1138,23 +1093,23 @@ vehicleDocsByRcIdList =
     DVC.Odometer
   ]
 
-getInProgressVehicleDocuments :: IQuery.DriverImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
-getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType = do
+getInProgressVehicleDocuments :: IQuery.EntityImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text)
+getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType = do
   let mbS3Path = case mbRcImagesInfo of
         Just rcImagesInfo ->
           let images = IQuery.filterRecentByPersonRCAndImageType rcImagesInfo docType
               mbLatestImage = listToMaybe images
            in mbLatestImage <&> (.s3Path)
-        Nothing -> getS3PathFromLatestImage driverImagesInfo docType
+        Nothing -> getS3PathFromLatestImage entityImagesInfo docType
   (status, mbReason, mbUrl) <- case docType of
-    DVC.VehicleRegistrationCertificate -> checkIfUnderProgress driverImagesInfo DVC.VehicleRegistrationCertificate
+    DVC.VehicleRegistrationCertificate -> checkIfUnderProgress entityImagesInfo DVC.VehicleRegistrationCertificate
     DVC.SubscriptionPlan -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
-    DVC.VehiclePermit -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehiclePermit
-    DVC.VehicleFitnessCertificate -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleFitnessCertificate
-    DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleInsurance
-    DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehiclePUC
+    DVC.VehiclePermit -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePermit
+    DVC.VehicleFitnessCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleFitnessCertificate
+    DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleInsurance
+    DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehiclePUC
     DVC.VehicleInspectionForm -> checkVehiclePhotosStatusByRC mbRcImagesInfo
-    DVC.VehicleNOC -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleNOC
+    DVC.VehicleNOC -> checkIfImageUploadedOrInvalidated entityImagesInfo DVC.VehicleNOC
     DVC.InspectionHub -> do
       mbRegistrationNo <- case mbRcImagesInfo of
         Just rcImagesInfo -> do
@@ -1185,10 +1140,10 @@ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType = do
         then (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
         else (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
 
-checkIfImageUploadedOrInvalidated :: IQuery.DriverImagesInfo -> DDVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
-checkIfImageUploadedOrInvalidated driverImagesInfo docType = do
-  let images = IQuery.filterRecentByPersonIdAndImageType driverImagesInfo docType
-  documentVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndDefaultEnabledOnManualVerification driverImagesInfo.merchantOperatingCity.id docType False Nothing
+checkIfImageUploadedOrInvalidated :: IQuery.EntityImagesInfo -> DDVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkIfImageUploadedOrInvalidated entityImagesInfo docType = do
+  let images = IQuery.filterRecentByEntityIdAndImageType entityImagesInfo docType
+  documentVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndDefaultEnabledOnManualVerification entityImagesInfo.merchantOperatingCity.id docType False Nothing
   case images of
     [] -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
     latestImage : _ -> do
@@ -1199,23 +1154,27 @@ checkIfImageUploadedOrInvalidated driverImagesInfo docType = do
             then return (FAILED, Nothing, Nothing)
             else return (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
 
-checkIfUnderProgress :: IQuery.DriverImagesInfo -> DVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
-checkIfUnderProgress driverImagesInfo docType = do
-  let mbDriverId = driverImagesInfo.driverId
-  mbVerificationReqRecord <- case mbDriverId of
-    Just driverId -> do
-      mbVerificationReqIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
-      mbVerificationReqHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
+checkIfUnderProgress :: IQuery.EntityImagesInfo -> DVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkIfUnderProgress entityImagesInfo docType = do
+  mbVerificationReqRecord <- case entityImagesInfo.entity of
+    IQuery.PersonEntity person -> do
+      -- Driver inspection or status handler: docType: DriverLicense/VehicleRegistrationCertificate
+      let driverId = person.id
+      mbVerificationReqIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId docType
+      mbVerificationReqHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId docType
       pure $ getLatestVerificationRecord mbVerificationReqIdfy mbVerificationReqHV
-    Nothing -> pure Nothing
+    IQuery.VehicleRCEntity _rc -> do
+      -- Vehicle inspection: docType: VehicleRegistrationCertificate
+      -- Inprogress rc doc for Vehicle inspection case not required, because we already have processed rc
+      pure Nothing
   case mbVerificationReqRecord of
     Just verificationReqRecord -> do
       if verificationReqRecord.status == "pending" || verificationReqRecord.status == "source_down_retrying"
         then return (PENDING, Nothing, Nothing)
         else return (FAILED, verificationReqRecord.verificaitonResponse, Nothing)
     Nothing -> do
-      let images = IQuery.filterRecentByPersonIdAndImageType driverImagesInfo docType
-      handleImages driverImagesInfo.transporterConfig.onboardingTryLimit images
+      let images = IQuery.filterRecentByEntityIdAndImageType entityImagesInfo docType
+      handleImages entityImagesInfo.transporterConfig.onboardingTryLimit images
   where
     handleImages onboardingTryLimit images
       | null images = return (NO_DOC_AVAILABLE, Nothing, Nothing)
@@ -1232,37 +1191,40 @@ extractImageFailReason imageError =
     Just (ImageNotValid reason) -> Just reason -- only this because we are inserting this type only in manual reject request in update documents dashboard api
     _ -> Nothing
 
-documentStatusMessage :: ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Language -> Flow Text
-documentStatusMessage status mbReason docType mbVerificationUrl language = do
-  case (status, docType, mbVerificationUrl) of
-    (VALID, _, _) -> toVerificationMessage DocumentValid language
-    (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview language
-    (PENDING, DDVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput language
-    (PENDING, _, _) -> toVerificationMessage VerificationInProgress language
-    (PULL_REQUIRED, _, _) -> toVerificationMessage PullRequired language
-    (CONSENT_DENIED, _, _) -> toVerificationMessage ConsentDenied language
-    (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed language
-    (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound language
-    (INVALID, DDVC.DriverLicense, _) -> do
-      msg <- toVerificationMessage DLInvalid language
-      return $ fromMaybe msg mbReason
-    (INVALID, DDVC.VehicleRegistrationCertificate, _) -> do
-      msg <- toVerificationMessage RCInvalid language
-      return $ fromMaybe msg mbReason
-    (INVALID, _, _) -> do
-      msg <- toVerificationMessage DocumentInvalid language
-      return $ fromMaybe msg mbReason
-    (UNAUTHORIZED, _, _) -> toVerificationMessage Unauthorized language
-    (FAILED, _, _) -> do
-      case mbReason of
-        Just res
-          | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-          | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress language
-          | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed language
-          | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-          | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-          | otherwise -> toVerificationMessage Other language
-        Nothing -> toVerificationMessage Other language
+documentStatusMessage :: ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Language -> Bool -> Flow (Maybe Text)
+documentStatusMessage status mbReason docType mbVerificationUrl language skipMessages
+  | skipMessages = pure Nothing
+  | otherwise = do
+      msg <- case (status, docType, mbVerificationUrl) of
+        (VALID, _, _) -> toVerificationMessage DocumentValid language
+        (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview language
+        (PENDING, DDVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput language
+        (PENDING, _, _) -> toVerificationMessage VerificationInProgress language
+        (PULL_REQUIRED, _, _) -> toVerificationMessage PullRequired language
+        (CONSENT_DENIED, _, _) -> toVerificationMessage ConsentDenied language
+        (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed language
+        (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound language
+        (INVALID, DDVC.DriverLicense, _) -> do
+          msg <- toVerificationMessage DLInvalid language
+          return $ fromMaybe msg mbReason
+        (INVALID, DDVC.VehicleRegistrationCertificate, _) -> do
+          msg <- toVerificationMessage RCInvalid language
+          return $ fromMaybe msg mbReason
+        (INVALID, _, _) -> do
+          msg <- toVerificationMessage DocumentInvalid language
+          return $ fromMaybe msg mbReason
+        (UNAUTHORIZED, _, _) -> toVerificationMessage Unauthorized language
+        (FAILED, _, _) -> do
+          case mbReason of
+            Just res
+              | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
+              | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress language
+              | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed language
+              | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
+              | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
+              | otherwise -> toVerificationMessage Other language
+            Nothing -> toVerificationMessage Other language
+      pure $ Just msg
 
 getAadhaarStatus :: Id DP.Person -> Flow (ResponseStatus, Maybe DAadhaarCard.AadhaarCard)
 getAadhaarStatus personId = do
@@ -1274,9 +1236,9 @@ getAadhaarStatus personId = do
         else return (MANUAL_VERIFICATION_REQUIRED, Just aadhaarCard)
     Nothing -> return (NO_DOC_AVAILABLE, Nothing)
 
-getDLAndStatus :: Id DP.Person -> IQuery.DriverImagesInfo -> Language -> Maybe Bool -> Flow (ResponseStatus, Maybe DL.DriverLicense, Text)
-getDLAndStatus driverId driverImagesInfo language useHVSdkForDL = do
-  let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
+getDLAndStatus :: Id DP.Person -> IQuery.EntityImagesInfo -> Language -> Maybe Bool -> Flow (ResponseStatus, Maybe DL.DriverLicense, Text)
+getDLAndStatus driverId entityImagesInfo language useHVSdkForDL = do
+  let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
   mDriverLicense <- do
     mbDL' <- DLQuery.findByDriverId driverId
     case mbDL' of
@@ -1294,16 +1256,16 @@ getDLAndStatus driverId driverImagesInfo language useHVSdkForDL = do
         msg <- verificationStatusCheck status language DVC.DriverLicense Nothing
         return (status, msg)
       Nothing -> do
-        (status, message) <- checkIfInVerification driverId driverImagesInfo DVC.DriverLicense language
+        (status, message) <- checkIfInVerification driverId entityImagesInfo DVC.DriverLicense language
         return (status, message)
   return (status, mDriverLicense, message)
 
-getRCAndStatus :: Id DP.Person -> IQuery.DriverImagesInfo -> Language -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate, Text)
-getRCAndStatus driverId driverImagesInfo language = do
+getRCAndStatus :: Id DP.Person -> IQuery.EntityImagesInfo -> Language -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate, Text)
+getRCAndStatus driverId entityImagesInfo language = do
   associations <- DRAQuery.findAllLinkedByDriverId driverId
   if null associations
     then do
-      (status, message) <- checkIfInVerification driverId driverImagesInfo DVC.VehicleRegistrationCertificate language
+      (status, message) <- checkIfInVerification driverId entityImagesInfo DVC.VehicleRegistrationCertificate language
       return (status, Nothing, message)
     else do
       mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
@@ -1355,13 +1317,13 @@ addVerificationReasons language mbReasons msg = do
       pure $ msg <> T.intercalate ", " translatedReasons
     _ -> pure msg
 
-checkIfInVerification :: Id DP.Person -> IQuery.DriverImagesInfo -> DVC.DocumentType -> Language -> Flow (ResponseStatus, Text)
-checkIfInVerification driverId driverImagesInfo docType language = do
-  let onboardingTryLimit = driverImagesInfo.transporterConfig.onboardingTryLimit
-  idfyVerificationReq <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
-  hvVerificationReq <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
+checkIfInVerification :: Id DP.Person -> IQuery.EntityImagesInfo -> DVC.DocumentType -> Language -> Flow (ResponseStatus, Text)
+checkIfInVerification driverId entityImagesInfo docType language = do
+  let onboardingTryLimit = entityImagesInfo.transporterConfig.onboardingTryLimit
+  idfyVerificationReq <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId docType
+  hvVerificationReq <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing driverId docType
   let mbVerificationReqRecord = getLatestVerificationRecord idfyVerificationReq hvVerificationReq
-  let images = IQuery.filterRecentByPersonIdAndImageType driverImagesInfo docType
+  let images = IQuery.filterRecentByEntityIdAndImageType entityImagesInfo docType
   verificationStatusWithMessage onboardingTryLimit (length images) mbVerificationReqRecord language docType
 
 verificationStatusWithMessage :: Int -> Int -> Maybe SDO.VerificationReqRecord -> Language -> DVC.DocumentType -> Flow (ResponseStatus, Text)

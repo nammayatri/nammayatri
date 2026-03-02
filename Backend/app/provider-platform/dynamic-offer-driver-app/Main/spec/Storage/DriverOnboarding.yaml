@@ -655,8 +655,11 @@ VehiclePermit:
       where:
         and: [rcId, driverId]
     findByRcId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: rcId
+      orderBy:
+        field: createdAt
+        order: desc
     updateVerificationStatusByImageId:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
@@ -682,6 +685,7 @@ VehicleInsurance:
     rejectReason: Maybe Text
   constraints:
     id: PrimaryKey
+    rcId: SecondaryKey
     documentImageId: SecondaryKey
   queries:
     findByRcIdAndDriverId:
@@ -689,8 +693,11 @@ VehicleInsurance:
       where:
         and: [rcId, driverId]
     findByRcId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: rcId
+      orderBy:
+        field: createdAt
+        order: desc
     updateVerificationStatus:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
@@ -722,8 +729,11 @@ VehicleFitnessCertificate:
       where:
         and: [rcId, driverId]
     findByRcId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: rcId
+      orderBy:
+        field: createdAt
+        order: desc
     updateVerificationStatus:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
@@ -756,8 +766,11 @@ VehicleNOC:
       where:
         and: [rcId, driverId]
     findByRcId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: rcId
+      orderBy:
+        field: createdAt
+        order: desc
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId
@@ -810,8 +823,11 @@ VehiclePUC:
       where:
         and: [rcId, driverId]
     findByRcId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: rcId
+      orderBy:
+        field: createdAt
+        order: desc
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId

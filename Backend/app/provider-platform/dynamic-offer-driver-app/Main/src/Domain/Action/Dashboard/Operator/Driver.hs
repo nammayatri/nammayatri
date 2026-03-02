@@ -170,7 +170,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       (merchantOpCity, transporterConfig, language) <- getMerchantAndPersonInfo mShortId city mbPerson
       fork "enable driver after vehicle inspection" $ do
         -- Only check vehicle docs, not driver docs (vehicle and driver enablement are segregated)
-        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC Nothing merchantOpCity transporterConfig language registrationNo
+        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOpCity transporterConfig language registrationNo
         when allVehicleDocsVerified $ do
           QVRC.updateApproved (Just True) rc.id
           -- Cancel pending vehicle inspection reminders for all drivers using this RC
@@ -338,13 +338,15 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
       merchantOpCity <-
         CQMOC.findById merchantOpCityId
           >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-      driverImages <- IQuery.findAllByPersonId transporterConfig driverId
-      let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+      let entity = IQuery.PersonEntity person
+      entityImages <- IQuery.findAllByEntityId transporterConfig entity
+      let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
       driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
       let shouldActivateRc = False
+          skipMessages = False -- Need translations for API response
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' person driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs -- FIXME: Need to change
+          <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages -- FIXME: Need to change
       pure $
         API.Types.ProviderPlatform.Operator.Driver.DriverInfo
           { driverId = cast drvOpAsn.driverId,
