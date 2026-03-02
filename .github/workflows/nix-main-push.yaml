@@ -46,7 +46,9 @@ jobs:
         env:
           NIX_LOCAL_BUILD: "1"
         run: |
-          nix build github:srid/devour-flake#default --impure --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result
+          nix build github:srid/devour-flake#default --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
+            printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
+          done | tee master-build-log.txt
 
       - name: Push to Cache (Local mode)        
         continue-on-error: true
@@ -65,6 +67,14 @@ jobs:
             echo "$PATHS" | cachix push nammayatri
           fi
 
+      - name: Upload master build log
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: master-build-log
+          path: master-build-log.txt
+          retention-days: 1
+
       - name: Build And Push Docker image (Master Local mode)
         id: docker
         if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
@@ -82,6 +92,45 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
+  
+  analyze-master-build-times:
+    name: Analyze Master Build Times
+    needs: [master-build, check-conditions]
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    runs-on: x86_64-linux
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download master build logs
+        uses: actions/download-artifact@v4
+        with:
+          path: master-build-logs
+
+      - name: Run build log analysis
+        run: |
+          cd buildtime-analysis
+          python3 analyze_build_log.py ../master-build-logs/master-build-log/master-build-log.txt
+
+      - name: Run build visualization
+        run: |
+          cd buildtime-analysis
+          python3 visualize_builds.py
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-analysis-results
+          path: |
+            buildtime-analysis/build_analysis.json
+            buildtime-analysis/build_analysis_report.md
+            buildtime-analysis/dependency_analysis.json
+            buildtime-analysis/*.png
+            buildtime-analysis/*/*.png
+          retention-days: 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
   prod-build:
     name: ${{ matrix.name }}
@@ -108,7 +157,7 @@ jobs:
         run: |
           nix build github:srid/devour-flake#default --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
-          done | tee build-log.txt
+          done | tee prod-build-log.txt
 
       - name: Push to Cache
         continue-on-error: true
@@ -131,8 +180,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: build-log
-          path: build-log.txt
+          name: prod-build-log
+          path: prod-build-log.txt
           retention-days: 1
 
       - name: Build And Push Docker image
@@ -152,8 +201,8 @@ jobs:
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
 
-  analyze-build-times:
-    name: Analyze Build Times
+  analyze-prod-build-times:
+    name: Analyze Prod Build Times
     needs: [prod-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
     runs-on: x86_64-linux
@@ -164,12 +213,12 @@ jobs:
       - name: Download build logs
         uses: actions/download-artifact@v4
         with:
-          path: build-logs
+          path: prod-build-logs
 
       - name: Run build log analysis
         run: |
           cd buildtime-analysis
-          python3 analyze_build_log.py ../build-logs/build-log/build-log.txt
+          python3 analyze_build_log.py ../prod-build-logs/prod-build-log/prod-build-log.txt
 
       - name: Run build visualization
         run: |
