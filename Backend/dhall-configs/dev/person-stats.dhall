@@ -4,6 +4,8 @@ let sec = ./secrets/rider-app.dhall
 
 let genericCommon = ../generic/common.dhall
 
+let appCfg = ./dynamic-offer-driver-app.dhall
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -140,4 +142,5 @@ in  { hedisCfg
     , consumerStartTime = Some +14
     , consumerEndTime = Some +20
     , inMemConfig
+    , smsCfg = appCfg.smsCfg
     }

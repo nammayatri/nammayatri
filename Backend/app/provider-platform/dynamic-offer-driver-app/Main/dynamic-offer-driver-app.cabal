@@ -170,6 +170,7 @@ library
       Domain.Action.Dashboard.Management.Account
       Domain.Action.Dashboard.Management.Booking
       Domain.Action.Dashboard.Management.CoinsConfig
+      Domain.Action.Dashboard.Management.Communication
       Domain.Action.Dashboard.Management.Driver
       Domain.Action.Dashboard.Management.DriverCoins
       Domain.Action.Dashboard.Management.DriverGoHome
@@ -345,6 +346,7 @@ library
       Domain.Types.DriverLocation
       Domain.Types.DriverWallet
       Domain.Types.External.LiveEKD
+      Domain.Types.Extra.Communication
       Domain.Types.Extra.ConditionalCharges
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.DriverHomeLocation
@@ -630,6 +632,8 @@ library
       Storage.Queries.CallStatusExtra
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
+      Storage.Queries.CommunicationDeliveryExtra
+      Storage.Queries.CommunicationExtra
       Storage.Queries.DailyStatsExtra
       Storage.Queries.DigilockerVerificationExtra
       Storage.Queries.DocumentVerificationConfigExtra
@@ -837,6 +841,7 @@ library
       API.Action.Dashboard.Management.Account
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.CoinsConfig
+      API.Action.Dashboard.Management.Communication
       API.Action.Dashboard.Management.Driver
       API.Action.Dashboard.Management.DriverCoins
       API.Action.Dashboard.Management.DriverGoHome
@@ -1004,6 +1009,8 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.CommonDriverOnboardingDocuments
+      Domain.Types.Communication
+      Domain.Types.CommunicationDelivery
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
       Domain.Types.DigilockerVerification
@@ -1172,6 +1179,8 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.CommonDriverOnboardingDocuments
+      Storage.Beam.Communication
+      Storage.Beam.CommunicationDelivery
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
       Storage.Beam.DigilockerVerification
@@ -1345,6 +1354,8 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.CommonDriverOnboardingDocuments
+      Storage.Queries.Communication
+      Storage.Queries.CommunicationDelivery
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
       Storage.Queries.DigilockerVerification
@@ -1442,6 +1453,8 @@ library
       Storage.Queries.OrphanInstances.BusinessEvent
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
+      Storage.Queries.OrphanInstances.Communication
+      Storage.Queries.OrphanInstances.CommunicationDelivery
       Storage.Queries.OrphanInstances.DailyStats
       Storage.Queries.OrphanInstances.DigilockerVerification
       Storage.Queries.OrphanInstances.DocumentVerificationConfig

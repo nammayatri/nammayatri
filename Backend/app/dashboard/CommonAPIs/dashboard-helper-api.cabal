@@ -38,6 +38,7 @@ library
       Dashboard.ProviderPlatform.CacAuth
       Dashboard.ProviderPlatform.Fleet.Driver
       Dashboard.ProviderPlatform.Fleet.RegistrationV2
+      Dashboard.ProviderPlatform.Management.Communication
       Dashboard.ProviderPlatform.Management.Driver
       Dashboard.ProviderPlatform.Management.DriverCoins
       Dashboard.ProviderPlatform.Management.DriverReferral
@@ -64,6 +65,7 @@ library
       API.Types.ProviderPlatform.Management.Account
       API.Types.ProviderPlatform.Management.Booking
       API.Types.ProviderPlatform.Management.CoinsConfig
+      API.Types.ProviderPlatform.Management.Communication
       API.Types.ProviderPlatform.Management.Driver
       API.Types.ProviderPlatform.Management.DriverCoins
       API.Types.ProviderPlatform.Management.DriverGoHome
@@ -72,6 +74,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Account
       API.Types.ProviderPlatform.Management.Endpoints.Booking
       API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig
+      API.Types.ProviderPlatform.Management.Endpoints.Communication
       API.Types.ProviderPlatform.Management.Endpoints.Driver
       API.Types.ProviderPlatform.Management.Endpoints.DriverCoins
       API.Types.ProviderPlatform.Management.Endpoints.DriverGoHome

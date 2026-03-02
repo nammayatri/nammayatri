@@ -1,0 +1,116 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Value: Data.Aeson
+  Communication: Domain.Types.Communication
+
+Communication:
+  tableName: communication
+
+  types:
+    CommunicationDomain:
+      enum: "CD_FLEET,CD_RIDE_HAILING,CD_GENERAL"
+      derive: "HttpInstance"
+
+    CommunicationSenderRole:
+      enum: "SR_ADMIN,SR_OPERATOR,SR_FLEET_OWNER"
+      derive: "HttpInstance"
+
+    CommunicationContentType:
+      enum: "CT_TEXT,CT_IMAGE,CT_VIDEO"
+      derive: "HttpInstance"
+
+    CommunicationTriggerType:
+      enum: "TT_MANUAL,TT_SYSTEM,TT_SCHEDULED"
+      derive: "HttpInstance"
+
+    CommunicationStatus:
+      enum: "ST_DRAFT,ST_QUEUED,ST_SENDING,ST_SENT,ST_FAILED,ST_SCHEDULED"
+      derive: "HttpInstance"
+
+    ChannelType:
+      enum: "CH_PUSH,CH_SMS,CH_EMAIL,CH_WHATSAPP,CH_WEB"
+      derive: "HttpInstance"
+
+    CTAButton:
+      label: Text
+      url: Text
+      linkType: Text
+      derive': "Generic, Show, Eq, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id Communication
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    domain: CommunicationDomain
+    senderId: Id Person
+    senderRole: CommunicationSenderRole
+    senderDisplayName: Maybe Text
+    title: Text
+    body: Text
+    htmlBody: Maybe Text
+    contentType: CommunicationContentType
+    mediaUrls: Maybe Value
+    channels: "[ChannelType]"
+    ctaButton: Maybe CTAButton
+    variables: Maybe Value
+    triggerType: CommunicationTriggerType
+    scheduledAt: Maybe UTCTime
+    status: CommunicationStatus
+    templateId: Maybe Text
+    templateName: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    channels: Maybe Value
+    ctaButton: Maybe Value
+
+  fromTType:
+    channels: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< channels)|E
+    ctaButton: ctaButton >>= Kernel.Utils.JSON.valueToMaybe|E
+
+  toTType:
+    channels: Just $ Data.Aeson.toJSON channels|E
+    ctaButton: Data.Aeson.toJSON <$> ctaButton|E
+
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    title: character varying (255)
+    senderDisplayName: character varying (255)
+    domain: character varying (36)
+    senderRole: character varying (36)
+    contentType: character varying (36)
+    triggerType: character varying (36)
+    status: character varying (36)
+    channels: json
+    mediaUrls: json
+    ctaButton: json
+    variables: json
+    templateId: character varying (255)
+    templateName: character varying (255)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findBySenderIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [senderId, status]
+
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey

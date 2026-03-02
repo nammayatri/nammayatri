@@ -16,8 +16,10 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage
-  { containsUrlButton :: Kernel.Prelude.Bool,
+  { channel :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel,
+    containsUrlButton :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
+    domain :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain,
     jsonData :: Domain.Types.Extra.MerchantMessage.MerchantMessageDefaultDataJSON,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -26,12 +28,15 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     messageType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     senderHeader :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     templateId :: Kernel.Prelude.Text,
+    templateName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Generic, Show, Eq)
 
 data MediaChannel = SMS | WHATSAPP | OVERLAY | ALERT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data MessageDomain = FLEET | RIDE_HAILING | GENERAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data MessageKey
   = SEND_OTP
@@ -80,6 +85,8 @@ data MessageKey
   | VEHICLE_INSPECTION_SMS
   | DRIVER_INSPECTION_SMS
   | TRAINING_VIDEO_SMS
+  | FLEET_COMMUNICATION_SMS
+  | FLEET_COMMUNICATION_WHATSAPP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe
@@ -93,5 +100,7 @@ instance FromJSON (MerchantMessageD 'Safe)
 instance ToJSON (MerchantMessageD 'Safe)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaChannel)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageDomain)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)
