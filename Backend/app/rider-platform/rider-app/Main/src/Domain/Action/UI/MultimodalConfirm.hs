@@ -944,7 +944,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
   let mbEligiblePassIds =
         mbVehicleLiveRouteInfo >>= (JMU.eligiblePassIds . snd)
 
-  let waybillStatus = (JLU.waybillStatus . snd) <$> mbVehicleLiveRouteInfo
+  let waybillStatus = mbVehicleLiveRouteInfo >>= (JMU.waybillStatus . snd)
 
   let mbOppositeTripDetails :: Maybe [NandiTypes.BusScheduleTrip] =
         case (mbEnableSwitchRoute, isPublicVehicleData) of

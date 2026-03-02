@@ -113,7 +113,7 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     conductor_id :: Maybe Text,
     eligible_pass_ids :: Maybe [Text],
     seatLayoutId :: Maybe Text,
-    waybill_status :: BecknV2.FRFS.Enums.WaybillStatus
+    waybill_status :: Maybe BecknV2.FRFS.Enums.WaybillStatus
   }
   deriving (Generic, ToJSON, ToSchema, Show)
 

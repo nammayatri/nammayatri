@@ -1449,7 +1449,7 @@ data VehicleLiveRouteInfo = VehicleLiveRouteInfo
     busDriverId :: Maybe Text,
     eligiblePassIds :: Maybe [Text],
     serviceSubTypes :: Maybe [Spec.ServiceSubType],
-    waybillStatus :: Spec.WaybillStatus,
+    waybillStatus :: Maybe Spec.WaybillStatus,
     seatLayoutId :: Maybe (Id SeatLayout.SeatLayout)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
