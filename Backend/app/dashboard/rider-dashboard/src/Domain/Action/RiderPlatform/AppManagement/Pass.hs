@@ -20,6 +20,7 @@ import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Pass
 import qualified "rider-app" Domain.Types.Person
 import qualified "rider-app" Domain.Types.PurchasedPass
+import qualified Domain.Types.PurchasedPassPayment
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -51,11 +52,11 @@ getPassCustomerTransactions merchantShortId opCity apiTokenInfo customerId limit
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerTransactions) customerId limit offset
 
-postPassCustomerActivateToday :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Data.Time.Day) -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postPassCustomerActivateToday merchantShortId opCity apiTokenInfo customerId passNumber startDay = do
+postPassCustomerActivateToday :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPassCustomerActivateToday merchantShortId opCity apiTokenInfo customerId passNumber purchasedPassPaymentId startDay = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.postPassCustomerActivateToday) customerId passNumber startDay)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.postPassCustomerActivateToday) customerId passNumber purchasedPassPaymentId startDay)
 
 postPassCustomerPassSelect :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> API.Types.Dashboard.AppManagement.Pass.PurchasedPassSelectReq -> Environment.Flow API.Types.UI.Pass.PassSelectionAPIEntity)
 postPassCustomerPassSelect merchantShortId opCity apiTokenInfo customerId passId req = do
