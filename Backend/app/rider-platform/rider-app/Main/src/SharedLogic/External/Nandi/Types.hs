@@ -112,7 +112,8 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     driver_id :: Maybe Text,
     conductor_id :: Maybe Text,
     eligible_pass_ids :: Maybe [Text],
-    seatLayoutId :: Maybe Text
+    seatLayoutId :: Maybe Text,
+    waybill_status :: BecknV2.FRFS.Enums.WaybillStatus
   }
   deriving (Generic, ToJSON, ToSchema, Show)
 
@@ -137,6 +138,7 @@ instance FromJSON VehicleServiceTypeResponse where
     conductor_id <- v .:? "conductor_id"
     eligible_pass_ids <- v .:? "eligible_pass_ids"
     seatLayoutId <- v .:? "seatLayoutId"
+    waybill_status <- v .: "waybill_status"
     return VehicleServiceTypeResponse {..}
 
 data BusScheduleTrip = BusScheduleTrip

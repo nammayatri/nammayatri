@@ -192,3 +192,20 @@ instance ToJSON OrderStatus where
   toJSON ACTIVE = String "ACTIVE"
   toJSON COMPLETE = String "COMPLETE"
   toJSON UPDATED = String "UPDATED"
+
+data WaybillStatus = ONLINE | PROCESSED_OR_NEW | NOT_FOUND | CLOSED
+  deriving (Eq, Ord, Show, Read, Generic, ToSchema)
+
+instance FromJSON WaybillStatus where
+  parseJSON (String "Online") = pure ONLINE
+  parseJSON (String "ProcessedOrNew") = pure PROCESSED_OR_NEW
+  parseJSON (String "NotFound") = pure NOT_FOUND
+  parseJSON (String "Closed") = pure CLOSED
+  parseJSON (String _) = parseFail "Invalid Waybill Status"
+  parseJSON e = typeMismatch "String" e
+
+instance ToJSON WaybillStatus where
+  toJSON ONLINE = String "Online"
+  toJSON PROCESSED_OR_NEW = String "ProcessedOrNew"
+  toJSON NOT_FOUND = String "NotFound"
+  toJSON CLOSED = String "Closed"

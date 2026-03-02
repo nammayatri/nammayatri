@@ -290,7 +290,14 @@ data PaymentOrder = PaymentOrder {sdkPayload :: Kernel.Prelude.Maybe Kernel.Exte
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PublicTransportData = PublicTransportData {eligiblePassIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text], ptcv :: Kernel.Prelude.Text, rs :: [TransportRoute], rsm :: [TransportRouteStopMapping], ss :: [TransportStation]}
+data PublicTransportData = PublicTransportData
+  { eligiblePassIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    ptcv :: Kernel.Prelude.Text,
+    rs :: [TransportRoute],
+    rsm :: [TransportRouteStopMapping],
+    ss :: [TransportStation],
+    waybillStatus :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.WaybillStatus
+  }
   deriving stock (Generic)
   deriving anyclass (ToSchema)
 
