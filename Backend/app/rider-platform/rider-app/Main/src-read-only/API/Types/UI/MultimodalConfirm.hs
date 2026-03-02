@@ -106,6 +106,10 @@ data ExtendLegReq = ExtendLegReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSCategorySelection = FRFSCategorySelection {category :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType, quantity :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data IntegratedQRReq = IntegratedQRReq {integratedQR :: Lib.JourneyModule.Types.UnifiedTicketQRV2, provider :: Lib.JourneyModule.Types.Provider}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -162,6 +166,7 @@ data JourneyInfoResp = JourneyInfoResp
     offer :: Kernel.Prelude.Maybe SharedLogic.Offer.CumulativeOfferResp,
     paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
     result :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sdkPayload :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.CreateOrderResp,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR,
     unifiedQRV2 :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQRV2
@@ -169,11 +174,24 @@ data JourneyInfoResp = JourneyInfoResp
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data JourneyInitiateReq = JourneyInitiateReq {enableOffer :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, journeyLegElements :: [JourneyV2InitiateReqElement]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data JourneyStatusResp = JourneyStatusResp
   { journeyChangeLogCounter :: Kernel.Prelude.Int,
     journeyPaymentStatus :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI,
     journeyStatus :: Domain.Types.Journey.JourneyStatus,
     legs :: [LegStatus]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data JourneyV2InitiateReqElement = JourneyV2InitiateReqElement
+  { categorySelectionReq :: Kernel.Prelude.Maybe [FRFSCategorySelection],
+    crisSdkResponse :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.CrisSdkResponse,
+    journeyLegOrder :: Kernel.Prelude.Int,
+    skipBooking :: Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

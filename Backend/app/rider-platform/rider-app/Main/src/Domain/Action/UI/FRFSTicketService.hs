@@ -73,6 +73,7 @@ import SharedLogic.FRFSStatus
 import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.Offer as SOffer
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -91,6 +92,7 @@ import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SeatLayout as QSeatLayout
 import Tools.Error
 import Tools.Maps as Maps
@@ -475,8 +477,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
       Just origin -> tryStationsAPIWithOSRMDistances mId merchantOpCity origin stations integratedBPPConfig
       Nothing -> return stations
 
-postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> Maybe [Spec.ServiceTierType] -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId mbNewServiceTiers vehicleType_ req = do
+postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId mbIsMockPayment mbNewServiceTiers vehicleType_ req = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   let platformType = fromMaybe DIBC.APPLICATION req.platformType
   merchantOperatingCityId <-
@@ -519,7 +521,7 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId mbNewServ
       <> show finalServiceTier
       <> ", routeCode="
       <> show req.routeCode
-  postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes False
+  postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes False mbIsMockPayment
 
 postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
@@ -532,7 +534,12 @@ postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
   return Kernel.Types.APISuccess.Success
 
 postFrfsSearchHandler ::
-  (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c) =>
+  ( CallExternalBPP.FRFSConfirmFlow m r c,
+    CallExternalBPP.FRFSSearchFlow m r,
+    ServiceFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasField "blackListedJobs" r [Text]
+  ) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   DMOC.MerchantOperatingCity ->
   DIBC.IntegratedBPPConfig ->
@@ -547,8 +554,9 @@ postFrfsSearchHandler ::
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
   Bool ->
+  Maybe Bool ->
   m API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbFare multimodalSearchRequestId upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode = do
+postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbFare multimodalSearchRequestId upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbIsMockPayment = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) >>= fromMaybeM (InternalError $ "Beckn Config not found " <> show merchantOperatingCity.id <> " " <> show merchant.id <> " " <> show vehicleType_)
   (fromStation, toStation) <- do
@@ -600,11 +608,42 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
       >>= \case
         Right frfsQuotes -> return frfsQuotes
         Left _ -> return []
-  return $ FRFSSearchAPIRes quotes searchReqId
 
-getFrfsSearchQuote :: (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
-getFrfsSearchQuote (mbPersonId, _) searchId_ = do
+  finalQuotes <- do
+    let mbSelection = categorySelectionReq >>= listToMaybe
+        shouldConfirm = fromMaybe False skipBooking == False
+    case quotes of
+      (q : _) | shouldConfirm -> do
+        mbQuoteCategory <- case mbSelection of
+          Just s -> B.runInReplica $ QFRFSQuoteCategory.findById s.quoteCategoryId
+          Nothing -> pure Nothing
+
+        let (quoteToConfirm, selectionToUse) = case mbQuoteCategory of
+              Just qc -> (qc.quoteId, categorySelectionReq)
+              Nothing -> (q.quoteId, Nothing)
+
+        finalSelection <- case selectionToUse of
+          Just s | not (null s) -> return $ Just s
+          _ -> do
+            quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteToConfirm
+            case listToMaybe quoteCategories of
+              Just firstCat -> return $ Just [FRFSTicketService.FRFSCategorySelectionReq {quoteCategoryId = firstCat.id, quantity = max 1 searchReq.quantity, seatIds = Nothing}]
+              Nothing -> return Nothing
+
+        case finalSelection of
+          Just selection -> do
+            confirmRes <- postFrfsQuoteV2Confirm (Just personId, merchantId) quoteToConfirm mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Just selection, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = crisSdkResponse, enableOffer = enableOffer, tripId = Nothing})
+            let mbSdkOrderPayload = confirmRes.payment >>= (.paymentOrder)
+            return $ map (\quote' -> if quote'.quoteId == quoteToConfirm then quote' {API.Types.UI.FRFSTicketService.sdkOrderPayload = mbSdkOrderPayload} else quote') quotes
+          Nothing -> return quotes
+      _ -> return quotes
+
+  return $ FRFSSearchAPIRes finalQuotes searchReqId
+
+getFrfsSearchQuote :: (CallExternalBPP.FRFSSearchFlow m r, CallExternalBPP.FRFSConfirmFlow m r c, ServiceFlow m r, HasShortDurationRetryCfg r c, HasField "blackListedJobs" r [Text]) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
+getFrfsSearchQuote (mbPersonId, merchantId) searchId_ = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (InternalError "Person not found")
   search <- QFRFSSearch.findById searchId_ >>= fromMaybeM (InvalidRequest "Invalid search id")
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity search
   unless (personId == search.riderId) $ throwError AccessDenied
@@ -644,6 +683,14 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
             categories = map mkCategoryInfoResponse quoteCategories
         singleAdultTicketPrice <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)) & fromMaybeM (InternalError "Adult Ticket Unit Price not found.")
         adultQuantity <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)) & fromMaybeM (InternalError "Adult Ticket Quantity not found.")
+
+        let paymentType = FRFSUtils.getPaymentType (integratedBppConfig.platformType == DIBC.MULTIMODAL) search.vehicleType
+        mbOffer <-
+          withTryCatch "getFrfsSearchQuote:offerListCache" (SOffer.offerListCache merchantId person.id person.merchantOperatingCityId paymentType singleAdultTicketPrice)
+            >>= \case
+              Left _ -> return Nothing
+              Right offersResp -> SOffer.mkCumulativeOfferResp person.merchantOperatingCityId offersResp []
+
         return $
           FRFSTicketService.FRFSQuoteAPIRes
             { quoteId = quote.id,
@@ -657,6 +704,8 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
               eventDiscountAmount = quote.eventDiscountAmount,
               integratedBppConfigId = quote.integratedBppConfigId,
               stations = fromMaybe [] stations,
+              sdkOrderPayload = Nothing,
+              offer = mbOffer,
               ..
             }
     )

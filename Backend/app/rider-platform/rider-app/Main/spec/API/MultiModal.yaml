@@ -90,6 +90,7 @@ types:
     createdAt: UTCTime
     merchantOperatingCityName: Maybe Text
     paymentOrderShortId: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
+    sdkPayload: Maybe CreateOrderResp
     result: Maybe Text # for backward compatibility hardcoding to Success in response
     isSingleMode: Maybe Bool
     offer: Maybe CumulativeOfferResp
@@ -205,6 +206,16 @@ types:
     rating: Maybe Int
     legOrder: Int
 
+  JourneyInitiateReq:
+    journeyLegElements: "[JourneyV2InitiateReqElement]"
+    enableOffer: Maybe Bool
+
+  JourneyV2InitiateReqElement:
+    journeyLegOrder: Int
+    skipBooking: Bool
+    crisSdkResponse: Maybe CrisSdkResponse
+    categorySelectionReq: Maybe [FRFSCategorySelection]
+
   JourneyConfirmReq:
     journeyConfirmReqElements: "[JourneyConfirmReqElement]"
     enableOffer: Maybe Bool
@@ -223,6 +234,10 @@ types:
     result: Text
     orderSdkPayload: Maybe CreateOrderResp
     gatewayReferenceId: Maybe Text
+
+  FRFSCategorySelection:
+    quantity: Int
+    category: FRFSQuoteCategoryType
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"
@@ -433,6 +448,18 @@ apis:
       query:
         filterServiceAndJrnyType: Bool
         newServiceTiers: [ServiceTierType]
+      response:
+        type: JourneyInfoResp
+  - POST:
+      endpoint: /multimodal/{journeyId}/v2/initiate
+      params:
+        journeyId: Id Journey
+      request:
+        type: JourneyInitiateReq
+      query:
+        filterServiceAndJrnyType: Bool
+        forceBookLegOrder: Int
+        isMockPayment: Bool
       response:
         type: JourneyInfoResp
   - POST:
