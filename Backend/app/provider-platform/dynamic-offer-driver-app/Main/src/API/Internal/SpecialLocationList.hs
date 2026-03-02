@@ -39,6 +39,7 @@ type API =
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
     :> QueryParam "locationType" SL.SpecialLocationType
+    :> QueryParam "getAllLocations" Bool
     :> Get '[JSON] [QSL.SpecialLocationFull]
 
 handler :: FlowServer API
@@ -50,7 +51,11 @@ getSpecialLocationList ::
   Maybe Int ->
   Maybe Int ->
   Maybe SL.SpecialLocationType ->
+  Maybe Bool ->
   FlowHandler [QSL.SpecialLocationFull]
-getSpecialLocationList merchantId city mbLimit mbOffset mbSpecialLocationType = withFlowHandlerAPI $ do
-  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchantId.getId <> " ,city: " <> show city)
-  QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset mbSpecialLocationType
+getSpecialLocationList merchantId city mbLimit mbOffset mbSpecialLocationType mbGetAllLocations = withFlowHandlerAPI $ do
+  if mbGetAllLocations == Just True
+    then QSL.findAllSpecialLocationsWithGeoJSONAllCities Nothing Nothing mbSpecialLocationType
+    else do
+      merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchantId.getId <> " ,city: " <> show city)
+      QSL.findAllSpecialLocationsWithGeoJSON merchantOpCity.id.getId mbLimit mbOffset mbSpecialLocationType

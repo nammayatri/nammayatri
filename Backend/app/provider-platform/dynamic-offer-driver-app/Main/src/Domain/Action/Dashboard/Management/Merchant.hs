@@ -2748,6 +2748,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
         SL.SpecialLocation
           { gates = [],
             enabled = True,
+            isOpenMarketEnabled = maybe True (.isOpenMarketEnabled) mbExistingSpLoc,
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
             merchantOperatingCityId = Just merchantOperatingCityId,
