@@ -134,7 +134,7 @@ jobs:
 
   prod-build:
     name: ${{ matrix.name }}
-    needs: [check-conditions]
+    needs: [master-build, check-conditions]
     continue-on-error: ${{ matrix.continue-on-error }}
     if: needs.check-conditions.outputs.should-proceed == 'true'
     strategy:
