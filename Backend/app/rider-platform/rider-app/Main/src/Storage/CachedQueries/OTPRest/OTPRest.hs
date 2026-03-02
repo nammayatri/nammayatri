@@ -385,7 +385,7 @@ getVehicleServiceType ::
   Text ->
   Maybe Bool ->
   m (Maybe VehicleServiceTypeResponse)
-getVehicleServiceType integratedBPPConfig vehicleNumber mbPassVerifyReq = do
+getVehicleServiceType integratedBPPConfig vehicleNumber mbPassVerifyReq = do IM.withInMemCache ["getVehicleServiceType", vehicleNumber] 43200 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getVehicleServiceType baseUrl integratedBPPConfig.feedKey vehicleNumber mbPassVerifyReq
 
