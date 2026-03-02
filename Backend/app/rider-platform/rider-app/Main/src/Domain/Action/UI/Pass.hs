@@ -15,6 +15,7 @@ module Domain.Action.UI.Pass
     postMultimodalPassUploadProfilePicture,
     postMultimodalPassUpdateProfilePictureUtil,
     buildPurchasedPassAPIEntity,
+    postPassCustomerPassSwitchUserId,
   )
 where
 
@@ -23,6 +24,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -39,7 +41,7 @@ import qualified Environment
 import qualified EulerHS.Prelude as EHS
 import qualified JsonLogic
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -84,6 +86,16 @@ import qualified Tools.Wallet as TWallet
 
 defaultDashboardDeviceId :: Text
 defaultDashboardDeviceId = "dashboard-default-device-id"
+
+getStaticPersonId :: (EncFlow m r, MonadFlow m) => DP.Person -> m (Maybe Text)
+getStaticPersonId person = do
+  case person.mobileNumber of
+    Just encHashedMobile -> do
+      let mobileHash = show encHashedMobile.hash -- hex representation of DbHash
+          combinedKey = mobileHash <> ":" <> person.merchantId.getId
+      combinedDbHash <- getDbHash combinedKey
+      pure $ Just (show combinedDbHash)
+    Nothing -> pure Nothing
 
 getMultimodalPassAvailablePasses ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
@@ -204,6 +216,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
           Nothing -> return Nothing
 
   let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
+
+  staticPersonId <- getStaticPersonId person
   purchasedPassId <-
     case mbSamePass of
       Just samePass -> do
@@ -243,6 +257,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   usedTripCount = Just 0,
                   verificationValidity = pass.verificationValidity,
                   merchantOperatingCityId = pass.merchantOperatingCityId,
+                  staticPersonId = staticPersonId,
                   createdAt = now,
                   updatedAt = now
                 }
@@ -271,6 +286,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             passEnum = passType >>= (.passEnum),
             merchantOperatingCityId = pass.merchantOperatingCityId,
             profilePicture = mbProfilePicture <|> person.profilePicture,
+            staticPersonId = staticPersonId,
             createdAt = now,
             updatedAt = now
           }
@@ -728,16 +744,29 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbDeviceId <- if isDashboard then return Nothing else Just <$> getDeviceId person mbDeviceIdParam mbImeiParam
-
   let mbStatus = case mbStatusParam of
         Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired, DPurchasedPass.PhotoPending]
         Just s -> Just [s]
         Nothing -> Nothing
 
   passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
+  oldPassEntities <-
+    if isDashboard
+      then do
+        let mbStaticPersonIdFromPass = listToMaybe passEntities >>= (.staticPersonId)
+        case mbStaticPersonIdFromPass of
+          Just staticPersonId -> QPurchasedPass.findByStaticPersonId (Just staticPersonId)
+          Nothing -> pure []
+      else return []
+  let combinedPassEntities =
+        Map.elems $
+          Map.fromListWith (\new _old -> new) $ -- new wins
+            map (\p -> (p.id, p)) $
+              oldPassEntities ++ passEntities
+
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   let today = DT.utctDay istTime
-  forM_ passEntities $ \purchasedPass -> do
+  forM_ combinedPassEntities $ \purchasedPass -> do
     when (purchasedPass.status == DPurchasedPass.PreBooked && purchasedPass.startDate <= today) $ do
       QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
 
@@ -962,6 +991,8 @@ postMultimodalPassResetDeviceSwitchCount (mbCallerPersonId, merchantId) purchase
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
   unless (purchasedPass.merchantId == merchantId) $ throwError AccessDenied
   QPurchasedPass.updateDeviceIdById purchasedPass.deviceId 0 purchasedPass.id
+  QPurchasedPass.deleteByPersonIdAndStatus personId DPurchasedPass.Pending
+  QPurchasedPassPayment.deleteByPurchasedPassIdAndStatus purchasedPass.id [DPurchasedPass.Pending]
   return APISuccess.Success
 
 getMultimodalPassTransactions ::
@@ -1108,4 +1139,19 @@ postMultimodalPassUpdateProfilePictureUtil personId merchantId purchasedPassId p
   let validStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
   QPurchasedPassPayment.updateProfilePictureByPurchasedPassIdAndStatus (Just profilePicture) purchasedPass.id validStatuses
 
+  return APISuccess.Success
+
+postPassCustomerPassSwitchUserId ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id.Id DP.Person ->
+  Id.Id DM.Merchant ->
+  Id.Id DPurchasedPass.PurchasedPass ->
+  m APISuccess.APISuccess
+postPassCustomerPassSwitchUserId personId _merchantId purchasedPassId = do
+  purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
+  QPurchasedPass.updatePersonId personId purchasedPass.id
+  QPurchasedPassPayment.updatePersonId personId purchasedPass.id
   return APISuccess.Success
