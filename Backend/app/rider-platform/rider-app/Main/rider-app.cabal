@@ -176,6 +176,7 @@ library
       Domain.Action.Dashboard.AppManagement.Payment
       Domain.Action.Dashboard.AppManagement.TicketDashboard
       Domain.Action.Dashboard.AppManagement.Tickets
+      Domain.Action.Dashboard.AppManagement.TransitOperator
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
@@ -296,6 +297,7 @@ library
       Domain.Action.UI.TicketKapture
       Domain.Action.UI.TicketService
       Domain.Action.UI.TrackRoute
+      Domain.Action.UI.TransitOperator
       Domain.Action.UI.TriggerFCM
       Domain.Action.UI.Whatsapp
       Domain.Action.UnifiedDashboard.Management.HealthCheck
@@ -712,6 +714,7 @@ library
       API.Action.Dashboard.AppManagement.Payment
       API.Action.Dashboard.AppManagement.TicketDashboard
       API.Action.Dashboard.AppManagement.Tickets
+      API.Action.Dashboard.AppManagement.TransitOperator
       API.Action.Dashboard.IssueManagement
       API.Action.Dashboard.IssueManagement.Issue
       API.Action.Dashboard.IssueManagement.IssueList
@@ -792,12 +795,14 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.Payment
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
+      API.Types.Dashboard.AppManagement.Endpoints.TransitOperator
       API.Types.Dashboard.AppManagement.EventManagement
       API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Pass
       API.Types.Dashboard.AppManagement.Payment
       API.Types.Dashboard.AppManagement.TicketDashboard
       API.Types.Dashboard.AppManagement.Tickets
+      API.Types.Dashboard.AppManagement.TransitOperator
       API.Types.Dashboard.RideBooking
       API.Types.Dashboard.RideBooking.Booking
       API.Types.Dashboard.RideBooking.Cancel

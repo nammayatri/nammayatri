@@ -11,6 +11,7 @@ import qualified "rider-app" API.Types.Dashboard.AppManagement.Pass
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Payment
 import qualified "rider-app" API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Tickets
+import qualified "rider-app" API.Types.Dashboard.AppManagement.TransitOperator
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.ServerName
 import Kernel.Prelude
@@ -26,7 +27,8 @@ data AppManagementAPIs = AppManagementAPIs
     passDSL :: API.Types.Dashboard.AppManagement.Pass.PassAPIs,
     paymentDSL :: API.Types.Dashboard.AppManagement.Payment.PaymentAPIs,
     ticketDashboardDSL :: API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardAPIs,
-    ticketsDSL :: API.Types.Dashboard.AppManagement.Tickets.TicketsAPIs
+    ticketsDSL :: API.Types.Dashboard.AppManagement.Tickets.TicketsAPIs,
+    transitOperatorDSL :: API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorAPIs
   }
 
 mkAppManagementAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> Text -> AppManagementAPIs)
@@ -38,9 +40,10 @@ mkAppManagementAPIs merchantId city token = do
   let paymentDSL = API.Types.Dashboard.AppManagement.Payment.mkPaymentAPIs paymentClientDSL
   let ticketDashboardDSL = API.Types.Dashboard.AppManagement.TicketDashboard.mkTicketDashboardAPIs ticketDashboardClientDSL
   let ticketsDSL = API.Types.Dashboard.AppManagement.Tickets.mkTicketsAPIs ticketsClientDSL
+  let transitOperatorDSL = API.Types.Dashboard.AppManagement.TransitOperator.mkTransitOperatorAPIs transitOperatorClientDSL
   (AppManagementAPIs {..})
   where
-    customerClientDSL :<|> eventManagementClientDSL :<|> merchantOnboardingClientDSL :<|> passClientDSL :<|> paymentClientDSL :<|> ticketDashboardClientDSL :<|> ticketsClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
+    customerClientDSL :<|> eventManagementClientDSL :<|> merchantOnboardingClientDSL :<|> passClientDSL :<|> paymentClientDSL :<|> ticketDashboardClientDSL :<|> ticketsClientDSL :<|> transitOperatorClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
 
 callAppManagementAPI ::
   forall m r b c.
