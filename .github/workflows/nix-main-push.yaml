@@ -1,0 +1,132 @@
+name: Nix CI (Main Push)
+
+on:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  packages: write
+
+jobs:
+  check-conditions:
+    runs-on: ubuntu-latest
+    outputs:
+      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
+    steps:
+      - name: Check global conditions
+        id: evaluate
+        run: |
+          echo "should_proceed=true" >> $GITHUB_OUTPUT
+
+  build:
+    name: ${{ matrix.name }}
+    needs: [check-conditions]
+    continue-on-error: ${{ matrix.continue-on-error }}
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    strategy:
+      matrix:
+        include:
+          - system: x86_64-linux
+            host: x86_64-linux
+            arch: amd64
+            name: Prod Release Build
+            continue-on-error: false
+      fail-fast: false
+    runs-on: ${{ matrix.host }}
+    outputs:
+      docker-image-name: ${{ steps.docker.outputs.base_image }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build all flake outputs
+        run: |
+          nix build github:srid/devour-flake#default --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
+            printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
+          done | tee build-log.txt
+
+      - name: Push to Cache
+        continue-on-error: true
+        env:
+          ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: |
+          echo "result=$(cat result)" >> $GITHUB_OUTPUT
+          PATHS=$(jq -r '.[].outPaths[]' ./result)
+          # Try attic (both login AND push must succeed)
+          if attic login cache-nixos-asia https://cache.nixos.asia/oss "$ATTIC_TOKEN" 2>/dev/null && \
+            echo "$PATHS" | attic push cache-nixos-asia 2>/dev/null; then
+            echo "✅ Pushed to attic"
+          else
+            echo "⚠️ Attic failed, using cachix..."
+            echo "$PATHS" | cachix push nammayatri
+          fi
+
+      - name: Upload build log
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build-log.txt
+          retention-days: 1
+
+      - name: Build And Push Docker image
+        id: docker
+        if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
+        env:
+          DOCKER_REGISTRY: ghcr.io
+          DOCKER_TAG_PREFIX: "prod-"
+        run: |
+          nix build .#packages.${{ matrix.system }}.dockerImage --impure
+
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
+          echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
+
+          gunzip -c ./result > image.tar || cp ./result image.tar
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
+          crane auth logout ${DOCKER_REGISTRY}
+
+  analyze-build-times:
+    name: Analyze Build Times
+    needs: [build, check-conditions]
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    runs-on: x86_64-linux
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build logs
+        uses: actions/download-artifact@v4
+        with:
+          path: build-logs
+
+      - name: Run build log analysis
+        run: |
+          cd buildtime-analysis
+          python3 analyze_build_log.py ../build-logs/build-log/build-log.txt
+
+      - name: Run build visualization
+        run: |
+          cd buildtime-analysis
+          python3 visualize_builds.py
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-analysis-results
+          path: |
+            buildtime-analysis/build_analysis.json
+            buildtime-analysis/build_analysis_report.md
+            buildtime-analysis/dependency_analysis.json
+            buildtime-analysis/*.png
+            buildtime-analysis/*/*.png
+          retention-days: 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

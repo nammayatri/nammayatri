@@ -4,7 +4,9 @@ let
   imageName = "ghcr.io/nammayatri/nammayatri";
   # self.rev will be non-null only when the working tree is clean
   # This is equivalent to `git rev-parse --short HEAD`
-  imageTag = builtins.substring 0 6 (self.rev or "dev");
+  commitHash = builtins.substring 0 6 (self.rev or "dev");
+  tagPrefix = builtins.getEnv "DOCKER_TAG_PREFIX";
+  imageTag = if tagPrefix != "" then "${tagPrefix}${commitHash}" else commitHash;
 in
 {
   config = {
