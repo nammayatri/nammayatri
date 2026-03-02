@@ -1,4 +1,4 @@
-name: Nix CI (Main PR)
+name: Nix CI (Main Pull)
 
 on:
   pull_request:
