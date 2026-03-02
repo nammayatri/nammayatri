@@ -6,6 +6,8 @@
 @customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
 @operator = favorit-operator-token0-000000000000
 
+@fleet = 88ef2a2a-b014-4a86-b1c0-e453e8b0b688
+
 # @name healthcheck
 GET {{bpp-dashboard-host}}
 
@@ -14,7 +16,74 @@ GET {{bpp-dashboard-host}}
 # @name documentsList
 # DocumentsListAPI
 
-@driverId1 = favorit-auto1-0000000000000000000000
+@driverId2 = favorit-auto2-0000000000000000000000
 
-GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{driverId1}/documents/list
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId2}}/documents/list
 token: {{customer_service}}
+
+###
+
+# @name uploadDocument
+# UploadDocumentAPI
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId2}}/document/upload
+token: {{fleet}}
+content-type: application/json
+
+{
+  "imageBase64": "",
+  "imageType":  "DriverLicense",
+  "rcNumber": null,
+  "fileExtension" : "png"
+}
+
+###
+
+# @name registerDL
+# RegisterDLAPI
+
+@imageId = {{uploadDocument.response.body.imageId}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId2}}/register/dl
+token: {{fleet}}
+content-type: application/json
+
+{
+  "driverLicenseNumber": "driverLicenseNumber",
+  "operatingCity":  "operatingCity",
+  "driverDateOfBirth": "2000-01-17T00:00:00.00Z",
+  "vehicleCategory" : "CAR",
+  "imageId1" : "{{imageId}}",
+  "imageId2" : null,
+  "dateOfIssue" : "2020-01-17T00:00:00.00Z"
+}
+
+###
+
+# @name triggerReminderDriverLicense
+# TriggerReminderAPI
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId2}}/trigger/reminder
+token: {{fleet}}
+content-type: application/json
+
+{
+  "documentType": "DriverLicense",
+  "dueDate": "2026-02-17T13:34:00.00Z",
+  "intervals": [5,2,1,0]
+}
+
+###
+
+# @name triggerReminderVehicleFitnessCertificate
+# TriggerReminderAPI
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId2}}/trigger/reminder
+token: {{fleet}}
+content-type: application/json
+
+{
+  "documentType": "VehicleFitnessCertificateImage",
+  "dueDate": "2026-02-17T13:38:00.00Z",
+  "intervals": [2,1,0]
+}
