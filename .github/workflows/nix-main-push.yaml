@@ -137,7 +137,7 @@ jobs:
 
   analyze-build-times:
     name: Analyze Build Times
-    needs: [build, check-conditions]
+    needs: [prod-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
     runs-on: x86_64-linux
     steps:
