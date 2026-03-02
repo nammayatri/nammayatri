@@ -17,13 +17,13 @@ module SharedLogic.Scheduler.Jobs.PartnerInvoiceDataExport where
 import qualified API.Types.UI.PartnerBookingStatement as PBSAPI
 import API.Types.UI.PartnerBookingStatementExtra ()
 import Control.Applicative ((<|>))
-import Control.Exception (try)
+import qualified Control.Exception
+import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (isAlphaNum)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
--- import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Domain.Action.UI.PartnerBookingStatement as PBS
 import qualified Domain.Types.Booking.API as DBAPI
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
@@ -42,8 +42,9 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PartnerInvoiceDataLog as QPartnerInvoiceDataLog
 import qualified Storage.Queries.Person as QPerson
-import System.Directory (removeFile)
+import System.Directory (getTemporaryDirectory, removeFile)
 import System.IO (hClose, hPutStr, openTempFile)
+import System.Timeout (timeout)
 import System.Process (callProcess)
 
 -- | The scheduled job handler for partner invoice data SFTP export
@@ -74,10 +75,14 @@ partnerInvoiceDataExportJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
 
   logInfo $ "Found " <> show (length unexportedLogs) <> " unexported partner invoice data logs"
 
-  -- Generate JSON content
-  enrichedRecords <- catMaybes <$> mapM enrichLogEntry unexportedLogs
+  -- Generate JSON content, pairing each log with its enrichment result
+  results <- mapM (\logEntry -> (logEntry,) <$> enrichLogEntry logEntry) unexportedLogs
+  let successPairs = [(logEntry, rec) | (logEntry, Just rec) <- results]
+      enrichedRecords = map snd successPairs
+      successLogs = map fst successPairs
   let jsonContent = TE.decodeUtf8 $ BL.toStrict $ encode enrichedRecords
-      fileName = "partner_invoice_data_" <> T.pack (show now) <> ".json"
+      timestamp = T.pack $ formatTime defaultTimeLocale "%Y%m%d_%H%M%S" now
+      fileName = "partner_invoice_data_" <> timestamp <> ".json"
 
   -- Upload via SFTP if there are records
   unless (null enrichedRecords) $ do
@@ -155,58 +160,64 @@ uploadToSFTP ::
 uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
   -- Sanitize file name to prevent command injection
   let fileName = sanitizeFileName rawFileName
-  when (T.null fileName) $ do
-    logError $ "Invalid file name after sanitization: " <> rawFileName
-    pure ()
-
-  -- Use secure temp files to prevent symlink/TOCTOU attacks
-  (tmpContentPath, hContent) <- liftIO $ openTempFile "/tmp" ("sftp_export_" <> T.unpack fileName)
-  liftIO $ hPutStr hContent (T.unpack content) >> hClose hContent
-  logInfo $ "Written export file to " <> T.pack tmpContentPath
-
-  -- Read SFTP config from environment
-  sftpCfg <- asks (.sftpConfig)
-  let host = T.unpack sftpCfg.host
-      port = show sftpCfg.port
-      username = T.unpack sftpCfg.username
-      privateKeyPath = T.unpack sftpCfg.privateKeyPath
-      remotePath = T.unpack sftpCfg.remotePath
-      remoteFilePath = remotePath <> "/" <> T.unpack fileName
-
-  -- Create SFTP batch file in a secure temp file
-  (tmpBatchPath, hBatch) <- liftIO $ openTempFile "/tmp" ("sftp_batch_" <> T.unpack fileName <> ".txt")
-  let batchContent = "put " <> tmpContentPath <> " " <> remoteFilePath <> "\nquit\n"
-  liftIO $ hPutStr hBatch batchContent >> hClose hBatch
-  logDebug $ "Created SFTP batch file: " <> T.pack tmpBatchPath
-
-  -- Build SFTP argument list (no shell interpolation)
-  let sftpArgs =
-        [ "-i",
-          privateKeyPath,
-          "-P",
-          port,
-          "-o",
-          "StrictHostKeyChecking=yes",
-          "-b",
-          tmpBatchPath,
-          username <> "@" <> host
-        ]
-
-  logInfo $ "Uploading file " <> fileName <> " to SFTP server " <> sftpCfg.host <> ":" <> sftpCfg.remotePath
-  logDebug $ "SFTP arguments: " <> T.pack (show sftpArgs)
-
-  -- Execute SFTP upload
-  result <- liftIO (Control.Exception.try $ callProcess "sftp" sftpArgs :: IO (Either SomeException ()))
-
-  -- Clean up temp files
-  liftIO $ removeFile tmpContentPath `catch` \(_ :: SomeException) -> pure ()
-  liftIO $ removeFile tmpBatchPath `catch` \(_ :: SomeException) -> pure ()
-  logDebug "Cleaned up temp files"
-
-  case result of
-    Right () -> do
-      logInfo $ "Successfully uploaded " <> fileName <> " via SFTP"
-      pure True
-    Left err -> do
-      logError $ "SFTP upload failed: " <> T.pack (show err)
+  if T.null fileName
+    then do
+      logError $ "Invalid file name after sanitization: " <> rawFileName
       pure False
+    else do
+      -- Use secure temp files to prevent symlink/TOCTOU attacks
+      tmpDir <- liftIO getTemporaryDirectory
+      (tmpContentPath, hContent) <- liftIO $ openTempFile tmpDir ("sftp_export_" <> T.unpack fileName)
+      liftIO $ hPutStr hContent (T.unpack content) >> hClose hContent
+      logInfo $ "Written export file to " <> T.pack tmpContentPath
+
+      -- Read SFTP config from environment
+      sftpCfg <- asks (.sftpConfig)
+      let host = T.unpack sftpCfg.host
+          port = show sftpCfg.port
+          username = T.unpack sftpCfg.username
+          privateKeyPath = T.unpack sftpCfg.privateKeyPath
+          remotePath = T.unpack sftpCfg.remotePath
+          remoteFilePath = remotePath <> "/" <> T.unpack fileName
+
+      -- Create SFTP batch file in a secure temp file
+      (tmpBatchPath, hBatch) <- liftIO $ openTempFile tmpDir ("sftp_batch_" <> T.unpack fileName <> ".txt")
+      let batchContent = "put " <> tmpContentPath <> " " <> remoteFilePath <> "\nquit\n"
+      liftIO $ hPutStr hBatch batchContent >> hClose hBatch
+      logDebug $ "Created SFTP batch file: " <> T.pack tmpBatchPath
+
+      -- Build SFTP argument list (no shell interpolation)
+      let sftpArgs =
+            [ "-i",
+              privateKeyPath,
+              "-P",
+              port,
+              "-o",
+              "StrictHostKeyChecking=yes",
+              "-b",
+              tmpBatchPath,
+              username <> "@" <> host
+            ]
+
+      logInfo $ "Uploading file " <> fileName <> " to SFTP server " <> sftpCfg.host <> ":" <> sftpCfg.remotePath
+      logDebug $ "SFTP arguments: " <> T.pack (show sftpArgs)
+
+      -- Execute SFTP upload with 240-second timeout
+      let sftpTimeoutMicros = 240 * 1000000 -- 240 seconds
+      mbResult <- liftIO $ timeout sftpTimeoutMicros (Control.Exception.try $ callProcess "sftp" sftpArgs :: IO (Either SomeException ()))
+
+      -- Clean up temp files
+      liftIO $ removeFile tmpContentPath `catch` \(_ :: SomeException) -> pure ()
+      liftIO $ removeFile tmpBatchPath `catch` \(_ :: SomeException) -> pure ()
+      logDebug "Cleaned up temp files"
+
+      case mbResult of
+        Nothing -> do
+          logError $ "SFTP upload timed out after 240 seconds for file: " <> fileName
+          pure False
+        Just (Right ()) -> do
+          logInfo $ "Successfully uploaded " <> fileName <> " via SFTP"
+          pure True
+        Just (Left err) -> do
+          logError $ "SFTP upload failed: " <> T.pack (show err)
+          pure False
