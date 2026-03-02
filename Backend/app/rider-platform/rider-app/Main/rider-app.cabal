@@ -178,6 +178,7 @@ library
       Domain.Action.Dashboard.AppManagement.Tickets
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
+      Domain.Action.Dashboard.DeviceVehicleMapping
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.FRFSAlerts
       Domain.Action.Dashboard.FRFSTicket
@@ -719,6 +720,7 @@ library
       API.Action.Dashboard.Management.AlertIncident
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.Customer
+      API.Action.Dashboard.Management.DeviceVehicleMapping
       API.Action.Dashboard.Management.FRFSAlerts
       API.Action.Dashboard.Management.FRFSTicket
       API.Action.Dashboard.Management.Invoice

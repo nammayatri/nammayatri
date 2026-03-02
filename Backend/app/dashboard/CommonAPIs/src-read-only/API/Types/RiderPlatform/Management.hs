@@ -6,6 +6,7 @@ module API.Types.RiderPlatform.Management where
 import qualified API.Types.RiderPlatform.Management.AlertIncident
 import qualified API.Types.RiderPlatform.Management.Booking
 import qualified API.Types.RiderPlatform.Management.Customer
+import qualified API.Types.RiderPlatform.Management.DeviceVehicleMapping
 import qualified API.Types.RiderPlatform.Management.FRFSAlerts
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.RiderPlatform.Management.Invoice
@@ -27,6 +28,7 @@ data ManagementUserActionType
   = ALERT_INCIDENT API.Types.RiderPlatform.Management.AlertIncident.AlertIncidentUserActionType
   | BOOKING API.Types.RiderPlatform.Management.Booking.BookingUserActionType
   | CUSTOMER API.Types.RiderPlatform.Management.Customer.CustomerUserActionType
+  | DEVICE_VEHICLE_MAPPING API.Types.RiderPlatform.Management.DeviceVehicleMapping.DeviceVehicleMappingUserActionType
   | FRFS_ALERTS API.Types.RiderPlatform.Management.FRFSAlerts.FRFSAlertsUserActionType
   | FRFS_TICKET API.Types.RiderPlatform.Management.FRFSTicket.FRFSTicketUserActionType
   | INVOICE API.Types.RiderPlatform.Management.Invoice.InvoiceUserActionType
@@ -45,6 +47,7 @@ instance Text.Show.Show ManagementUserActionType where
     ALERT_INCIDENT e -> "ALERT_INCIDENT/" <> show e
     BOOKING e -> "BOOKING/" <> show e
     CUSTOMER e -> "CUSTOMER/" <> show e
+    DEVICE_VEHICLE_MAPPING e -> "DEVICE_VEHICLE_MAPPING/" <> show e
     FRFS_ALERTS e -> "FRFS_ALERTS/" <> show e
     FRFS_TICKET e -> "FRFS_TICKET/" <> show e
     INVOICE e -> "INVOICE/" <> show e
@@ -72,6 +75,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "CUSTOMER/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( DEVICE_VEHICLE_MAPPING v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "DEVICE_VEHICLE_MAPPING/" r,
                    ( v1,
                      r2
                      ) <-
@@ -172,4 +184,4 @@ instance Text.Read.Read ManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])
+$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])

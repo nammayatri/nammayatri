@@ -21,35 +21,22 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping] -> m ())
 createMany = traverse_ create
 
+findAllByGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m ([Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping]))
+findAllByGtfsId gtfsId = do findAllWithKV [Se.Is Beam.gtfsId $ Se.Eq gtfsId]
+
 findByDeviceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m (Maybe Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping))
 findByDeviceId deviceId = do findOneWithKV [Se.Is Beam.deviceId $ Se.Eq deviceId]
+
+findByDeviceIdAndGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> Data.Text.Text -> m (Maybe Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping))
+findByDeviceIdAndGtfsId deviceId gtfsId = do findOneWithKV [Se.Is Beam.deviceId $ Se.Eq deviceId, Se.Is Beam.gtfsId $ Se.Eq gtfsId]
 
 findByVehicleNo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m ([Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping]))
 findByVehicleNo vehicleNo = do findAllWithKV [Se.Is Beam.vehicleNo $ Se.Eq vehicleNo]
 
 upsertMapping :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> Data.Text.Text -> Data.Text.Text -> m ())
 upsertMapping vehicleNo gtfsId deviceId = do
-  mb <- findByPrimaryKey deviceId
-  now <- getCurrentTime
-  case mb of
-    Just _ ->
-      updateWithKV
-        [ Se.Set Beam.vehicleNo vehicleNo,
-          Se.Set Beam.gtfsId gtfsId,
-          Se.Set Beam.updatedAt now
-        ]
-        [Se.Is Beam.deviceId $ Se.Eq deviceId]
-    Nothing ->
-      createWithKV
-        Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping
-          { createdAt = now,
-            deviceId = deviceId,
-            gtfsId = gtfsId,
-            updatedAt = now,
-            vehicleNo = vehicleNo,
-            merchantId = Nothing,
-            merchantOperatingCityId = Nothing
-          }
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.vehicleNo vehicleNo, Se.Set Beam.gtfsId gtfsId, Se.Set Beam.updatedAt _now] [Se.Is Beam.deviceId $ Se.Eq deviceId]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m (Maybe Domain.Types.DeviceVehicleMapping.DeviceVehicleMapping))
 findByPrimaryKey deviceId = do findOneWithKV [Se.And [Se.Is Beam.deviceId $ Se.Eq deviceId]]

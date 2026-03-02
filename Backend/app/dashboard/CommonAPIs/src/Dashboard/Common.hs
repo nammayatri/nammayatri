@@ -30,6 +30,9 @@ module Dashboard.Common
   )
 where
 
+import API.Types.RiderPlatform.Management.Endpoints.DeviceVehicleMapping
+  ( UpsertDeviceVehicleMappingReq (..),
+  )
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
@@ -268,6 +271,22 @@ instance FromMultipart Tmp PersonMobileNoReq where
 instance ToMultipart Tmp PersonMobileNoReq where
   toMultipart form =
     MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+instance FromMultipart Tmp UpsertDeviceVehicleMappingReq where
+  fromMultipart form = do
+    UpsertDeviceVehicleMappingReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp UpsertDeviceVehicleMappingReq where
+  toMultipart form =
+    MultipartData
+      []
+      [ FileData
+          "file"
+          (T.pack form.file) -- filename
+          "" -- content-type
+          form.file -- payload: FilePath
+      ]
 
 data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL | DASHCAM_RENTAL_CAUTIO | PREPAID_SUBSCRIPTION
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
