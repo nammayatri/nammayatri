@@ -17,6 +17,7 @@ module SharedLogic.Reminder.Helper
     cancelRemindersForEntity,
     cancelRemindersForDriverByDocumentType,
     cancelRemindersForRCByDocumentType,
+    cancelPendingReminders,
     recordDocumentCompletion,
     checkAndCreateReminderIfNeeded,
     precomputeThresholdCheckData,
@@ -461,9 +462,8 @@ recordDocumentCompletion documentType entityIdText entityType mbDriverId merchan
                 <> ", daysThreshold: "
                 <> show daysThreshold
                 <> ")"
-            -- Create reminder scheduled for the threshold date
-            -- This will automatically schedule ProcessReminder job for that date
-            createReminder documentType driverId merchantId merchantOpCityId Nothing (Just thresholdDate) Nothing
+            -- Create reminder scheduled for the threshold date (entityId = entityIdText so RC-level docs use rcId)
+            createReminder documentType driverId merchantId merchantOpCityId (Just entityIdText) (Just thresholdDate) Nothing
           Nothing -> pure () -- No daysThreshold configured, skip proactive reminder
         Nothing -> pure () -- Reminder system disabled or config not found
     Nothing -> pure () -- Could not determine driverId, skip proactive reminder
@@ -593,9 +593,8 @@ checkAndCreateReminderIfNeeded documentType driverId merchantId merchantOpCityId
                         <> ", rides: "
                         <> show ridesSinceCompletion
                         <> ")"
-                    -- Create reminder with immediate due date (now)
-                    -- The reminder system will keep sending reminders every 24 hours until inspection is completed
-                    createReminder documentType driverId merchantId merchantOpCityId Nothing (Just now) Nothing
+                    -- Create reminder with immediate due date (now); entityId = entityIdText so RC-level uses rcId
+                    createReminder documentType driverId merchantId merchantOpCityId (Just entityIdText) (Just now) Nothing
                 Nothing -> logInfo $ "No completion history found for " <> show documentType <> " (entity: " <> entityIdText <> "), skipping rides threshold check"
             Nothing -> logInfo $ "No active entity found for driver " <> driverId.getId <> " and document type " <> show documentType <> ", skipping rides threshold check"
       Nothing -> pure () -- Reminder system disabled or config not found

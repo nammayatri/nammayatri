@@ -37,21 +37,21 @@ deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id
 deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByPersonId personId = do deleteWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
-findAllByRcId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.Image.Image]))
+findAllByRcId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.Image.Image])
 findAllByRcId rcId = do findAllWithKV [Se.Is Beam.rcId $ Se.Eq rcId]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ([Domain.Types.Image.Image]))
+findByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.Image.Image])
 findByMerchantId merchantId = do findAllWithDb [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]
 
-findByWrokflowTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.Image.Image]))
+findByWrokflowTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.Image.Image])
 findByWrokflowTransactionId workflowTransactionId = do findAllWithKV [Se.Is Beam.workflowTransactionId $ Se.Eq workflowTransactionId]
 
 findImagesByPersonAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m ([Domain.Types.Image.Image]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.Image.Image])
 findImagesByPersonAndType limit offset merchantId personId imageType = do
   findAllWithOptionsKV
     [ Se.And
@@ -100,6 +100,19 @@ updateVerificationStatusAndExpiry verificationStatus documentExpiry imageType id
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateVerificationStatusAndFailureReasonByRcIdAndImageType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.DocumentVerificationConfig.DocumentType -> m ())
+updateVerificationStatusAndFailureReasonByRcIdAndImageType verificationStatus failureReason rcId imageType = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.failureReason failureReason, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.rcId $ Se.Eq rcId,
+          Se.Is Beam.imageType $ Se.Eq imageType
+        ]
+    ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.Image.Image))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

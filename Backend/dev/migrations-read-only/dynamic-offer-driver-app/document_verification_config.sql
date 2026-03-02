@@ -123,3 +123,12 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN docum
 
 ------- SQL updates -------
 
+
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN roles_allowed_to_upload_document_text text[] ;
+

@@ -32,13 +32,20 @@ findByRcId rcId = do findAllWithKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.get
 
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.VehiclePUC.VehiclePUC]))
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehiclePUC.VehiclePUC])
 findByRcIdAndDriverId rcId driverId = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId), Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
 updateVerificationStatusByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateVerificationStatusByImageId verificationStatus documentImageId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
+
+updateVerificationStatusByRcId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updateVerificationStatusByRcId verificationStatus rcId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehiclePUC.VehiclePUC -> m (Maybe Domain.Types.VehiclePUC.VehiclePUC))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -50,8 +57,8 @@ updateByPrimaryKey (Domain.Types.VehiclePUC.VehiclePUC {..}) = do
     [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.pucExpiry pucExpiry,
-      Se.Set Beam.pucNumberEncrypted (((pucNumber <&> unEncrypted . (.encrypted)))),
-      Se.Set Beam.pucNumberHash ((pucNumber <&> (.hash))),
+      Se.Set Beam.pucNumberEncrypted (pucNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.pucNumberHash (pucNumber <&> (.hash)),
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.testDate testDate,
       Se.Set Beam.verificationStatus verificationStatus,
@@ -87,8 +94,8 @@ instance ToTType' Beam.VehiclePUC Domain.Types.VehiclePUC.VehiclePUC where
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.pucExpiry = pucExpiry,
-        Beam.pucNumberEncrypted = ((pucNumber <&> unEncrypted . (.encrypted))),
-        Beam.pucNumberHash = (pucNumber <&> (.hash)),
+        Beam.pucNumberEncrypted = pucNumber <&> unEncrypted . (.encrypted),
+        Beam.pucNumberHash = pucNumber <&> (.hash),
         Beam.rcId = Kernel.Types.Id.getId rcId,
         Beam.testDate = testDate,
         Beam.verificationStatus = verificationStatus,

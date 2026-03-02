@@ -6,6 +6,7 @@ module Domain.Types.DocumentVerificationConfig where
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
@@ -37,6 +38,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     order :: Kernel.Prelude.Int,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
+    rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],
     supportedVehicleClasses :: Domain.Types.DocumentVerificationConfig.SupportedVehicleClasses,
     title :: Kernel.Prelude.Text,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,

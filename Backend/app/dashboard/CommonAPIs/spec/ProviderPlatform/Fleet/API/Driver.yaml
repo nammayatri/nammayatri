@@ -623,6 +623,7 @@ apis:
         - hasFleetMemberHierarchy: Bool
         - isRequestorFleerOwner: Bool
         - hasRequestReason: Bool
+        - mbServiceTier: Text
       response:
         type: DrivertoVehicleAssociationResT
       migrate:
@@ -1445,6 +1446,24 @@ apis:
             response:
               type: APISuccess
 
+  - POST: # ReassignScheduledBookingAPI
+      endpoint: /fleet/scheduledBooking/reassign
+      auth: ApiAuthV2
+      request:
+        type: ReassignScheduledBookingReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/{fleetOwnerId}/scheduledBooking/reassign
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: ReassignScheduledBookingReq
+            response:
+              type: APISuccess
+
 types:
   AddRidePayoutAccountNumberReq:
     - driverMobileNumber: Text
@@ -1849,6 +1868,7 @@ types:
     - requestReason: Maybe Text
     - responseReason: Maybe Text
     - associatedOn: Maybe UTCTime
+    - selectedServiceTiers: [Text]
   VerificationDocsStatus:
     - vehicleRegistrationCertificate: Maybe VerificationStatus
     - vehiclePermit: Maybe VerificationStatus
@@ -2185,6 +2205,11 @@ types:
     - rideId: Text
     - reasonCode: CancellationReasonCode
     - additionalInfo: Maybe Text
+    - derive: "'HideSecrets"
+  ReassignScheduledBookingReq:
+    - rideId: Text
+    - newDriverId: Id Driver
+    - clientId: Maybe Text
     - derive: "'HideSecrets"
   RateCardItem:
     - title: Text

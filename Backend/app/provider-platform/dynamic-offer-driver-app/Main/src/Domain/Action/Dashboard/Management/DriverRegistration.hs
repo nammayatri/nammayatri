@@ -321,15 +321,32 @@ postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> I
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  whenJust req.requestorId $ \requestorId -> do
-    entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, cast driverId_] merchantOpCityId
-    entity <- find (\e -> e.id == cast driverId_) entities & fromMaybeM (PersonDoesNotExist driverId_.getId)
-    requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
-    isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
-    unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
+  let docType = mapDocumentType req.imageType
+  docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId docType Nothing
+  -- Nothing or empty list = no role restriction (all allowed); non-empty = only those roles can upload (enforced in validateImageHandler)
+  let mbRolesAllowed = listToMaybe docConfigs >>= (.rolesAllowedToUploadDocument)
+  let isRoleRestricted = case mbRolesAllowed of Nothing -> False; Just roles -> not (Kernel.Prelude.null roles)
+  mbUploaderRole <-
+    if isRoleRestricted
+      then do
+        requestorId <- req.requestorId & fromMaybeM (InvalidRequest "This document can only be uploaded by operator or admin")
+        -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+        mbRequestor <- QPerson.findById (Id requestorId)
+        return (DP.role <$> mbRequestor)
+      else do
+        whenJust req.requestorId $ \requestorId -> do
+          entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, cast driverId_] merchantOpCityId
+          entity <- find (\e -> e.id == cast driverId_) entities & fromMaybeM (PersonDoesNotExist driverId_.getId)
+          -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+          whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+            isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
+            unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
+        return Nothing
   res <-
     validateImage
       True
+      mbUploaderRole
+      (Just docConfigs)
       (cast driverId_, cast merchant.id, merchantOpCityId)
       ImageValidateRequest
         { image = req.imageBase64,
@@ -383,9 +400,10 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
     Just requestorId -> do
       entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, cast personId] merchantOpCityId
       entity <- find (\e -> e.id == cast personId) entities & fromMaybeM (PersonDoesNotExist personId.getId)
-      requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
-      isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
-      unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
+      -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+      whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+        isValid <- DDriver.isAssociationBetweenTwoPerson requestor entity
+        unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
       pure entity
     Nothing -> runInReplica $ QPerson.findById (cast personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
   res <- unlinkPersonDocument merchantOpCityId person
@@ -603,7 +621,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
         updatedInsurance.driverId
         mId
         mOpCityId
-        (Just $ updatedInsurance.id.getId)
+        (Just $ updatedInsurance.rcId.getId)
         (Just updatedInsurance.policyExpiry)
         Nothing
     Nothing -> do
@@ -637,7 +655,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
             insurance.driverId
             mId
             mOpCityId
-            (Just $ insurance.id.getId)
+            (Just $ insurance.rcId.getId)
             (Just insurance.policyExpiry)
             Nothing
         _ -> do
@@ -672,7 +690,7 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
         updatedpuc.driverId
         mId
         mOpCityId
-        (Just $ updatedpuc.id.getId)
+        (Just $ updatedpuc.rcId.getId)
         (Just updatedpuc.pucExpiry)
         Nothing
     Nothing -> do
@@ -699,7 +717,7 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
         puc.driverId
         mId
         mOpCityId
-        (Just $ puc.id.getId)
+        (Just $ puc.rcId.getId)
         (Just puc.pucExpiry)
         Nothing
 
@@ -733,7 +751,7 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
         updatedpermit.driverId
         mId
         mOpCityId
-        (Just $ updatedpermit.id.getId)
+        (Just $ updatedpermit.rcId.getId)
         (Just updatedpermit.permitExpiry)
         Nothing
     Nothing -> do
@@ -763,7 +781,7 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
         permit.driverId
         mId
         mOpCityId
-        (Just $ permit.id.getId)
+        (Just $ permit.rcId.getId)
         (Just permit.permitExpiry)
         Nothing
 
@@ -795,7 +813,7 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
         updatedFitnessCert.driverId
         mId
         mOpCityId
-        (Just $ updatedFitnessCert.id.getId)
+        (Just $ updatedFitnessCert.rcId.getId)
         (Just updatedFitnessCert.fitnessExpiry)
         Nothing
     Nothing -> do
@@ -823,7 +841,7 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
         fitnessCert.driverId
         mId
         mOpCityId
-        (Just $ fitnessCert.id.getId)
+        (Just $ fitnessCert.rcId.getId)
         (Just fitnessCert.fitnessExpiry)
         Nothing
 
@@ -1271,9 +1289,10 @@ postDriverRegistrationTriggerReminder merchantShortId opCity driverId_ mbRequest
   -- Validate authorization: only fleet owners, operators linked to driver, or admins can trigger reminders
   requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "requestorId is required")
   entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, driverPersonId] merchantOpCityId
-  requestor <- find (\e -> e.id == Id requestorId) entities & fromMaybeM (PersonDoesNotExist requestorId)
-  isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
-  unless isValid $ throwError (InvalidRequest "Only fleet owners, operators linked to the driver, or admins can trigger reminders")
+  -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+  whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+    isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
+    unless isValid $ throwError (InvalidRequest "Only fleet owners, operators linked to the driver, or admins can trigger reminders")
 
   reminderDocumentType <- maybe (throwError $ InvalidRequest $ "Document type " <> show documentType <> " does not support reminder triggers") pure $ mapDocumentTypeToReminderType documentType
   createReminder reminderDocumentType driverPersonId merchant.id merchantOpCityId Nothing dueDate intervals

@@ -18,6 +18,8 @@ ReminderConfig:
     isMandatory: Bool
     daysThreshold: Maybe Int
     ridesThreshold: Maybe Int
+    reminderRescheduleIntervalSeconds: Maybe Int
+    reminderOnRideRescheduleIntervalSeconds: Maybe Int
     createdAt: UTCTime
     updatedAt: UTCTime
 

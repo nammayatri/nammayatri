@@ -34,13 +34,20 @@ findByRcId rcId = do findAllWithKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.get
 
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.VehiclePermit.VehiclePermit]))
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehiclePermit.VehiclePermit])
 findByRcIdAndDriverId rcId driverId = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId), Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
 updateVerificationStatusByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateVerificationStatusByImageId verificationStatus documentImageId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
+
+updateVerificationStatusByRcId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updateVerificationStatusByRcId verificationStatus rcId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehiclePermit.VehiclePermit -> m (Maybe Domain.Types.VehiclePermit.VehiclePermit))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -54,8 +61,8 @@ updateByPrimaryKey (Domain.Types.VehiclePermit.VehiclePermit {..}) = do
       Se.Set Beam.issueDate issueDate,
       Se.Set Beam.nameOfPermitHolder nameOfPermitHolder,
       Se.Set Beam.permitExpiry permitExpiry,
-      Se.Set Beam.permitNumberEncrypted (((permitNumber & unEncrypted . encrypted))),
-      Se.Set Beam.permitNumberHash ((permitNumber & hash)),
+      Se.Set Beam.permitNumberEncrypted (permitNumber & unEncrypted . encrypted),
+      Se.Set Beam.permitNumberHash (permitNumber & hash),
       Se.Set Beam.purposeOfJourney purposeOfJourney,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.regionCovered regionCovered,
@@ -97,8 +104,8 @@ instance ToTType' Beam.VehiclePermit Domain.Types.VehiclePermit.VehiclePermit wh
         Beam.issueDate = issueDate,
         Beam.nameOfPermitHolder = nameOfPermitHolder,
         Beam.permitExpiry = permitExpiry,
-        Beam.permitNumberEncrypted = ((permitNumber & unEncrypted . encrypted)),
-        Beam.permitNumberHash = (permitNumber & hash),
+        Beam.permitNumberEncrypted = permitNumber & unEncrypted . encrypted,
+        Beam.permitNumberHash = permitNumber & hash,
         Beam.purposeOfJourney = purposeOfJourney,
         Beam.rcId = Kernel.Types.Id.getId rcId,
         Beam.regionCovered = regionCovered,

@@ -149,19 +149,14 @@ getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurr
   whenJust mbCurrency $ \currency -> do
     unless (currency == merchantOpCity.currency) $
       throwError (InvalidRequest "Invalid currency")
-  shouldHideCustomerInfo <-
-    case mbFleetOwnerId of
-      Nothing -> shouldHideCustomerInfoWhenNoFleetOwner mbRequestorId
-      Just fleetOwnerId -> do
-        void $ FleetAccess.checkRequestorAccessToFleet True mbRequestorId fleetOwnerId
-        pure True
+  (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbFleetOwnerId
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
   now <- getCurrentTime
-  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash && isNothing mbVehicleNo && isNothing mbFleetOwnerId) $
+  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash && isNothing mbVehicleNo && isNothing effectiveFleetOwnerId) $
     throwError $ InvalidRequest "At least one filter is required"
   when (isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
   case (mbfrom, mbto) of
@@ -172,15 +167,15 @@ getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurr
   enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
   rideItems <-
     if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
-      then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to mbVehicleNo mbFleetOwnerId
-      else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto mbVehicleNo mbFleetOwnerId
+      then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to mbVehicleNo effectiveFleetOwnerId
+      else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto mbVehicleNo effectiveFleetOwnerId
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let rideListItems' :: [Common.RideListItem]
       rideListItems' =
-        if shouldHideCustomerInfo
-          then map (\item -> (item {Common.customerName = Nothing, Common.customerPhoneNo = ""} :: Common.RideListItem)) rideListItems
-          else rideListItems
+        if shouldShowCustomerInfo
+          then rideListItems
+          else map (\item -> (item {Common.customerName = Nothing, Common.customerPhoneNo = ""} :: Common.RideListItem)) rideListItems
   let count = length rideListItems'
   -- should we consider filters in totalCount, e.g. count all canceled rides?
   -- totalCount <- runInReplica $ QRide.countRides merchant.id
@@ -190,16 +185,38 @@ getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurr
     maxLimit = 20
     defaultLimit = 10
 
-    shouldHideCustomerInfoWhenNoFleetOwner :: Maybe Text -> Flow Bool
-    shouldHideCustomerInfoWhenNoFleetOwner mbReqId =
-      case mbReqId of
-        Nothing -> pure False
-        Just requestorId -> do
-          requestor <- runInReplica $ QP.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
-          case requestor.role of
-            DP.FLEET_OWNER -> pure True
-            DP.OPERATOR -> throwError AccessDenied
-            _ -> pure False
+    -- Resolve (show customer info?, effective fleet filter). Fleet owner/operator: only their fleet, no customer info; other roles: may filter by any fleet, show customer info.
+    resolveFleetAndCustomerVisibility :: Maybe Text -> Flow (Bool, Maybe Text)
+    resolveFleetAndCustomerVisibility (Just fleetOwnerId) = do
+      isFleetOrOp <- isRequestorFleetOwnerOrOperator
+      if isFleetOrOp
+        then do
+          void $ FleetAccess.checkRequestorAccessToFleet True mbRequestorId fleetOwnerId
+          pure (False, Just fleetOwnerId)
+        else pure (True, Just fleetOwnerId)
+    resolveFleetAndCustomerVisibility Nothing = resolveRoleAndEffectiveFleet
+
+    isRequestorFleetOwnerOrOperator :: Flow Bool
+    isRequestorFleetOwnerOrOperator = case mbRequestorId of
+      Nothing -> pure False
+      Just requestorId -> do
+        mbRequestor <- runInReplica $ QP.findById (Id requestorId)
+        pure $ maybe False (\r -> r.role == DP.FLEET_OWNER || r.role == DP.OPERATOR) mbRequestor
+
+    -- When no fleetOwnerId in request: fleet owner => their fleet only, no customer info; operator => must pass fleetOwnerId; other roles => no fleet filter, show customer info.
+    resolveRoleAndEffectiveFleet :: Flow (Bool, Maybe Text)
+    resolveRoleAndEffectiveFleet = case mbRequestorId of
+      Nothing -> pure (True, Nothing)
+      Just requestorId -> do
+        mbRequestor <- runInReplica $ QP.findById (Id requestorId)
+        case mbRequestor of
+          Nothing -> pure (True, Nothing)
+          Just requestor ->
+            case requestor.role of
+              DP.FLEET_OWNER -> pure (False, Just requestorId)
+              DP.FLEET_BUSINESS -> pure (False, Just requestorId)
+              DP.OPERATOR -> throwError AccessDenied
+              _ -> pure (True, Nothing)
 
 getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Flow Common.RideListResV2
 getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbRideStatus mbto = do

@@ -1151,6 +1151,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         documentCategory = castDocumentCategory <$> documentCategory,
         documentFlowGrouping = Just $ maybe DVC.STANDARD castDocumentFlowGroupingFromReq documentFlowGrouping,
         allowLicenseTransfer = Just False,
+        rolesAllowedToUploadDocument = Nothing,
         ..
       }
   where

@@ -80,6 +80,7 @@ module Domain.Action.UI.Driver
     getDummyRideRequest,
     listScheduledBookings,
     acceptScheduledBooking,
+    acceptScheduledBookingWithPreFetched,
     getScheduledBookings,
     buildBookingAPIEntityFromBooking,
     mkBreakupItem,
@@ -2931,6 +2932,20 @@ getScheduledBookings from mocCityId vehicleVariants mbDLoc transporterConfig mbP
   res <- if isToday then fetchTodayBookings else fetchFutureBookings
   returnFilteredBookings now res mbDLoc mbPossibleServiceTierTypes redisKeyForHset limit
 
+acceptScheduledBookingWithPreFetched ::
+  DM.Merchant ->
+  TransporterConfig ->
+  DRB.Booking ->
+  SP.Person ->
+  Maybe Text ->
+  Flow APISuccess
+acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId = do
+  upcomingOrActiveRide <- runInReplica $ QRide.getUpcomingOrActiveByDriverId driver.id
+  unless (isNothing upcomingOrActiveRide) $ throwError (RideInvalidStatus "Cannot accept booking during active or already having upcoming ride.")
+  mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
+  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig
+  pure Success
+
 acceptScheduledBooking ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
@@ -2941,11 +2956,7 @@ acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId booking
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  upcomingOrActiveRide <- runInReplica $ QRide.getUpcomingOrActiveByDriverId driver.id
-  unless (isNothing upcomingOrActiveRide) $ throwError (RideInvalidStatus "Cannot accept booking during active or already having upcoming ride.")
-  mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
-  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig
-  pure Success
+  acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId
 
 clearDriverFeeWithCreate ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r) =>
