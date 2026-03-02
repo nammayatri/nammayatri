@@ -16,6 +16,7 @@ imports:
   Day: Data.Time
   Language: Kernel.External.Types
   CumulativeOfferResp: SharedLogic.Offer
+  VerificationStatus: Domain.Types.PassDetails
 
 module: Pass
 types:
@@ -51,6 +52,9 @@ types:
     code: Text
     offer: Maybe CumulativeOfferResp
     autoApply: Bool
+    minFare: Maybe HighPrecMoney
+    maxFare: Maybe HighPrecMoney
+    verificationStatus: Maybe VerificationStatus
     derive: "Show"
 
   PassInfoAPIEntity:

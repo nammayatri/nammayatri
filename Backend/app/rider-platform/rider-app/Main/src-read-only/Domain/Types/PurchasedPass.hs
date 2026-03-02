@@ -18,7 +18,8 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data PurchasedPass = PurchasedPass
-  { applicableVehicleServiceTiers :: [BecknV2.FRFS.Enums.ServiceTierType],
+  { applicableRouteIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    applicableVehicleServiceTiers :: [BecknV2.FRFS.Enums.ServiceTierType],
     benefitDescription :: Kernel.Prelude.Text,
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
     benefitValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
