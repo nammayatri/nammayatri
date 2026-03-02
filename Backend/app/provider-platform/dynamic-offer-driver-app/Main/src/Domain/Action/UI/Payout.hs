@@ -146,6 +146,10 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                 forM_ (listToMaybe =<< payoutOrder.entityIds) $ \driverId -> do
                   fork "Update Payout Status and Transactions for Manual Payout" $ do
                     callPayoutService (Id driverId) payoutConfig payoutOrderId
+              Just DPayment.COINS_REDEMPTION -> do
+                let driverId = Id payoutOrder.customerId
+                fork "Update Payout Status and Transactions for Coins Redemption" $ do
+                  callPayoutService driverId payoutConfig payoutOrderId
               Just DPayment.BACKLOG -> do
                 whenJust payoutOrder.entityIds $ \entityIds -> do
                   fork "Update Payout Status for Backlog" $ do
