@@ -3,8 +3,7 @@ name: Nix CI
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
-    branches: 
-      - "main"
+    branches:
       - "prodHotPush-Common"
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
@@ -51,8 +50,7 @@ jobs:
         id: check-docker-push
         run: |
           # Moving the docker push conditions here from the build job
-          if [[ "${{ github.ref }}" == "refs/heads/main" || 
-                "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
+          if [[ "${{ github.ref }}" == "refs/heads/prodHotPush-Common" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-MMFRFS" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BPP" ||

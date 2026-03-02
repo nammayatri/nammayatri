@@ -97,6 +97,7 @@
           maintainers = with lib.maintainers; [ patrickbr ];
         };
       };
+      localBuild = builtins.getEnv "NIX_LOCAL_BUILD" != "";
     in
     {
       pre-commit.settings.imports = [
@@ -127,7 +128,15 @@
         # Temporary fix: Optimization level has been reduced for ARM Linux builds.
         # TODO: Monitor does this optimization cause any perf issue
         defaults.settings.defined = {
-          extraConfigureFlags = lib.mkIf (system == "aarch64-linux") [ "--ghc-options=-O1" ];
+          extraConfigureFlags =
+            (lib.optional (system == "aarch64-linux") "--ghc-options=-O1")
+            ++ (lib.optionals localBuild [
+              "--ghc-options=-O0"
+              "--ghc-options=-funfolding-use-threshold20"
+              "--ghc-options=-fno-cse"
+              "--ghc-options=-fmax-simplifier-iterations1"
+              "--ghc-options=-fno-specialise-aggressively"
+            ]);
         };
         packages = {
           amazonka.source = inputs.amazonka-git + /lib/amazonka;
