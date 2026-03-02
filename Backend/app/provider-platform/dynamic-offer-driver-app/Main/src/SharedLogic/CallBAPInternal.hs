@@ -279,3 +279,35 @@ getPickupInstructions apiKey internalUrl rideId = do
   logInfo $ "CallBAPInternal: Calling BAP internal API for pickup instructions, rideId: " <> rideId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getPickupInstructionsClient rideId (Just apiKey)) "GetPickupInstructions" getPickupInstructionsAPI
+
+type EKDLiveCallFeedbackAPI =
+  "internal"
+    :> "ekdLiveCallFeedback"
+    :> Header "token" Text
+    :> ReqBody '[JSON] EKDLiveCallFeedbackReq
+    :> Post '[JSON] APISuccess
+
+newtype EKDLiveCallFeedbackReq = EKDLiveCallFeedbackReq
+  {rideId :: Text}
+  deriving (Generic, ToJSON, FromJSON)
+
+ekdLiveCallFeedbackClient :: Maybe Text -> EKDLiveCallFeedbackReq -> EulerClient APISuccess
+ekdLiveCallFeedbackClient = client (Proxy @EKDLiveCallFeedbackAPI)
+
+ekdLiveCallFeedbackAPI :: Proxy EKDLiveCallFeedbackAPI
+ekdLiveCallFeedbackAPI = Proxy
+
+ekdLiveCallFeedback ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  EKDLiveCallFeedbackReq ->
+  m APISuccess
+ekdLiveCallFeedback apiKey internalUrl request = do
+  logInfo "CallBAPInternal: Calling BAP internal API for EKD live call feedback"
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (ekdLiveCallFeedbackClient (Just apiKey) request) "EKDLiveCallFeedback" ekdLiveCallFeedbackAPI

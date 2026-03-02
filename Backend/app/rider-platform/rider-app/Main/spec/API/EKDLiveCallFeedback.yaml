@@ -1,0 +1,17 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+
+module: EKDLiveCallFeedback
+
+types:
+  EKDLiveCallFeedbackReq:
+    rideId: Text
+
+apis:
+  - POST:
+      endpoint: ekdLiveCallFeedback
+      auth: NoAuth
+      request:
+        type: EKDLiveCallFeedbackReq
+      response:
+        type: APISuccess

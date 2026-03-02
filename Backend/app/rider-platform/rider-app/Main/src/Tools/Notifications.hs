@@ -1720,3 +1720,20 @@ notifyRefunds' notificationType DRefundRequest.RefundRequest {..} = do
     ]
     Nothing
     Nothing
+
+notifyRiderOnEKDLiveCallFeedback ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  m ()
+notifyRiderOnEKDLiveCallFeedback booking = do
+  person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  let entity = Notification.Entity Notification.Product booking.id.getId ()
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "EKD_LIVE_CALL_FEEDBACK" identity)
+    EmptyDynamicParam
+    entity
+    booking.tripCategory
+    []
+    (Just booking.configInExperimentVersions)
+    Nothing

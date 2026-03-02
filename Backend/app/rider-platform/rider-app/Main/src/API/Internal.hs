@@ -5,6 +5,7 @@ module API.Internal
 where
 
 import qualified API.Action.UI.AlertWebhook as AlertWebhook
+import qualified API.Action.UI.EKDLiveCallFeedback as EKDLiveCallFeedback
 import qualified API.Action.UI.InsuranceInternal as InsuranceInternal
 import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
 import qualified API.Internal.Auth as Auth
@@ -36,6 +37,7 @@ type API =
            :<|> RideSearchExpired.API
            :<|> GetPickupInstructions.API
            :<|> AlertWebhook.API
+           :<|> EKDLiveCallFeedback.API
        )
 
 handler :: FlowServer API
@@ -53,3 +55,4 @@ handler =
     :<|> RideSearchExpired.handler
     :<|> GetPickupInstructions.handler
     :<|> AlertWebhook.handler
+    :<|> EKDLiveCallFeedback.handler
