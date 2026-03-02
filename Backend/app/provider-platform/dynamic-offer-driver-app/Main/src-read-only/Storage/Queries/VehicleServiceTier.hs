@@ -126,7 +126,7 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
       Just
         Domain.Types.VehicleServiceTier.VehicleServiceTier
           { airConditionedThreshold = airConditionedThreshold,
-            allowedAreas = (Kernel.Prelude.fmap (Kernel.Prelude.map Domain.Types.VSTAllowedArea.VSTAllowedArea)) allowedAreas,
+            allowedAreas = ((Kernel.Prelude.fmap (Kernel.Prelude.catMaybes . Kernel.Prelude.map Domain.Types.VSTAllowedArea.vstAllowedAreaFromText))) allowedAreas,
             allowedVehicleVariant = allowedVehicleVariant,
             autoSelectedVehicleVariant = autoSelectedVehicleVariant,
             baseVehicleServiceTier = baseVehicleServiceTier,

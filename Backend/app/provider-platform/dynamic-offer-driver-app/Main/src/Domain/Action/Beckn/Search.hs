@@ -423,10 +423,15 @@ handler ValidatedDSearchReq {..} sReq = do
       let fp' = fp{DFP.businessDiscountPercentage = mbBusinessDiscount <|> fp.businessDiscountPercentage, DFP.personalDiscountPercentage = mbPersonalDiscount <|> fp.personalDiscountPercentage} :: DFP.FullFarePolicy
       case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem -> do
-          let areaForVST = fromMaybe area mbAreaForVST
-          isAllowed <- VSTAR.isAreaAllowedForVST vehicleServiceTierItem areaForVST
-          when (not isAllowed) $
-            logInfo $ "VST " <> show fp.vehicleServiceTier <> " skipped due to area restrictions for areaForVST: " <> show areaForVST <> " (fare product area: " <> show area <> ")"
+          isAllowed <- case mbAreaForVST of
+            Nothing -> do
+              logDebug $ "VST " <> show fp.vehicleServiceTier <> " area check skipped (no PickupDrop area resolved), allowing"
+              pure True
+            Just areaForVST -> do
+              allowed <- VSTAR.isAreaAllowedForVST vehicleServiceTierItem areaForVST
+              when (not allowed) $
+                logInfo $ "VST " <> show fp.vehicleServiceTier <> " skipped due to area restrictions for areaForVST: " <> show areaForVST <> " (fare product area: " <> show area <> ")"
+              pure allowed
           (estimates', quotes') <-
             bool
               (pure (estimates, quotes))

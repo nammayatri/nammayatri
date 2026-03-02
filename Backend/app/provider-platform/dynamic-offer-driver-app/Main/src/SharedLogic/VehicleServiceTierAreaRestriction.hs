@@ -14,6 +14,7 @@
 
 module SharedLogic.VehicleServiceTierAreaRestriction
   ( areaToText,
+    fromSLArea,
     vstAreasCacheKey,
     populateVSTAreasCache,
     isAreaAllowedForVST,
@@ -30,10 +31,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, MonadFlow, logDebug, logInfo)
 import qualified Lib.Types.SpecialLocation as SL
 
+fromSLArea :: SL.Area -> Maybe VSTAllowedArea.VSTAllowedArea
+fromSLArea (SL.PickupDrop pickupId dropId) =
+  Just VSTAllowedArea.VSTAllowedArea {pickupId = pickupId, dropId = dropId}
+fromSLArea _ = Nothing
+
 areaToText :: SL.Area -> Maybe Text
-areaToText (SL.PickupDrop pickupId dropId) =
-  Just $ "Pickup_" <> pickupId.getId <> "_Drop_" <> dropId.getId
-areaToText _ = Nothing
+areaToText = fmap VSTAllowedArea.vstAllowedAreaToText . fromSLArea
 
 vstAreasCacheKey :: Id VehicleServiceTier -> Id MerchantOperatingCity -> Text
 vstAreasCacheKey vstId cityId =
