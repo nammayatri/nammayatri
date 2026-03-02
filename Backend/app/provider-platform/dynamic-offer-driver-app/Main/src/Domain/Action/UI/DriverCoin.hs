@@ -280,7 +280,7 @@ handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
-  whenM (noDriverPlan driverId) $
+  whenM (noDriverPlan driverId && coinRedemptionType /= Just DirectPayout) $
     throwError $ NoPlanAgaintsDriver driverId.getId
   now <- getCurrentTime
   uuid <- generateGUIDText
