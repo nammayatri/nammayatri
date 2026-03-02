@@ -55,3 +55,8 @@ ALTER TABLE atlas_app.frfs_ticket ADD COLUMN commencing_hours integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket ADD COLUMN is_return_ticket boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket ADD COLUMN cloud_type text ;

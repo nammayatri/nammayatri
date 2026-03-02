@@ -12,10 +12,12 @@ import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import qualified Tools.Beam.UtilsTH
 
 data FRFSTicket = FRFSTicket
-  { commencingHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
+    commencingHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     frfsTicketBookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket,

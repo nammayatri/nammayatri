@@ -26,7 +26,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findByBppOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
@@ -161,7 +161,7 @@ updateTotalPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.T
 updateTotalPriceById totalPrice id = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
+    [ Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.updatedAt _now
     ]
@@ -190,6 +190,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.cancellationCharges cancellationCharges,
       Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
       Se.Set Beam.cashbackStatus cashbackStatus,
+      Se.Set Beam.cloudType cloudType,
       Se.Set Beam.customerCancelled customerCancelled,
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
@@ -233,7 +234,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.toStationName toStationName,
       Se.Set Beam.toStationLat ((.lat) <$> toStationPoint),
       Se.Set Beam.toStationLon ((.lon) <$> toStationPoint),
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
+      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleNumber vehicleNumber,

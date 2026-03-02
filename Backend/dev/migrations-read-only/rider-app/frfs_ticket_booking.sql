@@ -125,3 +125,8 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN frfs_ticket_booking_payment
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_mock_payment boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cloud_type text ;
