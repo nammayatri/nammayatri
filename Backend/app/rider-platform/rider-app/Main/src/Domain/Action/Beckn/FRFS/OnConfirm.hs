@@ -332,7 +332,8 @@ mkTicket ::
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
-  ) =>
+    HasField "cloudType" r (Maybe CloudType)
+    ) =>
   Booking.FRFSTicketBooking ->
   DTicket ->
   Bool ->
@@ -528,6 +529,7 @@ createTickets ::
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
+    HasField "cloudType" r (Maybe CloudType)
   ) =>
   Booking.FRFSTicketBooking ->
   [DTicket] ->
