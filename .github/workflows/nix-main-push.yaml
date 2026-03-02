@@ -48,6 +48,23 @@ jobs:
         run: |
           nix build github:srid/devour-flake#default --impure --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result
 
+      - name: Push to Cache (Local mode)        
+        continue-on-error: true
+        env:
+          ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: |
+          echo "result=$(cat result)" >> $GITHUB_OUTPUT          
+          PATHS=$(jq -r '.[].outPaths[]' ./result)
+          # Try attic (both login AND push must succeed)
+          if attic login cache-nixos-asia https://cache.nixos.asia/oss "$ATTIC_TOKEN" 2>/dev/null && \
+            echo "$PATHS" | attic push cache-nixos-asia 2>/dev/null; then
+            echo "✅ Pushed to attic"
+          else
+            echo "⚠️ Attic failed, using cachix..."
+            echo "$PATHS" | cachix push nammayatri
+          fi
+
       - name: Build And Push Docker image (Master Local mode)
         id: docker
         if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
