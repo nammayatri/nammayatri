@@ -249,6 +249,7 @@
         meta.description = "Backend development environment for nammayatri";
         packages = with pkgs; [
           redis # redis-cli is used in scripts.nix
+          openssh # sftp binary for SFTP upload support
           jq
           gdal
           postgis
