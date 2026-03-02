@@ -546,6 +546,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             fromStationAddress = fromStation'.address,
             toStationAddress = toStation'.address,
             vehicleNumber = Nothing,
+            cloudType = Nothing,
             ..
           }
 

@@ -19,6 +19,7 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
+import Kernel.Types.Version (CloudType)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
@@ -45,7 +46,8 @@ confirm ::
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasField "cloudType" r (Maybe CloudType)
   ) =>
   Merchant ->
   MerchantOperatingCity ->
@@ -117,7 +119,8 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
         HasFlowEnv m r '["googleSAPrivateKey" ::: String],
         HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
         HasField "isMetroTestTransaction" r Bool,
-        HasField "blackListedJobs" r [Text]
+        HasField "blackListedJobs" r [Text],
+        HasField "cloudType" r (Maybe CloudType)
       ) =>
       DOrder ->
       m ()

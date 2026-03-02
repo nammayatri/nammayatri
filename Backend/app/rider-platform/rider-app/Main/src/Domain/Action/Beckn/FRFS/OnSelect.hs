@@ -25,6 +25,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Types.Version (CloudType)
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.FRFSConfirm
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -44,7 +45,7 @@ validateRequest DOnSelect {..} = do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   return (merchant, quote, integratedBppConfig)
 
-onSelect :: (FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text]) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> Maybe Bool -> Maybe CrisSdkResponse -> DIBC.IntegratedBPPConfig -> m ()
+onSelect :: (FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> Maybe Bool -> Maybe CrisSdkResponse -> DIBC.IntegratedBPPConfig -> m ()
 onSelect onSelectReq merchant quote isSingleMode mbEnableOffer crisSdkResponse integratedBppConfig = do
   logDebug $ "onSelect isSingleMode: " <> show isSingleMode <> " mbEnableOffer: " <> show mbEnableOffer <> " crisSdkResponse: " <> show crisSdkResponse
   Metrics.finishMetrics Metrics.SELECT_FRFS merchant.name onSelectReq.transactionId quote.merchantOperatingCityId.getId

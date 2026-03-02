@@ -31,7 +31,6 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Action.UI.Cancel (makeCustomerBlockingKey)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.RidePayment as Reexport
-import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingStatus as BT
@@ -112,6 +111,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRRN
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -1156,8 +1156,8 @@ validateRideAssignedReq RideAssignedReq {..} = do
   mbMerchant <- CQM.findById booking.merchantId
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   let isSynchronousOnUpdateProcessing =
-        isValueAddNP &&
-          case booking.tripCategory of
+        isValueAddNP
+          && case booking.tripCategory of
             Just (Trip.OneWay Trip.OneWayRideOtp) -> True
             Just (Trip.InterCity Trip.OneWayRideOtp _) -> True
             Just (Trip.CrossCity Trip.OneWayRideOtp _) -> True

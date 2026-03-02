@@ -114,3 +114,9 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN minimal_data boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN cloud_type text ;
