@@ -2,8 +2,7 @@ name: Nix CI
 
 on:
   push:
-    branches: 
-      - "main"
+    branches:
       - "prodHotPush-Common"
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
@@ -44,8 +43,7 @@ jobs:
         id: check-docker-push
         run: |
           # Moving the docker push conditions here from the build job
-          if [[ "${{ github.ref }}" == "refs/heads/main" || 
-                "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
+          if [[ "${{ github.ref }}" == "refs/heads/prodHotPush-Common" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-MMFRFS" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BPP" ||
@@ -92,18 +90,27 @@ jobs:
       - name: Build all flake outputs
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
-          om ci run --systems "${{ matrix.system }}" -o ci-result -- -v 2>&1 | while IFS= read -r line; do
+          nix build github:srid/devour-flake#default --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee build-log.txt
 
-      - name: Push to Cachix
-        if: steps.check-conditions.outputs.should_build == 'true' && github.ref == 'refs/heads/main'
+      - name: Push to Cache
+        if: steps.check-conditions.outputs.should_build == 'true'
         continue-on-error: true
         env:
+          ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
           CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
         run: |
-          # Extract all built store paths from om ci results and push to cachix
-          jq -r '.result[].build.outPaths[]' ci-result | cachix push nammayatri
+          echo "result=$(cat result)" >> $GITHUB_OUTPUT          
+          PATHS=$(jq -r '.[].outPaths[]' ./result)
+          # Try attic (both login AND push must succeed)
+          if attic login cache-nixos-asia https://cache.nixos.asia/oss "$ATTIC_TOKEN" 2>/dev/null && \
+            echo "$PATHS" | attic push cache-nixos-asia 2>/dev/null; then
+            echo "✅ Pushed to attic"
+          else
+            echo "⚠️ Attic failed, using cachix..."
+            echo "$PATHS" | cachix push nammayatri
+          fi
 
       - name: Upload build log
         if: steps.check-conditions.outputs.should_build == 'true'

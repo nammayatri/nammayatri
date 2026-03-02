@@ -1,0 +1,128 @@
+name: Nix CI (Main PR)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - "main"
+  workflow_dispatch:
+
+# Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  packages: write
+
+jobs:
+  check-conditions:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    outputs:
+      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
+    steps:
+      - name: Apply labels
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        uses: actions/labeler@v4
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Check global conditions
+        id: evaluate
+        run: |
+          if [[ "${{ github.event.pull_request.merged }}" == "true" ||
+                "${{ github.event_name }}" != "pull_request" ||
+                "${{ github.event.action }}" != "closed" ]]; then
+            echo "should_proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    name: ${{ matrix.name }}
+    needs: [check-conditions]
+    continue-on-error: ${{ matrix.continue-on-error }}
+    if: needs.check-conditions.outputs.should-proceed == 'true' && github.event_name == 'pull_request' && github.event.action != 'closed'
+    strategy:
+      matrix:
+        include:
+          - system: x86_64-linux
+            host: x86_64-linux
+            arch: amd64
+            name: Master Local Build
+            continue-on-error: false
+      fail-fast: false
+    runs-on: ${{ matrix.host }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build all flake outputs (Local mode)
+        env:
+          NIX_LOCAL_BUILD: "1"
+        run: |
+          nix build github:srid/devour-flake#default --impure --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
+            printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
+          done | tee build-log.txt
+
+      - name: Upload build log
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build-log.txt
+          retention-days: 1
+
+      - name: Build Docker image (no push)
+        if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
+        env:
+          DOCKER_TAG_PREFIX: "master-"
+          NIX_LOCAL_BUILD: "1"
+        run: |
+          nix build .#packages.${{ matrix.system }}.dockerImage --impure
+
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
+          echo "Docker image built: ${BASE_IMAGE} (not pushed)"
+
+  analyze-build-times:
+    name: Analyze Build Times
+    needs: [build, check-conditions]
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    runs-on: x86_64-linux
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build logs
+        uses: actions/download-artifact@v4
+        with:
+          path: build-logs
+
+      - name: Run build log analysis
+        run: |
+          cd buildtime-analysis
+          python3 analyze_build_log.py ../build-logs/build-log/build-log.txt
+
+      - name: Run build visualization
+        run: |
+          cd buildtime-analysis
+          python3 visualize_builds.py
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-analysis-results
+          path: |
+            buildtime-analysis/build_analysis.json
+            buildtime-analysis/build_analysis_report.md
+            buildtime-analysis/dependency_analysis.json
+            buildtime-analysis/*.png
+            buildtime-analysis/*/*.png
+          retention-days: 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
