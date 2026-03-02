@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 
 data PurchasedPassPaymentT f = PurchasedPassPaymentT
   { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    applicableRouteIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     benefitDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     benefitType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType),
     benefitValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

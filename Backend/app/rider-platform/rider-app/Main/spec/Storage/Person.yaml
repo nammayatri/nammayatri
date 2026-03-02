@@ -124,6 +124,7 @@ Person:
     liveActivityToken : Maybe Text
     comments: "Maybe [Text]"
     paymentMode: Maybe PaymentMode
+    isOrganizationPassHolder: Maybe Bool
     operatorBadgeToken: Maybe Text
     clientId: Maybe Text
 
@@ -407,6 +408,11 @@ Person:
     updatePersonPassword:
       kvFunction: updateWithKV
       params: [passwordHash]
+      where: id
+
+    updateIsOrganizationPassHolder:
+      kvFunction: updateWithKV
+      params: [isOrganizationPassHolder]
       where: id
 
     findByOperatorBadgeTokenAndMerchantId:
