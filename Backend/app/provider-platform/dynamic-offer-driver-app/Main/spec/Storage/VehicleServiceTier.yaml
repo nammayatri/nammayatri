@@ -59,7 +59,7 @@ VehicleServiceTier:
     allowedAreas: Maybe [Text]
   fromTType:
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
-    allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.map Domain.Types.VSTAllowedArea.VSTAllowedArea))|I
+    allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.catMaybes . Kernel.Prelude.map Domain.Types.VSTAllowedArea.vstAllowedAreaFromText))|I
   toTType:
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.map Domain.Types.VSTAllowedArea.vstAllowedAreaToText))|I
