@@ -5,6 +5,7 @@ module Domain.Action.ProviderPlatform.Management.FeedbackForm
     putFeedbackFormUpdate,
     deleteFeedbackFormDelete,
     getFeedbackForm,
+    getFeedbackFormList,
   )
 where
 
@@ -47,3 +48,8 @@ getFeedbackForm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Ke
 getFeedbackForm merchantShortId opCity apiTokenInfo feedbackFormId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.feedbackFormDSL.getFeedbackForm) feedbackFormId
+
+getFeedbackFormList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormRes])
+getFeedbackFormList merchantShortId opCity apiTokenInfo mbLimit mbOffset = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.feedbackFormDSL.getFeedbackFormList) mbLimit mbOffset

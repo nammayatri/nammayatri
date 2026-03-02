@@ -22,42 +22,53 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("feedbackForm" :> (PostFeedbackFormCreate :<|> PutFeedbackFormUpdate :<|> DeleteFeedbackFormDelete :<|> GetFeedbackForm))
+type API = ("feedbackForm" :> (GetFeedbackFormList :<|> PostFeedbackFormCreate :<|> PutFeedbackFormUpdate :<|> DeleteFeedbackFormDelete :<|> GetFeedbackForm))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postFeedbackFormCreate merchantId city :<|> putFeedbackFormUpdate merchantId city :<|> deleteFeedbackFormDelete merchantId city :<|> getFeedbackForm merchantId city
+handler merchantId city = getFeedbackFormList merchantId city :<|> postFeedbackFormCreate merchantId city :<|> putFeedbackFormUpdate merchantId city :<|> deleteFeedbackFormDelete merchantId city :<|> getFeedbackForm merchantId city
+
+type GetFeedbackFormList =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FEEDBACK_FORM / 'API.Types.ProviderPlatform.Management.FeedbackForm.GET_FEEDBACK_FORM_LIST)
+      :> API.Types.ProviderPlatform.Management.FeedbackForm.GetFeedbackFormList
+  )
 
 type PostFeedbackFormCreate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FEEDBACK_FORM) / ('API.Types.ProviderPlatform.Management.FeedbackForm.POST_FEEDBACK_FORM_CREATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FEEDBACK_FORM / 'API.Types.ProviderPlatform.Management.FeedbackForm.POST_FEEDBACK_FORM_CREATE)
       :> API.Types.ProviderPlatform.Management.FeedbackForm.PostFeedbackFormCreate
   )
 
 type PutFeedbackFormUpdate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FEEDBACK_FORM) / ('API.Types.ProviderPlatform.Management.FeedbackForm.PUT_FEEDBACK_FORM_UPDATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FEEDBACK_FORM / 'API.Types.ProviderPlatform.Management.FeedbackForm.PUT_FEEDBACK_FORM_UPDATE)
       :> API.Types.ProviderPlatform.Management.FeedbackForm.PutFeedbackFormUpdate
   )
 
 type DeleteFeedbackFormDelete =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FEEDBACK_FORM) / ('API.Types.ProviderPlatform.Management.FeedbackForm.DELETE_FEEDBACK_FORM_DELETE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FEEDBACK_FORM / 'API.Types.ProviderPlatform.Management.FeedbackForm.DELETE_FEEDBACK_FORM_DELETE)
       :> API.Types.ProviderPlatform.Management.FeedbackForm.DeleteFeedbackFormDelete
   )
 
 type GetFeedbackForm =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FEEDBACK_FORM) / ('API.Types.ProviderPlatform.Management.FeedbackForm.GET_FEEDBACK_FORM))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FEEDBACK_FORM / 'API.Types.ProviderPlatform.Management.FeedbackForm.GET_FEEDBACK_FORM)
       :> API.Types.ProviderPlatform.Management.FeedbackForm.GetFeedbackForm
   )
+
+getFeedbackFormList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormRes])
+getFeedbackFormList merchantShortId opCity apiTokenInfo limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FeedbackForm.getFeedbackFormList merchantShortId opCity apiTokenInfo limit offset
 
 postFeedbackFormCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FeedbackForm.CreateFeedbackFormReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FeedbackForm.CreateFeedbackFormRes)
 postFeedbackFormCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FeedbackForm.postFeedbackFormCreate merchantShortId opCity apiTokenInfo req

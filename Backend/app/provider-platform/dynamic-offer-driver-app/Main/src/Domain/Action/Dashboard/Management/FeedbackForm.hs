@@ -5,6 +5,7 @@ module Domain.Action.Dashboard.Management.FeedbackForm
     putFeedbackFormUpdate,
     deleteFeedbackFormDelete,
     getFeedbackForm,
+    getFeedbackFormList,
   )
 where
 
@@ -21,8 +22,9 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FeedbackForm as QFF
-import qualified Storage.Queries.FeedbackFormExtra as QFFE
 import Tools.Error
 
 postFeedbackFormCreate ::
@@ -32,6 +34,8 @@ postFeedbackFormCreate ::
   Environment.Flow API.CreateFeedbackFormRes
 postFeedbackFormCreate _merchantShortId _opCity req = do
   id <- Id <$> L.generateGUID
+  merchant <- findMerchantByShortId _merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let feedbackForm =
         DTF.FeedbackForm
           { DTF.id = id,
@@ -42,8 +46,8 @@ postFeedbackFormCreate _merchantShortId _opCity req = do
             DTF.answer = req.answer,
             DTF.answerType = toDomainAnswerType req.answerType,
             DTF.badges = fmap (map toDomainBadgeDetail) req.badges,
-            DTF.merchantId = fmap (Kernel.Types.Id.Id . Kernel.Types.Id.getId) req.merchantId,
-            DTF.merchantOperatingCityId = fmap (Kernel.Types.Id.Id . Kernel.Types.Id.getId) req.merchantOperatingCityId
+            DTF.merchantId = Just merchant.id,
+            DTF.merchantOperatingCityId = Just merchantOpCityId
           }
   QFF.create feedbackForm
   pure $ API.CreateFeedbackFormRes {API.feedbackFormId = Kernel.Types.Id.getId id}
@@ -57,6 +61,8 @@ putFeedbackFormUpdate ::
 putFeedbackFormUpdate _merchantShortId _opCity feedbackFormId req = do
   let id = Kernel.Types.Id.Id feedbackFormId
   existing <- QFF.findByPrimaryKey id >>= fromMaybeM (InvalidRequest "Feedback form does not exist")
+  merchant <- findMerchantByShortId _merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let updated =
         existing
           { DTF.categoryName = fromMaybe existing.categoryName (toDomainCategory <$> req.categoryName),
@@ -66,8 +72,8 @@ putFeedbackFormUpdate _merchantShortId _opCity feedbackFormId req = do
             DTF.answer = fromMaybe existing.answer req.answer,
             DTF.answerType = fromMaybe existing.answerType (toDomainAnswerType <$> req.answerType),
             DTF.badges = (fmap (map toDomainBadgeDetail) req.badges) <|> existing.badges,
-            DTF.merchantId = fmap (Kernel.Types.Id.Id . Kernel.Types.Id.getId) req.merchantId <|> existing.merchantId,
-            DTF.merchantOperatingCityId = fmap (Kernel.Types.Id.Id . Kernel.Types.Id.getId) req.merchantOperatingCityId <|> existing.merchantOperatingCityId
+            DTF.merchantId = Just merchant.id,
+            DTF.merchantOperatingCityId = Just merchantOpCityId
           }
   QFF.updateByPrimaryKey updated
   pure Kernel.Types.APISuccess.Success
@@ -80,7 +86,7 @@ deleteFeedbackFormDelete ::
 deleteFeedbackFormDelete _merchantShortId _opCity feedbackFormId = do
   let id = Kernel.Types.Id.Id feedbackFormId
   void $ QFF.findByPrimaryKey id >>= fromMaybeM (InvalidRequest "Feedback form does not exist")
-  QFFE.deleteById id
+  QFF.deleteById id
   pure Kernel.Types.APISuccess.Success
 
 getFeedbackForm ::
@@ -91,19 +97,36 @@ getFeedbackForm ::
 getFeedbackForm _merchantShortId _opCity feedbackFormId = do
   let id = Kernel.Types.Id.Id feedbackFormId
   feedbackForm <- QFF.findByPrimaryKey id >>= fromMaybeM (InvalidRequest "Feedback form does not exist")
-  pure $
-    API.FeedbackFormRes
-      { API.id = Kernel.Types.Id.getId feedbackForm.id,
-        API.categoryName = toAPICategory feedbackForm.categoryName,
-        API.rating = feedbackForm.rating,
-        API.question = feedbackForm.question,
-        API.questionTranslations = feedbackForm.questionTranslations,
-        API.answer = feedbackForm.answer,
-        API.answerType = toAPIAnswerType feedbackForm.answerType,
-        API.badges = fmap (map toAPIBadgeDetail) feedbackForm.badges,
-        API.merchantOperatingCityId = fmap (Kernel.Types.Id.Id . Kernel.Types.Id.getId) feedbackForm.merchantOperatingCityId,
-        API.merchantId = fmap (Kernel.Types.Id.Id . Kernel.Types.Id.getId) feedbackForm.merchantId
-      }
+  pure $ toAPIFeedbackFormRes feedbackForm
+
+getFeedbackFormList ::
+  Kernel.Types.Id.ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Environment.Flow [API.FeedbackFormRes]
+getFeedbackFormList merchantShortId opCity mbLimit mbOffset = do
+  let limit = fromMaybe 10 mbLimit
+  let offset = fromMaybe 0 mbOffset
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  feedbackForms <- QFF.findAllFeedbackByMerchantOpCityIdWithLimitOffset merchantOpCityId (Just limit) (Just offset)
+  pure $ map toAPIFeedbackFormRes feedbackForms
+
+toAPIFeedbackFormRes :: DTF.FeedbackForm -> API.FeedbackFormRes
+toAPIFeedbackFormRes feedbackForm =
+  API.FeedbackFormRes
+    { API.id = Kernel.Types.Id.getId feedbackForm.id,
+      API.categoryName = toAPICategory feedbackForm.categoryName,
+      API.rating = feedbackForm.rating,
+      API.question = feedbackForm.question,
+      API.questionTranslations = feedbackForm.questionTranslations,
+      API.answer = feedbackForm.answer,
+      API.answerType = toAPIAnswerType feedbackForm.answerType,
+      API.badges = fmap (map toAPIBadgeDetail) feedbackForm.badges,
+      API.merchantOperatingCityId = fmap (Kernel.Types.Id.Id . Kernel.Types.Id.getId) feedbackForm.merchantOperatingCityId,
+      API.merchantId = fmap (Kernel.Types.Id.Id . Kernel.Types.Id.getId) feedbackForm.merchantId
+    }
 
 toDomainCategory :: API.Category -> DTF.Category
 toDomainCategory = \case

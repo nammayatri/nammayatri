@@ -1,6 +1,7 @@
 module Storage.Queries.FeedbackFormExtra where
 
 import Domain.Types.FeedbackForm
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -17,3 +18,16 @@ findAllFeedback = findAllWithDb [Se.Is BFF.id $ Se.Not $ Se.Eq ""]
 
 findAllFeedbackByRating :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> m [FeedbackForm]
 findAllFeedbackByRating rating = findAllWithDb [Se.Or [Se.Is BFF.rating $ Se.Eq $ Just rating, Se.Is BFF.rating $ Se.Eq Nothing]]
+
+findAllFeedbackByMerchantOpCityIdWithLimitOffset ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Kernel.Types.Id.Id DMOC.MerchantOperatingCity ->
+  Maybe Int ->
+  Maybe Int ->
+  m [FeedbackForm]
+findAllFeedbackByMerchantOpCityIdWithLimitOffset merchantOpCityId limit offset =
+  findAllWithOptionsKV
+    [Se.Is BFF.merchantOperatingCityId $ Se.Eq (Just $ Kernel.Types.Id.getId merchantOpCityId)]
+    (Se.Asc BFF.id)
+    limit
+    offset
