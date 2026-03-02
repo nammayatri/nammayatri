@@ -345,6 +345,7 @@ library
     , servant-multipart
     , servant-openapi3
     , servant-server
+    , special-zone-a
     , stm
     , string-conversions
     , syb
