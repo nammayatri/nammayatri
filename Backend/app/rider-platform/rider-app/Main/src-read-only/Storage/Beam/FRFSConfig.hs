@@ -13,31 +13,31 @@ import qualified Kernel.Types.Time
 import Tools.Beam.UtilsTH
 
 data FRFSConfigT f = FRFSConfigT
-  { bookingEndTime :: B.C f Kernel.Prelude.UTCTime,
-    bookingStartTime :: B.C f Kernel.Prelude.UTCTime,
-    busStationTtl :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
-    canUpdateExistingPaymentOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    cancellationReasonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    customDates :: B.C f [Kernel.Prelude.Text],
-    customEndTime :: B.C f Kernel.Prelude.Text,
-    discount :: B.C f Kernel.Prelude.Int,
-    freeTicketInterval :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    isCancellationAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isEventOngoing :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isFRFSTestingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    maxFreeTicketCashback :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    metroStationTtl :: B.C f Kernel.Prelude.Int,
-    oneWayTicketLimit :: B.C f Kernel.Prelude.Int,
-    providerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    providerName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    radius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
-    roundTripTicketLimit :: B.C f Kernel.Prelude.Int,
-    straightLineDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
-    validTillSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { bookingEndTime :: (B.C f Kernel.Prelude.UTCTime),
+    bookingStartTime :: (B.C f Kernel.Prelude.UTCTime),
+    busStationTtl :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds)),
+    canUpdateExistingPaymentOrder :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    cancellationReasonId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    customDates :: (B.C f [Kernel.Prelude.Text]),
+    customEndTime :: (B.C f Kernel.Prelude.Text),
+    discount :: (B.C f Kernel.Prelude.Int),
+    freeTicketInterval :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    isCancellationAllowed :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    isEventOngoing :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    isFRFSTestingEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    maxFreeTicketCashback :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    metroStationTtl :: (B.C f Kernel.Prelude.Int),
+    oneWayTicketLimit :: (B.C f Kernel.Prelude.Int),
+    providerId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    providerName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    radius :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters)),
+    roundTripTicketLimit :: (B.C f Kernel.Prelude.Int),
+    straightLineDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters)),
+    validTillSeconds :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -47,6 +47,6 @@ instance B.Table FRFSConfigT where
 
 type FRFSConfig = FRFSConfigT Identity
 
-$(enableKVPG ''FRFSConfigT ['merchantOperatingCityId] [])
+$(enableKVPG (''FRFSConfigT) [('merchantOperatingCityId)] [])
 
-$(mkTableInstances ''FRFSConfigT "frfs_config")
+$(mkTableInstances (''FRFSConfigT) "frfs_config")

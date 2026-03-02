@@ -57,6 +57,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Types.Version (CloudType)
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSUtils as FRFSUtils
@@ -329,7 +330,8 @@ mkTicket ::
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "cloudType" r (Maybe CloudType)
   ) =>
   Booking.FRFSTicketBooking ->
   DTicket ->
@@ -340,6 +342,7 @@ mkTicket booking dTicket isTicketFree = do
   ticketId <- generateGUID
   ticketStatus <- Utils.getTicketStatus booking False dTicket -- on_confirm should never make status inprogress
   processedQrData <- processQRData dTicket.qrData
+  cloudType <- asks (.cloudType)
   return
     Ticket.FRFSTicket
       { Ticket.frfsTicketBookingId = booking.id,
@@ -360,7 +363,8 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.updatedAt = now,
         Ticket.isTicketFree = Just isTicketFree,
         Ticket.commencingHours = dTicket.commencingHours,
-        Ticket.isReturnTicket = dTicket.isReturnTicket
+        Ticket.isReturnTicket = dTicket.isReturnTicket,
+        Ticket.cloudType = cloudType
       }
 
 processQRData ::

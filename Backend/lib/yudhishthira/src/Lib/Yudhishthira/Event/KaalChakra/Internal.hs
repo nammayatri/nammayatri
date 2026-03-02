@@ -19,13 +19,13 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import Data.List (nub, partition)
 import qualified Data.Map as M
-import qualified Database.Redis as Redis
 import Data.Scientific (fromFloatDigits, toRealFloat)
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time.Clock as Time
 import qualified Data.Vector as V
+import qualified Database.Redis as Redis
 import qualified JsonLogic
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
@@ -240,16 +240,19 @@ fetchUserDataBatch req eventId chakraQueries batchNumber = do
     if req.parseQueryResults
       then do
         parsedObjects <- Parse.parseQueryResult chakraQuery redisObjects
-        pure ChakraQueryResult
-          { queryName = chakraQuery.queryName
-          , queryText = chakraQuery.queryText
-          , queryResultObjects = parsedObjects
-          }
-      else pure ChakraQueryResult
-        { queryName = chakraQuery.queryName
-        , queryText = chakraQuery.queryText
-        , queryResultObjects = redisObjects
-        }
+        pure
+          ChakraQueryResult
+            { queryName = chakraQuery.queryName,
+              queryText = chakraQuery.queryText,
+              queryResultObjects = parsedObjects
+            }
+      else
+        pure
+          ChakraQueryResult
+            { queryName = chakraQuery.queryName,
+              queryText = chakraQuery.queryText,
+              queryResultObjects = redisObjects
+            }
 
   -- 5. Combine ClickHouse and Redis results
   let allResults = clickhouseResults ++ redisResults
@@ -612,7 +615,7 @@ extractUserIdsFromClickHouseResults results =
   S.fromList $ concatMap extractUserIdsFromResult results
   where
     extractUserIdsFromResult :: ChakraQueryResult -> [Id Yudhishthira.User]
-    extractUserIdsFromResult ChakraQueryResult{queryResultObjects} =
+    extractUserIdsFromResult ChakraQueryResult {queryResultObjects} =
       mapMaybe extractUserId queryResultObjects
 
     extractUserId :: A.Object -> Maybe (Id Yudhishthira.User)
@@ -638,7 +641,7 @@ buildRedisKeysWithMapping ::
 buildRedisKeysWithMapping config userIds =
   let mappings = map buildKeyMapping userIds
       keys = map snd mappings
-  in (mappings, keys)
+   in (mappings, keys)
   where
     buildKeyMapping :: Id Yudhishthira.User -> (Id Yudhishthira.User, Text)
     buildKeyMapping userId =
@@ -653,7 +656,7 @@ groupKeysBySlot keys =
     insertKeyBySlot acc key =
       let hashSlot = Redis.keyToSlot $ TE.encodeUtf8 key
           slot = fromIntegral hashSlot :: Int
-      in M.insertWith (++) slot [key] acc
+       in M.insertWith (++) slot [key] acc
 
 -- Chunks helper (if not available)
 chunksOf :: Int -> [a] -> [[a]]
@@ -773,9 +776,9 @@ parseRedisResponse op response queryResults =
     YT.GET -> parseGetResponse response queryResults
     YT.MGET -> parseGetResponse response queryResults
     YT.HGET -> parseHgetResponse response queryResults
-    YT.HGETALL -> parseGetResponse response queryResults  -- HGETALL converted to JSON object
-    YT.SMEMBERS -> parseGetResponse response queryResults  -- SMEMBERS converted to JSON array
-    YT.ZRANGE -> parseGetResponse response queryResults  -- ZRANGE converted to JSON array
+    YT.HGETALL -> parseGetResponse response queryResults -- HGETALL converted to JSON object
+    YT.SMEMBERS -> parseGetResponse response queryResults -- SMEMBERS converted to JSON array
+    YT.ZRANGE -> parseGetResponse response queryResults -- ZRANGE converted to JSON array
 
 parseGetResponse ::
   BS.ByteString ->

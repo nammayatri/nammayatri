@@ -36,6 +36,7 @@ import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common hiding (mkPrice)
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -108,11 +109,12 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
         )
         (pure mbBooking)
 
-    buildAndCreateBooking :: CallExternalBPP.FRFSConfirmFlow m r c => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> Maybe Bool -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
+    buildAndCreateBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> Maybe Bool -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
     buildAndCreateBooking rider quote'@DFRFSQuote.FRFSQuote {..} fareParameters mbMockPayment = do
       uuid <- generateGUID
       now <- getCurrentTime
       mbSearch <- QFRFSSearch.findById searchId
+      cloudType <- asks (.cloudType)
       let isFareChanged = if isJust partnerOrgId then isJust oldCacheDump else False
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking
@@ -148,6 +150,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 failureReason = Nothing,
                 isSingleMode = isSingleMode,
                 isMockPayment = mbMockPayment,
+                cloudType = cloudType,
                 ..
               }
       QFRFSTicketBooking.create booking

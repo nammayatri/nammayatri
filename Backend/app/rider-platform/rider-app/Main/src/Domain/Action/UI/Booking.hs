@@ -315,8 +315,9 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
         pure (entitiesWithSource, Nothing, Just finalJourneyOffset, Just finalPassOffset, hasMoreData)
       _ -> do
-        bookingListFork <- awaitableFork "bookingListV2->getBookingList" $
-          applyMasterDbIfGcp $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
+        bookingListFork <-
+          awaitableFork "bookingListV2->getBookingList" $
+            applyMasterDbIfGcp $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
 
         -- Journeys (NammaTransit) should only be included for PERSONAL billing category and NORMAL ride type
         let shouldIncludeJourneys = shouldIncludeJourneysForFilters billingCategoryList rideTypeList
@@ -388,10 +389,11 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
           fork "booking list status update" $ checkBookingsForStatus allbookings
           logInfo $ "rbList: test " <> show rbList
         Nothing -> do
-          fork "booking list status update" $ applyMasterDbIfGcp $ do
-            (rbList_, allbookings_) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
-            checkBookingsForStatus allbookings_
-            logInfo $ "rbList: test " <> show rbList_
+          fork "booking list status update" $
+            applyMasterDbIfGcp $ do
+              (rbList_, allbookings_) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
+              checkBookingsForStatus allbookings_
+              logInfo $ "rbList: test " <> show rbList_
 
 data MergedItem = MBooking SRB.Booking | MJourney DJ.Journey | MPass DPurchasedPass.PurchasedPass
 

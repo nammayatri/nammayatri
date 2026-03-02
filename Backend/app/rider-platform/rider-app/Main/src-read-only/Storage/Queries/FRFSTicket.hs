@@ -26,7 +26,7 @@ createMany = traverse_ create
 findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketStatus.FRFSTicketStatus -> m (Maybe Domain.Types.FRFSTicket.FRFSTicket))
 findAllByStatus status = do findOneWithKV [Se.Is Beam.status $ Se.Eq status]
 
-findAllByTicketBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m [Domain.Types.FRFSTicket.FRFSTicket])
+findAllByTicketBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ([Domain.Types.FRFSTicket.FRFSTicket]))
 findAllByTicketBookingId frfsTicketBookingId = do findAllWithKV [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket -> m (Maybe Domain.Types.FRFSTicket.FRFSTicket))
@@ -97,7 +97,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.commencingHours commencingHours,
+    [ Se.Set Beam.cloudType cloudType,
+      Se.Set Beam.commencingHours commencingHours,
       Se.Set Beam.description description,
       Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
       Se.Set Beam.isReturnTicket isReturnTicket,
@@ -122,7 +123,8 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
     pure $
       Just
         Domain.Types.FRFSTicket.FRFSTicket
-          { commencingHours = commencingHours,
+          { cloudType = cloudType,
+            commencingHours = commencingHours,
             description = description,
             frfsTicketBookingId = Kernel.Types.Id.Id frfsTicketBookingId,
             id = Kernel.Types.Id.Id id,
@@ -146,7 +148,8 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
 instance ToTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
   toTType' (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
     Beam.FRFSTicketT
-      { Beam.commencingHours = commencingHours,
+      { Beam.cloudType = cloudType,
+        Beam.commencingHours = commencingHours,
         Beam.description = description,
         Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,
