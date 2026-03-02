@@ -144,19 +144,22 @@ mkItemTags res =
 
 mkDisplayBookingIdTagGroup :: Data.Text.Text -> Spec.TagGroup
 mkDisplayBookingIdTagGroup displayBookingId =
-  Tags.getFullTagGroup Tags.BOOKING_INFO
+  Tags.getFullTagGroup
+    Tags.BOOKING_INFO
     [ Tags.mkTag Tags.DISPLAY_BOOKING_ID (Just displayBookingId)
     ]
 
 mkAdvancedBookingEnabledTagGroup :: SharedLogic.Confirm.DConfirmRes -> Spec.TagGroup
 mkAdvancedBookingEnabledTagGroup res =
-  Tags.getFullTagGroup Tags.FORWARD_BATCHING_REQUEST_INFO
+  Tags.getFullTagGroup
+    Tags.FORWARD_BATCHING_REQUEST_INFO
     [ Tags.mkTag Tags.IS_FORWARD_BATCH_ENABLED (Just $ show res.isAdvanceBookingEnabled)
     ]
 
 mkInsuranceTagGroup :: SharedLogic.Confirm.DConfirmRes -> Spec.TagGroup
 mkInsuranceTagGroup res =
-  Tags.getFullTagGroup Tags.INSURANCE_INFO
+  Tags.getFullTagGroup
+    Tags.INSURANCE_INFO
     [ Tags.mkTag Tags.IS_INSURED (Just $ show $ fromMaybe False res.isInsured),
       Tags.mkTag Tags.INSURED_AMOUNT res.insuredAmount
     ]
@@ -167,7 +170,8 @@ mkDeliveryTagGroup res =
     []
     ( \(SharedLogic.Confirm.DConfirmResDelivery (DTDD.DeliveryDetails {..})) ->
         pure $
-          Tags.getFullTagGroup Tags.DELIVERY
+          Tags.getFullTagGroup
+            Tags.DELIVERY
             [ Tags.mkTag Tags.INITIATED_AS (Just $ show initiatedAs),
               Tags.mkTag Tags.SENDER_NAME (Just senderDetails.name),
               Tags.mkTag Tags.SENDER_LOCATION_INSTRUCTIONS (Just $ mkLocationInstructions senderDetails.address.instructions senderDetails.address.extras),

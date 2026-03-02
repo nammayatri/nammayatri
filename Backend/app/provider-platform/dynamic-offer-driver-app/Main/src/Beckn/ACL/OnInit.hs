@@ -18,8 +18,8 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
-import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
+import BecknV2.OnDemand.Utils.Constructors
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
 import Domain.Action.Beckn.Init as DInit
@@ -112,8 +112,8 @@ tfCustomer res =
   return $
     Spec.Customer
       { customerContact =
-          Just Spec.Contact { contactPhone = Just res.riderPhoneNumber },
+          Just Spec.Contact {contactPhone = Just res.riderPhoneNumber},
         customerPerson = do
           riderName <- res.riderName
-          Just $ emptyPerson { Spec.personName = Just riderName }
+          Just $ emptyPerson {Spec.personName = Just riderName}
       }

@@ -122,7 +122,8 @@ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTerms
 
 mkBuyerFinderFeeTagGroup :: Maybe BuyerFinderFee -> Spec.TagGroup
 mkBuyerFinderFeeTagGroup mbff =
-  Tag.getFullTagGroup Tag.BUYER_FINDER_FEES
+  Tag.getFullTagGroup
+    Tag.BUYER_FINDER_FEES
     [ Tag.mkTag Tag.BUYER_FINDER_FEES_PERCENTAGE (Just $ fromMaybe "0" mbff)
     ]
 
@@ -146,9 +147,11 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
 mkSettlementDetailsTagGroup :: Maybe SettlementType -> Maybe Spec.TagGroup
 mkSettlementDetailsTagGroup mSettlementType = do
   st <- mSettlementType
-  return $ Tag.getFullTagGroup Tag.SETTLEMENT_DETAILS
-    [ Tag.mkTag Tag.SETTLEMENT_TYPE (Just st)
-    ]
+  return $
+    Tag.getFullTagGroup
+      Tag.SETTLEMENT_DETAILS
+      [ Tag.mkTag Tag.SETTLEMENT_TYPE (Just st)
+      ]
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode

@@ -19,8 +19,8 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
-import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import BecknV2.OnDemand.Utils.Constructors
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import BecknV2.Utils
@@ -95,7 +95,7 @@ tfFulfillments res =
 tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]
 tfItems res =
   Just
-    [ emptyItem { Spec.itemId = Just res.itemId } ]
+    [emptyItem {Spec.itemId = Just res.itemId}]
 
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DOnInit.OnInitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
@@ -107,7 +107,7 @@ tfPayments res bapConfig = do
 
 tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
 tfQuotation res =
-  Just $ emptyQuotation { Spec.quotationPrice = tfQuotationPrice res }
+  Just $ emptyQuotation {Spec.quotationPrice = tfQuotationPrice res}
 
 tfQuotationPrice :: DOnInit.OnInitRes -> Maybe Spec.Price
 tfQuotationPrice res =
@@ -161,7 +161,7 @@ tfVehicle res = do
 
 tfProvider :: DOnInit.OnInitRes -> Maybe Spec.Provider
 tfProvider res =
-  Just $ emptyProvider { Spec.providerId = Just res.bppId }
+  Just $ emptyProvider {Spec.providerId = Just res.bppId}
 
 tfOrderBilling :: DOnInit.OnInitRes -> Maybe Spec.Billing
 tfOrderBilling res =

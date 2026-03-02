@@ -1130,6 +1130,7 @@ TransporterConfig:
     generateReferralCodeForOperator: Maybe Bool
     maxAllowedDocSizeInMB: Maybe Int
     maxAllowedVideoDocSizeInMB: Maybe Int
+    maxNumberOfLuggages: Maybe Int
     bulkWaiveOffLimit : Int
     rcExpiryChecks : Maybe Bool
     requireRouteMappingInVehicle: Bool
