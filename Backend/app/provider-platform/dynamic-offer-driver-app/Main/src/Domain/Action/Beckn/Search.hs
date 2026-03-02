@@ -773,7 +773,13 @@ validateRequest merchant sReq = do
   (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation sourceCity merchant
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
-  let isMeterRideSearch = sReq.isMeterRideSearch
+      isMeterRideSearch = sReq.isMeterRideSearch
+      numberOfLuggages = sReq.numberOfLuggages
+  whenJust numberOfLuggages $ \n ->
+    when (n < 0) $ throwError (InvalidRequest "Number of luggages must be non-negative")
+  whenJust numberOfLuggages $ \n ->
+    whenJust transporterConfig.maxNumberOfLuggages $ \maxN ->
+      when (n > maxN) $ throwError (InvalidRequest $ "Number of luggages exceeds maximum allowed: " <> show maxN)
   driverIdForSearch <- mapM getDriverIdFromIdentifier $ bool Nothing sReq.driverIdentifier isValueAddNP
   return ValidatedDSearchReq {..}
 

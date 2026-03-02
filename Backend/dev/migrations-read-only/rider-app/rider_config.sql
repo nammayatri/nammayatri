@@ -282,3 +282,5 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN user_service_tier_order_config jso
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN no_of_ride_requests_config integer ;
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN max_number_of_luggages integer ;

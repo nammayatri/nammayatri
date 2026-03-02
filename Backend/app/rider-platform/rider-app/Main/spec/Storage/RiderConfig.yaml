@@ -108,6 +108,7 @@ RiderConfig:
     ticketingPermissionConfig: Maybe Value
     userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
+    maxNumberOfLuggages: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
