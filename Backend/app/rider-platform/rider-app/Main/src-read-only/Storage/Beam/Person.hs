@@ -76,6 +76,7 @@ data PersonT f = PersonT
     imeiNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     informPoliceSos :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isNew :: B.C f Kernel.Prelude.Bool,
+    isOrganizationPassHolder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isValidRating :: B.C f Kernel.Prelude.Bool,
     juspayCustomerPaymentID :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
