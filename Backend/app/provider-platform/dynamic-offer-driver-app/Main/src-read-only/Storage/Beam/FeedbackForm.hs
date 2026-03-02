@@ -13,16 +13,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FeedbackFormT f = FeedbackFormT
-  { answer :: (B.C f [Kernel.Prelude.Text]),
-    answerType :: (B.C f Domain.Types.FeedbackForm.AnswerType),
-    badges :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    categoryName :: (B.C f Domain.Types.FeedbackForm.Category),
-    id :: (B.C f Kernel.Prelude.Text),
-    question :: (B.C f Kernel.Prelude.Text),
-    questionTranslations :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    rating :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { answer :: B.C f [Kernel.Prelude.Text],
+    answerType :: B.C f Domain.Types.FeedbackForm.AnswerType,
+    badges :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    categoryName :: B.C f Domain.Types.FeedbackForm.Category,
+    id :: B.C f Kernel.Prelude.Text,
+    question :: B.C f Kernel.Prelude.Text,
+    questionTranslations :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    rating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table FeedbackFormT where
 
 type FeedbackForm = FeedbackFormT Identity
 
-$(enableKVPG (''FeedbackFormT) [('id)] [])
+$(enableKVPG ''FeedbackFormT ['id] [])
 
-$(mkTableInstances (''FeedbackFormT) "feedback_form")
+$(mkTableInstances ''FeedbackFormT "feedback_form_v2")

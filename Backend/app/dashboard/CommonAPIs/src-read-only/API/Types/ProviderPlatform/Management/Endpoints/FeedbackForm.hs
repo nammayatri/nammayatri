@@ -47,9 +47,7 @@ data CreateFeedbackFormReq = CreateFeedbackFormReq
     questionTranslations :: Kernel.Prelude.Maybe [IssueManagement.Common.Translation],
     answer :: [Kernel.Prelude.Text],
     answerType :: AnswerType,
-    badges :: Kernel.Prelude.Maybe [BadgeDetail],
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.MerchantOperatingCity),
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Merchant)
+    badges :: Kernel.Prelude.Maybe [BadgeDetail]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -83,9 +81,7 @@ data UpdateFeedbackFormReq = UpdateFeedbackFormReq
     questionTranslations :: Kernel.Prelude.Maybe [IssueManagement.Common.Translation],
     answer :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     answerType :: Kernel.Prelude.Maybe AnswerType,
-    badges :: Kernel.Prelude.Maybe [BadgeDetail],
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.MerchantOperatingCity),
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Merchant)
+    badges :: Kernel.Prelude.Maybe [BadgeDetail]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -93,7 +89,9 @@ data UpdateFeedbackFormReq = UpdateFeedbackFormReq
 instance Kernel.Types.HideSecrets.HideSecrets UpdateFeedbackFormReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("feedbackForm" :> (PostFeedbackFormCreate :<|> PutFeedbackFormUpdate :<|> DeleteFeedbackFormDelete :<|> GetFeedbackForm))
+type API = ("feedbackForm" :> (GetFeedbackFormList :<|> PostFeedbackFormCreate :<|> PutFeedbackFormUpdate :<|> DeleteFeedbackFormDelete :<|> GetFeedbackForm))
+
+type GetFeedbackFormList = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] [FeedbackFormRes])
 
 type PostFeedbackFormCreate = ("create" :> ReqBody '[JSON] CreateFeedbackFormReq :> Post '[JSON] CreateFeedbackFormRes)
 
@@ -104,7 +102,8 @@ type DeleteFeedbackFormDelete = (Capture "feedbackFormId" Kernel.Prelude.Text :>
 type GetFeedbackForm = (Capture "feedbackFormId" Kernel.Prelude.Text :> Get '[JSON] FeedbackFormRes)
 
 data FeedbackFormAPIs = FeedbackFormAPIs
-  { postFeedbackFormCreate :: CreateFeedbackFormReq -> EulerHS.Types.EulerClient CreateFeedbackFormRes,
+  { getFeedbackFormList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [FeedbackFormRes],
+    postFeedbackFormCreate :: CreateFeedbackFormReq -> EulerHS.Types.EulerClient CreateFeedbackFormRes,
     putFeedbackFormUpdate :: Kernel.Prelude.Text -> UpdateFeedbackFormReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     deleteFeedbackFormDelete :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getFeedbackForm :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient FeedbackFormRes
@@ -113,10 +112,11 @@ data FeedbackFormAPIs = FeedbackFormAPIs
 mkFeedbackFormAPIs :: (Client EulerHS.Types.EulerClient API -> FeedbackFormAPIs)
 mkFeedbackFormAPIs feedbackFormClient = (FeedbackFormAPIs {..})
   where
-    postFeedbackFormCreate :<|> putFeedbackFormUpdate :<|> deleteFeedbackFormDelete :<|> getFeedbackForm = feedbackFormClient
+    getFeedbackFormList :<|> postFeedbackFormCreate :<|> putFeedbackFormUpdate :<|> deleteFeedbackFormDelete :<|> getFeedbackForm = feedbackFormClient
 
 data FeedbackFormUserActionType
-  = POST_FEEDBACK_FORM_CREATE
+  = GET_FEEDBACK_FORM_LIST
+  | POST_FEEDBACK_FORM_CREATE
   | PUT_FEEDBACK_FORM_UPDATE
   | DELETE_FEEDBACK_FORM_DELETE
   | GET_FEEDBACK_FORM

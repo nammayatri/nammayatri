@@ -7,6 +7,14 @@ imports:
 module: FeedbackForm
 
 apis:
+  - GET: # GetFeedbackFormListAPI
+        endpoint: /list
+        auth: ApiAuthV2
+        query:
+          limit: Int
+          offset: Int
+        response:
+          type: "[FeedbackFormRes]"
   - POST: # CreateFeedbackFormAPI
       endpoint: /create
       auth: ApiAuthV2
@@ -54,8 +62,6 @@ types:
     - answer: '[Text]'
     - answerType: AnswerType
     - badges: Maybe [BadgeDetail]
-    - merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
-    - merchantId: Maybe (Id Merchant)
     - derive: "'HideSecrets"
 
   CreateFeedbackFormRes:
@@ -69,8 +75,6 @@ types:
     - answer: Maybe [Text]
     - answerType: Maybe AnswerType
     - badges: Maybe [BadgeDetail]
-    - merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
-    - merchantId: Maybe (Id Merchant)
     - derive: "'HideSecrets"
 
   FeedbackFormRes:

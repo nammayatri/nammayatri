@@ -6,7 +6,7 @@ imports:
   Value: Data.Aeson
 
 FeedbackForm:
-  tableName: feedback_form
+  tableName: feedback_form_v2
 
   types:
     Category:

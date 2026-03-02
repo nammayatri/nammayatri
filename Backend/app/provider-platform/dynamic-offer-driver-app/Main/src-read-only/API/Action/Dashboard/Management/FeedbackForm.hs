@@ -21,7 +21,10 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.FeedbackForm.API)
-handler merchantId city = postFeedbackFormCreate merchantId city :<|> putFeedbackFormUpdate merchantId city :<|> deleteFeedbackFormDelete merchantId city :<|> getFeedbackForm merchantId city
+handler merchantId city = getFeedbackFormList merchantId city :<|> postFeedbackFormCreate merchantId city :<|> putFeedbackFormUpdate merchantId city :<|> deleteFeedbackFormDelete merchantId city :<|> getFeedbackForm merchantId city
+
+getFeedbackFormList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormRes])
+getFeedbackFormList a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.FeedbackForm.getFeedbackFormList a4 a3 a2 a1
 
 postFeedbackFormCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.FeedbackForm.CreateFeedbackFormReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FeedbackForm.CreateFeedbackFormRes)
 postFeedbackFormCreate a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.FeedbackForm.postFeedbackFormCreate a3 a2 a1
