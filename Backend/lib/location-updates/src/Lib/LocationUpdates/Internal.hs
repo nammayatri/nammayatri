@@ -375,31 +375,47 @@ makeEditDestinationWaypointsRedisKey driverId = mconcat ["editDestinationWaypoin
 makeEditDestinationSnappedWaypointsRedisKey :: Id person -> Text
 makeEditDestinationSnappedWaypointsRedisKey driverId = mconcat ["editDestinationSnappedWaypoints", ":", driverId.getId]
 
-addEditDestinationSnappedWayPoints :: (HedisFlow m env) => Id person -> NonEmpty (LatLong, Bool) -> m ()
+addEditDestinationSnappedWayPoints :: (HedisFlow m env) => Id person -> NonEmpty (LatLong, Bool, UTCTime) -> m ()
 addEditDestinationSnappedWayPoints driverId waypoints = do
   let key = makeEditDestinationSnappedWaypointsRedisKey driverId
   rPush key waypoints
   Hedis.expire key 86400 -- 24 hours
 
-deleteAndPushEditDestinationSnappedWayPoints :: (HedisFlow m env) => Id person -> NonEmpty (LatLong, Bool) -> m ()
+deleteAndPushEditDestinationSnappedWayPoints :: (HedisFlow m env) => Id person -> NonEmpty (LatLong, Bool, UTCTime) -> m ()
 deleteAndPushEditDestinationSnappedWayPoints driverId waypoints = do
   let key = makeEditDestinationSnappedWaypointsRedisKey driverId
   Hedis.del key
   rPush key waypoints
   Hedis.expire key 86400 -- 24 hours
 
-getEditDestinationSnappedWaypoints :: (HedisFlow m env) => Id person -> m [(LatLong, Bool)]
-getEditDestinationSnappedWaypoints driverId = lRange (makeEditDestinationSnappedWaypointsRedisKey driverId) 0 (-1)
+getEditDestinationSnappedWaypoints :: (HedisFlow m env, MonadTime m, Log m) => Id person -> m [(LatLong, Bool, UTCTime)]
+getEditDestinationSnappedWaypoints driverId = do
+  let key = makeEditDestinationSnappedWaypointsRedisKey driverId
+  -- Try new format first: [(LatLong, Bool, UTCTime)]
+  newFormatWaypoints :: [(LatLong, Bool, UTCTime)] <- Hedis.lRange key 0 (-1)
+  if not (null newFormatWaypoints)
+    then return newFormatWaypoints
+    else do
+      -- Fall back to old format: [(LatLong, Bool)] (also written via rPush)
+      oldFormatWaypoints :: [(LatLong, Bool)] <- Hedis.lRange key 0 (-1)
+      if not (null oldFormatWaypoints)
+        then do
+          logInfo $ "Migrating legacy snapped waypoints format for driverId: " <> driverId.getId
+          now <- getCurrentTime
+          return $ map (\(ll, isSnapped) -> (ll, isSnapped, now)) oldFormatWaypoints
+        else return []
 
 deleteEditDestinationSnappedWaypoints :: (HedisFlow m env) => Id person -> m ()
 deleteEditDestinationSnappedWaypoints driverId = do
   let key = makeEditDestinationSnappedWaypointsRedisKey driverId
   Hedis.del key
 
-addEditDestinationPoints :: (HedisFlow m env) => Id person -> NonEmpty LatLong -> m ()
+addEditDestinationPoints :: (HedisFlow m env, MonadTime m) => Id person -> NonEmpty LatLong -> m ()
 addEditDestinationPoints driverId waypoints = do
+  now <- getCurrentTime
   let key = makeEditDestinationWaypointsRedisKey driverId
-  rPush key waypoints
+      waypointsWithTime = fmap (,now) waypoints
+  rPush key waypointsWithTime
   Hedis.expire key 86400 -- 24 hours
 
 deleteEditDestinationWaypoints :: (HedisFlow m env) => Id person -> m ()
@@ -407,8 +423,22 @@ deleteEditDestinationWaypoints driverId = do
   let key = makeEditDestinationWaypointsRedisKey driverId
   Hedis.del key
 
-getEditDestinationWaypoints :: (HedisFlow m env) => Id person -> m [LatLong]
-getEditDestinationWaypoints driverId = lRange (makeEditDestinationWaypointsRedisKey driverId) 0 (-1)
+getEditDestinationWaypoints :: (HedisFlow m env, MonadTime m, Log m) => Id person -> m [(LatLong, UTCTime)]
+getEditDestinationWaypoints driverId = do
+  let key = makeEditDestinationWaypointsRedisKey driverId
+  -- Try new format first: [(LatLong, UTCTime)]
+  newFormatWaypoints :: [(LatLong, UTCTime)] <- Hedis.lRange key 0 (-1)
+  if not (null newFormatWaypoints)
+    then return newFormatWaypoints
+    else do
+      -- Fall back to old format: [LatLong] (also written via rPush)
+      oldFormatWaypoints :: [LatLong] <- Hedis.lRange key 0 (-1)
+      if not (null oldFormatWaypoints)
+        then do
+          logInfo $ "Migrating legacy edit destination waypoints format for driverId: " <> driverId.getId
+          now <- getCurrentTime
+          return $ map (,now) oldFormatWaypoints
+        else return []
 
 clearLocationUpdatesImplementation :: (HedisFlow m env) => Id person -> m ()
 clearLocationUpdatesImplementation driverId = do

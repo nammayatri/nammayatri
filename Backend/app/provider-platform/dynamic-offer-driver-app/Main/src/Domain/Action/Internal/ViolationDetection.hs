@@ -9,9 +9,11 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Encryption
+import Kernel.External.Maps.Types (LatLong)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import SharedLogic.WMB
 import qualified Storage.Queries.Person as QPerson
@@ -36,14 +38,12 @@ violationDetection ViolationDetectionReq {..} = do
   case detectionData of
     RideStopReachedDetection RideStopReachedDetectionData {..} -> do
       when isViolated $ do
-        existingStops <- Redis.safeGet (mkReachedStopKey rideId)
-        case existingStops of
-          Just existingList -> do
-            unless (location `elem` existingList) $ do
-              let updatedList = existingList ++ [location]
-              Redis.setExp (mkReachedStopKey rideId) updatedList 86400
-          Nothing -> do
-            Redis.setExp (mkReachedStopKey rideId) [location] 86400
+        now <- getCurrentTime
+        existingStops <- getReachedStopsWithFallback rideId
+        let isNearExisting ll = any (\existingLL -> highPrecMetersToMeters (distanceBetweenInMeters ll existingLL) <= 10) (map fst existingStops)
+        unless (isNearExisting location) $ do
+          let updatedList = existingStops ++ [(location, now)]
+          Redis.setExp (mkReachedStopKey rideId) updatedList 86400
     _ -> pure ()
   void $ triggerAlertRequest driverId tripTransaction.fleetOwnerId.getId requestTitle requestBody requestData isViolated tripTransaction
   pure Success
@@ -100,3 +100,21 @@ violationDetection ViolationDetectionReq {..} = do
 
 mkReachedStopKey :: Id DRide.Ride -> Text
 mkReachedStopKey rideId = "add_stop_ride_reached_stop:" <> rideId.getId
+
+-- Helper function to get reached stops with fallback for backward compatibility
+getReachedStopsWithFallback :: (Redis.HedisFlow m env, MonadTime m, Log m) => Id DRide.Ride -> m [(LatLong, UTCTime)]
+getReachedStopsWithFallback rideId = do
+  let key = mkReachedStopKey rideId
+  -- Try new format first: [(LatLong, UTCTime)]
+  mbNewFormat <- Redis.runInMultiCloudRedisMaybeResult $ Redis.get key
+  case mbNewFormat of
+    Just stops -> return stops
+    Nothing -> do
+      -- Fall back to old format: [LatLong]
+      mbOldFormat <- Redis.runInMultiCloudRedisMaybeResult $ Redis.get key
+      case mbOldFormat of
+        Just (oldStops :: [LatLong]) -> do
+          logInfo $ "Migrating legacy reached stops format for rideId: " <> rideId.getId
+          now <- getCurrentTime
+          return $ map (,now) oldStops
+        Nothing -> return []
