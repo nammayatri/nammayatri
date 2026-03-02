@@ -11,11 +11,13 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   Pass: Domain.Types.Pass
   PurchasedPass: Domain.Types.PurchasedPass
+  PurchasedPassPayment: Domain.Types.PurchasedPassPayment
   Day: Data.Time
 
 importPackageOverrides:
   Domain.Types.Person: "rider-app"
   Domain.Types.PurchasedPass: "rider-app"
+  Domain.Types.PurchasedPassPayment: "rider-app"
   Lib.Payment.Domain.Action: "payment"
   Lib.Payment.Domain.Types.PaymentOrder: "payment"
   Domain.Types.Pass: "rider-app"
@@ -74,6 +76,7 @@ apis:
         passNumber: Int
       query:
         startDay: Day
+        purchasedPassPaymentId: Id PurchasedPassPayment
       response:
         type: APISuccess
 
