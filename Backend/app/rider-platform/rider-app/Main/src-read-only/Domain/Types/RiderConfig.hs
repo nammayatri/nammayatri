@@ -78,6 +78,7 @@ data RiderConfig = RiderConfig
     executePaymentDelay :: Kernel.Prelude.NominalDiffTime,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping,
     exotelStatusCheckSchedulerDelay :: Kernel.Prelude.Int,
+    externalSOSConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.ExternalSOSConfig,
     fareCacheInterCitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
     fareCacheRentalsConfig :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig],
     feedbackAlertRatingThreshold :: Kernel.Prelude.Int,
@@ -199,6 +200,21 @@ data BusTrackingConfig = BusTrackingConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
+data ExternalSOSConfig = ExternalSOSConfig
+  { flow :: Domain.Types.RiderConfig.ExternalSOSFlow,
+    latLonRequired :: Kernel.Prelude.Bool,
+    mediaRequired :: Kernel.Prelude.Bool,
+    stateCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tracePollingIntervalSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    trackingLinkRequired :: Kernel.Prelude.Bool,
+    triggerSource :: Domain.Types.RiderConfig.ExternalSOSTriggerSource
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data ExternalSOSFlow = ERSS | GJ112 deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data ExternalSOSTriggerSource = FRONTEND | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data RingBucketCfg = RingBucketCfg {radiusInMeters :: Kernel.Types.Common.Meters, size :: Kernel.Prelude.Int, vehVariant :: Domain.Types.VehicleVariant.VehicleVariant}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
@@ -209,5 +225,9 @@ data ServiceTierSource = NANDI | QUOTES deriving (Eq, Ord, Show, Read, Generic, 
 
 data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notificationMessage :: Kernel.Prelude.Text, notificationTitle :: Kernel.Prelude.Text, vehicleNo :: Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)
