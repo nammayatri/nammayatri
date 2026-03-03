@@ -176,6 +176,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
 
     callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverGstInformation driverDocument transporterConfig = do
+      logDebug $ "callIdfy: " <> show req
       documentVerificationConfig <-
         CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
           >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
@@ -222,6 +223,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
 
 verifyGstFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> ODC.DocumentVerificationConfig -> Text -> Id Image.Image -> Flow ()
 verifyGstFlow person merchantOpCityId documentVerificationConfig gstNumber imageId1 = do
+  logDebug $ "verifyGstFlow: " <> show gstNumber
   now <- getCurrentTime
   encryptedGst <- encrypt gstNumber
   let imageExtractionValidation =
@@ -231,6 +233,7 @@ verifyGstFlow person merchantOpCityId documentVerificationConfig gstNumber image
   verifyRes <-
     Verification.verifyGstAsync person.merchantId merchantOpCityId $
       Verification.VerifyGstAsyncReq {gstNumber, driverId = person.id.getId, filingDetails = True, eInvoiceDetails = True}
+  logDebug $ "verifyRes: " <> show verifyRes
   case verifyRes.requestor of
     VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntityGst person imageId1 verifyRes.requestId now imageExtractionValidation encryptedGst
     _ -> throwError $ InternalError ("Service provider not configured to return GST verification async responses. Provider Name : " <> (show verifyRes.requestor))
