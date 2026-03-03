@@ -138,3 +138,12 @@ instance FromHttpApiData Area where
 
 instance ToHttpApiData Area where
   toUrlPiece = T.pack . show
+
+areaToText :: Area -> Text
+areaToText = T.pack . show
+
+parsePickupDropFromText :: Text -> Maybe Area
+parsePickupDropFromText t =
+  case readMaybe (unpack t) of
+    Just a@(PickupDrop _ _) -> Just a
+    _ -> Nothing
