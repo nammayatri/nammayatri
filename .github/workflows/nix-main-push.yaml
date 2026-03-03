@@ -43,10 +43,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build all flake outputs (Master Local mode)
-        env:
-          NIX_LOCAL_BUILD: "1"
         run: |
-          nix build github:srid/devour-flake#default --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
+          NIX_LOCAL_BUILD="1" nix build github:srid/devour-flake#default --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee master-build-log.txt
 
