@@ -342,3 +342,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ALTER COLUMN driver_bank_a
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN tds_rate double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_blocked_for_scheduled_payout boolean ;

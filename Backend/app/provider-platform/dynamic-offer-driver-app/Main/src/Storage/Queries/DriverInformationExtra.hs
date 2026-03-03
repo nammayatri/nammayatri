@@ -509,3 +509,19 @@ updateMerchantIdAndCityIdByDriverId driverId merchantId merchantOperatingCityId 
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq $ getId driverId)]
+
+findEligibleForScheduledPayout :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Int -> Maybe (Id Person.Driver) -> m [DriverInformation]
+findEligibleForScheduledPayout merchantOpCityId batchSize mbLastDriverId = do
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is BeamDI.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId),
+          Se.Is BeamDI.enabled $ Se.Eq True,
+          Se.Is BeamDI.blocked $ Se.Eq False,
+          Se.Is BeamDI.payoutVpa $ Se.Not (Se.Eq Nothing),
+          Se.Is BeamDI.isBlockedForScheduledPayout $ Se.Not (Se.Eq (Just True))
+        ]
+          <> maybe [] (\lastId -> [Se.Is BeamDI.driverId $ Se.GreaterThan (getId lastId)]) mbLastDriverId
+    ]
+    (Se.Asc BeamDI.driverId)
+    (Just batchSize)
+    Nothing

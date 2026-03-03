@@ -129,6 +129,7 @@ DriverInformation:
     softBlockReasonFlag: Maybe Text
     tollRouteBlockedTill: Maybe UTCTime
     isBlockedForReferralPayout: Maybe Bool
+    isBlockedForScheduledPayout: Maybe Bool
     onboardingVehicleCategory: Maybe VehicleCategory
     servicesEnabledForSubscription: "[ServiceNames]"
     panNumber: Maybe (EncryptedHashedField e Text)

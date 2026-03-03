@@ -33,6 +33,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     gstNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gstNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     gstNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    isBlockedForScheduledPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isEligibleForSubscription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

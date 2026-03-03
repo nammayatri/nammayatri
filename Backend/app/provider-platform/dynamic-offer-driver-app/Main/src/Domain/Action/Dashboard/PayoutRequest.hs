@@ -4,6 +4,8 @@ module Domain.Action.Dashboard.PayoutRequest
   ( deleteVpa,
     updateVpa,
     refundRegistrationAmount,
+    upsertScheduledPayoutConfig,
+    UpdateScheduledPayoutConfigReq (..),
   )
 where
 
@@ -12,6 +14,7 @@ import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.ScheduledPayoutConfig as DSPC
 import qualified Domain.Types.VehicleCategory as DV
 import qualified Environment
 import EulerHS.Prelude hiding (id, readMaybe, sum)
@@ -27,6 +30,7 @@ import Kernel.Utils.Common
 import Lib.Payment.API.Payout (VerifyVpaFlow (..))
 import qualified Lib.Payment.API.Payout.Types as PayoutTypes
 import qualified Lib.Payment.Domain.Action as Payout
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Payout.Registration as Registration
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QM
@@ -34,6 +38,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.ScheduledPayoutConfig as QSPC
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TP
 
@@ -114,4 +119,82 @@ refundRegistrationAmount merchantShortId opCity req = do
     Nothing ->
       logDebug $ "Registration refund already exists for driver: " <> driverId.getId
 
+  pure Success
+
+--------------------------------------------------------------------------------
+-- Scheduled Payout Config Admin API
+--------------------------------------------------------------------------------
+
+data UpdateScheduledPayoutConfigReq = UpdateScheduledPayoutConfigReq
+  { payoutCategory :: DPayment.EntityName,
+    isEnabled :: Maybe Bool,
+    frequency :: Maybe DSPC.ScheduledPayoutFrequency,
+    dayOfWeek :: Maybe Int,
+    dayOfMonth :: Maybe Int,
+    timeOfDay :: Maybe Text,
+    batchSize :: Maybe Int,
+    minimumPayoutAmount :: Maybe HighPrecMoney,
+    maxRetriesPerDriver :: Maybe Int,
+    vehicleCategory :: Maybe DV.VehicleCategory,
+    remark :: Maybe Text,
+    orderType :: Maybe Text,
+    timeDiffFromUtc :: Maybe Seconds
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+upsertScheduledPayoutConfig ::
+  Id.ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  UpdateScheduledPayoutConfigReq ->
+  Environment.Flow APISuccess
+upsertScheduledPayoutConfig merchantShortId opCity req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+
+  mbExisting <- QSPC.findByMerchantOpCityIdAndCategory merchantOpCity.id req.payoutCategory
+  case mbExisting of
+    Just existing -> do
+      now <- getCurrentTime
+      let updated =
+            existing
+              { DSPC.isEnabled = fromMaybe existing.isEnabled req.isEnabled,
+                DSPC.frequency = fromMaybe existing.frequency req.frequency,
+                DSPC.dayOfWeek = req.dayOfWeek <|> existing.dayOfWeek,
+                DSPC.dayOfMonth = req.dayOfMonth <|> existing.dayOfMonth,
+                DSPC.timeOfDay = fromMaybe existing.timeOfDay req.timeOfDay,
+                DSPC.batchSize = fromMaybe existing.batchSize req.batchSize,
+                DSPC.minimumPayoutAmount = fromMaybe existing.minimumPayoutAmount req.minimumPayoutAmount,
+                DSPC.maxRetriesPerDriver = fromMaybe existing.maxRetriesPerDriver req.maxRetriesPerDriver,
+                DSPC.vehicleCategory = req.vehicleCategory <|> existing.vehicleCategory,
+                DSPC.remark = req.remark <|> existing.remark,
+                DSPC.orderType = fromMaybe existing.orderType req.orderType,
+                DSPC.timeDiffFromUtc = fromMaybe existing.timeDiffFromUtc req.timeDiffFromUtc,
+                DSPC.updatedAt = now
+              }
+      QSPC.updateByPrimaryKey updated
+      logInfo $ "Updated ScheduledPayoutConfig for " <> show req.payoutCategory <> " in city " <> merchantOpCity.id.getId
+    Nothing -> do
+      now <- getCurrentTime
+      let newConfig =
+            DSPC.ScheduledPayoutConfig
+              { DSPC.merchantId = merchant.id,
+                DSPC.merchantOperatingCityId = merchantOpCity.id,
+                DSPC.payoutCategory = req.payoutCategory,
+                DSPC.isEnabled = fromMaybe False req.isEnabled,
+                DSPC.frequency = fromMaybe DSPC.DAILY req.frequency,
+                DSPC.dayOfWeek = req.dayOfWeek,
+                DSPC.dayOfMonth = req.dayOfMonth,
+                DSPC.timeOfDay = fromMaybe "02:00" req.timeOfDay,
+                DSPC.batchSize = fromMaybe 50 req.batchSize,
+                DSPC.minimumPayoutAmount = fromMaybe 10.0 req.minimumPayoutAmount,
+                DSPC.maxRetriesPerDriver = fromMaybe 3 req.maxRetriesPerDriver,
+                DSPC.vehicleCategory = req.vehicleCategory,
+                DSPC.remark = req.remark,
+                DSPC.orderType = fromMaybe "FULFILL_ONLY" req.orderType,
+                DSPC.timeDiffFromUtc = fromMaybe 19800 req.timeDiffFromUtc,
+                DSPC.createdAt = now,
+                DSPC.updatedAt = now
+              }
+      QSPC.create newConfig
+      logInfo $ "Created ScheduledPayoutConfig for " <> show req.payoutCategory <> " in city " <> merchantOpCity.id.getId
   pure Success

@@ -12,7 +12,21 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.DriverWallet (getWalletTransactions, postWalletPayout, postWalletTopup, getWalletPayoutHistory) where
+module Domain.Action.UI.DriverWallet
+  ( getWalletTransactions,
+    postWalletPayout,
+    postWalletTopup,
+    getWalletPayoutHistory,
+    -- Exported for scheduled batch payout
+    PayoutContext (..),
+    loadPayoutContext,
+    counterpartyFromRole,
+    computePayoutableBalance,
+    computePayoutFee,
+    resolvePayoutVpa,
+    initiateWalletPayout,
+  )
+where
 
 import qualified API.Types.UI.DriverWallet as DriverWallet
 import Data.List (partition)
@@ -36,6 +50,7 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payment.Types as Payment
 import qualified Kernel.External.Payout.Types as TPayout
+import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -361,10 +376,18 @@ computePayoutFee (Just feeConfig) amount =
 -- | Create a PayoutRequest (INITIATED), then call Juspay createPayoutService (→ PROCESSING).
 --   No ledger entry here — that happens in the webhook handler on SUCCESS.
 initiateWalletPayout ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBFlow m r,
+    BeamFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+  ) =>
   PayoutContext ->
   Text -> -- VPA
   HighPrecMoney -> -- payoutable balance
-  Environment.Flow ()
+  m ()
 initiateWalletPayout ctx vpa payoutableBalance = do
   phoneNo <- mapM decrypt ctx.person.mobileNumber
   subscriptionConfig <-

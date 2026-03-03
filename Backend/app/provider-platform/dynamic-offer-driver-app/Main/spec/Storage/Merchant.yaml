@@ -14,6 +14,7 @@ imports:
   PaymentMode: Domain.Types.Plan
   Value: Data.Aeson
   Seconds: Kernel.Types.Common
+  EntityName: Lib.Payment.Domain.Types.Common
   Integer: Kernel.Prelude
   Version: Kernel.Types.Version
   AadhaarVerificationService: Kernel.External.AadhaarVerification.Types
@@ -1473,6 +1474,7 @@ TransporterConfig:
     driverWalletConfig: json
     subscriptionConfig: json
     feedbackNotificationConfig: json
+    taxConfig: json
     vehicleCategoryExcludedFromVerification: "text[]"
 
   default:
@@ -1876,3 +1878,52 @@ PayoutConfig:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
+ScheduledPayoutConfig:
+  tableName: scheduled_payout_config
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
+  types:
+    ScheduledPayoutFrequency:
+      enum: "DAILY, WEEKLY, MONTHLY"
+  fields:
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    payoutCategory: EntityName
+    isEnabled: Bool
+    frequency: ScheduledPayoutFrequency
+    dayOfWeek: Maybe Int
+    dayOfMonth: Maybe Int
+    timeOfDay: Text
+    batchSize: Int
+    minimumPayoutAmount: HighPrecMoney
+    maxRetriesPerDriver: Int
+    vehicleCategory: Maybe VehicleCategory|NoRelation
+    remark: Maybe Text
+    orderType: Text
+    timeDiffFromUtc: Seconds
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    payoutCategory: PrimaryKey
+  default:
+    isEnabled: "False"
+    batchSize: "50"
+    minimumPayoutAmount: "10.0"
+    maxRetriesPerDriver: "3"
+    orderType: "'FULFILL_ONLY'"
+    timeOfDay: "'02:00'"
+    frequency: "'DAILY'"
+    timeDiffFromUtc: "19800"
+  queries:
+    findByMerchantOpCityIdAndCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, payoutCategory]
+    findAllByMerchantOpCityIdAndIsEnabled:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, isEnabled]
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId

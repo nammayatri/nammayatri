@@ -4181,6 +4181,7 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
             distanceUnit = oldBooking.distanceUnit,
             merchantOperatingCityId = Just oldBooking.merchantOperatingCityId
           }
+  oldDriver <- QPerson.findById oldDriverPersonId >>= fromMaybeM (PersonNotFound oldDriverPersonId.getId)
   RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing transporterConfig oldDriver
 
   -- 6. Create new booking and quote (similar to performStaticOfferReallocation)

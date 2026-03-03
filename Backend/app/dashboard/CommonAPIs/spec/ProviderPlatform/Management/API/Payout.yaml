@@ -7,10 +7,13 @@ imports:
   UpdateVpaReq: Lib.Payment.API.Payout.Types
   RefundRegAmountReq: Lib.Payment.API.Payout.Types
   PayoutSuccess: Lib.Payment.API.Payout.Types
+  EntityName: Lib.Payment.Domain.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
 
 importPackageOverrides:
   Lib.Payment.Domain.Types.PayoutRequest: payment
   Lib.Payment.API.Payout.Types: payment
+  Lib.Payment.Domain.Types.Common: payment
 
 module: Payout
 
@@ -75,4 +78,28 @@ apis:
       response:
         type: PayoutSuccess
 
-types: {}
+  - POST:
+      endpoint: /payout/scheduledPayoutConfig/upsert
+      auth: ApiAuthV2
+      request:
+        type: UpdateScheduledPayoutConfigReq
+      response:
+        type: APISuccess
+
+types:
+  UpdateScheduledPayoutConfigReq:
+    - payoutCategory: EntityName
+    - isEnabled: Maybe Bool
+    - frequency: Maybe ScheduledPayoutFrequency
+    - dayOfWeek: Maybe Int
+    - dayOfMonth: Maybe Int
+    - timeOfDay: Maybe Text
+    - batchSize: Maybe Int
+    - minimumPayoutAmount: Maybe HighPrecMoney
+    - maxRetriesPerDriver: Maybe Int
+    - vehicleCategory: Maybe VehicleCategory
+    - remark: Maybe Text
+    - orderType: Maybe Text
+    - timeDiffFromUtc: Maybe Seconds
+  ScheduledPayoutFrequency:
+    - enum: "DAILY, WEEKLY, MONTHLY"

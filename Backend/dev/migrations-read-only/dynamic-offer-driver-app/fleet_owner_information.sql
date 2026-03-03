@@ -109,3 +109,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN fleet_name
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN tds_rate double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN is_blocked_for_scheduled_payout boolean ;

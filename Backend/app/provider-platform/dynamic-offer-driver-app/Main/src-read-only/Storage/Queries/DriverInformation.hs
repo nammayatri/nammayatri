@@ -418,6 +418,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.hasAdvanceBooking (Kernel.Prelude.Just hasAdvanceBooking),
       Se.Set Beam.hasRideStarted hasRideStarted,
       Se.Set Beam.isBlockedForReferralPayout isBlockedForReferralPayout,
+      Se.Set Beam.isBlockedForScheduledPayout isBlockedForScheduledPayout,
       Se.Set Beam.isHighAccuracyLocationEnabled isHighAccuracyLocationEnabled,
       Se.Set Beam.isInteroperable (Kernel.Prelude.Just isInteroperable),
       Se.Set Beam.isPetModeEnabled (Kernel.Prelude.Just isPetModeEnabled),
