@@ -7,6 +7,7 @@ import qualified Data.Text
 import qualified Domain.Types.Ride
 import qualified Domain.Types.Sos
 import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Prelude
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -23,7 +24,7 @@ data ErssStatusUpdateReq = ErssStatusUpdateReq
     currentStatus :: Data.Text.Text,
     statusDesc :: Kernel.Prelude.Maybe Data.Text.Text,
     comments :: Kernel.Prelude.Maybe Data.Text.Text,
-    lastUpdatedTime :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    lastUpdatedTime :: Kernel.Prelude.Maybe EulerHS.Prelude.Integer
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
