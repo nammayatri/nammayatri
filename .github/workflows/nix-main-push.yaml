@@ -118,7 +118,7 @@ jobs:
       - name: Upload analysis artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-analysis-results
+          name: master-build-analysis-results
           path: |
             buildtime-analysis/build_analysis.json
             buildtime-analysis/build_analysis_report.md
@@ -224,7 +224,7 @@ jobs:
       - name: Upload analysis artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-analysis-results
+          name: prod-build-analysis-results
           path: |
             buildtime-analysis/build_analysis.json
             buildtime-analysis/build_analysis_report.md
