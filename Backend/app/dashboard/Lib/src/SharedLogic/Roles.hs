@@ -35,9 +35,11 @@ type ChildrenMap = M.Map RoleId [RoleId]
 
 type HierarchyM = Either CycleDetection
 
+
+
 -- | Cycle detection result
 newtype CycleDetection = CycleDetected [RoleId] -- The path that forms a cycle
--- deriving (Show, Eq)
+  deriving (Show)
 
 -- | Complete role hierarchy information
 data RoleHierarchy = RoleHierarchy
@@ -97,7 +99,7 @@ buildAncestorCache parentMap = foldM processRole (M.empty, M.empty)
         -- Need to compute ancestors
         Nothing -> do
           -- Get all ancestors (automatically fails if cycle detected)
-          ancestors <- getAncestors role.id parentMap cache Set.empty
+          ancestors <- getAncestors role.id parentMap cache []
           let newCache = writeAncestorsToCache role.id ancestors cache
           let newChildrenAcc = case role.parentRoleId of
                 Nothing -> childrenAcc
@@ -111,19 +113,18 @@ buildAncestorCache parentMap = foldM processRole (M.empty, M.empty)
     writeAncestorsToCache roleId ancestors@(a : as) cache = writeAncestorsToCache a as (M.insert roleId ancestors cache)
 
 -- | Recursively get all ancestors of a role, detecting cycles
---   Uses Set for O(log n) visited checks instead of O(n) for lists
 --   Uses memoization via AncestorCache to avoid redundant computations
 getAncestors ::
   RoleId ->
   ParentMap ->
   AncestorCache ->
-  -- | Visited roles in current path
-  Set.Set RoleId ->
+  -- | Visited roles in current path (in order of visitation)
+  [RoleId] ->
   HierarchyM [RoleId]
 getAncestors roleId parentMap cache visited = do
   -- Cycle detection: we've seen this role before in current path
-  when (Set.member roleId visited) $
-    Left $ CycleDetected (roleId : Set.toList visited)
+  when (roleId `elem` visited) $
+    Left $ CycleDetected (roleId : visited)
 
   case M.lookup roleId parentMap of
     -- Root role: no parent
@@ -145,11 +146,17 @@ getAncestors roleId parentMap cache visited = do
 
         -- Cache miss: recursively compute parent's ancestors
         Nothing -> do
-          parentAncestors <- getAncestors parentId parentMap cache (Set.insert roleId visited)
-          -- Check for cycle after recursion
-          when (roleId `elem` parentAncestors) $
-            Left $ CycleDetected (roleId : parentId : parentAncestors)
-          pure $ parentId : parentAncestors
+          -- Check if parent exists in parentMap (if not, it's an orphan - treat as no parent)
+          case M.lookup parentId parentMap of
+            -- Parent doesn't exist (orphan) - return empty ancestors
+            Nothing -> pure []
+            -- Parent exists - recursively compute its ancestors
+            Just _ -> do
+              parentAncestors <- getAncestors parentId parentMap cache (roleId : visited)
+              -- Check for cycle after recursion
+              when (roleId `elem` parentAncestors) $
+                Left $ CycleDetected (roleId : parentId : parentAncestors)
+              pure $ parentId : parentAncestors
 
 -- -----------------------------------------------------------------------------
 -- Descendant cache construction (reverse index)
