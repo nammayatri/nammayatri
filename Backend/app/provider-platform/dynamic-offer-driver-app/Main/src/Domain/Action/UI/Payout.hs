@@ -323,7 +323,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
     when (length dailyStats > 0) $ do
       person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       let statsIds = map (.id) dailyStats
-          pendingAmount = sum $ map (.referralEarnings) dailyStats
+          pendingAmount = sum (map (.referralEarnings) dailyStats) + sum (map (.d2dReferralEarnings) dailyStats)
       case (mbVpa, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
         (Just vpa, True) -> do
           uid <- generateGUID

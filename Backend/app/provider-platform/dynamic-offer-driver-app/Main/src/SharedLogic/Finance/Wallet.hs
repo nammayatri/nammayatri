@@ -23,6 +23,7 @@ module SharedLogic.Finance.Wallet
     computeGstBreakdown,
     financeCtxFromRide,
     buildFinanceCtx,
+    walletReferenceD2DReferral
   )
 where
 
@@ -79,6 +80,9 @@ walletReferenceCustomerCancellationCharges = "CustomerCancellationCharges"
 
 walletReferenceCustomerCancellationGST :: Text
 walletReferenceCustomerCancellationGST = "CustomerCancellationGST"
+
+walletReferenceD2DReferral :: Text
+walletReferenceD2DReferral = "D2DReferral"
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)
 

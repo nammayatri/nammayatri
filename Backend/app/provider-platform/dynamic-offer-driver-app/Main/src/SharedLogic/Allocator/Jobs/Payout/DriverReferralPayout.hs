@@ -14,13 +14,14 @@
 
 module SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout where
 
+import qualified Data.Aeson as A
 import Data.Time (addDays, utctDay)
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DS
 import Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
-import Domain.Types.PayoutConfig
+import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (decrypt)
@@ -39,6 +40,8 @@ import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobInWithCheck)
 import SharedLogic.Allocator
+import SharedLogic.Finance.Prepaid (counterpartyDriver)
+import SharedLogic.Finance.Wallet (createWalletEntryDelta, walletReferenceD2DReferral)
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -86,7 +89,8 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   let lastNthDay = addDays (fromMaybe (-1) schedulePayoutForDay) (utctDay localTime)
   dailyStatsForEveryDriverList <- QDSE.findAllByDateAndPayoutStatus (Just transporterConfig.payoutBatchLimit) (Just 0) lastNthDay statusForRetry merchantOpCityId
   mapM_ (updateManualStatus transporterConfig) dailyStatsForEveryDriverList
-  let dStatsList = filter (\ds -> ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) dailyStatsForEveryDriverList -- filtering the max referral flagged payouts
+  let totalPayoutCount ds = ds.referralCounts + ds.d2dReferralCounts
+      dStatsList = filter (\ds -> totalPayoutCount ds <= transporterConfig.maxPayoutReferralForADay) dailyStatsForEveryDriverList -- total = customer + d2d
   statsWithVpaList <- mapM getStatsWithVpaList dStatsList
   let dailyStatsWithVpaList = filter (\dsv -> (isJust dsv.payoutVpa && dsv.dInfo.payoutVpaStatus /= Just DI.MANUALLY_ADDED) && (dsv.dInfo.isBlockedForReferralPayout /= Just True)) statsWithVpaList -- filter blocked drivers
   if null dailyStatsForEveryDriverList
@@ -123,7 +127,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       pure $ DailyStatsWithVpa {dailyStats = dStats, payoutVpa = dInfo.payoutVpa, dInfo = dInfo}
 
     updateManualStatus transporterConfig dStats = do
-      when (dStats.activatedValidRides > transporterConfig.maxPayoutReferralForADay) do
+      when ((dStats.referralCounts + dStats.d2dReferralCounts) > transporterConfig.maxPayoutReferralForADay) do
         updatePayoutStatus DS.ManualReview dStats
 
     updatePayoutStatus status dStats = do
@@ -143,7 +147,7 @@ callPayout ::
   DS.DailyStats ->
   DI.DriverInformation ->
   Maybe Text ->
-  [PayoutConfig] ->
+  [DPC.PayoutConfig] ->
   DS.PayoutStatus ->
   m ()
 callPayout ds driverInfo payoutVpa payoutConfigList statusForRetry = do
@@ -175,7 +179,7 @@ callPayoutHandler ::
   DS.DailyStats ->
   DI.DriverInformation ->
   Maybe Text ->
-  [PayoutConfig] ->
+  [DPC.PayoutConfig] ->
   DS.PayoutStatus ->
   m ()
 callPayoutHandler DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statusForRetry = do
@@ -211,12 +215,44 @@ callPayoutHandler DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statu
                         pure registrationAmount
                       _ -> pure 0.0
                   else pure 0.0
-              let entityName = DLP.DRIVER_DAILY_STATS
-                  amount = referralEarnings + refundRegistrationAmt
-                  createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
-              if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
+              let d2dAmount = d2dReferralEarnings
+                  customerAmount = referralEarnings
+              -- Handle d2d rewards based on d2dPayoutType
+              when (payoutConfig.d2dPayoutType == DPC.WALLET && d2dAmount > 0) $ do
+                -- Credit d2d earnings to driver wallet, not via bank payout
+                merchantOpCityId <-
+                  fromMaybeM
+                    (InternalError "merchantOperatingCityId missing in DailyStats for d2d wallet entry")
+                    dailyStat.merchantOperatingCityId
+                let metadata =
+                      A.object
+                        [ "d2dReferralEarnings" A..= d2dAmount,
+                          "dailyStatsId" A..= id
+                        ]
+                void $
+                  createWalletEntryDelta
+                    counterpartyDriver
+                    driverId.getId
+                    d2dAmount
+                    dailyStat.currency
+                    person.merchantId.getId
+                    merchantOpCityId.getId
+                    walletReferenceD2DReferral
+                    id
+                    (Just metadata)
+                    >>= fromEitherM (\err -> InternalError ("Failed to create d2d wallet entry: " <> show err))
+
+              let directBase =
+                    case payoutConfig.d2dPayoutType of
+                      DPC.NO_PAYOUT -> customerAmount
+                      DPC.DIRECT_PAYOUT -> customerAmount + d2dAmount
+                      DPC.WALLET -> customerAmount
+                  entityName = DLP.DRIVER_DAILY_STATS
+                  amount = directBase + refundRegistrationAmt
+              if directBase <= payoutConfig.thresholdPayoutAmountPerPerson
                 then do
-                  logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid
+                  logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show directBase <> " | orderId: " <> show uid
+                  let createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
                   payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
                   let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
                   mbPayoutOrderResp <- withTryCatch "createPayoutService:callPayout" $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
@@ -234,7 +270,7 @@ errorCatchAndHandle ::
   Text ->
   Text ->
   Either SomeException a ->
-  PayoutConfig ->
+  DPC.PayoutConfig ->
   DS.PayoutStatus ->
   (a -> m ()) ->
   m ()

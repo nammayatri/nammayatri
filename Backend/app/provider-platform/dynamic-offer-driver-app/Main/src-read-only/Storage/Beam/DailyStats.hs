@@ -20,6 +20,8 @@ data DailyStatsT f = DailyStatsT
     bonusEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancellationCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    d2dReferralCounts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    d2dReferralEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverId :: B.C f Data.Text.Text,
     id :: B.C f Data.Text.Text,

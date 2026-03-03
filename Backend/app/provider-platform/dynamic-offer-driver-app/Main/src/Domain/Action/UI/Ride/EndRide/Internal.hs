@@ -66,6 +66,7 @@ import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as Ride
@@ -80,6 +81,7 @@ import qualified Domain.Types.VendorFee as DVF
 import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
+import Kernel.External.Encryption (DbHash)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude hiding (find, forM_, map, whenJust)
@@ -260,6 +262,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   let validRide = isValidRide ride
   sendReferralFCM validRide ride booking mbRiderDetails thresholdConfig
+  sendDriverToDriverReferralReward validRide ride booking mbRiderDetails thresholdConfig
   when (validRide && (ride.traveledDistance > 1000 || (fromMaybe False ride.distanceCalculationFailed && fromMaybe 0 ride.chargeableDistance > 1000))) $ updateLeaderboardZScore booking ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams, ..}
   now <- getCurrentTime
@@ -588,7 +591,7 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
             let mobileNumberHash = (.hash) riderDetails.mobileNumber
             localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
             mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
-            (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
+            (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout validRide transporterConfig mobileNumberHash riderDetails mbDailyStats
             QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) mbFlagReason riderDetails.id
             when (isValidRideForPayout && isConsideredForPayout payoutConfig riderDetails) $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId payoutConfig
         Nothing -> pure ()
@@ -617,6 +620,7 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
         Just stats -> do
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referredDriverId.getId) 3 3 $ do
             QDailyStats.updateReferralStatsByDriverId (stats.activatedValidRides + 1) (stats.referralEarnings + referralRewardAmount) DDS.Verifying referredDriverId (utctDay localTime)
+            QDailyStats.updateReferralCount (stats.referralCounts + 1) referredDriverId (utctDay localTime)
         Nothing -> do
           id <- generateGUIDText
           now <- getCurrentTime
@@ -635,6 +639,8 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
                     activatedValidRides = 1,
                     referralEarnings = referralRewardAmount,
                     referralCounts = 1,
+                    d2dReferralEarnings = 0.0,
+                    d2dReferralCounts = 0,
                     payoutStatus = DDS.Verifying,
                     payoutOrderId = Nothing,
                     payoutOrderStatus = Nothing,
@@ -651,18 +657,130 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
                   }
           QDailyStats.create dailyStatsOfDriver'
 
-    fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats = do
-      availablePersonWithNumber <- SQP.findAllMerchantIdByPhoneNo riderDetails.mobileCountryCode mobileNumberHash
-      let isMaxReferralExceeded = maybe True ((<= transporterConfig.maxPayoutReferralForADay) . (.activatedValidRides)) mbDailyStats
-          isMultipleDeviceIdExists = isJust riderDetails.payoutFlagReason
-      let mbFlagReason =
-            case (listToMaybe availablePersonWithNumber, validRide, isMaxReferralExceeded) of
-              (Just _, _, _) -> Just RD.CustomerExistAsDriver
-              (_, False, _) -> Just RD.RideConstraintInvalid
-              (_, _, False) -> Just RD.ExceededMaxReferral
-              _ -> riderDetails.payoutFlagReason
-      let isValid = null availablePersonWithNumber && validRide && not isMultipleDeviceIdExists
-      return (isValid, mbFlagReason)
+    payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
+
+-- | Shared fraud checks for referral payout (driver-to-customer).
+-- Returns (isValidForPayout, updatedFlagReason).
+fraudChecksForReferralPayout ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Bool ->
+  TransporterConfig ->
+  DbHash ->
+  RD.RiderDetails ->
+  Maybe DDS.DailyStats ->
+  m (Bool, Maybe RD.PayoutFlagReason)
+fraudChecksForReferralPayout validRide transporterConfig mobileNumberHash riderDetails mbDailyStats = do
+  availablePersonWithNumber <- SQP.findAllMerchantIdByPhoneNo riderDetails.mobileCountryCode mobileNumberHash
+  let totalPayoutCount = maybe 0 (\s -> s.referralCounts + s.d2dReferralCounts) mbDailyStats
+      isMaxReferralExceeded = totalPayoutCount <= transporterConfig.maxPayoutReferralForADay
+      isMultipleDeviceIdExists = isJust riderDetails.payoutFlagReason
+  let mbFlagReason =
+        case (listToMaybe availablePersonWithNumber, validRide, isMaxReferralExceeded) of
+          (Just _, _, _) -> Just RD.CustomerExistAsDriver
+          (_, False, _) -> Just RD.RideConstraintInvalid
+          (_, _, False) -> Just RD.ExceededMaxReferral
+          _ -> riderDetails.payoutFlagReason
+  let isValid = null availablePersonWithNumber && validRide && not isMultipleDeviceIdExists
+  return (isValid, mbFlagReason)
+
+-- | When a referred driver (driver-to-driver referral) completes their first valid ride,
+-- run fraud checks (referred driver and rider must be different; daily cap) then credit and notify.
+-- First ride is determined from DriverStats.totalRides (referred driver).
+sendDriverToDriverReferralReward ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  Bool ->
+  Ride.Ride ->
+  SRB.Booking ->
+  Maybe RD.RiderDetails ->
+  TransporterConfig ->
+  m ()
+sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transporterConfig = do
+  driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  referredDriverStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
+  let isFirstRide = (== 1) . (.totalRides) <$> referredDriverStats
+  when (validRide && isJust driverInfo.referredByDriverId && (fromMaybe False isFirstRide)) $ do
+    let referringDriverId = fromJust driverInfo.referredByDriverId
+    referringDriver <- SQP.findById referringDriverId >>= fromMaybeM (PersonNotFound referringDriverId.getId)
+    localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    mbDailyStats <- QDailyStats.findByDriverIdAndDate referringDriverId (utctDay localTime)
+    passedFraudCheck <-
+      case mbRiderDetails of
+        Nothing -> pure False
+        Just riderDetails -> do
+          (isValid, _) <- fraudChecksForReferralPayout validRide transporterConfig ((.hash) riderDetails.mobileNumber) riderDetails mbDailyStats
+          pure isValid
+    when passedFraudCheck $ do
+      let referralMessage = "Congratulations!"
+          referralTitle = "Your referred driver has completed their first ride"
+      sendNotificationToDriver referringDriver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage referringDriver referringDriver.deviceToken
+      mbVehicle <- QV.findById referringDriverId
+      let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+      payoutConfig <- CPC.findByPrimaryKey referringDriver.merchantOperatingCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) referringDriver.merchantOperatingCityId.getId)
+      when (payoutConfig.isPayoutEnabled && driverInfo.isBlockedForReferralPayout /= Just True) $ do
+        let totalPayoutCount = maybe 0 (\s -> s.referralCounts + s.d2dReferralCounts) mbDailyStats
+            isMaxReferralExceeded = totalPayoutCount <= transporterConfig.maxPayoutReferralForADay
+        when isMaxReferralExceeded $
+          fork "Updating Payout Stats of Referring Driver (driver-to-driver)" $
+            updateReferralStatsForDriverToDriver referringDriverId mbDailyStats localTime payoutConfig
+  where
+    updateReferralStatsForDriverToDriver referringDriverId mbDailyStats localTime payoutConfig = do
+      -- Decide d2d reward amount based on d2dPayoutType.
+      -- For WALLET / DIRECT_PAYOUT we require referralRewardAmountPerRideForD2DPayout to be set.
+      d2dRewardAmount <-
+        case payoutConfig.d2dPayoutType of
+          DPC.WALLET -> getD2DRewardAmount payoutConfig
+          DPC.DIRECT_PAYOUT -> getD2DRewardAmount payoutConfig
+          DPC.NO_PAYOUT -> pure 0.0
+      driverStats <- QDriverStats.findByPrimaryKey referringDriverId >>= fromMaybeM (PersonNotFound referringDriverId.getId)
+      QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + d2dRewardAmount) referringDriverId
+      case mbDailyStats of
+        Just stats ->
+          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referringDriverId.getId) 3 3 $
+            QDailyStats.updateD2dReferralStatsByDriverId (stats.d2dReferralEarnings + d2dRewardAmount) (stats.d2dReferralCounts + 1) DDS.Verifying referringDriverId (utctDay localTime)
+        Nothing -> do
+          newId <- generateGUIDText
+          now <- getCurrentTime
+          let dailyStatsOfDriver' =
+                DDS.DailyStats
+                  { id = newId,
+                    driverId = referringDriverId,
+                    totalEarnings = 0.0,
+                    numRides = 0,
+                    totalDistance = 0,
+                    tollCharges = 0.0,
+                    bonusEarnings = 0.0,
+                    merchantLocalDate = utctDay localTime,
+                    currency = ride.currency,
+                    distanceUnit = ride.distanceUnit,
+                    activatedValidRides = 0,
+                    referralEarnings = 0.0,
+                    referralCounts = 0,
+                    d2dReferralEarnings = d2dRewardAmount,
+                    d2dReferralCounts = 1,
+                    payoutStatus = DDS.Verifying,
+                    payoutOrderId = Nothing,
+                    payoutOrderStatus = Nothing,
+                    createdAt = now,
+                    updatedAt = now,
+                    cancellationCharges = 0.0,
+                    tipAmount = 0.0,
+                    totalRideTime = 0,
+                    numDriversOnboarded = 0,
+                    numFleetsOnboarded = 0,
+                    merchantId = ride.merchantId,
+                    merchantOperatingCityId = Just ride.merchantOperatingCityId,
+                    onlineDuration = Nothing
+                  }
+          QDailyStats.create dailyStatsOfDriver'
+
+    getD2DRewardAmount payoutConfig = do
+      let mbAmount = payoutConfig.referralRewardAmountPerRideForD2DPayout
+      fromMaybeM (InternalError "referralRewardAmountPerRideForD2DPayout not configured for d2d payout") mbAmount
 
     payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
 
