@@ -159,3 +159,16 @@ updateManyVendorFeeWithMaxLimit merchantOpCityId = traverse_ $ \(vendorFee, maxL
 
 createManyWithMaxLimit :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [(VendorFee, Maybe HighPrecMoney)] -> m ()
 createManyWithMaxLimit = traverse_ $ \(vendorFee, maxLimit) -> createVendorFeeWithMaxLimit vendorFee maxLimit
+
+updateVendorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DriverFee -> Text -> Text -> m ()
+updateVendorId driverFeeId oldVendorId newVendorId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.vendorId newVendorId,
+      Se.Set Beam.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is Beam.driverFeeId $ Se.Eq driverFeeId.getId,
+          Se.Is Beam.vendorId $ Se.Eq oldVendorId
+        ]
+    ]
