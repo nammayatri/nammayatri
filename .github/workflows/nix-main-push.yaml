@@ -44,7 +44,7 @@ jobs:
 
       - name: Build all flake outputs (Master Local mode)
         run: |
-          NIX_LOCAL_BUILD="1" nix build github:srid/devour-flake#default --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
+          NIX_LOCAL_BUILD="1" nix build github:srid/devour-flake#default --impure --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee master-build-log.txt
 
@@ -184,9 +184,9 @@ jobs:
           DOCKER_REGISTRY: ghcr.io
           DOCKER_TAG_PREFIX: "prod-"
         run: |
-          nix build .#packages.${{ matrix.system }}.dockerImage --impure
+          nix build .#packages.${{ matrix.system }}.dockerImage
 
-          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag)"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
 
           gunzip -c ./result > image.tar || cp ./result image.tar
