@@ -29,6 +29,7 @@ library
       AddVehicleUnitTests
       DriverOperationHubUnitTests
       CreateRequestUnitTests
+      RolesHierarchyUnitTests
   hs-source-dirs:
       src
   default-extensions:
@@ -60,6 +61,7 @@ library
       TypeFamilies
       TypeOperators
       ViewPatterns
+  ghc-options: -fplugin=RecordDotPreprocessor
   build-depends:
       HUnit
     , aeson
@@ -134,6 +136,7 @@ executable hunit-tests
       TypeFamilies
       TypeOperators
       ViewPatterns
+  ghc-options: -fplugin=RecordDotPreprocessor
   build-depends:
       HUnit
     , aeson
