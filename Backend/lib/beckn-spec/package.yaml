@@ -109,7 +109,6 @@ dependencies:
   - utf8-string
   - geojson
   - safe-money
-  - special-zone-a
   - dhall
   - tasty
   - tasty-hunit
