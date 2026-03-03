@@ -7,17 +7,17 @@ import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.VSTAllowedArea
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Types.SpecialLocation
 import qualified Tools.Beam.UtilsTH
 
 data VehicleServiceTier = VehicleServiceTier
   { airConditionedThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    allowedAreas :: Kernel.Prelude.Maybe [Domain.Types.VSTAllowedArea.VSTAllowedArea],
+    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
     allowedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
     autoSelectedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
     baseVehicleServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
