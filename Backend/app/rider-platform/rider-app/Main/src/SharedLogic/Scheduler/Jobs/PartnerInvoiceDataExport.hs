@@ -18,12 +18,12 @@ import qualified API.Types.UI.PartnerBookingStatement as PBSAPI
 import API.Types.UI.PartnerBookingStatementExtra ()
 import Control.Applicative ((<|>))
 import qualified Control.Exception
-import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (isAlphaNum)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Domain.Action.UI.PartnerBookingStatement as PBS
 import qualified Domain.Types.Booking.API as DBAPI
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
@@ -44,8 +44,8 @@ import qualified Storage.Queries.PartnerInvoiceDataLog as QPartnerInvoiceDataLog
 import qualified Storage.Queries.Person as QPerson
 import System.Directory (getTemporaryDirectory, removeFile)
 import System.IO (hClose, hPutStr, openTempFile)
-import System.Timeout (timeout)
 import System.Process (callProcess)
+import System.Timeout (timeout)
 
 -- | The scheduled job handler for partner invoice data SFTP export
 partnerInvoiceDataExportJob ::
@@ -79,7 +79,7 @@ partnerInvoiceDataExportJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   results <- mapM (\logEntry -> (logEntry,) <$> enrichLogEntry logEntry) unexportedLogs
   let successPairs = [(logEntry, rec) | (logEntry, Just rec) <- results]
       enrichedRecords = map snd successPairs
-      successLogs = map fst successPairs
+      -- successLogs = map fst successPairs
   let jsonContent = TE.decodeUtf8 $ BL.toStrict $ encode enrichedRecords
       timestamp = T.pack $ formatTime defaultTimeLocale "%Y%m%d_%H%M%S" now
       fileName = "partner_invoice_data_" <> timestamp <> ".json"

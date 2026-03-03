@@ -1,0 +1,52 @@
+imports:
+  ServiceTierType: Dashboard.Common
+
+module: DomainDiscountConfig
+
+apis:
+  - POST:
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateDomainDiscountConfigReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      mandatoryQuery:
+        billingCategory: BillingCategory
+      response:
+        type: "[DomainDiscountConfigRes]"
+  - DELETE:
+      endpoint: /delete
+      auth: ApiAuthV2
+      request:
+        type: DeleteDomainDiscountConfigReq
+      response:
+        type: APISuccess
+
+types:
+  BillingCategory:
+    - enum: PERSONAL, BUSINESS
+    - derive: "HttpInstance, 'HideSecrets"
+  CreateDomainDiscountConfigReq:
+    - domain: Text
+    - billingCategory: BillingCategory
+    - vehicleServiceTier: ServiceTierType
+    - discountPercentage: Double
+    - enabled: Bool
+    - derive: "'HideSecrets"
+  DomainDiscountConfigRes:
+    - domain: Text
+    - billingCategory: BillingCategory
+    - vehicleServiceTier: ServiceTierType
+    - discountPercentage: Double
+    - enabled: Bool
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  DeleteDomainDiscountConfigReq:
+    - domain: Text
+    - billingCategory: BillingCategory
+    - vehicleServiceTier: ServiceTierType
+    - derive: "'HideSecrets"
