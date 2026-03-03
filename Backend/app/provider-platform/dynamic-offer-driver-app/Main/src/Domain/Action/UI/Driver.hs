@@ -339,6 +339,16 @@ data FleetInfo = FleetInfo
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data OperatorInfo = OperatorInfo
+  {
+    id :: Text,
+    firstName :: Text,
+    lastName :: Text,
+    phoneNumber :: Maybe Text,
+    createdAt :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
     firstName :: Text,
@@ -433,7 +443,7 @@ data DriverInformationRes = DriverInformationRes
     cancellationRateSlabConfig :: Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
     enabledAt :: Maybe UTCTime,
     fleetOwnerId :: Maybe Text, -- deprecate later
-    operatorId :: Maybe Text,
+    operatorId :: Maybe Text, -- deprecate later
     fleetRequest :: Maybe FleetInfo,
     tripDistanceMaxThreshold :: Maybe Meters,
     tripDistanceMinThreshold :: Maybe Meters,
@@ -449,6 +459,7 @@ data DriverInformationRes = DriverInformationRes
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
     vehicleImageUploadedAt :: Maybe UTCTime,
     subscriptionCreditBalance :: Maybe HighPrecMoney,
+    operatorInfo :: Maybe OperatorInfo,
     fleetOwnerName :: Maybe Text,
     pan :: Maybe Text,
     panAadhaarLinkedFlag :: Maybe Bool,
@@ -1470,6 +1481,18 @@ buildFleetInfo person fda = do
         createdAt = fda.createdAt
       }
 
+buildOperatorInfo :: (EncFlow m r, CacheFlow m r) => SP.Person -> m OperatorInfo
+buildOperatorInfo person = do
+  operatorPhoneNumber <- decrypt `mapM` person.mobileNumber
+  return $
+    OperatorInfo
+      { id = person.id.getId,
+        firstName = person.firstName,
+        lastName = fromMaybe "" person.lastName,
+        phoneNumber = operatorPhoneNumber,
+        createdAt = person.createdAt
+      }
+
 makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash operatorReferral operatorId mbInactiveFda mbActiveFda mbFleetInfo = do
   (activeFleet, fleetRequest, fleetOwnerName') <-
@@ -1502,6 +1525,13 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
 
         return (activeFleetInfo, fleetRequestInfo, fleetOwnerNameVal)
       else return (Nothing, Nothing, Nothing)
+  operatorInfo <- case operatorId of
+    Just opId -> do
+      mbPerson <- QPerson.findById (Id opId)
+      case mbPerson of
+        Just person -> Just <$> buildOperatorInfo person
+        Nothing -> return Nothing
+    Nothing -> return Nothing
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   mbVehicle <- QVehicle.findById id
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
@@ -1572,6 +1602,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           fleetOwnerId = (.fleetOwnerId) <$> mbActiveFda,
           onboardingAs = driverInfo.onboardingAs,
           subscriptionCreditBalance = subsCreditBalance,
+          operatorInfo = operatorInfo,
           pan = panDec,
           panAadhaarLinkedFlag = panAadhaarLinkedFlag',
           gstinApplicableFlag = gstinApplicableFlag',

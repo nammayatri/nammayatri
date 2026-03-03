@@ -59,6 +59,7 @@ apis:
         - offset: Int
         - vehicleNo: Text
         - mbSearchString: Text
+        - includeDocuments: Bool
         - onlyMandatoryDocs: Bool
       response:
         type: DriverInfoResp
@@ -72,6 +73,7 @@ apis:
               - offset: Int
               - vehicleNo: Text
               - mbSearchString: Text
+              - includeDocuments: Bool
               - onlyMandatoryDocs: Bool
             mandatoryQuery:
               - requestorId: Text
@@ -214,7 +216,7 @@ types:
     - vehicle: Maybe Text
     - vehicleNo: Maybe Text
     - isRcActive: Bool
-    - documents: StatusRes
+    - documents: Maybe StatusRes
   VerifyOperatorJoiningOtpReq:
     - mobileCountryCode: Text
     - mobileNumber: Text

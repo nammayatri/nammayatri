@@ -275,9 +275,10 @@ getDriverOperatorList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
-getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString onlyMandatoryDocs requestorId = do
+getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs requestorId = do
   requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (requestor.role == DP.OPERATOR) $
     Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
@@ -294,7 +295,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
       (drvOpAsn, person) <- MaybeT $ listToMaybe <$> QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString (Just driverId)
       pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive)
 
-  listItem <- mapM (buildDriverInfo now) driverOperatorInfoList
+  listItem <- mapM (buildDriverInfo now mbIncludeDocuments) driverOperatorInfoList
   let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
   pure API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp {..}
@@ -323,7 +324,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
           assoc <- MaybeT $ QDRC.findLatestLinkedByRCId rc.id now
           pure (rc.vehicleModel, rc.unencryptedCertificateNumber, assoc.isRcActive, assoc.driverId)
 
-    buildDriverInfo now (drvOpAsn, person, vehicleModel, registrationNo, isRcActive) = do
+    buildDriverInfo now mbIncDocs (drvOpAsn, person, vehicleModel, registrationNo, isRcActive) = do
       let driverId = drvOpAsn.driverId
       decryptedMobileNumber <-
         mapM decrypt person.mobileNumber
@@ -338,13 +339,17 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
       merchantOpCity <-
         CQMOC.findById merchantOpCityId
           >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-      driverImages <- IQuery.findAllByPersonId transporterConfig driverId
-      let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+
+      let shouldIncludeDocs = fromMaybe True mbIncDocs
+      statusRes <- if shouldIncludeDocs
+        then do
+          driverImages <- IQuery.findAllByPersonId transporterConfig driverId
+          let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+          let shouldActivateRc = False
+          Just . castStatusRes <$> SStatus.statusHandler' person driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
+        else pure Nothing
+
       driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
-      let shouldActivateRc = False
-      statusRes <-
-        castStatusRes
-          <$> SStatus.statusHandler' person driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs -- FIXME: Need to change
       pure $
         API.Types.ProviderPlatform.Operator.Driver.DriverInfo
           { driverId = cast drvOpAsn.driverId,
