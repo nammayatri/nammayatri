@@ -63,9 +63,9 @@ import Kernel.Utils.Common (MonadFlow)
 import Lib.Finance.Account.Interface (AccountInput (..))
 import Lib.Finance.Account.Service (getOrCreateAccount)
 import Lib.Finance.Domain.Types.Account
+import Lib.Finance.Domain.Types.Invoice (InvoiceType)
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Error.Types (FinanceError (..))
-import Lib.Finance.Domain.Types.Invoice (InvoiceType)
 import Lib.Finance.Invoice.Interface (GstAmountBreakdown, InvoiceInput (..), InvoiceLineItem)
 import Lib.Finance.Invoice.Service (createInvoice)
 import Lib.Finance.Ledger.Interface (LedgerEntryInput (..))

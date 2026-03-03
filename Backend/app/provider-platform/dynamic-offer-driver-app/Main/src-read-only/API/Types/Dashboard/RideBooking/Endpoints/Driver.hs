@@ -44,6 +44,15 @@ data ActionType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DriverAssociationInfo = DriverAssociationInfo
+  { personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
+    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverBlockTransactions = DriverBlockTransactions
   { reasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -124,7 +133,9 @@ data DriverInfoRes = DriverInfoRes
     softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverMode :: Kernel.Prelude.Maybe Domain.Types.Common.DriverMode,
     lastOfflineTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    onboardingAs :: Kernel.Prelude.Maybe OnboardingAs
+    onboardingAs :: Kernel.Prelude.Maybe OnboardingAs,
+    activeFleetInfo :: Kernel.Prelude.Maybe DriverAssociationInfo,
+    operatorInfo :: Kernel.Prelude.Maybe DriverAssociationInfo
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

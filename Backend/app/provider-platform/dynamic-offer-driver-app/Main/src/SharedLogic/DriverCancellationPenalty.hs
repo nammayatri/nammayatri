@@ -167,17 +167,18 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
             ctx <- buildFinanceCtx booking ride (Just driver)
             result <- runFinance ctx $ do
               _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges
-              invoice InvoiceConfig
-                { invoiceType = Invoice.RideCancellation,
-                  issuedToType = "DRIVER",
-                  issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
-                  issuedToName = Nothing,
-                  issuedToAddress = Nothing,
-                  gstBreakdown = Nothing,
-                  lineItems =
-                    [ InvoiceLineItem {description = "Driver Cancellation Penalty", quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False}
-                    ]
-                }
+              invoice
+                InvoiceConfig
+                  { invoiceType = Invoice.RideCancellation,
+                    issuedToType = "DRIVER",
+                    issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
+                    issuedToName = Nothing,
+                    issuedToAddress = Nothing,
+                    gstBreakdown = Nothing,
+                    lineItems =
+                      [ InvoiceLineItem {description = "Driver Cancellation Penalty", quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False}
+                      ]
+                  }
             case result of
               Left err -> fromEitherM (\e -> InternalError ("Failed to create DriverCancellationCharges: " <> show e)) (Left err)
               Right _ -> pure ()

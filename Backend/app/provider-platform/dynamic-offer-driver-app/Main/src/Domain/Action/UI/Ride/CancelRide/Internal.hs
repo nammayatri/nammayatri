@@ -60,7 +60,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), runFinance, transfer, transfer_, invoice)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), invoice, runFinance, transfer, transfer_)
 import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
@@ -271,32 +271,35 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
             gstOnCancellation = if gstPct > 0 then fee.amount * gstPct / (1 + gstPct) else 0
             baseCancellation = fee.amount - gstOnCancellation
             cancellationComponents =
-                [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
-                  (gstOnCancellation, walletReferenceCustomerCancellationGST, GovtIndirect)
-                ]
+              [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
+                (gstOnCancellation, walletReferenceCustomerCancellationGST, GovtIndirect)
+              ]
         ctx <- buildFinanceCtx booking ride (Just driver)
         result <- runFinance ctx $ do
-          mapM_ (\(amt, ref, dest) -> do
-            transfer_ BuyerAsset BuyerExternal amt ref
-            void $ transfer BuyerExternal dest amt ref
-            ) cancellationComponents
-          invoice InvoiceConfig
-            { invoiceType = Invoice.RideCancellation,
-              issuedToType = "CUSTOMER",
-              issuedToId = rid.getId,
-              issuedToName = booking.riderName,
-              issuedToAddress = booking.fromLocation.address.fullAddress,
-              gstBreakdown = computeGstBreakdown rideGst gstOnCancellation,
-              lineItems =
-                catMaybes
-                  [ if baseCancellation > 0
-                      then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
-                      else Nothing,
-                    if gstOnCancellation > 0
-                      then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
-                      else Nothing
-                  ]
-            }
+          mapM_
+            ( \(amt, ref, dest) -> do
+                transfer_ BuyerAsset BuyerExternal amt ref
+                void $ transfer BuyerExternal dest amt ref
+            )
+            cancellationComponents
+          invoice
+            InvoiceConfig
+              { invoiceType = Invoice.RideCancellation,
+                issuedToType = "CUSTOMER",
+                issuedToId = rid.getId,
+                issuedToName = booking.riderName,
+                issuedToAddress = booking.fromLocation.address.fullAddress,
+                gstBreakdown = computeGstBreakdown rideGst gstOnCancellation,
+                lineItems =
+                  catMaybes
+                    [ if baseCancellation > 0
+                        then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
+                        else Nothing,
+                      if gstOnCancellation > 0
+                        then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
+                        else Nothing
+                    ]
+              }
         case result of
           Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
           Right _ -> pure ()

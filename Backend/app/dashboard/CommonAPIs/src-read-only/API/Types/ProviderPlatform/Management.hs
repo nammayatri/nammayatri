@@ -117,7 +117,7 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "COMMUNICATION/" r,
-                 ( v1,
+                   ( v1,
                      r2
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
@@ -316,4 +316,4 @@ instance Text.Read.Read ManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])

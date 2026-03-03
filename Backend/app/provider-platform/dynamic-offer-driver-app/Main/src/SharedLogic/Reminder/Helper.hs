@@ -477,7 +477,6 @@ data ThresholdCheckData = ThresholdCheckData
     completionHistories :: M.Map (DVC.DocumentType, Text, DRH.EntityType) (Maybe DRH.DocumentReminderHistory) -- (documentType, entityId, entityType) -> latest history
   }
 
-
 -- | Check and create reminders for all document types that have ridesThreshold configured
 -- Note: daysThreshold is handled proactively by recordDocumentCompletion, so we only check ridesThreshold here
 -- Document expiry types (DriverLicense, VehicleRegistrationCertificate, etc.) are excluded

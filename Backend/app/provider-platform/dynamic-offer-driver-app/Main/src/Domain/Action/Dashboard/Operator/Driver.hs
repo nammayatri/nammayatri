@@ -341,13 +341,14 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
           >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
 
       let shouldIncludeDocs = fromMaybe True mbIncDocs
-      statusRes <- if shouldIncludeDocs
-        then do
-          driverImages <- IQuery.findAllByPersonId transporterConfig driverId
-          let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
-          let shouldActivateRc = False
-          Just . castStatusRes <$> SStatus.statusHandler' person driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
-        else pure Nothing
+      statusRes <-
+        if shouldIncludeDocs
+          then do
+            driverImages <- IQuery.findAllByPersonId transporterConfig driverId
+            let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+            let shouldActivateRc = False
+            Just . castStatusRes <$> SStatus.statusHandler' person driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
+          else pure Nothing
 
       driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
       pure $
