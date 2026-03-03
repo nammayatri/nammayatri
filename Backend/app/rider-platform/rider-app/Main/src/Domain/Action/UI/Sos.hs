@@ -120,7 +120,7 @@ newtype AddSosVideoRes = AddSosVideoRes
 data ExternalStatusEntry = ExternalStatusEntry
   { status :: Text,
     idErss :: Maybe Text,
-    lastUpdatedTime :: Maybe Int
+    lastUpdatedTime :: Maybe Integer
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON)
@@ -1043,7 +1043,7 @@ postSosErssStatusUpdate :: API.Types.UI.Sos.ErssStatusUpdateReq -> Flow API.Type
 postSosErssStatusUpdate req = do
   erssStatusUpdateRateLimitOptions <- asks (.erssStatusUpdateRateLimitOptions)
   checkSlidingWindowLimitWithOptions erssStatusUpdateHitsCountKey erssStatusUpdateRateLimitOptions
-  trackingId <- req.idSource & fromMaybeM (InvalidRequest "idSource is required")
+  trackingId <- req.idErss & fromMaybeM (InvalidRequest "idErss is required")
   sosDetails <-
     QSos.findByExternalReferenceId (Just trackingId)
       >>= fromMaybeM (InvalidRequest $ "No SOS found for tracking ID: " <> trackingId)
