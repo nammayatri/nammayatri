@@ -103,11 +103,12 @@ types:
     imageId: Text
     optionalImageId: Maybe Text
     identifierNumber: Text
+    identifierName: Maybe Text
   VerifyDocumentRes:
     - enableFleetOwner: Bool
     - recordType: NewType
   VerifyType:
-    enum: "VERIFY_PAN,VERIFY_GST,VERIFY_AADHAAR"
+    enum: "VERIFY_PAN,VERIFY_GST,VERIFY_AADHAAR,VERIFY_UDYAM"
     derive: "HttpInstance"
   Role:
     enum: "NORMAL_FLEET, BUSINESS_FLEET"

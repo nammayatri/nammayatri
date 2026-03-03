@@ -80,10 +80,10 @@ import Utils.Common.Cac.KeyNameConstants
 data DriverPanReq = DriverPanReq
   { panNumber :: Text,
     imageId :: Text, --Image,
-    driverId :: Text,
-    panName :: Maybe Text
+    driverId :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 
 type DriverPanRes = APISuccess
 
@@ -93,9 +93,24 @@ verifyPan ::
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverPanReq ->
   Maybe Bool ->
+  Maybe Text ->
   Bool ->
   Flow Bool
-verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalRequired isDashboard = do
+verifyPan verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req adminApprovalRequired mbPanName isDashboard = do
+  verifyPanHandler verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req adminApprovalRequired mbPanName False isDashboard
+
+verifyPanHandler ::
+  DPan.VerifiedBy ->
+  Maybe DM.Merchant ->
+  (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  DriverPanReq ->
+  Maybe Bool ->
+  Maybe Text ->
+  Bool ->
+  Bool ->
+  Flow Bool
+verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalRequired panName isPanNameMandatory isDashboard = do
+  when (isPanNameMandatory && isNothing panName) $ throwError (InvalidRequest "PAN name is required")
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyPanHitsCountKey req.panNumber) externalServiceRateLimitOptions
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -183,9 +198,9 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalR
               let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
               let extractedNameOnCard = extractedPan.name_on_card
               logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
-              logInfo ("req.panName: " <> show req.panName)
+              logInfo ("panName: " <> show panName)
               when (verifyBy /= DPan.FRONTEND_SDK) $ do
-                case (req.panName, extractedNameOnCard) of
+                case (panName, extractedNameOnCard) of
                   (Just providedName, Just extractedName) | not (T.null providedName) && not (T.null extractedName) -> do
                     let nameCompareReq =
                           Verification.NameCompareReq
@@ -196,12 +211,11 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalR
                             }
                     isValid <- DVRC.isNameComparePercentageValid person.merchantId merchantOpCityId nameCompareReq
                     unless isValid $ throwError (MismatchDataError "Provided name and extracted name on card do not match")
-                    when documentVerificationConfig.doStrictVerifcation $ do
-                      now <- getCurrentTime
-                      let parsedDob = extractedPan.date_of_birth >>= DVRC.parseDateTime
-                      verifyPanFlow person merchantOpCityId documentVerificationConfig (fromMaybe "" extractedPanNo) (fromMaybe now parsedDob) (Id req.imageId) extractedNameOnCard
-                    unless isValid $ throwError (InvalidRequest "Name match failed")
-                  _ -> throwError (InvalidRequest "PAN name is required")
+                  _ -> pure ()
+                when documentVerificationConfig.doStrictVerifcation $ do
+                  now <- getCurrentTime
+                  let parsedDob = extractedPan.date_of_birth >>= DVRC.parseDateTime
+                  verifyPanFlow person merchantOpCityId documentVerificationConfig (fromMaybe "" extractedPanNo) (fromMaybe now parsedDob) (Id req.imageId) extractedNameOnCard
 
               pure extractedPan
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
@@ -258,6 +272,7 @@ castTextToDomainType panType = case panType of
 
 verifyPanFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe Text -> Flow ()
 verifyPanFlow person merchantOpCityId documentVerificationConfig panNumber driverDateOfBirth imageId1 nameOnCard = do
+  logDebug $ "verifyPanFlow: " <> show panNumber
   now <- getCurrentTime
   encryptedPan <- encrypt panNumber
   let imageExtractionValidation =
@@ -267,6 +282,7 @@ verifyPanFlow person merchantOpCityId documentVerificationConfig panNumber drive
   verifyRes <-
     Verification.verifyPanAsync person.merchantId merchantOpCityId $
       Verification.VerifyPanAsyncReq {panNumber, driverId = person.id.getId, dateOfBirth = driverDateOfBirth, fullName = fromMaybe "" nameOnCard}
+  logDebug $ "verifyRes: " <> show verifyRes
   case verifyRes.requestor of
     VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 Nothing driverDateOfBirth Nothing nameOnCard verifyRes.requestId now imageExtractionValidation encryptedPan
     _ -> throwError $ InternalError ("Service provider not configured to return PAN verification async responses. Provider Name : " <> (show verifyRes.requestor))
