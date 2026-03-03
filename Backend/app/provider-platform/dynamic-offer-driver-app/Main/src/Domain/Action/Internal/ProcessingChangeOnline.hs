@@ -130,6 +130,8 @@ updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCal
             activatedValidRides = 0,
             referralEarnings = 0,
             referralCounts = 0,
+            d2dReferralEarnings = 0,
+            d2dReferralCounts = 0,
             payoutStatus = DDS.Initialized,
             payoutOrderId = Nothing,
             payoutOrderStatus = Nothing,

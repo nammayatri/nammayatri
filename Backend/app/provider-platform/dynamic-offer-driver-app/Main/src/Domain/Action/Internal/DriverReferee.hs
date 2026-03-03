@@ -207,8 +207,8 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
         case mbDailyStats of
           Just dailyStats -> do
             Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
-              QDailyStats.updateReferralCount (dailyStats.referralCounts + 1) driverId (utctDay localTime)
-            pure $ dailyStats {DDS.referralCounts = dailyStats.referralCounts + 1}
+              QDailyStats.updateD2dReferralStatsByDriverId dailyStats.d2dReferralEarnings (dailyStats.d2dReferralCounts + 1) DDS.Initialized driverId (utctDay localTime)
+            pure $ dailyStats {DDS.d2dReferralCounts = dailyStats.d2dReferralCounts + 1}
           Nothing -> do
             id <- generateGUIDText
             let dailyStatsOfDriver =
@@ -225,7 +225,9 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
                       distanceUnit = merchantOperatingCity.distanceUnit,
                       activatedValidRides = 0,
                       referralEarnings = 0.0,
-                      referralCounts = 1,
+                      referralCounts = 0,
+                      d2dReferralEarnings = 0.0,
+                      d2dReferralCounts = 1,
                       payoutStatus = DDS.Initialized,
                       payoutOrderId = Nothing,
                       payoutOrderStatus = Nothing,
@@ -268,6 +270,6 @@ updatePayoutRelatedFieldsIfRideValie transporterConfig merchOpCityId driverId ri
       vehicle <- QVeh.findById driverId >>= fromMaybeM (VehicleNotFound $ "driverId:-" <> driverId.getId)
       payoutConfig <- CPC.findByPrimaryKey merchOpCityId (fromMaybe VC.AUTO_CATEGORY vehicle.category) Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicle.category) merchOpCityId.getId)
       QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + payoutConfig.referralRewardAmountPerRide) (cast driverId)
-      QDailyStats.updateReferralStatsByDriverId (dailyStats.activatedValidRides + 1) (dailyStats.referralEarnings + payoutConfig.referralRewardAmountPerRide) DDS.Initialized driverId (utctDay localTimeOfThatDay)
+      QDailyStats.updateD2dReferralStatsByDriverId (dailyStats.d2dReferralEarnings + payoutConfig.referralRewardAmountPerRide) (dailyStats.d2dReferralCounts + 1) DDS.Initialized driverId (utctDay localTimeOfThatDay)
     else do
       logError $ "Meter Referral not on a validRide: " <> ride.id.getId <> " not adding payout counts for driver: " <> driverId.getId

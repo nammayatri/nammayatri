@@ -49,8 +49,11 @@ findAllByDateAndPayoutStatus limit offset merchantLocalDate payoutStatus merchan
     [ Se.And
         [ Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate,
           Se.Is Beam.payoutStatus $ Se.Eq (Just payoutStatus),
-          Se.Is Beam.referralEarnings $ Se.GreaterThan (Just 0.0),
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just $ getId merchantOpCityId)
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just $ getId merchantOpCityId),
+          Se.Or
+            [ Se.Is Beam.referralEarnings $ Se.GreaterThan (Just 0.0),
+              Se.Is Beam.d2dReferralEarnings $ Se.GreaterThan (Just 0.0)
+            ]
         ]
     ]
     (Se.Desc Beam.createdAt)
@@ -87,3 +90,22 @@ deleteAllByDriverId ::
   m ()
 deleteAllByDriverId driverId = do
   deleteWithKV [Se.Is Beam.driverId $ Se.Eq (getId driverId)]
+
+-- | Update only d2d (driver-to-driver) referral fields for payout. Customer referral uses updateReferralStatsByDriverId.
+updateD2dReferralStatsByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  HighPrecMoney ->
+  Int ->
+  PayoutStatus ->
+  Id SP.Person ->
+  Day ->
+  m ()
+updateD2dReferralStatsByDriverId d2dReferralEarnings d2dReferralCounts payoutStatus driverId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.d2dReferralEarnings (Just d2dReferralEarnings),
+      Se.Set Beam.d2dReferralCounts (Just d2dReferralCounts),
+      Se.Set Beam.payoutStatus (Just payoutStatus),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.driverId $ Se.Eq (getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]

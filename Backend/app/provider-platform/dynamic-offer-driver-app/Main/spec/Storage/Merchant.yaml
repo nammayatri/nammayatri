@@ -1847,13 +1847,19 @@ PayoutConfig:
     maxPayoutReferralForADay: Maybe Int
     referralProgramStartDate: Maybe UTCTime
     coinRedemptionMinimumLimit: Maybe HighPrecMoney
+    d2dPayoutType: D2DPayoutTypeEnum
+    referralRewardAmountPerRideForD2DPayout: Maybe HighPrecMoney
 
   beamType:
     timeDiff: Seconds
+    d2dPayoutType: Maybe D2DPayoutTypeEnum
+
   toTType:
     timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    d2dPayoutType: Just d2dPayoutType|E
   fromTType:
     timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    d2dPayoutType: fromMaybe NO_PAYOUT d2dPayoutType|E
   default:
     referralRewardAmountPerRide: "100.0"
     timeDiff: "86400"
@@ -1877,6 +1883,9 @@ PayoutConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled]
+  types:
+    D2DPayoutTypeEnum:
+      enum: "WALLET,DIRECT_PAYOUT,NO_PAYOUT"
 
   extraOperations:
     - EXTRA_QUERY_FILE

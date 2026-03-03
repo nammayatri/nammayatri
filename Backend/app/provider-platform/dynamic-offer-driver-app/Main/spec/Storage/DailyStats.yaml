@@ -39,6 +39,8 @@ DailyStats:
     numDriversOnboarded: Int
     numFleetsOnboarded: Int
     onlineDuration: Maybe Seconds
+    d2dReferralEarnings: HighPrecMoney
+    d2dReferralCounts: Int
 
   beamType:
     distanceUnit: Maybe DistanceUnit
@@ -53,6 +55,8 @@ DailyStats:
     totalRideTime: Maybe Seconds
     numDriversOnboarded: Maybe Int
     numFleetsOnboarded: Maybe Int
+    d2dReferralEarnings: Maybe HighPrecMoney
+    d2dReferralCounts: Maybe Int
 
   beamFields:
     totalEarnings:
@@ -76,6 +80,8 @@ DailyStats:
     totalRideTime: Kernel.Prelude.fromMaybe 0|I
     numDriversOnboarded: Kernel.Prelude.fromMaybe 0|I
     numFleetsOnboarded: Kernel.Prelude.fromMaybe 0|I
+    d2dReferralEarnings: Kernel.Prelude.fromMaybe 0|I
+    d2dReferralCounts: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     totalEarnings: Kernel.Prelude.roundToIntegral|I
@@ -94,6 +100,8 @@ DailyStats:
     totalRideTime: Kernel.Prelude.Just|I
     numDriversOnboarded: Kernel.Prelude.Just|I
     numFleetsOnboarded: Kernel.Prelude.Just|I
+    d2dReferralEarnings: Kernel.Prelude.Just|I
+    d2dReferralCounts: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey

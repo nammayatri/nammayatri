@@ -20,6 +20,7 @@ instance FromTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig whe
         Domain.Types.PayoutConfig.PayoutConfig
           { batchLimit = batchLimit,
             coinRedemptionMinimumLimit = coinRedemptionMinimumLimit,
+            d2dPayoutType = fromMaybe Domain.Types.PayoutConfig.NO_PAYOUT d2dPayoutType,
             expand = expand,
             isPayoutEnabled = isPayoutEnabled,
             maxPayoutReferralForADay = maxPayoutReferralForADay,
@@ -32,6 +33,7 @@ instance FromTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig whe
             payoutRegistrationSgst = payoutRegistrationSgst,
             referralProgramStartDate = referralProgramStartDate,
             referralRewardAmountPerRide = referralRewardAmountPerRide,
+            referralRewardAmountPerRideForD2DPayout = referralRewardAmountPerRideForD2DPayout,
             remark = remark,
             thresholdPayoutAmountPerPerson = thresholdPayoutAmountPerPerson,
             timeDiff = Kernel.Utils.Common.secondsToNominalDiffTime timeDiff,
@@ -45,6 +47,7 @@ instance ToTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig where
     Beam.PayoutConfigT
       { Beam.batchLimit = batchLimit,
         Beam.coinRedemptionMinimumLimit = coinRedemptionMinimumLimit,
+        Beam.d2dPayoutType = Just d2dPayoutType,
         Beam.expand = expand,
         Beam.isPayoutEnabled = isPayoutEnabled,
         Beam.maxPayoutReferralForADay = maxPayoutReferralForADay,
@@ -57,6 +60,7 @@ instance ToTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig where
         Beam.payoutRegistrationSgst = payoutRegistrationSgst,
         Beam.referralProgramStartDate = referralProgramStartDate,
         Beam.referralRewardAmountPerRide = referralRewardAmountPerRide,
+        Beam.referralRewardAmountPerRideForD2DPayout = referralRewardAmountPerRideForD2DPayout,
         Beam.remark = remark,
         Beam.thresholdPayoutAmountPerPerson = thresholdPayoutAmountPerPerson,
         Beam.timeDiff = Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff,

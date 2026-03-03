@@ -58,6 +58,7 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.batchLimit batchLimit,
       Se.Set Beam.coinRedemptionMinimumLimit coinRedemptionMinimumLimit,
+      Se.Set Beam.d2dPayoutType (Just d2dPayoutType),
       Se.Set Beam.expand expand,
       Se.Set Beam.isPayoutEnabled isPayoutEnabled,
       Se.Set Beam.maxPayoutReferralForADay maxPayoutReferralForADay,
@@ -69,6 +70,7 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
       Se.Set Beam.payoutRegistrationSgst payoutRegistrationSgst,
       Se.Set Beam.referralProgramStartDate referralProgramStartDate,
       Se.Set Beam.referralRewardAmountPerRide referralRewardAmountPerRide,
+      Se.Set Beam.referralRewardAmountPerRideForD2DPayout referralRewardAmountPerRideForD2DPayout,
       Se.Set Beam.remark remark,
       Se.Set Beam.thresholdPayoutAmountPerPerson thresholdPayoutAmountPerPerson,
       Se.Set Beam.timeDiff (Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff),

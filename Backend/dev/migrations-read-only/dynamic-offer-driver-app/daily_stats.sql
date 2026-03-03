@@ -82,3 +82,19 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN num_drivers_onboarded 
 
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN online_duration integer ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN d2d_referral_earnings double precision ;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN d2d_referral_counts integer ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

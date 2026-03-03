@@ -56,7 +56,8 @@ getPayoutReferralEarnings ::
 getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate toDate = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   earnings_ <- QDSE.findAllInRangeByDriverId_ personId fromDate toDate
-  let earnings = filter (\ern -> ern.referralCounts > 0) earnings_
+  let totalCount ern = ern.referralCounts + ern.d2dReferralCounts
+      earnings = filter (\ern -> totalCount ern > 0) earnings_
   driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   dInfo <- runInReplica $ DrInfo.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
   mbVehicle <- QVeh.findById personId
@@ -77,10 +78,10 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
   where
     parseDailyEarnings earning =
       API.Types.UI.ReferralPayout.DailyEarning
-        { earnings = earning.referralEarnings,
+        { earnings = earning.referralEarnings + earning.d2dReferralEarnings,
           activatedItems = earning.activatedValidRides,
           earningDate = earning.merchantLocalDate,
-          referrals = earning.referralCounts,
+          referrals = earning.referralCounts + earning.d2dReferralCounts,
           status = if (earning.payoutStatus `elem` [DS.PendingForVpa, DS.Initialized]) then DS.Verifying else earning.payoutStatus,
           payoutOrderId = earning.payoutOrderId
         }

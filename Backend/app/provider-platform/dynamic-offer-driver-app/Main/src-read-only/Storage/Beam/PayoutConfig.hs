@@ -5,6 +5,7 @@ module Storage.Beam.PayoutConfig where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.PayoutConfig
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import qualified Kernel.External.Payout.Interface.Types
@@ -16,6 +17,7 @@ import Tools.Beam.UtilsTH
 data PayoutConfigT f = PayoutConfigT
   { batchLimit :: B.C f Kernel.Prelude.Int,
     coinRedemptionMinimumLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    d2dPayoutType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PayoutConfig.D2DPayoutTypeEnum),
     expand :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand),
     isPayoutEnabled :: B.C f Kernel.Prelude.Bool,
     maxPayoutReferralForADay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -28,6 +30,7 @@ data PayoutConfigT f = PayoutConfigT
     payoutRegistrationSgst :: B.C f Kernel.Types.Common.HighPrecMoney,
     referralProgramStartDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referralRewardAmountPerRide :: B.C f Kernel.Types.Common.HighPrecMoney,
+    referralRewardAmountPerRideForD2DPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     remark :: B.C f Kernel.Prelude.Text,
     thresholdPayoutAmountPerPerson :: B.C f Kernel.Types.Common.HighPrecMoney,
     timeDiff :: B.C f Kernel.Types.Common.Seconds,
