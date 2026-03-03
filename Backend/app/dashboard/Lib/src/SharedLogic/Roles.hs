@@ -14,7 +14,6 @@ import Kernel.Prelude
 import Kernel.Types.Id
 
 -- TODO add time metrics for recalculate hierarchy, pure code, queries etc
--- TODO unit tests
 -- TODO api for recalculate roles/store redis cache and return roles hierarchy
 
 -- -----------------------------------------------------------------------------
@@ -57,6 +56,7 @@ data RoleHierarchy = RoleHierarchy
 --   Returns:
 --     - Left CycleDetected if a cycle is found in the parent relationships
 --     - Right [RoleHierarchy] for all roles, with ancestors and descendants precomputed
+
 calculateRoleHierarchy :: [DRole.Role] -> Either CycleDetection [RoleHierarchy]
 calculateRoleHierarchy allRoles = do
   -- Build essential indexes for O(log n) lookups

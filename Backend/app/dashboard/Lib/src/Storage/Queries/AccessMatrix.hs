@@ -102,8 +102,6 @@ instance FromTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
             ..
           }
 
--- isDerived = fromMaybe False isDerived,
-
 instance ToTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
   toTType' DMatrix.AccessMatrixItem {..} =
     BeamAM.AccessMatrixT
@@ -111,5 +109,3 @@ instance ToTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
         roleId = getId roleId,
         ..
       }
-
--- isDerived = Just isDerived,

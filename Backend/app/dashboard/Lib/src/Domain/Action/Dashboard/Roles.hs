@@ -65,6 +65,14 @@ data ListRoleRes = ListRoleRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+-- Validate input fields
+validateCreateRoleReq :: Validate CreateRoleReq
+validateCreateRoleReq CreateRoleReq {..} =
+  sequenceA_
+    [ validateField "name" name $ MinLength 3 `And` MaxLength 50 `And` P.name,
+      validateField "description" description $ MinLength 3 `And` P.inputName
+    ]
+
 createRole ::
   BeamFlow m r =>
   TokenInfo ->
@@ -75,7 +83,6 @@ createRole _ req = do
   mbExistingRole <- CQRole.findByName req.name
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
   role <- buildRole req
-  -- void $ CQRole.cacheParentRolesRecursively role
 
   case req.parentRoleId of
     Just parentRoleId -> do
@@ -83,6 +90,7 @@ createRole _ req = do
       allRoles <- CQRole.findAll
       _parentRole <- find (\r -> r.id == parentRoleId) allRoles & fromMaybeM (RoleDoesNotExist parentRoleId.getId)
       let allUpdRoles = role : allRoles
+      logInfo $ "Calculate role hierarchy for roles number: " <> show (length allUpdRoles)
       case SRoles.calculateRoleHierarchy allUpdRoles of
         Left (SRoles.CycleDetected cycleRoles) -> throwError (InvalidRequest $ "Cycle detected in roles hierarchy: " <> show cycleRoles)
         Right rolesHierarchy -> do
@@ -102,14 +110,6 @@ createRole _ req = do
 
   pure $ DRole.mkRoleAPIEntity role
 
--- Validate input fields
-validateCreateRoleReq :: Validate CreateRoleReq
-validateCreateRoleReq CreateRoleReq {..} =
-  sequenceA_
-    [ validateField "name" name $ MinLength 3 `And` MaxLength 50 `And` P.name,
-      validateField "description" description $ MinLength 3 `And` P.inputName
-    ]
-
 buildRole ::
   MonadFlow m =>
   CreateRoleReq ->
@@ -128,13 +128,20 @@ buildRole req = do
         updatedAt = now
       }
 
+validateUpdateRoleReq :: Validate UpdateRoleReq
+validateUpdateRoleReq UpdateRoleReq {..} =
+  sequenceA_
+    [ validateField "name" name $ InMaybe $ MinLength 3 `And` MaxLength 50 `And` P.name,
+      validateField "description" description $ InMaybe $ MinLength 3 `And` P.inputName
+    ]
+
 updateRole ::
   BeamFlow m r =>
   TokenInfo ->
   UpdateRoleReq ->
   m DRole.RoleAPIEntity
 updateRole _ req = do
-  -- runRequestValidation validateUpdateRoleReq req
+  runRequestValidation validateUpdateRoleReq req
 
   whenJust req.name $ \reqName -> do
     mbExistingRole <- CQRole.findByName reqName
@@ -157,6 +164,7 @@ updateRole _ req = do
       allRoles <- CQRole.findAll
       _parentRole <- find (\r -> r.id == parentRoleId) allRoles & fromMaybeM (RoleDoesNotExist parentRoleId.getId)
       let allUpdRoles = map (\r -> if r.id == updRole.id then updRole else r) allRoles
+      logInfo $ "Calculate role hierarchy for roles number: " <> show (length allUpdRoles)
       case SRoles.calculateRoleHierarchy allUpdRoles of
         Left (SRoles.CycleDetected cycleRoles) -> throwError (InvalidRequest $ "Cycle detected in roles hierarchy: " <> show cycleRoles)
         Right rolesHierarchy -> do
@@ -198,7 +206,6 @@ buildAccessMatrixItem roleId req = do
         apiEntity = req.apiEntity,
         userActionType = req.userActionType,
         userAccessType = req.userAccessType,
-        -- isDerived = False,
         createdAt = now,
         updatedAt = now
       }
