@@ -66,12 +66,6 @@ import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 
-data HoldContext = HoldContext
-  { hcHoldId :: Text,
-    hcFromIdx :: Int,
-    hcToIdx :: Int
-  }
-
 confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
 confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id

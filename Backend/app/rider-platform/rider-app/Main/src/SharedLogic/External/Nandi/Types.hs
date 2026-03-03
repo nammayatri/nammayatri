@@ -245,7 +245,7 @@ data BusScheduleDetail = BusScheduleDetail
   { eta :: [BusStopETA],
     vehicle_no :: Text,
     service_tier :: BecknV2.FRFS.Enums.ServiceTierType,
-    trip_number :: Maybe Text,
+    trip_number :: Maybe Int,
     waybill_no :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
