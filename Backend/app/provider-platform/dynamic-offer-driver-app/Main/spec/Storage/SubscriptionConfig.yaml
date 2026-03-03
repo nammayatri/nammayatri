@@ -23,6 +23,10 @@ SubscriptionConfig:
       nextJobScheduleTimeThreshold : Int
       rescheduleTimeThreshold : Int
       derive: "Ord, Eq"
+    VendorMigrationMapping:
+      oldVendorId: Text
+      newVendorId: Text
+      derive: "Eq"
     CurrentPlanEntites :
       enum : "SAFETY_PLUS"
       derive': "Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read"
@@ -70,6 +74,7 @@ SubscriptionConfig:
     disabledVariantsForSubscription: "Maybe [Domain.Types.VehicleVariant.VehicleVariant]"
     sendManualPaymentLinkJobMaxDelay: Maybe Data.Time.NominalDiffTime
     manualPaymentLinkRateLimitExpirySeconds: Maybe Data.Time.NominalDiffTime
+    vendorMigrationMappings: "Maybe [VendorMigrationMapping]"
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
@@ -95,6 +100,8 @@ SubscriptionConfig:
     waiveOffOfferDescription :  Kernel.Prelude.fromMaybe "NAN" |I
     sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 43200|I
     manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 21600|I
+    vendorMigrationMappings: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorMigrationMappings | E
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -115,6 +122,7 @@ SubscriptionConfig:
     waiveOffOfferDescription : Kernel.Prelude.Just|I
     sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 43200)|I
     manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 21600)|I
+    vendorMigrationMappings: Kernel.Prelude.toJSON <$> vendorMigrationMappings | E
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -135,6 +143,7 @@ SubscriptionConfig:
     waiveOffOfferDescription : Maybe Text
     sendManualPaymentLinkJobMaxDelay: Maybe Seconds
     manualPaymentLinkRateLimitExpirySeconds: Maybe Seconds
+    vendorMigrationMappings: Maybe Value
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -173,3 +182,4 @@ SubscriptionConfig:
    webhookConfig:  "json"
    dataEntityToSend: text[]
    disabledVariantsForSubscription: "text[]"
+   vendorMigrationMappings: "json"
