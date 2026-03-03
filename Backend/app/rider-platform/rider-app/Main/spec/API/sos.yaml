@@ -7,6 +7,7 @@ imports:
   SosState : Domain.Types.Sos
   Sos : Domain.Types.Sos
   LatLong : Kernel.External.Maps.Types
+  Integer: EulerHS.Prelude
 
 module: Sos
 types:
@@ -16,7 +17,7 @@ types:
     - currentStatus: Text
     - statusDesc: Maybe Text
     - comments: Maybe Text
-    - lastUpdatedTime: Maybe Int
+    - lastUpdatedTime: Maybe Integer
 
   ErssStatusUpdateRes:
     - resultCode: Text
@@ -209,7 +210,7 @@ apis:
       response:
         type: API.Types.UI.Sos.SosTrackingDetailsRes
 
-  # POST /sos/erss/statusUpdate (NoAuth webhook from C-DAC)
+  # POST /sos/erss/statusUpdate (Webhook for external SOS status update from Police)
   - POST:
       endpoint: /sos/erss/statusUpdate
       auth: NoAuth
