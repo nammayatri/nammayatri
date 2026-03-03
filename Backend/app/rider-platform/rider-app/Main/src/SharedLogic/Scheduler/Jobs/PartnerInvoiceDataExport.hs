@@ -79,7 +79,7 @@ partnerInvoiceDataExportJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   results <- mapM (\logEntry -> (logEntry,) <$> enrichLogEntry logEntry) unexportedLogs
   let successPairs = [(logEntry, rec) | (logEntry, Just rec) <- results]
       enrichedRecords = map snd successPairs
-      -- successLogs = map fst successPairs
+  -- successLogs = map fst successPairs
   let jsonContent = TE.decodeUtf8 $ BL.toStrict $ encode enrichedRecords
       timestamp = T.pack $ formatTime defaultTimeLocale "%Y%m%d_%H%M%S" now
       fileName = "partner_invoice_data_" <> timestamp <> ".json"

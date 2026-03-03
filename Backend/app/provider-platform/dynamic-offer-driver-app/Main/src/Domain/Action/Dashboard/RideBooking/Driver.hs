@@ -32,6 +32,7 @@ module Domain.Action.Dashboard.RideBooking.Driver
 where
 
 import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
+import qualified Dashboard.Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -88,8 +89,10 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as QDriverPanCard
+import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperator
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FeedbackExtra as QFeedback
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Invoice as QINV
@@ -461,6 +464,18 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let isACAllowedForDriver = checkIfACAllowedForDriver info (catMaybes serviceTierACThresholds)
   let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle
   cancellationData <- SCR.getCancellationRateData person.merchantOperatingCityId person.id
+  activeFleetInfo <-
+    B.runInReplica (QFleetDriver.findByDriverId person.id True) >>= \case
+      Nothing -> pure Nothing
+      Just fda -> do
+        fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonDoesNotExist fda.fleetOwnerId)
+        Just <$> buildDriverAssociationInfoFromPerson fleetOwner
+  operatorInfo <-
+    B.runInReplica (QDriverOperator.findByDriverId person.id True) >>= \case
+      Nothing -> pure Nothing
+      Just doa -> do
+        op <- B.runInReplica $ QPerson.findById (Id doa.operatorId) >>= fromMaybeM (PersonDoesNotExist doa.operatorId)
+        Just <$> buildDriverAssociationInfoFromPerson op
   pure
     Common.DriverInfoRes
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -519,9 +534,22 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         driverMode = info.mode,
         lastOfflineTime = info.lastOfflineTime,
         drunkAndDriveViolationCount,
-        onboardingAs = castOnboardingAs <$> info.onboardingAs
+        onboardingAs = castOnboardingAs <$> info.onboardingAs,
+        activeFleetInfo,
+        operatorInfo
       }
   where
+    buildDriverAssociationInfoFromPerson :: (EncFlow m r) => DP.Person -> m Common.DriverAssociationInfo
+    buildDriverAssociationInfoFromPerson p = do
+      mob <- traverse decrypt p.mobileNumber
+      pure
+        Common.DriverAssociationInfo
+          { personId = cast @DP.Person @Dashboard.Common.Person p.id,
+            name = Just $ p.firstName <> maybe "" (" " <>) p.lastName,
+            mobileCountryCode = p.mobileCountryCode,
+            mobileNumber = mob
+          }
+
     castOnboardingAs :: DI.OnboardingAs -> Common.OnboardingAs
     castOnboardingAs = \case
       DI.FLEET_DRIVER -> Common.FLEET_DRIVER

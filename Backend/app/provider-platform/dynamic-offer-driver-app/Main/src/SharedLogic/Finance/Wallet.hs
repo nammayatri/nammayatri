@@ -42,7 +42,6 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.FleetOwnerInformation as QFOI
 
-
 -- Reference type constants (PascalCase, abbreviations in all caps)
 
 walletReferenceBaseRide :: Text
@@ -158,8 +157,9 @@ buildFinanceCtx booking ride mbDriver = do
   mbMerchantOpCity <- CQMOC.findById booking.merchantOperatingCityId
   let mName = mbMerchant <&> (.name)
       mShortId = mbMerchant <&> (.shortId.getShortId)
-      address = mbMerchantOpCity <&> \city ->
-        show city.city <> ", " <> show city.state <> ", " <> show city.country
+      address =
+        mbMerchantOpCity <&> \city ->
+          show city.city <> ", " <> show city.state <> ", " <> show city.country
   -- Resolve supplier info (fleet owner or driver)
   (sName, sGSTIN, sId) <- case ride.fleetOwnerId of
     Just fleetOwnerId -> do
