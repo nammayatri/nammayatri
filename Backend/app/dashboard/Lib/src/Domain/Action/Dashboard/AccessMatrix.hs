@@ -21,9 +21,9 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import Storage.Beam.BeamFlow
+import qualified Storage.CachedQueries.Role as CQRole
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Merchant as QMerchant
-import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import Tools.Error
 
@@ -42,7 +42,7 @@ getAccessMatrix ::
   Maybe Integer ->
   m DMatrix.AccessMatrixAPIEntity
 getAccessMatrix _ mbLimit mbOffset = do
-  roles <- B.runInReplica $ QRole.findAllByLimitOffset mbLimit mbOffset
+  roles <- B.runInReplica $ CQRole.findAllByLimitOffset mbLimit mbOffset
   accessMatrixItems <- B.runInReplica $ QMatrix.findAllByRoles roles
   pure $ DMatrix.mkAccessMatrixAPIEntity roles accessMatrixItems
 
@@ -52,6 +52,6 @@ getAccessMatrixByRole ::
   Id DRole.Role ->
   m DMatrix.AccessMatrixRowAPIEntity
 getAccessMatrixByRole _ roleId = do
-  role <- B.runInReplica $ QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  role <- B.runInReplica $ CQRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   accessMatrixItems <- B.runInReplica $ QMatrix.findAllByRoleId roleId
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role

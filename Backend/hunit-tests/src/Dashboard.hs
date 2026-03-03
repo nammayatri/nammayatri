@@ -5,6 +5,7 @@ module Dashboard
     vehicleAssociationUnitTests,
     driverDocumentUploadUnitTests,
     driverOperationHubUnitTests,
+    rolesHierarchyUnitTests,
     dashboardUnitTests,
   )
 where
@@ -14,6 +15,7 @@ import CreateRequestUnitTests (createRequestUnitTests)
 import DriverDocumentUploadUnitTests (driverDocumentUploadUnitTests)
 import DriverOperationHubUnitTests (driverOperationHubUnitTests)
 import RegistrationUnitTests (registrationUnitTests)
+import RolesHierarchyUnitTests (rolesHierarchyUnitTests)
 import Test.Tasty (TestTree, testGroup)
 import VehicleAssociationUnitTests (vehicleAssociationUnitTests)
 
@@ -23,6 +25,7 @@ dashboardUnitTests =
   testGroup
     "Dashboard Unit Tests"
     [ registrationUnitTests,
+      rolesHierarchyUnitTests,
       vehicleAssociationUnitTests,
       driverDocumentUploadUnitTests,
       driverOperationHubUnitTests,

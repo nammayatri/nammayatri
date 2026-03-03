@@ -19,10 +19,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction as ST
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified "lib-dashboard" Storage.Queries.Person as QP
-import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
@@ -59,8 +59,8 @@ registerOperator ::
 registerOperator opCity email mobileNumber mobileCountryCode firstName lastName password operatorId merchant mbRoleId = do
   operatorRole <-
     case mbRoleId of
-      Just roleId -> QRole.findById (Id roleId) >>= fromMaybeM (RoleNotFound roleId)
-      Nothing -> QRole.findByDashboardAccessType DRole.DASHBOARD_OPERATOR >>= fromMaybeM (RoleNotFound "OPERATOR")
+      Just roleId -> CQRole.findById (Id roleId) >>= fromMaybeM (RoleNotFound roleId)
+      Nothing -> CQRole.findByDashboardAccessType DRole.DASHBOARD_OPERATOR >>= fromMaybeM (RoleNotFound "OPERATOR")
   operator <- buildOperator email mobileNumber mobileCountryCode firstName lastName password operatorId operatorRole
   merchantAccess <- DP.buildMerchantAccess operator.id merchant.id merchant.shortId opCity
   QP.create operator

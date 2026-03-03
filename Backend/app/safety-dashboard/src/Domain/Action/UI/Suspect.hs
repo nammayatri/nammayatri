@@ -22,12 +22,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.CachedQueries.Role as CQRole
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QMerchantAccess
 import qualified Storage.Queries.Notification as SQN
 import "lib-dashboard" Storage.Queries.Person as QP
 import qualified Storage.Queries.PortalConfigs as PC
-import qualified "lib-dashboard" Storage.Queries.Role as QRole
 import qualified Storage.Queries.Suspect as SQ
 import Storage.Queries.SuspectExtra
 import qualified Storage.Queries.SuspectFlagRequest as SQF
@@ -160,7 +160,7 @@ validateChangeRequest suspectId = do
 
 getRecieverIdListByAcessType :: DashboardAccessType -> Environment.Flow [Id Domain.Types.Person.Person]
 getRecieverIdListByAcessType acessName = do
-  role <- QRole.findByDashboardAccessType acessName >>= fromMaybeM (RoleDoesNotExist (show acessName))
+  role <- CQRole.findByDashboardAccessType acessName >>= fromMaybeM (RoleDoesNotExist (show acessName))
   receiversList <- QP.findAllByRoleAndReciveNotification role.id
   return $ map (\receiver -> receiver.id) receiversList
 
@@ -174,7 +174,7 @@ getMerchantAdminReceiverIdList merchanId = do
 
 getAllMerchantAdminIdList :: Id Merchant.Merchant -> Environment.Flow [Id Domain.Types.Person.Person]
 getAllMerchantAdminIdList merchantId = do
-  adminRole <- QRole.findByDashboardAccessType MERCHANT_ADMIN >>= fromMaybeM (RoleDoesNotExist "MERCHANT_ADMIN")
+  adminRole <- CQRole.findByDashboardAccessType MERCHANT_ADMIN >>= fromMaybeM (RoleDoesNotExist "MERCHANT_ADMIN")
   allMerchantUsers <- QMerchantAccess.findAllUserAccountForMerchant merchantId
   let personIds = map (.personId) allMerchantUsers
   merchantAdminList <- QP.findAllByIdRoleIdAndReceiveNotification personIds adminRole.id

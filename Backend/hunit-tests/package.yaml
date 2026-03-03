@@ -75,7 +75,8 @@ default-extensions:
 - TypeFamilies
 - TypeOperators
 - ViewPatterns
-
+ghc-options:
+  - -fplugin=RecordDotPreprocessor
 library:
   source-dirs: src
   exposed-modules:
@@ -87,6 +88,7 @@ library:
   - AddVehicleUnitTests
   - DriverOperationHubUnitTests
   - CreateRequestUnitTests
+  - RolesHierarchyUnitTests
 
 executables:
   hunit-tests:
