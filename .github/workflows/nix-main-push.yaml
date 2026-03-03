@@ -76,10 +76,9 @@ jobs:
         if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
         env:
           DOCKER_REGISTRY: ghcr.io          
-          DOCKER_TAG_PREFIX: "master-"
-          NIX_LOCAL_BUILD: "1"
+          DOCKER_TAG_PREFIX: "master-"          
         run: |
-          nix build .#packages.${{ matrix.system }}.dockerImage --impure
+          NIX_LOCAL_BUILD="1" nix build .#packages.${{ matrix.system }}.dockerImage --impure
 
           BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
