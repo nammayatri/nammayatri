@@ -46,11 +46,17 @@ postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req
       REGULAR_INSPECTION -> maybe (pure False) (\rc -> isJust <$> QOHR.findOneByRequestStatusAndRegistrationNo PENDING (Just rc)) req.registrationNo
     when isDuplicate $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
     void $ QOH.findByPrimaryKey req.operationHubId >>= fromMaybeM (OperationHubDoesNotExist req.operationHubId.getId)
-    let operationHubReq =
+    let (registrationNo', driverId') =
+          case req.requestType of
+            DRIVER_ONBOARDING_INSPECTION -> (Nothing, req.driverId)
+            DRIVER_REGULAR_INSPECTION -> (Nothing, req.driverId)
+            ONBOARDING_INSPECTION -> (req.registrationNo, Nothing)
+            REGULAR_INSPECTION -> (req.registrationNo, Nothing)
+        operationHubReq =
           OperationHubRequests
             { operationHubId = req.operationHubId,
-              registrationNo = req.registrationNo,
-              driverId = req.driverId,
+              registrationNo = registrationNo',
+              driverId = driverId',
               requestType = req.requestType,
               requestStatus = PENDING,
               createdAt = now,
