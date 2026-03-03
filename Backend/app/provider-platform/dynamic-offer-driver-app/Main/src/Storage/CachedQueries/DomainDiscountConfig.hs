@@ -51,6 +51,16 @@ resolveDomainDiscountPercentage merchantOpCityId (Just domain) billingCategory v
         Just wc | wc.enabled -> return $ Just wc.discountPercentage
         _ -> return Nothing
 
+clearCache ::
+  (CacheFlow m r, MonadFlow m) =>
+  Id MerchantOperatingCity ->
+  Text ->
+  SLT.BillingCategory ->
+  ServiceTierType ->
+  m ()
+clearCache merchantOpCityId domain billingCategory vehicleServiceTier =
+  Hedis.del (makeDomainDiscountKey merchantOpCityId domain billingCategory vehicleServiceTier)
+
 makeDomainDiscountKey :: Id MerchantOperatingCity -> Text -> SLT.BillingCategory -> ServiceTierType -> Text
 makeDomainDiscountKey merchantOpCityId domain billingCategory vehicleServiceTier =
   "driverOffer:CachedQueries:DomainDiscountConfig:MocId-"

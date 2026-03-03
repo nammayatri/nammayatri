@@ -64,6 +64,7 @@ library
       API.Types.ProviderPlatform.Management.Account
       API.Types.ProviderPlatform.Management.Booking
       API.Types.ProviderPlatform.Management.CoinsConfig
+      API.Types.ProviderPlatform.Management.DomainDiscountConfig
       API.Types.ProviderPlatform.Management.Driver
       API.Types.ProviderPlatform.Management.DriverCoins
       API.Types.ProviderPlatform.Management.DriverGoHome
@@ -72,6 +73,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Account
       API.Types.ProviderPlatform.Management.Endpoints.Booking
       API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig
+      API.Types.ProviderPlatform.Management.Endpoints.DomainDiscountConfig
       API.Types.ProviderPlatform.Management.Endpoints.Driver
       API.Types.ProviderPlatform.Management.Endpoints.DriverCoins
       API.Types.ProviderPlatform.Management.Endpoints.DriverGoHome
