@@ -239,7 +239,6 @@ library
       Domain.Types.Trip
       Domain.Types.VehicleCategory
       Domain.Types.VehicleVariant
-      Domain.Types.VSTAllowedArea
       Domain.Utils
       IGM.Enums
       IGM.Types
@@ -345,7 +344,6 @@ library
     , servant-multipart
     , servant-openapi3
     , servant-server
-    , special-zone-a
     , stm
     , string-conversions
     , syb

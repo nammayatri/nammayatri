@@ -14,7 +14,6 @@
 
 module SharedLogic.VehicleServiceTierAreaRestriction
   ( areaToText,
-    fromSLArea,
     vstAreasCacheKey,
     populateVSTAreasCache,
     isAreaAllowedForVST,
@@ -23,7 +22,6 @@ module SharedLogic.VehicleServiceTierAreaRestriction
 where
 
 import Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.VSTAllowedArea as VSTAllowedArea
 import Domain.Types.VehicleServiceTier
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -31,13 +29,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, MonadFlow, logDebug, logInfo)
 import qualified Lib.Types.SpecialLocation as SL
 
-fromSLArea :: SL.Area -> Maybe VSTAllowedArea.VSTAllowedArea
-fromSLArea (SL.PickupDrop pickupId dropId) =
-  Just VSTAllowedArea.VSTAllowedArea {pickupId = pickupId, dropId = dropId}
-fromSLArea _ = Nothing
-
 areaToText :: SL.Area -> Maybe Text
-areaToText = fmap VSTAllowedArea.vstAllowedAreaToText . fromSLArea
+areaToText a@(SL.PickupDrop _ _) = Just (SL.areaToText a)
+areaToText _ = Nothing
 
 vstAreasCacheKey :: Id VehicleServiceTier -> Id MerchantOperatingCity -> Text
 vstAreasCacheKey vstId cityId =
@@ -60,7 +54,7 @@ populateVSTAreasCache vst =
           thirtyDaysInSeconds = 30 * 24 * 60 * 60 :: Int
       logInfo $ "VST area cache: writing to Redis key=" <> hashKey <> " areasCount=" <> show (length areasList)
       forM_ areasList $ \area ->
-        Redis.hSetExp hashKey (VSTAllowedArea.vstAllowedAreaToText area) ("1" :: Text) thirtyDaysInSeconds
+        Redis.hSetExp hashKey (SL.areaToText area) ("1" :: Text) thirtyDaysInSeconds
       logDebug $ "VST area cache: populated Redis for vstId=" <> vst.id.getId
 
 isAreaAllowedForVST ::
@@ -97,7 +91,7 @@ checkAreaInCache vst areaText = do
     Nothing -> do
       logInfo $ "VST area check: cache MISS vstId=" <> vst.id.getId <> " areaText=" <> areaText <> " key=" <> hashKey <> " (warming from passed-in VST)"
       populateVSTAreasCache vst
-      return $ maybe False (elem areaText . map VSTAllowedArea.vstAllowedAreaToText) vst.allowedAreas
+      return $ maybe False (elem areaText . map SL.areaToText) vst.allowedAreas
 
 clearVSTAreasCache :: (Redis.HedisFlow m r) => VehicleServiceTier -> m ()
 clearVSTAreasCache vst = void $ Redis.del $ vstAreasCacheKey vst.id vst.merchantOperatingCityId
