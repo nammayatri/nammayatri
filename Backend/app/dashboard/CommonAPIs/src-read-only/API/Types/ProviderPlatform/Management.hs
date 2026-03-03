@@ -7,6 +7,7 @@ import qualified API.Types.ProviderPlatform.Management.Account
 import qualified API.Types.ProviderPlatform.Management.Booking
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig
 import qualified API.Types.ProviderPlatform.Management.Communication
+import qualified API.Types.ProviderPlatform.Management.DomainDiscountConfig
 import qualified API.Types.ProviderPlatform.Management.Driver
 import qualified API.Types.ProviderPlatform.Management.DriverCoins
 import qualified API.Types.ProviderPlatform.Management.DriverGoHome
@@ -39,6 +40,7 @@ data ManagementUserActionType
   | BOOKING API.Types.ProviderPlatform.Management.Booking.BookingUserActionType
   | COINS_CONFIG API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigUserActionType
   | COMMUNICATION API.Types.ProviderPlatform.Management.Communication.CommunicationUserActionType
+  | DOMAIN_DISCOUNT_CONFIG API.Types.ProviderPlatform.Management.DomainDiscountConfig.DomainDiscountConfigUserActionType
   | DRIVER API.Types.ProviderPlatform.Management.Driver.DriverUserActionType
   | DRIVER_COINS API.Types.ProviderPlatform.Management.DriverCoins.DriverCoinsUserActionType
   | DRIVER_GO_HOME API.Types.ProviderPlatform.Management.DriverGoHome.DriverGoHomeUserActionType
@@ -68,6 +70,7 @@ instance Text.Show.Show ManagementUserActionType where
     BOOKING e -> "BOOKING/" <> show e
     COINS_CONFIG e -> "COINS_CONFIG/" <> show e
     COMMUNICATION e -> "COMMUNICATION/" <> show e
+    DOMAIN_DISCOUNT_CONFIG e -> "DOMAIN_DISCOUNT_CONFIG/" <> show e
     DRIVER e -> "DRIVER/" <> show e
     DRIVER_COINS e -> "DRIVER_COINS/" <> show e
     DRIVER_GO_HOME e -> "DRIVER_GO_HOME/" <> show e
@@ -114,6 +117,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "COMMUNICATION/" r,
+                 ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( DOMAIN_DISCOUNT_CONFIG v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "DOMAIN_DISCOUNT_CONFIG/" r,
                    ( v1,
                      r2
                      ) <-

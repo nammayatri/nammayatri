@@ -171,6 +171,7 @@ library
       Domain.Action.Dashboard.Management.Booking
       Domain.Action.Dashboard.Management.CoinsConfig
       Domain.Action.Dashboard.Management.Communication
+      Domain.Action.Dashboard.Management.DomainDiscountConfig
       Domain.Action.Dashboard.Management.Driver
       Domain.Action.Dashboard.Management.DriverCoins
       Domain.Action.Dashboard.Management.DriverGoHome
@@ -847,6 +848,7 @@ library
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.CoinsConfig
       API.Action.Dashboard.Management.Communication
+      API.Action.Dashboard.Management.DomainDiscountConfig
       API.Action.Dashboard.Management.Driver
       API.Action.Dashboard.Management.DriverCoins
       API.Action.Dashboard.Management.DriverGoHome
