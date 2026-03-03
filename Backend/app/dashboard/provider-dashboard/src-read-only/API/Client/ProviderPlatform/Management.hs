@@ -8,6 +8,7 @@ import qualified API.Types.ProviderPlatform.Management.Account
 import qualified API.Types.ProviderPlatform.Management.Booking
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig
 import qualified API.Types.ProviderPlatform.Management.Communication
+import qualified API.Types.ProviderPlatform.Management.DomainDiscountConfig
 import qualified API.Types.ProviderPlatform.Management.Driver
 import qualified API.Types.ProviderPlatform.Management.DriverCoins
 import qualified API.Types.ProviderPlatform.Management.DriverGoHome
@@ -41,6 +42,7 @@ data ManagementAPIs = ManagementAPIs
     bookingDSL :: API.Types.ProviderPlatform.Management.Booking.BookingAPIs,
     coinsConfigDSL :: API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigAPIs,
     communicationDSL :: API.Types.ProviderPlatform.Management.Communication.CommunicationAPIs,
+    domainDiscountConfigDSL :: API.Types.ProviderPlatform.Management.DomainDiscountConfig.DomainDiscountConfigAPIs,
     driverDSL :: API.Types.ProviderPlatform.Management.Driver.DriverAPIs,
     driverCoinsDSL :: API.Types.ProviderPlatform.Management.DriverCoins.DriverCoinsAPIs,
     driverGoHomeDSL :: API.Types.ProviderPlatform.Management.DriverGoHome.DriverGoHomeAPIs,
@@ -69,6 +71,7 @@ mkManagementAPIs merchantId city token = do
   let bookingDSL = API.Types.ProviderPlatform.Management.Booking.mkBookingAPIs bookingClientDSL
   let coinsConfigDSL = API.Types.ProviderPlatform.Management.CoinsConfig.mkCoinsConfigAPIs coinsConfigClientDSL
   let communicationDSL = API.Types.ProviderPlatform.Management.Communication.mkCommunicationAPIs communicationClientDSL
+  let domainDiscountConfigDSL = API.Types.ProviderPlatform.Management.DomainDiscountConfig.mkDomainDiscountConfigAPIs domainDiscountConfigClientDSL
   let driverDSL = API.Types.ProviderPlatform.Management.Driver.mkDriverAPIs driverClientDSL
   let driverCoinsDSL = API.Types.ProviderPlatform.Management.DriverCoins.mkDriverCoinsAPIs driverCoinsClientDSL
   let driverGoHomeDSL = API.Types.ProviderPlatform.Management.DriverGoHome.mkDriverGoHomeAPIs driverGoHomeClientDSL
@@ -91,7 +94,7 @@ mkManagementAPIs merchantId city token = do
   let volunteerDSL = API.Types.ProviderPlatform.Management.Volunteer.mkVolunteerAPIs volunteerClientDSL
   (ManagementAPIs {..})
   where
-    accountClientDSL :<|> bookingClientDSL :<|> coinsConfigClientDSL :<|> communicationClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> entityInfoClientDSL :<|> feedbackFormClientDSL :<|> financeManagementClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> systemClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    accountClientDSL :<|> bookingClientDSL :<|> coinsConfigClientDSL :<|> communicationClientDSL :<|> domainDiscountConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> entityInfoClientDSL :<|> feedbackFormClientDSL :<|> financeManagementClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> systemClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.
