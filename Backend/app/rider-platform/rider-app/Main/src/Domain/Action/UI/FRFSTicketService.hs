@@ -567,6 +567,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
       searchReq =
         DFRFSSearch.FRFSSearch
           { id = searchReqId,
+            multimodalSearchRequestId = multimodalSearchRequestId <|> if integratedBPPConfig.platformType == DIBC.MULTIMODAL then Just searchReqId.getId else Nothing,
             vehicleType = vehicleType_,
             merchantId = merchantId,
             merchantOperatingCityId = fromStation.merchantOperatingCityId,
