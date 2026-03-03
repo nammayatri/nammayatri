@@ -257,18 +257,20 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
         return (flattenedLiveRouteStopTimes, nub $ routesWithoutLiveTimings ++ routesWithoutBuses)
       else do
         return ([], routeCodes)
-  staticRouteStopTimes <- measureLatency
-    ( do
-        scheduleResults <- mapConcurrently
-          (\routeId -> do
-            busScheduleDetails <- OTPRest.getRouteBusSchedule routeId integratedBppConfig
-            results <- mapConcurrently (convertBusScheduleToRouteStopTimeTable routeId) busScheduleDetails
-            return $ concat results
-          )
-          routesWithoutBuses
-        return $ concat scheduleResults
-    )
-    "fetch route stop timing through getRouteBusSchedule"
+  staticRouteStopTimes <-
+    measureLatency
+      ( do
+          scheduleResults <-
+            mapConcurrently
+              ( \routeId -> do
+                  busScheduleDetails <- OTPRest.getRouteBusSchedule routeId integratedBppConfig
+                  results <- mapConcurrently (convertBusScheduleToRouteStopTimeTable routeId) busScheduleDetails
+                  return $ concat results
+              )
+              routesWithoutBuses
+          return $ concat scheduleResults
+      )
+      "fetch route stop timing through getRouteBusSchedule"
   return $ flattenedLiveRouteStopTimes ++ staticRouteStopTimes
   where
     processRoute now routeWithBuses = do
