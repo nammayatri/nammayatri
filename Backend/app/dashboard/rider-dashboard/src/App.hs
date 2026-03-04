@@ -18,8 +18,9 @@ module App
 where
 
 import API
+import Data.Aeson (object, (.=))
 import qualified Data.Aeson as A
-import qualified Data.Aeson.KeyMap as AKM
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.HashMap.Strict as HMS
 import "lib-dashboard" Environment
 import EulerHS.Language as L
@@ -40,20 +41,19 @@ import Kernel.Utils.Servant.Server (runServerWithHealthCheckAndSlackNotification
 import Servant (Context (..))
 import qualified "lib-dashboard" Tools.Auth as Auth
 import qualified Network.Wai as Wai
-import qualified Data.ByteString.Lazy.Char8 as LBS
 
 requestArrivalLoggingMiddleware :: Wai.Middleware
 requestArrivalLoggingMiddleware nextApp req respond = do
   arrivalTime <- getCurrentTime
-  let requestIdText = maybe "NO-REQUEST-ID" decodeUtf8 $ lookup "x-request-id" (Wai.requestHeaders req)
-      path = decodeUtf8 $ Wai.rawPathInfo req
-      method = decodeUtf8 $ Wai.requestMethod req
-      logMessage = "[REQUEST-ARRIVAL] method=" <> method <> " path=" <> path <> " event=request_received_from_sidecar"
-      logJson = A.Object
-        $ AKM.insert "timestamp" (A.String $ show arrivalTime)
-        $ AKM.insert "requestId" (A.String requestIdText)
-        $ AKM.insert "log" (A.String logMessage)
-        $ AKM.empty
+  let requestIdText = (maybe "NO-REQUEST-ID" decodeUtf8 $ lookup "x-request-id" (Wai.requestHeaders req)) :: Text
+      path = decodeUtf8 (Wai.rawPathInfo req) :: Text
+      method = decodeUtf8 (Wai.requestMethod req) :: Text
+      logMessage = ("[REQUEST-ARRIVAL] method=" <> method <> " path=" <> path <> " event=request_received_from_sidecar") :: Text
+      logJson = object
+        [ "timestamp" .= (show arrivalTime :: String)
+        , "requestId" .= requestIdText
+        , "log" .= logMessage
+        ]
   LBS.putStrLn $ A.encode logJson
   nextApp req respond
 
