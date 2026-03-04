@@ -31,6 +31,7 @@ library
       Dashboard.Common.Driver
       Dashboard.Common.DriverCoins
       Dashboard.Common.Exotel
+      Dashboard.Common.FinanceManagement
       Dashboard.Common.MediaFileDocument
       Dashboard.Common.Merchant
       Dashboard.Common.Ride
@@ -38,10 +39,12 @@ library
       Dashboard.ProviderPlatform.CacAuth
       Dashboard.ProviderPlatform.Fleet.Driver
       Dashboard.ProviderPlatform.Fleet.RegistrationV2
+      Dashboard.ProviderPlatform.Management.Communication
       Dashboard.ProviderPlatform.Management.Driver
       Dashboard.ProviderPlatform.Management.DriverCoins
       Dashboard.ProviderPlatform.Management.DriverReferral
       Dashboard.ProviderPlatform.Management.DriverRegistration
+      Dashboard.ProviderPlatform.Management.FinanceManagement
       Dashboard.ProviderPlatform.Management.MediaFileDocument
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
@@ -64,6 +67,8 @@ library
       API.Types.ProviderPlatform.Management.Account
       API.Types.ProviderPlatform.Management.Booking
       API.Types.ProviderPlatform.Management.CoinsConfig
+      API.Types.ProviderPlatform.Management.Communication
+      API.Types.ProviderPlatform.Management.DomainDiscountConfig
       API.Types.ProviderPlatform.Management.Driver
       API.Types.ProviderPlatform.Management.DriverCoins
       API.Types.ProviderPlatform.Management.DriverGoHome
@@ -72,6 +77,8 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Account
       API.Types.ProviderPlatform.Management.Endpoints.Booking
       API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig
+      API.Types.ProviderPlatform.Management.Endpoints.Communication
+      API.Types.ProviderPlatform.Management.Endpoints.DomainDiscountConfig
       API.Types.ProviderPlatform.Management.Endpoints.Driver
       API.Types.ProviderPlatform.Management.Endpoints.DriverCoins
       API.Types.ProviderPlatform.Management.Endpoints.DriverGoHome
@@ -79,6 +86,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
       API.Types.ProviderPlatform.Management.Endpoints.EntityInfo
       API.Types.ProviderPlatform.Management.Endpoints.FeedbackForm
+      API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement
       API.Types.ProviderPlatform.Management.Endpoints.Media
       API.Types.ProviderPlatform.Management.Endpoints.MediaFileDocument
       API.Types.ProviderPlatform.Management.Endpoints.Merchant
@@ -93,6 +101,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Volunteer
       API.Types.ProviderPlatform.Management.EntityInfo
       API.Types.ProviderPlatform.Management.FeedbackForm
+      API.Types.ProviderPlatform.Management.FinanceManagement
       API.Types.ProviderPlatform.Management.Media
       API.Types.ProviderPlatform.Management.MediaFileDocument
       API.Types.ProviderPlatform.Management.Merchant
@@ -219,4 +228,4 @@ library
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j12
+    ghc-options: -O2 -j4

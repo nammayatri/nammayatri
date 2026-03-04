@@ -59,6 +59,7 @@ dependencies:
   - text
   - time
   - aeson
+  - mtl
   - exceptions
   - containers
   - unordered-containers
@@ -101,6 +102,6 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j12
+          - -j4
   dependencies:
     - mobility-core

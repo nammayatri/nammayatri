@@ -55,7 +55,6 @@ update' farePolicy = do
       Se.Set BeamFP.nightShiftEnd $ (.nightShiftEnd) <$> farePolicy.nightShiftBounds,
       Se.Set BeamFP.maxAllowedTripDistance $ (.maxAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
       Se.Set BeamFP.minAllowedTripDistance $ (.minAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
-      Se.Set BeamFP.govtCharges $ farePolicy.govtCharges,
       Se.Set BeamFP.serviceCharge $ roundToIntegral <$> farePolicy.serviceCharge,
       Se.Set BeamFP.tollCharges $ farePolicy.tollCharges,
       Se.Set BeamFP.petCharges $ farePolicy.petCharges,
@@ -144,7 +143,7 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.nightShiftEnd = (.nightShiftEnd) <$> nightShiftBounds,
         BeamFP.maxAllowedTripDistance = (.maxAllowedTripDistance) <$> allowedTripDistanceBounds,
         BeamFP.minAllowedTripDistance = (.minAllowedTripDistance) <$> allowedTripDistanceBounds,
-        BeamFP.govtCharges = govtCharges,
+        BeamFP.govtCharges = Nothing, -- deprecated: GST rate now sourced from TaxConfig
         BeamFP.perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
         BeamFP.rideExtraTimeChargeGracePeriod = rideExtraTimeChargeGracePeriod,
         BeamFP.congestionCharge = congestionChargeMultiplier,
@@ -253,7 +252,7 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {vatChargeConfig = beamVatChargeC
                       maxAllowedTripDistance = maxAllowedTripDistance',
                       distanceUnit = fromMaybe Meter distanceUnit
                     },
-              govtCharges = govtCharges,
+              -- govtCharges from DB is deprecated; GST rate now comes from TaxConfig
               driverExtraFeeBounds = nonEmpty fDEFB,
               farePolicyDetails,
               perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,

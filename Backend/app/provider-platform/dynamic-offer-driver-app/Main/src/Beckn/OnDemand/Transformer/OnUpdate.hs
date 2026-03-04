@@ -107,12 +107,13 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
             Just . List.singleton $
               Spec.Item
                 { itemId = Just estimateId.getId,
+                  itemCategoryIds = Just [Utils.tripCategoryToCategoryCode booking.tripCategory],
                   itemDescriptor = Nothing,
                   itemFulfillmentIds = Nothing,
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing
+                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -267,12 +268,13 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
             Just . List.singleton $
               Spec.Item
                 { itemId = Just newBookingId.getId,
+                  itemCategoryIds = Just [Utils.tripCategoryToCategoryCode booking.tripCategory],
                   itemDescriptor = Nothing,
                   itemFulfillmentIds = Nothing,
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing
+                  itemTags = Utils.mkRateCardTag Nothing booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,

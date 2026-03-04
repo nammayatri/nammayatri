@@ -1,0 +1,20 @@
+CREATE TABLE atlas_driver_offer_bpp.scheduled_payout_config ();
+
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN batch_size integer NOT NULL default 50;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN day_of_month integer ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN day_of_week integer ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN frequency text NOT NULL default 'DAILY';
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN is_enabled boolean NOT NULL default False;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN max_retries_per_driver integer NOT NULL default 3;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN minimum_payout_amount double precision NOT NULL default 10.0;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN order_type text NOT NULL default 'FULFILL_ONLY';
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN payout_category text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN remark text ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN time_diff_from_utc integer NOT NULL default 19800;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN time_of_day text NOT NULL default '02:00';
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN vehicle_category text ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD PRIMARY KEY ( merchant_operating_city_id, payout_category);

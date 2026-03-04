@@ -23,6 +23,7 @@ data LedgerEntry = LedgerEntry
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
     metadata :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    reconciliationStatus :: Kernel.Prelude.Maybe Data.Aeson.Value,
     referenceId :: Kernel.Prelude.Text,
     referenceType :: Kernel.Prelude.Text,
     reversalOf :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry),
@@ -41,8 +42,8 @@ data EntryStatus = PENDING | DUE | SETTLED | VOIDED deriving (Eq, Ord, Show, Rea
 
 data EntryType = Expense | Revenue | LiabilityCreated | LiabilitySettled | Reversal deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EntryType))
-
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EntryStatus))
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EntryType))
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum (''EntryStatus))

@@ -36,14 +36,18 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance
+import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Ride as QRide
 import Tools.Constants
+import Tools.Error
 import Tools.Metrics as Metrics
 import TransactionLogs.Types
 
@@ -147,48 +151,78 @@ accumulateCancellationPenalty ::
     Metrics.HasCoreMetrics r,
     HasShortDurationRetryCfg r c
   ) =>
+  Bool -> -- isWalletEnabled
   SRB.Booking ->
   DRide.Ride ->
   [LYT.TagNameValue] ->
   DTC.TransporterConfig ->
+  DP.Person ->
   m ()
-accumulateCancellationPenalty booking ride rideTags transporterConfig = do
+accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterConfig driver = do
   when (validCancellationPenaltyApplicable `elem` rideTags && isJust booking.fareParams.driverCancellationPenaltyAmount) $ do
     case booking.fareParams.driverCancellationPenaltyAmount of
-      Just penaltyAmount -> do
-        now <- getCurrentTime
-        existingCancellationFee <-
-          QDF.findOngoingCancellationPenaltyFeeByDriverIdAndServiceName
-            (cast ride.driverId)
-            DPlan.YATRI_SUBSCRIPTION
-            booking.providerId
-            booking.merchantOperatingCityId
-            now
-        (feeId, penAmt) <- case existingCancellationFee of
-          Just existingFee -> do
-            Redis.whenWithLockRedis (cancellationPenaltyLockKey existingFee.id.getId) 10 $ do
-              let currentAmount = fromMaybe 0 existingFee.cancellationPenaltyAmount
-                  newAmount = currentAmount + penaltyAmount
-                  newNumRides = existingFee.numRides + 1
-              QDF.updateCancellationPenaltyAmountAndNumRides existingFee.id newAmount newNumRides now
-            return (existingFee.id, penaltyAmount)
-          Nothing -> do
-            (_, newFee) <-
-              mkCancellationPenaltyFee
-                now
+      Just penaltyAmount ->
+        if isWalletEnabled
+          then do
+            ctx <- buildFinanceCtx booking ride (Just driver)
+            result <- runFinance ctx $ do
+              _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges
+              invoice
+                InvoiceConfig
+                  { invoiceType = Invoice.RideCancellation,
+                    issuedToType = "DRIVER",
+                    issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
+                    issuedToName = Nothing,
+                    issuedToAddress = Nothing,
+                    gstBreakdown = Nothing,
+                    lineItems =
+                      [ InvoiceLineItem {description = "Driver Cancellation Penalty", quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False}
+                      ]
+                  }
+            case result of
+              Left err -> fromEitherM (\e -> InternalError ("Failed to create DriverCancellationCharges: " <> show e)) (Left err)
+              Right _ -> pure ()
+            logInfo $
+              "Created DriverCancellationCharges ledger entry for ₹"
+                <> show penaltyAmount
+                <> " bookingId: "
+                <> booking.id.getId
+            QRide.updateDriverCancellationPenalty Nothing (Just penaltyAmount) ride.id
+          else do
+            -- Legacy path: create/update DriverFee
+            now <- getCurrentTime
+            existingCancellationFee <-
+              QDF.findOngoingCancellationPenaltyFeeByDriverIdAndServiceName
+                (cast ride.driverId)
+                DPlan.YATRI_SUBSCRIPTION
                 booking.providerId
                 booking.merchantOperatingCityId
-                ride.driverId
-                penaltyAmount
-                booking.currency
-                transporterConfig
-            QDF.create newFee
-            logInfo $
-              "Created new CANCELLATION_PENALTY DriverFee " <> newFee.id.getId
-                <> " for ₹"
-                <> show penaltyAmount
-            return (newFee.id, penaltyAmount)
-        QRide.updateDriverCancellationPenalty (Just feeId.getId) (Just penAmt) ride.id
+                now
+            (feeId, penAmt) <- case existingCancellationFee of
+              Just existingFee -> do
+                Redis.whenWithLockRedis (cancellationPenaltyLockKey existingFee.id.getId) 10 $ do
+                  let currentAmount = fromMaybe 0 existingFee.cancellationPenaltyAmount
+                      newAmount = currentAmount + penaltyAmount
+                      newNumRides = existingFee.numRides + 1
+                  QDF.updateCancellationPenaltyAmountAndNumRides existingFee.id newAmount newNumRides now
+                return (existingFee.id, penaltyAmount)
+              Nothing -> do
+                (_, newFee) <-
+                  mkCancellationPenaltyFee
+                    now
+                    booking.providerId
+                    booking.merchantOperatingCityId
+                    ride.driverId
+                    penaltyAmount
+                    booking.currency
+                    transporterConfig
+                QDF.create newFee
+                logInfo $
+                  "Created new CANCELLATION_PENALTY DriverFee " <> newFee.id.getId
+                    <> " for ₹"
+                    <> show penaltyAmount
+                return (newFee.id, penaltyAmount)
+            QRide.updateDriverCancellationPenalty (Just feeId.getId) (Just penAmt) ride.id
       Nothing ->
         logError $
           "Penalty tag present but driverCancellationPenaltyAmount is Nothing for ride "

@@ -313,32 +313,16 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN approved boolea
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN address_document_type text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN address text ;
 
-
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_bank_account_details text ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.driver_information ALTER COLUMN driver_bank_account_details TYPE json;
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_bank_account_details json;
 
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN tds_rate double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_blocked_for_scheduled_payout boolean ;

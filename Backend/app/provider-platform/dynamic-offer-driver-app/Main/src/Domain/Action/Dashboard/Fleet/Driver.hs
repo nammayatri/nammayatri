@@ -77,6 +77,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetScheduledBookingList,
     postDriverFleetScheduledBookingAssign,
     postDriverFleetScheduledBookingCancel,
+    postDriverFleetScheduledBookingReassign,
     postDriverFleetDashboardAnalyticsCache,
     postDriverAddRidePayoutAccountNumber,
   )
@@ -88,8 +89,8 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.En
 import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode (..))
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import Control.Applicative (liftA2, optional)
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.Common as DCommonRole (Role (..))
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Char (isDigit)
 import Data.Coerce (coerce)
 import Data.Csv
@@ -114,17 +115,21 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
+import qualified Domain.Action.UI.Ride.CancelRide.Internal as RideCancelInternal
 import qualified Domain.Action.UI.WMB as DWMB
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Alert as DTA
 import Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.AlertRequest as DTR
+import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLocation as DDL
+import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.DriverRidePayoutBankAccount as DRPB
 import qualified Domain.Types.FleetBadge as DFB
@@ -139,6 +144,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.TransporterConfig as DTCConfig
@@ -165,13 +171,16 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import SharedLogic.Analytics as Analytics
+import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
-import qualified SharedLogic.External.LocationTrackingService.Types as LTST
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoMerchantBased)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -192,7 +201,9 @@ import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverBankAccount as QDBA
+import qualified Storage.Queries.DriverGstinExtra as QDGExtra
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
@@ -224,9 +235,12 @@ import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
+import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QRideExtra
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.TripAlertRequest as QTAR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -1407,8 +1421,8 @@ castDashboardDriverStatus = \case
 
 ---------------------------------------------------------------------
 
-getDriverFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbHasRequestReason = do
+getDriverFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.DrivertoVehicleAssociationResT
+getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbHasRequestReason mbServiceTier = do
   requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
   fleetOwnersInfo <- getFleetOwnersInfoMerchantBased mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner
   when (hasFleetMemberHierarchy == Just False) $ mapM_ (FleetAccess.checkRequestorAccessToFleet False mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
@@ -1417,7 +1431,16 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
   let fleetOwnerIds = map (.fleetOwnerId) fleetOwnersInfo
       fleetOwnerNameMap = Map.fromList $ map (\info -> (info.fleetOwnerId, info.fleetOwnerName)) fleetOwnersInfo
   listOfAllDrivers <- getListOfDriversMultiFleet mbCountryCode mbDriverPhNo fleetOwnerIds merchant.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason
-  listItems <- createFleetDriverAssociationListItem fleetOwnerNameMap listOfAllDrivers
+  filteredDrivers <- case mbServiceTier of
+    Nothing -> pure listOfAllDrivers
+    Just tierText -> do
+      let (fdaList, personList, driverInfoList) = listOfAllDrivers
+      vehicles <- QVehicle.findAllByDriverIds (map (.id) personList)
+      let vehicleMap = Map.fromList [(v.driverId, v) | v <- vehicles]
+      let keepFunc (_fda, person, _info) = maybe False (\v -> any (\st -> show st == tierText) v.selectedServiceTiers) (Map.lookup person.id vehicleMap)
+      let filteredTriples = filter keepFunc (zip3 fdaList personList driverInfoList)
+      pure $ unzip3 filteredTriples
+  listItems <- createFleetDriverAssociationListItem fleetOwnerNameMap filteredDrivers
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $
     Common.DrivertoVehicleAssociationResT
@@ -1531,6 +1554,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
                           localResidenceProof = Just localResidenceProofStatus,
                           drivingSchoolCertificate = Just drivingSchoolCertificateStatus
                         },
+                  selectedServiceTiers = [],
                   ..
                 }
         pure ls
@@ -1618,6 +1642,16 @@ getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehi
                   localResidenceProof = Nothing,
                   drivingSchoolCertificate = Nothing
                 }
+        selectedServiceTiers <- case driverId of
+          Nothing -> pure []
+          Just driverIdText -> do
+            mbVehicle <- QVehicle.findById (Id @DP.Person driverIdText)
+            mbPerson <- QPerson.findById (Id @DP.Person driverIdText)
+            case (mbVehicle, mbPerson) of
+              (Just vehicle, Just person) -> do
+                cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
+                pure $ map (\st -> maybe (show st) (.name) (find (\vst -> vst.serviceTierType == st) cityVehicleServiceTiers)) vehicle.selectedServiceTiers
+              _ -> pure []
         let ls =
               Common.DriveVehicleAssociationListItemT
                 { vehicleNo = Just decryptedVehicleRC,
@@ -1633,6 +1667,7 @@ getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehi
                   requestReason = Nothing,
                   responseReason = Nothing,
                   associatedOn = mbAssociatedOn,
+                  selectedServiceTiers = selectedServiceTiers,
                   ..
                 }
         pure ls
@@ -2028,7 +2063,16 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             fleetDob = Nothing,
             stripeAddress = Nothing,
             stripeIdNumber = Nothing,
-            updatedAt = person.updatedAt
+            updatedAt = person.updatedAt,
+            panAadhaarLinkedFlag = Nothing,
+            gstinApplicableFlag = Nothing,
+            tdsApplicableFlag = Nothing,
+            walletId = Nothing,
+            bankAccountNumber = Nothing,
+            bankIfsc = Nothing,
+            bankVerificationStatus = Nothing,
+            upiId = Nothing,
+            linkedDriverIds = []
           }
     Just fleetOwnerInfo -> do
       fleetConfig <- QFC.findByPrimaryKey personId
@@ -2072,11 +2116,44 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
       stripeIdNumber' <- forM stripeIdNumber decrypt
       let name = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.middleName <> maybe "" (" " <>) fleetOwner.lastName
       mobileNo' <- mapM decrypt fleetOwner.mobileNumber
+
+      -- Fetch DriverInformation for upiId
+      mbDriverInfo <- QDriverInfo.findById fleetOwnerPersonId
+
+      -- Fetch GSTIN details for gstinApplicableFlag and gstImageId
+      mbGstin <- QDGExtra.findGSTInByDriverId fleetOwnerPersonId
+      let gstinApplicableFlag = mbGstin <&> \gstin -> gstin.verificationStatus == Documents.VALID
+      let gstImageIdVal = mbGstin <&> \gstin -> gstin.documentImageId1.getId
+
+      -- Fetch DriverPanCard for panAadhaarLinkedFlag
+      mbPanCard <- QPanCard.findByDriverId fleetOwnerPersonId
+      let panAadhaarLinkedFlag =
+            (== DPanCard.PAN_AADHAAR_LINKED) <$> (mbPanCard >>= (.panAadhaarLinkage))
+
+      -- tdsApplicableFlag - check from FleetOwnerInfo or config (defaulting to Nothing for now)
+      let tdsApplicableFlag = Nothing
+
+      -- Fetch bank account details (similar to Driver info)
+      mbBankAccount <- QDBA.findByPrimaryKey fleetOwnerPersonId
+      let bankAccountNumber' = mbBankAccount <&> (.accountId)
+      let bankIfsc' = mbBankAccount >>= (.ifscCode)
+      -- wallet_id = Account_id from Finance_account where counterparty_id = fleet_owner_id AND AccountType = Liability
+      mbWalletAccount <- FWallet.getWalletAccountByOwner FLEET_OWNER fleetOwnerPersonId.getId
+      let walletId' = (\acc -> acc.id.getId) <$> mbWalletAccount
+      let bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+
+      -- upiId from DriverInformation
+      let upiId' = mbDriverInfo >>= (.payoutVpa)
+
+      -- Fetch linked drivers
+      linkedDrivers <- FDV.findAllActiveByFleetOwnerId fleetOwnerPersonId.getId
+
       return $
         Common.FleetOwnerInfoRes
           { fleetType = show fleetType,
             referralCode = (.referralCode.getId) <$> referral,
             gstNumber = gstNumber',
+            gstImageId = gstImageIdVal,
             panNumber = panNumber',
             aadhaarNumber = aadhaarNumber',
             businessLicenseNumber = businessLicenseNumber',
@@ -2090,6 +2167,15 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             operatorName = operatorName,
             operatorContact = operatorContact,
             operators = operatorsList,
+            bankAccountNumber = bankAccountNumber',
+            bankIfsc = bankIfsc',
+            bankVerificationStatus = bankVerificationStatus',
+            walletId = walletId',
+            panAadhaarLinkedFlag = panAadhaarLinkedFlag,
+            gstinApplicableFlag = gstinApplicableFlag,
+            tdsApplicableFlag = tdsApplicableFlag,
+            upiId = upiId',
+            linkedDriverIds = map (\assoc -> assoc.driverId.getId) linkedDrivers,
             ..
           }
 
@@ -3076,7 +3162,7 @@ postDriverFleetGetNearbyDrivers merchantShortId _ fleetOwnerId req = do
         map
           ( \driverLocation ->
               case (driverLocation.rideDetails >>= (.rideInfo), driverLocation.rideDetails <&> (.rideStatus)) of
-                (Just (LTST.Bus LTST.BusRideInfo {..}), Just rideStatus) ->
+                (Just (LT.Bus LT.BusRideInfo {..}), Just rideStatus) ->
                   case driverName of
                     Just driverName' ->
                       Just $
@@ -3465,7 +3551,7 @@ postDriverFleetGetNearbyDriversV2 merchantShortId _ fleetOwnerId req = do
 
     handleBusDriver driverLocation =
       case (driverLocation.rideDetails >>= (.rideInfo), driverLocation.rideDetails <&> (.rideStatus)) of
-        (Just (LTST.Bus LTST.BusRideInfo {..}), Just rideStatus) ->
+        (Just (LT.Bus LT.BusRideInfo {..}), Just rideStatus) ->
           Just $
             Common.NearbyDriverDetails
               { driverId = cast driverLocation.driverId,
@@ -3478,7 +3564,7 @@ postDriverFleetGetNearbyDriversV2 merchantShortId _ fleetOwnerId req = do
 
     handleVipDriver driverLocation =
       case (driverLocation.rideDetails >>= (.rideInfo), driverLocation.rideDetails <&> (.rideStatus)) of
-        (Just (LTST.Pilot LTST.PilotRideInfo {..}), Just rideStatus) ->
+        (Just (LT.Pilot LT.PilotRideInfo {..}), Just rideStatus) ->
           Just $
             Common.NearbyDriverDetails
               { driverId = cast driverLocation.driverId,
@@ -3801,10 +3887,11 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
   _ <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
-
-  isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
-  unless isValid $ throwError AccessDenied
+  mbRequestor <- QPerson.findById (Id requestorId)
+  -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+  whenJust mbRequestor $ \requestor -> do
+    isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
+    unless isValid $ throwError AccessDenied
 
   when (isJust req.firstName || isJust req.lastName || isJust req.email) $ do
     whenJust req.email $ \reqEmail -> do
@@ -3968,7 +4055,7 @@ getDriverFleetScheduledBookingList ::
   Maybe DTC.TripCategory ->
   Maybe LatLong ->
   Flow Common.FleetScheduledBookingListRes
-getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbFromDay mbToDay mbTripCategory mbCurrentLocation = do
+getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbFromDay mbToDay mbTripCategory _mbCurrentLocation = do
   -- check if fleet owner or stop sending fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -3981,15 +4068,17 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
         (Just from, Just to) -> do
           when (from > to) $ throwError (InvalidRequest "From date should be less than to date")
 
-          let limit = fromMaybe 10 mbLimit
+          let scheduledBookingListLimit = 10
+              limit = min scheduledBookingListLimit $ fromMaybe scheduledBookingListLimit mbLimit
               offset = fromMaybe 0 mbOffset
               possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
               tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
           cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
           let allVehicleVariants = nub $ concatMap (.allowedVehicleVariant) cityServiceTiers
               safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
-          scheduledBookings <- UIDriver.getScheduledBookings from merchantOpCityId allVehicleVariants mbCurrentLocation transporterConfig Nothing tripCategory (toInteger limit) (toInteger offset) safelimit
-          bookings <- mapM (UIDriver.buildBookingAPIEntityFromBooking mbCurrentLocation) (catMaybes scheduledBookings)
+          -- Fleet sees all scheduled bookings; no location/reachability filter (unlike driver app listScheduledBookings)
+          scheduledBookings <- UIDriver.getScheduledBookings from merchantOpCityId allVehicleVariants Nothing transporterConfig Nothing tripCategory (toInteger limit) (toInteger offset) safelimit
+          bookings <- mapM (UIDriver.buildBookingAPIEntityFromBooking Nothing) (catMaybes scheduledBookings)
           fleetBookings <- mapM convertToFleetScheduledBooking (catMaybes bookings)
 
           pure $ Common.FleetScheduledBookingListRes {bookings = fleetBookings}
@@ -4068,6 +4157,10 @@ postDriverFleetScheduledBookingAssign merchantShortId opCity fleetOwnerId Common
   let driverPersonId = cast @Common.Driver @DP.Person driverId
   fleetDriverAssociation <- QFDAExtra.findByDriverId driverPersonId True >>= fromMaybeM (InvalidRequest "Driver not associated with fleet")
   unless (fleetDriverAssociation.fleetOwnerId == fleetOwnerId) $ throwError (InvalidRequest "Driver does not belong to this fleet owner")
+  -- Driver's selected service tiers must include booking's service tier (drivers can downgrade variant)
+  booking <- QRB.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
+  vehicle <- QVehicle.findById driverPersonId >>= fromMaybeM (VehicleNotFound driverPersonId.getId)
+  unless (booking.vehicleServiceTier `elem` vehicle.selectedServiceTiers) $ throwError (InvalidRequest "Booking's service tier is not in driver's selected service tiers")
   void $ UIDriver.acceptScheduledBooking (driverPersonId, merchant.id, merchantOpCityId) clientId (Id bookingId)
   pure Success
 
@@ -4089,4 +4182,78 @@ postDriverFleetScheduledBookingCancel _merchantShortId _opCity fleetOwnerId Comm
 
   -- Call driverCancelRideHandler
   void $ RideCancel.driverCancelRideHandler RideCancel.cancelRideHandle (Id fleetOwnerId) (Id rideId) cancelRideReq
+  pure Success
+
+----------------------------------------------------------------------
+postDriverFleetScheduledBookingReassign ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.ReassignScheduledBookingReq ->
+  Flow APISuccess
+postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Common.ReassignScheduledBookingReq {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  -- 1. Get old ride and validate old driver belongs to fleet
+  oldRide <- QRide.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
+  oldBooking <- QRB.findById oldRide.bookingId >>= fromMaybeM (BookingNotFound oldRide.bookingId.getId)
+  let oldDriverPersonId = oldRide.driverId
+  oldDriver <- QPerson.findById oldDriverPersonId >>= fromMaybeM (PersonNotFound oldDriverPersonId.getId)
+  oldFleetAssociation <- QFDAExtra.findByDriverId oldDriverPersonId True >>= fromMaybeM (InvalidRequest "Old driver not associated with fleet")
+  unless (oldFleetAssociation.fleetOwnerId == fleetOwnerId) $ throwError (InvalidRequest "Old driver does not belong to this fleet owner")
+
+  -- 2. Validate new driver belongs to fleet
+  let newDriverPersonId = cast @Common.Driver @DP.Person newDriverId
+  newFleetAssociation <- QFDAExtra.findByDriverId newDriverPersonId True >>= fromMaybeM (InvalidRequest "New driver not associated with fleet")
+  unless (newFleetAssociation.fleetOwnerId == fleetOwnerId) $ throwError (InvalidRequest "New driver does not belong to this fleet owner")
+
+  -- 2b. New driver's selected service tiers must include booking's service tier (drivers can downgrade variant)
+  newDriverVehicle <- QVehicle.findById newDriverPersonId >>= fromMaybeM (VehicleNotFound newDriverPersonId.getId)
+  unless (oldBooking.vehicleServiceTier `elem` newDriverVehicle.selectedServiceTiers) $ throwError (InvalidRequest "Booking's service tier is not in driver's selected service tiers")
+  newDriver <- QPerson.findById newDriverPersonId >>= fromMaybeM (PersonNotFound newDriverPersonId.getId)
+
+  -- 3. Validate ride status
+  unless (oldRide.status `elem` [DRide.NEW, DRide.UPCOMING]) $ throwError (RideInvalidStatus "Ride must be in NEW or UPCOMING status to reassign")
+
+  -- 4. Get quote and search request for creating new booking
+  quote <- QQuote.findById (Id oldBooking.quoteId) >>= fromMaybeM (InvalidRequest $ "Quote not found: " <> oldBooking.quoteId)
+  searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (InvalidRequest $ "Search request not found: " <> quote.searchRequestId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId oldBooking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound oldBooking.merchantOperatingCityId.getId)
+
+  -- 5. Cancel old ride using cancelRideTransaction
+  now <- getCurrentTime
+  let bookingCReason =
+        SBCR.BookingCancellationReason
+          { driverId = Just oldRide.driverId,
+            bookingId = oldBooking.id,
+            rideId = Just oldRide.id,
+            merchantId = Just merchant.id,
+            source = SBCR.ByFleetOwner,
+            reasonCode = Nothing,
+            additionalInfo = Nothing,
+            driverCancellationLocation = Nothing,
+            driverDistToPickup = Nothing,
+            distanceUnit = oldBooking.distanceUnit,
+            merchantOperatingCityId = Just oldBooking.merchantOperatingCityId
+          }
+  RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing transporterConfig oldDriver
+
+  -- 6. Create new booking and quote (similar to performStaticOfferReallocation)
+  newBookingId <- generateGUID
+  newQuoteId <- generateGUID
+  newFareParamsId <- generateGUID
+  searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+  let newIsScheduled = oldBooking.isScheduled && transporterConfig.scheduleRideBufferTime `addUTCTime` now < searchReq.startTime
+      newFareParams = quote.fareParams{id = newFareParamsId, updatedAt = now}
+      newQuote = quote{id = Id newQuoteId, fareParams = newFareParams, validTill = searchRequestExpirationSeconds `addUTCTime` now, isScheduled = newIsScheduled}
+      newBooking = oldBooking{id = newBookingId, quoteId = newQuoteId, status = SRB.NEW, isScheduled = newIsScheduled, startTime = max now oldBooking.startTime, createdAt = now, updatedAt = now}
+
+  -- 7. Save new booking and quote
+  QQuote.create newQuote
+  QRB.createBooking newBooking
+  when newBooking.isScheduled $ void $ SBooking.addScheduledBookingInRedis newBooking
+
+  -- 8. Assign to new driver immediately (reuse merchant, transporterConfig, newBooking to avoid duplicate queries)
+  void $ UIDriver.acceptScheduledBookingWithPreFetched merchant transporterConfig newBooking newDriver clientId
+
   pure Success

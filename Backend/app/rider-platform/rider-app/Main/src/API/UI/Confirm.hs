@@ -86,7 +86,7 @@ confirm' ::
 confirm' (personId, _) quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled =
   withPersonIdLogTag personId $ do
     -- BoothOnline (Paytm EDC) always requires payment before confirm; derived from paymentInstrument only
-    let requiresPaymentBeforeConfirm = mbPaymentInstrument == Just DMPM.BoothOnline
+    let requiresPaymentBeforeConfirm = mbPaymentInstrument == Just DMPM.BoothOnline && mbPaymentMethodId == Just "PAYTM_EDC"
     dConfirmRes <- DConfirm.confirm personId quoteId mbDashboardAgentId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
     moc <- CQMOC.findByMerchantIdAndCity dConfirmRes.merchant.id dConfirmRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dConfirmRes.merchant.id.getId <> "-city-" <> show dConfirmRes.city)

@@ -83,15 +83,6 @@ deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> 
 deleteByDriverId driverId = do
   deleteWithKV [Se.Is BeamOHR.creatorId $ Se.Eq (getId driverId)]
 
-findPendingRequestByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> m (Maybe OperationHubRequests)
-findPendingRequestByOperatorId operatorId = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamOHR.operatorId $ Se.Eq (Just $ getId operatorId),
-          Se.Is BeamOHR.requestStatus $ Se.Eq PENDING
-        ]
-    ]
-
 deleteByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> m ()
 deleteByOperatorId operatorId = do
   deleteWithKV [Se.Is BeamOHR.operatorId $ Se.Eq (Just $ getId operatorId)]

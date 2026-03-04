@@ -129,3 +129,8 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN send_manual_pa
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN manual_payment_link_rate_limit_expiry_seconds integer  default 21600;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN vendor_migration_mappings json ;

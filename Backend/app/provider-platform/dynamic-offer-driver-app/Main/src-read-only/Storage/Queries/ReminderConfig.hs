@@ -51,6 +51,8 @@ instance FromTType' Beam.ReminderConfig Domain.Types.ReminderConfig.ReminderConf
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             reminderIntervals = reminderIntervals,
+            reminderOnRideRescheduleIntervalSeconds = reminderOnRideRescheduleIntervalSeconds,
+            reminderRescheduleIntervalSeconds = reminderRescheduleIntervalSeconds,
             ridesThreshold = ridesThreshold,
             updatedAt = updatedAt
           }
@@ -66,6 +68,8 @@ instance ToTType' Beam.ReminderConfig Domain.Types.ReminderConfig.ReminderConfig
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.reminderIntervals = reminderIntervals,
+        Beam.reminderOnRideRescheduleIntervalSeconds = reminderOnRideRescheduleIntervalSeconds,
+        Beam.reminderRescheduleIntervalSeconds = reminderRescheduleIntervalSeconds,
         Beam.ridesThreshold = ridesThreshold,
         Beam.updatedAt = updatedAt
       }

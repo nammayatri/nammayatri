@@ -5,7 +5,7 @@ INSERT INTO atlas_driver_offer_bpp.operation_hub (
 )
 SELECT
     'Udyog Vihar Phase 2, Gurugram, Haryana',
-    atlas_driver_offer_bpp.uuid_generate_v4(),
+    'operation-hub-id-0000000000000000000',
     28.5057,
     77.0888,
     (SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id = 'NAMMA_YATRI_PARTNER'),

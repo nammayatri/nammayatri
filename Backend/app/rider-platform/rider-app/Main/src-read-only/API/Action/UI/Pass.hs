@@ -152,10 +152,24 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "multimodal"
+      :> "pass"
+      :> "set"
+      :> "prefSrcAndDest"
+      :> Capture
+           "purchasedPassId"
+           (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.Pass.SetPassPrefSrcAndDestReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture
+handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> postMultimodalPassSetPrefSrcAndDest
 
 getMultimodalPassAvailablePasses ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -250,3 +264,13 @@ postMultimodalPassUploadProfilePicture ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalPassUploadProfilePicture a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePicture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postMultimodalPassSetPrefSrcAndDest ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass ->
+    API.Types.UI.Pass.SetPassPrefSrcAndDestReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalPassSetPrefSrcAndDest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSetPrefSrcAndDest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

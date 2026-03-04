@@ -1,0 +1,24 @@
+@token2 = {{driver-offer-bpp-auto-token2}}
+@driverId = favorit-auto2-0000000000000000000000
+@driver-offer-bpp-host = http://localhost:8016
+
+# @name healthcheck
+
+GET {{driver-offer-bpp-host}}/ui
+
+###
+
+# @name postLmsQuestionConfirm
+POST {{driver-offer-bpp-host}}/ui/lms/question/confirm
+content-type: application/json
+token: {{token2}}
+
+{
+  "questionId": "questionId",
+  "moduleId" : "moduleId",
+  "language": "ENGLISH",
+  "selectedOption":
+  { "tag": "SingleSelectedOption",
+    "contents": "selectedOption"
+  }
+}

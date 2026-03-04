@@ -5,6 +5,7 @@ module Storage.Queries.Transformers.TransporterConfig
     parseAnalyticsConfig,
     parseDriverWalletConfig,
     parseSubscriptionConfig,
+    parseTaxConfig,
   )
 where
 
@@ -54,7 +55,6 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
           { enableDriverWallet = False,
             driverWalletPayoutThreshold = 0,
             gstPercentage = 0.0,
-            tdsRate = Nothing,
             enableWalletPayout = False,
             enableWalletTopup = False,
             maxWalletPayoutsPerDay = Nothing,
@@ -64,3 +64,17 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             payoutFee = Nothing
           }
   parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def parseDriverWalletConfigWithDefault mbVal
+
+$(mkFieldParserWithDefault ''TaxConfig)
+
+parseTaxConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m TaxConfig
+parseTaxConfig merchantOperatingCityId mbVal = do
+  let def =
+        TaxConfig
+          { rideGst = GstBreakup {cgstPercentage = Nothing, sgstPercentage = Nothing, igstPercentage = Nothing},
+            securityDepositGst = Nothing,
+            defaultTdsRate = Nothing,
+            subscriptionTdsRate = Nothing,
+            invalidPanTdsRate = 0
+          }
+  parseFieldWithDefaultM "transporterConfig" "taxConfig" merchantOperatingCityId def parseTaxConfigWithDefault mbVal

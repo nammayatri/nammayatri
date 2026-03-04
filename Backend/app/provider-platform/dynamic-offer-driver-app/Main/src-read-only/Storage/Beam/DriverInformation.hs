@@ -64,6 +64,7 @@ data DriverInformationT f = DriverInformationT
     hasAdvanceBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasRideStarted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBlockedForReferralPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isBlockedForScheduledPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isHighAccuracyLocationEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isInteroperable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPetModeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

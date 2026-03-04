@@ -32,6 +32,7 @@ import Domain.Types.Ride as Ride
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, elem, forM_, id, length, null, sum, traverse_, whenJust)
 import IssueManagement.Domain.Types.MediaFile as DMF
@@ -463,7 +464,10 @@ data RideItem = RideItem
     customerName :: Maybe Text,
     fareDiff :: Maybe Price,
     bookingStatus :: Common.BookingStatus,
-    tripCategory :: DTC.TripCategory
+    tripCategory :: DTC.TripCategory,
+    ride :: Maybe Ride.Ride,
+    booking :: Maybe Booking.Booking,
+    driverId :: Maybe (Id Person)
   }
 
 data RideItemV2 = RideItemV2
@@ -537,7 +541,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       rideDetails <- findOneWithKV [Se.Is BeamRD.id $ Se.Eq $ getId ride.id] >>= fromMaybeM (RideNotFound $ "for ride id: " <> ride.id.getId)
       riderDetails <- findOneWithKV [Se.Is BeamRDR.id $ Se.Eq $ getId $ fromJust booking.riderId | isJust booking.riderId] >>= fromMaybeM (RiderDetailsNotFound $ "for booking id: " <> booking.id.getId)
       let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
-      pure $ mkRideItem <$> [(rideShortId, ride.createdAt, rideDetails, riderDetails, booking, fareDiff, mkBookingStatus now ride)]
+      pure $ mkRideItem <$> [(ride, rideShortId, ride.createdAt, rideDetails, riderDetails, booking, fareDiff, mkBookingStatus now ride)]
     Nothing -> do
       zippedRides <- case mbTo of
         Just toDate | roundToMidnightUTCToDate toDate >= now -> do
@@ -636,7 +640,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
           rd <- catMaybes <$> mapM fromTType' rideDetails
           rdr <- catMaybes <$> mapM fromTType' riderDetails
           let fareDiffs = zipWith (\ride booking -> mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare) r b
-          pure $ zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr b fareDiffs (mkBookingStatus now <$> r)
+          let z7 = zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr b fareDiffs (mkBookingStatus now <$> r)
+          pure $ zipWith (\ride (rideShortId, rideCreatedAt, rd', rdr', b', fareDiff, bookingStatus) -> (ride, rideShortId, rideCreatedAt, rd', rdr', b', fareDiff, bookingStatus)) r z7
         Left err -> do
           logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
           pure []
@@ -679,13 +684,13 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                 booking <- ride.bookingId `HMS.lookup` bookingsMap
                 riderDetail <- booking.riderId >>= (`HMS.lookup` riderDetailsMap)
                 let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
-                Just (mkRideItem (ride.shortId, ride.createdAt, rideDetail, riderDetail, booking, fareDiff, mkBookingStatus now ride))
+                Just (mkRideItem (ride, ride.shortId, ride.createdAt, rideDetail, riderDetail, booking, fareDiff, mkBookingStatus now ride))
             )
             rides
 
-    mkRideItem :: (ShortId Ride, UTCTime, RideDetails.RideDetails, RiderDetails.RiderDetails, Booking.Booking, Maybe Price, Common.BookingStatus) -> RideItem
-    mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, booking, fareDiff, bookingStatus) =
-      RideItem {customerName = booking.riderName, tripCategory = booking.tripCategory, ..}
+    mkRideItem :: (Ride.Ride, ShortId Ride, UTCTime, RideDetails.RideDetails, RiderDetails.RiderDetails, Booking.Booking, Maybe Price, Common.BookingStatus) -> RideItem
+    mkRideItem (ride, rideShortId, rideCreatedAt, rideDetails, riderDetails, booking, fareDiff, bookingStatus) =
+      RideItem {customerName = booking.riderName, tripCategory = booking.tripCategory, ride = Just ride, booking = Just booking, driverId = Just ride.driverId, ..}
 
     mkBookingStatusFilter :: [Ride.Ride] -> [Ride.Ride]
     mkBookingStatusFilter rides = case mbBookingStatus of
@@ -998,3 +1003,12 @@ findByIds ::
   m [Ride]
 findByIds rideIds = do
   findAllWithKV [Se.Is BeamR.id $ Se.In $ getId <$> rideIds]
+
+-- | Find all rides linked to a subscription purchase ID
+-- The subscriptionPurchaseIds field is an array, so we check if the given ID is in that array
+findAllBySubscriptionPurchaseId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DSP.SubscriptionPurchase ->
+  m [Ride]
+findAllBySubscriptionPurchaseId (Id subPurchaseId) = do
+  findAllWithKV [Se.Is BeamR.subscriptionPurchaseIds $ Se.Eq (Just [subPurchaseId])]

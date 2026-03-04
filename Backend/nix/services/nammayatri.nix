@@ -77,7 +77,7 @@ in
           environment.CABAL_TARGET = cabalTargetForExe.${name};
         }
         else {
-          command = "set -x; pwd; ${ny.config.apps.${name}.program}";
+          command = "set -x; pwd; ${ny.config.haskellProjects.default.outputs.apps.${name}.program}";
         };
 
       haskellProcesses.processes =

@@ -40,6 +40,7 @@ FleetOwnerInformation:
     fleetDob: Maybe UTCTime
     stripeAddress: Maybe Address
     fleetName: Maybe Text
+    isBlockedForScheduledPayout: Maybe Bool
 
   excludedFields: [merchantOperatingCityId]
   types:

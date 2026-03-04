@@ -1,0 +1,77 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Communication: Domain.Types.Communication
+  ChannelType: Domain.Types.Communication
+  CommunicationDelivery: Domain.Types.CommunicationDelivery
+
+CommunicationDelivery:
+  tableName: communication_delivery
+
+  types:
+    CommunicationRecipientRole:
+      enum: "RR_DRIVER,RR_FLEET_OWNER,RR_OPERATOR,RR_ADMIN"
+      derive: "HttpInstance"
+
+    DeliveryStatus:
+      enum: "DS_PENDING,DS_SENT,DS_DELIVERED,DS_READ,DS_FAILED"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id CommunicationDelivery
+    communicationId: Id Communication
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    recipientId: Id Person
+    recipientRole: CommunicationRecipientRole
+    channel: ChannelType
+    status: DeliveryStatus
+    failureReason: Maybe Text
+    fleetOwnerId: Maybe Text
+    operatorId: Maybe Text
+    deliveredAt: Maybe UTCTime
+    readAt: Maybe UTCTime
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    communicationId: "!SecondaryKey"
+
+  sqlType:
+    recipientRole: character varying (36)
+    channel: character varying (36)
+    status: character varying (36)
+    fleetOwnerId: character varying (36)
+    operatorId: character varying (36)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByCommunicationId:
+      kvFunction: findAllWithKV
+      where: communicationId
+
+    findByRecipientIdAndChannel:
+      kvFunction: findAllWithKV
+      where:
+        and: [recipientId, channel]
+
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+
+    updateStatusAndReadAt:
+      kvFunction: updateOneWithKV
+      params: [status, readAt, updatedAt]
+      where:
+        and: [recipientId, communicationId, channel]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey

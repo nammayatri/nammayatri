@@ -346,7 +346,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             driverFlowStatus = Just DriverFlowStatus.OFFLINE,
             onlineDurationRefreshedAt = Just now,
             panNumber = Nothing,
-            tdsRate = transporterConfig.driverWalletConfig.tdsRate,
+            tdsRate = transporterConfig.taxConfig.defaultTdsRate,
             aadhaarNumber = Nothing,
             dlNumber = Nothing,
             maxPickupRadius = Nothing,
@@ -366,7 +366,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             approved = Nothing,
             address = Nothing,
             addressDocumentType = Nothing,
-            driverBankAccountDetails = Nothing
+            driverBankAccountDetails = Nothing,
+            isBlockedForScheduledPayout = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

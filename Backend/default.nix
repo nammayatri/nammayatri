@@ -31,7 +31,40 @@
         "safety-dashboard"
         "search-result-aggregator"
         "beckn-cli"
+        "alchemist"
+        "arion"
+        "load-test-dev"
+        "load-test-prepare"
+        "mock-fcm"
+        "mock-sms"
+        "osrm-server"
+        "osrm-data"
+        "run-mobility-stack-dev"
+        "run-mobility-stack-nix"
+      ];
+      # Apps to exclude from CI builds (devour-flake via om ci run)
+      ciExcludedApps = [
         "hunit-tests"
+        "beckn-cli-exe"
+        "image-api-helper-exe"
+        "route-extractor-exe"
+        "mock-public-transport-provider-platform-exe"
+        "public-transport-rider-platform-exe"
+        "public-transport-search-consumer-exe"
+        "mock-idfy-exe"
+        "mock-payment-exe"
+        "mock-google-exe"
+        "kafka-consumers-exe"
+        "mock-rider-platform-exe"
+        "sdk-event-pipeline-exe"
+        "special-zone-exe"
+        "example-service-exe"
+        "safety-dashboard-exe"
+        "search-result-aggregator-exe"
+        "mock-fcm-exe"
+        "mock-sms-exe"
+        "trace"
+        "alchemist-generator-exe"
       ];
       cacConfig = p: p.overrideAttrs (oa: {
         inherit (config.haskellProjects.default.outputs.finalPackages) cac_client;
@@ -64,6 +97,7 @@
           maintainers = with lib.maintainers; [ patrickbr ];
         };
       };
+      localBuild = builtins.getEnv "NIX_LOCAL_BUILD" != "";
     in
     {
       pre-commit.settings.imports = [
@@ -81,9 +115,9 @@
           # inputs.namma-dsl.haskellFlakeProjectModules.output
           inputs.haskell-cac.haskellFlakeProjectModules.output
         ];
-        # "packages" is excluded from autoWire so we can filter out ciExcludedPackages
-        # from the flake's top-level packages output (used by devour-flake in om ci run).
-        autoWire = [ "checks" "apps" ];
+        # "packages" and "apps" are excluded from autoWire so we can filter out
+        # ciExcludedPackages from the flake's top-level outputs (used by devour-flake in om ci run).
+        autoWire = [ "checks" ];
         devShell.tools = _: {
           inherit (self'.packages)
             arion;
@@ -94,7 +128,15 @@
         # Temporary fix: Optimization level has been reduced for ARM Linux builds.
         # TODO: Monitor does this optimization cause any perf issue
         defaults.settings.defined = {
-          extraConfigureFlags = lib.mkIf (system == "aarch64-linux") [ "--ghc-options=-O1" ];
+          extraConfigureFlags =
+            (lib.optional (system == "aarch64-linux") "--ghc-options=-O1")
+            ++ (lib.optionals localBuild [
+              "--ghc-options=-O0"
+              "--ghc-options=-funfolding-use-threshold20"
+              "--ghc-options=-fno-cse"
+              "--ghc-options=-fmax-simplifier-iterations1"
+              "--ghc-options=-fno-specialise-aggressively"
+            ]);
         };
         packages = {
           amazonka.source = inputs.amazonka-git + /lib/amazonka;
@@ -196,11 +238,18 @@
           };
         };
 
+      apps =
+        let
+          allHaskellApps = config.haskellProjects.default.outputs.apps;
+        in
+        lib.filterAttrs (name: _: !(builtins.elem name ciExcludedApps)) allHaskellApps;
+
       devShells.backend = pkgs.mkShell {
         name = builtins.traceVerbose "devShells.backend" "ny-backend";
         meta.description = "Backend development environment for nammayatri";
         packages = with pkgs; [
           redis # redis-cli is used in scripts.nix
+          openssh # sftp binary for SFTP upload support
           jq
           gdal
           postgis

@@ -17,6 +17,7 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as DAV
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as DGV
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as DPV
+import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UDYAM
 import Domain.Action.UI.DriverOnboarding.Referral
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Types.DriverPanCard as DPan
@@ -133,12 +134,14 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   mDL <- DLQuery.findByDriverId (Id personId)
-  driverImages <- IQuery.findAllByPersonId transporterConfig (Id personId)
-  now <- getCurrentTime
-  let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just $ Id personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
-  let shouldActivateRc = True
   person <- runInReplica $ PersonQuery.findById (Id personId) >>= fromMaybeM (PersonNotFound personId)
-  castStatusRes <$> SStatus.statusHandler' person driverImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs
+  let entity = IQuery.PersonEntity person
+  entityImages <- IQuery.findAllByEntityId transporterConfig entity
+  now <- getCurrentTime
+  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
+  let shouldActivateRc = True
+      skipMessages = False -- Need translations for API response
+  castStatusRes <$> SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
 
 postOnboardingVerify ::
   ShortId DM.Merchant ->
@@ -158,9 +161,10 @@ postOnboardingVerify merchantShortId opCity reqType mbAccessType adminApprovalRe
           _ -> DPan.DASHBOARD
         Nothing -> DPan.DASHBOARD
   enable <- case reqType of
-    CommonOnboarding.VERIFY_PAN -> DPV.verifyPan verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DPV.DriverPanReq {panNumber = req.identifierNumber, imageId = req.imageId, driverId = req.driverId, panName = Nothing}) adminApprovalRequired True
+    CommonOnboarding.VERIFY_PAN -> DPV.verifyPan verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DPV.DriverPanReq {panNumber = req.identifierNumber, imageId = req.imageId, driverId = req.driverId}) adminApprovalRequired req.identifierName True
     CommonOnboarding.VERIFY_GST -> DGV.verifyGstin verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DGV.DriverGstinReq {gstin = req.identifierNumber, imageId = req.imageId, driverId = req.driverId}) adminApprovalRequired True
     CommonOnboarding.VERIFY_AADHAAR -> DAV.verifyAadhaar verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DAV.DriverAadhaarReq {aadhaarNumber = Just req.identifierNumber, aadhaarFrontImageId = req.imageId, aadhaarBackImageId = req.optionalImageId, consent = True, driverId = req.driverId, aadhaarName = Nothing}) adminApprovalRequired
+    CommonOnboarding.VERIFY_UDYAM -> UDYAM.verifyUdyam (Id req.driverId, merchantOpCity.id) (UDYAM.DriverUdyamReq {uamNumber = req.identifierNumber, imageId1 = Id req.imageId})
   return
     CommonOnboarding.VerifyDocumentRes
       { enableFleetOwner = enable
@@ -181,6 +185,7 @@ castDocumentStatusItem SStatus.DocumentStatusItem {..} =
   CommonOnboarding.DocumentStatusItem
     { documentType = SDO.castDocumentType documentType,
       verificationStatus = castResponseStatus verificationStatus,
+      expiryDate = documentExpiry,
       ..
     }
 
@@ -198,6 +203,7 @@ castVehicleDocumentItem :: SStatus.VehicleDocumentItem -> CommonOnboarding.Vehic
 castVehicleDocumentItem SStatus.VehicleDocumentItem {..} =
   CommonOnboarding.VehicleDocumentItem
     { documents = castDocumentStatusItem <$> documents,
+      expiryDate = documentExpiry,
       ..
     }
 

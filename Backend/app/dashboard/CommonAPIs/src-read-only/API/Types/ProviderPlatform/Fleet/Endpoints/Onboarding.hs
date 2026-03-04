@@ -43,6 +43,8 @@ data DocumentFlowGrouping
 
 data DocumentStatusItem = DocumentStatusItem
   { documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
+    expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    s3Path :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verificationMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verificationStatus :: ResponseStatus,
     verificationUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl
@@ -135,10 +137,12 @@ data StatusRes = StatusRes
 data VehicleDocumentItem = VehicleDocumentItem
   { dateOfUpload :: Kernel.Prelude.UTCTime,
     documents :: [DocumentStatusItem],
+    expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     isActive :: Kernel.Prelude.Bool,
     isApproved :: Kernel.Prelude.Bool,
     isVerified :: Kernel.Prelude.Bool,
     registrationNo :: Kernel.Prelude.Text,
+    s3Path :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     userSelectedVehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verifiedVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
@@ -150,7 +154,13 @@ newtype VerifyDocumentRes = VerifyDocumentRes {enableFleetOwner :: Kernel.Prelud
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data VerifyReq = VerifyReq {driverId :: Kernel.Prelude.Text, identifierNumber :: Kernel.Prelude.Text, imageId :: Kernel.Prelude.Text, optionalImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data VerifyReq = VerifyReq
+  { driverId :: Kernel.Prelude.Text,
+    identifierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    identifierNumber :: Kernel.Prelude.Text,
+    imageId :: Kernel.Prelude.Text,
+    optionalImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -158,6 +168,7 @@ data VerifyType
   = VERIFY_PAN
   | VERIFY_GST
   | VERIFY_AADHAAR
+  | VERIFY_UDYAM
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

@@ -62,6 +62,9 @@ data BecknTagGroup
   | BUYER_FINDER_FEES
   | SETTLEMENT_TERMS
   | ROUTE_INFO
+  | -- ONDC 2.1.0 tag groups (subsume BUYER_FINDER_FEES + SETTLEMENT_TERMS)
+    BAP_TERMS
+  | BPP_TERMS
   | -- Custom tag groups
     REALLOCATION_INFO
   | SEARCH_REQUEST_INFO
@@ -105,13 +108,18 @@ instance CompleteTagGroup BecknTagGroup where
   getFullTagGroup tagGroup tags = Spec.TagGroup (Just $ getTagGroupDescriptor tagGroup) (Just $ getTagGroupDisplay tagGroup) (if null tags then Nothing else Just tags)
 
   getTagGroupDisplay = \case
-    _ -> False -- All tags are display False by default
+    VEHICLE_INFO -> True
+    UPDATE_DETAILS -> True
+    ESTIMATIONS -> True
+    _ -> False
 
   -- getDescriptor :: tags -> (description, shortDescription)
   getTagGroupDescriptor tagGroup = uncurry (Spec.Descriptor . Just . T.pack $ show tagGroup) $ case tagGroup of
     ROUTE_INFO -> (Just "Route Information", Nothing)
     BUYER_FINDER_FEES -> (Just "Buyer Finder Fees Information", Nothing)
     SETTLEMENT_TERMS -> (Just "Settlement Terms Information", Nothing)
+    BAP_TERMS -> (Just "BAP Terms of Engagement", Nothing)
+    BPP_TERMS -> (Just "BPP Terms of Engagement", Nothing)
     REALLOCATION_INFO -> (Just "Reallocation Information", Nothing)
     FARE_PARAMETERS_IN_RATECARD_INFO -> (Just "Fare Parametes in RateCard information", Nothing)
     DELIVERY -> (Just "Delivery Information", Nothing)
@@ -515,7 +523,12 @@ instance CompleteTag BecknTag where
   type TagGroupF BecknTag = BecknTagGroup
 
   getTagDisplay = \case
-    _ -> False -- All tags are False by default, Textdd specific tags here that you want to display
+    IS_AIR_CONDITIONED -> True
+    IS_AIR_CONDITIONED_VEHICLE -> True
+    SPECIAL_LOCATION_TAG -> True
+    SMART_TIP_REASON -> True
+    MAX_ESTIMATED_DISTANCE -> True
+    _ -> False
 
   -- getDescriptor :: tags -> (description, shortDescription)
   getTagDescriptor tag = uncurry (Spec.Descriptor . Just . T.pack $ show tag) $ case tag of
@@ -622,13 +635,14 @@ instance CompleteTag BecknTag where
     DISTANCE_TO_NEAREST_DRIVER_METER -> GENERAL_INFO
     ETA_TO_NEAREST_DRIVER_MIN -> GENERAL_INFO
     SPECIAL_LOCATION_TAG -> GENERAL_INFO
+    SPECIAL_LOCATION_NAME -> GENERAL_INFO
     UPGRADE_TO_CAB -> GENERAL_INFO
     CUSTOMER_DISABILITY_DISABLE -> CUSTOMER_INFO
     IS_PET_RIDE -> PET_ORDER_INFO
     BILLING_CATEGORY -> BILLING_CATEGORY_INFO
     PARCEL_TYPE -> DELIVERY
     PARCEL_QUANTITY -> DELIVERY
-    IS_SAFETY_PLUS -> GENERAL_INFO
+    IS_SAFETY_PLUS -> DRIVER_DETAILS
     SAFETY_PLUS_CHARGES -> GENERAL_INFO
     IS_INSURED -> INSURANCE_INFO
     INSURED_AMOUNT -> INSURANCE_INFO
@@ -638,7 +652,149 @@ instance CompleteTag BecknTag where
     DISPLAY_BOOKING_ID -> BOOKING_INFO
     EMAIL_DOMAIN -> EMAIL_DOMAIN_INFO
     BUSINESS_EMAIL_DOMAIN -> EMAIL_DOMAIN_INFO
-    a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
+    -- Driver details tags
+    REGISTERED_AT -> DRIVER_DETAILS
+    RATING -> DRIVER_DETAILS
+    IS_DRIVER_BIRTHDAY -> DRIVER_DETAILS
+    IS_FREE_RIDE -> DRIVER_DETAILS
+    DRIVER_TRACKING_URL -> DRIVER_DETAILS
+    DRIVER_ACCOUNT_ID -> DRIVER_DETAILS
+    DRIVER_ALTERNATE_NUMBER -> DRIVER_DETAILS
+    IS_ALREADY_FAVOURITE -> DRIVER_DETAILS
+    FAVOURITE_COUNT -> DRIVER_DETAILS
+    -- Ride distance details tags
+    CHARGEABLE_DISTANCE -> RIDE_DISTANCE_DETAILS
+    TRAVELED_DISTANCE -> RIDE_DISTANCE_DETAILS
+    END_ODOMETER_READING -> RIDE_DISTANCE_DETAILS
+    -- Driver arrived info tags
+    ARRIVAL_TIME -> DRIVER_ARRIVED_INFO
+    -- Location tags
+    CURRENT_LOCATION_LAT -> CURRENT_LOCATION
+    CURRENT_LOCATION_LON -> CURRENT_LOCATION
+    -- Odometer tags
+    START_ODOMETER_READING -> RIDE_ODOMETER_DETAILS
+    -- Toll confidence tags
+    TOLL_CONFIDENCE -> TOLL_CONFIDENCE_INFO
+    -- Vehicle age tags
+    VEHICLE_AGE -> VEHICLE_AGE_INFO
+    -- Vehicle info tags
+    IS_AIR_CONDITIONED -> VEHICLE_INFO
+    IS_AIR_CONDITIONED_VEHICLE -> VEHICLE_INFO
+    VEHICLE_ICON_URL -> VEHICLE_INFO
+    -- Estimated end time range tags
+    ESTIMATED_END_TIME_RANGE_START -> ESTIMATED_END_TIME_RANGE
+    ESTIMATED_END_TIME_RANGE_END -> ESTIMATED_END_TIME_RANGE
+    -- Parcel tags
+    PARCEL_IMAGE_UPLOADED -> GENERAL_INFO
+    -- General info / Agent info tags
+    BPP_QUOTE_ID -> GENERAL_INFO
+    DURATION_TO_PICKUP_IN_S -> AGENT_INFO
+    CUSTOMER_TIP -> CUSTOMER_TIP_INFO
+    IS_AUTO_ASSIGN_ENABLED -> AUTO_ASSIGN_ENABLED
+    SAFETY_REASON_CODE -> SAFETY_ALERT
+    MESSAGE -> DRIVER_NEW_MESSAGE
+    CANCELLATION_REASON -> PREVIOUS_CANCELLATION_REASONS
+    OTHER_SELECT_ESTIMATES -> ESTIMATIONS
+    MAX_ESTIMATED_DISTANCE -> ESTIMATIONS
+    -- Forward batching tags
+    PREVIOUS_RIDE_DROP_LOCATION_LAT -> FORWARD_BATCHING_REQUEST_INFO
+    PREVIOUS_RIDE_DROP_LOCATION_LON -> FORWARD_BATCHING_REQUEST_INFO
+    IS_FORWARD_BATCH_ENABLED -> FORWARD_BATCHING_REQUEST_INFO
+    -- Rating tags
+    RIDER_PHONE_NUMBER -> RATING_TAGS
+    SHOULD_FAVOURITE_DRIVER -> RATING_TAGS
+    RIDER_NAME -> RATING_TAGS
+    MEDIA_FILE_PATH -> RATING_TAGS
+    -- Device ID tags
+    DEVICE_ID_FLAG -> DEVICE_ID_INFO
+    TO_UPDATE_DEVICE_ID -> DEVICE_ID_INFO
+    -- Ride details tags
+    IS_VALID_RIDE -> RIDE_DETAILS_INFO
+    -- Safety plus tags
+    PREFER_SAFETY_PLUS -> SAFETY_PLUS_INFO
+    -- Customer info tags (remaining)
+    NIGHT_SAFETY_CHECK -> CUSTOMER_INFO
+    ENABLE_FREQUENT_LOCATION_UPDATES -> CUSTOMER_INFO
+    ENABLE_OTP_LESS_RIDE -> CUSTOMER_INFO
+    INITIATED_AS -> DELIVERY
+    -- Fare policy tags
+    MIN_FARE -> FARE_POLICY
+    MIN_FARE_DISTANCE_KM -> FARE_POLICY
+    PER_KM_CHARGE -> FARE_POLICY
+    DEAD_KILOMETER_FARE -> FARE_POLICY
+    WAITING_CHARGE_PER_MIN -> FARE_POLICY
+    WAITING_CHARGE_RATE_PER_MIN -> FARE_POLICY
+    NIGHT_CHARGE_MULTIPLIER -> FARE_POLICY
+    NIGHT_SHIFT_START_TIME -> FARE_POLICY
+    NIGHT_SHIFT_END_TIME -> FARE_POLICY
+    PER_STOP_CHARGES -> FARE_POLICY
+    PET_CHARGES -> FARE_POLICY
+    PRIORITY_CHARGES -> FARE_POLICY
+    BUSINESS_DISCOUNT -> FARE_POLICY
+    PERSONAL_DISCOUNT -> FARE_POLICY
+    PERSONAL_DISCOUNT_PERCENTAGE -> FARE_POLICY
+    BUSINESS_DISCOUNT_PERCENTAGE -> FARE_POLICY
+    NIGHT_SHIFT_START_TIME_IN_SECONDS -> FARE_POLICY
+    NIGHT_SHIFT_END_TIME_IN_SECONDS -> FARE_POLICY
+    NIGHT_SHIFT_CHARGE_PERCENTAGE -> FARE_POLICY
+    CONSTANT_NIGHT_SHIFT_CHARGE -> FARE_POLICY
+    RESTRICTED_PERSON -> FARE_POLICY
+    RESTRICTION_PROOF -> FARE_POLICY
+    DRIVER_MIN_EXTRA_FEE -> FARE_POLICY
+    DRIVER_MAX_EXTRA_FEE -> FARE_POLICY
+    EXTRA_PER_KM_FARE -> FARE_POLICY
+    WAITING_OR_PICKUP_CHARGES -> FARE_POLICY
+    CONSTANT_WAITING_CHARGE -> FARE_POLICY
+    FREE_WAITING_TIME_IN_MINUTES -> FARE_POLICY
+    SERVICE_CHARGE -> FARE_POLICY
+    PARKING_CHARGE -> FARE_POLICY
+    GOVERNMENT_CHARGE -> FARE_POLICY
+    BASE_DISTANCE -> FARE_POLICY
+    BASE_FARE -> FARE_POLICY
+    PROGRESSIVE_PLATFORM_CHARGE -> FARE_POLICY
+    CONSTANT_PLATFORM_CHARGE -> FARE_POLICY
+    PLATFORM_FEE_CGST -> FARE_POLICY
+    PLATFORM_FEE_SGST -> FARE_POLICY
+    TOLL_CHARGES -> FARE_POLICY
+    CANCELLATION_CHARGES -> FARE_POLICY
+    TIP_OPTIONS -> FARE_POLICY
+    CONGESTION_CHARGE_PERCENTAGE -> FARE_POLICY
+    UPDATED_ESTIMATED_DISTANCE -> UPDATE_DETAILS
+    LUGGAGE_CHARGE -> FARE_POLICY
+    DRIVER_ALLOWANCE -> FARE_POLICY
+    NIGHT_SHIFT_CHARGE -> FARE_POLICY
+    PER_HOUR_CHARGE -> FARE_POLICY
+    PER_MINUTE_CHARGE -> FARE_POLICY
+    UNPLANNED_PER_KM_CHARGE -> FARE_POLICY
+    PER_HOUR_DISTANCE_KM -> FARE_POLICY
+    PLANNED_PER_KM_CHARGE -> FARE_POLICY
+    PLANNED_PER_KM_CHARGE_ROUND_TRIP -> FARE_POLICY
+    PER_KM_RATE -> FARE_POLICY
+    PER_DAY_MAX_HOUR_ALLOWANCE -> FARE_POLICY
+    PER_DAY_MAX_ALLOWANCE_IN_MINS -> FARE_POLICY
+    RETURN_FEE -> FARE_POLICY
+    BOOTH_CHARGE -> FARE_POLICY
+    RETURN_FEE_PERCENTAGE -> FARE_POLICY
+    BOOTH_CHARGE_PERCENTAGE -> FARE_POLICY
+    INSURANCE_CHARGE_PER_METER -> FARE_POLICY
+    INSURANCE_CHARGE_PER_MILE -> FARE_POLICY
+    INSURANCE_CHARGE_PER_KM -> FARE_POLICY
+    INSURANCE_CHARGE_PER_YARD -> FARE_POLICY
+    CARD_CHARGE_PERCENTAGE -> FARE_POLICY
+    FIXED_CARD_CHARGE -> FARE_POLICY
+    NO_CHARGES -> FARE_POLICY
+    -- Info tags
+    SMART_TIP_SUGGESTION -> INFO
+    QAR -> INFO
+    SMART_TIP_REASON -> INFO
+    BUYER_FINDER_FEES_TYPE -> INFO
+    BUYER_FINDER_FEES_AMOUNT -> INFO
+    DURATION_TO_NEAREST_DRIVER_MINUTES -> INFO
+    -- Fulfillment route tags
+    ENCODED_POLYLINE -> ROUTE_INFO
+    TOLL_NAMES -> ROUTE_INFO
+    IS_CUSTOMER_PREFFERED_SEARCH_ROUTE -> ROUTE_INFO
+    IS_BLOCKED_SEARCH_ROUTE -> ROUTE_INFO
 
 convertToSentence :: Show a => a -> Text
 convertToSentence = T.pack . toSentence . show
@@ -665,3 +821,59 @@ convertToTagGroup = go . filter (isJust . snd)
               mempty
               tagList
       M.elems $ MP.mapWithKey getFullTagGroup tagsWithGroup
+
+-- ##############################################################
+-- Tag Combinators
+-- ##############################################################
+
+-- | Always include a tag with the given value.
+--
+-- @REGISTERED_AT ~= show driver.createdAt@
+(~=) :: BecknTag -> Text -> (BecknTag, Maybe Text)
+tag ~= val = (tag, Just val)
+
+infixl 7 ~=
+
+-- | Include a tag only if the value is @Just@. @Nothing@ values are filtered out.
+--
+-- @RATING ~=? (show \<$\> driverStats.rating)@
+(~=?) :: BecknTag -> Maybe Text -> (BecknTag, Maybe Text)
+tag ~=? val = (tag, val)
+
+infixl 7 ~=?
+
+-- | Include a tag conditionally. If the condition is @False@, the tag is omitted.
+--
+-- @IS_FREE_RIDE ~=| (isFreeRide, show isFreeRide)@
+(~=|) :: BecknTag -> (Bool, Text) -> (BecknTag, Maybe Text)
+tag ~=| (cond, val) = (tag, if cond then Just val else Nothing)
+
+infixl 7 ~=|
+
+-- | Build @[Spec.TagGroup]@ from a flat list of @(BecknTag, Maybe Text)@ pairs.
+-- Tags are automatically grouped by their 'getTagGroup' mapping.
+-- @Nothing@-valued tags are filtered out. Returns @Nothing@ if all tags are @Nothing@.
+buildTagGroups :: TagList -> Maybe [Spec.TagGroup]
+buildTagGroups = convertToTagGroup
+
+-- | Create a single 'Spec.Tag' from a tag enum and a value.
+-- Useful when building tag lists for 'getFullTagGroup'.
+mkTag :: BecknTag -> Maybe Text -> Spec.Tag
+mkTag = getFullTag
+
+-- | Create an optional tag. Returns @Nothing@ if the value is @Nothing@,
+-- otherwise returns @Just@ the tag. Useful with @catMaybes@ when building
+-- tag lists for 'getFullTagGroup'.
+mkOptionalTag :: BecknTag -> Maybe Text -> Maybe Spec.Tag
+mkOptionalTag _ Nothing = Nothing
+mkOptionalTag tag val = Just $ getFullTag tag val
+
+-- | Wrap a single optional @Show@-able value into a tag group.
+-- Returns @Nothing@ if the input value is @Nothing@.
+-- This eliminates the common pattern:
+--
+-- @
+-- mkXxxTagGroup val' = val' >>= \\val -> buildTagGroups [TAG ~= show val]
+-- @
+mkSingleTagGroup :: Show a => BecknTag -> Maybe a -> Maybe [Spec.TagGroup]
+mkSingleTagGroup tag = (>>= \v -> buildTagGroups [tag ~= T.pack (show v)])

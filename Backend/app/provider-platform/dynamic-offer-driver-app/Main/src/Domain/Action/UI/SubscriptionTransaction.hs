@@ -31,12 +31,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.Finance.Prepaid
 import qualified Storage.Queries.BookingExtra as QBookingE
 import qualified Storage.Queries.Person as QP
 
 getSubscriptionTransactions ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   ( Maybe (Id Person),
     Id Merchant,
     Id MerchantOperatingCity
@@ -61,11 +62,11 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
   mbAccount <- getPrepaidAccountByOwner counterpartyType driverId'.getId
   case mbAccount of
     Nothing -> pure emptyResponse
-    Just account -> do
+    Just acc -> do
       let referenceTypes = [prepaidRideDebitReferenceType, subscriptionCreditReferenceType]
       entries <-
         findByAccountWithFilters
-          account.id
+          acc.id
           (Just fromDate)
           (Just toDate)
           mbMinAmount
@@ -81,8 +82,8 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
           paged = sortOn (Down . (.timestamp)) (pagedRides <> pagedPlans)
           rideEarning = sum $ map (.amount) rideEntries
           planPurchased = sum $ map (.amount) planEntries
-          startingBalance = computeStartingBalance account.id upSorted
-          finalBalance = computeFinalBalance account.id upSorted
+          startingBalance = computeStartingBalance acc.id upSorted
+          finalBalance = computeFinalBalance acc.id upSorted
       -- Enrich ride entries with booking locations
       let bookingIds = mapMaybe (\e -> if e.referenceType == prepaidRideDebitReferenceType then Just (Id e.referenceId) else Nothing) paged
       bookings <- if null bookingIds then pure [] else QBookingE.findByIds bookingIds

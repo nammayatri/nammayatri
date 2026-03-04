@@ -131,11 +131,13 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
         merchantOpCity <-
           CQMOC.findById merchantOpCityId
             >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-        driverImages <- IQuery.findAllByPersonId transporterConfig personId
-        let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+        let entity = IQuery.PersonEntity person
+        entityImages <- IQuery.findAllByEntityId transporterConfig entity
+        let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
         let onlyMandatoryDocs = Just True
             shouldActivateRc = False
-        void $ SStatus.statusHandler' person driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
+            skipMessages = True -- Skip translations, result is ignored (void)
+        void $ SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->
@@ -176,6 +178,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
 
     callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverGstInformation driverDocument transporterConfig = do
+      logDebug $ "callIdfy: " <> show req
       documentVerificationConfig <-
         CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
           >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
@@ -222,6 +225,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
 
 verifyGstFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> ODC.DocumentVerificationConfig -> Text -> Id Image.Image -> Flow ()
 verifyGstFlow person merchantOpCityId documentVerificationConfig gstNumber imageId1 = do
+  logDebug $ "verifyGstFlow: " <> show gstNumber
   now <- getCurrentTime
   encryptedGst <- encrypt gstNumber
   let imageExtractionValidation =
@@ -231,6 +235,7 @@ verifyGstFlow person merchantOpCityId documentVerificationConfig gstNumber image
   verifyRes <-
     Verification.verifyGstAsync person.merchantId merchantOpCityId $
       Verification.VerifyGstAsyncReq {gstNumber, driverId = person.id.getId, filingDetails = True, eInvoiceDetails = True}
+  logDebug $ "verifyRes: " <> show verifyRes
   case verifyRes.requestor of
     VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntityGst person imageId1 verifyRes.requestId now imageExtractionValidation encryptedGst
     _ -> throwError $ InternalError ("Service provider not configured to return GST verification async responses. Provider Name : " <> (show verifyRes.requestor))

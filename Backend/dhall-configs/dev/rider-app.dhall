@@ -375,7 +375,8 @@ let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
 
 let sosTrackingRateLimitOptions = { limit = +60, limitResetTimeInSec = +60 }
 
-let erssStatusUpdateRateLimitOptions = { limit = +20, limitResetTimeInSec = +60 }
+let erssStatusUpdateRateLimitOptions =
+      { limit = +20, limitResetTimeInSec = +60 }
 
 let dashboardClickhouseCfg = riderClickhouseCfg
 

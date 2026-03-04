@@ -21,7 +21,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.LocationUpdates.Internal as LU
+import qualified SharedLogic.FareCalculator as SFC
 import SharedLogic.FarePolicy
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
@@ -34,13 +36,15 @@ getPriceBreakup ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.Flow [DOVT.RateCardItem]
   )
-getPriceBreakup (_, _, _) rideId = do
+getPriceBreakup (_, _, merchantOpCityId) rideId = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   quote <- B.runInReplica $ QQuote.findById (Id booking.quoteId)
+  mbTransporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing
+  let govtChargesRate = mbTransporterConfig >>= (SFC.computeTotalGstRate . (.taxConfig.rideGst))
   case quote of
     Just quote' -> do
-      let fareDetails_ = catMaybes $ maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem booking.currency) booking.estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare quote'.fareParams.congestionChargeViaDp) quote'.farePolicy
+      let fareDetails_ = catMaybes $ maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem booking.currency) booking.estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare quote'.fareParams.congestionChargeViaDp govtChargesRate) quote'.farePolicy
       pure fareDetails_
     _ -> pure []
   where

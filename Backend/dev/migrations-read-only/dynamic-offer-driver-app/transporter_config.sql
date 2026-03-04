@@ -704,6 +704,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN send_sms_on_ena
 
 
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN reconciliation_jobs_enabled boolean ;
+
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN reconciliation_scheduler_time integer ;
+
 
 ------- SQL updates -------
 
@@ -776,10 +781,16 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_pan_aadha
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_coins_to_direct_payout boolean ;
 
 
-------- SQL updates -------
-
-
-
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN tax_config TYPE text;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_luggages integer ;

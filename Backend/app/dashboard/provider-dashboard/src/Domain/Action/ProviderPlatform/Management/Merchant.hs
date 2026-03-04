@@ -501,7 +501,6 @@ getMerchantConfigFarePolicyExport merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigFarePolicyExport)
 
-
 getMerchantConfigVehicleServiceTier :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.Flow Common.VehicleServiceTierRes)
 getMerchantConfigVehicleServiceTier merchantShortId opCity apiTokenInfo serviceTierType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city

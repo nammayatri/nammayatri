@@ -111,6 +111,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRRN
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -189,7 +190,8 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     driverTrackingUrl :: Maybe BaseUrl,
     isAlreadyFav :: Bool,
     favCount :: Maybe Int,
-    isSafetyPlus :: Bool
+    isSafetyPlus :: Bool,
+    isSynchronousOnUpdateProcessing :: Bool
   }
 
 data RideStartedReq = RideStartedReq
@@ -1153,6 +1155,16 @@ validateRideAssignedReq ::
 validateRideAssignedReq RideAssignedReq {..} = do
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
   mbMerchant <- CQM.findById booking.merchantId
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  let isSynchronousOnUpdateProcessing =
+        isValueAddNP
+          && case booking.tripCategory of
+            Just (Trip.OneWay Trip.OneWayRideOtp) -> True
+            Just (Trip.InterCity Trip.OneWayRideOtp _) -> True
+            Just (Trip.CrossCity Trip.OneWayRideOtp _) -> True
+            Just (Trip.Ambulance Trip.OneWayRideOtp) -> True
+            Just (Trip.Delivery Trip.OneWayRideOtp) -> True
+            _ -> False
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   -- TODO: Should we put 'TRIP_ASSIGNED' status check in the 'isAssignable' function for normal booking Or Handle for crone Job in Different Way?
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)

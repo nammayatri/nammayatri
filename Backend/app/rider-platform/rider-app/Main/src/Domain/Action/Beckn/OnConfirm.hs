@@ -175,4 +175,4 @@ validateRequest (RideAssigned RideAssignedInfo {..}) transactionId isValueAddNP 
         email <- mapM decrypt person.email
         return $ Just DCommon.OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
-  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, driverTrackingUrl = Nothing, ..}
+  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, driverTrackingUrl = Nothing, isSynchronousOnUpdateProcessing = False, ..}

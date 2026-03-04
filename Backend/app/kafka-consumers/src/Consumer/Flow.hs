@@ -19,6 +19,7 @@ import qualified Consumer.AvailabilityTime.Processor as ATProcessor
 import qualified Consumer.AvailabilityTime.Types as T
 import qualified Consumer.BroadcastMessage.Processor as BMProcessor
 import qualified Consumer.CustomerStats.Processor as PSProcessor
+import qualified Consumer.FleetCommunication.Processor as FCProcessor
 import qualified Consumer.LocationUpdate.Processor as LCProcessor
 import Control.Error.Util
 import qualified Data.Aeson as A
@@ -28,6 +29,7 @@ import Data.Function
 import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
 import qualified Data.Time as T
+import "dynamic-offer-driver-app" Domain.Action.Dashboard.Management.Communication (CommunicationDeliveryDispatchPayload)
 import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
@@ -45,6 +47,7 @@ runConsumer flowRt appEnv consumerType kafkaConsumer = do
     BROADCAST_MESSAGE -> broadcastMessageConsumer flowRt appEnv kafkaConsumer
     PERSON_STATS -> updateCustomerStatsConsumer flowRt appEnv kafkaConsumer
     LOCATION_UPDATE -> locationUpdateConsumer flowRt appEnv kafkaConsumer
+    FLEET_COMMUNICATION_DISPATCH -> fleetCommunicationDispatchConsumer flowRt appEnv kafkaConsumer
 
 updateCustomerStatsConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 updateCustomerStatsConsumer flowRt appEnv kafkaConsumer = do
@@ -74,6 +77,16 @@ broadcastMessageConsumer flowRt appEnv kafkaConsumer =
       runFlowR flowRt appEnv . withLogTag driverId $
         generateGUID
           >>= flip withLogTag (BMProcessor.broadcastMessage messagePayload driverId)
+
+fleetCommunicationDispatchConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
+fleetCommunicationDispatchConsumer flowRt appEnv kafkaConsumer =
+  readMessages kafkaConsumer
+    & S.mapM processOne
+    & S.drain
+  where
+    processOne :: (CommunicationDeliveryDispatchPayload, Text, ConsumerRecordD) -> IO ()
+    processOne (payload, _key, _cr) =
+      runFlowR flowRt appEnv $ FCProcessor.processFleetCommunicationDelivery payload
 
 availabilityConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 availabilityConsumer flowRt appEnv kafkaConsumer =
@@ -206,3 +219,4 @@ getConfigNameFromConsumertype = \case
   BROADCAST_MESSAGE -> pure "broadcast-message"
   PERSON_STATS -> pure "person-stats"
   LOCATION_UPDATE -> pure "location-update"
+  FLEET_COMMUNICATION_DISPATCH -> pure "fleet-communication-dispatch"

@@ -13,6 +13,7 @@ import qualified Domain.Action.ProviderPlatform.Management.Payout
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
@@ -22,65 +23,73 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("payout" :> (GetPayoutPayout :<|> PostPayoutPayoutRetry :<|> PostPayoutPayoutCancel :<|> PostPayoutPayoutCash :<|> PostPayoutPayoutVpaDelete :<|> PostPayoutPayoutVpaUpdate :<|> PostPayoutPayoutVpaRefundRegistration))
+type API = ("payout" :> (GetPayoutPayout :<|> PostPayoutPayoutRetry :<|> PostPayoutPayoutCancel :<|> PostPayoutPayoutCash :<|> PostPayoutPayoutVpaDelete :<|> PostPayoutPayoutVpaUpdate :<|> PostPayoutPayoutVpaRefundRegistration :<|> PostPayoutPayoutScheduledPayoutConfigUpsert))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPayoutPayout merchantId city :<|> postPayoutPayoutRetry merchantId city :<|> postPayoutPayoutCancel merchantId city :<|> postPayoutPayoutCash merchantId city :<|> postPayoutPayoutVpaDelete merchantId city :<|> postPayoutPayoutVpaUpdate merchantId city :<|> postPayoutPayoutVpaRefundRegistration merchantId city
+handler merchantId city = getPayoutPayout merchantId city :<|> postPayoutPayoutRetry merchantId city :<|> postPayoutPayoutCancel merchantId city :<|> postPayoutPayoutCash merchantId city :<|> postPayoutPayoutVpaDelete merchantId city :<|> postPayoutPayoutVpaUpdate merchantId city :<|> postPayoutPayoutVpaRefundRegistration merchantId city :<|> postPayoutPayoutScheduledPayoutConfigUpsert merchantId city
 
 type GetPayoutPayout =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PAYOUT) / ('API.Types.ProviderPlatform.Management.Payout.GET_PAYOUT_PAYOUT))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.GET_PAYOUT_PAYOUT)
       :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayout
   )
 
 type PostPayoutPayoutRetry =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PAYOUT) / ('API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_RETRY))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_RETRY)
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetry
   )
 
 type PostPayoutPayoutCancel =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PAYOUT) / ('API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_CANCEL))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_CANCEL)
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutCancel
   )
 
 type PostPayoutPayoutCash =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PAYOUT) / ('API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_CASH))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_CASH)
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutCash
   )
 
 type PostPayoutPayoutVpaDelete =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PAYOUT) / ('API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_VPA_DELETE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_VPA_DELETE)
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutVpaDelete
   )
 
 type PostPayoutPayoutVpaUpdate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PAYOUT) / ('API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_VPA_UPDATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_VPA_UPDATE)
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutVpaUpdate
   )
 
 type PostPayoutPayoutVpaRefundRegistration =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PAYOUT) / ('API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_VPA_REFUND_REGISTRATION))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_VPA_REFUND_REGISTRATION)
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutVpaRefundRegistration
+  )
+
+type PostPayoutPayoutScheduledPayoutConfigUpsert =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_SCHEDULED_PAYOUT_CONFIG_UPSERT)
+      :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutScheduledPayoutConfigUpsert
   )
 
 getPayoutPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutRequestResp)
@@ -103,3 +112,6 @@ postPayoutPayoutVpaUpdate merchantShortId opCity apiTokenInfo req = withFlowHand
 
 postPayoutPayoutVpaRefundRegistration :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Payment.API.Payout.Types.RefundRegAmountReq -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutSuccess)
 postPayoutPayoutVpaRefundRegistration merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.postPayoutPayoutVpaRefundRegistration merchantShortId opCity apiTokenInfo req
+
+postPayoutPayoutScheduledPayoutConfigUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.UpdateScheduledPayoutConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiTokenInfo req

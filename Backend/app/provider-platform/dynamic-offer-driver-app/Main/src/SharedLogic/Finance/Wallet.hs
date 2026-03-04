@@ -10,36 +10,37 @@ module SharedLogic.Finance.Wallet
     walletReferenceTDSDeductionCash,
     walletReferenceTopup,
     walletReferencePayout,
+    walletReferenceDriverCancellationCharges,
+    walletReferenceCustomerCancellationCharges,
+    walletReferenceCustomerCancellationGST,
     getWalletAccountByOwner,
     getWalletBalanceByOwner,
-    getOrCreateWalletAccount,
     createWalletEntryDelta,
-    reverseWalletEntryByReference,
-    getOrCreateBuyerAssetAccount,
-    getOrCreateBuyerExternalAccount,
-    getOrCreateDriverLiabilityAccount,
-    getOrCreateFleetOwnerLiabilityAccount,
-    getOrCreateGovtIndirectLiabilityAccount,
-    getOrCreateGovtDirectLiabilityAccount,
-    createLedgerTransfer,
-    createLedgerTransferAllowZero,
     utcToLocalDay,
     payoutCutoffTimeUTC,
     todayRangeUTC,
     getNonRedeemableBalance,
+    computeGstBreakdown,
+    financeCtxFromRide,
+    buildFinanceCtx,
   )
 where
 
-import Data.Aeson (Value)
-import Data.List (sortOn)
-import Data.Ord (Down (..))
 import qualified Data.Time as Time
+import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Prelude
-import Kernel.Types.Common (Currency, HighPrecMoney)
+import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.Queries.FleetOwnerInformation as QFOI
 
 -- Reference type constants (PascalCase, abbreviations in all caps)
 
@@ -69,6 +70,15 @@ walletReferenceTopup = "WalletTopup"
 
 walletReferencePayout :: Text
 walletReferencePayout = "WalletPayout"
+
+walletReferenceDriverCancellationCharges :: Text
+walletReferenceDriverCancellationCharges = "DriverCancellationCharges"
+
+walletReferenceCustomerCancellationCharges :: Text
+walletReferenceCustomerCancellationCharges = "CustomerCancellationCharges"
+
+walletReferenceCustomerCancellationGST :: Text
+walletReferenceCustomerCancellationGST = "CustomerCancellationGST"
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)
 
@@ -106,7 +116,7 @@ getNonRedeemableBalance accountId timeDiff cutOffDays now = do
   entries <- findByAccountWithFilters accountId (Just cutoff) (Just now) Nothing Nothing Nothing (Just [walletReferenceBaseRide])
   pure $ sum $ map (.amount) entries
 
--- Account helpers
+-- Account helpers (these are still needed for non-FinanceM callers like balance queries)
 
 getWalletAccountByOwner ::
   (BeamFlow m r) =>
@@ -126,202 +136,83 @@ getWalletBalanceByOwner counterpartyType ownerId = do
   mbAcc <- getWalletAccountByOwner counterpartyType ownerId
   pure $ mbAcc <&> (.balance)
 
-getOrCreateWalletAccount ::
-  (BeamFlow m r) =>
-  CounterpartyType ->
-  Text -> -- Owner ID
-  Currency ->
-  Text -> -- Merchant ID
-  Text -> -- Merchant operating city ID
-  m (Either FinanceError Account)
-getOrCreateWalletAccount counterpartyType ownerId currency merchantId merchantOperatingCityId = do
-  let input =
-        AccountInput
-          { accountType = Liability,
-            counterpartyType = Just counterpartyType,
-            counterpartyId = Just ownerId,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  getOrCreateAccount input
+-- | Build a FinanceCtx from booking + ride data.
+--   Resolves merchant name, shortId, address, and supplier info from DB.
+--   This is the standard way to create a context for wallet operations.
+buildFinanceCtx ::
+  (BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  SRB.Booking ->
+  DRide.Ride ->
+  Maybe DP.Person ->
+  m FinanceCtx
+buildFinanceCtx booking ride mbDriver = do
+  let merchantId = fromMaybe booking.providerId ride.merchantId
+      mid = merchantId.getId
+      mocid = booking.merchantOperatingCityId.getId
+      (cType, cId) = case ride.fleetOwnerId of
+        Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId.getId)
+        Nothing -> (DRIVER, ride.driverId.getId)
+  -- Resolve merchant info
+  mbMerchant <- CQM.findById merchantId
+  mbMerchantOpCity <- CQMOC.findById booking.merchantOperatingCityId
+  let mName = mbMerchant <&> (.name)
+      mShortId = mbMerchant <&> (.shortId.getShortId)
+      address =
+        mbMerchantOpCity <&> \city ->
+          show city.city <> ", " <> show city.state <> ", " <> show city.country
+  -- Resolve supplier info (fleet owner or driver)
+  (sName, sGSTIN, sId) <- case ride.fleetOwnerId of
+    Just fleetOwnerId -> do
+      mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+      pure
+        ( mbFleetInfo >>= (.fleetName),
+          mbFleetInfo >>= (.gstNumberDec),
+          Just fleetOwnerId.getId
+        )
+    Nothing ->
+      pure
+        ( mbDriver <&> \d -> d.firstName <> maybe "" (" " <>) d.lastName,
+          Nothing,
+          Just ride.driverId.getId
+        )
+  pure
+    FinanceCtx
+      { merchantId = mid,
+        merchantOpCityId = mocid,
+        currency = booking.currency,
+        counterpartyType = cType,
+        counterpartyId = cId,
+        referenceId = booking.id.getId,
+        merchantName = mName,
+        merchantShortId = mShortId,
+        issuedByAddress = address,
+        supplierName = sName,
+        supplierGSTIN = sGSTIN,
+        supplierId = sId
+      }
 
-getOrCreatePlatformAccount ::
-  (BeamFlow m r) =>
-  Currency ->
-  Text ->
-  Text ->
-  m (Either FinanceError Account)
-getOrCreatePlatformAccount currency merchantId merchantOperatingCityId = do
-  let input =
-        AccountInput
-          { accountType = Asset,
-            counterpartyType = Just SELLER,
-            counterpartyId = Just merchantId,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  getOrCreateAccount input
-
--- New account helpers for the refactored wallet flow
-
-getOrCreateBuyerAssetAccount ::
-  (BeamFlow m r) =>
-  Currency ->
-  Text -> -- Merchant ID
-  Text -> -- Merchant operating city ID
-  m (Either FinanceError Account)
-getOrCreateBuyerAssetAccount currency merchantId merchantOperatingCityId = do
-  let input =
-        AccountInput
-          { accountType = Asset,
-            counterpartyType = Just BUYER,
-            counterpartyId = Just merchantId,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  getOrCreateAccount input
-
-getOrCreateBuyerExternalAccount ::
-  (BeamFlow m r) =>
-  Currency ->
-  Text -> -- Merchant ID
-  Text -> -- Merchant operating city ID
-  m (Either FinanceError Account)
-getOrCreateBuyerExternalAccount currency merchantId merchantOperatingCityId = do
-  let input =
-        AccountInput
-          { accountType = External,
-            counterpartyType = Just BUYER,
-            counterpartyId = Just merchantId,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  getOrCreateAccount input
-
-getOrCreateDriverLiabilityAccount ::
-  (BeamFlow m r) =>
-  Currency ->
-  Text -> -- Driver ID
-  Text -> -- Merchant ID
-  Text -> -- Merchant operating city ID
-  m (Either FinanceError Account)
-getOrCreateDriverLiabilityAccount currency driverId =
-  getOrCreateWalletAccount DRIVER driverId currency
-
-getOrCreateFleetOwnerLiabilityAccount ::
-  (BeamFlow m r) =>
-  Currency ->
-  Text -> -- Fleet owner ID
-  Text -> -- Merchant ID
-  Text -> -- Merchant operating city ID
-  m (Either FinanceError Account)
-getOrCreateFleetOwnerLiabilityAccount currency fleetOwnerId =
-  getOrCreateWalletAccount FLEET_OWNER fleetOwnerId currency
-
-getOrCreateGovtIndirectLiabilityAccount ::
-  (BeamFlow m r) =>
-  Currency ->
-  Text -> -- Merchant ID
-  Text -> -- Merchant operating city ID
-  m (Either FinanceError Account)
-getOrCreateGovtIndirectLiabilityAccount currency merchantId merchantOperatingCityId = do
-  let input =
-        AccountInput
-          { accountType = Liability,
-            counterpartyType = Just GOVERNMENT_INDIRECT,
-            counterpartyId = Just merchantId,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  getOrCreateAccount input
-
-getOrCreateGovtDirectLiabilityAccount ::
-  (BeamFlow m r) =>
-  Currency ->
-  Text -> -- Merchant ID
-  Text -> -- Merchant operating city ID
-  m (Either FinanceError Account)
-getOrCreateGovtDirectLiabilityAccount currency merchantId merchantOperatingCityId = do
-  let input =
-        AccountInput
-          { accountType = Liability,
-            counterpartyType = Just GOVERNMENT_DIRECT,
-            counterpartyId = Just merchantId,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  getOrCreateAccount input
-
--- Ledger transfer functions
-
-createLedgerTransfer ::
-  (BeamFlow m r) =>
-  Account ->
-  Account ->
-  HighPrecMoney ->
-  Text ->
-  Text ->
-  m (Either FinanceError (Maybe (Id LedgerEntry)))
-createLedgerTransfer fromAccount toAccount amount referenceType referenceId = do
-  if amount <= 0
-    then pure $ Right Nothing
-    else do
-      let entryInput =
-            LedgerEntryInput
-              { fromAccountId = fromAccount.id,
-                toAccountId = toAccount.id,
-                amount = amount,
-                currency = fromAccount.currency,
-                entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
-                status = SETTLED,
-                referenceType = referenceType,
-                referenceId = referenceId,
-                metadata = Nothing,
-                merchantId = fromAccount.merchantId,
-                merchantOperatingCityId = fromAccount.merchantOperatingCityId
-              }
-      entryRes <- createEntryWithBalanceUpdate entryInput
-      case entryRes of
-        Left err -> pure $ Left err
-        Right entry -> pure $ Right (Just entry.id)
-
--- | Like createLedgerTransfer but allows zero-amount entries (for placeholder entries like TDS)
-createLedgerTransferAllowZero ::
-  (BeamFlow m r) =>
-  Account ->
-  Account ->
-  HighPrecMoney ->
-  Text ->
-  Text ->
-  m (Either FinanceError (Maybe (Id LedgerEntry)))
-createLedgerTransferAllowZero fromAccount toAccount amount referenceType referenceId = do
-  if amount < 0
-    then pure $ Right Nothing
-    else do
-      let entryInput =
-            LedgerEntryInput
-              { fromAccountId = fromAccount.id,
-                toAccountId = toAccount.id,
-                amount = amount,
-                currency = fromAccount.currency,
-                entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
-                status = SETTLED,
-                referenceType = referenceType,
-                referenceId = referenceId,
-                metadata = Nothing,
-                merchantId = fromAccount.merchantId,
-                merchantOperatingCityId = fromAccount.merchantOperatingCityId
-              }
-      entryRes <- createEntryWithBalanceUpdate entryInput
-      case entryRes of
-        Left err -> pure $ Left err
-        Right entry -> pure $ Right (Just entry.id)
+-- | Build a minimal FinanceCtx without invoice fields (for callers that
+--   only need transfers, not invoices).
+financeCtxFromRide :: SRB.Booking -> DRide.Ride -> FinanceCtx
+financeCtxFromRide booking ride =
+  let merchantId = fromMaybe booking.providerId ride.merchantId
+      (cType, cId) = case ride.fleetOwnerId of
+        Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId.getId)
+        Nothing -> (DRIVER, ride.driverId.getId)
+   in FinanceCtx
+        { merchantId = merchantId.getId,
+          merchantOpCityId = booking.merchantOperatingCityId.getId,
+          currency = booking.currency,
+          counterpartyType = cType,
+          counterpartyId = cId,
+          referenceId = booking.id.getId,
+          merchantName = Nothing,
+          merchantShortId = Nothing,
+          issuedByAddress = Nothing,
+          supplierName = Nothing,
+          supplierGSTIN = Nothing,
+          supplierId = Nothing
+        }
 
 -- Wallet entry delta (for topup/payout)
 
@@ -343,8 +234,26 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
       mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
       pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBalance
     else do
-      mbOwnerAccount <- getOrCreateWalletAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
-      mbPlatformAccount <- getOrCreatePlatformAccount currency merchantId merchantOperatingCityId
+      let walletInput =
+            AccountInput
+              { accountType = Liability,
+                counterpartyType = Just counterpartyType,
+                counterpartyId = Just ownerId,
+                currency = currency,
+                merchantId = merchantId,
+                merchantOperatingCityId = merchantOperatingCityId
+              }
+          platformInput =
+            AccountInput
+              { accountType = Asset,
+                counterpartyType = Just SELLER,
+                counterpartyId = Just merchantId,
+                currency = currency,
+                merchantId = merchantId,
+                merchantOperatingCityId = merchantOperatingCityId
+              }
+      mbOwnerAccount <- getOrCreateAccount walletInput
+      mbPlatformAccount <- getOrCreateAccount platformInput
       case (mbOwnerAccount, mbPlatformAccount) of
         (Right ownerAccount, Right platformAccount) -> do
           let (fromAcc, toAcc, amount, eType) =
@@ -374,18 +283,21 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
         (Left err, _) -> pure $ Left err
         (_, Left err) -> pure $ Left err
 
-reverseWalletEntryByReference ::
-  (BeamFlow m r) =>
-  Text -> -- Reference type
-  Text -> -- Reference ID
-  Text -> -- Reason
-  m ()
-reverseWalletEntryByReference referenceType referenceId reason = do
-  entries <- getEntriesByReference referenceType referenceId
-  let hasReversal = any (\e -> e.entryType == Reversal) entries
-  unless hasReversal $
-    case sortOn (Down . (.timestamp)) entries of
-      (latest : _) -> do
-        _ <- createReversal latest.id reason
-        pure ()
-      [] -> pure ()
+-- | Split a total GST amount into CGST/SGST/IGST proportionally based on GstBreakup percentages.
+--   If the total percentage is 0, returns Nothing.
+computeGstBreakdown :: DTC.GstBreakup -> HighPrecMoney -> Maybe GstAmountBreakdown
+computeGstBreakdown gstBreakup totalGst
+  | totalGst <= 0 = Nothing
+  | totalPct <= 0 = Nothing
+  | otherwise =
+    Just
+      GstAmountBreakdown
+        { cgstAmount = if cgstPct > 0 then Just (totalGst * cgstPct / totalPct) else Nothing,
+          sgstAmount = if sgstPct > 0 then Just (totalGst * sgstPct / totalPct) else Nothing,
+          igstAmount = if igstPct > 0 then Just (totalGst * igstPct / totalPct) else Nothing
+        }
+  where
+    cgstPct = fromMaybe 0 gstBreakup.cgstPercentage
+    sgstPct = fromMaybe 0 gstBreakup.sgstPercentage
+    igstPct = fromMaybe 0 gstBreakup.igstPercentage
+    totalPct = cgstPct + sgstPct + igstPct

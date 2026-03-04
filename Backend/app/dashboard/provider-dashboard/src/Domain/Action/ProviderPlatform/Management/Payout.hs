@@ -8,15 +8,18 @@ module Domain.Action.ProviderPlatform.Management.Payout
     postPayoutPayoutVpaDelete,
     postPayoutPayoutVpaUpdate,
     postPayoutPayoutVpaRefundRegistration,
+    postPayoutPayoutScheduledPayoutConfigUpsert,
   )
 where
 
 import qualified API.Client.ProviderPlatform.Management as ManagementClient
+import qualified API.Types.ProviderPlatform.Management.Payout as ApiPayout
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -26,6 +29,9 @@ import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant
+
+instance Common.HideSecrets ApiPayout.UpdateScheduledPayoutConfigReq where
+  hideSecrets = identity
 
 buildPayoutManagementServerTransaction ::
   ( MonadFlow m,
@@ -120,3 +126,15 @@ postPayoutPayoutVpaRefundRegistration merchantShortId opCity apiTokenInfo req = 
   transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ do
     ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutVpaRefundRegistration) req
+
+postPayoutPayoutScheduledPayoutConfigUpsert ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  ApiPayout.UpdateScheduledPayoutConfigReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ do
+    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutScheduledPayoutConfigUpsert) req

@@ -62,9 +62,15 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance (getEntriesByReference)
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as FinanceIndirectTax
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
+import qualified SharedLogic.Finance.Wallet as FinanceWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -149,19 +155,14 @@ getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurr
   whenJust mbCurrency $ \currency -> do
     unless (currency == merchantOpCity.currency) $
       throwError (InvalidRequest "Invalid currency")
-  shouldHideCustomerInfo <-
-    case mbFleetOwnerId of
-      Nothing -> shouldHideCustomerInfoWhenNoFleetOwner mbRequestorId
-      Just fleetOwnerId -> do
-        void $ FleetAccess.checkRequestorAccessToFleet True mbRequestorId fleetOwnerId
-        pure True
+  (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbFleetOwnerId
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
   now <- getCurrentTime
-  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash && isNothing mbVehicleNo && isNothing mbFleetOwnerId) $
+  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash && isNothing mbVehicleNo && isNothing effectiveFleetOwnerId) $
     throwError $ InvalidRequest "At least one filter is required"
   when (isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
   case (mbfrom, mbto) of
@@ -172,15 +173,15 @@ getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurr
   enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
   rideItems <-
     if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
-      then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to mbVehicleNo mbFleetOwnerId
-      else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto mbVehicleNo mbFleetOwnerId
+      then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now from to mbVehicleNo effectiveFleetOwnerId
+      else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto mbVehicleNo effectiveFleetOwnerId
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let rideListItems' :: [Common.RideListItem]
       rideListItems' =
-        if shouldHideCustomerInfo
-          then map (\item -> (item {Common.customerName = Nothing, Common.customerPhoneNo = ""} :: Common.RideListItem)) rideListItems
-          else rideListItems
+        if shouldShowCustomerInfo
+          then rideListItems
+          else map (\item -> (item {Common.customerName = Nothing, Common.customerPhoneNo = ""} :: Common.RideListItem)) rideListItems
   let count = length rideListItems'
   -- should we consider filters in totalCount, e.g. count all canceled rides?
   -- totalCount <- runInReplica $ QRide.countRides merchant.id
@@ -190,16 +191,38 @@ getRideListUtil isDashboardRequest merchantShortId opCity mbBookingStatus mbCurr
     maxLimit = 20
     defaultLimit = 10
 
-    shouldHideCustomerInfoWhenNoFleetOwner :: Maybe Text -> Flow Bool
-    shouldHideCustomerInfoWhenNoFleetOwner mbReqId =
-      case mbReqId of
-        Nothing -> pure False
-        Just requestorId -> do
-          requestor <- runInReplica $ QP.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
-          case requestor.role of
-            DP.FLEET_OWNER -> pure True
-            DP.OPERATOR -> throwError AccessDenied
-            _ -> pure False
+    -- Resolve (show customer info?, effective fleet filter). Fleet owner/operator: only their fleet, no customer info; other roles: may filter by any fleet, show customer info.
+    resolveFleetAndCustomerVisibility :: Maybe Text -> Flow (Bool, Maybe Text)
+    resolveFleetAndCustomerVisibility (Just fleetOwnerId) = do
+      isFleetOrOp <- isRequestorFleetOwnerOrOperator
+      if isFleetOrOp
+        then do
+          void $ FleetAccess.checkRequestorAccessToFleet True mbRequestorId fleetOwnerId
+          pure (False, Just fleetOwnerId)
+        else pure (True, Just fleetOwnerId)
+    resolveFleetAndCustomerVisibility Nothing = resolveRoleAndEffectiveFleet
+
+    isRequestorFleetOwnerOrOperator :: Flow Bool
+    isRequestorFleetOwnerOrOperator = case mbRequestorId of
+      Nothing -> pure False
+      Just requestorId -> do
+        mbRequestor <- runInReplica $ QP.findById (Id requestorId)
+        pure $ maybe False (\r -> r.role == DP.FLEET_OWNER || r.role == DP.OPERATOR) mbRequestor
+
+    -- When no fleetOwnerId in request: fleet owner => their fleet only, no customer info; operator => must pass fleetOwnerId; other roles => no fleet filter, show customer info.
+    resolveRoleAndEffectiveFleet :: Flow (Bool, Maybe Text)
+    resolveRoleAndEffectiveFleet = case mbRequestorId of
+      Nothing -> pure (True, Nothing)
+      Just requestorId -> do
+        mbRequestor <- runInReplica $ QP.findById (Id requestorId)
+        case mbRequestor of
+          Nothing -> pure (True, Nothing)
+          Just requestor ->
+            case requestor.role of
+              DP.FLEET_OWNER -> pure (False, Just requestorId)
+              DP.FLEET_BUSINESS -> pure (False, Just requestorId)
+              DP.OPERATOR -> throwError AccessDenied
+              _ -> pure (True, Nothing)
 
 getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Flow Common.RideListResV2
 getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbRideStatus mbto = do
@@ -237,25 +260,148 @@ getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mb
     maxLimit = 20
     defaultLimit = 10
 
-buildRideListItem :: EncFlow m r => QRide.RideItem -> m Common.RideListItem
-buildRideListItem QRide.RideItem {..} = do
+-- | Reference types used for ride/booking in finance ledger (for wallet_transaction_ids).
+rideLedgerReferenceTypes :: [Text]
+rideLedgerReferenceTypes =
+  [ FinancePrepaid.prepaidRideDebitReferenceType, -- "RideSubscriptionDebit"
+    FinancePrepaid.subscriptionRideReferenceType, -- "RideRevenueRecognition"
+    FinanceWallet.walletReferenceBaseRide,
+    FinanceWallet.walletReferenceGSTOnline,
+    FinanceWallet.walletReferenceTollCharges,
+    FinanceWallet.walletReferenceParkingCharges,
+    FinanceWallet.walletReferenceTDSDeductionOnline,
+    FinanceWallet.walletReferenceGSTCash,
+    FinanceWallet.walletReferenceTDSDeductionCash
+  ]
+
+buildRideListItem :: (EncFlow m r, BeamFlow m r) => QRide.RideItem -> m Common.RideListItem
+buildRideListItem item@QRide.RideItem {..} = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
+  -- Prefill finance and lifecycle fields when we have full ride and booking
+
+  (ondcOrderId, buyerAppOrderId, pickupLocationId, dropLocationId, grossRideValue, subscriptionOffsetAmount, netPayableToDriver, paymentModeText, paymentReferenceInternal, walletTransactionIds, rideStartedAt, rideCompletedAt, rideCancelledAt, rideStatus, customerIdMasked, tripDistanceKm, tripDurationMinutes, gstApplicableFlag, gstRate, gstAmount) <-
+    case (item.ride, item.booking) of
+      (Just r, Just b) -> do
+        let bookingIdStr = b.id.getId
+        -- Subscription offset: sum of RideSubscriptionDebit entries for this booking
+        subEntries <- getEntriesByReference FinancePrepaid.prepaidRideDebitReferenceType bookingIdStr
+        let subOffset = if null subEntries then Nothing else Just (sum (map (.amount) subEntries))
+        -- Net payable to driver: sum of RideRevenueRecognition entries
+        revEntries <- getEntriesByReference FinancePrepaid.subscriptionRideReferenceType bookingIdStr
+        let netPayable = if null revEntries then Nothing else Just (sum (map (.amount) revEntries))
+        -- All ledger entry IDs for this booking (wallet_transaction_ids)
+        allEntries <- concat <$> mapM (\refType -> getEntriesByReference refType bookingIdStr) rideLedgerReferenceTypes
+        let ledgerIds = map (.id.getId) allEntries
+        let payModeText = show <$> b.paymentMode
+        let rideStartedAt' = r.tripStartTime
+        let rideCompletedAt' = r.tripEndTime
+        let rideCancelledAt' = if r.status == DRide.CANCELLED then Just r.updatedAt else Nothing
+        let tripDistKm = Just (highPrecMetersToMeters r.traveledDistance)
+        let tripDurMin = timeDiffInMinutes <$> r.tripEndTime <*> r.tripStartTime
+        -- Get GST and gross ride value from indirect tax transaction
+        indirectTaxTxns <- QIndirectTax.findByReferenceId bookingIdStr
+        let mbRideFareTxn = listToMaybe $ filter (\txn -> txn.transactionType == FinanceIndirectTax.RideFare) indirectTaxTxns
+        let grossRideValue' = mbRideFareTxn <&> (.taxableValue)
+        let gstApplicableFlag' = isJust mbRideFareTxn
+        let gstRate' = mbRideFareTxn <&> (.gstRate)
+        let gstAmount' = mbRideFareTxn <&> (.totalGstAmount)
+        pure
+          ( Just b.transactionId,
+            Just b.bapId,
+            Just (r.fromLocation.id.getId),
+            (\loc -> loc.id.getId) <$> r.toLocation,
+            grossRideValue',
+            subOffset,
+            netPayable,
+            payModeText,
+            b.paymentId,
+            ledgerIds,
+            rideStartedAt',
+            rideCompletedAt',
+            rideCancelledAt',
+            castRideStatus' r.status,
+            getId <$> b.riderId,
+            tripDistKm,
+            tripDurMin,
+            Just gstApplicableFlag',
+            gstRate',
+            gstAmount'
+          )
+      _ ->
+        pure
+          ( Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            [],
+            Nothing,
+            Nothing,
+            Nothing,
+            bookingStatusToRideStatus bookingStatus,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing
+          )
   pure
     Common.RideListItem
       { rideId = cast @DRide.Ride @Common.Ride rideDetails.id,
         rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) rideShortId,
+        ondcOrderId,
+        buyerAppOrderId,
+        rideCreatedAt = rideCreatedAt,
+        rideStartedAt,
+        rideCompletedAt,
+        rideCancelledAt,
+        rideStatus,
+        fleetOperatorId = rideDetails.fleetOwnerId,
+        customerIdMasked,
+        pickupLocationId,
+        dropLocationId,
+        tripDistanceKm,
+        tripDurationMinutes,
         customerName,
         customerPhoneNo,
         driverName = rideDetails.driverName,
         driverPhoneNo,
-        vehicleNo = rideDetails.vehicleNumber,
         tripCategory = castTripCategory tripCategory, -- TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
         tripCategoryV2 = tripCategory,
+        vehicleNo = rideDetails.vehicleNumber,
         fareDiff = fareDiff <&> (.amountInt),
         fareDiffWithCurrency = mkPriceAPIEntity <$> fareDiff,
-        bookingStatus,
-        rideCreatedAt = rideCreatedAt
+        baseFare = Nothing,
+        distanceCharge = Nothing,
+        timeCharge = Nothing,
+        surgeMultiplier = Nothing,
+        surgeAmount = Nothing,
+        grossRideValue,
+        platformFee = Nothing,
+        platformFeeGst = Nothing,
+        subscriptionOffsetAmount,
+        incentivesAmount = Nothing,
+        penaltiesAmount = Nothing,
+        gstApplicableFlag = gstApplicableFlag,
+        gstRate = gstRate,
+        gstAmount = gstAmount,
+        tdsApplicableFlag = Nothing,
+        tdsRate = Nothing,
+        tdsAmount = Nothing,
+        netPayableToDriver,
+        netPlatformRevenue = Nothing,
+        paymentMode = paymentModeText,
+        paymentStatus = Nothing,
+        paymentReferenceInternal,
+        walletTransactionIds,
+        invoiceIds = [],
+        bookingStatus
       }
 
 buildRideListItemV2 :: EncFlow m r => QRide.RideItemV2 -> m Common.RideListItemV2
@@ -265,10 +411,45 @@ buildRideListItemV2 QRide.RideItemV2 {..} = do
     Common.RideListItemV2
       { rideId = cast @DRide.Ride @Common.Ride rideId,
         rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) rideShortId,
+        ondcOrderId = Nothing,
+        buyerAppOrderId = Nothing,
         rideCreatedAt = rideCreatedAt,
+        rideStartedAt = Nothing,
+        rideCompletedAt = Nothing,
+        rideCancelledAt = Nothing,
         rideStatus = castRideStatus' rideStatus,
+        fleetOperatorId = Nothing,
+        customerIdMasked = Nothing,
+        pickupLocationId = Nothing,
+        dropLocationId = Nothing,
+        tripDistanceKm = Nothing,
+        tripDurationMinutes = Nothing,
         driverName = driverName,
-        driverPhoneNo = driverPhoneNumber
+        driverPhoneNo = driverPhoneNumber,
+        baseFare = Nothing,
+        distanceCharge = Nothing,
+        timeCharge = Nothing,
+        surgeMultiplier = Nothing,
+        surgeAmount = Nothing,
+        grossRideValue = Nothing,
+        platformFee = Nothing,
+        platformFeeGst = Nothing,
+        subscriptionOffsetAmount = Nothing,
+        incentivesAmount = Nothing,
+        penaltiesAmount = Nothing,
+        gstApplicableFlag = Nothing,
+        gstRate = Nothing,
+        gstAmount = Nothing,
+        tdsApplicableFlag = Nothing,
+        tdsRate = Nothing,
+        tdsAmount = Nothing,
+        netPayableToDriver = Nothing,
+        netPlatformRevenue = Nothing,
+        paymentMode = Nothing,
+        paymentStatus = Nothing,
+        paymentReferenceInternal = Nothing,
+        walletTransactionIds = [],
+        invoiceIds = []
       }
 
 castRideStatus' :: DRide.RideStatus -> Common.RideStatus
@@ -278,6 +459,15 @@ castRideStatus' = \case
   DRide.INPROGRESS -> Common.RIDE_INPROGRESS
   DRide.COMPLETED -> Common.RIDE_COMPLETED
   DRide.CANCELLED -> Common.RIDE_CANCELLED
+
+bookingStatusToRideStatus :: Common.BookingStatus -> Common.RideStatus
+bookingStatusToRideStatus = \case
+  Common.COMPLETED -> Common.RIDE_COMPLETED
+  Common.CANCELLED -> Common.RIDE_CANCELLED
+  Common.UPCOMING -> Common.RIDE_UPCOMING
+  Common.UPCOMING_6HRS -> Common.RIDE_UPCOMING
+  Common.ONGOING -> Common.RIDE_INPROGRESS
+  Common.ONGOING_6HRS -> Common.RIDE_INPROGRESS
 
 ---------------------------------------------------------------------------------------------------
 ticketRideList :: ShortId DM.Merchant -> Context.City -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes

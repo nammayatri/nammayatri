@@ -172,4 +172,5 @@ in  { hedisCfg
     , dashboardClickhouseCfg
     , inMemConfig
     , hedisSecondaryClusterCfg
+    , smsCfg = appCfg.smsCfg
     }

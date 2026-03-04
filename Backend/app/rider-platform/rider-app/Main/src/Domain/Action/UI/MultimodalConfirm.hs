@@ -1825,20 +1825,24 @@ postMultimodalRouteServiceability ::
     API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
   )
-postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
-  person <- authenticate mbPersonId
-  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-  let routeServiceabilityContext =
-        RouteServiceabilityContext
-          { integratedBPPConfig,
-            merchantOperatingCityId = person.merchantOperatingCityId,
-            merchantId = person.merchantId
-          }
-  (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
-  directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
-  if null directRouteCodes
-    then JMU.measureLatency (handleOtpRoute routeServiceabilityContext srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
-    else JMU.measureLatency (handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
+postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
+  JMU.measureLatency
+    ( do
+        person <- authenticate mbPersonId
+        integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+        let routeServiceabilityContext =
+              RouteServiceabilityContext
+                { integratedBPPConfig,
+                  merchantOperatingCityId = person.merchantOperatingCityId,
+                  merchantId = person.merchantId
+                }
+        (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
+        directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
+        if null directRouteCodes
+          then JMU.measureLatency (handleOtpRoute routeServiceabilityContext srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
+          else JMU.measureLatency (handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
+    )
+    ("FULL_API postMultimodalRouteServiceability req=" <> show req)
   where
     authenticate :: Maybe (Id Domain.Types.Person.Person) -> Environment.Flow Domain.Types.Person.Person
     authenticate mbPersonId' = do
@@ -1903,11 +1907,10 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
     buildRouteWithLiveVehicle ::
       CQMMB.RouteWithBuses ->
       RouteServiceabilityContext ->
-      Bool ->
       Text ->
       Text ->
       Environment.Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
-    buildRouteWithLiveVehicle routeInfo routeServiceabilityContext enableDebug fromStopCode toStopCode = do
+    buildRouteWithLiveVehicle routeInfo routeServiceabilityContext fromStopCode toStopCode = do
       route <-
         OTPRest.getRouteByRouteId routeServiceabilityContext.integratedBPPConfig routeInfo.routeId
           >>= fromMaybeM
@@ -1916,19 +1919,17 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
         OTPRest.getRouteBusSchedule routeInfo.routeId routeServiceabilityContext.integratedBPPConfig
       schedules <-
         getBusScheduleInfo busScheduleDetails routeServiceabilityContext routeInfo.routeId fromStopCode toStopCode
-      when enableDebug $
-        logDebug $
-          "AlternateRoute getRouteBusSchedule routeId="
-            <> routeInfo.routeId
-            <> ", scheduleCount="
-            <> show (length schedules)
+      logDebug $
+        "AlternateRoute getRouteBusSchedule routeId="
+          <> routeInfo.routeId
+          <> ", scheduleCount="
+          <> show (length schedules)
       liveVehicles <- getLiveVehicles routeInfo.buses routeServiceabilityContext
-      when enableDebug $
-        logDebug $
-          "AlternateRoute routeId="
-            <> routeInfo.routeId
-            <> ", shortName="
-            <> route.shortName
+      logDebug $
+        "AlternateRoute routeId="
+          <> routeInfo.routeId
+          <> ", shortName="
+          <> route.shortName
       if null liveVehicles && null schedules
         then pure Nothing
         else
@@ -2022,7 +2023,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                   let combinedTripId = do
                         waybill <- detail.waybill_no
                         tNum <- detail.trip_number
-                        return $ waybill <> "-" <> tNum
+                        return $ waybill <> "-" <> show tNum
                   seatLayoutId <-
                     JMU.getLiveRouteInfo
                       routeServiceabilityContext.integratedBPPConfig
@@ -2154,7 +2155,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       Text
     makeOtpResolvedRouteKey ctx srcCode destCode =
       "otp-resolved-route-"
-        <> show ctx.merchantOperatingCityId
+        <> show ctx.merchantOperatingCityId.getId
         <> "-"
         <> normalize srcCode
         <> "-"
@@ -2196,7 +2197,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
           routesWithLiveVehicles <-
             catMaybes
               <$> mapM
-                (\r -> buildRouteWithLiveVehicle r ctx False rlFromStopCode rlToStopCode)
+                (\r -> buildRouteWithLiveVehicle r ctx rlFromStopCode rlToStopCode)
                 busesForRoutes
 
           pure $
@@ -2513,6 +2514,18 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         DJourneyLeg.finalBoardedScheduleNo = vehicleLiveRouteInfo.scheduleNo,
         DJourneyLeg.finalBoardedBusServiceTierType = Just vehicleLiveRouteInfo.serviceType
       }
+  -- Sync journey leg data to frfs_ticket_booking for analytics
+  fork "FRFS Analytics: sync vehicle data to ticket booking" $
+    QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataBySearchId
+      (Just vehicleLiveRouteInfo.vehicleNumber)
+      (Just DJourneyLeg.UserActivated)
+      vehicleLiveRouteInfo.waybillId
+      vehicleLiveRouteInfo.scheduleNo
+      vehicleLiveRouteInfo.depot
+      (Just vehicleLiveRouteInfo.serviceType)
+      journeyLeg.busConductorId
+      journeyLeg.busDriverId
+      legSearchId
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
   where

@@ -107,7 +107,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j12
+          - -j4
   dependencies:
     - rider-app
 
@@ -133,7 +133,7 @@ executables:
       else:
         ghc-options:
           - -O2
-          - -j12
+          - -j4
     dependencies:
       - search-result-aggregator
       - mobility-core

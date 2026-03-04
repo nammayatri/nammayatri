@@ -51,6 +51,8 @@ library
       Domain.Action.ProviderPlatform.Management.Account
       Domain.Action.ProviderPlatform.Management.Booking
       Domain.Action.ProviderPlatform.Management.CoinsConfig
+      Domain.Action.ProviderPlatform.Management.Communication
+      Domain.Action.ProviderPlatform.Management.DomainDiscountConfig
       Domain.Action.ProviderPlatform.Management.Driver
       Domain.Action.ProviderPlatform.Management.DriverCoins
       Domain.Action.ProviderPlatform.Management.DriverGoHome
@@ -58,6 +60,7 @@ library
       Domain.Action.ProviderPlatform.Management.DriverRegistration
       Domain.Action.ProviderPlatform.Management.EntityInfo
       Domain.Action.ProviderPlatform.Management.FeedbackForm
+      Domain.Action.ProviderPlatform.Management.FinanceManagement
       Domain.Action.ProviderPlatform.Management.Media
       Domain.Action.ProviderPlatform.Management.MediaFileDocument
       Domain.Action.ProviderPlatform.Management.Merchant
@@ -105,6 +108,8 @@ library
       API.Action.ProviderPlatform.Management.Account
       API.Action.ProviderPlatform.Management.Booking
       API.Action.ProviderPlatform.Management.CoinsConfig
+      API.Action.ProviderPlatform.Management.Communication
+      API.Action.ProviderPlatform.Management.DomainDiscountConfig
       API.Action.ProviderPlatform.Management.Driver
       API.Action.ProviderPlatform.Management.DriverCoins
       API.Action.ProviderPlatform.Management.DriverGoHome
@@ -112,6 +117,7 @@ library
       API.Action.ProviderPlatform.Management.DriverRegistration
       API.Action.ProviderPlatform.Management.EntityInfo
       API.Action.ProviderPlatform.Management.FeedbackForm
+      API.Action.ProviderPlatform.Management.FinanceManagement
       API.Action.ProviderPlatform.Management.Media
       API.Action.ProviderPlatform.Management.MediaFileDocument
       API.Action.ProviderPlatform.Management.Merchant
@@ -225,7 +231,7 @@ library
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j12
+    ghc-options: -O2 -j4
 
 executable provider-dashboard-exe
   main-is: Main.hs
@@ -307,4 +313,4 @@ executable provider-dashboard-exe
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j12
+    ghc-options: -O2 -j4

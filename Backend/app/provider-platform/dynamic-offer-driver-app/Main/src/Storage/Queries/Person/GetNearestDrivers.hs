@@ -32,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -102,7 +103,7 @@ data NearestDriversReq = NearestDriversReq
   }
 
 getNearestDrivers ::
-  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  (BeamFlow m r, MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
   NearestDriversReq ->
   m [NearestDriversResult]
 getNearestDrivers NearestDriversReq {..} = do
@@ -213,7 +214,7 @@ getNearestDrivers NearestDriversReq {..} = do
               }
 
 hasSufficientBalance ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (BeamFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   HighPrecMoney ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
@@ -242,7 +243,7 @@ hasSufficientBalance fare fleetThreshold driverThreshold fleetAssociationMap fle
           _ -> False
 
 filterDriversBySufficientBalance ::
-  (EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
+  (BeamFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
   Merchant ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
@@ -264,7 +265,7 @@ filterDriversBySufficientBalance merchant rideFare fleetPrepaidSubscriptionThres
       Nothing -> pure driverInfos_
 
 filterDriversByMinWalletBalance ::
-  (EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
+  (BeamFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
   Merchant ->
   Maybe HighPrecMoney ->
   Maybe MP.PaymentInstrument ->

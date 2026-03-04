@@ -15,6 +15,7 @@ module Domain.Action.UI.Pass
     postMultimodalPassUploadProfilePicture,
     postMultimodalPassUpdateProfilePictureUtil,
     buildPurchasedPassAPIEntity,
+    postMultimodalPassSetPrefSrcAndDest,
   )
 where
 
@@ -243,6 +244,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   usedTripCount = Just 0,
                   verificationValidity = pass.verificationValidity,
                   merchantOperatingCityId = pass.merchantOperatingCityId,
+                  preferredDestination = Nothing,
+                  preferredSource = Nothing,
                   createdAt = now,
                   updatedAt = now
                 }
@@ -622,6 +625,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         daysToExpire = daysToExpire,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
         expiryDate = purchasedPass.endDate,
+        isPreferredSourceAndDestinationSet = isJust purchasedPass.preferredDestination && isJust purchasedPass.preferredSource,
         futureRenewals = buildPurchasedPassPaymentAPIEntity <$> futureRenewals
       }
 
@@ -1107,5 +1111,23 @@ postMultimodalPassUpdateProfilePictureUtil personId merchantId purchasedPassId p
 
   let validStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
   QPurchasedPassPayment.updateProfilePictureByPurchasedPassIdAndStatus (Just profilePicture) purchasedPass.id validStatuses
+
+  return APISuccess.Success
+
+postMultimodalPassSetPrefSrcAndDest ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Id.Id DPurchasedPass.PurchasedPass ->
+    PassAPI.SetPassPrefSrcAndDestReq ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postMultimodalPassSetPrefSrcAndDest (mbCallerPersonId, merchantId) purchasedPassId req = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
+  unless (purchasedPass.personId == personId) $ throwError AccessDenied
+  unless (purchasedPass.merchantId == merchantId) $ throwError AccessDenied
+
+  QPurchasedPass.updatePrefSrcAndDestById (Just req.prefSrc) (Just req.prefDest) purchasedPass.id
 
   return APISuccess.Success

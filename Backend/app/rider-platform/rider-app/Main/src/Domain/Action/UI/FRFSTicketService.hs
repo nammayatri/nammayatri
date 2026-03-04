@@ -521,7 +521,7 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId mbIsMockP
       <> show finalServiceTier
       <> ", routeCode="
       <> show req.routeCode
-  postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes False mbIsMockPayment
+  postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes True mbIsMockPayment
 
 postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
@@ -575,6 +575,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
       searchReq =
         DFRFSSearch.FRFSSearch
           { id = searchReqId,
+            multimodalSearchRequestId = multimodalSearchRequestId <|> if integratedBPPConfig.platformType == DIBC.MULTIMODAL then Just searchReqId.getId else Nothing,
             vehicleType = vehicleType_,
             merchantId = merchantId,
             merchantOperatingCityId = fromStation.merchantOperatingCityId,
@@ -598,6 +599,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             validTill = Just validTill,
             searchAsParentStops = searchAsParentStops,
             busLocationData = fromMaybe [] busLocationData,
+            isSingleMode = Just isSingleMode,
             ..
           }
   upsertJourneyLegAction searchReqId.getId
@@ -1224,10 +1226,10 @@ select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories cr
     updateQuoteCategoriesWithSelections
       ( selectedQuoteCategories <&> \category ->
           QuoteCategorySelection
-            { qcQuoteCategoryId = category.quoteCategoryId
-            , qcQuantity = category.quantity
-            , qcSeatIds = category.seatIds
-            , qcSeatLabels = Nothing
+            { qcQuoteCategoryId = category.quoteCategoryId,
+              qcQuantity = category.quantity,
+              qcSeatIds = category.seatIds,
+              qcSeatLabels = Nothing
             }
       )
       quoteCategories

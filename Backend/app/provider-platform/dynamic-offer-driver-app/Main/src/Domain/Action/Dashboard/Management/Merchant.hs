@@ -1151,6 +1151,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         documentCategory = castDocumentCategory <$> documentCategory,
         documentFlowGrouping = Just $ maybe DVC.STANDARD castDocumentFlowGroupingFromReq documentFlowGrouping,
         allowLicenseTransfer = Just False,
+        rolesAllowedToUploadDocument = Nothing,
         ..
       }
   where
@@ -1376,7 +1377,6 @@ postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
           { serviceCharge = (req.serviceChargeWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.serviceCharge) <|> serviceCharge,
             nightShiftBounds = req.nightShiftBounds <|> nightShiftBounds,
             allowedTripDistanceBounds = (FarePolicy.mkAllowedTripDistanceBounds distanceUnit <$> req.allowedTripDistanceBounds) <|> allowedTripDistanceBounds,
-            govtCharges = req.govtCharges <|> govtCharges,
             perMinuteRideExtraTimeCharge = (req.perMinuteRideExtraTimeChargeWithCurrency <&> (.amount)) <|> req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
             tollCharges = req.tollCharges <|> tollCharges,
             petCharges = req.petCharges <|> petCharges,
@@ -2086,7 +2086,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     personalDiscountPercentage = maybe "" showT farePolicy.personalDiscountPercentage,
                     priorityCharges = maybe "" showT farePolicy.priorityCharges,
                     tipOptions = maybe "" showT farePolicy.tipOptions,
-                    govtCharges = maybe "" showT farePolicy.govtCharges,
+                    govtCharges = "",
                     farePolicyType = farePolicyTypeText,
                     description = fromMaybe "" farePolicy.description,
                     congestionChargeMultiplier = congestionMultiplierVal,
@@ -2419,7 +2419,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let tipOptions :: (Maybe [Int]) = readMaybeCSVField idx row.tipOptions "Tip Options"
       let perMinuteRideExtraTimeCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perMinuteRideExtraTimeCharge "Per Minute Ride Extra Time Charge"
       let rideExtraTimeChargeGracePeriod :: (Maybe Seconds) = readMaybeCSVField idx row.rideExtraTimeChargeGracePeriod "Ride Extra Time Charge Grace Period"
-      let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
+      let _govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
       farePolicyType :: FarePolicy.FarePolicyType <- readCSVField idx row.farePolicyType "Fare Policy Type"
       void $ validateFarePolicyType farePolicyType tripCategory
       let platformFeeChargeFarePolicyLevel :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeChargeFarePolicyLevel "Platform Fee Charge"

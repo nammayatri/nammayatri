@@ -14,6 +14,7 @@ imports:
   PaymentMode: Domain.Types.Plan
   Value: Data.Aeson
   Seconds: Kernel.Types.Common
+  EntityName: Lib.Payment.Domain.Types.Common
   Integer: Kernel.Prelude
   Version: Kernel.Types.Version
   AadhaarVerificationService: Kernel.External.AadhaarVerification.Types
@@ -188,10 +189,14 @@ MerchantMessage:
   derives: Generic,Show,'UsageSafety,Eq
   types:
     MessageKey:
-      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE,SEND_FARE_RECEIPT_MESSAGE,WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION,OPERATOR_CONSENT_DEEPLINK_MESSAGE,OPERATOR_JOINING_MESSAGE,OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE,FLEET_LINK_SUCCESS_MESSAGE,FLEET_UNLINK_SUCCESS_MESSAGE,DOCUMENT_INVALID,DRIVER_PAYOUT,DOCUMENT_EXPIRY_REMINDER_SMS,VEHICLE_INSPECTION_SMS,DRIVER_INSPECTION_SMS,TRAINING_VIDEO_SMS
+      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE,SEND_FARE_RECEIPT_MESSAGE,WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION,OPERATOR_CONSENT_DEEPLINK_MESSAGE,OPERATOR_JOINING_MESSAGE,OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE,FLEET_LINK_SUCCESS_MESSAGE,FLEET_UNLINK_SUCCESS_MESSAGE,DOCUMENT_INVALID,DRIVER_PAYOUT,DOCUMENT_EXPIRY_REMINDER_SMS,VEHICLE_INSPECTION_SMS,DRIVER_INSPECTION_SMS,TRAINING_VIDEO_SMS,FLEET_COMMUNICATION_SMS,FLEET_COMMUNICATION_WHATSAPP
 
     MediaChannel:
       enum: SMS,WHATSAPP,OVERLAY,ALERT
+
+    MessageDomain:
+      enum: FLEET,RIDE_HAILING,GENERAL
+
   fields:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -203,6 +208,9 @@ MerchantMessage:
     containsUrlButton: Bool
     senderHeader: Maybe Text
     vehicleCategory: Maybe VehicleCategory|NoRelation
+    domain: Maybe MessageDomain
+    templateName: Maybe Text
+    channel: Maybe MediaChannel
     updatedAt: UTCTime
     createdAt: UTCTime
 
@@ -211,6 +219,9 @@ MerchantMessage:
     messageKey: character varying(255)
     templateId: character varying(255)
     messageType: character varying(255)
+    templateName: character varying(255)
+    domain: character varying(255)
+    channel: character varying(255)
   default:
     containsUrlButton: "false"
   beamType:
@@ -244,6 +255,10 @@ MerchantMessage:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, messageKey, vehicleCategory]
+    findByMerchantOpCityIdDomainAndChannel:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, domain, channel]
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
@@ -768,6 +783,7 @@ DriverIntelligentPoolConfig:
     numRidesWeightage: int
     maxNumRides: int
     cancellationAndRideFrequencyRatioWindowOption: json
+    tax_config: json
 
   default:
     speedNormalizer: "28"
@@ -876,7 +892,6 @@ TransporterConfig:
       enableDriverWallet: Bool
       driverWalletPayoutThreshold: HighPrecMoney
       gstPercentage: Double
-      tdsRate: Maybe Double
       enableWalletPayout: Bool
       enableWalletTopup: Bool
       maxWalletPayoutsPerDay: Maybe Int
@@ -888,7 +903,18 @@ TransporterConfig:
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
       fleetPrepaidSubscriptionThreshold: Maybe HighPrecMoney
-      tdsRate: Maybe Double
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    GstBreakup:
+      cgstPercentage: Maybe HighPrecMoney
+      sgstPercentage: Maybe HighPrecMoney
+      igstPercentage: Maybe HighPrecMoney
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    TaxConfig:
+      rideGst: GstBreakup
+      securityDepositGst: Maybe GstBreakup
+      defaultTdsRate: Maybe Double
+      subscriptionTdsRate: Maybe Double
+      invalidPanTdsRate: Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool
@@ -1105,6 +1131,7 @@ TransporterConfig:
     generateReferralCodeForOperator: Maybe Bool
     maxAllowedDocSizeInMB: Maybe Int
     maxAllowedVideoDocSizeInMB: Maybe Int
+    maxNumberOfLuggages: Maybe Int
     bulkWaiveOffLimit : Int
     rcExpiryChecks : Maybe Bool
     requireRouteMappingInVehicle: Bool
@@ -1131,6 +1158,7 @@ TransporterConfig:
     subscriptionConfig: SubscriptionConfig
     analyticsConfig: AnalyticsConfig
     driverWalletConfig: DriverWalletConfig
+    taxConfig: TaxConfig
     cancellationFeeCycle: Maybe Seconds
     cancellationFeeDisputeWindow: Maybe Seconds
     cancellationFeeVendor: Maybe Text
@@ -1150,6 +1178,8 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: "Maybe [VehicleCategory]"
     linkFleetToUnVerifiedExistingRC: Maybe Bool
     sendSmsOnEnablement: Maybe Bool # Controls whether SMS is sent to drivers/fleet owners when they are enabled
+    reconciliationJobsEnabled: Maybe Bool # Enable reconciliation jobs for this merchant operating city
+    reconciliationSchedulerTime: Maybe Seconds # Time of day to run reconciliation job (in seconds from midnight IST), e.g., 10800 = 3:00 AM IST
     enableScheduleReallocation: Maybe Bool
     enableCoinsToDirectPayout: Maybe Bool
 
@@ -1227,6 +1257,8 @@ TransporterConfig:
       analyticsConfig: Maybe Value
     subscriptionConfig:
       subscriptionConfig: Maybe Value
+    taxConfig:
+      taxConfig: Maybe Value
 
   toTType:
     currency: Just currency|E
@@ -1294,6 +1326,7 @@ TransporterConfig:
     analyticsConfig: Just . Data.Aeson.toJSON|I
     driverWalletConfig: Just . Data.Aeson.toJSON|I
     subscriptionConfig: Just . Data.Aeson.toJSON|I
+    taxConfig: Just . Data.Aeson.toJSON|I
     feedbackNotificationConfig: Data.Aeson.toJSON <$> feedbackNotificationConfig|E
     vehicleCategoryExcludedFromVerification: (Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification|E
 
@@ -1376,6 +1409,7 @@ TransporterConfig:
     analyticsConfig: Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId|IM
     driverWalletConfig: Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId|IM
     subscriptionConfig: Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId|IM
+    taxConfig: Storage.Queries.Transformers.TransporterConfig.parseTaxConfig merchantOperatingCityId|IM
     vehicleCategoryExcludedFromVerification: (mapMaybe (readMaybe . Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
 
   constraints:
@@ -1442,6 +1476,7 @@ TransporterConfig:
     driverWalletConfig: json
     subscriptionConfig: json
     feedbackNotificationConfig: json
+    taxConfig: json
     vehicleCategoryExcludedFromVerification: "text[]"
 
   default:
@@ -1845,3 +1880,52 @@ PayoutConfig:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
+ScheduledPayoutConfig:
+  tableName: scheduled_payout_config
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
+  types:
+    ScheduledPayoutFrequency:
+      enum: "DAILY, WEEKLY, MONTHLY"
+  fields:
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    payoutCategory: EntityName
+    isEnabled: Bool
+    frequency: ScheduledPayoutFrequency
+    dayOfWeek: Maybe Int
+    dayOfMonth: Maybe Int
+    timeOfDay: Text
+    batchSize: Int
+    minimumPayoutAmount: HighPrecMoney
+    maxRetriesPerDriver: Int
+    vehicleCategory: Maybe VehicleCategory|NoRelation
+    remark: Maybe Text
+    orderType: Text
+    timeDiffFromUtc: Seconds
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    payoutCategory: PrimaryKey
+  default:
+    isEnabled: "False"
+    batchSize: "50"
+    minimumPayoutAmount: "10.0"
+    maxRetriesPerDriver: "3"
+    orderType: "'FULFILL_ONLY'"
+    timeOfDay: "'02:00'"
+    frequency: "'DAILY'"
+    timeDiffFromUtc: "19800"
+  queries:
+    findByMerchantOpCityIdAndCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, payoutCategory]
+    findAllByMerchantOpCityIdAndIsEnabled:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, isEnabled]
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId

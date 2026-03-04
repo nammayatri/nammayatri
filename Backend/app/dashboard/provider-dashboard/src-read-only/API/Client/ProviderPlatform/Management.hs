@@ -7,6 +7,8 @@ import qualified "dynamic-offer-driver-app" API.Dashboard
 import qualified API.Types.ProviderPlatform.Management.Account
 import qualified API.Types.ProviderPlatform.Management.Booking
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig
+import qualified API.Types.ProviderPlatform.Management.Communication
+import qualified API.Types.ProviderPlatform.Management.DomainDiscountConfig
 import qualified API.Types.ProviderPlatform.Management.Driver
 import qualified API.Types.ProviderPlatform.Management.DriverCoins
 import qualified API.Types.ProviderPlatform.Management.DriverGoHome
@@ -14,6 +16,7 @@ import qualified API.Types.ProviderPlatform.Management.DriverReferral
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified API.Types.ProviderPlatform.Management.EntityInfo
 import qualified API.Types.ProviderPlatform.Management.FeedbackForm
+import qualified API.Types.ProviderPlatform.Management.FinanceManagement
 import qualified API.Types.ProviderPlatform.Management.Media
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
 import qualified API.Types.ProviderPlatform.Management.Merchant
@@ -38,6 +41,8 @@ data ManagementAPIs = ManagementAPIs
   { accountDSL :: API.Types.ProviderPlatform.Management.Account.AccountAPIs,
     bookingDSL :: API.Types.ProviderPlatform.Management.Booking.BookingAPIs,
     coinsConfigDSL :: API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigAPIs,
+    communicationDSL :: API.Types.ProviderPlatform.Management.Communication.CommunicationAPIs,
+    domainDiscountConfigDSL :: API.Types.ProviderPlatform.Management.DomainDiscountConfig.DomainDiscountConfigAPIs,
     driverDSL :: API.Types.ProviderPlatform.Management.Driver.DriverAPIs,
     driverCoinsDSL :: API.Types.ProviderPlatform.Management.DriverCoins.DriverCoinsAPIs,
     driverGoHomeDSL :: API.Types.ProviderPlatform.Management.DriverGoHome.DriverGoHomeAPIs,
@@ -45,6 +50,7 @@ data ManagementAPIs = ManagementAPIs
     driverRegistrationDSL :: API.Types.ProviderPlatform.Management.DriverRegistration.DriverRegistrationAPIs,
     entityInfoDSL :: API.Types.ProviderPlatform.Management.EntityInfo.EntityInfoAPIs,
     feedbackFormDSL :: API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormAPIs,
+    financeManagementDSL :: API.Types.ProviderPlatform.Management.FinanceManagement.FinanceManagementAPIs,
     mediaDSL :: API.Types.ProviderPlatform.Management.Media.MediaAPIs,
     mediaFileDocumentDSL :: API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentAPIs,
     merchantDSL :: API.Types.ProviderPlatform.Management.Merchant.MerchantAPIs,
@@ -64,6 +70,8 @@ mkManagementAPIs merchantId city token = do
   let accountDSL = API.Types.ProviderPlatform.Management.Account.mkAccountAPIs accountClientDSL
   let bookingDSL = API.Types.ProviderPlatform.Management.Booking.mkBookingAPIs bookingClientDSL
   let coinsConfigDSL = API.Types.ProviderPlatform.Management.CoinsConfig.mkCoinsConfigAPIs coinsConfigClientDSL
+  let communicationDSL = API.Types.ProviderPlatform.Management.Communication.mkCommunicationAPIs communicationClientDSL
+  let domainDiscountConfigDSL = API.Types.ProviderPlatform.Management.DomainDiscountConfig.mkDomainDiscountConfigAPIs domainDiscountConfigClientDSL
   let driverDSL = API.Types.ProviderPlatform.Management.Driver.mkDriverAPIs driverClientDSL
   let driverCoinsDSL = API.Types.ProviderPlatform.Management.DriverCoins.mkDriverCoinsAPIs driverCoinsClientDSL
   let driverGoHomeDSL = API.Types.ProviderPlatform.Management.DriverGoHome.mkDriverGoHomeAPIs driverGoHomeClientDSL
@@ -71,6 +79,7 @@ mkManagementAPIs merchantId city token = do
   let driverRegistrationDSL = API.Types.ProviderPlatform.Management.DriverRegistration.mkDriverRegistrationAPIs driverRegistrationClientDSL
   let entityInfoDSL = API.Types.ProviderPlatform.Management.EntityInfo.mkEntityInfoAPIs entityInfoClientDSL
   let feedbackFormDSL = API.Types.ProviderPlatform.Management.FeedbackForm.mkFeedbackFormAPIs feedbackFormClientDSL
+  let financeManagementDSL = API.Types.ProviderPlatform.Management.FinanceManagement.mkFinanceManagementAPIs financeManagementClientDSL
   let mediaDSL = API.Types.ProviderPlatform.Management.Media.mkMediaAPIs mediaClientDSL
   let mediaFileDocumentDSL = API.Types.ProviderPlatform.Management.MediaFileDocument.mkMediaFileDocumentAPIs mediaFileDocumentClientDSL
   let merchantDSL = API.Types.ProviderPlatform.Management.Merchant.mkMerchantAPIs merchantClientDSL
@@ -85,7 +94,7 @@ mkManagementAPIs merchantId city token = do
   let volunteerDSL = API.Types.ProviderPlatform.Management.Volunteer.mkVolunteerAPIs volunteerClientDSL
   (ManagementAPIs {..})
   where
-    accountClientDSL :<|> bookingClientDSL :<|> coinsConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> entityInfoClientDSL :<|> feedbackFormClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> systemClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    accountClientDSL :<|> bookingClientDSL :<|> coinsConfigClientDSL :<|> communicationClientDSL :<|> domainDiscountConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> entityInfoClientDSL :<|> feedbackFormClientDSL :<|> financeManagementClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> systemClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.

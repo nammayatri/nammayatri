@@ -17,7 +17,7 @@ module Environment where
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
-import Kernel.External.Encryption (EncTools)
+import Kernel.External.Encryption (EncTools, mkDefPassettoContext)
 import qualified Kernel.Prelude
 import qualified Kernel.Prelude as Kernel
 import Kernel.Sms.Config (SmsConfig)
@@ -38,6 +38,7 @@ import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
+import Passetto.Client (PassettoContext)
 import System.Environment (lookupEnv)
 import Prelude (show)
 
@@ -71,7 +72,7 @@ instance FromDhall ConsumerConfig where
         Nothing -> noAutoCommit
         Just v -> autoCommit (Millis $ fromIntegral v)
 
-data ConsumerType = LOCATION_UPDATE | AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS deriving (Generic, FromDhall, Read, Eq)
+data ConsumerType = LOCATION_UPDATE | AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS | FLEET_COMMUNICATION_DISPATCH deriving (Generic, FromDhall, Read, Eq)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
@@ -80,6 +81,7 @@ instance Show ConsumerType where
   show BROADCAST_MESSAGE = "broadcast-message"
   show PERSON_STATS = "person-stats"
   show LOCATION_UPDATE = "location-update"
+  show FLEET_COMMUNICATION_DISPATCH = "fleet-communication-dispatch"
 
 type Seconds' = Integer
 
@@ -119,7 +121,8 @@ data AppCfg = AppCfg
     kafkaReadBatchDelay :: Seconds,
     consumerStartTime :: Maybe Integer,
     consumerEndTime :: Maybe Integer,
-    inMemConfig :: CF.InMemConfig
+    inMemConfig :: CF.InMemConfig,
+    smsCfg :: SmsConfig
   }
   deriving (Generic, FromDhall)
 
@@ -169,7 +172,9 @@ data AppEnv = AppEnv
     consumerStartTime :: Maybe Integer,
     consumerEndTime :: Maybe Integer,
     inMemEnv :: CF.InMemEnv,
-    url :: Maybe Text
+    url :: Maybe Text,
+    smsCfg :: SmsConfig,
+    passettoContext :: PassettoContext
   }
   deriving (Generic)
 
@@ -219,6 +224,7 @@ buildAppEnv AppCfg {..} consumerType = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
+  passettoContext <- uncurry mkDefPassettoContext encTools.service
   isShuttingDown <- mkShutdown
   serviceClickhouseEnv <- createConn serviceClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg

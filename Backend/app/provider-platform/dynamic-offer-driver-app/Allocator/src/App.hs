@@ -57,6 +57,7 @@ import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDri
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
+import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (sendScheduledBatchPayout)
 import SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout (sendSpecialZonePayout)
 import SharedLogic.Allocator.Jobs.Reminder.ProcessReminder (processReminder)
 import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP (checkExotelCallStatusAndNotifyBAP)
@@ -146,6 +147,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSpecialZonePayout)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . processReminder)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . expireSubscriptionPurchase)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledBatchPayout)
     }
 
 runDriverOfferAllocator ::

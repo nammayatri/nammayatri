@@ -17,8 +17,10 @@ module SharedLogic.Reminder.Helper
     cancelRemindersForEntity,
     cancelRemindersForDriverByDocumentType,
     cancelRemindersForRCByDocumentType,
+    cancelPendingReminders,
     recordDocumentCompletion,
     checkAndCreateReminderIfNeeded,
+    checkAndCreateRemindersForRidesThreshold,
     precomputeThresholdCheckData,
     ThresholdCheckData (..),
     isDocumentExpiryType,
@@ -33,6 +35,7 @@ import Data.Ord (comparing)
 import qualified Data.Time as Time
 import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverRCAssociation as DRCAssoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -55,7 +58,6 @@ import qualified SharedLogic.Allocator as Allocator
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.Queries.DocumentReminderHistory as QDRH
-import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRCAExtra
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
@@ -461,9 +463,8 @@ recordDocumentCompletion documentType entityIdText entityType mbDriverId merchan
                 <> ", daysThreshold: "
                 <> show daysThreshold
                 <> ")"
-            -- Create reminder scheduled for the threshold date
-            -- This will automatically schedule ProcessReminder job for that date
-            createReminder documentType driverId merchantId merchantOpCityId Nothing (Just thresholdDate) Nothing
+            -- Create reminder scheduled for the threshold date (entityId = entityIdText so RC-level docs use rcId)
+            createReminder documentType driverId merchantId merchantOpCityId (Just entityIdText) (Just thresholdDate) Nothing
           Nothing -> pure () -- No daysThreshold configured, skip proactive reminder
         Nothing -> pure () -- Reminder system disabled or config not found
     Nothing -> pure () -- Could not determine driverId, skip proactive reminder
@@ -476,6 +477,43 @@ data ThresholdCheckData = ThresholdCheckData
     completionHistories :: M.Map (DVC.DocumentType, Text, DRH.EntityType) (Maybe DRH.DocumentReminderHistory) -- (documentType, entityId, entityType) -> latest history
   }
 
+-- | Check and create reminders for all document types that have ridesThreshold configured
+-- Note: daysThreshold is handled proactively by recordDocumentCompletion, so we only check ridesThreshold here
+-- Document expiry types (DriverLicense, VehicleRegistrationCertificate, etc.) are excluded
+-- as they are based on expiry dates, not rides/days thresholds
+checkAndCreateRemindersForRidesThreshold ::
+  ( EsqDBReplicaFlow m r,
+    SchedulerFlow r,
+    ServiceFlow m r,
+    CoreMetrics m,
+    HasField "blackListedJobs" r [Text]
+  ) =>
+  Id DP.Person ->
+  Int ->
+  Maybe DRCAssoc.DriverRCAssociation ->
+  Maybe Int ->
+  Id DMOC.MerchantOperatingCity ->
+  Id DM.Merchant ->
+  m ()
+checkAndCreateRemindersForRidesThreshold driverId driverRideCount mbRCAssoc mbRCRideCount merchantOperatingCityId providerId = do
+  -- Get all reminder configs that have ridesThreshold configured
+  allReminderConfigs <- QReminderConfig.findAllByMerchantOpCityId merchantOperatingCityId
+  let ridesThresholdDocumentTypes =
+        List.map (.documentType) $
+          filter
+            ( \config ->
+                config.enabled
+                  && isJust config.ridesThreshold
+                  && not (isDocumentExpiryType config.documentType) -- Exclude document expiry types
+            )
+            allReminderConfigs
+  -- Precompute all data needed for threshold checks (ride counts, RC association, completion histories)
+  -- This avoids repeated DB queries in the loop
+  thresholdData <- precomputeThresholdCheckData driverId driverRideCount mbRCAssoc mbRCRideCount ridesThresholdDocumentTypes
+  -- Check rides threshold for all document types that have it configured
+  forM_ ridesThresholdDocumentTypes $ \documentType -> do
+    checkAndCreateReminderIfNeeded documentType driverId providerId merchantOperatingCityId thresholdData
+
 -- | Precompute all data needed for threshold checks (called once before the loop)
 precomputeThresholdCheckData ::
   ( MonadFlow m,
@@ -484,20 +522,14 @@ precomputeThresholdCheckData ::
     CacheFlow m r
   ) =>
   Id DP.Person ->
+  Int ->
+  Maybe DRCAssoc.DriverRCAssociation ->
+  Maybe Int ->
   [DVC.DocumentType] ->
   m ThresholdCheckData
-precomputeThresholdCheckData driverId documentTypes = do
-  -- Get driver ride count once
-  (driverRideCount, _) <- QDriverStats.findTotalRides (cast driverId)
-
-  -- Get active RC association once
-  mbRCAssoc <- QDRCA.findActiveAssociationByDriver driverId True
+precomputeThresholdCheckData driverId driverRideCount mbRCAssoc mbRCRideCount documentTypes = do
+  -- Use provided RC association (avoiding duplicate query)
   let mbRCAssocData = (\rcAssoc -> (rcAssoc.rcId.getId, DRH.RC)) <$> mbRCAssoc
-
-  -- Get RC ride count once (if RC exists)
-  mbRCRideCount <- case mbRCAssoc of
-    Just rcAssoc -> Just <$> QRCStats.findTotalRides rcAssoc.rcId
-    Nothing -> pure Nothing
 
   -- Get completion histories for all document types and entities
   -- Only process document types that have valid entities (skip RC types without RC association)
@@ -593,9 +625,8 @@ checkAndCreateReminderIfNeeded documentType driverId merchantId merchantOpCityId
                         <> ", rides: "
                         <> show ridesSinceCompletion
                         <> ")"
-                    -- Create reminder with immediate due date (now)
-                    -- The reminder system will keep sending reminders every 24 hours until inspection is completed
-                    createReminder documentType driverId merchantId merchantOpCityId Nothing (Just now) Nothing
+                    -- Create reminder with immediate due date (now); entityId = entityIdText so RC-level uses rcId
+                    createReminder documentType driverId merchantId merchantOpCityId (Just entityIdText) (Just now) Nothing
                 Nothing -> logInfo $ "No completion history found for " <> show documentType <> " (entity: " <> entityIdText <> "), skipping rides threshold check"
             Nothing -> logInfo $ "No active entity found for driver " <> driverId.getId <> " and document type " <> show documentType <> ", skipping rides threshold check"
       Nothing -> pure () -- Reminder system disabled or config not found

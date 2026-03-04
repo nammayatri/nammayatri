@@ -566,7 +566,7 @@ verifyAndStorePAN session person pdfBytes extractedPan = do
             fileExtension = Just "pdf"
           }
 
-  Image.ImageValidateResponse {imageId} <- Image.validateImage False (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
+  Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
   logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded PAN PDF to S3, ImageId: " <> imageId.getId
 
   let panReq =
@@ -626,7 +626,7 @@ verifyAndStoreAadhaar session person xmlBytes extractedAadhaar = do
             fileExtension = Just "xml"
           }
 
-  Image.ImageValidateResponse {imageId} <- Image.validateImage False (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
+  Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
   logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded Aadhaar XML to S3, ImageId: " <> imageId.getId
 
   now <- getCurrentTime
@@ -710,7 +710,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
             fileExtension = Just "pdf"
           }
 
-  Image.ImageValidateResponse {imageId} <- Image.validateImage False (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
+  Image.ImageValidateResponse {imageId} <- Image.validateImage False Nothing Nothing (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
   logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Uploaded DL PDF to S3, ImageId: " <> imageId.getId
 
   let vehicleCategory = session.vehicleCategory

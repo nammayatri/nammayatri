@@ -71,6 +71,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+import "rider-app" Tools.HTTPManager (prepareCRISHttpManager)
 
 instance HasSchemaName Beam.MerchantOperatingCityT where
   schemaName _ = T.pack currentSchemaName
@@ -175,7 +176,8 @@ runRiderAppScheduler configModifier = do
               [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
                 Just (Nothing, prepareAuthManagers flowRt appEnv allFRFSSubIds),
                 Just (Just 150000, prepareGridlineHttpManager 150000),
-                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000)
+                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000),
+                Just (Just 60000, prepareCRISHttpManager 60000)
               ]
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'

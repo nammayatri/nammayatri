@@ -130,7 +130,7 @@ fleetOwnerRegister req mbEnabled = do
       fork "Uploading GST Image" $ do
         whenJust req.gstCertificateImage $ \gstImage -> do
           let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing, fileExtension = Nothing}
-          image <- Image.validateImage True (person.id, merchant.id, merchantOpCityId) req'
+          image <- Image.validateImage True Nothing Nothing (person.id, merchant.id, merchantOpCityId) req'
           gstNumber <- forM req.gstNumber encrypt
           QFOI.updateGstImage gstNumber (Just image.imageId.getId) person.id
       return $ FleetOwnerRegisterRes {personId = person.id.getId}
@@ -151,7 +151,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   void $ QP.create person
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
-  createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id) transporterConfig.driverWalletConfig.tdsRate
+  createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id) transporterConfig.taxConfig.defaultTdsRate
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
     fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFOA.create fleetOperatorAssData
@@ -166,7 +166,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
 createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
 createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just panNo) = do
   let req' = Image.ImageValidateRequest {imageType = DVC.PanCard, image = img1, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing, fileExtension = Nothing}
-  image <- Image.validateImage True (personId, merchantId, merchantOperatingCityId) req'
+  image <- Image.validateImage True Nothing Nothing (personId, merchantId, merchantOperatingCityId) req'
   let panReq = DO.DriverPanReq {panNumber = panNo, imageId1 = image.imageId, imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing, transactionId = Nothing, nameOnGovtDB = Nothing, docType = Nothing}
   void $ Registration.postDriverRegisterPancardHelper (Just personId, merchantId, merchantOperatingCityId) True False panReq
 createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this as Pan info is optional
@@ -209,7 +209,8 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             ticketPlaceId = mbTicketPlaceId,
             fleetDob = Nothing,
             stripeAddress = Nothing,
-            merchantOperatingCityId = mbMerchantOperatingCityId
+            merchantOperatingCityId = mbMerchantOperatingCityId,
+            isBlockedForScheduledPayout = Nothing
           }
   QFOI.create fleetOwnerInfo
 

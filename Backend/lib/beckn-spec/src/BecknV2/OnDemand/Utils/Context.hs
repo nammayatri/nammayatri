@@ -15,6 +15,8 @@
 module BecknV2.OnDemand.Utils.Context
   ( buildContextV2,
     buildContextV2',
+    buildContextV2_1,
+    buildContextV2_1',
     mapToCbAction,
     validateContext,
   )
@@ -75,6 +77,24 @@ buildContextV2' now action domain messageId transactionId bapId bapUri bppId bpp
       contextVersion = Just "2.0.0"
     }
 
+buildContextV2_1' :: UTCTime -> Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> Spec.Context
+buildContextV2_1' now action domain messageId transactionId bapId bapUri bppId bppUri city country ttl = do
+  Spec.Context
+    { contextAction = showContextAction action,
+      contextBapId = Just bapId,
+      contextBapUri = Just $ KP.showBaseUrl bapUri,
+      contextBppId = bppId,
+      contextBppUri = KP.showBaseUrl <$> bppUri,
+      contextDomain = showContextDomain domain,
+      contextKey = Nothing,
+      contextLocation = buildContextLocation city country,
+      contextMessageId = UUID.fromText messageId,
+      contextTimestamp = Just $ UTCTimeRFC3339 now,
+      contextTransactionId = UUID.fromText =<< transactionId,
+      contextTtl = ttl,
+      contextVersion = Just "2.1.0"
+    }
+
 buildContextV2 :: (MonadFlow m) => Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> m Spec.Context
 buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri city country ttl = do
   now <- getCurrentTime <&> Just
@@ -93,6 +113,26 @@ buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri c
         contextTransactionId = UUID.fromText =<< transactionId,
         contextTtl = ttl,
         contextVersion = Just "2.0.0"
+      }
+
+buildContextV2_1 :: (MonadFlow m) => Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> m Spec.Context
+buildContextV2_1 action domain messageId transactionId bapId bapUri bppId bppUri city country ttl = do
+  now <- getCurrentTime <&> Just
+  pure $
+    Spec.Context
+      { contextAction = showContextAction action,
+        contextBapId = Just bapId,
+        contextBapUri = Just $ KP.showBaseUrl bapUri,
+        contextBppId = bppId,
+        contextBppUri = KP.showBaseUrl <$> bppUri,
+        contextDomain = showContextDomain domain,
+        contextKey = Nothing,
+        contextLocation = buildContextLocation city country,
+        contextMessageId = UUID.fromText messageId,
+        contextTimestamp = UTCTimeRFC3339 <$> now,
+        contextTransactionId = UUID.fromText =<< transactionId,
+        contextTtl = ttl,
+        contextVersion = Just "2.1.0"
       }
 
 mapToCbAction :: Text -> Maybe Text
@@ -139,7 +179,7 @@ validateCoreVersion :: (HasFlowEnv m r '["_version" ::: Text], Log m) => Spec.Co
 validateCoreVersion context = do
   supportedVersion <- asks (._version)
   version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
-  unless (version == supportedVersion) $
+  unless (version == supportedVersion || version `elem` ["2.0.0", "2.1.0"]) $
     throwError Error.UnsupportedCoreVer
 
 validateTTL :: (MonadFlow m, Log m) => Spec.Context -> m ()

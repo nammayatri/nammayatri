@@ -1,5 +1,6 @@
 imports:
   Driver: Dashboard.Common
+  Person: Dashboard.Common
   Image: Dashboard.Common
   VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
@@ -340,6 +341,13 @@ types:
     - driverMode: Maybe DriverMode
     - lastOfflineTime: Maybe UTCTime
     - onboardingAs: Maybe OnboardingAs
+    - activeFleetInfo: Maybe DriverAssociationInfo
+    - operatorInfo: Maybe DriverAssociationInfo
+  DriverAssociationInfo:
+    - personId: Id Person
+    - name: Maybe Text
+    - mobileCountryCode: Maybe Text
+    - mobileNumber: Maybe Text
   OnboardingAs:
     enum: "FLEET_DRIVER, INDIVIDUAL"
   GetFeedbackListRes:

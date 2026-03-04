@@ -84,6 +84,7 @@ data FulfillmentState
   | ADD_STOP -- Custom type only used for on-us transaction
   | EDIT_STOP -- Custom type only used for on-us transaction
   | DRIVER_REACHED_DESTINATION
+  | RIDE_CONFIRMED -- New in 2.1.0
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data PaymentStatus
@@ -141,12 +142,17 @@ instance FromJSON PaymentType where
 data OrderStatus
   = -- ..order.status
     SOFT_CANCEL
-  | CONFIRM_CANCEL
+  | CONFIRM_CANCEL -- v2.0.0 only, maps to CANCELLATION_INITIATED in 2.1.0
   | ACTIVE
   | COMPLETE
   | CANCELLED
   | SOFT_UPDATE
   | CONFIRM_UPDATE
+  | -- New in 2.1.0
+    COMPLETED
+  | CANCELLATION_INITIATED
+  | CANCELLATION_REJECTED
+  | UPDATED
   deriving (Eq, Generic, Read, Show, FromJSON, ToJSON)
 
 data QuoteBreakupTitle

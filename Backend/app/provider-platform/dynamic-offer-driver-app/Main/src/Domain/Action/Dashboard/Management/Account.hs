@@ -68,7 +68,7 @@ putAccountUpdateRole _merchantShortId _opCity personId' accessType = do
   mbFleetOwnerInfo <- QFOI.findByPrimaryKey personId
   when (accessType == Common.FLEET_OWNER && isNothing mbFleetOwnerInfo) $ do
     transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-    DRegistrationV2.createFleetOwnerInfo personId person.merchantId (Just False) (Just person.merchantOperatingCityId) transporterConfig.driverWalletConfig.tdsRate
+    DRegistrationV2.createFleetOwnerInfo personId person.merchantId (Just False) (Just person.merchantOperatingCityId) transporterConfig.taxConfig.defaultTdsRate
   updatePersonRole personId =<< castRole accessType
   pure Kernel.Types.APISuccess.Success
   where

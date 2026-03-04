@@ -57,7 +57,8 @@ tfCatalogProviders res bppConfig isValueAddNP = do
       pricings = (map (Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.specialLocationName) res.estimates) <> (map (Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.specialLocationName) res.quotes)
       providerFulfillments_ = map (tfProviderFulfillments res) pricings & Just
       providerItems_ = Just $ map (tfProviderItems res isValueAddNP) pricings
-  BecknV2.OnDemand.Types.Provider {providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_}
+      providerCategories_ = Just $ Beckn.OnDemand.Utils.OnSearch.mkTripCategories pricings
+  BecknV2.OnDemand.Types.Provider {providerCategories = providerCategories_, providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_}
 
 tfItemPrice :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Price
 tfItemPrice pricing = do
@@ -94,7 +95,8 @@ tfProviderItems res isValueAddNP pricing = do
       itemPaymentIds_ = Nothing
       itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing isValueAddNP res.fareParametersInRateCard
       itemPrice_ = tfItemPrice pricing
-  BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
+      itemCategoryIds_ = Just [Beckn.OnDemand.Utils.OnSearch.tripCategoryToCategoryCode pricing.tripCategory]
+  BecknV2.OnDemand.Types.Item {itemCategoryIds = itemCategoryIds_, itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 
 tfVehicle :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Vehicle
 tfVehicle pricing = do

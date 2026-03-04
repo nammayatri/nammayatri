@@ -165,7 +165,7 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
   fork "Uploading Business License Image" $ do
     whenJust req.businessLicenseImage $ \businessLicenseImage -> do
       let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing, fileExtension = Nothing}
-      image <- Image.validateImage True (fleetOwnerId, person.merchantId, person.merchantOperatingCityId) req'
+      image <- Image.validateImage True Nothing Nothing (fleetOwnerId, person.merchantId, person.merchantOperatingCityId) req'
       businessLicenseNumber <- forM req.businessLicenseNumber encrypt
       QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) businessLicenseNumber fleetOwnerId
   enabled <-
@@ -288,7 +288,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
     fork "initializing fleet analytics keys" $
       Analytics.updateFleetOwnerAnalyticsKeys person.id.getId (Just 0) (Just 0) (Just 0)
-  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) transporterConfig.driverWalletConfig.tdsRate
+  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) transporterConfig.taxConfig.defaultTdsRate
   pure person
 
 createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Flow ()
@@ -326,7 +326,8 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             ticketPlaceId = Nothing,
             fleetDob = Nothing,
             stripeAddress = Nothing,
-            merchantOperatingCityId = mbMerchantOperatingCityId
+            merchantOperatingCityId = mbMerchantOperatingCityId,
+            isBlockedForScheduledPayout = Nothing
           }
   QFOI.create fleetOwnerInfo
 

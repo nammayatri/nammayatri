@@ -69,3 +69,11 @@ OperationHubRequests:
       kvFunction: findAllWithKV
       where:
         and: [creatorId, requestStatus, requestType]
+    findOneByRequestStatusAndDriverId:
+      kvFunction: findOneWithKV
+      where:
+        and: [requestStatus, driverId]
+    findOneByRequestStatusAndRegistrationNo:
+      kvFunction: findOneWithKV
+      where:
+        and: [requestStatus, registrationNo]

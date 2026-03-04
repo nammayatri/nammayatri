@@ -6,13 +6,18 @@ module Domain.Action.Dashboard.Management.Payout
     postPayoutPayoutVpaDelete,
     postPayoutPayoutVpaUpdate,
     postPayoutPayoutVpaRefundRegistration,
+    postPayoutPayoutScheduledPayoutConfigUpsert,
   )
 where
 
+import qualified API.Types.ProviderPlatform.Management.Payout as ApiPayout
 import qualified Domain.Action.Common.PayoutRequest as CommonPayout
 import qualified Domain.Action.Dashboard.PayoutRequest as DashboardPayoutRequest
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.ScheduledPayoutConfig as DSPC
 import qualified Environment
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id as Id
 import qualified Lib.Payment.API.Payout as PayoutAPI
@@ -105,3 +110,33 @@ postPayoutPayoutVpaRefundRegistration merchantShortId opCity req = do
   let (_getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> refundReg) =
         payoutServer merchantShortId opCity
   refundReg req
+
+postPayoutPayoutScheduledPayoutConfigUpsert ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiPayout.UpdateScheduledPayoutConfigReq ->
+  Environment.Flow APISuccess
+postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiReq = do
+  let domainReq =
+        DashboardPayoutRequest.UpdateScheduledPayoutConfigReq
+          { payoutCategory = apiReq.payoutCategory,
+            isEnabled = apiReq.isEnabled,
+            frequency = castFrequency <$> apiReq.frequency,
+            dayOfWeek = apiReq.dayOfWeek,
+            dayOfMonth = apiReq.dayOfMonth,
+            timeOfDay = apiReq.timeOfDay,
+            batchSize = apiReq.batchSize,
+            minimumPayoutAmount = apiReq.minimumPayoutAmount,
+            maxRetriesPerDriver = apiReq.maxRetriesPerDriver,
+            vehicleCategory = apiReq.vehicleCategory,
+            remark = apiReq.remark,
+            orderType = apiReq.orderType,
+            timeDiffFromUtc = apiReq.timeDiffFromUtc
+          }
+  DashboardPayoutRequest.upsertScheduledPayoutConfig merchantShortId opCity domainReq
+  where
+    castFrequency :: ApiPayout.ScheduledPayoutFrequency -> DSPC.ScheduledPayoutFrequency
+    castFrequency = \case
+      ApiPayout.DAILY -> DSPC.DAILY
+      ApiPayout.WEEKLY -> DSPC.WEEKLY
+      ApiPayout.MONTHLY -> DSPC.MONTHLY

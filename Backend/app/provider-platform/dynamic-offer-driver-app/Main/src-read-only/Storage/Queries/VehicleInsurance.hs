@@ -11,6 +11,7 @@ import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Documents
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -30,18 +31,25 @@ findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ S
 
 findByRcId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m [Domain.Types.VehicleInsurance.VehicleInsurance])
-findByRcId rcId = do findAllWithKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m [Domain.Types.VehicleInsurance.VehicleInsurance])
+findByRcId limit offset rcId = do findAllWithOptionsKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)] (Se.Desc Beam.createdAt) limit offset
 
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.VehicleInsurance.VehicleInsurance]))
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehicleInsurance.VehicleInsurance])
 findByRcIdAndDriverId rcId driverId = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId), Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateVerificationStatus verificationStatus documentImageId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
+
+updateVerificationStatusAndRejectReasonByRcId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updateVerificationStatusAndRejectReasonByRcId verificationStatus rejectReason rcId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.rejectReason rejectReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleInsurance.VehicleInsurance -> m (Maybe Domain.Types.VehicleInsurance.VehicleInsurance))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -56,8 +64,8 @@ updateByPrimaryKey (Domain.Types.VehicleInsurance.VehicleInsurance {..}) = do
       Se.Set Beam.issueDate issueDate,
       Se.Set Beam.limitsOfLiability limitsOfLiability,
       Se.Set Beam.policyExpiry policyExpiry,
-      Se.Set Beam.policyNumberEncrypted (((policyNumber & unEncrypted . encrypted))),
-      Se.Set Beam.policyNumberHash ((policyNumber & hash)),
+      Se.Set Beam.policyNumberEncrypted (policyNumber & unEncrypted . encrypted),
+      Se.Set Beam.policyNumberHash (policyNumber & hash),
       Se.Set Beam.policyProvider policyProvider,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.rejectReason rejectReason,

@@ -170,7 +170,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       (merchantOpCity, transporterConfig, language) <- getMerchantAndPersonInfo mShortId city mbPerson
       fork "enable driver after vehicle inspection" $ do
         -- Only check vehicle docs, not driver docs (vehicle and driver enablement are segregated)
-        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC Nothing merchantOpCity transporterConfig language registrationNo
+        allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOpCity transporterConfig language registrationNo
         when allVehicleDocsVerified $ do
           QVRC.updateApproved (Just True) rc.id
           -- Cancel pending vehicle inspection reminders for all drivers using this RC
@@ -275,9 +275,10 @@ getDriverOperatorList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
-getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString onlyMandatoryDocs requestorId = do
+getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs requestorId = do
   requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (requestor.role == DP.OPERATOR) $
     Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
@@ -294,7 +295,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
       (drvOpAsn, person) <- MaybeT $ listToMaybe <$> QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString (Just driverId)
       pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive)
 
-  listItem <- mapM (buildDriverInfo now) driverOperatorInfoList
+  listItem <- mapM (buildDriverInfo now mbIncludeDocuments) driverOperatorInfoList
   let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
   pure API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp {..}
@@ -323,7 +324,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
           assoc <- MaybeT $ QDRC.findLatestLinkedByRCId rc.id now
           pure (rc.vehicleModel, rc.unencryptedCertificateNumber, assoc.isRcActive, assoc.driverId)
 
-    buildDriverInfo now (drvOpAsn, person, vehicleModel, registrationNo, isRcActive) = do
+    buildDriverInfo now mbIncDocs (drvOpAsn, person, vehicleModel, registrationNo, isRcActive) = do
       let driverId = drvOpAsn.driverId
       decryptedMobileNumber <-
         mapM decrypt person.mobileNumber
@@ -338,13 +339,20 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
       merchantOpCity <-
         CQMOC.findById merchantOpCityId
           >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-      driverImages <- IQuery.findAllByPersonId transporterConfig driverId
-      let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Just driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
-      driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
-      let shouldActivateRc = False
+
+      let shouldIncludeDocs = fromMaybe True mbIncDocs
       statusRes <-
-        castStatusRes
-          <$> SStatus.statusHandler' person driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs -- FIXME: Need to change
+        if shouldIncludeDocs
+          then do
+            let entity = IQuery.PersonEntity person
+            entityImages <- IQuery.findAllByEntityId transporterConfig entity
+            let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
+            let shouldActivateRc = False
+                skipMessages = False -- Need translations for API response
+            Just . castStatusRes <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
+          else pure Nothing
+
+      driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
       pure $
         API.Types.ProviderPlatform.Operator.Driver.DriverInfo
           { driverId = cast drvOpAsn.driverId,

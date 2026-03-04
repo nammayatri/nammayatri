@@ -108,7 +108,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j12
+          - -j4
 
 executables:
   mock-google-exe:
@@ -132,7 +132,7 @@ executables:
       else:
         ghc-options:
           - -O2
-          - -j12
+          - -j4
     dependencies:
       - mock-google
       - mobility-core

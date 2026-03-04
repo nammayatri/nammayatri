@@ -6,6 +6,8 @@ module API.Types.ProviderPlatform.Management where
 import qualified API.Types.ProviderPlatform.Management.Account
 import qualified API.Types.ProviderPlatform.Management.Booking
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig
+import qualified API.Types.ProviderPlatform.Management.Communication
+import qualified API.Types.ProviderPlatform.Management.DomainDiscountConfig
 import qualified API.Types.ProviderPlatform.Management.Driver
 import qualified API.Types.ProviderPlatform.Management.DriverCoins
 import qualified API.Types.ProviderPlatform.Management.DriverGoHome
@@ -13,6 +15,7 @@ import qualified API.Types.ProviderPlatform.Management.DriverReferral
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified API.Types.ProviderPlatform.Management.EntityInfo
 import qualified API.Types.ProviderPlatform.Management.FeedbackForm
+import qualified API.Types.ProviderPlatform.Management.FinanceManagement
 import qualified API.Types.ProviderPlatform.Management.Media
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
 import qualified API.Types.ProviderPlatform.Management.Merchant
@@ -36,6 +39,8 @@ data ManagementUserActionType
   = ACCOUNT API.Types.ProviderPlatform.Management.Account.AccountUserActionType
   | BOOKING API.Types.ProviderPlatform.Management.Booking.BookingUserActionType
   | COINS_CONFIG API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigUserActionType
+  | COMMUNICATION API.Types.ProviderPlatform.Management.Communication.CommunicationUserActionType
+  | DOMAIN_DISCOUNT_CONFIG API.Types.ProviderPlatform.Management.DomainDiscountConfig.DomainDiscountConfigUserActionType
   | DRIVER API.Types.ProviderPlatform.Management.Driver.DriverUserActionType
   | DRIVER_COINS API.Types.ProviderPlatform.Management.DriverCoins.DriverCoinsUserActionType
   | DRIVER_GO_HOME API.Types.ProviderPlatform.Management.DriverGoHome.DriverGoHomeUserActionType
@@ -43,6 +48,7 @@ data ManagementUserActionType
   | DRIVER_REGISTRATION API.Types.ProviderPlatform.Management.DriverRegistration.DriverRegistrationUserActionType
   | ENTITY_INFO API.Types.ProviderPlatform.Management.EntityInfo.EntityInfoUserActionType
   | FEEDBACK_FORM API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormUserActionType
+  | FINANCE_MANAGEMENT API.Types.ProviderPlatform.Management.FinanceManagement.FinanceManagementUserActionType
   | MEDIA API.Types.ProviderPlatform.Management.Media.MediaUserActionType
   | MEDIA_FILE_DOCUMENT API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentUserActionType
   | MERCHANT API.Types.ProviderPlatform.Management.Merchant.MerchantUserActionType
@@ -63,6 +69,8 @@ instance Text.Show.Show ManagementUserActionType where
     ACCOUNT e -> "ACCOUNT/" <> show e
     BOOKING e -> "BOOKING/" <> show e
     COINS_CONFIG e -> "COINS_CONFIG/" <> show e
+    COMMUNICATION e -> "COMMUNICATION/" <> show e
+    DOMAIN_DISCOUNT_CONFIG e -> "DOMAIN_DISCOUNT_CONFIG/" <> show e
     DRIVER e -> "DRIVER/" <> show e
     DRIVER_COINS e -> "DRIVER_COINS/" <> show e
     DRIVER_GO_HOME e -> "DRIVER_GO_HOME/" <> show e
@@ -70,6 +78,7 @@ instance Text.Show.Show ManagementUserActionType where
     DRIVER_REGISTRATION e -> "DRIVER_REGISTRATION/" <> show e
     ENTITY_INFO e -> "ENTITY_INFO/" <> show e
     FEEDBACK_FORM e -> "FEEDBACK_FORM/" <> show e
+    FINANCE_MANAGEMENT e -> "FINANCE_MANAGEMENT/" <> show e
     MEDIA e -> "MEDIA/" <> show e
     MEDIA_FILE_DOCUMENT e -> "MEDIA_FILE_DOCUMENT/" <> show e
     MERCHANT e -> "MERCHANT/" <> show e
@@ -99,6 +108,24 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "COINS_CONFIG/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( COMMUNICATION v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "COMMUNICATION/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( DOMAIN_DISCOUNT_CONFIG v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "DOMAIN_DISCOUNT_CONFIG/" r,
                    ( v1,
                      r2
                      ) <-
@@ -162,6 +189,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "FEEDBACK_FORM/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( FINANCE_MANAGEMENT v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "FINANCE_MANAGEMENT/" r,
                    ( v1,
                      r2
                      ) <-

@@ -26,6 +26,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
     analyticsConfig' <- Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId analyticsConfig
     driverWalletConfig' <- Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId driverWalletConfig
     subscriptionConfig' <- Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId subscriptionConfig
+    taxConfig' <- Storage.Queries.Transformers.TransporterConfig.parseTaxConfig merchantOperatingCityId taxConfig
     pure $
       Just
         Domain.Types.TransporterConfig.TransporterConfig
@@ -189,6 +190,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             mandateValidity = mandateValidity,
             maxAllowedDocSizeInMB = maxAllowedDocSizeInMB,
             maxAllowedVideoDocSizeInMB = maxAllowedVideoDocSizeInMB,
+            maxNumberOfLuggages = maxNumberOfLuggages,
             maxPayoutReferralForADay = maxPayoutReferralForADay,
             mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
             mediaFileUrlPattern = mediaFileUrlPattern,
@@ -234,6 +236,8 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             recentScheduledBookingsSafeLimit = fromMaybe 50 recentScheduledBookingsSafeLimit,
             recomputeDistanceThresholds = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< recomputeDistanceThresholds,
             recomputeIfPickupDropNotOutsideOfThreshold = recomputeIfPickupDropNotOutsideOfThreshold,
+            reconciliationJobsEnabled = reconciliationJobsEnabled,
+            reconciliationSchedulerTime = reconciliationSchedulerTime,
             referralLinkPassword = referralLinkPassword,
             refillVehicleModel = refillVehicleModel,
             reminderSystemEnabled = reminderSystemEnabled,
@@ -259,6 +263,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             subscription = subscription,
             subscriptionConfig = subscriptionConfig',
             subscriptionStartTime = subscriptionStartTime,
+            taxConfig = taxConfig',
             thresholdCancellationPercentageToUnlist = thresholdCancellationPercentageToUnlist,
             thresholdCancellationScore = thresholdCancellationScore,
             timeDiffFromUtc = timeDiffFromUtc,
@@ -449,6 +454,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.mandateValidity = mandateValidity,
         Beam.maxAllowedDocSizeInMB = maxAllowedDocSizeInMB,
         Beam.maxAllowedVideoDocSizeInMB = maxAllowedVideoDocSizeInMB,
+        Beam.maxNumberOfLuggages = maxNumberOfLuggages,
         Beam.maxPayoutReferralForADay = maxPayoutReferralForADay,
         Beam.mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
         Beam.mediaFileUrlPattern = mediaFileUrlPattern,
@@ -494,6 +500,8 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.recentScheduledBookingsSafeLimit = Just recentScheduledBookingsSafeLimit,
         Beam.recomputeDistanceThresholds = Kernel.Prelude.toJSON <$> recomputeDistanceThresholds,
         Beam.recomputeIfPickupDropNotOutsideOfThreshold = recomputeIfPickupDropNotOutsideOfThreshold,
+        Beam.reconciliationJobsEnabled = reconciliationJobsEnabled,
+        Beam.reconciliationSchedulerTime = reconciliationSchedulerTime,
         Beam.referralLinkPassword = referralLinkPassword,
         Beam.refillVehicleModel = refillVehicleModel,
         Beam.reminderSystemEnabled = reminderSystemEnabled,
@@ -519,6 +527,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.subscription = subscription,
         Beam.subscriptionConfig = (Just . Data.Aeson.toJSON) subscriptionConfig,
         Beam.subscriptionStartTime = subscriptionStartTime,
+        Beam.taxConfig = (Just . Data.Aeson.toJSON) taxConfig,
         Beam.thresholdCancellationPercentageToUnlist = thresholdCancellationPercentageToUnlist,
         Beam.thresholdCancellationScore = thresholdCancellationScore,
         Beam.timeDiffFromUtc = timeDiffFromUtc,

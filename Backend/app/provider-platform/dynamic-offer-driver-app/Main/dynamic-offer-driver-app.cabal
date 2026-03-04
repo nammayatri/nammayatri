@@ -170,6 +170,8 @@ library
       Domain.Action.Dashboard.Management.Account
       Domain.Action.Dashboard.Management.Booking
       Domain.Action.Dashboard.Management.CoinsConfig
+      Domain.Action.Dashboard.Management.Communication
+      Domain.Action.Dashboard.Management.DomainDiscountConfig
       Domain.Action.Dashboard.Management.Driver
       Domain.Action.Dashboard.Management.DriverCoins
       Domain.Action.Dashboard.Management.DriverGoHome
@@ -177,6 +179,7 @@ library
       Domain.Action.Dashboard.Management.DriverRegistration
       Domain.Action.Dashboard.Management.EntityInfo
       Domain.Action.Dashboard.Management.FeedbackForm
+      Domain.Action.Dashboard.Management.FinanceManagement
       Domain.Action.Dashboard.Management.Media
       Domain.Action.Dashboard.Management.MediaFileDocument
       Domain.Action.Dashboard.Management.Merchant
@@ -345,6 +348,7 @@ library
       Domain.Types.DriverLocation
       Domain.Types.DriverWallet
       Domain.Types.External.LiveEKD
+      Domain.Types.Extra.Communication
       Domain.Types.Extra.ConditionalCharges
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.DriverHomeLocation
@@ -405,7 +409,9 @@ library
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
+      SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout
       SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout
+      SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation
       SharedLogic.Allocator.Jobs.Reminder.ProcessReminder
       SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
@@ -464,6 +470,7 @@ library
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
       SharedLogic.Finance.Prepaid
+      SharedLogic.Finance.Reconciliation
       SharedLogic.Finance.Wallet
       SharedLogic.Fleet
       SharedLogic.FleetOperatorStats
@@ -630,6 +637,8 @@ library
       Storage.Queries.CallStatusExtra
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
+      Storage.Queries.CommunicationDeliveryExtra
+      Storage.Queries.CommunicationExtra
       Storage.Queries.DailyStatsExtra
       Storage.Queries.DigilockerVerificationExtra
       Storage.Queries.DocumentVerificationConfigExtra
@@ -812,6 +821,7 @@ library
       Tools.Payment
       Tools.PaymentNudge
       Tools.Payout
+      Tools.Plasma
       Tools.SignatureAuth
       Tools.SMS
       Tools.Ticket
@@ -837,6 +847,8 @@ library
       API.Action.Dashboard.Management.Account
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.CoinsConfig
+      API.Action.Dashboard.Management.Communication
+      API.Action.Dashboard.Management.DomainDiscountConfig
       API.Action.Dashboard.Management.Driver
       API.Action.Dashboard.Management.DriverCoins
       API.Action.Dashboard.Management.DriverGoHome
@@ -844,6 +856,7 @@ library
       API.Action.Dashboard.Management.DriverRegistration
       API.Action.Dashboard.Management.EntityInfo
       API.Action.Dashboard.Management.FeedbackForm
+      API.Action.Dashboard.Management.FinanceManagement
       API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.MediaFileDocument
       API.Action.Dashboard.Management.Merchant
@@ -1004,6 +1017,8 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.CommonDriverOnboardingDocuments
+      Domain.Types.Communication
+      Domain.Types.CommunicationDelivery
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
       Domain.Types.DigilockerVerification
@@ -1117,6 +1132,7 @@ library
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.Route
       Domain.Types.RouteTripStopMapping
+      Domain.Types.ScheduledPayoutConfig
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
@@ -1172,6 +1188,8 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.CommonDriverOnboardingDocuments
+      Storage.Beam.Communication
+      Storage.Beam.CommunicationDelivery
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
       Storage.Beam.DigilockerVerification
@@ -1285,6 +1303,7 @@ library
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.Route
       Storage.Beam.RouteTripStopMapping
+      Storage.Beam.ScheduledPayoutConfig
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
@@ -1345,6 +1364,8 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.CommonDriverOnboardingDocuments
+      Storage.Queries.Communication
+      Storage.Queries.CommunicationDelivery
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
       Storage.Queries.DigilockerVerification
@@ -1442,6 +1463,8 @@ library
       Storage.Queries.OrphanInstances.BusinessEvent
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
+      Storage.Queries.OrphanInstances.Communication
+      Storage.Queries.OrphanInstances.CommunicationDelivery
       Storage.Queries.OrphanInstances.DailyStats
       Storage.Queries.OrphanInstances.DigilockerVerification
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
@@ -1548,6 +1571,7 @@ library
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.Route
       Storage.Queries.RouteTripStopMapping
+      Storage.Queries.ScheduledPayoutConfig
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
@@ -1720,7 +1744,7 @@ library
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j12
+    ghc-options: -O2 -j4
 
 executable dynamic-offer-driver-app-exe
   main-is: Main.hs
@@ -1854,4 +1878,4 @@ executable dynamic-offer-driver-app-exe
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
-    ghc-options: -O2 -j12
+    ghc-options: -O2 -j4

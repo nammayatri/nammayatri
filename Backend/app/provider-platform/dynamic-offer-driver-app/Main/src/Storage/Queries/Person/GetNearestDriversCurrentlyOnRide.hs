@@ -23,6 +23,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -94,7 +95,7 @@ data NearestDriversOnRideReq = NearestDriversOnRideReq
   }
 
 getNearestDriversCurrentlyOnRide ::
-  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  (BeamFlow m r, MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
   NearestDriversOnRideReq ->
   m [NearestDriversResultCurrentlyOnRide]
 getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do

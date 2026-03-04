@@ -37,6 +37,8 @@ data PurchasedPass = PurchasedPass
     passNumber :: Kernel.Prelude.Int,
     passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    preferredDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    preferredSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startDate :: Data.Time.Calendar.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
@@ -47,7 +49,7 @@ data PurchasedPass = PurchasedPass
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BenefitType = FullSaving | FixedSaving | PercentageSaving deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data BenefitType = FullSaving | FixedSaving | PercentageSaving deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data StatusType
   = Pending
@@ -60,14 +62,14 @@ data StatusType
   | Refunded
   | RefundFailed
   | PhotoPending
-  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''StatusType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''StatusType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''StatusType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''StatusType)
 
-$(Kernel.Utils.TH.mkToHttpInstanceForEnum (''StatusType))
+$(Kernel.Utils.TH.mkToHttpInstanceForEnum ''StatusType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''BenefitType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''BenefitType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''BenefitType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''BenefitType)

@@ -82,6 +82,7 @@ let defaultTypeImportMapper =
       , { _1 = "Kilometers", _2 = "Kernel.Types.Common" }
       , { _1 = "HighPrecMoney", _2 = "Kernel.Types.Common" }
       , { _1 = "Seconds", _2 = "Kernel.Types.Common" }
+      , { _1 = "Merchant", _2 = "Domain.Types.Merchant" }
       ]
 
 let extraDefaultFields =
@@ -156,7 +157,7 @@ let defaultImports =
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_HANDLER
         }
-      , { _simpleImports = [] : List Text
+      , { _simpleImports = [ "Data.Aeson" ] : List Text
         , _qualifiedImports = [ "!Kernel.Beam.Lib.UtilsTH" ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_TYPE

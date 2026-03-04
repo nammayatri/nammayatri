@@ -750,10 +750,10 @@ addMetroLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers bl
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg,
+            isSingleMode = fromMaybe False journey.isSingleMode,
             upsertJourneyLegAction,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
-            isSingleMode = fromMaybe False journey.isSingleMode
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
           }
 
 addSubwayLeg ::
@@ -779,10 +779,10 @@ addSubwayLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers b
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg,
+            isSingleMode = fromMaybe False journey.isSingleMode,
             upsertJourneyLegAction,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
-            isSingleMode = fromMaybe False journey.isSingleMode
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
           }
 
 addBusLeg ::
@@ -809,11 +809,11 @@ addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedSer
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg,
+            isSingleMode = fromMaybe False journey.isSingleMode,
             upsertJourneyLegAction,
             serviceTier = mbServiceTier,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
-            isSingleMode = fromMaybe False journey.isSingleMode
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
           }
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
@@ -1409,8 +1409,22 @@ generateJourneyInfoResponse journey legs = do
       }
   where
     getUnifiedQRV2 :: Maybe JL.UnifiedTicketQR -> Maybe JL.UnifiedTicketQRV2
-    getUnifiedQRV2 mbUnifiedQR =
-      mbUnifiedQR <&> convertUnifiedQRToV2
+    getUnifiedQRV2 mbUnifiedQR = do
+      unifiedQR <- convertUnifiedQRToV2 <$> mbUnifiedQR
+      let totalTickets =
+            foldr
+              (\leg acc ->
+                  case leg.legExtraInfo of
+                    JL.Metro info -> acc + length (fromMaybe [] info.tickets)
+                    JL.Bus info -> acc + length (fromMaybe [] info.tickets)
+                    JL.Subway info -> acc + length (fromMaybe [] info.tickets)
+                    _ -> acc
+              ) 0 legs
+      -- When direct booking with single ticket, we don't need to return unifiedQRV2 as it is Bloated and makes QR dense
+      -- UI simply fallsback to leg.legExtraInfo.tickets to get just the ticket data
+      if totalTickets == 1
+        then Nothing
+        else Just unifiedQR
 
     convertUnifiedQRToV2 :: JL.UnifiedTicketQR -> JL.UnifiedTicketQRV2
     convertUnifiedQRToV2 unifiedQR =
