@@ -18,6 +18,8 @@ module App
 where
 
 import API
+import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.HashMap.Strict as HMS
 import "lib-dashboard" Environment
 import EulerHS.Language as L
@@ -38,6 +40,7 @@ import Kernel.Utils.Servant.Server (runServerWithHealthCheckAndSlackNotification
 import Servant (Context (..))
 import qualified "lib-dashboard" Tools.Auth as Auth
 import qualified Network.Wai as Wai
+import qualified Data.ByteString.Lazy.Char8 as LBS
 
 requestArrivalLoggingMiddleware :: Wai.Middleware
 requestArrivalLoggingMiddleware nextApp req respond = do
@@ -45,14 +48,13 @@ requestArrivalLoggingMiddleware nextApp req respond = do
   let requestIdText = maybe "NO-REQUEST-ID" decodeUtf8 $ lookup "x-request-id" (Wai.requestHeaders req)
       path = decodeUtf8 $ Wai.rawPathInfo req
       method = decodeUtf8 $ Wai.requestMethod req
-  putStrLn $ unwords
-    [ "[REQUEST-ARRIVAL]"
-    , "timestamp=" <> show arrivalTime
-    , "request_id=" <> requestIdText
-    , "method=" <> method
-    , "path=" <> path
-    , "event=request_received_from_sidecar"
-    ]
+      logMessage = "[REQUEST-ARRIVAL] method=" <> method <> " path=" <> path <> " event=request_received_from_sidecar"
+      logJson = A.Object
+        $ AKM.insert "timestamp" (A.String $ show arrivalTime)
+        $ AKM.insert "requestId" (A.String requestIdText)
+        $ AKM.insert "log" (A.String logMessage)
+        $ AKM.empty
+  LBS.putStrLn $ A.encode logJson
   nextApp req respond
 
 runService :: (AppCfg -> AppCfg) -> IO ()
