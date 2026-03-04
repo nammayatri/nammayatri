@@ -175,6 +175,7 @@ library
     , text
     , time
     , unordered-containers
+    , wai
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)
@@ -247,6 +248,7 @@ executable rider-dashboard-exe
     , text
     , time
     , unordered-containers
+    , wai
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)

@@ -30,19 +30,37 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Flow
+import Kernel.Types.Time (getCurrentTime)
 import Kernel.Utils.App
 import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import Kernel.Utils.Servant.Server (runServerWithHealthCheckAndSlackNotification)
 import Servant (Context (..))
 import qualified "lib-dashboard" Tools.Auth as Auth
+import qualified Network.Wai as Wai
+
+requestArrivalLoggingMiddleware :: Wai.Middleware
+requestArrivalLoggingMiddleware nextApp req respond = do
+  arrivalTime <- getCurrentTime
+  let requestIdText = maybe "NO-REQUEST-ID" decodeUtf8 $ lookup "x-request-id" (Wai.requestHeaders req)
+      path = decodeUtf8 $ Wai.rawPathInfo req
+      method = decodeUtf8 $ Wai.requestMethod req
+  putStrLn $ unwords
+    [ "[REQUEST-ARRIVAL]"
+    , "timestamp=" <> show arrivalTime
+    , "request_id=" <> requestIdText
+    , "method=" <> method
+    , "path=" <> path
+    , "event=request_received_from_sidecar"
+    ]
+  nextApp req respond
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appCfg <- readDhallConfigDefault "rider-dashboard" <&> configModifier
   appEnv <- buildAppEnv authTokenCacheKeyPrefix appCfg
   -- Metrics.serve (appCfg.metricsPort) --  do we need it?
-  runServerWithHealthCheckAndSlackNotification appEnv (Proxy @API) handler identity identity context releaseAppEnv \flowRt -> do
+  runServerWithHealthCheckAndSlackNotification appEnv (Proxy @API) handler requestArrivalLoggingMiddleware identity context releaseAppEnv \flowRt -> do
     prepareConnectionDashboard
       ( ConnectionConfigDashboard
           { esqDBCfg = appCfg.esqDBCfg,
