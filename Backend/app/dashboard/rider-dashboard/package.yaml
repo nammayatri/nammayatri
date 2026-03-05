@@ -81,6 +81,7 @@ dependencies:
   - dashboard-helper-api
   - unordered-containers
   - yudhishthira
+  - wai
 
 ghc-options:
   - -Wall
