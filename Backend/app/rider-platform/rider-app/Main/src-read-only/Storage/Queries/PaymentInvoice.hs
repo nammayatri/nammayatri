@@ -26,6 +26,9 @@ createMany = traverse_ create
 findAllByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m [Domain.Types.PaymentInvoice.PaymentInvoice])
 findAllByRideId rideId = do findAllWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId rideId)]
 
+findByCreatedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.UTCTime -> m (Maybe Domain.Types.PaymentInvoice.PaymentInvoice))
+findByCreatedAt createdAt = do findOneWithKV [Se.Is Beam.createdAt $ Se.Eq createdAt]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PaymentInvoice.PaymentInvoice -> m (Maybe Domain.Types.PaymentInvoice.PaymentInvoice))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 

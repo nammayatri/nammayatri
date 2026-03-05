@@ -38,6 +38,6 @@ instance B.Table PaymentInvoiceT where
 
 type PaymentInvoice = PaymentInvoiceT Identity
 
-$(enableKVPG ''PaymentInvoiceT ['id] [['invoiceNumber], ['paymentOrderId], ['rideId]])
+$(enableKVPG ''PaymentInvoiceT ['id] [['invoiceNumber], ['paymentOrderId], ['rideId], ['createdAt]])
 
 $(mkTableInstances ''PaymentInvoiceT "payment_invoice")

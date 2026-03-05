@@ -318,6 +318,7 @@ library
       Domain.Types.Extra.MerchantServiceConfig
       Domain.Types.Extra.NyRegularSubscription
       Domain.Types.Extra.PartnerOrgConfig
+      Domain.Types.Extra.PaymentInvoice
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
       Domain.Types.Extra.PurchasedPass

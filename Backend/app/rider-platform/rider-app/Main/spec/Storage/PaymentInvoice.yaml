@@ -45,6 +45,7 @@ PaymentInvoice:
     rideId: SecondaryKey
     paymentOrderId: SecondaryKey
     invoiceNumber: SecondaryKey
+    createdAt: SecondaryKey
 
   # merchantId and merchantOperatingCityId kept for future filtering/analytics
   excludedFields: []
@@ -66,8 +67,17 @@ PaymentInvoice:
       kvFunction: findOneWithKV
       where:
         and: [paymentOrderId, invoiceType]
+    findByCreatedAt:
+      kvFunction: findOneWithKV
+      where: createdAt
     updatePaymentStatus:
       kvFunction: updateWithKV
       params: [paymentStatus]
       where: id
+
+  extraOperations:
+    - GENERATE_INDEXES
+
+  extraIndexes:
+    columns: [createdAt]
 

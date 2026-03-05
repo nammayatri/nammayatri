@@ -4,9 +4,11 @@ module SharedLogic.PaymentInvoice
   ( generateInvoiceNumber,
     buildInvoice,
     createPaymentInvoiceAfterOrder,
+    createInvoiceIfNotExists,
     createOrUpdateRefundInvoice,
     refundStatusToInvoiceStatus,
     refundPurposeToPaymentPurpose,
+    showPurpose,
   )
 where
 
@@ -18,6 +20,7 @@ import Domain.Types.PaymentInvoice (InvoicePaymentStatus (..), InvoiceType (..),
 import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride as DRide
+import Data.Time (utctDay)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -42,7 +45,8 @@ generateInvoiceNumber ::
   UTCTime ->
   m Text
 generateInvoiceNumber merchantShortId purpose invoiceType createdAt = do
-  let dbFallback = fmap (.invoiceNumber) <$> QPaymentInvoiceExtra.findLatestGlobal
+  let currentDate = utctDay createdAt
+      dbFallback = fmap (.invoiceNumber) <$> QPaymentInvoiceExtra.findLatestForDate currentDate
   FInvNum.generateInvoiceNumber
     (getShortId merchantShortId)
     (showPurpose purpose)
@@ -139,20 +143,36 @@ createPaymentInvoiceAfterOrder merchantShortId rideId booking mbPaymentOrderInfo
         Cash -> CAPTURED
         _ -> PENDING
 
+  createInvoiceIfNotExists merchantShortId rideId mbOrderId DPI.PAYMENT paymentPurpose paymentStatus amount currency paymentInstrument booking.merchantId booking.merchantOperatingCityId now
+  where
+    (mbOrderId, amount, currency) = case mbPaymentOrderInfo of
+      Just (orderId, orderAmount, orderCurrency) -> (Just orderId, orderAmount, orderCurrency)
+      Nothing -> (Nothing, booking.estimatedFare.amount, booking.estimatedFare.currency)
+
+-- | Create invoice if it doesn't exist
+createInvoiceIfNotExists ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
+  ShortId DMerchant.Merchant ->
+  Id DRide.Ride ->
+  Maybe (Id DOrder.PaymentOrder) ->
+  DPI.InvoiceType ->
+  DPI.PaymentPurpose ->
+  DPI.InvoicePaymentStatus ->
+  HighPrecMoney ->
+  Currency ->
+  PaymentInstrument ->
+  Id DMerchant.Merchant ->
+  Id DMerchant.MerchantOperatingCity ->
+  UTCTime ->
+  m ()
+createInvoiceIfNotExists merchantShortId rideId mbPaymentOrderId invoiceType paymentPurpose paymentStatus amount currency paymentInstrument merchantId merchantOperatingCityId now = do
   -- Check if invoice already exists
-  mbExistingInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose rideId DPI.PAYMENT paymentPurpose
+  mbExistingInvoice <- QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose rideId invoiceType paymentPurpose
   case mbExistingInvoice of
     Just _ -> pure () -- Invoice already exists, skip creation
     Nothing -> do
-      case mbPaymentOrderInfo of
-        Just (paymentOrderId, orderAmount, orderCurrency) -> do
-          -- Online payment: create invoice with order details
-          paymentInvoice <- buildInvoice merchantShortId rideId (Just paymentOrderId) DPI.PAYMENT paymentPurpose paymentStatus orderAmount orderCurrency paymentInstrument booking.merchantId booking.merchantOperatingCityId now
-          QPaymentInvoice.create paymentInvoice
-        Nothing -> do
-          -- Cash payment: create invoice without order
-          paymentInvoice <- buildInvoice merchantShortId rideId Nothing DPI.PAYMENT paymentPurpose paymentStatus booking.estimatedFare.amount booking.estimatedFare.currency paymentInstrument booking.merchantId booking.merchantOperatingCityId now
-          QPaymentInvoice.create paymentInvoice
+      invoice <- buildInvoice merchantShortId rideId mbPaymentOrderId invoiceType paymentPurpose paymentStatus amount currency paymentInstrument merchantId merchantOperatingCityId now
+      QPaymentInvoice.create invoice
 
 -- | Create or update refund invoice
 -- This is a unified function for refund invoice handling

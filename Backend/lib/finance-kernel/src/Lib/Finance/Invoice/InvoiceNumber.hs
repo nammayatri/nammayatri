@@ -83,49 +83,53 @@ abbreviateMerchant merchantShortId =
 
 -- | Global per-date sequence generator (resets daily, shared across all invoices)
 -- Uses Redis lock to prevent race conditions in DB fallback case
+-- Uses runInMasterCloudRedisCell to ensure cross-app Redis support (rider-app and rider-scheduler share same sequence)
 getNextSequenceForDate ::
   (MonadFlow m, CacheFlow m r, Redis.HedisFlow m r) =>
   Text -> -- dateStr in DDMMYY format
   UTCTime ->
   m (Maybe Text) -> -- DB fallback: get latest invoice number
   m Int
-getNextSequenceForDate dateStr createdAt dbFallback = do
+getNextSequenceForDate dateStr createdAt dbFallback = Redis.runInMasterCloudRedisCell $ do
+  -- Explicit prefix ensures rider-app and rider-scheduler share same keys
   let redisKey = "FinanceInvoiceSequence:" <> dateStr
       lockKey = "FinanceInvoiceSequenceLock:" <> dateStr
 
   -- First check if key exists
-  mbCounter <- Hedis.safeGet redisKey
+  mbCounter <- Hedis.withCrossAppRedis $ Hedis.safeGet redisKey
   case (mbCounter :: Maybe Integer) of
     Just _ -> pure () -- Key exists, no initialization needed
     Nothing -> do
-      -- Key doesn't exist - use lock to initialize from DB
-      Redis.withWaitOnLockRedisWithExpiry lockKey 5 10 $ do
-        -- Double-check if key was created while waiting for lock
-        mbCounter' <- Hedis.safeGet redisKey
-        case (mbCounter' :: Maybe Integer) of
-          Just _ -> pure () -- Another process initialized it
-          Nothing -> do
-            -- Initialize from database using caller-provided fallback
-            mbLatestInvoiceNumber <- dbFallback
-            let currentDate = utctDay createdAt
-                startSeq =
-                  case mbLatestInvoiceNumber >>= parseInvoiceNumberSequence of
-                    Just (lastSeq, lastDate) | lastDate == currentDate -> lastSeq
-                    _ -> 0 -- Start at 0 so first INCR gives 1
-            Hedis.set redisKey (fromIntegral startSeq :: Integer)
-            -- Set expiry only when initializing key (not on every increment)
-            setExpiry redisKey
+      -- Key doesn't exist - use cross-app lock to initialize from DB
+      Hedis.withCrossAppRedis $
+        Redis.withWaitOnLockRedisWithExpiry lockKey 5 10 $ do
+          -- Double-check after acquiring lock (another thread may have initialized it)
+          mbCounterAfterLock <- Hedis.withCrossAppRedis $ Hedis.safeGet redisKey
+          case (mbCounterAfterLock :: Maybe Integer) of
+            Just _ -> pure () -- Another thread initialized it
+            Nothing -> do
+              -- Initialize from database using caller-provided fallback
+              mbLatestInvoiceNumber <- dbFallback
+              let currentDate = utctDay createdAt
+                  startSeq =
+                    case mbLatestInvoiceNumber >>= parseInvoiceNumberSequence of
+                      Just (lastSeq, lastDate) | lastDate == currentDate -> lastSeq
+                      _ -> 0 -- Start at 0 so first INCR gives 1
+              Hedis.withCrossAppRedis $ Hedis.set redisKey (fromIntegral startSeq :: Integer)
+              -- Set expiry only when initializing key (not on every increment)
+              setExpiry redisKey
 
-  -- Now atomically increment and return
-  seqNum <- Hedis.incr redisKey
+  -- Now atomically increment and return (cross-app Redis ensures single counter)
+  seqNum <- Hedis.withCrossAppRedis $ Hedis.incr redisKey
   return $ fromIntegral seqNum
   where
     setExpiry key = do
       now <- getCurrentTime
+      -- Expire at end of day (midnight next day)
       let midnightToday = UTCTime (utctDay now) 0
-          midnightTomorrow = addUTCTime 86400 midnightToday
+          midnightTomorrow = addUTCTime 86400 midnightToday -- 24 * 60 * 60 = 86400 seconds
           secondsUntilMidnight = nominalDiffTimeToSeconds $ diffUTCTime midnightTomorrow now
-      when (secondsUntilMidnight > 0) $ Hedis.expire key $ secondsUntilMidnight.getSeconds
+      when (secondsUntilMidnight > 0) $ Hedis.withCrossAppRedis $ Hedis.expire key $ secondsUntilMidnight.getSeconds
 
 -- | Parse invoice number in format DDMMYY-MERCHANT_ABBR-PURPOSE-TYPE-XXXXXX
 -- Returns (sequenceNumber, date) if parse succeeds

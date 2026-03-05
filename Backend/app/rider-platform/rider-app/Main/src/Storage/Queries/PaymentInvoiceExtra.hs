@@ -2,6 +2,7 @@ module Storage.Queries.PaymentInvoiceExtra where
 
 import qualified Domain.Types.PaymentInvoice as DPI
 import qualified Domain.Types.Ride as DRide
+import Data.Time (UTCTime(..), Day)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -10,14 +11,23 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.PaymentInvoice as BeamPI
 import Storage.Queries.PaymentInvoice ()
 
--- | Find latest payment invoice globally (for global sequence).
--- Ordered by createdAt DESC with LIMIT 1.
--- Uses KV layer which updates immediately.
-findLatestGlobal ::
+-- | Find latest payment invoice for a specific date (optimized).
+-- Only scans invoices created on the given date using created_at index.
+-- Used for initializing the daily invoice sequence counter from database.
+findLatestForDate ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Day ->  -- The date to filter by (current day)
   m (Maybe DPI.PaymentInvoice)
-findLatestGlobal =
-  findAllWithOptionsKV [] (Se.Desc BeamPI.createdAt) (Just 1) Nothing <&> listToMaybe
+findLatestForDate targetDate = do
+  -- Get all invoices from the start of this day onwards
+  let dayStart = UTCTime targetDate 0  -- Midnight start of day
+
+  findAllWithOptionsKV
+    [Se.Is BeamPI.createdAt $ Se.GreaterThanOrEq dayStart]
+    (Se.Desc BeamPI.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
 
 -- | Find payment invoice by rideId, invoiceType, and paymentPurpose.
 -- Used to lookup specific invoice to handle cases with multiple purposes (RIDE, TIP, CANCELLATION_FEE).
