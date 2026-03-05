@@ -5,6 +5,7 @@ module Domain.Action.RiderPlatform.Management.FRFSTicket
     getFRFSTicketFrfsRouteFareList,
     putFRFSTicketFrfsRouteFareUpsert,
     getFRFSTicketFrfsRouteStations,
+    postFRFSTicketFrfsStatusUpdate,
   )
 where
 
@@ -21,6 +22,7 @@ import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.APISuccess
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
@@ -49,3 +51,9 @@ getFRFSTicketFrfsRouteStations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant
 getFRFSTicketFrfsRouteStations merchantShortId opCity apiTokenInfo searchStr limit offset vehicleType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.fRFSTicketDSL.getFRFSTicketFrfsRouteStations) searchStr limit offset vehicleType
+
+postFRFSTicketFrfsStatusUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStatusUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketFrfsStatusUpdate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.fRFSTicketDSL.postFRFSTicketFrfsStatusUpdate) req)

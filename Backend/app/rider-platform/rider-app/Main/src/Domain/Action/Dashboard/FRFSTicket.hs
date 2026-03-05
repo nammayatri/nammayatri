@@ -3,6 +3,7 @@ module Domain.Action.Dashboard.FRFSTicket
     getFRFSTicketFrfsRouteFareList,
     putFRFSTicketFrfsRouteFareUpsert,
     getFRFSTicketFrfsRouteStations,
+    postFRFSTicketFrfsStatusUpdate,
   )
 where
 
@@ -34,9 +35,15 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Domain.Action.Internal.FRFS as InternalFRFS
+import qualified Kernel.Types.APISuccess
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.StopFare as QRSF
+
+postFRFSTicketFrfsStatusUpdate :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStatusUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketFrfsStatusUpdate _merchantShortId _opCity req =
+  InternalFRFS.frfsStatusUpdate $ InternalFRFS.FRFSStatusUpdateReq {bookingIds = map cast req.bookingIds}
 
 getFRFSTicketFrfsRoutes :: (ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
 getFRFSTicketFrfsRoutes merchantShortId opCity searchStr limit offset vehicleType = do
