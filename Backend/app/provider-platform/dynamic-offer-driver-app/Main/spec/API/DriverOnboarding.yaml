@@ -31,6 +31,7 @@ imports:
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
   BankAccountVerificationResponse: Kernel.External.Verification.Types
   VerifyAsyncResp : Kernel.External.Verification.Interface.Types
+  HighPrecMoney: Kernel.Types.Common
 
 module: DriverOnboardingV2
 types:
@@ -191,6 +192,26 @@ types:
   VerifyBankAccReq:
       - bankAccountNo : Text
       - bankIfscCode : Text
+  # TDS Certificate validation types
+  TDSInvoiceEntry:
+    invoiceId: Text
+    invoiceDate: UTCTime
+    invoiceNumber: Text
+    baseValue: HighPrecMoney
+    gst: HighPrecMoney
+    invoiceValue: HighPrecMoney
+    tdsAmountAgainstInvoice: HighPrecMoney
+    tanNumber: Maybe Text
+    tdsCertificateNumber: Maybe Text
+    quarter: Text
+    assessmentYear: Text
+  TDSCertificateData:
+    tdsCertificates: '[TDSInvoiceEntry]'
+    overallTdsAmount: HighPrecMoney
+  TDSCertificateValidationError:
+    field: Text
+    invoiceId: Text
+    errorMessage: Text
 
 apis:
   - GET:
