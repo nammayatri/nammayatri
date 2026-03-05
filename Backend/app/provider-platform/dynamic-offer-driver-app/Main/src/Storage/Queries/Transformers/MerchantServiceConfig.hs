@@ -117,6 +117,7 @@ getConfigJSON = \case
     Payment.PaytmEDCConfig cfg -> toJSON cfg
   Domain.PlasmaServiceConfig plasmaCfg -> case plasmaCfg of
     Plasma.LMSConfig cfg -> toJSON cfg
+  Domain.InsuranceDeclarationServiceConfig iffcoTokioCfg -> toJSON iffcoTokioCfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -192,6 +193,7 @@ getServiceName = \case
     Payment.PaytmEDCConfig _ -> Domain.JuspayWalletService Payment.PaytmEDC
   Domain.PlasmaServiceConfig plasmaCfg -> case plasmaCfg of
     Plasma.LMSConfig _ -> Domain.PlasmaService Plasma.LMS
+  Domain.InsuranceDeclarationServiceConfig _ -> Domain.InsuranceDeclarationService Domain.IffcoTokio
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -262,6 +264,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.DashCamService Dashcam.Cautio -> Domain.DashCamServiceConfig . DashcamInter.CautioConfig <$> eitherValue configJSON
   Domain.JuspayWalletService paymentServiceName -> Domain.JuspayWalletServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.PlasmaService Plasma.LMS -> Domain.PlasmaServiceConfig . Plasma.LMSConfig <$> eitherValue configJSON
+  Domain.InsuranceDeclarationService Domain.IffcoTokio -> Domain.InsuranceDeclarationServiceConfig <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of

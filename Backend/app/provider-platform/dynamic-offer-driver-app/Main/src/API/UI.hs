@@ -30,6 +30,7 @@ import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
 import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
+import qualified API.UI.DriverInsurance as DriverInsurance
 import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Merchant as Merchant
 import qualified API.Action.UI.MeterRide as MeterRide
@@ -139,6 +140,7 @@ type API =
            :<|> CallFeedback.API
            :<|> Invoice.API
            :<|> Insurance.API
+           :<|> DriverInsurance.API
            :<|> DriverWallet.API
            :<|> SubscriptionTransaction.API
            :<|> Penalty.API
@@ -203,6 +205,7 @@ handler =
     :<|> CallFeedback.handler
     :<|> Invoice.handler
     :<|> Insurance.handler
+    :<|> DriverInsurance.handler
     :<|> DriverWallet.handler
     :<|> SubscriptionTransaction.handler
     :<|> Penalty.handler
