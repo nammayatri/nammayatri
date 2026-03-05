@@ -87,9 +87,11 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Maps as Maps
+import qualified Tools.MultiModal as MM
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
@@ -1175,3 +1177,17 @@ select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories cr
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
   updatedQuoteCategories <- updateQuoteCategoriesWithQuantitySelections (selectedQuoteCategories <&> (\category -> (category.quoteCategoryId, category.quantity))) quoteCategories
   CallExternalBPP.select merchant merchantOperatingCity bapConfig quote updatedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer
+
+getFrfsActiveRoutes ::
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Spec.VehicleCategory ->
+  Environment.Flow [FRFSTicketService.ActiveRouteRes]
+getFrfsActiveRoutes (mbPersonId, merchantId) vehicleType = do
+  case vehicleType of
+    Spec.BUS -> do
+      personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
+      personCityInfo <- CQP.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
+      baseUrl <- MM.getOTPRestServiceReq merchantId personCityInfo.merchantOperatingCityId
+      nandiRoutes <- NandiFlow.getRoutesServedToday baseUrl
+      pure $ map (\r -> FRFSTicketService.ActiveRouteRes {routeId = r.routeId, lastScheduleTime = r.lastScheduleTime}) nandiRoutes
+    _ -> pure []

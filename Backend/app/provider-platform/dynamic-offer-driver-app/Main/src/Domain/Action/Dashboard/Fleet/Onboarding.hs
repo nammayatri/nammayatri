@@ -18,6 +18,7 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as DAV
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as DGV
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as DPV
 import Domain.Action.UI.DriverOnboarding.Referral
+import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UDYAM
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM

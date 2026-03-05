@@ -28,6 +28,10 @@ import qualified Kernel.Types.TimeBound
 import Servant
 import Tools.Auth
 
+data ActiveRouteRes = ActiveRouteRes {lastScheduleTime :: Data.Text.Text, routeId :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data AutocompleteRes = AutocompleteRes {routes :: [FRFSRouteAPI], stops :: [FRFSStationAPI]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

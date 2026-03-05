@@ -164,3 +164,7 @@ getDepotNameById baseUrl depotId = do
 getAlternateStationsByGtfsIdAndStopCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m [RouteStopMappingInMemoryServer]
 getAlternateStationsByGtfsIdAndStopCode baseUrl gtfsId stopCode = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiAlternateStopsByGtfsIdAndStopCode gtfsId stopCode) "getNandiAlternateStopsByGtfsIdAndStopCode" NandiAPI.nandiAlternateStopsByGtfsIdAndStopCodeAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ALTERNATE_STATIONS_BY_GTFS_ID_AND_STOP_CODE_API") baseUrl)
+
+getRoutesServedToday :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> m [RoutesServedTodayItem]
+getRoutesServedToday baseUrl = do
+  withShortRetry $ callAPI baseUrl NandiAPI.getNandiRoutesServedToday "getRoutesServedToday" NandiAPI.nandiRoutesServedTodayAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTES_SERVED_TODAY_API") baseUrl)

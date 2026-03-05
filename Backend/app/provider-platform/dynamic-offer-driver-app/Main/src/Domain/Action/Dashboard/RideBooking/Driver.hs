@@ -33,6 +33,7 @@ where
 
 import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified Dashboard.Common
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -91,6 +92,7 @@ import qualified Storage.Queries.DriverPanCard as QDriverPanCard
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FeedbackExtra as QFeedback
+import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson

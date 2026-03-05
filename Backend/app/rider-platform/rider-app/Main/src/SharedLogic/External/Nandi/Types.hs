@@ -418,3 +418,9 @@ data DepotVehicle = DepotVehicle
     vehicle_no :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data RoutesServedTodayItem = RoutesServedTodayItem
+  { routeId :: Text,
+    lastScheduleTime :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

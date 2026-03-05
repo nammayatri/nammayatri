@@ -1411,13 +1411,15 @@ generateJourneyInfoResponse journey legs = do
       unifiedQR <- convertUnifiedQRToV2 <$> mbUnifiedQR
       let totalTickets =
             foldr
-              (\leg acc ->
+              ( \leg acc ->
                   case leg.legExtraInfo of
                     JL.Metro info -> acc + length (fromMaybe [] info.tickets)
                     JL.Bus info -> acc + length (fromMaybe [] info.tickets)
                     JL.Subway info -> acc + length (fromMaybe [] info.tickets)
                     _ -> acc
-              ) 0 legs
+              )
+              0
+              legs
       -- When direct booking with single ticket, we don't need to return unifiedQRV2 as it is Bloated and makes QR dense
       -- UI simply fallsback to leg.legExtraInfo.tickets to get just the ticket data
       if totalTickets == 1
