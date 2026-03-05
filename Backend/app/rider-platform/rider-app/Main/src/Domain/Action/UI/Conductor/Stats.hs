@@ -1,6 +1,7 @@
 module Domain.Action.UI.Conductor.Stats where
 
 import Data.List (partition)
+import Data.Time.Calendar (Day)
 import qualified Data.Time as Time
 import Environment
 import Kernel.Prelude
@@ -15,11 +16,12 @@ data StatsResp = StatsResp
     weeklyRevenue :: Money,
     mtdTickets :: Int,
     mtdRevenue :: Money,
-    activeCount :: Int,
     busNo :: Maybe Text,
     newUsersToday :: Int,
     newUsersWeekly :: Int,
-    newUsersMtd :: Int
+    newUsersMtd :: Int,
+    rangeTickets :: Maybe Int,
+    rangeRevenue :: Maybe Money
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -41,8 +43,8 @@ aggStat stat acc =
       newUsers = acc.newUsers + fromMaybe 0 stat.numberOfNewCustomers
     }
 
-statsHandler :: Text -> FlowHandler StatsResp
-statsHandler conductorToken = withFlowHandlerAPI $ do
+statsHandler :: Text -> Maybe Day -> Maybe Day -> FlowHandler StatsResp
+statsHandler conductorToken mbStartDate mbEndDate = withFlowHandlerAPI $ do
   now <- liftIO getCurrentTime
   let today = Time.utctDay now
   let (year, month, _) = Time.toGregorian today
@@ -74,6 +76,13 @@ statsHandler conductorToken = withFlowHandlerAPI $ do
   let newUsersToday = todayAgg.newUsers
   let newUsersWeekly = weeklyAgg.newUsers
   let newUsersMtd = mtdAgg.newUsers
-  let activeCount = 0
   let busNo = Nothing
+
+  (rangeTickets, rangeRevenue) <- case (mbStartDate, mbEndDate) of
+    (Just startDate, Just endDate) -> do
+      rangeStats <- CHConductor.findConductorStatsBetween conductorToken startDate endDate
+      let rangeAgg = foldr aggStat emptyAgg rangeStats
+      pure (Just rangeAgg.tickets, Just . Money . round $ rangeAgg.revenue)
+    _ -> pure (Nothing, Nothing)
+
   return StatsResp {..}
