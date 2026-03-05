@@ -109,6 +109,7 @@ getConfigJSON = \case
   Domain.JuspayWalletServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
+  Domain.InsuranceDeclarationServiceConfig iffcoTokioCfg -> toJSON iffcoTokioCfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -181,6 +182,7 @@ getServiceName = \case
   Domain.JuspayWalletServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> Domain.JuspayWalletService Payment.Juspay
     Payment.StripeConfig _ -> Domain.JuspayWalletService Payment.Stripe
+  Domain.InsuranceDeclarationServiceConfig _ -> Domain.InsuranceDeclarationService Domain.IffcoTokio
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -249,6 +251,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.LLMChatCompletionService ChatCompletion.Types.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> eitherValue configJSON
   Domain.DashCamService Dashcam.Cautio -> Domain.DashCamServiceConfig . DashcamInter.CautioConfig <$> eitherValue configJSON
   Domain.JuspayWalletService paymentServiceName -> Domain.JuspayWalletServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+  Domain.InsuranceDeclarationService Domain.IffcoTokio -> Domain.InsuranceDeclarationServiceConfig <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of

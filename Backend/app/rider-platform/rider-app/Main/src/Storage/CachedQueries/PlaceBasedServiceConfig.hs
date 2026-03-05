@@ -129,3 +129,4 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit
   InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
     Insurance.AckoInsuranceConfig _ -> InsuranceService Insurance.Acko
+    Insurance.IffcoTokioInsuranceConfig _ -> InsuranceService Insurance.IffcoTokio
