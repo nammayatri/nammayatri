@@ -96,6 +96,8 @@ data MerchantOperatingCity
 
 data IntegratedBPPConfig
 
+data FRFSTicketBooking
+
 data Role = DRIVER | FLEET
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)

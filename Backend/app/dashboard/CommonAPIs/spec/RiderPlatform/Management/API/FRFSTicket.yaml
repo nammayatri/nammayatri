@@ -7,6 +7,7 @@ imports:
   TimeBound: Kernel.Types.TimeBound
   StationType: Domain.Types.StationType
   IntegratedBPPConfig: Dashboard.Common
+  FRFSTicketBooking: Dashboard.Common
 
 module: FRFSTicket
 types:
@@ -80,6 +81,11 @@ types:
     unprocessedRouteFares: [Text]
     success: Text
 
+  FRFSStatusUpdateReq:
+    recordType: NewType
+    bookingIds: "[Id FRFSTicketBooking]"
+    derive: "'HideSecrets"
+
 apis:
   - GET: # Get list of all the FRFS routes
       endpoint: /frfs/routes
@@ -133,6 +139,14 @@ apis:
         type: "[FRFSStationAPI]"
       migrate:
         userActionType: ApiAuth APP_BACKEND FRFS LIST_FRFS_STATION
+
+  - POST: # FRFS Status Update (proxies internal/frfs/statusUpdate)
+      endpoint: /frfs/statusUpdate
+      auth: ApiAuthV2
+      request:
+        type: FRFSStatusUpdateReq
+      response:
+        type: APISuccess
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

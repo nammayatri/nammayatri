@@ -16,6 +16,7 @@ import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -23,7 +24,7 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.RiderPlatform.Management.FRFSTicket.API)
-handler merchantId city = getFRFSTicketFrfsRoutes merchantId city :<|> getFRFSTicketFrfsRouteFareList merchantId city :<|> putFRFSTicketFrfsRouteFareUpsert merchantId city :<|> getFRFSTicketFrfsRouteStations merchantId city
+handler merchantId city = getFRFSTicketFrfsRoutes merchantId city :<|> getFRFSTicketFrfsRouteFareList merchantId city :<|> putFRFSTicketFrfsRouteFareUpsert merchantId city :<|> getFRFSTicketFrfsRouteStations merchantId city :<|> postFRFSTicketFrfsStatusUpdate merchantId city
 
 getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
 getFRFSTicketFrfsRoutes a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.FRFSTicket.getFRFSTicketFrfsRoutes a6 a5 a4 a3 a2 a1
@@ -36,3 +37,6 @@ putFRFSTicketFrfsRouteFareUpsert a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI
 
 getFRFSTicketFrfsRouteStations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationAPI])
 getFRFSTicketFrfsRouteStations a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.FRFSTicket.getFRFSTicketFrfsRouteStations a6 a5 a4 a3 a2 a1
+
+postFRFSTicketFrfsStatusUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStatusUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFRFSTicketFrfsStatusUpdate a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.FRFSTicket.postFRFSTicketFrfsStatusUpdate a3 a2 a1
