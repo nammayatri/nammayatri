@@ -81,6 +81,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.MultiModalStaticDataService MultiModal.GoogleTransit -> Domain.MultiModalStaticDataServiceConfig . MultiModal.GoogleTransitConfig <$> valueToMaybe configJSON
     Domain.MultiModalStaticDataService MultiModal.OTPTransit -> Domain.MultiModalStaticDataServiceConfig . MultiModal.OTPTransitConfig <$> valueToMaybe configJSON
     Domain.InsuranceService Insurance.Acko -> Domain.InsuranceServiceConfig . Insurance.AckoInsuranceConfig <$> valueToMaybe configJSON
+    Domain.InsuranceService Insurance.IffcoTokio -> Domain.InsuranceServiceConfig . Insurance.IffcoTokioInsuranceConfig <$> valueToMaybe configJSON
     Domain.SOSService SOS.ERSS -> Domain.SOSServiceConfig . SOSInterface.ERSSConfig <$> valueToMaybe configJSON
     Domain.SOSService SOS.GJ112 -> Domain.SOSServiceConfig . SOSInterface.GJ112Config <$> valueToMaybe configJSON
 
@@ -160,6 +161,7 @@ getServiceNameConfigJson = \case
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalStaticDataService MultiModal.OTPTransit, toJSON cfg)
   Domain.InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
     Insurance.AckoInsuranceConfig cfg -> (Domain.InsuranceService Insurance.Acko, toJSON cfg)
+    Insurance.IffcoTokioInsuranceConfig cfg -> (Domain.InsuranceService Insurance.IffcoTokio, toJSON cfg)
   Domain.SOSServiceConfig sosCfg -> case sosCfg of
     SOSInterface.ERSSConfig cfg -> (Domain.SOSService SOS.ERSS, toJSON cfg)
     SOSInterface.GJ112Config cfg -> (Domain.SOSService SOS.GJ112, toJSON cfg)

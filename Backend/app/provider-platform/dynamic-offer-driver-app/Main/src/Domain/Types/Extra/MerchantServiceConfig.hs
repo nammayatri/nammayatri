@@ -30,8 +30,25 @@ import Lib.Dashcam.Domain.Interface as DashcamInter
 import Lib.Dashcam.Domain.Types as Dashcam
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import Kernel.External.Encryption
 
 -- Extra code goes here --
+
+data IffcoTokioConfig = IffcoTokioConfig
+  { url :: Text,
+    username :: Text,
+    password :: EncryptedField 'AsEncrypted Text,
+    masterPolicyClient :: Text,
+    insurancePlan :: Text,
+    insuredAddress :: Text,
+    insuredEmail :: Text,
+    fcmNotificationTitle :: Text,
+    fcmNotificationMessage :: Text
+  }
+  deriving (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
+
+data InsuranceProvider = IffcoTokio deriving stock (Eq, Ord, Show, Read, Generic) deriving anyclass (FromJSON, ToJSON)
 
 data ServiceName
   = MapsService Maps.MapsService
@@ -57,6 +74,7 @@ data ServiceName
   | DashCamService Dashcam.DashcamService
   | JuspayWalletService Payment.PaymentService
   | PlasmaService Plasma.PlasmaService
+  | InsuranceDeclarationService InsuranceProvider
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -86,6 +104,7 @@ instance Show ServiceName where
   show (DashCamService s) = "DashCamService_" <> show s
   show (JuspayWalletService s) = "JuspayWalletService_" <> show s
   show (PlasmaService s) = "Plasma_" <> show s
+  show (InsuranceDeclarationService s) = "InsuranceDeclaration_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -184,6 +203,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Plasma_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (InsuranceDeclarationService v1, r2)
+                 | r1 <- stripPrefix "InsuranceDeclaration_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -213,6 +236,7 @@ data ServiceConfigD (s :: UsageSafety)
   | DashCamServiceConfig !DashcamInter.DashCamServiceConfig
   | JuspayWalletServiceConfig !PaymentServiceConfig
   | PlasmaServiceConfig !Plasma.PlasmaServiceConfig
+  | InsuranceDeclarationServiceConfig !IffcoTokioConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

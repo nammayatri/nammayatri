@@ -84,6 +84,7 @@ library
       API.UI.City
       API.UI.Driver
       API.UI.DriverCoins
+      API.UI.DriverInsurance
       API.UI.DriverOnboarding
       API.UI.DriverProfileSummary
       API.UI.DriverReferral
@@ -477,6 +478,7 @@ library
       SharedLogic.FleetVehicleStats
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
+      SharedLogic.IffcoTokioInsurance
       SharedLogic.KaalChakra.Actions
       SharedLogic.KaalChakra.Chakras
       SharedLogic.LocationMapping
@@ -703,6 +705,7 @@ library
       Storage.Queries.GeometryGeom
       Storage.Queries.HyperVergeVerificationExtra
       Storage.Queries.IdfyVerificationExtra
+      Storage.Queries.IffcoTokioInsuranceExtra
       Storage.Queries.ImageExtra
       Storage.Queries.InterCityTravelCities
       Storage.Queries.InvoiceExtra
@@ -1076,6 +1079,7 @@ library
       Domain.Types.HyperVergeSdkLogs
       Domain.Types.HyperVergeVerification
       Domain.Types.IdfyVerification
+      Domain.Types.IffcoTokioInsurance
       Domain.Types.Image
       Domain.Types.Invoice
       Domain.Types.KioskLocation
@@ -1247,6 +1251,7 @@ library
       Storage.Beam.HyperVergeSdkLogs
       Storage.Beam.HyperVergeVerification
       Storage.Beam.IdfyVerification
+      Storage.Beam.IffcoTokioInsurance
       Storage.Beam.Image
       Storage.Beam.Invoice
       Storage.Beam.KioskLocation
@@ -1423,6 +1428,7 @@ library
       Storage.Queries.HyperVergeSdkLogs
       Storage.Queries.HyperVergeVerification
       Storage.Queries.IdfyVerification
+      Storage.Queries.IffcoTokioInsurance
       Storage.Queries.Image
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
@@ -1500,6 +1506,7 @@ library
       Storage.Queries.OrphanInstances.FleetOwnerInformation
       Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.FleetRcDailyStats
+      Storage.Queries.OrphanInstances.IffcoTokioInsurance
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.Invoice
       Storage.Queries.OrphanInstances.KioskLocation
