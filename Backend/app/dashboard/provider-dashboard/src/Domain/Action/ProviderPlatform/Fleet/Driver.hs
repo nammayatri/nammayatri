@@ -150,15 +150,20 @@ getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId = do
     Just False -> do
       -- MSIL: requestor is fleet owner or operator, access check on bpp side required!
       let requestorId = apiTokenInfo.personId.getId
-      if DP.isFleetOwner apiTokenInfo.person
+      if DP.isAdmin apiTokenInfo.person
         then do
-          -- requestor is fleet owner
-          whenJust mbFleetOwnerId $ \fleetOwnerId ->
-            unless (fleetOwnerId == requestorId) $ throwError AccessDenied
-          return (Just requestorId, requestorId)
-        else do
-          -- requestor is operator
-          return (mbFleetOwnerId, requestorId)
+          -- requestor is admin
+          fleetOwnerId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId required")
+          return (Just fleetOwnerId, fleetOwnerId)
+        else if DP.isFleetOwner apiTokenInfo.person
+          then do
+            -- requestor is fleet owner
+            whenJust mbFleetOwnerId $ \fleetOwnerId ->
+              unless (fleetOwnerId == requestorId) $ throwError AccessDenied
+            return (Just requestorId, requestorId)
+          else do
+            -- requestor is operator
+            return (mbFleetOwnerId, requestorId)
     _ -> do
       -- Existing flow: consider requestor the same as fleet owner, fleet member operates on befalf of fleet owner
       fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
