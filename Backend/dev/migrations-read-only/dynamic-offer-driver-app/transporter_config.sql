@@ -781,16 +781,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_pan_aadha
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_coins_to_direct_payout boolean ;
 
 
-
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tax_config json;
 
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN tax_config TYPE text;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_luggages integer ;

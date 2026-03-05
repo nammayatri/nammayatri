@@ -292,6 +292,7 @@ let AllocatorJobType =
       | ProcessReminder
       | ExpireSubscriptionPurchase
       | Reconciliation
+      | ScheduledBatchPayout
       >
 
 let jobInfoMapx =
@@ -350,6 +351,7 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }
+      , { mapKey = AllocatorJobType.ScheduledBatchPayout, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =

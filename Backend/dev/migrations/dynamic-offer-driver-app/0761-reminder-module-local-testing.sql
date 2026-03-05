@@ -163,7 +163,7 @@ SELECT
     moc.merchant_id,
     moc.id,
     'Document Expiry Reminder',
-    'Your document is expiring soon. Please update it to continue driving.',
+    'Your {#documentType#} is expiring soon. Please update it to continue driving.',
     'ENGLISH',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
