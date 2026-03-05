@@ -92,6 +92,8 @@ import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingP
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SeatLayout as QSeatLayout
+import qualified Tools.MultiModal as MM
+import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
@@ -1263,3 +1265,17 @@ getFrfsRouteSeatLayout (mbPersonId, _merchantId) routeId mbVehicleNumber = do
   seatLayout <- QSeatLayout.findById seatLayoutId >>= fromMaybeM (InvalidRequest "SeatLayout not found")
   logInfo $ "FRFSTicketService:getFrfsRouteSeatLayout routeId=" <> routeId <> " seatLayoutId=" <> seatLayoutId.getId <> " seatCount=" <> show (length seats)
   return $ SeatLayoutDetailsResp {seatLayout = seatLayout, seats = seats}
+
+getFrfsActiveRoutes ::
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Spec.VehicleCategory ->
+  Environment.Flow [FRFSTicketService.ActiveRouteRes]
+getFrfsActiveRoutes (mbPersonId, merchantId) vehicleType = do
+  case vehicleType of
+    Spec.BUS -> do
+      personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
+      personCityInfo <- CQP.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
+      baseUrl <- MM.getOTPRestServiceReq merchantId personCityInfo.merchantOperatingCityId
+      nandiRoutes <- NandiFlow.getRoutesServedToday baseUrl
+      pure $ map (\r -> FRFSTicketService.ActiveRouteRes {routeId = r.routeId, lastScheduleTime = r.lastScheduleTime}) nandiRoutes
+    _ -> pure []

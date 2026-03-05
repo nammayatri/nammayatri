@@ -23,7 +23,7 @@ module SharedLogic.Finance.Wallet
     computeGstBreakdown,
     financeCtxFromRide,
     buildFinanceCtx,
-    walletReferenceD2DReferral
+    walletReferenceD2DReferral,
   )
 where
 

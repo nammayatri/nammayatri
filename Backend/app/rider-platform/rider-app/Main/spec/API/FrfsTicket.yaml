@@ -303,6 +303,10 @@ types:
     seatLayout: SeatLayout
     seats: [Seat]
 
+  ActiveRouteRes:
+    routeId: Text
+    lastScheduleTime: Text
+
 apis:
   # Get FRFS Config
   - GET:
@@ -560,3 +564,12 @@ apis:
         vehicleNumber: Text
       response:
         type: SeatLayoutDetailsResp
+
+  # GET active routes served today
+  - GET:
+      endpoint: /frfs/activeRoutes
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      response:
+        type: "[API.Types.UI.FRFSTicketService.ActiveRouteRes]"

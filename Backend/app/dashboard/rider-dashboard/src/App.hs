@@ -38,9 +38,9 @@ import Kernel.Utils.App
 import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import Kernel.Utils.Servant.Server (runServerWithHealthCheckAndSlackNotification)
+import qualified Network.Wai as Wai
 import Servant (Context (..))
 import qualified "lib-dashboard" Tools.Auth as Auth
-import qualified Network.Wai as Wai
 
 requestArrivalLoggingMiddleware :: Wai.Middleware
 requestArrivalLoggingMiddleware nextApp req respond = do
@@ -49,11 +49,12 @@ requestArrivalLoggingMiddleware nextApp req respond = do
       path = decodeUtf8 (Wai.rawPathInfo req) :: Text
       method = decodeUtf8 (Wai.requestMethod req) :: Text
       logMessage = ("[REQUEST-ARRIVAL] method=" <> method <> " path=" <> path <> " event=request_received_from_sidecar") :: Text
-      logJson = object
-        [ "timestamp" .= (show arrivalTime :: String)
-        , "requestId" .= requestIdText
-        , "log" .= logMessage
-        ]
+      logJson =
+        object
+          [ "timestamp" .= (show arrivalTime :: String),
+            "requestId" .= requestIdText,
+            "log" .= logMessage
+          ]
   LBS.putStrLn $ A.encode logJson
   nextApp req respond
 
