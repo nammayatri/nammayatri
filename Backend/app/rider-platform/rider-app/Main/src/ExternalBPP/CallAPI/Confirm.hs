@@ -7,7 +7,6 @@ import qualified Domain.Action.Beckn.FRFS.OnConfirm as DACFOC
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSTicketBooking as DBooking
-import qualified Domain.Types.FRFSTicketBookingStatus as DBooking
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -96,7 +95,6 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
             case fromException err :: Maybe CRISError of
               Just crisError -> void $ QFRFSTicketBooking.updateFailureReasonById (Just crisError.errorMessage) booking.id
               Nothing -> logError $ "FRFS External Confirm failed with error: " <> show err
-            void $ QFRFSTicketBooking.updateStatusById DBooking.FAILED booking.id
             throwM err
           Right _ -> do
             when circuitOpen $ CB.reEnableCircuit ptMode CB.BookingAPI merchantOperatingCity.id
