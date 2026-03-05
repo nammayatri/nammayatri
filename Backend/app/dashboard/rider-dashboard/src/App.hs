@@ -34,7 +34,6 @@ import Kernel.Utils.App
 import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import Kernel.Utils.Servant.Server (runServerWithHealthCheckAndSlackNotification)
-import qualified Network.Wai as Wai
 import Servant (Context (..))
 import qualified "lib-dashboard" Tools.Auth as Auth
 

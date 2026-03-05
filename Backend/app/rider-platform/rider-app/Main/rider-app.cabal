@@ -48,6 +48,7 @@ library
       API.Conductor
       API.Dashboard
       API.Dashboard.Exotel
+      API.Depot
       API.FRFS
       API.FRFSMetrics
       API.IGM
@@ -232,6 +233,7 @@ library
       Domain.Action.UI.CRIS
       Domain.Action.UI.CustomerReferral
       Domain.Action.UI.DeletedPerson
+      Domain.Action.UI.Depot.Stats
       Domain.Action.UI.Disability
       Domain.Action.UI.Dispatcher
       Domain.Action.UI.DriverOffer
