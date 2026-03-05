@@ -21,6 +21,7 @@ where
 import qualified API.Beckn as Beckn
 import qualified API.Conductor as Conductor
 import qualified API.Dashboard as Dashboard
+import qualified API.Depot as Depot
 import qualified API.FRFS as FRFS
 import qualified API.FRFSMetrics as FRFSMetrics
 import qualified API.IGM as IGM
@@ -89,6 +90,7 @@ type MainAPI =
              :> JuspayPayout.JuspayPayoutWebhookAPI
          )
     :<|> Conductor.API
+    :<|> Depot.API
     :<|> FRFSMetrics.API
 
 handler :: FlowServer API
@@ -115,6 +117,7 @@ mainServer =
     :<|> Internal.handler
     :<|> juspayPayoutWebhookHandlerV2
     :<|> Conductor.handler
+    :<|> Depot.handler
     :<|> FRFSMetrics.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString

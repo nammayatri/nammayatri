@@ -67,3 +67,20 @@ findConductorStatsBetween token fromDay toDay =
               CH.&&. row.bookingDate CH.<=. toDay
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE conductorStatsTTable)
+
+findDepotStatsBetween ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Text ->
+  Day ->
+  Day ->
+  m [ConductorStats]
+findDepotStatsBetween depot fromDay toDay =
+  CH.findAll $
+    CH.select $
+      CH.filter_
+        ( \row ->
+            row.depotNo CH.==. Just depot
+              CH.&&. row.bookingDate CH.>=. fromDay
+              CH.&&. row.bookingDate CH.<=. toDay
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE conductorStatsTTable)
