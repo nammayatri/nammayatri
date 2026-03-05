@@ -29,6 +29,7 @@ Merchant:
     hasFleetMemberHierarchy: Maybe Bool
     isStrongNameCheckRequired: Maybe Bool
     singleActiveSessionOnly: Maybe Bool
+    enableGetRequestAuditLogs: Maybe Bool
 
   beamFields:
     authToken:

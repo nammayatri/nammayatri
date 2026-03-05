@@ -1,0 +1,1 @@
+ALTER table atlas_bpp_dashboard.merchant ADD COLUMN enable_get_request_audit_logs boolean DEFAULT false;

@@ -210,7 +210,8 @@ buildMerchant req = do
         hasFleetMemberHierarchy = Just True,
         isStrongNameCheckRequired = Just True,
         singleActiveSessionOnly = Just False,
-        updatedAt = now
+        updatedAt = now,
+        enableGetRequestAuditLogs = Just False
       }
 
 buildMerchantAccess ::

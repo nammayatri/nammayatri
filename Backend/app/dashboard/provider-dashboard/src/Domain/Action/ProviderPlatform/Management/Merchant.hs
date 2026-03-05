@@ -490,7 +490,8 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           verifyFleetWhileLogin = baseMerchant.verifyFleetWhileLogin,
           hasFleetMemberHierarchy = baseMerchant.hasFleetMemberHierarchy,
           isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
-          singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly
+          singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
+          enableGetRequestAuditLogs = baseMerchant.enableGetRequestAuditLogs
         }
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes

@@ -38,7 +38,8 @@ data MerchantE e = Merchant
     verifyFleetWhileLogin :: Maybe Bool,
     hasFleetMemberHierarchy :: Maybe Bool,
     isStrongNameCheckRequired :: Maybe Bool,
-    singleActiveSessionOnly :: Maybe Bool
+    singleActiveSessionOnly :: Maybe Bool,
+    enableGetRequestAuditLogs :: Maybe Bool
   }
   deriving (Generic)
 

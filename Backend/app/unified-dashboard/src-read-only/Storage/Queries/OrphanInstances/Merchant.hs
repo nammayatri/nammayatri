@@ -21,6 +21,7 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             createdAt = createdAt,
             defaultOperatingCity = defaultOperatingCity,
             domain = domain,
+            enableGetRequestAuditLogs = enableGetRequestAuditLogs,
             enabled = enabled,
             hasFleetMemberHierarchy = hasFleetMemberHierarchy,
             id = Kernel.Types.Id.Id id,
@@ -39,11 +40,12 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
 instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
   toTType' (Domain.Types.Merchant.Merchant {..}) = do
     Beam.MerchantT
-      { Beam.authTokenEncrypted = ((authToken <&> unEncrypted . (.encrypted))),
-        Beam.authTokenHash = (authToken <&> (.hash)),
+      { Beam.authTokenEncrypted = authToken <&> unEncrypted . (.encrypted),
+        Beam.authTokenHash = authToken <&> (.hash),
         Beam.createdAt = createdAt,
         Beam.defaultOperatingCity = defaultOperatingCity,
         Beam.domain = domain,
+        Beam.enableGetRequestAuditLogs = enableGetRequestAuditLogs,
         Beam.enabled = enabled,
         Beam.hasFleetMemberHierarchy = hasFleetMemberHierarchy,
         Beam.id = Kernel.Types.Id.getId id,
