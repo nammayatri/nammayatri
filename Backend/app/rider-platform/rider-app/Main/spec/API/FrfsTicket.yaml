@@ -31,6 +31,7 @@ imports:
   QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
   BusLocation: API.Types.UI.RiderLocation
   CrisSdkResponse: API.Types.UI.MultimodalConfirm
+  CumulativeOfferResp: SharedLogic.Offer
   Seat: Domain.Types.Seat
   SeatLayout: Domain.Types.SeatLayout
   SeatType: Domain.Types.Seat
@@ -53,6 +54,10 @@ types:
     recentLocationId: Maybe (Id RecentLocation)
     busLocationData: Maybe [BusLocation]
     vehicleNumber: Maybe Text
+    skipBooking: Maybe Bool
+    crisSdkResponse: Maybe CrisSdkResponse
+    categorySelectionReq: Maybe [FRFSCategorySelectionReq]
+    enableOffer: Maybe Bool
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
@@ -72,6 +77,8 @@ types:
     eventDiscountAmount: Maybe HighPrecMoney
     integratedBppConfigId: Id IntegratedBPPConfig
     categories: [CategoryInfoResponse]
+    offer: Maybe CumulativeOfferResp
+    sdkOrderPayload: Maybe CreateOrderResp
 
     derive: "Show"
 
@@ -400,6 +407,7 @@ apis:
       query:
         city: City
         integratedBppConfigId: Id IntegratedBPPConfig
+        isMockPayment: Bool
         newServiceTiers: [ServiceTierType]
       request:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq

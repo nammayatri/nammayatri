@@ -6,6 +6,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Monad.Extra (mapMaybeM)
+import qualified Data.Aeson as A
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.Location as DLoc
 import Domain.Action.UI.Ride as DRide
@@ -1384,7 +1385,7 @@ generateJourneyInfoResponse journey legs = do
     withTryCatch "generateJourneyInfoResponse:offerListCache" (SOffer.offerListCache journey.merchantId journey.riderId journey.merchantOperatingCityId DOrder.FRFSMultiModalBooking (mkPrice mbCurrency estimatedMinFareAmount))
       >>= \case
         Left _ -> return Nothing
-        Right offersResp -> SOffer.mkCumulativeOfferResp journey.merchantOperatingCityId offersResp legs
+        Right offersResp -> SOffer.mkCumulativeOfferResp journey.merchantOperatingCityId offersResp (map A.toJSON legs)
   pure $
     APITypes.JourneyInfoResp
       { estimatedDuration = journey.estimatedDuration,
@@ -1403,7 +1404,8 @@ generateJourneyInfoResponse journey legs = do
         unifiedQRV2,
         result = Just "Success",
         isSingleMode = journey.isSingleMode,
-        offer
+        offer,
+        sdkPayload = Nothing
       }
   where
     getUnifiedQRV2 :: Maybe JL.UnifiedTicketQR -> Maybe JL.UnifiedTicketQRV2

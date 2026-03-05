@@ -15,7 +15,6 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -39,7 +38,7 @@ data CumulativeOfferResp = CumulativeOfferResp
 
 data CumulativeOfferReq = CumulativeOfferReq
   { offerListResp :: Payment.OfferListResp,
-    extraParams :: [JL.LegInfo]
+    extraParams :: [A.Value]
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -74,7 +73,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
         )
           =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion req
 
-mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r, ClickhouseFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> [JL.LegInfo] -> m (Maybe CumulativeOfferResp)
+mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r, ClickhouseFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> [A.Value] -> m (Maybe CumulativeOfferResp)
 mkCumulativeOfferResp merchantOperatingCityId offerListResp legInfos = do
   now <- getCurrentTime
   (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY now Nothing Nothing

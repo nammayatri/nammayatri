@@ -3,6 +3,7 @@
 module Domain.Action.UI.MultimodalConfirm
   ( postMultimodalInitiate,
     postMultimodalInitiateSimpl,
+    postMultimodalV2Initiate,
     postMultimodalConfirm,
     getMultimodalBookingInfo,
     postMultimodalOrderSwitchTaxi,
@@ -216,6 +217,59 @@ postMultimodalInitiateSimpl journeyLegs journey blacklistedServiceTiers blacklis
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
+
+postMultimodalV2Initiate ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    API.Types.UI.MultimodalConfirm.JourneyInitiateReq ->
+    Environment.Flow ApiTypes.JourneyInfoResp
+  )
+postMultimodalV2Initiate (mbPersonId, merchantId) journeyId filterServiceAndJrnyType forcedBookLegOrder mbIsMockPayment req = do
+  initiateResp <- postMultimodalInitiate (mbPersonId, merchantId) journeyId filterServiceAndJrnyType Nothing
+  journey <- JM.getJourney journeyId
+  legs <- JM.getAllLegsInfo journey.riderId journeyId
+  confirmReqElements <- forM req.journeyLegElements $ \el -> do
+    let mLeg = find (\l -> l.order == el.journeyLegOrder) legs
+    categorySelectionReq <- case (el.categorySelectionReq, mLeg >>= (.pricingId)) of
+      (Just selections, Just pId) -> do
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId (Id pId)
+        pure $ Just $ mapMaybe (matchCategory quoteCategories) selections
+      _ -> pure Nothing
+    pure $
+      ApiTypes.JourneyConfirmReqElement
+        { ApiTypes.journeyLegOrder = el.journeyLegOrder,
+          ApiTypes.skipBooking = el.skipBooking,
+          ApiTypes.ticketQuantity = Nothing,
+          ApiTypes.childTicketQuantity = Nothing,
+          ApiTypes.crisSdkResponse = el.crisSdkResponse,
+          ApiTypes.categorySelectionReq = categorySelectionReq,
+          ApiTypes.seatIds = Nothing,
+          ApiTypes.tripId = Nothing
+        }
+
+  if null confirmReqElements
+    then pure initiateResp
+    else do
+      let journeyConfirmReq =
+            ApiTypes.JourneyConfirmReq
+              { ApiTypes.journeyConfirmReqElements = confirmReqElements,
+                ApiTypes.enableOffer = req.enableOffer
+              }
+      confirmResp <- postMultimodalConfirm (mbPersonId, merchantId) journeyId forcedBookLegOrder mbIsMockPayment journeyConfirmReq
+      updatedJourney <- JM.getJourney journeyId
+      updatedLegs <- JM.getAllLegsInfo updatedJourney.riderId journeyId
+      resp <- generateJourneyInfoResponse updatedJourney updatedLegs
+      pure $ resp {ApiTypes.sdkPayload = confirmResp.orderSdkPayload}
+  where
+    matchCategory quoteCategories sel =
+      case find (\qc -> qc.category == sel.category) quoteCategories of
+        Just qc -> Just $ FRFSTicketService.FRFSCategorySelectionReq {quoteCategoryId = qc.id, quantity = sel.quantity, seatIds = Nothing}
+        Nothing -> Nothing
 
 postMultimodalConfirm ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

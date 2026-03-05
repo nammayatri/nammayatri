@@ -28,6 +28,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
 import Servant
+import qualified SharedLogic.Offer
 import Tools.Auth
 
 data AutocompleteRes = AutocompleteRes {routes :: [FRFSRouteAPI], stops :: [FRFSStationAPI]}
@@ -150,11 +151,13 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
+    offer :: Data.Maybe.Maybe SharedLogic.Offer.CumulativeOfferResp,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
+    sdkOrderPayload :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp,
     stations :: [FRFSStationAPI],
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
@@ -219,6 +222,9 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
 
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { busLocationData :: Data.Maybe.Maybe [API.Types.UI.RiderLocation.BusLocation],
+    categorySelectionReq :: Data.Maybe.Maybe [FRFSCategorySelectionReq],
+    crisSdkResponse :: Data.Maybe.Maybe CrisSdkResponse,
+    enableOffer :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     fromStationCode :: Data.Text.Text,
     platformType :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.PlatformType,
     quantity :: Kernel.Prelude.Int,
@@ -226,6 +232,7 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
     searchAsParentStops :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     serviceTier :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    skipBooking :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     toStationCode :: Data.Text.Text,
     vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
   }

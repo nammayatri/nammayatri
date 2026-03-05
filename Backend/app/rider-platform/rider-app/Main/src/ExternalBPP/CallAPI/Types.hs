@@ -3,6 +3,7 @@ module ExternalBPP.CallAPI.Types where
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis
 import Kernel.Utils.Common
@@ -12,12 +13,15 @@ import qualified Tools.Metrics as Metrics
 import qualified UrlShortner.Common as UrlShortner
 
 type FRFSSearchFlow m r =
-  ( CacheFlow m r,
+  ( MonadFlow m,
+    CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
+    ClickhouseFlow m r,
     Metrics.HasBAPMetrics m r,
     CallFRFSBPP.BecknAPICallFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasField "isMetroTestTransaction" r Bool
   )
 
 type FRFSConfirmFlow m r c =
