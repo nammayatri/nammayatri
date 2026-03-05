@@ -160,6 +160,7 @@ cacheMerchantServiceConfig merchantServiceConfig = do
         MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit
       InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
         Insurance.AckoInsuranceConfig _ -> InsuranceService Insurance.Acko
+        Insurance.IffcoTokioInsuranceConfig _ -> InsuranceService Insurance.IffcoTokio
 
 makeMerchantIdAndServiceKey :: Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> Text
 makeMerchantIdAndServiceKey id mocId serviceName = "CachedQueries:MerchantServiceConfig:MerchantId-" <> id.getId <> ":MechantOperatingCityId:-" <> mocId.getId <> ":ServiceName-" <> show serviceName
