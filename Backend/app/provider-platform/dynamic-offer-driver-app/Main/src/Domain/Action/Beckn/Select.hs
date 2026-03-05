@@ -67,6 +67,7 @@ data DSelectReq = DSelectReq
     disabilityDisable :: Maybe Bool,
     parcelDetails :: (Maybe Text, Maybe Int),
     preferSafetyPlus :: Bool,
+    driverPreference :: Maybe [Text],
     billingCategory :: SLT.BillingCategory,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     emailDomain :: Maybe Text
@@ -132,7 +133,8 @@ handler merchant sReq searchReq estimates = do
             billingCategory = sReq.billingCategory,
             isAllocatorBatch = False,
             paymentMethodInfo = sReq.paymentMethodInfo,
-            emailDomain = sReq.emailDomain
+            emailDomain = sReq.emailDomain,
+            driverPreference = sReq.driverPreference
           }
   void $ initiateDriverSearchBatch driverSearchBatchInput
   Metrics.finishGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST searchReq.transactionId

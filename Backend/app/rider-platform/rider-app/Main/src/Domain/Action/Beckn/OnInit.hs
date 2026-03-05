@@ -84,7 +84,8 @@ data OnInitRes = OnInitRes
     enableOtpLessRide :: Bool,
     tripCategory :: Maybe TripCategory,
     paymentMode :: Maybe DMPM.PaymentMode,
-    paymentInstrument :: Maybe DMPM.PaymentInstrument
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
+    driverPreference :: Maybe [Text]
   }
   deriving (Generic, Show)
 
@@ -150,6 +151,7 @@ onInit req = do
             enableOtpLessRide = isBookingMeterRide booking.bookingDetails || fromMaybe False safetySettings.enableOtpLessRide,
             tripCategory = booking.tripCategory,
             paymentMode = booking.paymentMode,
+            driverPreference = booking.driverPreference,
             ..
           }
   Metrics.finishMetricsBap Metrics.INIT merchant.name booking.transactionId booking.merchantOperatingCityId.getId
@@ -228,7 +230,8 @@ buildOnInitResFromBooking bookingId = do
         enableOtpLessRide = isBookingMeterRide booking.bookingDetails || fromMaybe False safetySettings.enableOtpLessRide,
         tripCategory = booking.tripCategory,
         paymentMode = booking.paymentMode,
-        paymentInstrument = booking.paymentInstrument
+        paymentInstrument = booking.paymentInstrument,
+        driverPreference = booking.driverPreference
       }
   where
     convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> Person.RideShareOptions

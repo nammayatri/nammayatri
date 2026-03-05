@@ -183,7 +183,8 @@ select bapToken quoteId =
         deliveryDetails = Nothing,
         disabilityDisable = Nothing,
         billingCategory = Nothing,
-        preferSafetyPlus = Nothing
+        preferSafetyPlus = Nothing,
+        driverPreference = Nothing
       }
 
 getNearbySearchRequestForDriver :: DriverTestData -> Id AppEstimate.Estimate -> ClientsM (NonEmpty DSRD.SearchRequestForDriverAPIEntity)

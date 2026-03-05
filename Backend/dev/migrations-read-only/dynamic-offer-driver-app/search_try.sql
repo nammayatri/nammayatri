@@ -58,3 +58,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN billing_category text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN email_domain text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN driver_preference text[] ;

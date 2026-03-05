@@ -653,6 +653,22 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   updateVersionInSearchReq mbVersion
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
   let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = onlyNewDriversWithCustomerInfo, needOnRideDrivers = isOnRidePool, batchNum}
+  logInfo $
+    "DriverPreference pooling input: customerNammaTags=" <> show customerNammaTags
+      <> " | drivers=["
+      <> mconcat
+        ( map
+            ( \d ->
+                "driverId=" <> show d.driverPoolResult.driverId
+                  <> " gender="
+                  <> show d.driverPoolResult.driverGender
+                  <> " customerTags="
+                  <> show d.driverPoolResult.customerTags
+                  <> "; "
+            )
+            onlyNewDriversWithCustomerInfo
+        )
+      <> "]"
   resp <- withTimeAPI "driverPooling" "runLogics" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast mOCityId) LYT.POOLING allLogics taggedDriverPoolInput
   sortedPool' <-
     case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of

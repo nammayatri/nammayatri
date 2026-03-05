@@ -437,3 +437,13 @@ ALTER TABLE atlas_app.booking ADD COLUMN requires_payment_before_confirm boolean
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN driver_preference text[] ;
+
+
+------- SQL updates -------
+

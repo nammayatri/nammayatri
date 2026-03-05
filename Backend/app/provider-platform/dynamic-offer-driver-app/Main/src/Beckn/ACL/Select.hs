@@ -31,6 +31,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Tools.Utils as YUtils
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CallBAP (mkTxnIdKey)
 import qualified SharedLogic.Type as SLT
 import Tools.Error
@@ -75,6 +77,7 @@ buildSelectReqV2 subscriber req = do
       (toUpdateDeviceIdInfo, isMultipleOrNoDeviceIdExist) = getDeviceIdInfo item.itemTags
       parcelDetails = getParcelDetails item.itemTags
       preferSafetyPlus = getPeferSafetyPlus item.itemTags
+      driverPreference = getDriverPreference item.itemTags now
   logDebug $ "billingCategory: select request" <> show billingCategory <> "transactionId: " <> transactionId
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure $ Just fulfillment
@@ -167,6 +170,16 @@ getPeferSafetyPlus tagGroups =
         Just "True" -> True
         Just "False" -> False
         _ -> False
+
+getDriverPreference :: Maybe [Spec.TagGroup] -> UTCTime -> Maybe [Text]
+getDriverPreference tagGroups now = do
+  tagValue <- Utils.getTagV2 Tag.SAFETY_PLUS_INFO Tag.DRIVER_PREFERENCE tagGroups
+  (_, parsedValue, _) <- YUtils.parseTag (LYT.TagNameValueExpiry $ "driverPreference#" <> tagValue) now
+  let prefs = case parsedValue of
+        LYT.TextValue t -> filter (not . T.null) [T.strip t]
+        LYT.ArrayValue vals -> filter (not . T.null) (T.strip <$> vals)
+        LYT.NumberValue _ -> []
+  pure prefs
 
 getDeviceIdInfo :: Maybe [Spec.TagGroup] -> (Bool, Maybe Bool)
 getDeviceIdInfo tagGroups = do
