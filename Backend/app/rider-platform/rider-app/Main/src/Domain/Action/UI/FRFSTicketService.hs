@@ -1196,7 +1196,7 @@ getFrfsTripRouteSeats ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow SeatLayoutResp
-getFrfsTripRouteSeats (mbPersonId, _merchantId) routeId tripId vehicleNumber mbFromStopCode mbToStopCode = do
+getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mbToStopCode vehicleNumber = do
   logInfo $ "FRFSTicketService:getFrfsTripRouteSeats routeId=" <> routeId <> " tripId=" <> tripId <> " vehicleNumber=" <> show vehicleNumber <> " from=" <> show mbFromStopCode <> " to=" <> show mbToStopCode
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
