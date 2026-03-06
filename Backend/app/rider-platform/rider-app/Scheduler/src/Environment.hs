@@ -26,7 +26,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import Data.String.Conversions (cs)
-import "rider-app" Environment (AppCfg (..))
+import "rider-app" Environment (AppCfg (..), SFTPConfig (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -136,7 +136,8 @@ data HandlerEnv = HandlerEnv
     noSignatureSubscribers :: [Text],
     isMetroTestTransaction :: Bool,
     blackListedJobs :: [Text],
-    cloudType :: Maybe CloudType
+    cloudType :: Maybe CloudType,
+    sftpConfig :: SFTPConfig
   }
   deriving (Generic)
 
