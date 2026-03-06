@@ -140,7 +140,7 @@ data DLDetails = DLDetails
     driverDateOfBirth :: Maybe UTCTime,
     classOfVehicles :: [Text],
     imageId1 :: Text,
-    imageId2 :: Maybe (Text),
+    imageId2 :: Maybe Text,
     dateOfIssue :: Maybe UTCTime,
     createdAt :: UTCTime
   }

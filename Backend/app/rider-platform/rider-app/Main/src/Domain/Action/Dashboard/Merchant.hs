@@ -109,7 +109,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.JobScheduler (RiderJobType (NyRegularMaster))
+import SharedLogic.JobScheduler (PartnerInvoiceDataExportJobData (..), RiderJobType (NyRegularMaster, PartnerInvoiceDataExport))
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
@@ -1597,6 +1597,15 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               createJobIn @_ @'NyRegularMaster merchantId mbMerchantOpCityId diffTimeS jobData
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.PartnerInvoiceDataExportTrigger -> do
+          let jobData =
+                PartnerInvoiceDataExportJobData
+                  { merchantId = merchant.id,
+                    merchantOperatingCityId = merchantOpCity.id,
+                    scheduleItself = False
+                  }
+          createJobIn @_ @'PartnerInvoiceDataExport (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
+          pure Success
         Nothing -> throwError $ InternalError "invalid job name"
 
 -- create the EP here
