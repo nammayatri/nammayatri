@@ -357,7 +357,8 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
             merchantOperatingCityId = Just merchantOperatingCityId,
             mbAdditonalChargeCategories = Nothing,
             numberOfLuggages = Nothing,
-            govtChargesRate = gstBreakup
+            govtChargesRate = gstBreakup,
+            pickupGateId = Nothing
           }
   SFC.calculateFareParameters params
 

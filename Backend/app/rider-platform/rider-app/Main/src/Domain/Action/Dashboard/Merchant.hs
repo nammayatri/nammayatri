@@ -430,6 +430,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             gateType = D.Pickup,
             merchantId = specialLocation.merchantId,
             merchantOperatingCityId = specialLocation.merchantOperatingCityId,
+            entryFeeAmount = Nothing,
             ..
           }
 
@@ -1539,7 +1540,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 createdAt = now,
                 updatedAt = now,
                 gateTags = gateInfoGateTags,
-                walkDescription = gateInfoWalkDescription
+                walkDescription = gateInfoWalkDescription,
+                entryFeeAmount = Nothing
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 
@@ -1574,7 +1576,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
         Nothing -> maybe generateGUID (return . (.id)) mbExisting
       void $ runTransaction $ QSLG.create $ specialLocation {DSL.id = specialLocationId}
       mapM_
-        (\(_, _, (_, gateInfo), _) -> runTransaction $ QGIG.create $ gateInfo {DGI.specialLocationId = specialLocationId})
+        (\(_, _, (_, gateInfo), _) -> runTransaction $ QGIG.create $ (gateInfo :: DGI.GateInfo) {DGI.specialLocationId = specialLocationId})
         specialLocationAndGates
 
 getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Flow [Common.SpecialLocationWithPlatform]

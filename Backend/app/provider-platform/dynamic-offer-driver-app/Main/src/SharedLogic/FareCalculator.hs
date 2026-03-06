@@ -371,7 +371,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
     numberOfLuggages :: Maybe Int,
-    govtChargesRate :: Maybe DTC.GstBreakup -- from TaxConfig.rideGst; summed inside calculateFareParameters
+    govtChargesRate :: Maybe DTC.GstBreakup, -- from TaxConfig.rideGst; summed inside calculateFareParameters
+    pickupGateId :: Maybe Text -- Optional airport pickup gate id; used by V2 to apply airport entry fee
   }
 
 calculateFareParameters :: MonadFlow m => CalculateFareParametersParams -> m FareParameters

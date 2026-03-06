@@ -339,7 +339,8 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   merchantOperatingCityId = Just merchantOperatingCityId,
                   mbAdditonalChargeCategories = Nothing,
                   numberOfLuggages = Nothing,
-                  govtChargesRate = transporterConfig <&> (.taxConfig.rideGst)
+                  govtChargesRate = transporterConfig <&> (.taxConfig.rideGst),
+                  pickupGateId = Nothing
                 }
           let totalFareAmount = perRideKmFareParamsSum fareParams
               perKmAmount :: Rational = totalFareAmount.getHighPrecMoney / fromIntegral (maybe 1 (getKilometers . metersToKilometers) mbDistance)

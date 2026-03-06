@@ -2842,6 +2842,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             gateType = D.Pickup,
             merchantId = specialLocation.merchantId,
             merchantOperatingCityId = specialLocation.merchantOperatingCityId,
+            entryFeeAmount = Nothing,
             ..
           }
 

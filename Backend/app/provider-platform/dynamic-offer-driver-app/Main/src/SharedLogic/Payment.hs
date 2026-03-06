@@ -24,7 +24,7 @@ import Domain.Types.MerchantMessage as MessageKey
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
-import Domain.Types.Plan as DP
+import qualified Domain.Types.Plan as DPlan
 import Domain.Types.SubscriptionConfig (VendorMigrationMapping (..))
 import qualified Domain.Types.VendorFee as VF
 import qualified EulerHS.Language as L
@@ -51,6 +51,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Person as QP
@@ -239,7 +240,7 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       createdAt = now
     }
 
-offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> DP.ServiceNames -> Payment.OfferListReq -> m Payment.OfferListResp
+offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> DPlan.ServiceNames -> Payment.OfferListReq -> m Payment.OfferListResp
 offerListCache merchantId driverId merchantOpCityId serviceName req = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   subscriptionConfig <-
@@ -412,3 +413,71 @@ createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbP
       False -- isMockPayment
       Nothing -- mbGroupId
   mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")
+
+-- | Create a payment order for driver wallet topup (no Invoice/DriverFee).
+--   Uses finance ledger: caller creates LedgerEntry DUE with referenceType = walletReferenceTopup, referenceId = orderId.
+createWalletTopupOrder ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    MonadFlow m,
+    ServiceFlow m r
+  ) =>
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  HighPrecMoney ->
+  m (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
+createWalletTopupOrder (driverId, merchantId, mocId) amount = do
+  driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  merchantServiceUsageConfig <-
+    CQMSUC.findByMerchantOpCityId mocId
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
+  paymentServiceName <-
+    TPayment.decidePaymentService
+      (DMSC.PaymentService merchantServiceUsageConfig.createBankAccount)
+      driver.clientSdkVersion
+      mocId
+  orderId <- generateGUID
+  orderShortId <- generateShortId
+  let createOrderReq =
+        Payment.CreateOrderReq
+          { orderId = orderId,
+            orderShortId = orderShortId.getShortId,
+            amount = amount,
+            customerId = driver.id.getId,
+            customerEmail = fromMaybe "test@juspay.in" driver.email,
+            customerPhone = driverPhone,
+            customerFirstName = Just driver.firstName,
+            customerLastName = driver.lastName,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateFrequency = Nothing,
+            mandateEndDate = Nothing,
+            mandateStartDate = Nothing,
+            optionsGetUpiDeepLinks = Nothing,
+            metadataExpiryInMins = Nothing,
+            splitSettlementDetails = Nothing,
+            metadataGatewayReferenceId = Nothing,
+            basket = Nothing
+          }
+  (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId mocId paymentServiceName (Just driver.id.getId)
+  let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
+      commonPersonId = cast @DP.Person @DPayment.Person driverId
+  mbResp <-
+    DPayment.createOrderService
+      commonMerchantId
+      (Just $ cast mocId)
+      commonPersonId
+      Nothing
+      (Just DPayment.DRIVER_WALLET_TOPUP)
+      DOrder.Normal
+      False
+      createOrderReq
+      createOrderCall
+      Nothing
+      False
+      Nothing
+  createOrderRes <- mbResp & fromMaybeM (InternalError "Failed to create wallet topup payment order")
+  let createOrderRes' = applyPseudoClientId pseudoClientId createOrderRes
+  pure (createOrderRes', Id orderId)

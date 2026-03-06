@@ -33,6 +33,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     acStatusCheckGap :: Kernel.Prelude.Int,
     actualRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: Kernel.Types.Common.HighPrecMeters,
+    airportEntryFeeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDashboardToPassVehicleDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDefaultPlanAllocation :: Kernel.Prelude.Bool,
     allowDisableDriverToTakeSpecialZoneRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -413,7 +414,8 @@ data SubscriptionConfig = SubscriptionConfig
   deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data TaxConfig = TaxConfig
-  { defaultTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+  { airportEntryFeeGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
+    defaultTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     invalidPanTdsRate :: Kernel.Prelude.Double,
     rideGst :: Domain.Types.TransporterConfig.GstBreakup,
     securityDepositGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,

@@ -223,5 +223,11 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN reconciliation_status text
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN pickup_gate_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN email_domain text ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN ledger_write_mode boolean ;
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN email_domain text ;
