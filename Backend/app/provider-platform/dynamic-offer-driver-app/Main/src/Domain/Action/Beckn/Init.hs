@@ -272,6 +272,7 @@ handler merchantId req validatedReq = do
             searchTryId = searchTryId,
             dqDurationToPickup = dqDurationToPickup,
             reconciliationStatus = Nothing,
+            pickupGateId = searchRequest.pickupGateId,
             ledgerWriteMode = Nothing,
             ..
           }

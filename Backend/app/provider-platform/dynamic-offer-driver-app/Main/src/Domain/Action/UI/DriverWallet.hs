@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -16,6 +18,7 @@ module Domain.Action.UI.DriverWallet
   ( getWalletTransactions,
     postWalletPayout,
     postWalletTopup,
+    recordAirportCashRecharge,
     getWalletPayoutHistory,
     -- Exported for scheduled batch payout
     PayoutContext (..),
@@ -25,6 +28,7 @@ module Domain.Action.UI.DriverWallet
     resolvePayoutVpa,
     initiateWalletPayout,
     makePayoutEntryIdsKey,
+    mkDriverWalletFinanceCtx
   )
 where
 
@@ -34,30 +38,41 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Time
 import Domain.Action.UI.Plan hiding (mkDriverFee)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
-import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Extra.Plan
-import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTConf
-import Domain.Types.VehicleCategory
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.FCM.Types as FCM
-import qualified Kernel.External.Payment.Types as Payment
 import qualified Kernel.External.Payout.Types as TPayout
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
+import qualified Kernel.Types.HideSecrets
 import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
+  ( Account,
+    AccountRole (OwnerLiability, PlatformAsset),
+    CounterpartyType,
+    FinanceCtx (..),
+    InvoiceConfig (..),
+    InvoiceLineItem (..),
+    findByAccountWithFilters,
+    getEntriesByReference,
+    invoice,
+    runFinance,
+    transfer,
+  )
+import qualified Lib.Finance.Domain.Types.Account as FAccount
+import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
@@ -70,13 +85,14 @@ import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
-import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.DriverFeeExtra as QDFE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
+
+instance Kernel.Types.HideSecrets.HideSecrets DriverWallet.TopUpRequest where
+  hideSecrets = Kernel.Prelude.identity
 
 -- | Pick the counterparty type based on the person's role.
 counterpartyFromRole :: DP.Role -> CounterpartyType
@@ -196,6 +212,7 @@ referenceTypeToItemName ref
   | ref == walletReferenceTDSDeductionOnline = "TDS (Online)"
   | ref == walletReferenceTDSDeductionCash = "TDS (Cash)"
   | ref == walletReferencePayout = "Withdrawal"
+  | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
   | otherwise = ref
 
 --------------------------------------------------------------------------------
@@ -424,7 +441,7 @@ makePayoutEntryIdsKey :: Text -> Text
 makePayoutEntryIdsKey payoutRequestId = "payout-entry-ids:" <> payoutRequestId
 
 --------------------------------------------------------------------------------
--- postWalletTopup
+-- postWalletTopup (finance ledger: platform Asset -> driver RideCredit, reference WalletTopup)
 --------------------------------------------------------------------------------
 
 postWalletTopup ::
@@ -435,98 +452,109 @@ postWalletTopup ::
     DriverWallet.TopUpRequest ->
     Environment.Flow PlanSubscribeRes
   )
-postWalletTopup (mbPersonId, merchantId, mocId) req = do
-  driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
-  transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  unless (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletTopup) $ throwError $ InvalidRequest "Wallet topups are disabled"
-  when (req.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
-  eitherResult <- Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
-    existingTopUpFee <- QDFE.findLatestByFeeTypeAndStatusWithTotalEarnings DF.WALLET_TOPUP [DF.PAYMENT_PENDING] driverId req.amount
-    case existingTopUpFee of
-      Just fee -> pure fee
-      Nothing -> do
-        driverFee <- mkDriverFee driverId req.amount transporterConfig.currency
-        QDF.create driverFee
-        pure driverFee
-  case eitherResult of
-    Right fee -> createTopupOrder driverId [fee]
-    Left _ -> throwError $ InternalError "Could not acquire lock for wallet topup."
+postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merchantId mocId
   where
+    doWalletTopup mbP mId mocId0 r =
+      do
+        driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbP
+        when (r.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
+        Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
+          (createOrderResp, orderId) <- SPayment.createWalletTopupOrder (driverId, mId, mocId0) r.amount
+          pure $
+            PlanSubscribeRes
+              { orderId = orderId,
+                orderResp = createOrderResp
+              }
+        >>= \case
+          Right res -> pure res
+          Left _ -> throwError WalletTopupLockFailed
+
     makeWalletTopupLockKey :: Text -> Text
     makeWalletTopupLockKey dId = "wallet-topup-lock:" <> dId
 
-    createTopupOrder driverId driverFees = do
-      (createOrderResp, orderId) <-
-        SPayment.createOrder
-          (driverId, merchantId, mocId)
-          (DEMSC.PaymentService Payment.Juspay)
-          (driverFees, [])
-          Nothing
-          INV.WALLET_TOPUP_INVOICE
-          Nothing
-          []
-          Nothing
-          False
-          (Just DPayment.DRIVER_WALLET_TOPUP)
-      return $
-        PlanSubscribeRes
-          { orderId = orderId,
-            orderResp = createOrderResp
-          }
+--------------------------------------------------------------------------------
+-- recordAirportCashRecharge (booth operator took cash; credit driver wallet, idempotent by referenceId)
+--------------------------------------------------------------------------------
 
-    mkDriverFee driverId amount currency = do
-      now <- getCurrentTime
-      feeId <- generateGUID
-      pure $
-        DF.DriverFee
-          { id = feeId,
-            driverId = driverId,
-            merchantId = merchantId,
-            merchantOperatingCityId = mocId,
-            feeType = DF.WALLET_TOPUP,
-            status = DF.PAYMENT_PENDING,
-            currency,
-            platformFee = DF.PlatformFee {fee = 0, cgst = 0, sgst = 0, currency},
-            govtCharges = 0,
-            specialZoneAmount = 0,
-            totalEarnings = amount,
-            numRides = 0,
-            specialZoneRideCount = 0,
-            startTime = now,
-            endTime = now,
-            payBy = now,
-            createdAt = now,
-            updatedAt = now,
-            serviceName = PREPAID_SUBSCRIPTION,
-            vehicleCategory = CAR,
-            notificationRetryCount = 0,
-            schedulerTryCount = 0,
-            overlaySent = False,
-            amountPaidByCoin = Nothing,
-            autopayPaymentStage = Nothing,
-            badDebtDeclarationDate = Nothing,
-            badDebtRecoveryDate = Nothing,
-            billNumber = Nothing,
-            collectedAt = Nothing,
-            collectedBy = Nothing,
-            feeWithoutDiscount = Nothing,
-            hasSibling = Nothing,
-            offerId = Nothing,
-            planId = Nothing,
-            planMode = Nothing,
-            planOfferTitle = Nothing,
-            refundEntityId = Nothing,
-            refundedAmount = Nothing,
-            refundedAt = Nothing,
-            refundedBy = Nothing,
-            siblingFeeId = Nothing,
-            splitOfDriverFeeId = Nothing,
-            stageUpdatedAt = Nothing,
-            validDays = Nothing,
-            vehicleNumber = Nothing,
-            cancellationPenaltyAmount = Nothing,
-            addedToFeeId = Nothing,
-            collectedAtVendorId = Nothing
-          }
+-- | Shared helper to build a FinanceCtx for driver wallet recharges (topup/cash).
+--   Populates merchant/supplier metadata so invoices and analytics have rich context.
+-- TODO: Add supplier name and GSTIN
+mkDriverWalletFinanceCtx ::
+  ( BeamFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  Id DP.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Currency ->
+  Text -> -- referenceId (order id or booth receipt id)
+  m FinanceCtx
+mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
+  let mName = Just merchant.name
+      mShortId = Just merchant.shortId.getShortId
+      address =
+        Just $
+          show merchantOpCity.city
+            <> ", "
+            <> show merchantOpCity.state
+            <> ", "
+            <> show merchantOpCity.country
+      supplierName = Nothing
+      supplierGSTIN = Nothing
+      supplierId = Nothing
+  pure
+    FinanceCtx
+      { merchantId = merchantId.getId,
+        merchantOpCityId = mocId.getId,
+        currency = currency,
+        counterpartyType = FAccount.DRIVER,
+        counterpartyId = driverId.getId,
+        referenceId = referenceId,
+        merchantName = mName,
+        merchantShortId = mShortId,
+        issuedByAddress = address,
+        supplierName = supplierName,
+        supplierGSTIN = supplierGSTIN,
+        supplierId = supplierId,
+        panOfParty = Nothing,
+        panType = Nothing,
+        tdsRateReason = Nothing
+      }
+
+-- | Record airport booth cash recharge: credit driver wallet (PlatformAsset → OwnerLiability)
+--   with referenceType = walletReferenceAirportCashRecharge. Idempotent by referenceId (e.g. booth receipt id).
+recordAirportCashRecharge ::
+  ( BeamFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  (Id DP.Person, Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
+  HighPrecMoney ->
+  Text -> -- referenceId for idempotency (e.g. booth receipt id)
+  m ()
+recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
+  when (amount <= 0) $ throwError $ InvalidRequest "Cash recharge amount must be greater than zero"
+  existing <- getEntriesByReference walletReferenceAirportCashRecharge referenceId
+  when (null existing) $ do
+    merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
+    let currency = merchantOpCity.currency
+    ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId
+    let cashRechargeInvoiceConfig =
+          InvoiceConfig
+            { invoiceType = FinanceInvoice.SubscriptionPurchase,
+              issuedToType = "DRIVER",
+              issuedToId = driverId.getId,
+              issuedToName = Nothing,
+              issuedToAddress = Nothing,
+              lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False}],
+              gstBreakdown = Nothing
+            }
+    result <- runFinance ctx $ do
+      _ <- transfer PlatformAsset OwnerLiability amount walletReferenceAirportCashRecharge
+      invoice cashRechargeInvoiceConfig
+    void $ fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result

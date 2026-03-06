@@ -13,12 +13,20 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified "payment" Lib.Payment.Domain.Types.PayoutRequest
 import Servant
 import Servant.Client
 
-type API = ("driverWallet" :> (GetDriverWalletWalletTransactions :<|> PostDriverWalletWalletPayout :<|> PostDriverWalletWalletTopup :<|> GetDriverWalletWalletPayoutHistory))
+data AirportCashRechargeRequest = AirportCashRechargeRequest {amount :: Kernel.Types.Common.HighPrecMoney, referenceId :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)  deriving Show
+
+instance Kernel.Types.HideSecrets.HideSecrets AirportCashRechargeRequest where
+  hideSecrets = Kernel.Prelude.identity
+type API = ("driverWallet" :> (GetDriverWalletWalletTransactions :<|> PostDriverWalletWalletPayout :<|> PostDriverWalletWalletTopup :<|> PostDriverWalletWalletAirportCashRecharge :<|> GetDriverWalletWalletPayoutHistory))
 
 type GetDriverWalletWalletTransactions =
   ( "wallet" :> Capture "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Driver) :> "transactions"
@@ -26,17 +34,25 @@ type GetDriverWalletWalletTransactions =
            "fromDate"
            Kernel.Prelude.UTCTime
       :> QueryParam "toDate" Kernel.Prelude.UTCTime
-      :> Get ('[JSON]) API.Types.UI.DriverWallet.WalletSummaryResponse
+      :> Get '[JSON] API.Types.UI.DriverWallet.WalletSummaryResponse
   )
 
-type PostDriverWalletWalletPayout = ("wallet" :> Capture "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Driver) :> "payout" :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostDriverWalletWalletPayout = ("wallet" :> Capture "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Driver) :> "payout" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostDriverWalletWalletTopup =
   ( "wallet" :> Capture "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Driver) :> "topup"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverWallet.TopUpRequest
-      :> Post ('[JSON]) Domain.Action.UI.Plan.PlanSubscribeRes
+      :> Post '[JSON] Domain.Action.UI.Plan.PlanSubscribeRes
+  )
+
+type PostDriverWalletWalletAirportCashRecharge =
+  ( "wallet" :> Capture "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Driver) :> "airportCashRecharge"
+      :> ReqBody
+           '[JSON]
+           AirportCashRechargeRequest
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type GetDriverWalletWalletPayoutHistory =
@@ -55,28 +71,30 @@ type GetDriverWalletWalletPayoutHistory =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverWallet.PayoutHistoryResponse
   )
 
 data DriverWalletAPIs = DriverWalletAPIs
-  { getDriverWalletWalletTransactions :: (Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient API.Types.UI.DriverWallet.WalletSummaryResponse),
-    postDriverWalletWalletPayout :: (Kernel.Types.Id.Id Domain.Types.Person.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postDriverWalletWalletTopup :: (Kernel.Types.Id.Id Domain.Types.Person.Driver -> API.Types.UI.DriverWallet.TopUpRequest -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.PlanSubscribeRes),
-    getDriverWalletWalletPayoutHistory :: (Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe ([Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus]) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient API.Types.UI.DriverWallet.PayoutHistoryResponse)
+  { getDriverWalletWalletTransactions :: Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.UI.DriverWallet.WalletSummaryResponse,
+    postDriverWalletWalletPayout :: Kernel.Types.Id.Id Domain.Types.Person.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverWalletWalletTopup :: Kernel.Types.Id.Id Domain.Types.Person.Driver -> API.Types.UI.DriverWallet.TopUpRequest -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.PlanSubscribeRes,
+    postDriverWalletWalletAirportCashRecharge :: Kernel.Types.Id.Id Domain.Types.Person.Driver -> AirportCashRechargeRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getDriverWalletWalletPayoutHistory :: Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus] -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient API.Types.UI.DriverWallet.PayoutHistoryResponse
   }
 
 mkDriverWalletAPIs :: (Client EulerHS.Types.EulerClient API -> DriverWalletAPIs)
 mkDriverWalletAPIs driverWalletClient = (DriverWalletAPIs {..})
   where
-    getDriverWalletWalletTransactions :<|> postDriverWalletWalletPayout :<|> postDriverWalletWalletTopup :<|> getDriverWalletWalletPayoutHistory = driverWalletClient
+    getDriverWalletWalletTransactions :<|> postDriverWalletWalletPayout :<|> postDriverWalletWalletTopup :<|> postDriverWalletWalletAirportCashRecharge :<|> getDriverWalletWalletPayoutHistory = driverWalletClient
 
 data DriverWalletUserActionType
   = GET_DRIVER_WALLET_WALLET_TRANSACTIONS
   | POST_DRIVER_WALLET_WALLET_PAYOUT
   | POST_DRIVER_WALLET_WALLET_TOPUP
+  | POST_DRIVER_WALLET_WALLET_AIRPORT_CASH_RECHARGE
   | GET_DRIVER_WALLET_WALLET_PAYOUT_HISTORY
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''DriverWalletUserActionType)])
+$(Data.Singletons.TH.genSingletons [''DriverWalletUserActionType])

@@ -47,6 +47,7 @@ Booking:
     specialLocationName: Maybe Text
     disabilityTag: Maybe Text
     area: Maybe Area
+    pickupGateId: Maybe Text
     providerId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     fromLocGeohash: Maybe Text
@@ -186,6 +187,7 @@ Booking:
     isPetRide: Just isPetRide|E
     billingCategory: Just billingCategory|E
     searchTryId: (Kernel.Types.Id.getId <$> searchTryId)|E
+    pickupGateId: pickupGateId|E
 
   intermediateTransformers:
     fromTType:
@@ -216,6 +218,7 @@ Booking:
     isPetRide: fromMaybe False isPetRide|E
     billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
     searchTryId: Kernel.Types.Id.Id <$> searchTryId|E
+    pickupGateId: pickupGateId|E
 
   sqlType:
     status: character varying(255)
@@ -243,6 +246,7 @@ Booking:
     displayBookingId: character varying(25)
     searchTryId: character varying(36)
     dqDurationToPickup: bigint
+    pickupGateId: character varying(36)
 
   default:
     bookingType: "'NormalBooking'"

@@ -239,7 +239,8 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               merchantOperatingCityId = Just searchReq.merchantOperatingCityId,
               mbAdditonalChargeCategories = Nothing,
               numberOfLuggages = searchReq.numberOfLuggages,
-              govtChargesRate = Just transporterConfig.taxConfig.rideGst
+              govtChargesRate = Just transporterConfig.taxConfig.rideGst,
+              pickupGateId = searchReq.pickupGateId
             }
       pure $ Fare.fareSum fareParams $ Just []
 

@@ -103,11 +103,13 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), invoice, runFinance, transfer, transfer_)
 import qualified Lib.Finance.Domain.Types.Invoice as Invoice
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
+import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverFee (calculatePlatformFeeAttr)
@@ -285,7 +287,8 @@ processEndRideFinance ::
     HasShortDurationRetryCfg r c,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    BeamFlow m r
   ) =>
   Merchant ->
   Ride.Ride ->
@@ -327,6 +330,10 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
   -- 2. Wallet Flow
   when (isPrepaidSubscriptionAndWalletEnabled && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
     createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson
+
+  -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)
+  when (fromMaybe False thresholdConfig.airportEntryFeeEnabled) $
+    AirportEntryFee.deductAirportEntryFeeAtEndRide ride booking
   where
     processEndRidePrepaidSubscription fare = do
       case ride.fleetOwnerId of

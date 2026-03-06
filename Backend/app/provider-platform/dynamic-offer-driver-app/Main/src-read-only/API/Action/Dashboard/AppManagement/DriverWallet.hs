@@ -25,9 +25,9 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.Dashboard.AppManagement.DriverWallet.API)
-handler merchantId city = getDriverWalletWalletTransactions merchantId city :<|> postDriverWalletWalletPayout merchantId city :<|> postDriverWalletWalletTopup merchantId city :<|> getDriverWalletWalletPayoutHistory merchantId city
+handler merchantId city = getDriverWalletWalletTransactions merchantId city :<|> postDriverWalletWalletPayout merchantId city :<|> postDriverWalletWalletTopup merchantId city :<|> postDriverWalletWalletAirportCashRecharge merchantId city :<|> getDriverWalletWalletPayoutHistory merchantId city
 
-getDriverWalletWalletTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.UI.DriverWallet.WalletSummaryResponse)
+getDriverWalletWalletTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.UI.DriverWallet.WalletSummaryResponse)
 getDriverWalletWalletTransactions a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletTransactions a5 a4 a3 a2 a1
 
 postDriverWalletWalletPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -36,5 +36,8 @@ postDriverWalletWalletPayout a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Act
 postDriverWalletWalletTopup :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> API.Types.UI.DriverWallet.TopUpRequest -> Environment.FlowHandler Domain.Action.UI.Plan.PlanSubscribeRes)
 postDriverWalletWalletTopup a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.DriverWallet.postDriverWalletWalletTopup a4 a3 a2 a1
 
-getDriverWalletWalletPayoutHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe ([Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus]) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.UI.DriverWallet.PayoutHistoryResponse)
+postDriverWalletWalletAirportCashRecharge :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> API.Types.Dashboard.AppManagement.DriverWallet.AirportCashRechargeRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverWalletWalletAirportCashRecharge a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.DriverWallet.postDriverWalletWalletAirportCashRecharge a4 a3 a2 a1
+
+getDriverWalletWalletPayoutHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus] -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.UI.DriverWallet.PayoutHistoryResponse)
 getDriverWalletWalletPayoutHistory a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletPayoutHistory a8 a7 a6 a5 a4 a3 a2 a1

@@ -43,9 +43,14 @@ import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
 import Kernel.Prelude
+import Kernel.Types.Error
+import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import qualified SharedLogic.FareCalculator as FC
 import qualified Storage.Cac.TransporterConfig as SCTC
+
 
 -- | Map of fare components to their monetary values
 -- Used to compute charges on specific components (e.g., VAT on RideFare + CongestionChargeComponent)
@@ -74,7 +79,7 @@ data ParsedCodeValue
 -- Example: If fare_policy has vat_charge_config = {"value":"14%","appliesOn":["RideFare","DeadKmFareComponent"]},
 -- then VAT will be calculated as 14% of (RideFare + DeadKmFareComponent)
 calculateFareParametersV2 ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r) =>
   FC.CalculateFareParametersParams ->
   m FareParameters
 calculateFareParametersV2 params = do
@@ -91,11 +96,14 @@ calculateFareParametersV2 params = do
       logDebug "FareCalculatorV2: No merchantOperatingCityId provided, using v1 behavior"
       pure False -- If no merchantOperatingCityId, default to v1 behavior
       -- Apply configurable charges only if V2 is enabled
-  if isV2Enabled
-    then applyConfiguredCharges params.farePolicy baseFareParams
-    else do
-      logDebug "FareCalculatorV2: V2 disabled or not enabled, using v1 behavior (no configurable charges applied)"
-      pure baseFareParams
+  fareWithV2 <-
+    if isV2Enabled
+      then applyConfiguredCharges params.farePolicy baseFareParams
+      else do
+        logDebug "FareCalculatorV2: V2 disabled or not enabled, using v1 behavior (no configurable charges applied)"
+        pure baseFareParams
+  -- Apply airport entry fee (if any) to parkingCharge in FareParameters
+  applyAirportEntryFee params fareWithV2
 
 -- | Apply configurable charges (VAT, commission, toll tax) to fare parameters
 --
@@ -133,6 +141,28 @@ applyConfiguredCharges farePolicy fareParams = do
         rideVat = rideVatValue,
         tollVat = tollVatValue
       }
+
+-- | Apply airport entry fee into parkingCharge, based on pickupGateId and transporter config.
+applyAirportEntryFee ::
+  (MonadFlow m, EsqDBFlow m r, BeamFlow m r) =>
+  FC.CalculateFareParametersParams ->
+  FareParameters ->
+  m FareParameters
+applyAirportEntryFee params fareParams = case (params.merchantOperatingCityId, params.pickupGateId) of
+  (Just merchantOperatingCityId, Just gateIdText) -> do
+    transporterConfig <-
+      SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing
+        >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+    if not (fromMaybe False transporterConfig.airportEntryFeeEnabled)
+      then pure fareParams
+      else do
+        airportFee <- AirportEntryFee.entryFeeForGateId (Id gateIdText)
+        let currentParking = fromMaybe 0 fareParams.parkingCharge
+        pure $
+          if airportFee > 0
+            then fareParams {parkingCharge = Just (currentParking + airportFee)}
+            else fareParams
+  _ -> pure fareParams
 
 -- | Compute a configured charge (VAT, commission, or toll tax)
 --

@@ -27,6 +27,9 @@ module SharedLogic.Finance.Wallet
     financeCtxFromRide,
     buildFinanceCtx,
     walletReferenceD2DReferral,
+    walletReferenceAirportCashRecharge,
+    walletReferenceAirportEntryFeeGST,
+    walletReferenceAirportEntryFee,
     getRedeemableEntryIds,
     settleWalletEntries,
     getPayoutEligibilityData,
@@ -100,6 +103,18 @@ walletReferenceTDSDeductionCancellation = "TDSDeductionCancellation"
 walletReferenceD2DReferral :: Text
 walletReferenceD2DReferral = "D2DReferral"
 
+-- | Reference type for airport booth cash recharge (idempotent by referenceId; booth operator took amount)
+walletReferenceAirportCashRecharge :: Text
+walletReferenceAirportCashRecharge = "AirportCashRecharge"
+
+-- | Reference type for airport entry fee GST ledger entry at EndRide (third party GST)
+walletReferenceAirportEntryFeeGST :: Text
+walletReferenceAirportEntryFeeGST = "AirportEntryFeeGST"
+
+-- | Reference type for airport entry fee (airport portion) ledger entry at EndRide (third party charges)
+walletReferenceAirportEntryFee :: Text
+walletReferenceAirportEntryFee = "AirportEntryFee"
+
 walletReferenceWalletIncentive :: Text
 walletReferenceWalletIncentive = "WalletIncentive"
 
@@ -118,6 +133,7 @@ walletCreditRefs =
     walletReferenceTDSDeductionCash,
     walletReferenceTDSDeductionCancellation,
     walletReferenceTopup,
+    walletReferenceAirportCashRecharge,
     walletReferenceD2DReferral,
     walletReferenceCustomerCancellationCharges,
     walletReferenceDriverCancellationCharges,

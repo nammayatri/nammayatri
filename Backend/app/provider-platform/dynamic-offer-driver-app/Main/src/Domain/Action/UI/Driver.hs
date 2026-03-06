@@ -1905,6 +1905,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               mbAdditonalChargeCategories = Just sReqFD.conditionalCharges,
               numberOfLuggages = searchReq.numberOfLuggages,
               govtChargesRate = Just transporterConfig.taxConfig.rideGst,
+              pickupGateId = searchReq.pickupGateId,
               ..
             }
       driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice'

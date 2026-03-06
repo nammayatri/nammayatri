@@ -17,6 +17,7 @@ module Tools.Error (module Tools.Error) where
 import Data.Aeson (Value (Null), object, (.=))
 import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Error as Tools.Error hiding (PersonError, SosError, SosIdDoesNotExist)
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Utils.Common (Meters)
@@ -205,6 +206,7 @@ data DriverError
   | FleetOwnerAccountBlocked
   | AccountBlocked
   | DriverActivityUpdateInProgress Text
+  | InsufficientAirportBalance HighPrecMoney HighPrecMoney
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -225,6 +227,7 @@ instance IsBaseError DriverError where
   toMessage FleetOwnerAccountBlocked = Just "Fleet Owner account has been blocked."
   toMessage AccountBlocked = Just "Account has been blocked."
   toMessage (DriverActivityUpdateInProgress driverId) = Just $ "Driver activity update is already in progress for driverId: " <> driverId <> ". Please try again later."
+  toMessage (InsufficientAirportBalance required available) = Just $ "Insufficient airport entry fee balance. Required: " <> show required <> ", Available: " <> show available <> ". Please recharge before starting this ride."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -243,6 +246,7 @@ instance IsHTTPError DriverError where
     FleetOwnerAccountBlocked -> "FLEET_OWNER_ACCOUNT_BLOCKED"
     AccountBlocked -> "ACCOUNT_BLOCKED"
     DriverActivityUpdateInProgress _ -> "DRIVER_ACTIVITY_UPDATE_IN_PROGRESS"
+    InsufficientAirportBalance _ _ -> "INSUFFICIENT_AIRPORT_BALANCE"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -259,10 +263,45 @@ instance IsHTTPError DriverError where
     FleetOwnerAccountBlocked -> E403
     AccountBlocked -> E403
     DriverActivityUpdateInProgress _ -> E409
+    InsufficientAirportBalance _ _ -> E402
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload
   toPayload _ = Null
+
+data DriverWalletError
+  = PlatformAccountNotFound
+  | DriverRideCreditAccountNotFound
+  | WalletLedgerEntryFailed Text
+  | WalletTopupLockFailed
+  | WalletAccountNotFound Text
+  | WalletBalanceUpdateFailed Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverWalletError
+
+instance IsBaseError DriverWalletError where
+  toMessage = \case
+    PlatformAccountNotFound -> Just "Platform account not found for wallet operation."
+    DriverRideCreditAccountNotFound -> Just "Driver RideCredit account not found."
+    WalletLedgerEntryFailed msg -> Just $ "Wallet ledger entry failed: " <> msg
+    WalletTopupLockFailed -> Just "Could not acquire lock for wallet topup. Please try again."
+    WalletAccountNotFound msg -> Just $ "Wallet account not found: " <> msg
+    WalletBalanceUpdateFailed msg -> Just $ "Wallet balance update failed: " <> msg
+
+instance IsHTTPError DriverWalletError where
+  toErrorCode = \case
+    PlatformAccountNotFound -> "PLATFORM_ACCOUNT_NOT_FOUND"
+    DriverRideCreditAccountNotFound -> "DRIVER_RIDECREDIT_ACCOUNT_NOT_FOUND"
+    WalletLedgerEntryFailed _ -> "WALLET_LEDGER_ENTRY_FAILED"
+    WalletTopupLockFailed -> "WALLET_TOPUP_LOCK_FAILED"
+    WalletAccountNotFound _ -> "WALLET_ACCOUNT_NOT_FOUND"
+    WalletBalanceUpdateFailed _ -> "WALLET_BALANCE_UPDATE_FAILED"
+  toHttpCode = \case
+    WalletTopupLockFailed -> E429
+    _ -> E500
+
+instance IsAPIError DriverWalletError
 
 data AadhaarError
   = AadhaarAlreadyVerified
