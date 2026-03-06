@@ -6,8 +6,10 @@ import qualified Dashboard.Common
 import Domain.Action.ProviderPlatform.Fleet.Driver (getFleetOwnerId)
 import qualified Domain.Action.ProviderPlatform.Management.Account as Common
 import qualified "lib-dashboard" Domain.Types.Merchant
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import qualified Domain.Types.VehicleCategory
 import qualified "lib-dashboard" Environment
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
@@ -25,13 +27,25 @@ getOnboardingDocumentConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 getOnboardingDocumentConfigs merchantShortId opCity apiTokenInfo makeSelfieAadhaarPanMandatory onlyVehicle role = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
-  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingDocumentConfigs) fleetOwnerId makeSelfieAadhaarPanMandatory onlyVehicle role
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingDocumentConfigs) fleetOwnerId makeSelfieAadhaarPanMandatory onlyVehicle role)
 
 getOnboardingRegisterStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.StatusRes)
 getOnboardingRegisterStatus merchantShortId opCity apiTokenInfo driverId makeSelfieAadhaarPanMandatory onboardingVehicleCategory providePrefillDetails onlyMandatoryDocs = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
-  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingRegisterStatus) fleetOwnerId driverId makeSelfieAadhaarPanMandatory onboardingVehicleCategory providePrefillDetails onlyMandatoryDocs
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingRegisterStatus) fleetOwnerId driverId makeSelfieAadhaarPanMandatory onboardingVehicleCategory providePrefillDetails onlyMandatoryDocs)
 
 postOnboardingVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyType -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postOnboardingVerify merchantShortId opCity apiTokenInfo verifyType req = do
@@ -52,4 +66,10 @@ getOnboardingGetReferralDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchan
 getOnboardingGetReferralDetails merchantShortId opCity apiTokenInfo referralCode = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
-  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingGetReferralDetails) requestorId referralCode
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingGetReferralDetails) requestorId referralCode)

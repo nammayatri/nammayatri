@@ -40,7 +40,13 @@ postRideEnd merchantShortId opCity apiTokenInfo rideId req = do
 getRideCurrentActiveRide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow (Kernel.Types.Id.Id Dashboard.Common.Ride))
 getRideCurrentActiveRide merchantShortId opCity apiTokenInfo vehicleNumber = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.rideDSL.getRideCurrentActiveRide) vehicleNumber
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.rideDSL.getRideCurrentActiveRide) vehicleNumber)
 
 postRideCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Ride -> API.Types.Dashboard.RideBooking.Ride.CancelRideReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postRideCancel merchantShortId opCity apiTokenInfo rideId req = do

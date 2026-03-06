@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
-
 import Data.List (dropWhileEnd, isInfixOf, isSuffixOf, sort)
 import Data.List.Extra (dropSuffix)
 import Data.Text (unpack)

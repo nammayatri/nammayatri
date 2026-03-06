@@ -47,9 +47,21 @@ deleteFeedbackFormDelete merchantShortId opCity apiTokenInfo feedbackFormId = do
 getFeedbackForm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormRes)
 getFeedbackForm merchantShortId opCity apiTokenInfo feedbackFormId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.feedbackFormDSL.getFeedbackForm) feedbackFormId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.feedbackFormDSL.getFeedbackForm) feedbackFormId)
 
 getFeedbackFormList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormRes])
 getFeedbackFormList merchantShortId opCity apiTokenInfo mbLimit mbOffset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.feedbackFormDSL.getFeedbackFormList) mbLimit mbOffset
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.feedbackFormDSL.getFeedbackFormList) mbLimit mbOffset)

@@ -22,7 +22,13 @@ import Tools.Auth.Merchant
 getEntityInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.EntityInfo.EntityExtraInformation)
 getEntityInfoList merchantShortId opCity apiTokenInfo entityType entityId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.entityInfoDSL.getEntityInfoList) entityType entityId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.entityInfoDSL.getEntityInfoList) entityType entityId)
 
 postEntityInfoUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.EntityInfo.UpdateEntityInfoReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postEntityInfoUpdate merchantShortId opCity apiTokenInfo req = do

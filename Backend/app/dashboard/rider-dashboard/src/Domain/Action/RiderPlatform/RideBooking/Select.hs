@@ -32,12 +32,24 @@ postSelectEstimate merchantShortId opCity apiTokenInfo customerId estimateId req
 getSelectQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.Flow Domain.Action.UI.Select.SelectListRes)
 getSelectQuotes merchantShortId opCity apiTokenInfo customerId estimateId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.selectDSL.getSelectQuotes) customerId estimateId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.selectDSL.getSelectQuotes) customerId estimateId)
 
 getSelectResult :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.Flow Domain.Action.UI.Select.QuotesResultResponse)
 getSelectResult merchantShortId opCity apiTokenInfo customerId estimateId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.selectDSL.getSelectResult) customerId estimateId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.selectDSL.getSelectResult) customerId estimateId)
 
 postSelectCancelSearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.Flow SharedLogic.Cancel.CancelAPIResponse)
 postSelectCancelSearch merchantShortId opCity apiTokenInfo customerId estimateId = do

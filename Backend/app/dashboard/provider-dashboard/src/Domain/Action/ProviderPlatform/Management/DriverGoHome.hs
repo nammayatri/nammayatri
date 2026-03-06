@@ -50,7 +50,13 @@ buildTransaction apiTokenInfo driverId =
 getDriverGoHomeGetHomeLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.GetHomeLocationsRes
 getDriverGoHomeGetHomeLocation merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverGoHomeDSL.getDriverGoHomeGetHomeLocation) driverId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.driverGoHomeDSL.getDriverGoHomeGetHomeLocation) driverId)
 
 postDriverGoHomeUpdateHomeLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverHomeLocationReq -> Flow APISuccess
 postDriverGoHomeUpdateHomeLocation merchantShortId opCity apiTokenInfo driverId req = do
@@ -69,4 +75,10 @@ postDriverGoHomeIncrementGoToCount merchantShortId opCity apiTokenInfo driverId 
 getDriverGoHomeGetGoHomeInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.CachedGoHomeRequestInfoRes
 getDriverGoHomeGetGoHomeInfo merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverGoHomeDSL.getDriverGoHomeGetGoHomeInfo) driverId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.driverGoHomeDSL.getDriverGoHomeGetGoHomeInfo) driverId)

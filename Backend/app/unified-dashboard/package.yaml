@@ -95,6 +95,7 @@ dependencies:
   - random
   - rider-app
   - dynamic-offer-driver-app
+  - lib-dashboard
 
 ghc-options:
   - -Wall

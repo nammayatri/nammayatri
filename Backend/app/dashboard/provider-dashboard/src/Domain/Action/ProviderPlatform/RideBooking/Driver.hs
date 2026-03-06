@@ -67,7 +67,13 @@ buildTransaction apiTokenInfo driverId =
 getDriverPaymentDue :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Text -> Flow [Common.DriverOutstandingBalanceResp]
 getDriverPaymentDue merchantShortId opCity apiTokenInfo mbMobileCountryCode phone = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverPaymentDue) mbMobileCountryCode phone
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverPaymentDue) mbMobileCountryCode phone)
 
 postDriverEnable :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverEnable merchantShortId opCity apiTokenInfo driverId = do
@@ -125,7 +131,13 @@ getDriverInfo merchantShortId opCity apiTokenInfo mbMobileNumber mbMobileCountry
   encPerson <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
   role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
   let mbFleet = role.dashboardAccessType == DRole.FLEET_OWNER || role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER
-  Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverInfo) apiTokenInfo.personId.getId mbFleet mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail mbPersonId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    mbPersonId
+    Nothing
+    (Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverInfo) apiTokenInfo.personId.getId mbFleet mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail mbPersonId)
 
 postDriverUnlinkVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverUnlinkVehicle merchantShortId opCity apiTokenInfo driverId = do
@@ -166,7 +178,13 @@ postDriverExemptDriverFee merchantShortId opCity apiTokenInfo driverId serviceNa
 getDriverFeedbackList :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Flow Common.GetFeedbackListRes)
 getDriverFeedbackList merchantShortId opCity apiTokenInfo personId mobileNumber mobileCountryCode = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverFeedbackList) personId mobileNumber mobileCountryCode
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    personId
+    Nothing
+    (Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverFeedbackList) personId mobileNumber mobileCountryCode)
 
 postDriverDeleteAadhaar :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverDeleteAadhaar merchantShortId opCity apiTokenInfo driverId = do

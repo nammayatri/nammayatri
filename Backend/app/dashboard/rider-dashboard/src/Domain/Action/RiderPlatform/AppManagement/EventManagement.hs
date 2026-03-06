@@ -23,8 +23,10 @@ import Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding (getDashboar
 import qualified "rider-app" Domain.Types.DraftTicketChange
 import qualified "rider-app" Domain.Types.EventManagement
 import qualified "lib-dashboard" Domain.Types.Merchant
+import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "rider-app" Domain.Types.MerchantOnboarding
 import qualified Domain.Types.ServiceCategory
+import qualified "lib-dashboard" SharedLogic.Transaction
 import qualified Domain.Types.ServicePeopleCategory
 import qualified "rider-app" Domain.Types.TicketPlace
 import qualified "rider-app" Domain.Types.TicketService
@@ -43,7 +45,13 @@ getEventManagementTicketdashboardTicketplaceDef merchantShortId opCity apiTokenI
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
   requestorRole <- getDashboardAccessType requestorId
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.eventManagementDSL.getEventManagementTicketdashboardTicketplaceDef) ticketPlaceId (Just requestorId) (Just requestorRole)
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.eventManagementDSL.getEventManagementTicketdashboardTicketplaceDef) ticketPlaceId (Just requestorId) (Just requestorRole))
 
 postEventManagementTicketdashboardTicketplaceCleardraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postEventManagementTicketdashboardTicketplaceCleardraft merchantShortId opCity apiTokenInfo ticketPlaceId _requestorId _requestorRole = do
@@ -134,7 +142,13 @@ getEventManagementTicketdashboardTicketplaceDrafts merchantShortId opCity apiTok
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
   requestorRole <- getDashboardAccessType requestorId
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.eventManagementDSL.getEventManagementTicketdashboardTicketplaceDrafts) (Just requestorId) (Just requestorRole) limit offset status
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.eventManagementDSL.getEventManagementTicketdashboardTicketplaceDrafts) (Just requestorId) (Just requestorRole) limit offset status)
 
 postEventManagementTicketdashboardTicketplaceRecommend :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> [API.Types.Dashboard.AppManagement.EventManagement.RecommendToggleReq] -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postEventManagementTicketdashboardTicketplaceRecommend merchantShortId opCity apiTokenInfo _requestorId _requestorRole req = do

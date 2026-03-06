@@ -19,3 +19,9 @@ ALTER TABLE atlas_dashboard.merchant ADD COLUMN verify_fleet_while_login boolean
 ALTER TABLE atlas_dashboard.merchant ADD COLUMN website text ;
 ALTER TABLE atlas_dashboard.merchant ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_dashboard.merchant ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_dashboard.merchant ADD COLUMN enable_get_request_audit_logs boolean ;

@@ -5,7 +5,9 @@ import qualified API.Types.ProviderPlatform.Fleet.LiveMap
 import qualified "dashboard-helper-api" Dashboard.Common
 import Domain.Action.ProviderPlatform.Fleet.Driver (getMbFleetOwnerAndRequestorIdMerchantBased)
 import qualified "lib-dashboard" Domain.Types.Merchant
+import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
+import qualified "lib-dashboard" SharedLogic.Transaction
 import EulerHS.Prelude
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
@@ -28,4 +30,10 @@ getLiveMapDrivers ::
 getLiveMapDrivers merchantShortId opCity apiTokenInfo radius mbFleetOwnerId mbDriverIdForRadius mbPoint = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
-  API.Client.ProviderPlatform.Fleet.callFleetAPI checkedMerchantId opCity (.liveMapDSL.getLiveMapDrivers) radius requestorId mbFleetOwnerId' mbDriverIdForRadius mbPoint
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (API.Client.ProviderPlatform.Fleet.callFleetAPI checkedMerchantId opCity (.liveMapDSL.getLiveMapDrivers) radius requestorId mbFleetOwnerId' mbDriverIdForRadius mbPoint)

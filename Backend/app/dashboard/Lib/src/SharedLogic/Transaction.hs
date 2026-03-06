@@ -18,6 +18,7 @@ module SharedLogic.Transaction
     buildTransaction,
     withTransactionStoring,
     withResponseTransactionStoring,
+    withGetTransactionStoring,
     buildTransactionForSafetyDashboard,
   )
 where
@@ -124,6 +125,32 @@ withResponseTransactionStoring' responseModifier transaction clientCall = handle
     errorHandler (err :: E.Error) = do
       QT.create transaction{responseError = Just $ show err}
       throwError err
+
+withGetTransactionStoring ::
+  ( BeamFlow m r,
+    MonadCatch m,
+    MonadFlow m
+  ) =>
+  DT.Endpoint ->
+  Maybe ServerName ->
+  Maybe ApiTokenInfo ->
+  Maybe (Id Common.Driver) ->
+  Maybe (Id Common.Ride) ->
+  m response ->
+  m response
+withGetTransactionStoring endpoint serverName apiTokenInfo commonDriverId commonRideId clientCall = do
+  case apiTokenInfo of
+    Nothing -> clientCall
+    Just info -> do
+      let enabled = fromMaybe False (info.merchant.enableGetRequestAuditLogs)
+      if enabled
+        then do
+          transaction <- buildTransaction endpoint serverName apiTokenInfo commonDriverId commonRideId emptyRequest
+          handle (\(err :: E.Error) -> QT.create transaction{responseError = Just $ show err} >> throwError err) $ do
+            response <- clientCall
+            QT.create transaction {DT.response = Nothing}
+            pure response
+        else clientCall
 
 buildTransactionForSafetyDashboard ::
   ( MonadFlow m

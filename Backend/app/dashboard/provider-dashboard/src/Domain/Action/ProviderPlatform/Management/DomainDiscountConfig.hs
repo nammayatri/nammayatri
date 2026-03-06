@@ -29,7 +29,13 @@ postDomainDiscountConfigCreate merchantShortId opCity apiTokenInfo req = do
 getDomainDiscountConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DomainDiscountConfig.BillingCategory -> Environment.Flow [API.Types.ProviderPlatform.Management.DomainDiscountConfig.DomainDiscountConfigRes])
 getDomainDiscountConfigList merchantShortId opCity apiTokenInfo billingCategory = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.domainDiscountConfigDSL.getDomainDiscountConfigList) billingCategory
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.domainDiscountConfigDSL.getDomainDiscountConfigList) billingCategory)
 
 deleteDomainDiscountConfigDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DomainDiscountConfig.DeleteDomainDiscountConfigReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 deleteDomainDiscountConfigDelete merchantShortId opCity apiTokenInfo req = do

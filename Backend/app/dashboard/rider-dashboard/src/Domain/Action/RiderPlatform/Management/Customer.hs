@@ -34,7 +34,13 @@ import Tools.Auth.Merchant
 getCustomerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> Environment.Flow API.Types.RiderPlatform.Management.Customer.CustomerListRes)
 getCustomerList merchantShortId opCity apiTokenInfo limit offset enabled blocked phone personId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.getCustomerList) limit offset enabled blocked phone personId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.getCustomerList) limit offset enabled blocked phone personId)
 
 deleteCustomerDelete ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -70,7 +76,13 @@ postCustomerUnblock merchantShortId opCity apiTokenInfo customerId = do
 getCustomerInfo :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.Flow API.Types.RiderPlatform.Management.Customer.CustomerInfoRes
 getCustomerInfo merchantShortId opCity apiTokenInfo customerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.getCustomerInfo) customerId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.getCustomerInfo) customerId)
 
 postCustomerCancellationDuesSync ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -88,7 +100,13 @@ postCustomerCancellationDuesSync merchantShortId opCity apiTokenInfo customerId 
 getCustomerCancellationDuesDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.Flow API.Types.RiderPlatform.Management.Customer.CancellationDuesDetailsRes
 getCustomerCancellationDuesDetails merchantShortId opCity apiTokenInfo customerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.getCustomerCancellationDuesDetails) customerId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.getCustomerCancellationDuesDetails) customerId)
 
 postCustomerUpdateSafetyCenterBlocking :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.UpdateSafetyCenterBlockingReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postCustomerUpdateSafetyCenterBlocking merchantShortId opCity apiTokenInfo customerId req = do

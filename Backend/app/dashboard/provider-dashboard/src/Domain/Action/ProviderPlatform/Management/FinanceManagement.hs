@@ -31,7 +31,28 @@ import Tools.Auth.Merchant
 getFinanceManagementSubscriptionPurchaseList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.SubscriptionPurchaseListRes)
 getFinanceManagementSubscriptionPurchaseList merchantShortId opCity apiTokenInfo amountMax amountMin driverId fleetOperatorId from limit offset serviceName status subscriptionId to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementSubscriptionPurchaseList) amountMax amountMin driverId fleetOperatorId from limit offset serviceName status subscriptionId to
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    ( API.Client.ProviderPlatform.Management.callManagementAPI
+        checkedMerchantId
+        opCity
+        (.financeManagementDSL.getFinanceManagementSubscriptionPurchaseList)
+        amountMax
+        amountMin
+        driverId
+        fleetOperatorId
+        from
+        limit
+        offset
+        serviceName
+        status
+        subscriptionId
+        to
+    )
 
 postFinanceManagementReconciliationTrigger :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FinanceManagement.ReconciliationTriggerReq -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.ReconciliationTriggerRes)
 postFinanceManagementReconciliationTrigger merchantShortId opCity apiTokenInfo req = do
@@ -44,28 +65,107 @@ postFinanceManagementReconciliationTrigger merchantShortId opCity apiTokenInfo r
 getFinanceManagementFinancePayoutList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.PayoutListRes)
 getFinanceManagementFinancePayoutList merchantShortId opCity apiTokenInfo driverId fleetOperatorId from limit offset to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinancePayoutList) driverId fleetOperatorId from limit offset to
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    ( API.Client.ProviderPlatform.Management.callManagementAPI
+        checkedMerchantId
+        opCity
+        (.financeManagementDSL.getFinanceManagementFinancePayoutList)
+        driverId
+        fleetOperatorId
+        from
+        limit
+        offset
+        to
+    )
 
 getFinanceManagementFinanceWalletLedger :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.WalletLedgerRes)
 getFinanceManagementFinanceWalletLedger merchantShortId opCity apiTokenInfo limit offset driverId fleetOperatorId from to sourceType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceWalletLedger) limit offset driverId fleetOperatorId from to sourceType
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    ( API.Client.ProviderPlatform.Management.callManagementAPI
+        checkedMerchantId
+        opCity
+        (.financeManagementDSL.getFinanceManagementFinanceWalletLedger)
+        limit
+        offset
+        driverId
+        fleetOperatorId
+        from
+        to
+        sourceType
+    )
 
 --- << AUTOGENERATED Check this code, update export list and remove comment >> ---
 
 getFinanceManagementFinanceEarningSummary :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.EarningsSummaryRes)
 getFinanceManagementFinanceEarningSummary merchantShortId opCity apiTokenInfo driverId fleetOwnerId from to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceEarningSummary) driverId fleetOwnerId from to
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    ( API.Client.ProviderPlatform.Management.callManagementAPI
+        checkedMerchantId
+        opCity
+        (.financeManagementDSL.getFinanceManagementFinanceEarningSummary)
+        driverId
+        fleetOwnerId
+        from
+        to
+    )
 
 --- << AUTOGENERATED Check this code, update export list and remove comment >> ---
 
 getFinanceManagementFinanceInvoiceList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.InvoiceListRes)
 getFinanceManagementFinanceInvoiceList merchantShortId opCity apiTokenInfo from invoiceId invoiceType limit offset status to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceInvoiceList) from invoiceId invoiceType limit offset status to
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    ( API.Client.ProviderPlatform.Management.callManagementAPI
+        checkedMerchantId
+        opCity
+        (.financeManagementDSL.getFinanceManagementFinanceInvoiceList)
+        from
+        invoiceId
+        invoiceType
+        limit
+        offset
+        status
+        to
+    )
 
 getFinanceManagementFinanceReconciliation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.ReconciliationRes)
 getFinanceManagementFinanceReconciliation merchantShortId opCity apiTokenInfo fromDate limit offset reconciliationType toDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceReconciliation) fromDate limit offset reconciliationType toDate
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    ( API.Client.ProviderPlatform.Management.callManagementAPI
+        checkedMerchantId
+        opCity
+        (.financeManagementDSL.getFinanceManagementFinanceReconciliation)
+        fromDate
+        limit
+        offset
+        reconciliationType
+        toDate
+    )

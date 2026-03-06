@@ -31,12 +31,24 @@ import Tools.Auth.Merchant
 getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
 getFRFSTicketFrfsRoutes merchantShortId opCity apiTokenInfo searchStr limit offset vehicleType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.fRFSTicketDSL.getFRFSTicketFrfsRoutes) searchStr limit offset vehicleType
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.fRFSTicketDSL.getFRFSTicketFrfsRoutes) searchStr limit offset vehicleType)
 
 getFRFSTicketFrfsRouteFareList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Text.Text -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteFareAPI)
 getFRFSTicketFrfsRouteFareList merchantShortId opCity apiTokenInfo routeCode integratedBppConfigId vehicleType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.fRFSTicketDSL.getFRFSTicketFrfsRouteFareList) routeCode integratedBppConfigId vehicleType
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.fRFSTicketDSL.getFRFSTicketFrfsRouteFareList) routeCode integratedBppConfigId vehicleType)
 
 putFRFSTicketFrfsRouteFareUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Text.Text -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareReq -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareResp)
 putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity apiTokenInfo routeCode integratedBppConfigId vehicleType req = do
@@ -50,7 +62,13 @@ putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity apiTokenInfo routeCode i
 getFRFSTicketFrfsRouteStations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationAPI])
 getFRFSTicketFrfsRouteStations merchantShortId opCity apiTokenInfo searchStr limit offset vehicleType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.fRFSTicketDSL.getFRFSTicketFrfsRouteStations) searchStr limit offset vehicleType
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.fRFSTicketDSL.getFRFSTicketFrfsRouteStations) searchStr limit offset vehicleType)
 
 postFRFSTicketFrfsStatusUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStatusUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postFRFSTicketFrfsStatusUpdate merchantShortId opCity apiTokenInfo req = do

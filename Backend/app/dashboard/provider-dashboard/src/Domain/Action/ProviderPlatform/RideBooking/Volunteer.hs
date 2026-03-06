@@ -22,7 +22,13 @@ import Tools.Auth.Merchant
 getVolunteerBooking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.Dashboard.RideBooking.Volunteer.BookingInfoResponse)
 getVolunteerBooking merchantShortId opCity apiTokenInfo bookingOtp = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.volunteerDSL.getVolunteerBooking) bookingOtp
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.volunteerDSL.getVolunteerBooking) bookingOtp)
 
 postVolunteerAssignStartOtpRide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.RideBooking.Volunteer.AssignCreateAndStartOtpRideAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postVolunteerAssignStartOtpRide merchantShortId opCity apiTokenInfo req = do

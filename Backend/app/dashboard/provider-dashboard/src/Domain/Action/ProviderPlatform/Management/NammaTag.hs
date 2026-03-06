@@ -77,7 +77,13 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity apiTokenInfo req = do
 getNammaTagAppDynamicLogic :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.GetLogicsResp])
 getNammaTagAppDynamicLogic merchantShortId opCity apiTokenInfo version domain = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogic) version domain
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogic) version domain)
 
 postNammaTagRunJob :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.RunKaalChakraJobReq -> Environment.Flow Lib.Yudhishthira.Types.RunKaalChakraJobRes)
 postNammaTagRunJob merchantShortId opCity apiTokenInfo req = do
@@ -112,7 +118,13 @@ deleteNammaTagTimeBoundsDelete merchantShortId opCity apiTokenInfo domain name =
 getNammaTagAppDynamicLogicGetLogicRollout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.LogicRolloutObject])
 getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity apiTokenInfo timeBound domain = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicGetLogicRollout) timeBound domain
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicGetLogicRollout) timeBound domain)
 
 postNammaTagAppDynamicLogicUpsertLogicRollout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> [Lib.Yudhishthira.Types.LogicRolloutObject] -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity apiTokenInfo req = do
@@ -124,22 +136,46 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity apiTokenInf
 getNammaTagTimeBounds :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.TimeBoundResp)
 getNammaTagTimeBounds merchantShortId opCity apiTokenInfo domain = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagTimeBounds) domain
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagTimeBounds) domain)
 
 getNammaTagAppDynamicLogicVersions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicVersionResp)
 getNammaTagAppDynamicLogicVersions merchantShortId opCity apiTokenInfo limit offset domain = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicVersions) limit offset domain
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicVersions) limit offset domain)
 
 getNammaTagAppDynamicLogicDomains :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicDomainResp)
 getNammaTagAppDynamicLogicDomains merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicDomains)
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicDomains))
 
 getNammaTagQueryAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.Chakra -> Environment.Flow Lib.Yudhishthira.Types.ChakraQueryResp)
 getNammaTagQueryAll merchantShortId opCity apiTokenInfo chakra = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagQueryAll) chakra
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagQueryAll) chakra)
 
 postNammaTagConfigPilotGetVersion :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.UiConfigRequest -> Environment.Flow Lib.Yudhishthira.Types.UiConfigGetVersionResponse)
 postNammaTagConfigPilotGetVersion merchantShortId opCity apiTokenInfo req = do
@@ -162,17 +198,35 @@ postNammaTagConfigPilotCreateUiConfig merchantShortId opCity apiTokenInfo req = 
 getNammaTagConfigPilotAllConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow [Lib.Yudhishthira.Types.ConfigType])
 getNammaTagConfigPilotAllConfigs merchantShortId opCity apiTokenInfo underExperiment = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotAllConfigs) underExperiment
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotAllConfigs) underExperiment)
 
 getNammaTagConfigPilotConfigDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ConfigType -> Environment.Flow [Lib.Yudhishthira.Types.ConfigDetailsResp])
 getNammaTagConfigPilotConfigDetails merchantShortId opCity apiTokenInfo tableName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotConfigDetails) tableName
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotConfigDetails) tableName)
 
 getNammaTagConfigPilotGetTableData :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ConfigType -> Environment.Flow Lib.Yudhishthira.Types.TableDataResp)
 getNammaTagConfigPilotGetTableData merchantShortId opCity apiTokenInfo tableName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotGetTableData) tableName
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotGetTableData) tableName)
 
 postNammaTagConfigPilotActionChange :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagConfigPilotActionChange merchantShortId opCity apiTokenInfo req = do
@@ -195,17 +249,35 @@ deleteNammaTagQueryDelete merchantShortId opCity apiTokenInfo req = do
 getNammaTagConfigPilotAllUiConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.Flow [Lib.Yudhishthira.Types.LogicDomain])
 getNammaTagConfigPilotAllUiConfigs merchantShortId opCity apiTokenInfo underExperiment = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotAllUiConfigs) underExperiment
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotAllUiConfigs) underExperiment)
 
 getNammaTagConfigPilotUiConfigDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.UiDevicePlatformReq -> Environment.Flow [Lib.Yudhishthira.Types.ConfigDetailsResp])
 getNammaTagConfigPilotUiConfigDetails merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotUiConfigDetails) req
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotUiConfigDetails) req)
 
 getNammaTagConfigPilotGetUiTableData :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.UiDevicePlatformReq -> Environment.Flow Lib.Yudhishthira.Types.TableDataResp)
 getNammaTagConfigPilotGetUiTableData merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotGetUiTableData) req
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagConfigPilotGetUiTableData) req)
 
 postNammaTagConfigPilotGetPatchedElement :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.GetPatchedElementReq -> Environment.Flow Lib.Yudhishthira.Types.GetPatchedElementResp)
 postNammaTagConfigPilotGetPatchedElement merchantShortId opCity apiTokenInfo req = do
@@ -216,9 +288,21 @@ postNammaTagConfigPilotGetPatchedElement merchantShortId opCity apiTokenInfo req
 getNammaTagAppDynamicLogicGetDomainSchema :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.DomainSchemaResp)
 getNammaTagAppDynamicLogicGetDomainSchema merchantShortId opCity apiTokenInfo domain = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicGetDomainSchema) domain
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicGetDomainSchema) domain)
 
 getNammaTagAppDynamicLogicDomainsAndEvents :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.Flow Lib.Yudhishthira.Types.NammaTagEventsOrNammaTagNamesResp)
 getNammaTagAppDynamicLogicDomainsAndEvents merchantShortId opCity apiTokenInfo fetchNammaTagNames = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicDomainsAndEvents) fetchNammaTagNames
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicDomainsAndEvents) fetchNammaTagNames)

@@ -39,17 +39,35 @@ import Tools.Auth.Merchant
 getPassCustomerAvailablePasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.Flow [API.Types.UI.Pass.PassInfoAPIEntity])
 getPassCustomerAvailablePasses merchantShortId opCity apiTokenInfo customerId language = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerAvailablePasses) customerId language
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerAvailablePasses) customerId language)
 
 getPassCustomerPurchasedPasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Maybe (Domain.Types.PurchasedPass.StatusType) -> Environment.Flow [API.Types.UI.Pass.PurchasedPassAPIEntity])
 getPassCustomerPurchasedPasses merchantShortId opCity apiTokenInfo customerId language status = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerPurchasedPasses) customerId language status
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerPurchasedPasses) customerId language status)
 
 getPassCustomerTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity])
 getPassCustomerTransactions merchantShortId opCity apiTokenInfo customerId limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerTransactions) customerId limit offset
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerTransactions) customerId limit offset)
 
 postPassCustomerActivateToday :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Data.Time.Day) -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postPassCustomerActivateToday merchantShortId opCity apiTokenInfo customerId passNumber startDay = do
@@ -66,7 +84,13 @@ postPassCustomerPassSelect merchantShortId opCity apiTokenInfo customerId passId
 getPassCustomerPaymentStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> Environment.Flow Lib.Payment.Domain.Action.PaymentStatusResp)
 getPassCustomerPaymentStatus merchantShortId opCity apiTokenInfo customerId orderId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerPaymentStatus) customerId orderId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerPaymentStatus) customerId orderId)
 
 postPassCustomerPassResetDeviceSwitchCount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postPassCustomerPassResetDeviceSwitchCount merchantShortId opCity apiTokenInfo customerId purchasedPassId = do

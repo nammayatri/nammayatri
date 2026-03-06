@@ -46,7 +46,13 @@ getFleetManagementFleets ::
   Environment.Flow API.Types.ProviderPlatform.Operator.FleetManagement.FleetInfoRes
 getFleetManagementFleets merchantShortId opCity apiTokenInfo mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.getFleetManagementFleets) mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString apiTokenInfo.personId.getId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.getFleetManagementFleets) mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString apiTokenInfo.personId.getId)
 
 postFleetManagementFleetRegisterClientCall :: DRegistrationV2.RegisterClientCall
 postFleetManagementFleetRegisterClientCall checkedMerchantId opCity requestorId req' =
