@@ -1186,36 +1186,36 @@ documentStatusMessage :: ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Ma
 documentStatusMessage status mbReason docType mbVerificationUrl language skipMessages
   | skipMessages = pure Nothing
   | otherwise = do
-      msg <- case (status, docType, mbVerificationUrl) of
-        (VALID, _, _) -> toVerificationMessage DocumentValid language
-        (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview language
-        (PENDING, DDVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput language
-        (PENDING, _, _) -> toVerificationMessage VerificationInProgress language
-        (PULL_REQUIRED, _, _) -> toVerificationMessage PullRequired language
-        (CONSENT_DENIED, _, _) -> toVerificationMessage ConsentDenied language
-        (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed language
-        (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound language
-        (INVALID, DDVC.DriverLicense, _) -> do
-          msg <- toVerificationMessage DLInvalid language
-          return $ fromMaybe msg mbReason
-        (INVALID, DDVC.VehicleRegistrationCertificate, _) -> do
-          msg <- toVerificationMessage RCInvalid language
-          return $ fromMaybe msg mbReason
-        (INVALID, _, _) -> do
-          msg <- toVerificationMessage DocumentInvalid language
-          return $ fromMaybe msg mbReason
-        (UNAUTHORIZED, _, _) -> toVerificationMessage Unauthorized language
-        (FAILED, _, _) -> do
-          case mbReason of
-            Just res
-              | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-              | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress language
-              | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed language
-              | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-              | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-              | otherwise -> toVerificationMessage Other language
-            Nothing -> toVerificationMessage Other language
-      pure $ Just msg
+    msg <- case (status, docType, mbVerificationUrl) of
+      (VALID, _, _) -> toVerificationMessage DocumentValid language
+      (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview language
+      (PENDING, DDVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput language
+      (PENDING, _, _) -> toVerificationMessage VerificationInProgress language
+      (PULL_REQUIRED, _, _) -> toVerificationMessage PullRequired language
+      (CONSENT_DENIED, _, _) -> toVerificationMessage ConsentDenied language
+      (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed language
+      (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound language
+      (INVALID, DDVC.DriverLicense, _) -> do
+        msg <- toVerificationMessage DLInvalid language
+        return $ fromMaybe msg mbReason
+      (INVALID, DDVC.VehicleRegistrationCertificate, _) -> do
+        msg <- toVerificationMessage RCInvalid language
+        return $ fromMaybe msg mbReason
+      (INVALID, _, _) -> do
+        msg <- toVerificationMessage DocumentInvalid language
+        return $ fromMaybe msg mbReason
+      (UNAUTHORIZED, _, _) -> toVerificationMessage Unauthorized language
+      (FAILED, _, _) -> do
+        case mbReason of
+          Just res
+            | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
+            | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress language
+            | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed language
+            | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
+            | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
+            | otherwise -> toVerificationMessage Other language
+          Nothing -> toVerificationMessage Other language
+    pure $ Just msg
 
 getAadhaarStatus :: Id DP.Person -> Flow (ResponseStatus, Maybe DAadhaarCard.AadhaarCard)
 getAadhaarStatus personId = do
