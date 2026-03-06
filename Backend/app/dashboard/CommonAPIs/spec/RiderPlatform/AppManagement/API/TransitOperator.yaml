@@ -20,6 +20,7 @@ imports:
   BreakType: SharedLogic.External.Nandi.Types
   NandiRow: SharedLogic.External.Nandi.Types
   NandiWaybillRow: SharedLogic.External.Nandi.Types
+  QueryBody: SharedLogic.External.Nandi.Types
   Value: Data.Aeson
 
 importPackageOverrides:
@@ -78,6 +79,18 @@ apis:
         type: Value
       response:
         type: NandiRow
+
+  - POST:
+      endpoint: /queryRow
+      name: TransitOperatorQueryRows
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        table: NandiTable
+      request:
+        type: QueryBody
+      response:
+        type: "[NandiRow]"
 
   - GET:
       endpoint: /serviceTypes

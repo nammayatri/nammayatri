@@ -24,6 +24,7 @@ module Domain.Action.RiderPlatform.AppManagement.TransitOperator
     transitOperatorUpdateWaybillFleet,
     transitOperatorUpdateWaybillTablet,
     transitOperatorGetWaybills,
+    transitOperatorQueryRows,
   )
 where
 
@@ -163,3 +164,9 @@ transitOperatorGetWaybills :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mer
 transitOperatorGetWaybills merchantShortId opCity apiTokenInfo limit offset vehicleCategory = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorGetWaybills) limit offset vehicleCategory
+
+transitOperatorQueryRows :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.QueryBody -> Environment.Flow [SharedLogic.External.Nandi.Types.NandiRow])
+transitOperatorQueryRows merchantShortId opCity apiTokenInfo table vehicleCategory req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorQueryRows) table vehicleCategory req)
