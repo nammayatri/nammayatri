@@ -60,6 +60,7 @@ data SubscriptionConfig = SubscriptionConfig
     subscriptionDown :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     subscriptionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
     useOverlayService :: Kernel.Prelude.Bool,
+    vendorMigrationMappings :: Kernel.Prelude.Maybe [Domain.Types.SubscriptionConfig.VendorMigrationMapping],
     waiveOffOfferDescription :: Kernel.Prelude.Text,
     waiveOffOfferTitle :: Kernel.Prelude.Text,
     webhookConfig :: Kernel.Prelude.Maybe Domain.Types.SubscriptionConfig.WebhookConfig,
@@ -71,6 +72,8 @@ data SubscriptionConfig = SubscriptionConfig
   deriving (Generic, Show, ToJSON, FromJSON)
 
 data CurrentPlanEntites = SAFETY_PLUS deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read)
+
+data VendorMigrationMapping = VendorMigrationMapping {newVendorId :: Kernel.Prelude.Text, oldVendorId :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data WebhookConfig = WebhookConfig
   { batchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

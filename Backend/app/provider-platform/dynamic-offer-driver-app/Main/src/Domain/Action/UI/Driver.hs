@@ -308,6 +308,7 @@ import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
+import qualified Domain.Types.VendorFee as VF
 import qualified Storage.Queries.VendorFee as QVF
 import qualified Tools.Auth as Auth
 import Tools.Error
@@ -2351,9 +2352,9 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
       sortedInvoices = mergeSortAndRemoveDuplicate invoices
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
   vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) dueDriverFees else pure []
-  let vendorFees = map SPayment.roundVendorFee vendorFees'
+  (vendorFees, finalInvoices) <- applyVendorMigrations subscriptionConfig.vendorMigrationMappings vendorFees' sortedInvoices
   clearDueResp <- do
-    case sortedInvoices of
+    case finalInvoices of
       [] -> mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing vendorFees mbDeepLinkData splitEnabled Nothing
       (invoice_ : restinvoices) -> do
         mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
@@ -2369,6 +2370,29 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
       SPayment.sendLinkTroughChannelProvided mbPaymentLink personId mbAmount (Just subscriptionConfig.paymentLinkChannel) False messageKey
   return clearDueResp
   where
+    -- Applies configured vendor ID migrations in both database and memory for vendor account changes.
+    -- Invalidates existing invoices when any vendor migrations are found to force new orders with updated vendors.
+    -- Returns updated vendor fees list and filtered invoices (empty if migrations applied, original list otherwise).
+    applyVendorMigrations mbMappings vendorFees' sortedInvoices = do
+      case mbMappings of
+        Nothing -> return (map SPayment.roundVendorFee vendorFees', sortedInvoices)
+        Just mappings -> do
+          let vendorFeesToMigrate = filter (\vf -> any (\m -> vf.vendorId == m.oldVendorId) mappings) vendorFees'
+          forM_ vendorFeesToMigrate $ \vf ->
+            whenJust (find (\m -> m.oldVendorId == vf.vendorId) mappings) $ \mapping ->
+              QVF.updateVendorId vf.driverFeeId mapping.oldVendorId mapping.newVendorId
+          let updatedVendorFees = map (applyMigrationToVendorFee mappings) $ map SPayment.roundVendorFee vendorFees'
+              hasMigrations = not (null vendorFeesToMigrate)
+          when (hasMigrations && not (null sortedInvoices)) $
+            mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) sortedInvoices
+          let finalInvoices = if hasMigrations then [] else sortedInvoices
+          return (updatedVendorFees, finalInvoices)
+      where
+        applyMigrationToVendorFee mappings vf =
+          case find (\m -> m.oldVendorId == vf.vendorId) mappings of
+            Just mapping -> vf {VF.vendorId = mapping.newVendorId}
+            Nothing -> vf
+
     validateExistingInvoice invoice driverFees = do
       invoices <- runInReplica $ QINV.findAllByInvoiceId invoice.id
       let driverFeeIds = driverFees <&> getId . (.id)
