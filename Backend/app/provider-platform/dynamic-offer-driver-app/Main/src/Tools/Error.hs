@@ -1285,7 +1285,7 @@ instance IsBaseError DriverOnboardingError where
     ImageExtractionFailed -> Just "Image extraction failed"
     ImageNotFound id_ -> Just $ "Image with imageId \"" <> id_ <> "\" not found."
     ImageNotValid id_ -> Just $ "Image with imageId \"" <> id_ <> "\" is not valid."
-    DriverAlreadyLinked -> Just "Other doc is already linked with driver."
+    DriverAlreadyLinked -> Just "Document is already linked with driver."
     DLAlreadyLinked -> Just "Driver License Is Already Linked With Another Driver."
     DLAlreadyUpdated -> Just "No action required. Driver license is already linked to driver."
     RCAlreadyLinked -> Just "Vehicle RC not available."
