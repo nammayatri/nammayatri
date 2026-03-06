@@ -1695,11 +1695,11 @@ type GetDriverFleetDriverListStats =
   )
 
 type GetDriverFleetDriverListStatsHelper =
-  ( Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "driver" :> "list" :> "stats" :> QueryParam "from" Data.Time.Day
+  ( Capture "requestorId" Kernel.Prelude.Text :> "fleet" :> "driver" :> "list" :> "stats" :> QueryParam "from" Data.Time.Day
       :> QueryParam
            "to"
            Data.Time.Day
-      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
       :> QueryParam
            "search"
            Kernel.Prelude.Text

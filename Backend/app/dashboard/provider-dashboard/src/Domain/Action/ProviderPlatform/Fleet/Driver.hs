@@ -150,20 +150,15 @@ getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId = do
     Just False -> do
       -- MSIL: requestor is fleet owner or operator, access check on bpp side required!
       let requestorId = apiTokenInfo.personId.getId
-      if DP.isAdmin apiTokenInfo.person
+      if DP.isFleetOwner apiTokenInfo.person
         then do
-          -- requestor is admin
-          fleetOwnerId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId required")
-          return (Just fleetOwnerId, fleetOwnerId)
-        else if DP.isFleetOwner apiTokenInfo.person
-          then do
-            -- requestor is fleet owner
-            whenJust mbFleetOwnerId $ \fleetOwnerId ->
-              unless (fleetOwnerId == requestorId) $ throwError AccessDenied
-            return (Just requestorId, requestorId)
-          else do
-            -- requestor is operator
-            return (mbFleetOwnerId, requestorId)
+          -- requestor is fleet owner
+          whenJust mbFleetOwnerId $ \fleetOwnerId ->
+            unless (fleetOwnerId == requestorId) $ throwError AccessDenied
+          return (Just requestorId, requestorId)
+        else do
+          -- requestor is operator
+          return (mbFleetOwnerId, requestorId)
     _ -> do
       -- Existing flow: consider requestor the same as fleet owner, fleet member operates on befalf of fleet owner
       fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
@@ -459,8 +454,8 @@ getDriverFleetDashboardAnalytics merchantShortId opCity apiTokenInfo mbFleetOwne
 getDriverFleetDriverListStats :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Day -> Maybe Day -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Common.FleetDriverListStatsSortOn -> Maybe Common.FleetDriverStatsResponseType -> Flow Common.FleetDriverStatsListRes
 getDriverFleetDriverListStats merchantShortId opCity apiTokenInfo from to mbFleetOwnerId search limit offset sortDesc sortOn responseType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  (fleetOwnerId, requestorId) <- getFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverListStats) fleetOwnerId from to (Just requestorId) search limit offset sortDesc sortOn responseType
+  (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverListStats) requestorId from to mbFleetOwnerId' search limit offset sortDesc sortOn responseType
 
 ---------------------------------------------------------------------------------------------------------------------------------
 ----------------------------------------------- READ LAYER (Multi Fleet Level) --------------------------------------------------

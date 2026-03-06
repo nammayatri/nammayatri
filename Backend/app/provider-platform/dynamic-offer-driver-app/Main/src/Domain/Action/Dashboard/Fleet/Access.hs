@@ -46,20 +46,23 @@ checkRequestorAccessToFleet allowOtherRoles mbRequestorId fleetOwnerId = do
     Nothing -> pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing} -- old flow
     Just requestorId -> do
       -- new flow
-      requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
-      case requestor.role of
-        DP.FLEET_OWNER -> do
-          unless (fleetOwner.id == requestor.id) $
-            throwError (InvalidRequest "Invalid fleet owner")
-          pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}
-        DP.OPERATOR -> do
-          association <-
-            QFleetOperatorAssociation.findByFleetIdAndOperatorId fleetOwner.id.getId requestor.id.getId True
-              >>= fromMaybeM (InvalidRequest "FleetOperatorAssociation does not exist") -- TODO add error codes
-          whenJust association.associatedTill $ \associatedTill -> do
-            now <- getCurrentTime
-            when (now > associatedTill) $
-              throwError (InvalidRequest "FleetOperatorAssociation expired")
-          pure $ FleetOwnerInfo {fleetOwner, mbOperator = Just requestor}
-        DP.ADMIN -> pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}
-        _ -> if allowOtherRoles then pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing} else throwError AccessDenied
+      mbRequestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
+      case mbRequestor of
+        Nothing -> pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}
+        Just requestor -> do
+          case requestor.role of
+            DP.FLEET_OWNER -> do
+              unless (fleetOwner.id == requestor.id) $
+                throwError (InvalidRequest "Invalid fleet owner")
+              pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}
+            DP.OPERATOR -> do
+              association <-
+                QFleetOperatorAssociation.findByFleetIdAndOperatorId fleetOwner.id.getId requestor.id.getId True
+                  >>= fromMaybeM (InvalidRequest "FleetOperatorAssociation does not exist") -- TODO add error codes
+              whenJust association.associatedTill $ \associatedTill -> do
+                now <- getCurrentTime
+                when (now > associatedTill) $
+                  throwError (InvalidRequest "FleetOperatorAssociation expired")
+              pure $ FleetOwnerInfo {fleetOwner, mbOperator = Just requestor}
+            DP.ADMIN -> pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}
+            _ -> if allowOtherRoles then pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing} else throwError AccessDenied

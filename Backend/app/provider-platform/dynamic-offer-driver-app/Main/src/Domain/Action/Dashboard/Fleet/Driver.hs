@@ -193,6 +193,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
+import qualified Storage.Clickhouse.DriverOperatorAssociation as CDOA
 import qualified Storage.Clickhouse.FleetDriverAssociation as CFDA
 import qualified Storage.Clickhouse.FleetOperatorDailyStats as CFODS
 import qualified Storage.Clickhouse.FleetRcDailyStats as CFRDSExtra
@@ -208,6 +209,7 @@ import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
+import qualified Storage.Queries.DriverOperatorAssociationExtra as QDOAExtra
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
@@ -1687,9 +1689,9 @@ getDriverFleetDriverListStats ::
   Maybe Common.FleetDriverListStatsSortOn ->
   Maybe Common.FleetDriverStatsResponseType ->
   Flow Common.FleetDriverStatsListRes
-getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mbRequestorId mbSearch mbLimit mbOffset sortDesc sortOnField mbResponseType = do
-  -- Ensure requestor has access to this fleet owner (similar to VerifyJoiningOtp flow)
-  void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
+getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbFleetOwnerId mbSearch mbLimit mbOffset sortDesc sortOnField mbResponseType = do
+  mbRequestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
+  let mbRole = (.role) <$> mbRequestor
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -1704,12 +1706,29 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
       responseType = fromMaybe Common.METRICS_LIST mbResponseType
 
   -- Fetch driver ids from ClickHouse association
-  driverIdObjs <-
-    if useDBForAnalytics
-      then QFDAExtra.getActiveDriverIdsByFleetOwnerId fleetOwnerId
-      else do
-        maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId fleetOwnerId
-        pure $ fromMaybe [] maybeDriverIds
+  (driverIdObjs, fleetOwnerId) <-
+    case (mbRole, mbFleetOwnerId) of
+      (Just DP.OPERATOR, Nothing) -> do
+        ids <- if useDBForAnalytics
+          then QDOAExtra.getActiveDriverIdsByOperatorId requestorId
+          else CDOA.getDriverIdsByOperatorId requestorId
+        pure (ids, requestorId)
+      (_, Just foId) -> do
+        void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) foId
+        ids <- if useDBForAnalytics
+          then QFDAExtra.getActiveDriverIdsByFleetOwnerId foId
+          else do
+            maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId foId
+            pure $ fromMaybe [] maybeDriverIds
+        pure (ids, foId)
+      (_, Nothing) -> do
+        void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) requestorId
+        ids <- if useDBForAnalytics
+          then QFDAExtra.getActiveDriverIdsByFleetOwnerId requestorId
+          else do
+            maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId requestorId
+            pure $ fromMaybe [] maybeDriverIds
+        pure (ids, requestorId)
   let driverIdTexts = map (.getId) driverIdObjs
       mbSearchTerm = do
         raw <- mbSearch
