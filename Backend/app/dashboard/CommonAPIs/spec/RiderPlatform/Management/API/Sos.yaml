@@ -61,6 +61,7 @@ types:
   SosDetailsMaybeRes:
     - details: Maybe SosDetailsRes
     - triggerSource: Maybe ExternalSOSTriggerSource
+    - riderDetails: Maybe RiderDetailsRes
 
   SosDetailsRes:
     - id: Id Sos
@@ -85,3 +86,8 @@ types:
     - currentLocation: Maybe SosLocationRes
     - sosState: Maybe SosState
     - status: SosStatus
+
+  RiderDetailsRes:
+    - firstName: Maybe Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
