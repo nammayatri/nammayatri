@@ -187,6 +187,7 @@ createInvoice input entryIds = do
                     tdsAmount = tdsAmount,
                     netAmountPaid = netAmountPaid,
                     tdsTreatment = DirectTax.Deducted,
+                    tdsSection = transactionTypeToTdsSection txnType,
                     counterpartyId = input.issuedToId,
                     panOfParty = input.panOfParty,
                     tanOfDeductee = input.tanOfDeductee,
@@ -284,3 +285,11 @@ invoiceTypeToPurpose = \case
   SubscriptionPurchase -> purposeSubscription
   Ride -> purposeRideFare
   RideCancellation -> purposeCancellation
+
+-- | Map DirectTax TransactionType to TDS section
+transactionTypeToTdsSection :: DirectTax.TransactionType -> Maybe Text
+transactionTypeToTdsSection = \case
+  DirectTax.RideFare -> Just "194O"
+  DirectTax.Cancellation -> Just "194O"
+  DirectTax.BuyerCommission -> Just "194H"
+  _ -> Nothing

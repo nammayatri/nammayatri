@@ -23,6 +23,7 @@ data DirectTaxTransaction = DirectTaxTransaction
     tanOfDeductee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tdsAmount :: Kernel.Types.Common.HighPrecMoney,
     tdsRate :: Kernel.Prelude.Double,
+    tdsSection :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tdsTreatment :: Lib.Finance.Domain.Types.DirectTaxTransaction.TdsTreatment,
     transactionDate :: Kernel.Prelude.UTCTime,
     transactionType :: Lib.Finance.Domain.Types.DirectTaxTransaction.TransactionType,
