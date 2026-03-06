@@ -211,7 +211,7 @@ processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r Retry
 processActiveBooking booking mbIsDashBoardRequest cancellationStage = do
 
   -- Allow multiple bookings only if request is coming from dashboard
-  unless (mbIsDashBoardRequest == Just True) $ do
+  unless (mbIsDashBoardRequest == Just True || booking.isDashboardRequest == Just True) $ do
     mbRide <- QRide.findActiveByRBId booking.id
     case mbRide of
       Just ride -> do
