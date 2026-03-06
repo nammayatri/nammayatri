@@ -26,6 +26,7 @@ data DirectTaxTransactionT f = DirectTaxTransactionT
     tanOfDeductee :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     tdsAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     tdsRate :: (B.C f Kernel.Prelude.Double),
+    tdsSection :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     tdsTreatment :: (B.C f Lib.Finance.Domain.Types.DirectTaxTransaction.TdsTreatment),
     transactionDate :: (B.C f Kernel.Prelude.UTCTime),
     transactionType :: (B.C f Lib.Finance.Domain.Types.DirectTaxTransaction.TransactionType),

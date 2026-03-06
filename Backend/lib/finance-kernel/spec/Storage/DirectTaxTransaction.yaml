@@ -36,6 +36,7 @@ DirectTaxTransaction:
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
+    tdsSection: Maybe Text
 
   constraints:
     id: PrimaryKey
