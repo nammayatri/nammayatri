@@ -75,7 +75,13 @@ getOverlayList ::
   Environment.Flow API.Types.Dashboard.AppManagement.Overlay.ListOverlayResp
 getOverlayList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.overlayDSL.getOverlayList)
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.overlayDSL.getOverlayList))
 
 getOverlayInfo ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -86,12 +92,13 @@ getOverlayInfo ::
   Environment.Flow API.Types.Dashboard.AppManagement.Overlay.OverlayInfoResp
 getOverlayInfo merchantShortId opCity apiTokenInfo udf1 overlayKey = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI
-    checkedMerchantId
-    opCity
-    (.overlayDSL.getOverlayInfo)
-    udf1
-    overlayKey
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.overlayDSL.getOverlayInfo) udf1 overlayKey)
 
 postOverlaySchedule ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

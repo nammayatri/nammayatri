@@ -95,7 +95,13 @@ getMerchantServiceUsageConfig ::
   Flow Common.ServiceUsageConfigRes
 getMerchantServiceUsageConfig merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantServiceUsageConfig)
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just APP_BACKEND)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantServiceUsageConfig))
 
 postMerchantServiceConfigMapsUpdate ::
   ShortId DM.Merchant ->
@@ -274,12 +280,24 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
 getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe SL.SpecialLocationType -> Environment.Flow Common.SpecialLocationResp)
 getMerchantConfigSpecialLocationList merchantShortId opCity apiTokenInfo limit offset specialLocationType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSpecialLocationList) limit offset specialLocationType
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just APP_BACKEND)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSpecialLocationList) limit offset specialLocationType)
 
 getMerchantConfigGeometryList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow Common.GeometryResp)
 getMerchantConfigGeometryList merchantShortId opCity apiTokenInfo limit offset allCities = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigGeometryList) limit offset allCities
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just APP_BACKEND)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigGeometryList) limit offset allCities)
 
 putMerchantConfigGeometryUpdate :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.UpdateGeometryReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 putMerchantConfigGeometryUpdate merchantShortId opCity apiTokenInfo req = do
@@ -290,7 +308,13 @@ putMerchantConfigGeometryUpdate merchantShortId opCity apiTokenInfo req = do
 getMerchantRiderConfigEstimatesOrder :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Common.RiderConfigEstimatesOrderRes)
 getMerchantRiderConfigEstimatesOrder merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantRiderConfigEstimatesOrder)
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just APP_BACKEND)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantRiderConfigEstimatesOrder))
 
 postMerchantRiderConfigEstimatesOrderUpdate :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.UpdateRiderConfigEstimatesOrderReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMerchantRiderConfigEstimatesOrderUpdate merchantShortId opCity apiTokenInfo req = do

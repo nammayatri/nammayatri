@@ -51,7 +51,13 @@ getPayoutPayout ::
   Environment.Flow PayoutTypes.PayoutRequestResp
 getPayoutPayout merchantShortId opCity apiTokenInfo payoutRequestId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayout) payoutRequestId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayout) payoutRequestId)
 
 postPayoutPayoutRetry ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

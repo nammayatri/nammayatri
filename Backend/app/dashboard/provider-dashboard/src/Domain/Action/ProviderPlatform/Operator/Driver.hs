@@ -47,7 +47,13 @@ getDriverOperatorFetchHubRequests ::
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp
 getDriverOperatorFetchHubRequests merchantShortId opCity apiTokenInfo mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber mbOperationHubId mbOperationHubName mbRegistrationNo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorFetchHubRequests) mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber mbOperationHubId mbOperationHubName mbRegistrationNo
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorFetchHubRequests) mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber mbOperationHubId mbOperationHubName mbRegistrationNo)
 
 postDriverOperatorRespondHubRequest :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.RespondHubRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postDriverOperatorRespondHubRequest merchantShortId opCity apiTokenInfo req = do
@@ -64,7 +70,13 @@ postDriverOperatorCreateRequest merchantShortId opCity apiTokenInfo req = do
 getDriverOperationGetAllHubs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [CommonDriver.OperationHub])
 getDriverOperationGetAllHubs merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperationGetAllHubs)
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperationGetAllHubs))
 
 getDriverOperatorList ::
   ( Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -81,7 +93,13 @@ getDriverOperatorList ::
   )
 getDriverOperatorList merchantShortId opCity apiTokenInfo mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorList) mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs apiTokenInfo.personId.getId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorList) mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs apiTokenInfo.personId.getId)
 
 postDriverOperatorSendJoiningOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> Environment.Flow Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes)
 postDriverOperatorSendJoiningOtp merchantShortId opCity apiTokenInfo req = do
@@ -96,9 +114,21 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity apiTokenInfo authId re
 getDriverOperatorDashboardAnalyticsAllTime :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.AllTimeOperatorAnalyticsRes)
 getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorDashboardAnalyticsAllTime) apiTokenInfo.personId.getId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorDashboardAnalyticsAllTime) apiTokenInfo.personId.getId)
 
 getDriverOperatorDashboardAnalytics :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes)
 getDriverOperatorDashboardAnalytics merchantShortId opCity apiTokenInfo from to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorDashboardAnalytics) apiTokenInfo.personId.getId from to
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorDashboardAnalytics) apiTokenInfo.personId.getId from to)

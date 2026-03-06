@@ -48,11 +48,13 @@ getSubscriptionListPlan ::
   Environment.Flow Domain.Action.UI.Plan.PlanListAPIRes
 getSubscriptionListPlan merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI
-    checkedMerchantId
-    opCity
-    (.subscriptionDSL.getSubscriptionListPlan)
-    driverId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.getSubscriptionListPlan) driverId)
 
 putSubscriptionSelectPlan ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -135,11 +137,13 @@ getSubscriptionCurrentPlan ::
   Environment.Flow Domain.Action.UI.Plan.CurrentPlanRes
 getSubscriptionCurrentPlan merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI
-    checkedMerchantId
-    opCity
-    (.subscriptionDSL.getSubscriptionCurrentPlan)
-    driverId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    (Just driverId)
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.getSubscriptionCurrentPlan) driverId)
 
 getSubscriptionListPlanV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -150,12 +154,13 @@ getSubscriptionListPlanV2 ::
   Environment.Flow Domain.Action.UI.Plan.PlanListAPIRes
 getSubscriptionListPlanV2 merchantShortId opCity apiTokenInfo driverId serviceName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI
-    checkedMerchantId
-    opCity
-    (.subscriptionDSL.getSubscriptionListPlanV2)
-    driverId
-    serviceName
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    (Just driverId)
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.getSubscriptionListPlanV2) driverId serviceName)
 
 putSubscriptionSelectPlanV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -247,12 +252,13 @@ getSubscriptionCurrentPlanV2 ::
   Environment.Flow Domain.Action.UI.Plan.CurrentPlanRes
 getSubscriptionCurrentPlanV2 merchantShortId opCity apiTokenInfo driverId serviceName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI
-    checkedMerchantId
-    opCity
-    (.subscriptionDSL.getSubscriptionCurrentPlanV2)
-    driverId
-    serviceName
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    (Just driverId)
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.getSubscriptionCurrentPlanV2) driverId serviceName)
 
 getSubscriptionOrderStatus ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -263,12 +269,13 @@ getSubscriptionOrderStatus ::
   Environment.Flow Domain.Action.UI.Payment.PaymentStatusResp
 getSubscriptionOrderStatus merchantShortId opCity apiTokenInfo driverId orderId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI
-    checkedMerchantId
-    opCity
-    (.subscriptionDSL.getSubscriptionOrderStatus)
-    driverId
-    orderId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    (Just driverId)
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.getSubscriptionOrderStatus) driverId orderId)
 
 getSubscriptionDriverPaymentHistoryAPIV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -282,15 +289,13 @@ getSubscriptionDriverPaymentHistoryAPIV2 ::
   Environment.Flow Domain.Action.UI.Driver.HistoryEntityV2
 getSubscriptionDriverPaymentHistoryAPIV2 merchantShortId opCity apiTokenInfo driverId serviceName paymentMode limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI
-    checkedMerchantId
-    opCity
-    (.subscriptionDSL.getSubscriptionDriverPaymentHistoryAPIV2)
-    driverId
-    serviceName
-    paymentMode
-    limit
-    offset
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    (Just driverId)
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.getSubscriptionDriverPaymentHistoryAPIV2) driverId serviceName paymentMode limit offset)
 
 getSubscriptionDriverPaymentHistoryEntityDetailsV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -302,13 +307,13 @@ getSubscriptionDriverPaymentHistoryEntityDetailsV2 ::
   Environment.Flow Domain.Action.UI.Driver.HistoryEntryDetailsEntityV2
 getSubscriptionDriverPaymentHistoryEntityDetailsV2 merchantShortId opCity apiTokenInfo driverId serviceName invoiceId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI
-    checkedMerchantId
-    opCity
-    (.subscriptionDSL.getSubscriptionDriverPaymentHistoryEntityDetailsV2)
-    driverId
-    serviceName
-    invoiceId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    (Just driverId)
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.getSubscriptionDriverPaymentHistoryEntityDetailsV2) driverId serviceName invoiceId)
 
 postSubscriptionCollectManualPayments ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -354,11 +359,11 @@ getSubscriptionPurchaseList ::
   Environment.Flow Domain.Action.UI.Plan.SubscriptionPurchaseListRes
 getSubscriptionPurchaseList merchantShortId opCity apiTokenInfo driverId limit offset status = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI
-    checkedMerchantId
-    opCity
-    (.subscriptionDSL.getSubscriptionPurchaseList)
-    driverId
-    limit
-    offset
-    status
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    (Just driverId)
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.getSubscriptionPurchaseList) driverId limit offset status)
+

@@ -6,7 +6,9 @@ import qualified API.Client.ProviderPlatform.AppManagement
 import qualified API.Types.UI.SubscriptionTransaction
 import qualified Data.Time
 import qualified "lib-dashboard" Domain.Types.Merchant
+import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
+import qualified "lib-dashboard" SharedLogic.Transaction
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
@@ -20,4 +22,10 @@ import Tools.Auth.Merchant
 getSubscriptionTransactionSubscriptionTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Environment.Flow API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse)
 getSubscriptionTransactionSubscriptionTransactions merchantShortId opCity apiTokenInfo fromDate limit maxAmount minAmount offset status toDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionTransactionDSL.getSubscriptionTransactionSubscriptionTransactions) (Kernel.Types.Id.cast apiTokenInfo.personId) fromDate limit maxAmount minAmount offset status toDate
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionTransactionDSL.getSubscriptionTransactionSubscriptionTransactions) (Kernel.Types.Id.cast apiTokenInfo.personId) fromDate limit maxAmount minAmount offset status toDate)

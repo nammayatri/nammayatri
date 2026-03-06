@@ -8,9 +8,11 @@ import qualified API.Client.RiderPlatform.IssueManagement
 import qualified API.Types.RiderPlatform.IssueManagement.IssueList
 import qualified Data.Aeson
 import qualified "lib-dashboard" Domain.Types.Merchant
+import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
+import qualified "lib-dashboard" SharedLogic.Transaction
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
@@ -31,7 +33,13 @@ getIssueListV1 ::
   Environment.Flow API.Types.RiderPlatform.IssueManagement.IssueList.IssueListRes
 getIssueListV1 merchantShortId opCity apiTokenInfo limit offset mobileCountryCode mobileNumber from to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI
     checkedMerchantId
     opCity
     (.issueListDSL.getIssueListV1)
@@ -40,7 +48,7 @@ getIssueListV1 merchantShortId opCity apiTokenInfo limit offset mobileCountryCod
     mobileCountryCode
     mobileNumber
     from
-    to
+    to)
 
 postIssueListTicketStatusCallBack ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

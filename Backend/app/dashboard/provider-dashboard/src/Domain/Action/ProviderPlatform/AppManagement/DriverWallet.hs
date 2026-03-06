@@ -30,7 +30,13 @@ import Tools.Auth.Merchant
 getDriverWalletWalletTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow API.Types.UI.DriverWallet.WalletSummaryResponse)
 getDriverWalletWalletTransactions merchantShortId opCity apiTokenInfo driverId fromDate toDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.getDriverWalletWalletTransactions) driverId fromDate toDate
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    ( API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.getDriverWalletWalletTransactions) driverId fromDate toDate )
 
 postDriverWalletWalletPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverWalletWalletPayout merchantShortId opCity apiTokenInfo driverId = do
@@ -47,4 +53,10 @@ postDriverWalletWalletTopup merchantShortId opCity apiTokenInfo driverId req = d
 getDriverWalletWalletPayoutHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe ([Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus]) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow API.Types.UI.DriverWallet.PayoutHistoryResponse)
 getDriverWalletWalletPayoutHistory merchantShortId opCity apiTokenInfo driverId from to status limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.getDriverWalletWalletPayoutHistory) driverId from to status limit offset
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    ( API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.getDriverWalletWalletPayoutHistory) driverId from to status limit offset )

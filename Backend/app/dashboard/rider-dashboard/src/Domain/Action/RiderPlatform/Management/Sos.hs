@@ -13,7 +13,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common ()
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
@@ -22,7 +22,13 @@ import Tools.Auth.Merchant
 getSosTracking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow API.Types.RiderPlatform.Management.Sos.SosTrackingRes)
 getSosTracking merchantShortId opCity sosId = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.sosDSL.getSosTracking) sosId
+  SharedLogic.Transaction.withGetTransactionStoring
+    Domain.Types.Transaction.UnknownEndpoint
+    (Kernel.Prelude.Just APP_BACKEND)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.sosDSL.getSosTracking) sosId)
 
 postSosCallExternalSOS :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postSosCallExternalSOS merchantShortId opCity apiTokenInfo sosId = do
@@ -33,4 +39,10 @@ postSosCallExternalSOS merchantShortId opCity apiTokenInfo sosId = do
 getSosDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow API.Types.RiderPlatform.Management.Sos.SosDetailsMaybeRes)
 getSosDetails merchantShortId opCity sosId = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.sosDSL.getSosDetails) sosId
+  SharedLogic.Transaction.withGetTransactionStoring
+    Domain.Types.Transaction.UnknownEndpoint
+    (Kernel.Prelude.Just APP_BACKEND)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.sosDSL.getSosDetails) sosId)

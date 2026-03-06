@@ -90,12 +90,24 @@ shouldExcludeRequestorId apiTokenInfo driverId =
 getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Flow Common.DocumentsListResponse
 getDriverRegistrationDocumentsList merchantShortId opCity apiTokenInfo driverId mbRcId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationDocumentsList) driverId mbRcId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationDocumentsList) driverId mbRcId)
 
 getDriverRegistrationGetDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Image -> Flow Common.GetDocumentResponse
 getDriverRegistrationGetDocument merchantShortId opCity apiTokenInfo imageId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationGetDocument) imageId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationGetDocument) imageId)
 
 postDriverRegistrationVerifyBankAccount :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.VerifyBankAccountReq -> Flow Kernel.External.Verification.Interface.Types.VerifyAsyncResp
 postDriverRegistrationVerifyBankAccount merchantShortId opCity apiTokenInfo driverId req = do
@@ -107,7 +119,13 @@ postDriverRegistrationVerifyBankAccount merchantShortId opCity apiTokenInfo driv
 getDriverRegistrationInfoBankAccount :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Kernel.Prelude.Text -> Flow Kernel.External.Verification.Types.BankAccountVerificationResponse
 getDriverRegistrationInfoBankAccount merchantShortId opCity apiTokenInfo driverId requestId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationInfoBankAccount) driverId requestId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationInfoBankAccount) driverId requestId)
 
 postDriverRegistrationDeleteBankAccount :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverRegistrationDeleteBankAccount merchantShortId opCity apiTokenInfo driverId = do
@@ -156,12 +174,24 @@ postDriverRegistrationRegisterVerifyAadhaarOtp merchantShortId opCity apiTokenIn
 getDriverRegistrationUnderReviewDrivers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Flow Common.UnderReviewDriversListResponse
 getDriverRegistrationUnderReviewDrivers merchantShortId opCity apiTokenInfo limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationUnderReviewDrivers) limit offset
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationUnderReviewDrivers) limit offset)
 
 getDriverRegistrationDocumentsInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow [Common.DriverDocument]
 getDriverRegistrationDocumentsInfo merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationDocumentsInfo) driverId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationDocumentsInfo) driverId)
 
 postDriverRegistrationDocumentsUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateDocumentRequest -> Flow APISuccess
 postDriverRegistrationDocumentsUpdate merchantShortId opCity apiTokenInfo req = do
@@ -190,7 +220,13 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity apiTokenInfo personI
 getDriverRegistrationVerificationStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> UTCTime -> UTCTime -> Int -> Int -> Common.DocumentType -> Common.ServiceType -> Flow Common.VerificationStatusListResponse
 getDriverRegistrationVerificationStatus merchantShortId opCity apiTokenInfo driverId fromDate toDate limit offset documentType serviceType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationVerificationStatus) driverId fromDate toDate limit offset documentType serviceType
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationVerificationStatus) driverId fromDate toDate limit offset documentType serviceType)
 
 postDriverRegistrationDocumentsCommon ::
   ShortId DM.Merchant ->

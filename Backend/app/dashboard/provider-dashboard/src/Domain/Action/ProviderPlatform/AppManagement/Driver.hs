@@ -4,7 +4,9 @@ import qualified API.Client.ProviderPlatform.AppManagement
 import qualified Data.Time.Calendar
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Ride
 import qualified "lib-dashboard" Domain.Types.Merchant
+import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "dynamic-offer-driver-app" Domain.Types.Person
+import qualified "lib-dashboard" SharedLogic.Transaction
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -18,4 +20,10 @@ import Tools.Auth.Merchant
 getDriverFleetListRides :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Ride.RideStatus -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow Domain.Action.UI.Ride.DriverRideListRes)
 getDriverFleetListRides merchantShortId opCity apiTokenInfo driverId limit offset onlyActive status day fleetOwnerId numOfDays = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverDSL.getDriverFleetListRides) driverId limit offset onlyActive status day fleetOwnerId numOfDays
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    ( API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverDSL.getDriverFleetListRides) driverId limit offset onlyActive status day fleetOwnerId numOfDays )

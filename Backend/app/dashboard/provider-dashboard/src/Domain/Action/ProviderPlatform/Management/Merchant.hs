@@ -120,7 +120,13 @@ getMerchantConfigCommon ::
   Flow Common.MerchantCommonConfigRes
 getMerchantConfigCommon merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigCommon)
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigCommon))
 
 postMerchantConfigCommonUpdate ::
   ShortId DM.Merchant ->
@@ -145,7 +151,13 @@ getMerchantConfigDriverPool ::
   Flow Common.DriverPoolConfigRes
 getMerchantConfigDriverPool merchantShortId opCity apiTokenInfo tripDistance tripDistanceValue distanceUnit = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigDriverPool) tripDistance tripDistanceValue distanceUnit
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigDriverPool) tripDistance tripDistanceValue distanceUnit)
 
 postMerchantConfigDriverPoolUpdate ::
   ShortId DM.Merchant ->
@@ -192,7 +204,13 @@ getMerchantConfigDriverIntelligentPool ::
   Flow Common.DriverIntelligentPoolConfigRes
 getMerchantConfigDriverIntelligentPool merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigDriverIntelligentPool)
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigDriverIntelligentPool))
 
 postMerchantConfigDriverIntelligentPoolUpdate ::
   ShortId DM.Merchant ->
@@ -216,7 +234,13 @@ getMerchantConfigOnboardingDocument ::
   Flow Common.DocumentVerificationConfigRes
 getMerchantConfigOnboardingDocument merchantShortId opCity apiTokenInfo documentType category = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigOnboardingDocument) documentType category
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigOnboardingDocument) documentType category)
 
 postMerchantConfigOnboardingDocumentUpdate ::
   ShortId DM.Merchant ->
@@ -256,7 +280,13 @@ getMerchantServiceUsageConfig ::
   Flow Common.ServiceUsageConfigRes
 getMerchantServiceUsageConfig merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantServiceUsageConfig)
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantServiceUsageConfig))
 
 postMerchantServiceConfigMapsUpdate ::
   ShortId DM.Merchant ->
@@ -500,12 +530,24 @@ postMerchantConfigMerchantCreate merchantShortId opCity apiTokenInfo req = proce
 getMerchantConfigFarePolicyExport :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Kernel.Prelude.Text)
 getMerchantConfigFarePolicyExport merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigFarePolicyExport)
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigFarePolicyExport))
 
 getMerchantConfigVehicleServiceTier :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.Flow Common.VehicleServiceTierRes)
 getMerchantConfigVehicleServiceTier merchantShortId opCity apiTokenInfo serviceTierType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigVehicleServiceTier) serviceTierType
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigVehicleServiceTier) serviceTierType)
 
 postMerchantConfigVehicleServiceTierUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.ServiceTierType -> Common.VehicleServiceTierConfigUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigVehicleServiceTierUpdate merchantShortId opCity apiTokenInfo serviceTierType req = do
@@ -516,12 +558,24 @@ postMerchantConfigVehicleServiceTierUpdate merchantShortId opCity apiTokenInfo s
 getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe SL.SpecialLocationType -> Environment.Flow Common.SpecialLocationResp)
 getMerchantConfigSpecialLocationList merchantShortId opCity apiTokenInfo limit offset specialLocationType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSpecialLocationList) limit offset specialLocationType
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSpecialLocationList) limit offset specialLocationType)
 
 getMerchantConfigGeometryList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow Common.GeometryResp)
 getMerchantConfigGeometryList merchantShortId opCity apiTokenInfo limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigGeometryList) limit offset
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigGeometryList) limit offset)
 
 putMerchantConfigGeometryUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.UpdateGeometryReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 putMerchantConfigGeometryUpdate merchantShortId opCity apiTokenInfo req = do
@@ -544,12 +598,24 @@ postMerchantConfigVehicleServiceTierCreate merchantShortId opCity apiTokenInfo r
 getMerchantConfigDriverPoolList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Common.DriverPoolConfigListRes)
 getMerchantConfigDriverPoolList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigDriverPoolList)
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigDriverPoolList))
 
 getMerchantConfigVehicleServiceTierList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Common.VehicleServiceTierListRes)
 getMerchantConfigVehicleServiceTierList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigVehicleServiceTierList)
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigVehicleServiceTierList))
 
 postMerchantConfigDebugLogUpdate ::
   ShortId DM.Merchant ->

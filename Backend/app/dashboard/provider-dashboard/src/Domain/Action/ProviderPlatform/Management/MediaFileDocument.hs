@@ -69,4 +69,10 @@ getMediaFileDocumentDownloadLink ::
 getMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo mediaFileDocumentType rcNumber = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
-  Client.callManagementAPI checkedMerchantId opCity (.mediaFileDocumentDSL.getMediaFileDocumentDownloadLink) mediaFileDocumentType rcNumber requestorId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.mediaFileDocumentDSL.getMediaFileDocumentDownloadLink) mediaFileDocumentType rcNumber requestorId)

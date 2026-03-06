@@ -23,7 +23,13 @@ import Tools.Auth.Merchant
 getProfileDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Domain.Action.UI.Profile.ProfileRes)
 getProfileDetail merchantShortId opCity apiTokenInfo customerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.profileDSL.getProfileDetail) customerId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.profileDSL.getProfileDetail) customerId)
 
 postProfileUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Profile.UpdateProfileReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postProfileUpdate merchantShortId opCity apiTokenInfo customerId req = do

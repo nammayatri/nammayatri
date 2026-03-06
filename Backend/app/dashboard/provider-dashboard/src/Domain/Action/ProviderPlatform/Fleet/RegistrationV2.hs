@@ -175,4 +175,10 @@ getRegistrationV2RegisterBankAccountStatus ::
   Flow Common.FleetBankAccountResp
 getRegistrationV2RegisterBankAccountStatus merchantShortId opCity apiTokenInfo fleetOwnerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2RegisterBankAccountStatus) fleetOwnerId apiTokenInfo.personId.getId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2RegisterBankAccountStatus) fleetOwnerId apiTokenInfo.personId.getId)

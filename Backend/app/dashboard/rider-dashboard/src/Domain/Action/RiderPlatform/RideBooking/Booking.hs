@@ -35,19 +35,43 @@ postBookingStatus merchantShortId opCity apiTokenInfo rideBookingId customerId =
 getBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Environment.Flow Domain.Action.UI.Booking.BookingListRes)
 getBookingList merchantShortId opCity apiTokenInfo customerId limit offset onlyActive status = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingList) customerId limit offset onlyActive status
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingList) customerId limit offset onlyActive status)
 
 getBookingBooking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.Flow Domain.Types.Booking.API.BookingAPIEntity)
 getBookingBooking merchantShortId opCity bookingOtp = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingBooking) bookingOtp
+  SharedLogic.Transaction.withGetTransactionStoring
+    Domain.Types.Transaction.UnknownEndpoint
+    (Kernel.Prelude.Just APP_BACKEND)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingBooking) bookingOtp)
 
 getBookingAgentL1List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Domain.Types.BookingStatus.BookingStatus) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe UTCTime -> Kernel.Prelude.Maybe UTCTime -> Environment.Flow Domain.Action.UI.Booking.BookingListRes)
 getBookingAgentL1List merchantShortId opCity apiTokenInfo limit offset status mbCustomerPhoneNo fromDate toDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingAgentL1List) (Just apiTokenInfo.personId.getId) limit offset status mbCustomerPhoneNo fromDate toDate
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingAgentL1List) (Just apiTokenInfo.personId.getId) limit offset status mbCustomerPhoneNo fromDate toDate)
 
 getBookingAgentL2List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Domain.Types.BookingStatus.BookingStatus) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe UTCTime -> Kernel.Prelude.Maybe UTCTime -> Environment.Flow Domain.Action.UI.Booking.BookingListRes)
 getBookingAgentL2List merchantShortId opCity apiTokenInfo limit offset status mbCustomerPhoneNo fromDate toDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingAgentL2List) limit offset status mbCustomerPhoneNo fromDate toDate
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingAgentL2List) limit offset status mbCustomerPhoneNo fromDate toDate)

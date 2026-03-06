@@ -26,9 +26,21 @@ postSearchRequestSearchrequests merchantShortId opCity apiTokenInfo req = do
 getSearchRequestList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Environment.Flow API.Types.Dashboard.RideBooking.SearchRequest.SearchRequestsRes)
 getSearchRequestList merchantShortId opCity apiTokenInfo driverId fromDate toDate mbLimit mbOffset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.searchRequestDSL.getSearchRequestList) driverId fromDate toDate mbLimit mbOffset
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.searchRequestDSL.getSearchRequestList) driverId fromDate toDate mbLimit mbOffset)
 
 getSearchRequestInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow API.Types.Dashboard.RideBooking.SearchRequest.SearchReqInfoRes)
 getSearchRequestInfo merchantShortId opCity apiTokenInfo fromDate toDate driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.searchRequestDSL.getSearchRequestInfo) fromDate toDate driverId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just DRIVER_OFFER_BPP)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.searchRequestDSL.getSearchRequestInfo) fromDate toDate driverId)

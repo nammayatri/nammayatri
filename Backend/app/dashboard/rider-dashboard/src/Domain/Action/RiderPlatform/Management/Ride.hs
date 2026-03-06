@@ -48,14 +48,26 @@ getRideList ::
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Environment.Flow API.Types.RiderPlatform.Management.Ride.RideListRes
-getRideList merchantShortId opCity _apiTokenInfo limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to = do
+getRideList merchantShortId opCity apiTokenInfo limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideList) limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideList) limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to)
 
 getRideInfo :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.Flow API.Types.RiderPlatform.Management.Ride.RideInfoRes
 getRideInfo merchantShortId opCity apiTokenInfo rideId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideInfo) rideId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideInfo) rideId)
 
 rideInfoHitsCountKey :: Text -> Text
 rideInfoHitsCountKey rideId = "RideInfoHits:" <> rideId <> ":hitsCount"
@@ -65,24 +77,48 @@ getShareRideInfo merchantShortId opCity rideId = do
   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ Kernel.Types.Id.getId rideId) shareRideApiRateLimitOptions
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getShareRideInfo) rideId
+  SharedLogic.Transaction.withGetTransactionStoring
+    Domain.Types.Transaction.UnknownEndpoint
+    (Kernel.Prelude.Just APP_BACKEND)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getShareRideInfo) rideId)
 
 getShareRideInfoByShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.ShortId Dashboard.Common.Ride -> Environment.Flow API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes
 getShareRideInfoByShortId merchantShortId opCity rideShortId = do
   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ Kernel.Types.Id.getShortId rideShortId) shareRideApiRateLimitOptions
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getShareRideInfoByShortId) rideShortId
+  SharedLogic.Transaction.withGetTransactionStoring
+    Domain.Types.Transaction.UnknownEndpoint
+    (Kernel.Prelude.Just APP_BACKEND)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getShareRideInfoByShortId) rideShortId)
 
 getRideTripRoute :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> Environment.Flow Kernel.External.Maps.GetRoutesResp
 getRideTripRoute merchantShortId opCity rideId lat lon = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideTripRoute) rideId lat lon
+  SharedLogic.Transaction.withGetTransactionStoring
+    Domain.Types.Transaction.UnknownEndpoint
+    (Kernel.Prelude.Just APP_BACKEND)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideTripRoute) rideId lat lon)
 
 getRidePickupRoute :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> Environment.Flow Kernel.External.Maps.GetRoutesResp
 getRidePickupRoute merchantShortId opCity rideId lat lon = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRidePickupRoute) rideId lat lon
+  SharedLogic.Transaction.withGetTransactionStoring
+    Domain.Types.Transaction.UnknownEndpoint
+    (Kernel.Prelude.Just APP_BACKEND)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRidePickupRoute) rideId lat lon)
 
 postRideSyncMultiple :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.Flow Dashboard.Common.Ride.MultipleRideSyncResp
 postRideSyncMultiple merchantShortId opCity apiTokenInfo req = do
@@ -117,4 +153,10 @@ getRideKaptureList merchantShortId opCity apiTokenInfo rideShortId countryCode p
 cancellationChargesWaiveOff :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.Flow API.Types.RiderPlatform.Management.Ride.CancellationChargesWaiveOffRes)
 cancellationChargesWaiveOff merchantShortId opCity apiTokenInfo rideId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.cancellationChargesWaiveOff) rideId
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.cancellationChargesWaiveOff) rideId)

@@ -22,7 +22,13 @@ import Tools.Auth.Merchant
 getFrontendFlowStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow Domain.Action.UI.Frontend.GetPersonFlowStatusRes)
 getFrontendFlowStatus merchantShortId opCity apiTokenInfo customerId isPolling checkForActiveBooking = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.frontendDSL.getFrontendFlowStatus) customerId isPolling checkForActiveBooking
+  SharedLogic.Transaction.withGetTransactionStoring
+    (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+    (Kernel.Prelude.Just APP_BACKEND)
+    (Kernel.Prelude.Just apiTokenInfo)
+    Kernel.Prelude.Nothing
+    Kernel.Prelude.Nothing
+    (API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.frontendDSL.getFrontendFlowStatus) customerId isPolling checkForActiveBooking)
 
 postFrontendNotifyEvent :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Frontend.NotifyEventReq -> Environment.Flow Domain.Action.UI.Frontend.NotifyEventResp)
 postFrontendNotifyEvent merchantShortId opCity apiTokenInfo customerId req = do

@@ -97,22 +97,46 @@ postMessageSend merchantShortId opCity apiTokenInfo req = do
 getMessageList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
 getMessageList merchantShortId opCity apiTokenInfo mbLimit mbOffset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageList) mbLimit mbOffset
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageList) mbLimit mbOffset)
 
 getMessageInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Message -> Flow Common.MessageInfoResponse
 getMessageInfo merchantShortId opCity apiTokenInfo messageId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageInfo) messageId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageInfo) messageId)
 
 getMessageDeliveryInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Message -> Flow Common.MessageDeliveryInfoResponse
 getMessageDeliveryInfo merchantShortId opCity apiTokenInfo messageId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageDeliveryInfo) messageId
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageDeliveryInfo) messageId)
 
 getMessageReceiverList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
 getMessageReceiverList merchantShortId opCity apiTokenInfo messageId number status limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageReceiverList) messageId number status limit offset
+  T.withGetTransactionStoring
+    (DT.castEndpoint apiTokenInfo.userActionType)
+    (Just DRIVER_OFFER_BPP)
+    (Just apiTokenInfo)
+    Nothing
+    Nothing
+    (Client.callManagementAPI checkedMerchantId opCity (.messageDSL.getMessageReceiverList) messageId number status limit offset)
 
 postMessageEdit :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.EditMessageRequest -> Flow APISuccess
 postMessageEdit merchantShortId opCity apiTokenInfo req = do
