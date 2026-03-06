@@ -21,7 +21,11 @@ data ExternalSOSTriggerSource
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosDetailsMaybeRes = SosDetailsMaybeRes {details :: Kernel.Prelude.Maybe SosDetailsRes, triggerSource :: Kernel.Prelude.Maybe ExternalSOSTriggerSource}
+data RiderDetailsRes = RiderDetailsRes {firstName :: Kernel.Prelude.Maybe Kernel.Prelude.Text, middleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text, lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SosDetailsMaybeRes = SosDetailsMaybeRes {details :: Kernel.Prelude.Maybe SosDetailsRes, triggerSource :: Kernel.Prelude.Maybe ExternalSOSTriggerSource, riderDetails :: Kernel.Prelude.Maybe RiderDetailsRes}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
