@@ -23,3 +23,9 @@ ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN provider_name text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN is_ticket_valid_on_multiple_routes boolean ;
+
+
+------- SQL updates -------
+
+CREATE INDEX integrated_bpp_config_idx_agency_key ON atlas_app.integrated_bpp_config USING btree (agency_key);
+ALTER TABLE atlas_app.integrated_bpp_config ADD CONSTRAINT integrated_bpp_config_unique_idx_agency_key UNIQUE (agency_key);

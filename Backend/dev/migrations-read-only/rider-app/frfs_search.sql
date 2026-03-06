@@ -125,3 +125,7 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN minimal_data boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_search ADD COLUMN is_single_mode boolean ;
+
+
+------- SQL updates -------
+

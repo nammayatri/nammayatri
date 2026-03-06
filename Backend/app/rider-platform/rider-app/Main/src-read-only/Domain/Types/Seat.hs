@@ -13,6 +13,7 @@ import qualified Tools.Beam.UtilsTH
 
 data Seat = Seat
   { colNo :: Kernel.Prelude.Int,
+    directionDegrees :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.Seat.Seat,
     isBookable :: Kernel.Prelude.Bool,
     isLadiesOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -25,8 +26,8 @@ data Seat = Seat
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq), (ToSchema))
+  deriving (Show, Generic, ToJSON, FromJSON, Eq, ToSchema)
 
 data SeatType = WINDOW | AISLE | MIDDLE | SLEEPER_LOWER | SLEEPER_UPPER | MOUNT_AREA deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SeatType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SeatType)

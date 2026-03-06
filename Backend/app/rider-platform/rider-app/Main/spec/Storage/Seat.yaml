@@ -19,6 +19,10 @@ Seat:
     seatLayoutId: Id SeatLayout
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    directionDegrees: Maybe Int
+
+  default:
+    directionDegrees: "0"
 
   types:
     SeatType:

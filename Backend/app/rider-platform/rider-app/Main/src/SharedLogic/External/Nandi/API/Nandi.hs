@@ -16,6 +16,8 @@ type RoutesByRouteIdsAPI = "getRoutesByIds" :> Capture "gtfs_id" Text :> ReqBody
 
 type BusRouteScheduleAPI = "bus-route-schedule" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> Get '[JSON] BusScheduleDetails
 
+type BusTripScheduleAPI = "bus-trip-schedule" :> Capture "gtfs_id" Text :> Capture "waybill_no" Text :> Capture "trip_number" Int :> Capture "route_id" Text :> Get '[JSON] BusScheduleDetails
+
 type RouteFuzzySearchAPI = "routes" :> Capture "gtfs_id" Text :> "fuzzy" :> Capture "query" Text :> Get '[JSON] [RouteInfoNandi]
 
 type RoutesByGtfsIdAPI = "routes" :> Capture "gtfs_id" Text :> Get '[JSON] [RouteInfoNandi]
@@ -74,6 +76,9 @@ nandiRoutesByRouteIdsAPI = Proxy
 
 nandiBusRouteScheduleAPI :: Proxy BusRouteScheduleAPI
 nandiBusRouteScheduleAPI = Proxy
+
+nandiBusTripScheduleAPI :: Proxy BusTripScheduleAPI
+nandiBusTripScheduleAPI = Proxy
 
 nandiRouteFuzzySearchAPI :: Proxy RouteFuzzySearchAPI
 nandiRouteFuzzySearchAPI = Proxy
@@ -155,6 +160,9 @@ getNandiRoutesByRouteIds = ET.client nandiRoutesByRouteIdsAPI
 
 getNandiBusRouteSchedule :: Text -> Text -> ET.EulerClient BusScheduleDetails
 getNandiBusRouteSchedule = ET.client nandiBusRouteScheduleAPI
+
+getNandiBusTripSchedule :: Text -> Text -> Int -> Text -> ET.EulerClient BusScheduleDetails
+getNandiBusTripSchedule = ET.client nandiBusTripScheduleAPI
 
 getNandiRouteFuzzySearch :: Text -> Text -> ET.EulerClient [RouteInfoNandi]
 getNandiRouteFuzzySearch = ET.client nandiRouteFuzzySearchAPI

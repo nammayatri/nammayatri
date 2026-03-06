@@ -11,6 +11,7 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.List (groupBy, nub, nubBy)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
 import Data.List.Split (chunksOf)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text
 import qualified Data.Time as Time
 import Domain.Types.BecknConfig
@@ -25,6 +26,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingFeedback as DFRFSTicketBookingFeedback
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.Merchant
@@ -53,6 +55,7 @@ import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
@@ -66,6 +69,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types (StopInfo (..), StopSchedule (..))
 import SharedLogic.FRFSConfirm
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
@@ -73,6 +77,7 @@ import SharedLogic.FRFSStatus
 import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -86,17 +91,17 @@ import qualified Storage.CachedQueries.Seat as CQSeat
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SeatLayout as QSeatLayout
-import qualified Tools.MultiModal as MM
-import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
+import qualified Tools.MultiModal as MM
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 import qualified UrlShortner.Common as UrlShortner
@@ -1279,3 +1284,64 @@ getFrfsActiveRoutes (mbPersonId, merchantId) vehicleType = do
       nandiRoutes <- NandiFlow.getRoutesServedToday baseUrl
       pure $ map (\r -> FRFSTicketService.ActiveRouteRes {routeId = r.routeId, lastScheduleTime = r.lastScheduleTime}) nandiRoutes
     _ -> pure []
+
+getFrfsTripRouteManifest ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Text ->
+  Text ->
+  Environment.Flow FRFSTripPassengerManifestResp
+getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
+  shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" 120 ("1" :: Text)
+  when shouldRun $
+    fork "frfs-seat-hold-reaper" SeatHold.seatHoldReaperImpl
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let cityId = personCityInfo.merchantOperatingCityId
+  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
+  let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId tripId
+  schedule <- OTPRest.getBusTripSchedule waybillNo tripNo routeId integratedBPPConfig
+  scheduleDetail <-
+    schedule & listToMaybe
+      & fromMaybeM (InvalidRequest "Bus schedule not found")
+  let stops = scheduleDetail.eta
+  bookings <- QFRFSTicketBooking.findAllByTripId tripId
+  let riderIds = map (.riderId) bookings
+  persons <- QP.findAllByIds riderIds
+  let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
+  passengerData <- forM bookings $ \booking ->
+    case Map.lookup booking.riderId personMap of
+      Nothing -> pure Nothing
+      Just person -> do
+        mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+        frfsTickets <- QFRFSTicket.findAllByTicketBookingId booking.id
+        let isCheckedIn = any (\t -> t.status == DFRFSTicket.USED) frfsTickets
+        let pName = Data.Text.intercalate " " $ catMaybes [person.firstName, person.lastName]
+        let pInfo =
+              PassengerInfo
+                { personId = person.id,
+                  name = pName,
+                  phone = mobileNumber,
+                  bookingId = booking.id,
+                  checkedIn = isCheckedIn
+                }
+        pure $ Just (booking.fromStationCode, booking.toStationCode, pInfo)
+  let validPassengerData = catMaybes passengerData
+  let stopManifests =
+        map
+          ( \stop ->
+              let sCode = stop.stopCode
+                  boarding = [p | (fromStop, _, p) <- validPassengerData, fromStop == sCode]
+                  alighting = [p | (_, toStop, p) <- validPassengerData, toStop == sCode]
+               in PassengerStopManifest
+                    { stopCode = sCode,
+                      boardingPassengers = boarding,
+                      alightingPassengers = alighting
+                    }
+          )
+          stops
+  pure $
+    FRFSTripPassengerManifestResp
+      { manifest = stopManifests
+      }

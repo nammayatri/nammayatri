@@ -103,3 +103,7 @@ findAllByProviderNameAndCreatedAtAfterAndStatus providerName createdAtAfter stat
           Se.Is Beam.status $ Se.Eq status
         ]
     ]
+
+findAllByTripId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [FRFSTicketBooking]
+findAllByTripId tripId = do
+  findAllWithKV [Se.Is Beam.tripId $ Se.Eq (Just tripId)]

@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Seat.Seat] -> m ())
 createMany = traverse_ create
 
-findAllByLayoutId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> m ([Domain.Types.Seat.Seat]))
+findAllByLayoutId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> m [Domain.Types.Seat.Seat])
 findAllByLayoutId seatLayoutId = do findAllWithKV [Se.Is Beam.seatLayoutId $ Se.Eq (Kernel.Types.Id.getId seatLayoutId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Seat.Seat -> m (Maybe Domain.Types.Seat.Seat))
@@ -35,6 +35,7 @@ updateByPrimaryKey (Domain.Types.Seat.Seat {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.colNo colNo,
+      Se.Set Beam.directionDegrees directionDegrees,
       Se.Set Beam.isBookable isBookable,
       Se.Set Beam.isLadiesOnly isLadiesOnly,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -53,6 +54,7 @@ instance FromTType' Beam.Seat Domain.Types.Seat.Seat where
       Just
         Domain.Types.Seat.Seat
           { colNo = colNo,
+            directionDegrees = directionDegrees,
             id = Kernel.Types.Id.Id id,
             isBookable = isBookable,
             isLadiesOnly = isLadiesOnly,
@@ -70,6 +72,7 @@ instance ToTType' Beam.Seat Domain.Types.Seat.Seat where
   toTType' (Domain.Types.Seat.Seat {..}) = do
     Beam.SeatT
       { Beam.colNo = colNo,
+        Beam.directionDegrees = directionDegrees,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isBookable = isBookable,
         Beam.isLadiesOnly = isLadiesOnly,

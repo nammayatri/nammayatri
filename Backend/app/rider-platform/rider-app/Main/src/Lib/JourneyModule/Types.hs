@@ -454,7 +454,9 @@ data BusLegExtraInfo = BusLegExtraInfo
     categories :: [FRFSTicketServiceAPI.CategoryInfoResponse],
     categoryBookingDetails :: Maybe [CategoryBookingDetails], -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
     busConductorId :: Maybe Text,
-    busDriverId :: Maybe Text
+    busDriverId :: Maybe Text,
+    tripStartTime :: Maybe [UTCTime],
+    bookedStopETA :: Maybe [UTCTime]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -867,7 +869,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
 
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
   journeyLegInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
-  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters booking.totalPrice
+  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters booking.totalPrice integratedBPPConfig
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
@@ -898,7 +900,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         hasApplicablePasses = Nothing
       }
   where
-    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters totalBookingAmount = do
+    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters totalBookingAmount integratedBPPConfig = do
       bookingPayments <- QFRFSTicketBookingPayment.findAllTBPByBookingId booking.id
       let paymentOrderIds = nub $ map (.paymentOrderId) bookingPayments
       paymentOrders <- mapMaybeM QPaymentOrder.findById paymentOrderIds
@@ -938,6 +940,20 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
           mbQuote <- QFRFSQuote.findById booking.quoteId
           quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
           let mbSelectedServiceTier = getServiceTierFromQuote quoteCategories =<< mbQuote
+
+          (mTripStartTime, mBookedStopETA) <- case (booking.tripId, journeyLegDetail.routeCode) of
+            (Just tripId, _) -> do
+              let (waybillNo, tripNo) = getWaybillNoAndTripNoFromTripId tripId
+              mbSchedule <- withTryCatch "getBusTripSchedule_mkLegInfo" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
+              case mbSchedule of
+                Right (firstSchedule : _) -> do
+                  let allEtas = firstSchedule.eta
+                      mbBookedStopEta = find (\etaObj -> etaObj.stopCode == booking.fromStationCode) allEtas <&> (.arrivalTime)
+                      mbTripStartEta = listToMaybe allEtas <&> (.arrivalTime)
+                  return (mbTripStartEta, mbBookedStopEta)
+                _ -> return (Nothing, Nothing)
+            _ -> return (Nothing, Nothing)
+
           return $
             Bus $
               BusLegExtraInfo
@@ -977,7 +993,9 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                             tnc = maybe "" (.tnc) category.categoryMeta
                           },
                   categories = categories,
-                  categoryBookingDetails = Just categoryBookingDetails
+                  categoryBookingDetails = Just categoryBookingDetails,
+                  tripStartTime = fmap pure mTripStartTime,
+                  bookedStopETA = fmap pure mBookedStopETA
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -1237,7 +1255,9 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                             tnc = maybe "" (.tnc) category.categoryMeta
                           },
                   categories = categories,
-                  categoryBookingDetails = Nothing
+                  categoryBookingDetails = Nothing,
+                  tripStartTime = Nothing,
+                  bookedStopETA = Nothing
                 }
         Spec.SUBWAY -> do
           let mbSelectedServiceTier = getServiceTierFromQuote quoteCategories =<< mbQuote
