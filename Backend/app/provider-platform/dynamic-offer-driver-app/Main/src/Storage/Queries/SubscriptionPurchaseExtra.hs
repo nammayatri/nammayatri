@@ -125,6 +125,38 @@ findAllByMerchantOpCityIdAndServiceNameWithPagination merchantOpCityId serviceNa
     limit
     offset
 
+-- | Find subscription purchases by merchant operating city with optional filters (for finance dashboard).
+-- When mbServiceName is Nothing, returns all service types. When mbFrom/mbTo are provided, filters by purchaseTimestamp.
+-- When mbStatus is provided, filters by subscription status (PENDING, ACTIVE, EXPIRED, FAILED, EXHAUSTED).
+findAllByMerchantOpCityIdWithFilters ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe ServiceNames ->
+  Maybe SubscriptionPurchaseStatus ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  m [SubscriptionPurchase]
+findAllByMerchantOpCityIdWithFilters merchantOpCityId mbServiceName mbStatus mbFrom mbTo mbLimit mbOffset = do
+  let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
+      offset = fromMaybe 0 mbOffset
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId
+        ]
+          <> [Se.Is Beam.serviceName $ Se.Eq sn | Just sn <- [mbServiceName]]
+          <> [Se.Is Beam.status $ Se.Eq st | Just st <- [mbStatus]]
+          <> [Se.Is Beam.purchaseTimestamp $ Se.GreaterThanOrEq t | Just t <- [mbFrom]]
+          <> [Se.Is Beam.purchaseTimestamp $ Se.LessThanOrEq t | Just t <- [mbTo]]
+    ]
+    (Se.Desc Beam.purchaseTimestamp)
+    (Just limit)
+    (Just offset)
+  where
+    maxLimit = 20
+    defaultLimit = 10
+
 -- | Find ACTIVE subscription purchases for a merchant operating city whose purchaseTimestamp falls in the date range
 findActiveByDateRange ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

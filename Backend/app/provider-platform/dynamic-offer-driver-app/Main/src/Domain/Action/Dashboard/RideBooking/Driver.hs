@@ -46,6 +46,7 @@ import Domain.Types.DriverInformation
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverLicense
 import Domain.Types.DriverPanCard
+import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.Feedback as DFeedback
 import Domain.Types.Image (Image)
@@ -70,11 +71,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation (runRequestValidation)
+import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as CTC
@@ -82,9 +85,11 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverGstinExtra as QDGExtra
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
@@ -94,6 +99,7 @@ import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FeedbackExtra as QFeedback
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
@@ -464,18 +470,32 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let isACAllowedForDriver = checkIfACAllowedForDriver info (catMaybes serviceTierACThresholds)
   let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle
   cancellationData <- SCR.getCancellationRateData person.merchantOperatingCityId person.id
-  activeFleetInfo <-
-    B.runInReplica (QFleetDriver.findByDriverId person.id True) >>= \case
-      Nothing -> pure Nothing
-      Just fda -> do
-        fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonDoesNotExist fda.fleetOwnerId)
-        Just <$> buildDriverAssociationInfoFromPerson fleetOwner
+  mbActiveFda <- B.runInReplica $ QFleetDriver.findByDriverId person.id True
+  activeFleetInfo <- case mbActiveFda of
+    Nothing -> pure Nothing
+    Just fda -> do
+      fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonDoesNotExist fda.fleetOwnerId)
+      Just <$> buildDriverAssociationInfoFromPerson fleetOwner
   operatorInfo <-
     B.runInReplica (QDriverOperator.findByDriverId person.id True) >>= \case
       Nothing -> pure Nothing
       Just doa -> do
         op <- B.runInReplica $ QPerson.findById (Id doa.operatorId) >>= fromMaybeM (PersonDoesNotExist doa.operatorId)
         Just <$> buildDriverAssociationInfoFromPerson op
+  mbBankAccount <- QDBA.findByPrimaryKey person.id
+  mbGstin <- QDGExtra.findGSTInByDriverId person.id
+  mbWalletAccount <- FWallet.getWalletAccountByOwner DRIVER person.id.getId
+  let panAadhaarLinkedFlag' = (== DPanCard.PAN_AADHAAR_LINKED) <$> (mbPanCardAssociationHistory >>= (.panAadhaarLinkage))
+  let gstinApplicableFlag' = mbGstin <&> \gstin -> gstin.verificationStatus == Documents.VALID
+  let bankAccountNumber' = mbBankAccount <&> (.accountId)
+  let bankIfsc' = mbBankAccount >>= (.ifscCode)
+  let bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+  let fleetOwnerId' = (.fleetOwnerId) <$> mbActiveFda
+  tdsApplicableFlag' <- case mbActiveFda of
+    Just fda -> do
+      mbFleetInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
+      pure $ isJust (mbFleetInfo >>= (.tdsRate))
+    Nothing -> pure $ isJust driverInfo.tdsRate
   pure
     Common.DriverInfoRes
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -536,7 +556,16 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         drunkAndDriveViolationCount,
         onboardingAs = castOnboardingAs <$> info.onboardingAs,
         activeFleetInfo,
-        operatorInfo
+        operatorInfo,
+        panAadhaarLinkedFlag = panAadhaarLinkedFlag',
+        gstinApplicableFlag = gstinApplicableFlag',
+        tdsApplicableFlag = Just tdsApplicableFlag',
+        walletId = (\acc -> acc.id.getId) <$> mbWalletAccount,
+        bankAccountNumber = bankAccountNumber',
+        bankIfsc = bankIfsc',
+        bankVerificationStatus = bankVerificationStatus',
+        upiId = driverInfo.payoutVpa,
+        fleetOwnerId = fleetOwnerId'
       }
   where
     buildDriverAssociationInfoFromPerson :: (EncFlow m r) => DP.Person -> m Common.DriverAssociationInfo

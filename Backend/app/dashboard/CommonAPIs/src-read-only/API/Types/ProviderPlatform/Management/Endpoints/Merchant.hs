@@ -427,6 +427,7 @@ data JobName
   | ReferralPayoutTrigger
   | SupplyDemandCalculation
   | CongestionChargeCalculation
+  | ReconciliationTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

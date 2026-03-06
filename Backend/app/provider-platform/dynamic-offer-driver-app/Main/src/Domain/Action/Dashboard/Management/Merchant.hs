@@ -155,7 +155,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, ReconciliationJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -426,6 +426,13 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               let mbMerchantOpCityId = mbMerchantOperatingCity <&> (.id)
               let mbMerchantId = mbMerchantOperatingCity <&> (.merchantId)
               createJobIn @_ @'CongestionCharge mbMerchantId mbMerchantOpCityId diffTimeS (jobData :: CongestionChargeCalculationRequestJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.ReconciliationTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe ReconciliationJobData
+          case jobData' of
+            Just jobData -> do
+              createJobIn @_ @'Reconciliation (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: ReconciliationJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"
