@@ -202,6 +202,7 @@ library
     , esqueleto
     , euler-hs
     , extra
+    , finance-kernel
     , hashable
     , mobility-core
     , openapi3

@@ -6,6 +6,8 @@
 imports:
   Summary: Dashboard.Common
   Driver: Dashboard.Common
+  InvoiceStatus: Lib.Finance.Domain.Types.Invoice
+  InvoiceType: Lib.Finance.Domain.Types.Invoice
 
 module: FinanceManagement
 
@@ -18,7 +20,7 @@ apis:
         offset: Int
         from: UTCTime
         to: UTCTime
-        status: Text
+        status: SubscriptionPurchaseStatus
         driverId: Text
         fleetOperatorId: Text
         amountMin: Text
@@ -39,8 +41,8 @@ apis:
         invoiceId: Text
         from: UTCTime
         to: UTCTime
-        invoiceType: Text
-        status: Text
+        invoiceType: InvoiceType
+        status: InvoiceStatus
       auth: ApiAuthV2
       response:
         type: InvoiceListRes
@@ -109,6 +111,10 @@ apis:
       userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FINANCE RECONCILIATION_TRIGGER
 
 types:
+  SubscriptionPurchaseStatus:
+    - enum: "SubscriptionPending, SubscriptionActive, SubscriptionExpired, SubscriptionFailed, SubscriptionExhausted"
+    - derive: "ToParamSchema,HttpInstance"
+
   # ----- Subscription Purchase -----
   SubscriptionPurchaseListRes:
     - totalItems: Int
@@ -148,17 +154,15 @@ types:
     - utilizedValue: Maybe HighPrecMoney
     - remainingValue: Maybe HighPrecMoney
     - revenueRecognized: Maybe HighPrecMoney
-    - linkedRideIds: [Text]
-    - linkedBookingIds: [Text]
-    - rideUsageDetails: [RideUsageDetail]
+    - linkedRides: [LinkedRideItem]
     - createdAt: Maybe UTCTime
     - updatedAt: Maybe UTCTime
 
-  RideUsageDetail:
-    - bookingId: Text
+  LinkedRideItem:
     - rideId: Text
-    - rideDate: UTCTime
-    - deductedAmount: HighPrecMoney
+    - bookingId: Text
+    - rideCreatedAt: UTCTime
+    - rideSubscriptionDebitAmount: HighPrecMoney
 
   # ----- Fleet Operator -----
   FleetOperatorListRes:

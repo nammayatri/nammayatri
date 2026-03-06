@@ -4,6 +4,7 @@
 module API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement where
 
 import qualified Dashboard.Common
+import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -11,6 +12,8 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
+import Kernel.Utils.TH
+import qualified Lib.Finance.Domain.Types.Invoice
 import Servant
 import Servant.Client
 
@@ -72,6 +75,10 @@ data InvoiceListItem = InvoiceListItem
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data InvoiceListRes = InvoiceListRes {totalItems :: Kernel.Prelude.Int, summary :: Dashboard.Common.Summary, invoices :: [InvoiceListItem]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LinkedRideItem = LinkedRideItem {rideId :: Kernel.Prelude.Text, bookingId :: Kernel.Prelude.Text, rideCreatedAt :: Kernel.Prelude.UTCTime, rideSubscriptionDebitAmount :: Kernel.Types.Common.HighPrecMoney}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -151,10 +158,6 @@ data ReconciliationTriggerRes = ReconciliationTriggerRes {success :: Kernel.Prel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RideUsageDetail = RideUsageDetail {bookingId :: Kernel.Prelude.Text, rideId :: Kernel.Prelude.Text, rideDate :: Kernel.Prelude.UTCTime, deductedAmount :: Kernel.Types.Common.HighPrecMoney}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data SubscriptionPurchaseListItem = SubscriptionPurchaseListItem
   { subscriptionPurchaseId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     purchasedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -189,9 +192,7 @@ data SubscriptionPurchaseListItem = SubscriptionPurchaseListItem
     utilizedValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     remainingValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     revenueRecognized :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    linkedRideIds :: [Kernel.Prelude.Text],
-    linkedBookingIds :: [Kernel.Prelude.Text],
-    rideUsageDetails :: [RideUsageDetail],
+    linkedRides :: [LinkedRideItem],
     createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
@@ -201,6 +202,15 @@ data SubscriptionPurchaseListItem = SubscriptionPurchaseListItem
 data SubscriptionPurchaseListRes = SubscriptionPurchaseListRes {totalItems :: Kernel.Prelude.Int, summary :: Dashboard.Common.Summary, subscriptions :: [SubscriptionPurchaseListItem]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SubscriptionPurchaseStatus
+  = SubscriptionPending
+  | SubscriptionActive
+  | SubscriptionExpired
+  | SubscriptionFailed
+  | SubscriptionExhausted
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data WalletLedgerItem = WalletLedgerItem
   { walletTxnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -248,7 +258,7 @@ type GetFinanceManagementSubscriptionPurchaseList =
            Kernel.Prelude.Text
       :> QueryParam
            "status"
-           Kernel.Prelude.Text
+           SubscriptionPurchaseStatus
       :> QueryParam
            "subscriptionId"
            Kernel.Prelude.Text
@@ -256,7 +266,7 @@ type GetFinanceManagementSubscriptionPurchaseList =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           ('[JSON])
+           '[JSON]
            SubscriptionPurchaseListRes
   )
 
@@ -264,19 +274,19 @@ type GetFinanceManagementFinanceInvoiceList =
   ( "finance" :> "invoice" :> "list" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "invoiceId" Kernel.Prelude.Text
       :> QueryParam
            "invoiceType"
-           Kernel.Prelude.Text
+           Lib.Finance.Domain.Types.Invoice.InvoiceType
       :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
       :> QueryParam
            "status"
-           Kernel.Prelude.Text
+           Lib.Finance.Domain.Types.Invoice.InvoiceStatus
       :> QueryParam
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           ('[JSON])
+           '[JSON]
            InvoiceListRes
   )
 
@@ -290,7 +300,7 @@ type GetFinanceManagementFinanceReconciliation =
            "toDate"
            Kernel.Prelude.UTCTime
       :> Get
-           ('[JSON])
+           '[JSON]
            ReconciliationRes
   )
 
@@ -307,7 +317,7 @@ type GetFinanceManagementFinancePayoutList =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           ('[JSON])
+           '[JSON]
            PayoutListRes
   )
 
@@ -327,7 +337,7 @@ type GetFinanceManagementFinanceWalletLedger =
            "sourceType"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            WalletLedgerRes
   )
 
@@ -337,19 +347,19 @@ type GetFinanceManagementFinanceEarningSummary =
            "from"
            Kernel.Prelude.UTCTime
       :> QueryParam "to" Kernel.Prelude.UTCTime
-      :> Get ('[JSON]) EarningsSummaryRes
+      :> Get '[JSON] EarningsSummaryRes
   )
 
-type PostFinanceManagementReconciliationTrigger = ("reconciliation" :> "trigger" :> ReqBody ('[JSON]) ReconciliationTriggerReq :> Post ('[JSON]) ReconciliationTriggerRes)
+type PostFinanceManagementReconciliationTrigger = ("reconciliation" :> "trigger" :> ReqBody '[JSON] ReconciliationTriggerReq :> Post '[JSON] ReconciliationTriggerRes)
 
 data FinanceManagementAPIs = FinanceManagementAPIs
-  { getFinanceManagementSubscriptionPurchaseList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient SubscriptionPurchaseListRes),
-    getFinanceManagementFinanceInvoiceList :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient InvoiceListRes),
-    getFinanceManagementFinanceReconciliation :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient ReconciliationRes),
-    getFinanceManagementFinancePayoutList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient PayoutListRes),
-    getFinanceManagementFinanceWalletLedger :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient WalletLedgerRes),
-    getFinanceManagementFinanceEarningSummary :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient EarningsSummaryRes),
-    postFinanceManagementReconciliationTrigger :: (ReconciliationTriggerReq -> EulerHS.Types.EulerClient ReconciliationTriggerRes)
+  { getFinanceManagementSubscriptionPurchaseList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe SubscriptionPurchaseStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient SubscriptionPurchaseListRes,
+    getFinanceManagementFinanceInvoiceList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient InvoiceListRes,
+    getFinanceManagementFinanceReconciliation :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ReconciliationRes,
+    getFinanceManagementFinancePayoutList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutListRes,
+    getFinanceManagementFinanceWalletLedger :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient WalletLedgerRes,
+    getFinanceManagementFinanceEarningSummary :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient EarningsSummaryRes,
+    postFinanceManagementReconciliationTrigger :: ReconciliationTriggerReq -> EulerHS.Types.EulerClient ReconciliationTriggerRes
   }
 
 mkFinanceManagementAPIs :: (Client EulerHS.Types.EulerClient API -> FinanceManagementAPIs)
@@ -368,4 +378,6 @@ data FinanceManagementUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''FinanceManagementUserActionType)])
+$(mkHttpInstancesForEnum ''SubscriptionPurchaseStatus)
+
+$(Data.Singletons.TH.genSingletons [''FinanceManagementUserActionType])

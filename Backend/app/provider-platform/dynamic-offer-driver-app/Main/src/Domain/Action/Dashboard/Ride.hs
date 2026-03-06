@@ -280,7 +280,7 @@ buildRideListItem item@QRide.RideItem {..} = do
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   -- Prefill finance and lifecycle fields when we have full ride and booking
 
-  (ondcOrderId, buyerAppOrderId, pickupLocationId, dropLocationId, grossRideValue, subscriptionOffsetAmount, netPayableToDriver, paymentModeText, paymentReferenceInternal, walletTransactionIds, rideStartedAt, rideCompletedAt, rideCancelledAt, rideStatus, customerIdMasked, tripDistanceKm, tripDurationMinutes, gstApplicableFlag, gstRate, gstAmount) <-
+  (ondcOrderId, buyerAppOrderId, pickupLocationId, dropLocationId, grossRideValue, subscriptionOffsetAmount, netPayableToDriver, paymentModeText, paymentReferenceInternal, walletTransactions, rideStartedAt, rideCompletedAt, rideCancelledAt, rideStatus, customerIdMasked, tripDistanceKm, tripDurationMinutes, gstApplicableFlag, gstRate, gstAmount) <-
     case (item.ride, item.booking) of
       (Just r, Just b) -> do
         let bookingIdStr = b.id.getId
@@ -290,9 +290,19 @@ buildRideListItem item@QRide.RideItem {..} = do
         -- Net payable to driver: sum of RideRevenueRecognition entries
         revEntries <- getEntriesByReference FinancePrepaid.subscriptionRideReferenceType bookingIdStr
         let netPayable = if null revEntries then Nothing else Just (sum (map (.amount) revEntries))
-        -- All ledger entry IDs for this booking (wallet_transaction_ids)
+        -- All ledger entries for this booking (wallet transactions with referenceType, amount, createdAt)
         allEntries <- concat <$> mapM (\refType -> getEntriesByReference refType bookingIdStr) rideLedgerReferenceTypes
-        let ledgerIds = map (.id.getId) allEntries
+        let walletTransactions =
+              map
+                ( \e ->
+                    Common.WalletTransactionItem
+                      { transactionId = e.id.getId,
+                        referenceType = e.referenceType,
+                        amount = e.amount,
+                        createdAt = e.createdAt
+                      }
+                )
+                allEntries
         let payModeText = show <$> b.paymentMode
         let rideStartedAt' = r.tripStartTime
         let rideCompletedAt' = r.tripEndTime
@@ -316,7 +326,7 @@ buildRideListItem item@QRide.RideItem {..} = do
             netPayable,
             payModeText,
             b.paymentId,
-            ledgerIds,
+            walletTransactions,
             rideStartedAt',
             rideCompletedAt',
             rideCancelledAt',
@@ -399,7 +409,7 @@ buildRideListItem item@QRide.RideItem {..} = do
         paymentMode = paymentModeText,
         paymentStatus = Nothing,
         paymentReferenceInternal,
-        walletTransactionIds,
+        walletTransactions,
         invoiceIds = [],
         bookingStatus
       }
@@ -448,7 +458,7 @@ buildRideListItemV2 QRide.RideItemV2 {..} = do
         paymentMode = Nothing,
         paymentStatus = Nothing,
         paymentReferenceInternal = Nothing,
-        walletTransactionIds = [],
+        walletTransactions = [],
         invoiceIds = []
       }
 

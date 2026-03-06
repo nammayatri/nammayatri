@@ -50,6 +50,7 @@ import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Queries.Account as QAccount
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
+import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvoiceLedgerLink
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExtra
@@ -87,21 +88,21 @@ getFinanceManagementSubscriptionPurchaseList ::
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
-  Maybe Text ->
+  Maybe API.SubscriptionPurchaseStatus ->
   Maybe Text ->
   Maybe UTCTime ->
   Flow API.SubscriptionPurchaseListRes
-getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _amountMin mbDriverId mbFleetOperatorId _mbFrom mbLimit mbOffset _mbStatus mbServiceName mbSubscriptionId _mbTo = do
+getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _amountMin mbDriverId mbFleetOperatorId mbFrom mbLimit mbOffset mbServiceName mbStatus mbSubscriptionId mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let limit = fromMaybe 20 mbLimit
       offset = fromMaybe 0 mbOffset
 
-  -- Parse service name from input or default to YATRI_SUBSCRIPTION
-  let serviceName = fromMaybe DPlan.YATRI_SUBSCRIPTION $ mbServiceName >>= parseServiceName
+  let mbParsedServiceName = mbServiceName >>= parseServiceName
+      mbParsedStatus = fmap castSubscriptionPurchaseStatus mbStatus
 
-  -- Get subscription purchases based on filters
+  -- Get subscription purchases based on filters (subscriptionId is optional)
   subscriptions <- case mbSubscriptionId of
     Just subscriptionId -> do
       QSubscriptionPurchase.findByPrimaryKey (Id subscriptionId) >>= \case
@@ -110,18 +111,21 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
     Nothing -> do
       case (mbDriverId, mbFleetOperatorId) of
         (Just driverId, _) ->
-          fetchSubscriptionsForOwner driverId DSP.DRIVER serviceName limit offset merchantOpCityId
+          fetchSubscriptionsForOwner driverId DSP.DRIVER (fromMaybe DPlan.YATRI_SUBSCRIPTION mbParsedServiceName) mbParsedStatus limit offset merchantOpCityId
         (_, Just fleetOwnerId) ->
-          fetchSubscriptionsForOwner fleetOwnerId DSP.FLEET_OWNER serviceName limit offset merchantOpCityId
+          fetchSubscriptionsForOwner fleetOwnerId DSP.FLEET_OWNER (fromMaybe DPlan.YATRI_SUBSCRIPTION mbParsedServiceName) mbParsedStatus limit offset merchantOpCityId
         _ -> do
-          QSubscriptionPurchase.findAllByMerchantOpCityIdAndServiceNameWithPagination
+          QSubscriptionPurchase.findAllByMerchantOpCityIdWithFilters
             merchantOpCityId
-            serviceName
-            (Just limit)
-            (Just offset)
+            mbParsedServiceName
+            mbParsedStatus
+            mbFrom
+            mbTo
+            mbLimit
+            mbOffset
 
-  -- Build response items
-  items <- mapM (buildSubscriptionPurchaseItem serviceName limit offset) subscriptions
+  -- Build response items (use each subscription's serviceName for plan lookup)
+  items <- mapM (\sub -> buildSubscriptionPurchaseItem sub limit offset) subscriptions
 
   let totalItems = length items
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
@@ -141,21 +145,28 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
     parseServiceName "DASHCAM_RENTAL_OWNED" = Just $ DPlan.DASHCAM_RENTAL DPlan.OWNED
     parseServiceName _ = Nothing
 
-    fetchSubscriptionsForOwner :: Text -> DSP.SubscriptionOwnerType -> DPlan.ServiceNames -> Int -> Int -> (Id DMOC.MerchantOperatingCity) -> Flow [DSP.SubscriptionPurchase]
-    fetchSubscriptionsForOwner ownerId ownerType serviceName limit offset merchantOpCityId = do
-      let _mbStatus = Nothing -- Convert Text to SubscriptionPurchaseStatus if needed
-      -- Use merchantOpCityId filter for proper KV lookup
+    castSubscriptionPurchaseStatus :: API.SubscriptionPurchaseStatus -> DSP.SubscriptionPurchaseStatus
+    castSubscriptionPurchaseStatus = \case
+      API.SubscriptionPending -> DSP.PENDING
+      API.SubscriptionActive -> DSP.ACTIVE
+      API.SubscriptionExpired -> DSP.EXPIRED
+      API.SubscriptionFailed -> DSP.FAILED
+      API.SubscriptionExhausted -> DSP.EXHAUSTED
+
+    fetchSubscriptionsForOwner :: Text -> DSP.SubscriptionOwnerType -> DPlan.ServiceNames -> Maybe DSP.SubscriptionPurchaseStatus -> Int -> Int -> (Id DMOC.MerchantOperatingCity) -> Flow [DSP.SubscriptionPurchase]
+    fetchSubscriptionsForOwner ownerId ownerType serviceName mbStatusVal limit offset merchantOpCityId = do
       QSubscriptionPurchase.findAllByOwnerAndServiceNameWithPagination'
         merchantOpCityId
         ownerId
         ownerType
         serviceName
-        _mbStatus
+        mbStatusVal
         (Just limit)
         (Just offset)
 
-    buildSubscriptionPurchaseItem :: DPlan.ServiceNames -> Int -> Int -> DSP.SubscriptionPurchase -> Flow API.SubscriptionPurchaseListItem
-    buildSubscriptionPurchaseItem serviceName _limit _offset subscription = do
+    buildSubscriptionPurchaseItem :: DSP.SubscriptionPurchase -> Int -> Int -> Flow API.SubscriptionPurchaseListItem
+    buildSubscriptionPurchaseItem subscription _limit _offset = do
+      let serviceName = subscription.serviceName
       -- Get plan details
       plan <-
         CQPlan.findByIdAndPaymentModeWithServiceName subscription.planId DPlan.MANUAL serviceName >>= \case
@@ -232,13 +243,9 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
       -- Get revenue recognized
       revenueRecognized <- calculateRevenueRecognized subscription.id
 
-      -- Get linked rides and usage details
+      -- Get linked rides with rideId, bookingId, rideCreatedAt, rideSubscriptionDebitAmount
       rides <- QRide.findAllBySubscriptionPurchaseId subscription.id
-      let linkedRideIds = map (\r -> r.id.getId) rides
-      let linkedBookingIds = map (\r -> r.bookingId.getId) rides
-
-      -- Build ride usage details
-      rideUsageDetails <- mapM buildRideUsageDetail rides
+      linkedRides <- mapM buildLinkedRideItem rides
 
       pure $
         API.SubscriptionPurchaseListItem
@@ -275,9 +282,7 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
             utilizedValue = Just utilizedValue,
             remainingValue = Just remainingValue,
             revenueRecognized = Just revenueRecognized,
-            linkedRideIds = linkedRideIds,
-            linkedBookingIds = linkedBookingIds,
-            rideUsageDetails = rideUsageDetails,
+            linkedRides = linkedRides,
             createdAt = Just subscription.createdAt,
             updatedAt = Just subscription.updatedAt
           }
@@ -317,18 +322,18 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity _amountMax _
 
       pure revenue
 
-    buildRideUsageDetail :: DRide.Ride -> Flow API.RideUsageDetail
-    buildRideUsageDetail ride = do
-      -- Get deducted amount from ledger entries for this ride's booking
+    buildLinkedRideItem :: DRide.Ride -> Flow API.LinkedRideItem
+    buildLinkedRideItem ride = do
+      -- Fetch RideSubscriptionDebit entries from finance_ledger_entry: rideId -> bookingId -> reference_type=RideSubscriptionDebit, reference_id=bookingId
       entries <- QLedgerEntry.findByReference "RideSubscriptionDebit" ride.bookingId.getId
-      let deductedAmount = sum $ map (.amount) entries
+      let rideSubscriptionDebitAmount = sum $ map (.amount) entries
 
       pure $
-        API.RideUsageDetail
-          { bookingId = ride.bookingId.getId,
-            rideId = ride.id.getId,
-            rideDate = ride.createdAt,
-            deductedAmount = deductedAmount
+        API.LinkedRideItem
+          { rideId = ride.id.getId,
+            bookingId = ride.bookingId.getId,
+            rideCreatedAt = ride.createdAt,
+            rideSubscriptionDebitAmount = rideSubscriptionDebitAmount
           }
 
 -- | Get invoice list with filters
@@ -337,18 +342,18 @@ getFinanceManagementInvoiceList ::
   Context.City ->
   Maybe UTCTime ->
   Maybe Text ->
-  Maybe Text ->
+  Maybe FinanceInvoice.InvoiceType ->
   Maybe Int ->
   Maybe Int ->
-  Maybe Text ->
+  Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow API.InvoiceListRes
-getFinanceManagementInvoiceList merchantShortId opCity _mbFrom mbInvoiceId _mbInvoiceType mbLimit mbOffset _mbStatus _mbTo = do
+getFinanceManagementInvoiceList merchantShortId opCity mbFrom mbInvoiceId mbInvoiceType mbLimit mbOffset mbStatus mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
-  _merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
-  let _limit = fromMaybe 20 mbLimit
-      _offset = fromMaybe 0 mbOffset
+  let limit = fromMaybe 20 mbLimit
+      offset = fromMaybe 0 mbOffset
 
   -- Get invoices based on filters
   invoices <- case mbInvoiceId of
@@ -357,8 +362,14 @@ getFinanceManagementInvoiceList merchantShortId opCity _mbFrom mbInvoiceId _mbIn
         Just inv -> pure [inv]
         Nothing -> pure []
     Nothing -> do
-      -- TODO: Need query to fetch all invoices with filters
-      pure []
+      QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
+        merchantOpCityId.getId
+        mbFrom
+        mbTo
+        mbInvoiceType
+        mbStatus
+        (Just limit)
+        (Just offset)
 
   -- Build response items
   items <- mapM buildInvoiceItem invoices
@@ -508,7 +519,17 @@ getFinanceManagementReconciliation :: ShortId DM.Merchant -> Context.City -> May
 getFinanceManagementReconciliation = getReconciliation
 
 -- Aliases for generated API (Dashboard Management uses FinanceInvoiceList / FinanceReconciliation naming)
-getFinanceManagementFinanceInvoiceList :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe UTCTime -> Flow API.InvoiceListRes
+getFinanceManagementFinanceInvoiceList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Maybe FinanceInvoice.InvoiceType ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe FinanceInvoice.InvoiceStatus ->
+  Maybe UTCTime ->
+  Flow API.InvoiceListRes
 getFinanceManagementFinanceInvoiceList = getFinanceManagementInvoiceList
 
 getFinanceManagementFinanceReconciliation :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe UTCTime -> Flow API.ReconciliationRes

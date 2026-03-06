@@ -3,11 +3,12 @@
 
 module Lib.Finance.Domain.Types.Invoice where
 
-import qualified Data.Aeson
+import Data.Aeson
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 
 data Invoice = Invoice
   { createdAt :: Kernel.Prelude.UTCTime,
@@ -44,6 +45,10 @@ data Invoice = Invoice
 data InvoiceStatus = Draft | Issued | Paid | PartiallyPaid | Cancelled | Voided deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data InvoiceType = SubscriptionPurchase | Ride | RideCancellation deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum (''InvoiceStatus))
+
+$(mkHttpInstancesForEnum (''InvoiceType))
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''InvoiceStatus))
 

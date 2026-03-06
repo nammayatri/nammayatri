@@ -135,7 +135,16 @@ data DriverInfoRes = DriverInfoRes
     lastOfflineTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     onboardingAs :: Kernel.Prelude.Maybe OnboardingAs,
     activeFleetInfo :: Kernel.Prelude.Maybe DriverAssociationInfo,
-    operatorInfo :: Kernel.Prelude.Maybe DriverAssociationInfo
+    operatorInfo :: Kernel.Prelude.Maybe DriverAssociationInfo,
+    panAadhaarLinkedFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    gstinApplicableFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    tdsApplicableFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    walletId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankAccountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankIfsc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankVerificationStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    upiId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

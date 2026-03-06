@@ -389,7 +389,7 @@ data RideListItem = RideListItem
     paymentMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentReferenceInternal :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    walletTransactionIds :: [Kernel.Prelude.Text],
+    walletTransactions :: [WalletTransactionItem],
     invoiceIds :: [Kernel.Prelude.Text],
     bookingStatus :: BookingStatus
   }
@@ -436,7 +436,7 @@ data RideListItemV2 = RideListItemV2
     paymentMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentReferenceInternal :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    walletTransactionIds :: [Kernel.Prelude.Text],
+    walletTransactions :: [WalletTransactionItem],
     invoiceIds :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
@@ -497,6 +497,10 @@ newtype TicketRideListRes = TicketRideListRes {rides :: [RideInfo]}
   deriving anyclass (ToSchema)
 
 data WaiverRideCancellationPenaltyReq = WaiverRideCancellationPenaltyReq {reason :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletTransactionItem = WalletTransactionItem {transactionId :: Kernel.Prelude.Text, referenceType :: Kernel.Prelude.Text, amount :: Kernel.Types.Common.HighPrecMoney, createdAt :: Kernel.Prelude.UTCTime}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
