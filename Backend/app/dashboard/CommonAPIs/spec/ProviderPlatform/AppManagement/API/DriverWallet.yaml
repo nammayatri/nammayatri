@@ -6,6 +6,7 @@ imports:
   PlanSubscribeRes: Domain.Action.UI.Plan
   APISuccess: Kernel.Types.APISuccess
   PayoutRequestStatus: Lib.Payment.Domain.Types.PayoutRequest
+  HighPrecMoney: Kernel.Types.Common
 
 importPackageOverrides:
   API.Types.UI.DriverWallet: "dynamic-offer-driver-app"
@@ -42,6 +43,15 @@ apis:
         type: TopUpRequest
       response:
         type: PlanSubscribeRes
+  - POST:
+      endpoint: /wallet/{driverId}/airportCashRecharge
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: AirportCashRechargeRequest
+      response:
+        type: APISuccess
   - GET:
       endpoint: /wallet/{driverId}/payoutHistory
       auth: ApiAuthV2
@@ -56,4 +66,7 @@ apis:
       response:
         type: PayoutHistoryResponse
 
-types: {}
+types:
+  AirportCashRechargeRequest:
+    amount: HighPrecMoney
+    referenceId: Text

@@ -30,7 +30,8 @@ data GateInfoFull = GateInfoFull
     canQueueUpOnGate :: Bool,
     gateType :: GateType,
     gateTags :: Maybe [Text],
-    walkDescription :: Maybe Text
+    walkDescription :: Maybe Text,
+    entryFeeAmount :: Maybe Double
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -52,6 +53,7 @@ data GateInfo = GateInfo
     merchantId :: Maybe (Id Merchant),
     merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
     gateTags :: Maybe [Text],
-    walkDescription :: Maybe Text
+    walkDescription :: Maybe Text,
+    entryFeeAmount :: Maybe Double
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

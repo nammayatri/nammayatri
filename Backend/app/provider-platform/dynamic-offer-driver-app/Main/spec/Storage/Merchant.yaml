@@ -911,6 +911,7 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     TaxConfig:
       rideGst: GstBreakup
+      airportEntryFeeGst: Maybe GstBreakup
       securityDepositGst: Maybe GstBreakup
       defaultTdsRate: Maybe Double
       subscriptionTdsRate: Maybe Double
@@ -1186,6 +1187,7 @@ TransporterConfig:
     reconciliationSchedulerTime: Maybe Seconds # Time of day to run reconciliation job (in seconds from midnight IST), e.g., 10800 = 3:00 AM IST
     enableScheduleReallocation: Maybe Bool
     enableCoinsToDirectPayout: Maybe Bool
+    airportEntryFeeEnabled: Maybe Bool
 
   beamType:
     currency: Maybe Currency

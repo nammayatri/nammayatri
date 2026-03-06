@@ -70,12 +70,14 @@ data BookingT f = BookingT
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    pickupGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     primaryExophone :: B.C f Kernel.Prelude.Text,
     providerId :: B.C f Kernel.Prelude.Text,
     quoteId :: B.C f Kernel.Prelude.Text,
     receiverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     receiverName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     receiverPrimaryExophone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    reconciliationStatus :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     riderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     riderName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -102,8 +104,7 @@ data BookingT f = BookingT
     vehicleVariant :: B.C f Domain.Types.Common.ServiceTierType,
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    reconciliationStatus :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)
+    vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)
 

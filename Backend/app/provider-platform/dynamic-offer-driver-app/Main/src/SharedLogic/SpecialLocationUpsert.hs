@@ -253,7 +253,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             createdAt = now,
             updatedAt = now,
             gateTags = gateInfoGateTags,
-            walkDescription = gateInfoWalkDescription
+            walkDescription = gateInfoWalkDescription,
+            entryFeeAmount = Nothing
           }
   return (city, locationName, (specialLocation, gateInfo), pickupPriority, dropPriority, mbSpecialLocationId)
 

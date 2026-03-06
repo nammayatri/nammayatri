@@ -44,6 +44,7 @@ import Domain.Types
 import Domain.Types.BapMetadata
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Extra.ConditionalCharges as DAC
+import Domain.Types.FareParameters ()
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -83,6 +84,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import SharedLogic.AirportEntryFee ()
 import SharedLogic.BlockedRouteDetector
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
@@ -700,16 +702,17 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           merchantOperatingCityId = Just merchantOpCityId,
           mbAdditonalChargeCategories = Nothing,
           numberOfLuggages = searchRequest.numberOfLuggages,
-          govtChargesRate = Just transporterConfig.taxConfig.rideGst
+          govtChargesRate = Just transporterConfig.taxConfig.rideGst,
+          pickupGateId = searchRequest.pickupGateId
         }
+  let estimatedFare = fareSum fareParams (Just [])
   quoteId <- Id <$> generateGUID
   void $ cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
   now <- getCurrentTime
-  let estimatedFare = fareSum fareParams (Just [])
-      estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
   -- Keeping quote expiry as search request expiry. Slack discussion: https://juspay.slack.com/archives/C0139KHBFU1/p1683349807003679
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
+      estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
       isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
   pure
     DQuote.Quote
@@ -790,27 +793,30 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               merchantOperatingCityId = Just merchantOperatingCityId,
               mbAdditonalChargeCategories = Nothing,
               numberOfLuggages = mbSearchReq >>= (.numberOfLuggages),
-              govtChargesRate = Just transporterConfig.taxConfig.rideGst
+              govtChargesRate = Just transporterConfig.taxConfig.rideGst,
+              pickupGateId = mbSearchReq >>= (.pickupGateId)
             }
     fareParamsMax <- FCV2.calculateFareParametersV2 params
     fareParamsMin <-
       if isAmbulanceEstimate
-        then FCV2.calculateFareParametersV2 params {vehicleAge = Just 100000} -- high value
+        then FCV2.calculateFareParametersV2 params {SharedLogic.FareCalculator.vehicleAge = Just 100000} -- high value
         else return fareParamsMax
     return (fareParamsMin, fareParamsMax)
-  let businessDiscount = if isJust fullFarePolicy.businessDiscountPercentage then fullFarePolicy.businessDiscountPercentage >>= computeRideDiscount maxFareParams.fareParametersDetails maxFareParams.baseFare maxFareParams.congestionCharge maxFareParams.nightShiftCharge maxFareParams.stopCharges else Nothing
-  let personalDiscount = if isJust fullFarePolicy.personalDiscountPercentage then fullFarePolicy.personalDiscountPercentage >>= computeRideDiscount maxFareParams.fareParametersDetails maxFareParams.baseFare maxFareParams.congestionCharge maxFareParams.nightShiftCharge maxFareParams.stopCharges else Nothing
+  let minFareParams' = minFareParams
+      maxFareParams' = maxFareParams
+  let businessDiscount = if isJust fullFarePolicy.businessDiscountPercentage then fullFarePolicy.businessDiscountPercentage >>= computeRideDiscount maxFareParams'.fareParametersDetails maxFareParams'.baseFare maxFareParams'.congestionCharge maxFareParams'.nightShiftCharge maxFareParams'.stopCharges else Nothing
+  let personalDiscount = if isJust fullFarePolicy.personalDiscountPercentage then fullFarePolicy.personalDiscountPercentage >>= computeRideDiscount maxFareParams'.fareParametersDetails maxFareParams'.baseFare maxFareParams'.congestionCharge maxFareParams'.nightShiftCharge maxFareParams'.stopCharges else Nothing
   estimateId <- Id <$> generateGUID
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
-  commissionCharges <- FCV2.calculateCommission minFareParams (Just fullFarePolicy)
+  commissionCharges <- FCV2.calculateCommission minFareParams' (Just fullFarePolicy)
   let pickupChargesMaxx = case fullFarePolicy.farePolicyDetails of
         DFP.ProgressiveDetails progressiveDetails ->
           if progressiveDetails.pickupCharges.pickupChargesMin == progressiveDetails.pickupCharges.pickupChargesMax then 0 else progressiveDetails.pickupCharges.pickupChargesMax - progressiveDetails.pickupCharges.pickupChargesMin
         _ -> 0
   let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
-      minFare = fareSum minFareParams (Just []) + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
-      maxFare = fareSum maxFareParams (Just []) + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds + pickupChargesMaxx
+      minFare = fareSum minFareParams' (Just []) + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
+      maxFare = fareSum maxFareParams' (Just []) + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds + pickupChargesMaxx
   let isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
   pure
     DEst.Estimate
@@ -824,7 +830,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         estimatedDuration = maybe Nothing (.estimatedDuration) mbSearchReq,
         fromLocGeohash = maybe Nothing (.fromLocGeohash) mbSearchReq,
         currency,
-        fareParams = Just maxFareParams, -- Todo: fix it
+        fareParams = Just maxFareParams',
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         tipOptions = fullFarePolicy.tipOptions,
         specialLocationTag = specialLocationTag,

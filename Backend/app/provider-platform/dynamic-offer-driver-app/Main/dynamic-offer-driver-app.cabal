@@ -407,6 +407,7 @@ library
       Lib.DriverScore.Types
       Lib.LocationUpdates
       Lib.Schema
+      SharedLogic.AirportEntryFee
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.Cautio.InstallationStatus
       SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg

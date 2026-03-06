@@ -26,7 +26,6 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
-import qualified Data.Aeson as A
 import qualified Data.Tuple.Extra as Tuple
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Driver as DADriver
@@ -72,7 +71,20 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Finance.Invoice.Interface (GstAmountBreakdown (..))
+import Lib.Finance
+  ( AccountRole (OwnerLiability, PlatformAsset),
+    GstAmountBreakdown (..),
+    InvoiceConfig (..),
+    InvoiceLineItem (..),
+    getEntriesByReference,
+    invoice,
+    runFinance,
+    transfer,
+  )
+import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
+import Lib.Finance.Domain.Types.Account ()
+import Lib.Finance.Ledger.Service ()
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -116,6 +128,7 @@ import Tools.Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.PaymentNudge as PaymentNudge
 import Utils.Common.Cac.KeyNameConstants
+import Domain.Action.UI.DriverWallet (mkDriverWalletFinanceCtx)
 
 -- create order -----------------------------------------------------
 createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
@@ -351,34 +364,8 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
             QOrder.updateVpa order.id mbVpa
             when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId
           when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
-            when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP && transactionStatus == Payment.CHARGED) $ do
-              let driverFeeIds = (.driverFeeId) <$> invoices
-              driverFees <- QDF.findAllByDriverFeeIds driverFeeIds
-              let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
-              forM_ nonClearedDriverFees $ \driverFee -> do
-                Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driver.id.getId) 10 10 $ do
-                  let metadata =
-                        A.object
-                          [ "driverPayable" A..= driverFee.totalEarnings,
-                            "driverFeeId" A..= driverFee.id.getId
-                          ]
-                  _ <-
-                    createWalletEntryDelta
-                      counterpartyDriver
-                      driver.id.getId
-                      driverFee.totalEarnings
-                      driverFee.currency
-                      merchantId.getId
-                      driver.merchantOperatingCityId.getId
-                      walletReferenceTopup
-                      driverFee.id.getId
-                      (Just metadata)
-                      >>= fromEitherM (\err -> InternalError ("Failed to create wallet topup entry: " <> show err))
-                  pure ()
-                  QDF.updateStatusByIds CLEARED [driverFee.id] now
-                  let notificationTitle = "Wallet Top-up Successful"
-                      notificationMessage = "Your wallet has been topped up with Rs." <> show driverFee.totalEarnings
-                  sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
+            when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP) $
+              processWalletTopupWebhook driver order transactionStatus
             unless (transactionStatus /= Payment.CHARGED) $ do
               processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
             notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
@@ -405,6 +392,40 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     Payment.BadStatusResp -> pure ()
   pure Ack
   where
+    processWalletTopupWebhook ::
+      ( BeamFlow m r,
+        CacheFlow m r,
+        EsqDBFlow m r,
+        MonadFlow m
+      ) =>
+      DP.Person ->
+      DOrder.PaymentOrder ->
+      Payment.TransactionStatus ->
+      m ()
+    processWalletTopupWebhook driver order transactionStatus = do
+      when (transactionStatus == Payment.CHARGED) $ do
+        existing <- getEntriesByReference walletReferenceTopup (order.id.getId)
+        when (null existing) $ do
+          ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId)
+          let topupInvoiceConfig =
+                InvoiceConfig
+                  { invoiceType = FinanceInvoice.SubscriptionPurchase,
+                    issuedToType = "DRIVER",
+                    issuedToId = order.personId.getId,
+                    issuedToName = Nothing,
+                    issuedToAddress = Nothing,
+                    lineItems = [InvoiceLineItem {description = "Wallet Top-up", quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False}],
+                    gstBreakdown = Nothing
+                  }
+          result <- runFinance ctx $ do
+            _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup
+            invoice topupInvoiceConfig
+          void $ fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e)) result
+          let notificationTitle = "Wallet Top-up Successful"
+              notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
+          sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
+      QOrder.updateStatus order.id order.paymentServiceOrderId transactionStatus
+
     getInvoicesAndServiceWithServiceConfigByOrderId ::
       (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) =>
       DOrder.PaymentOrder ->
@@ -436,11 +457,11 @@ processPayment ::
 processPayment merchantId driver orderId sendNotification (serviceName, subsConfig) invoices = do
   transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  let invoice = listToMaybe invoices
+  let mbInvoice = listToMaybe invoices
   let driverFeeIds = (.driverFeeId) <$> invoices
   Redis.whenWithLockRedis (paymentProcessingLockKey driver.id.getId) 60 $ do
-    when ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (invoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
-      maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS) (Just now)) (invoice <&> (.driverFeeId))
+    when ((mbInvoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (mbInvoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
+      maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS) (Just now)) (mbInvoice <&> (.driverFeeId))
     Redis.whenWithLockRedis (DADriver.mkPayoutLockKeyByDriverAndService driver.id serviceName) 60 $ do
       driverFees <- QDF.findAllByDriverFeeIds driverFeeIds
       let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees

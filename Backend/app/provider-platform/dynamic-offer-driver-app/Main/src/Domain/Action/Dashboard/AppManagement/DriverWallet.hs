@@ -2,10 +2,12 @@ module Domain.Action.Dashboard.AppManagement.DriverWallet
   ( getDriverWalletWalletTransactions,
     postDriverWalletWalletPayout,
     postDriverWalletWalletTopup,
-    getDriverWalletWalletPayoutHistory,
+    postDriverWalletWalletAirportCashRecharge,
+    getDriverWalletWalletPayoutHistory
   )
 where
 
+import qualified API.Types.Dashboard.AppManagement.DriverWallet as DDashboardDriverWallet
 import qualified API.Types.UI.DriverWallet as DriverWallet
 import qualified Domain.Action.UI.DriverWallet as DDriverWallet
 import qualified Domain.Action.UI.Plan as Plan
@@ -52,6 +54,18 @@ postDriverWalletWalletTopup merchantShortId opCity driverId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Kernel.Prelude.Nothing merchant (Kernel.Prelude.Just opCity)
   DDriverWallet.postWalletTopup (Kernel.Prelude.Just driverId, merchant.id, merchantOpCityId) req
+
+postDriverWalletWalletAirportCashRecharge ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id DP.Person ->
+  DDashboardDriverWallet.AirportCashRechargeRequest ->
+  Environment.Flow APISuccess.APISuccess
+postDriverWalletWalletAirportCashRecharge merchantShortId opCity driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Kernel.Prelude.Nothing merchant (Kernel.Prelude.Just opCity)
+  DDriverWallet.recordAirportCashRecharge (driverId, merchant.id, merchantOpCityId) req.amount req.referenceId
+  Kernel.Prelude.pure APISuccess.Success
 
 getDriverWalletWalletPayoutHistory ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

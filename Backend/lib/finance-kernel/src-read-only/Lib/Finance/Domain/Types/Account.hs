@@ -3,6 +3,7 @@
 
 module Lib.Finance.Domain.Types.Account where
 
+import Data.Aeson
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -37,6 +38,7 @@ data CounterpartyType
   | GOVERNMENT_INDIRECT
   | PG_PAYMENT_JUSPAY
   | PG_PAYOUT_JUSPAY
+  | AIRPORT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''AccountType))
