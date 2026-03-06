@@ -34,6 +34,7 @@ imports:
   Seat: Domain.Types.Seat
   SeatLayout: Domain.Types.SeatLayout
   SeatType: Domain.Types.Seat
+  Person: Domain.Types.Person
 
 module: FRFSTicketService
 types:
@@ -306,6 +307,23 @@ types:
   ActiveRouteRes:
     routeId: Text
     lastScheduleTime: Text
+  PassengerInfo:
+    personId: Id Person
+    name: Text
+    phone: Text
+    bookingId: Id FRFSTicketBooking
+    checkedIn: Bool
+    derive: "Show"
+
+  PassengerStopManifest:
+    stopCode: Text
+    boardingPassengers: "[PassengerInfo]"
+    alightingPassengers: "[PassengerInfo]"
+    derive: "Show"
+
+  FRFSTripPassengerManifestResp:
+    manifest: "[PassengerStopManifest]"
+    derive: "Show"
 
 apis:
   # Get FRFS Config
@@ -544,8 +562,10 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
   - GET:
       endpoint: /frfs/trip/{tripId}/route/{routeId}/seats
+      auth: TokenAuth
       params:
         tripId: Text
         routeId: Text
@@ -558,6 +578,7 @@ apis:
 
   - GET:
       endpoint: /frfs/route/{routeId}/seatLayout
+      auth: TokenAuth
       params:
         routeId: Text
       query:
@@ -573,3 +594,12 @@ apis:
         vehicleType: VehicleCategory
       response:
         type: "[API.Types.UI.FRFSTicketService.ActiveRouteRes]"
+
+  - GET:
+      endpoint: /frfs/trip/{tripId}/route/{routeId}/manifest
+      auth: TokenAuth
+      params:
+        tripId: Text
+        routeId: Text
+      response:
+        type: FRFSTripPassengerManifestResp

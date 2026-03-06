@@ -33,6 +33,10 @@ getRouteBusSchedule :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDur
 getRouteBusSchedule baseUrl gtfsId routeId = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiBusRouteSchedule gtfsId routeId) "getRouteBusSchedule" NandiAPI.nandiBusRouteScheduleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_BUS_ROUTE_SCHEDULE_API") baseUrl)
 
+getBusTripSchedule :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Int -> Text -> m BusScheduleDetails
+getBusTripSchedule baseUrl gtfsId waybillNo tripNumber routeId = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiBusTripSchedule gtfsId waybillNo tripNumber routeId) "getBusTripSchedule" NandiAPI.nandiBusTripScheduleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_BUS_TRIP_SCHEDULE_API") baseUrl)
+
 getRouteByFuzzySearch :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m [RouteInfoNandi]
 getRouteByFuzzySearch baseUrl gtfsId query = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiRouteFuzzySearch gtfsId query) "getRouteByFuzzySearch" NandiAPI.nandiRouteFuzzySearchAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTE_FUZZY_SEARCH_API") baseUrl)

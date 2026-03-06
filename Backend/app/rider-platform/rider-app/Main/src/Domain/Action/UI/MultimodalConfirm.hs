@@ -2403,7 +2403,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails ::
     API.Types.UI.MultimodalConfirm.OnboardedVehicleDetailsReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) journeyId legOrder _subLegOrder req = do
+postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder _subLegOrder req = do
   let vehicleNumber = req.vehicleNumber
   mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
   journey <- JM.getJourney journeyId
@@ -2450,7 +2450,18 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
     Nothing -> logError $ "Vehicle " <> vehicleLiveRouteInfo.vehicleNumber <> " not found on any route " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking."
 
   let mbNewRouteCode = (vehicleLiveRouteInfo.routeCode,) <$> (listToMaybe journeyLeg.routeDetails) -- doing list to maybe as onluy need from and to stop codes, which will be same in all tickets
-  updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode vehicleLiveRouteInfo
+  qrDataList <- updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode vehicleLiveRouteInfo
+  merchantOperatingCity <- CQMOC.findById journey.merchantOperatingCityId >>= fromMaybeM (InvalidRequest "MerchantOperatingCity not found")
+  let frfsVehicleCategory =
+        case journeyLeg.mode of
+          DTrip.Bus -> Spec.BUS
+          DTrip.Metro -> Spec.METRO
+          DTrip.Subway -> Spec.SUBWAY
+          _ -> Spec.BUS
+  forM_ qrDataList $ \qrData -> do
+    let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
+    void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) Nothing merchantOperatingCity.city frfsVehicleCategory verifyReq
+
   QJourneyLeg.updateByPrimaryKey $
     journeyLeg
       { DJourneyLeg.finalBoardedBusNumber = Just vehicleLiveRouteInfo.vehicleNumber,
@@ -2528,11 +2539,12 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
                 _ -> do
                   pure newTicket
           )
-      void $
+      qrDataList <-
         mapConcurrently
           ( \ticketPayload -> do
               qrData <- DirectExternalBPP.generateQR integratedBPPConfig ticketPayload
               QFRFSTicket.udpateQrDataAndValidTill qrData ticketPayload.expiryIST ticketBookingId ticketPayload.ticketNumber
+              pure qrData
           )
           updatedTickets
       case updatedTickets of
@@ -2540,6 +2552,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         (ticket : _) -> do
           let newJourneyExpiry = addUTCTime (-19800) ticket.expiryIST
           QJourney.updateJourneyExpiryTime journey.id $ fromMaybe newJourneyExpiry (max journey.journeyExpiryTime . Just $ newJourneyExpiry)
+      pure qrDataList
 
     tryGettingArray action = do
       resp <- withTryCatch "action:tryGettingArray" action

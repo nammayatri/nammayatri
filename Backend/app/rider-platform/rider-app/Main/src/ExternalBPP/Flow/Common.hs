@@ -26,6 +26,7 @@ import qualified Kernel.Storage.Esqueleto.Config as DB
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
@@ -192,11 +193,29 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
 
 confirm :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> Maybe Bool -> m DOrder
 confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode = do
-  let qrTtl =
+  let baseQrTtl =
         case booking.vehicleType of
           Spec.BUS -> Seconds $ if (fromMaybe False mbIsSingleMode) then frfsConfig.busStationTtl.getSeconds else 2 * frfsConfig.busStationTtl.getSeconds
           Spec.METRO -> Seconds frfsConfig.metroStationTtl
           _ -> Seconds frfsConfig.metroStationTtl
+  qrTtl <- case (booking.vehicleType, booking.tripId, booking.routeCode) of
+    (Spec.BUS, Just tripId, Just routeCode) -> do
+      let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId tripId
+      mbSchedule <- withTryCatch "getBusTripSchedule_confirm" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
+      case mbSchedule of
+        Right [] -> return baseQrTtl
+        Right (firstSchedule : _) -> do
+          case find (\eta -> eta.stopCode == booking.fromStationCode) firstSchedule.eta of
+            Just boardingStopEta -> do
+              currentTime <- getCurrentTime
+              let extraTtlSeconds = (nominalDiffTimeToSeconds $ diffUTCTime boardingStopEta.arrivalTime currentTime).getSeconds
+              let addedTtl = max extraTtlSeconds 0
+              return $ Seconds (baseQrTtl.getSeconds + addedTtl)
+            Nothing -> return baseQrTtl
+        Left err -> do
+          logError $ "Failed to fetch bus trip schedule: " <> show err
+          return baseQrTtl
+    _ -> return baseQrTtl
   order <- CallAPI.createOrder integratedBPPConfig qrTtl (mRiderName, mRiderNumber) booking quoteCategories
   let tickets =
         map

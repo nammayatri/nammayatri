@@ -1822,3 +1822,14 @@ getRouteStopIndices routeCode fromStationCode toStationCode integratedBppConfig 
         mToIdx =
           findIndex (\s -> s.stopCode == toStationCode) sortedStops
     pure $ (,) <$> mFromIdx <*> mToIdx
+
+getWaybillNoAndTripNoFromTripId :: T.Text -> (T.Text, Int)
+getWaybillNoAndTripNoFromTripId tripId =
+  case T.splitOn "-" tripId of
+    [waybillNo, tripNoTxt] ->
+      (waybillNo, fromMaybe 0 (readMaybe $ T.unpack tripNoTxt))
+    _ -> (tripId, 0)
+
+makeTripIdFromWaybillNoAndTripNo :: T.Text -> Int -> T.Text
+makeTripIdFromWaybillNoAndTripNo waybillNo tripNo =
+  waybillNo <> "-" <> T.pack (show tripNo)

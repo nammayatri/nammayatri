@@ -13,3 +13,9 @@ ALTER TABLE atlas_app.seat ADD COLUMN seat_type text ;
 ALTER TABLE atlas_app.seat ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.seat ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.seat ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.seat ADD COLUMN direction_degrees integer  default 0;

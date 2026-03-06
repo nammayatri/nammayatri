@@ -584,8 +584,12 @@ FRFSTicketBooking:
       params: [ondcOnInitReceived, ondcOnInitReceivedAt, updatedAt]
       where: id
 
+  extraIndexes:
+    - columns: [tripId]
+
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 # Make use of FareBreakup to store the fare breakup of a ticket
 
 # Get transaction_id from Payment Transaction table
@@ -653,6 +657,9 @@ FRFSTicket:
       params: [qrData, qrRefreshAt]
       where:
         and: [frfsTicketBookingId, ticketNumber]
+
+  extraOperations:
+    - GENERATE_INDEXES
 
 FRFSTicketBookingPayment:
   tableName: frfs_ticket_booking_payment

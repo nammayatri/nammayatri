@@ -49,9 +49,9 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     fromStationName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     fromStationLat :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
     fromStationLon :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    fromStopIdx :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    fromStopIdx :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     googleWalletJWTUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    holdId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    holdId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     id :: (B.C f Kernel.Prelude.Text),
     integratedBppConfigId :: (B.C f Kernel.Prelude.Text),
     isBookingCancellable :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
@@ -90,10 +90,10 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     toStationName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     toStationLat :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
     toStationLon :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    toStopIdx :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    toStopIdx :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
     price :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    tripId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    tripId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     validTill :: (B.C f Kernel.Prelude.UTCTime),
     vehicleNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
@@ -108,6 +108,6 @@ instance B.Table FRFSTicketBookingT where
 
 type FRFSTicketBooking = FRFSTicketBookingT Identity
 
-$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['quoteId], ['riderId], ['searchId]])
+$(enableKVPG (''FRFSTicketBookingT) [('id)] [[('bppOrderId)], [('quoteId)], [('riderId)], [('searchId)]])
 
-$(mkTableInstances ''FRFSTicketBookingT "frfs_ticket_booking")
+$(mkTableInstances (''FRFSTicketBookingT) "frfs_ticket_booking")
