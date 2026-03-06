@@ -149,3 +149,8 @@ transitOperatorGetWaybillsUtil :: ShortId Merchant -> Context.City -> BecknSpec.
 transitOperatorGetWaybillsUtil merchantShortId city vehicleCategory limit offset = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorWaybills baseUrl gtfsId limit offset
+
+transitOperatorQueryRowsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> NandiTable -> QueryBody -> Flow [NandiRow]
+transitOperatorQueryRowsUtil merchantShortId city vehicleCategory table body = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorQueryRows baseUrl gtfsId table body

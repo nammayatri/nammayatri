@@ -15,7 +15,7 @@ import Servant
 import Servant.Client
 import qualified "this" SharedLogic.External.Nandi.Types
 
-type API = ("transitOperator" :> (TransitOperatorGetRow :<|> TransitOperatorGetAllRows :<|> TransitOperatorDeleteRow :<|> TransitOperatorUpsertRow :<|> TransitOperatorGetServiceTypes :<|> TransitOperatorGetRoutes :<|> TransitOperatorGetDepots :<|> TransitOperatorGetShiftTypes :<|> TransitOperatorGetScheduleNumbers :<|> TransitOperatorGetDayTypes :<|> TransitOperatorGetTripTypes :<|> TransitOperatorGetBreakTypes :<|> TransitOperatorGetTripDetails :<|> TransitOperatorGetFleets :<|> TransitOperatorGetConductor :<|> TransitOperatorGetDriver :<|> TransitOperatorGetDeviceIds :<|> TransitOperatorGetTabletIds :<|> TransitOperatorGetOperators :<|> TransitOperatorUpdateWaybillStatus :<|> TransitOperatorUpdateWaybillFleet :<|> TransitOperatorUpdateWaybillTablet :<|> TransitOperatorGetWaybills))
+type API = ("transitOperator" :> (TransitOperatorGetRow :<|> TransitOperatorGetAllRows :<|> TransitOperatorDeleteRow :<|> TransitOperatorUpsertRow :<|> TransitOperatorQueryRows :<|> TransitOperatorGetServiceTypes :<|> TransitOperatorGetRoutes :<|> TransitOperatorGetDepots :<|> TransitOperatorGetShiftTypes :<|> TransitOperatorGetScheduleNumbers :<|> TransitOperatorGetDayTypes :<|> TransitOperatorGetTripTypes :<|> TransitOperatorGetBreakTypes :<|> TransitOperatorGetTripDetails :<|> TransitOperatorGetFleets :<|> TransitOperatorGetConductor :<|> TransitOperatorGetDriver :<|> TransitOperatorGetDeviceIds :<|> TransitOperatorGetTabletIds :<|> TransitOperatorGetOperators :<|> TransitOperatorUpdateWaybillStatus :<|> TransitOperatorUpdateWaybillFleet :<|> TransitOperatorUpdateWaybillTablet :<|> TransitOperatorGetWaybills))
 
 type TransitOperatorGetRow =
   ( "row" :> QueryParam "column" Kernel.Prelude.Text :> MandatoryQueryParam "table" SharedLogic.External.Nandi.Types.NandiTable
@@ -52,6 +52,17 @@ type TransitOperatorUpsertRow =
            BecknV2.OnDemand.Enums.VehicleCategory
       :> ReqBody '[JSON] Data.Aeson.Value
       :> Post '[JSON] SharedLogic.External.Nandi.Types.NandiRow
+  )
+
+type TransitOperatorQueryRows =
+  ( "queryRow" :> MandatoryQueryParam "table" SharedLogic.External.Nandi.Types.NandiTable
+      :> MandatoryQueryParam
+           "vehicleCategory"
+           BecknV2.OnDemand.Enums.VehicleCategory
+      :> ReqBody '[JSON] SharedLogic.External.Nandi.Types.QueryBody
+      :> Post
+           '[JSON]
+           [SharedLogic.External.Nandi.Types.NandiRow]
   )
 
 type TransitOperatorGetServiceTypes = ("serviceTypes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get '[JSON] [SharedLogic.External.Nandi.Types.ServiceType])
@@ -148,6 +159,7 @@ data TransitOperatorAPIs = TransitOperatorAPIs
     transitOperatorGetAllRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRow],
     transitOperatorDeleteRow :: SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp,
     transitOperatorUpsertRow :: SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.NandiRow,
+    transitOperatorQueryRows :: SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.QueryBody -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRow],
     transitOperatorGetServiceTypes :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.ServiceType],
     transitOperatorGetRoutes :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRoute],
     transitOperatorGetDepots :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Depot],
@@ -172,13 +184,14 @@ data TransitOperatorAPIs = TransitOperatorAPIs
 mkTransitOperatorAPIs :: (Client EulerHS.Types.EulerClient API -> TransitOperatorAPIs)
 mkTransitOperatorAPIs transitOperatorClient = (TransitOperatorAPIs {..})
   where
-    transitOperatorGetRow :<|> transitOperatorGetAllRows :<|> transitOperatorDeleteRow :<|> transitOperatorUpsertRow :<|> transitOperatorGetServiceTypes :<|> transitOperatorGetRoutes :<|> transitOperatorGetDepots :<|> transitOperatorGetShiftTypes :<|> transitOperatorGetScheduleNumbers :<|> transitOperatorGetDayTypes :<|> transitOperatorGetTripTypes :<|> transitOperatorGetBreakTypes :<|> transitOperatorGetTripDetails :<|> transitOperatorGetFleets :<|> transitOperatorGetConductor :<|> transitOperatorGetDriver :<|> transitOperatorGetDeviceIds :<|> transitOperatorGetTabletIds :<|> transitOperatorGetOperators :<|> transitOperatorUpdateWaybillStatus :<|> transitOperatorUpdateWaybillFleet :<|> transitOperatorUpdateWaybillTablet :<|> transitOperatorGetWaybills = transitOperatorClient
+    transitOperatorGetRow :<|> transitOperatorGetAllRows :<|> transitOperatorDeleteRow :<|> transitOperatorUpsertRow :<|> transitOperatorQueryRows :<|> transitOperatorGetServiceTypes :<|> transitOperatorGetRoutes :<|> transitOperatorGetDepots :<|> transitOperatorGetShiftTypes :<|> transitOperatorGetScheduleNumbers :<|> transitOperatorGetDayTypes :<|> transitOperatorGetTripTypes :<|> transitOperatorGetBreakTypes :<|> transitOperatorGetTripDetails :<|> transitOperatorGetFleets :<|> transitOperatorGetConductor :<|> transitOperatorGetDriver :<|> transitOperatorGetDeviceIds :<|> transitOperatorGetTabletIds :<|> transitOperatorGetOperators :<|> transitOperatorUpdateWaybillStatus :<|> transitOperatorUpdateWaybillFleet :<|> transitOperatorUpdateWaybillTablet :<|> transitOperatorGetWaybills = transitOperatorClient
 
 data TransitOperatorUserActionType
   = TRANSIT_OPERATOR_GET_ROW
   | TRANSIT_OPERATOR_GET_ALL_ROWS
   | TRANSIT_OPERATOR_DELETE_ROW
   | TRANSIT_OPERATOR_UPSERT_ROW
+  | TRANSIT_OPERATOR_QUERY_ROWS
   | TRANSIT_OPERATOR_GET_SERVICE_TYPES
   | TRANSIT_OPERATOR_GET_ROUTES
   | TRANSIT_OPERATOR_GET_DEPOTS

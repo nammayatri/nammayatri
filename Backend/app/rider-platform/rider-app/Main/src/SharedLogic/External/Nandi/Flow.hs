@@ -266,3 +266,8 @@ operatorWaybills :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurati
 operatorWaybills baseUrl gtfsId limit offset = do
   vals <- withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorWaybills gtfsId limit offset) "operatorWaybills" NandiAPI.operatorWaybillsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_WAYBILLS_API") baseUrl)
   either (throwError . InternalError . T.pack) pure (mapM (parseEither parseJSON) vals)
+
+operatorQueryRows :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> NandiTable -> QueryBody -> m [NandiRow]
+operatorQueryRows baseUrl gtfsId table body = do
+  vals <- withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorQueryRows gtfsId (nandiTableToText table) body) "operatorQueryRows" NandiAPI.operatorQueryRowsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_QUERY_ROWS_API") baseUrl)
+  either (throwError . InternalError . T.pack) pure (mapM (decodeNandiRow table) vals)

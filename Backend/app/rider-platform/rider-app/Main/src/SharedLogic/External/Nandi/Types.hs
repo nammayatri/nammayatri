@@ -148,14 +148,15 @@ instance ToJSON WaybillStatus where
   toJSON WaybillClosed = toJSON ("closed" :: Text)
 
 instance FromJSON WaybillStatus where
-  parseJSON = withText "WaybillStatus" $ \case
-    "online" -> pure WaybillOnline
-    "upcoming" -> pure WaybillUpcoming
-    "new" -> pure WaybillNew
-    "processed" -> pure WaybillProcessed
-    "audited" -> pure WaybillAudited
-    "closed" -> pure WaybillClosed
-    v -> fail $ "Unknown WaybillStatus: " <> T.unpack v
+  parseJSON = withText "WaybillStatus" $ \v ->
+    case T.toLower v of
+      "online" -> pure WaybillOnline
+      "upcoming" -> pure WaybillUpcoming
+      "new" -> pure WaybillNew
+      "processed" -> pure WaybillProcessed
+      "audited" -> pure WaybillAudited
+      "closed" -> pure WaybillClosed
+      _ -> fail $ "Unknown WaybillStatus: " <> T.unpack v
 
 -- | Employee roles.
 data OperatorRole
@@ -1057,7 +1058,7 @@ data RoutesServedTodayItem = RoutesServedTodayItem
     lastScheduleTime :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
-  
+
 data RowsAffectedResp = RowsAffectedResp
   { message :: Maybe Text,
     rows_affected :: Maybe Int64
@@ -1151,4 +1152,62 @@ data UpdateWaybillTabletReq = UpdateWaybillTabletReq
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 instance HideSecrets UpdateWaybillTabletReq where
+  hideSecrets = identity
+
+-- Filter operators for query endpoint
+data FilterOperator = Eq | NotEq | Gt | Lt | Like
+  deriving (Show, Eq, Ord, Generic, ToSchema)
+
+filterOperatorToText :: FilterOperator -> Text
+filterOperatorToText Eq = "eq"
+filterOperatorToText NotEq = "noteq"
+filterOperatorToText Gt = "gt"
+filterOperatorToText Lt = "lt"
+filterOperatorToText Like = "like"
+
+instance ToJSON FilterOperator where
+  toJSON = toJSON . filterOperatorToText
+
+instance FromJSON FilterOperator where
+  parseJSON = withText "FilterOperator" $ \case
+    "eq" -> pure Eq
+    "noteq" -> pure NotEq
+    "gt" -> pure Gt
+    "lt" -> pure Lt
+    "like" -> pure Like
+    v -> fail $ "Unknown FilterOperator: " <> T.unpack v
+
+-- Single filter condition
+data QueryFilter = QueryFilter
+  { column :: Text,
+    operator :: FilterOperator,
+    value :: Text
+  }
+  deriving (Generic, ToSchema, Show)
+
+-- Custom FromJSON to parse ["column", "operator", "value"]
+instance FromJSON QueryFilter where
+  parseJSON = withArray "QueryFilter" $ \jsonArr -> do
+    let elems = toList jsonArr
+    case elems of
+      [col, op, val] ->
+        QueryFilter
+          <$> parseJSON col
+          <*> parseJSON op
+          <*> parseJSON val
+      _ -> fail $ "QueryFilter array must have 3 elements, got: " ++ show (length elems)
+
+instance ToJSON QueryFilter where
+  toJSON (QueryFilter col op val) =
+    toJSON [toJSON col, toJSON op, toJSON val]
+
+-- Request body for query endpoint
+data QueryBody = QueryBody
+  { filters :: [QueryFilter],
+    limit :: Maybe Int,
+    offset :: Maybe Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets QueryBody where
   hideSecrets = identity

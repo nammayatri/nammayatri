@@ -276,6 +276,11 @@ type OperatorWaybillTabletAPI = "internal" :> "operator" :> Capture "gtfs_id" Te
 
 type OperatorWaybillsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybills" :> QueryParam "limit" Int :> QueryParam "offset" Int :> Get '[JSON] [Value]
 
+type OperatorQueryRowsAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "crud" :> Capture "table" Text :> "query"
+    :> ReqBody '[JSON] QueryBody
+    :> Post '[JSON] [Value]
+
 operatorGetRowAPI :: Proxy OperatorGetRowAPI
 operatorGetRowAPI = Proxy
 
@@ -344,6 +349,9 @@ operatorWaybillTabletAPI = Proxy
 
 operatorWaybillsAPI :: Proxy OperatorWaybillsAPI
 operatorWaybillsAPI = Proxy
+
+operatorQueryRowsAPI :: Proxy OperatorQueryRowsAPI
+operatorQueryRowsAPI = Proxy
 
 -- Client functions
 getOperatorRow :: Text -> Text -> Maybe Text -> ET.EulerClient Value
@@ -414,3 +422,6 @@ postOperatorWaybillTablet = ET.client operatorWaybillTabletAPI
 
 getOperatorWaybills :: Text -> Maybe Int -> Maybe Int -> ET.EulerClient [Value]
 getOperatorWaybills = ET.client operatorWaybillsAPI
+
+postOperatorQueryRows :: Text -> Text -> QueryBody -> ET.EulerClient [Value]
+postOperatorQueryRows = ET.client operatorQueryRowsAPI
