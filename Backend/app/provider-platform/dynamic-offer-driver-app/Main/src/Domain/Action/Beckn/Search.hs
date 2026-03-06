@@ -44,6 +44,7 @@ import Domain.Types
 import Domain.Types.BapMetadata
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Extra.ConditionalCharges as DAC
+import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -83,6 +84,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.BlockedRouteDetector
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
@@ -702,15 +704,26 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           numberOfLuggages = searchRequest.numberOfLuggages,
           govtChargesRate = Just transporterConfig.taxConfig.rideGst
         }
+  airportFee <-
+    if fromMaybe False transporterConfig.airportEntryFeeEnabled
+      then case searchRequest.pickupGateId of
+        Just gid -> AirportEntryFee.entryFeeForGateId (Id gid)
+        Nothing -> pure 0
+      else pure 0
+  let fareParams' =
+        if airportFee > 0
+          then fareParams {DFParams.parkingCharge = Just (fromMaybe 0 fareParams.parkingCharge + airportFee)}
+          else fareParams
+      estimatedFare = fareSum fareParams' (Just [])
   quoteId <- Id <$> generateGUID
   void $ cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
   now <- getCurrentTime
-  let estimatedFare = fareSum fareParams (Just [])
-      estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
   -- Keeping quote expiry as search request expiry. Slack discussion: https://juspay.slack.com/archives/C0139KHBFU1/p1683349807003679
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
+      estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
       isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
+      fareParamsForQuote = fareParams'
   pure
     DQuote.Quote
       { id = quoteId,
@@ -727,6 +740,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
         currency = searchRequest.currency,
         distanceUnit = searchRequest.distanceUnit,
         merchantOperatingCityId = Just merchantOpCityId,
+        fareParams = fareParamsForQuote,
         ..
       }
 
@@ -798,19 +812,28 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         then FCV2.calculateFareParametersV2 params {vehicleAge = Just 100000} -- high value
         else return fareParamsMax
     return (fareParamsMin, fareParamsMax)
-  let businessDiscount = if isJust fullFarePolicy.businessDiscountPercentage then fullFarePolicy.businessDiscountPercentage >>= computeRideDiscount maxFareParams.fareParametersDetails maxFareParams.baseFare maxFareParams.congestionCharge maxFareParams.nightShiftCharge maxFareParams.stopCharges else Nothing
-  let personalDiscount = if isJust fullFarePolicy.personalDiscountPercentage then fullFarePolicy.personalDiscountPercentage >>= computeRideDiscount maxFareParams.fareParametersDetails maxFareParams.baseFare maxFareParams.congestionCharge maxFareParams.nightShiftCharge maxFareParams.stopCharges else Nothing
+  airportFee <-
+    if fromMaybe False transporterConfig.airportEntryFeeEnabled
+      then case mbSearchReq >>= (.pickupGateId) of
+        Just gid -> AirportEntryFee.entryFeeForGateId (Id gid)
+        Nothing -> pure 0
+      else pure 0
+  let addParkingCharge fp = if airportFee > 0 then fp {DFParams.parkingCharge = Just (fromMaybe 0 fp.parkingCharge + airportFee)} else fp
+      minFareParams' = addParkingCharge minFareParams
+      maxFareParams' = addParkingCharge maxFareParams
+  let businessDiscount = if isJust fullFarePolicy.businessDiscountPercentage then fullFarePolicy.businessDiscountPercentage >>= computeRideDiscount maxFareParams'.fareParametersDetails maxFareParams'.baseFare maxFareParams'.congestionCharge maxFareParams'.nightShiftCharge maxFareParams'.stopCharges else Nothing
+  let personalDiscount = if isJust fullFarePolicy.personalDiscountPercentage then fullFarePolicy.personalDiscountPercentage >>= computeRideDiscount maxFareParams'.fareParametersDetails maxFareParams'.baseFare maxFareParams'.congestionCharge maxFareParams'.nightShiftCharge maxFareParams'.stopCharges else Nothing
   estimateId <- Id <$> generateGUID
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
-  commissionCharges <- FCV2.calculateCommission minFareParams (Just fullFarePolicy)
+  commissionCharges <- FCV2.calculateCommission minFareParams' (Just fullFarePolicy)
   let pickupChargesMaxx = case fullFarePolicy.farePolicyDetails of
         DFP.ProgressiveDetails progressiveDetails ->
           if progressiveDetails.pickupCharges.pickupChargesMin == progressiveDetails.pickupCharges.pickupChargesMax then 0 else progressiveDetails.pickupCharges.pickupChargesMax - progressiveDetails.pickupCharges.pickupChargesMin
         _ -> 0
   let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
-      minFare = fareSum minFareParams (Just []) + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
-      maxFare = fareSum maxFareParams (Just []) + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds + pickupChargesMaxx
+      minFare = fareSum minFareParams' (Just []) + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
+      maxFare = fareSum maxFareParams' (Just []) + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds + pickupChargesMaxx
   let isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
   pure
     DEst.Estimate
@@ -824,7 +847,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         estimatedDuration = maybe Nothing (.estimatedDuration) mbSearchReq,
         fromLocGeohash = maybe Nothing (.fromLocGeohash) mbSearchReq,
         currency,
-        fareParams = Just maxFareParams, -- Todo: fix it
+        fareParams = Just maxFareParams',
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         tipOptions = fullFarePolicy.tipOptions,
         specialLocationTag = specialLocationTag,

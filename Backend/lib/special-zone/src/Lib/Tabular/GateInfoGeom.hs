@@ -44,6 +44,7 @@ mkPersist
       updatedAt UTCTime
       gateTags [Text] Maybe
       walkDescription Text Maybe
+      entryFeeAmount Double Maybe
       Primary id
       deriving Generic
     |]

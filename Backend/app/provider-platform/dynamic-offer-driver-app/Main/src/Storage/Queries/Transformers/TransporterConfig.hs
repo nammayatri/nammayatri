@@ -72,6 +72,7 @@ parseTaxConfig merchantOperatingCityId mbVal = do
   let def =
         TaxConfig
           { rideGst = GstBreakup {cgstPercentage = Nothing, sgstPercentage = Nothing, igstPercentage = Nothing},
+            airportEntryFeeGst = Nothing,
             securityDepositGst = Nothing,
             defaultTdsRate = Nothing,
             subscriptionTdsRate = Nothing,

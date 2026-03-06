@@ -136,6 +136,8 @@ data AccountRole
   | SellerRevenue
   | GovtDirectAsset
   | GovtDirectExpense
+  | -- One per (merchant, city): parking fee recipient (e.g. airport entry, toll)
+    ParkingFeeRecipient
   | -- PG fee accounts
     PGPaymentExpense
   | PGPaymentLiability
@@ -330,6 +332,15 @@ roleToInput ctx = \case
       { accountType = Expense,
         counterpartyType = Just GOVERNMENT_DIRECT,
         counterpartyId = Just ctx.merchantId,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
+  ParkingFeeRecipient ->
+    AccountInput
+      { accountType = External,
+        counterpartyType = Just AIRPORT,
+        counterpartyId = Just ctx.merchantOpCityId,
         currency = ctx.currency,
         merchantId = ctx.merchantId,
         merchantOperatingCityId = ctx.merchantOpCityId

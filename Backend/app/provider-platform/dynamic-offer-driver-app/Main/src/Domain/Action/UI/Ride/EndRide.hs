@@ -534,9 +534,10 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                         then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
                         else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint
                 pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
-    let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
+    let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
+    -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.
     mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-    finalCommission <- FareV2.calculateCommission newFareParams mbFarePolicy
+    finalCommission <- FareV2.calculateCommission baseFareParams mbFarePolicy
     clearEditDestinationWayAndSnappedPointsFork <- awaitableFork "endRide->clearEditDestinationWayAndSnappedPoints" $ withTimeAPI "endRide" "clearEditDestinationWayAndSnappedPoints" $ clearEditDestinationWayAndSnappedPoints driverId
     clearReachedStopLocationsFork <- awaitableFork "endRide->clearReachedStopLocations" $ withTimeAPI "endRide" "clearReachedStopLocations" $ clearReachedStopLocations rideOld.id
     let updRide' =
@@ -546,7 +547,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                status = DRide.COMPLETED,
                tripEndPos = Just tripEndPoint,
                rideEndedBy = Just rideEndedBy',
-               fareParametersId = Just newFareParams.id,
+               fareParametersId = Just baseFareParams.id,
                tollCharges = mbUpdatedFareParams >>= (.tollCharges),
                distanceCalculationFailed = distanceCalculationFailed,
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
@@ -562,7 +563,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
 
     -- we need to store fareParams only when they changed
-    endRideTransactionFork <- awaitableFork "endRide->endRideTransaction" $ withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig
+    endRideTransactionFork <- awaitableFork "endRide->endRideTransaction" $ withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId baseFareParams thresholdConfig
     clearInterpolatedPointsFork <- awaitableFork "endRide->clearInterpolatedPoints" $ withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
     logDebug $ "RideCompleted Coin Event" <> show chargeableDistance
@@ -619,7 +620,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-    notifyCompleteToBAPFork <- awaitableFork "endRide->notifyCompleteToBAP" $ withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
+    notifyCompleteToBAPFork <- awaitableFork "endRide->notifyCompleteToBAP" $ withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide baseFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
     fork "sending dashboardSMS - CallbasedEndRide " $ do
       case req of
         CallBasedReq callBasedEndRideReq -> do
