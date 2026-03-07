@@ -62,7 +62,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import qualified SharedLogic.FarePolicy as SFP
-import SharedLogic.Ride (calculateEstimatedEndTimeRange)
+import SharedLogic.Ride (calculateEstimatedEndTimeRange, getRcIdForRide)
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
@@ -228,6 +228,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
           whenJust transporterConfig.payoutRideScheduleTimeBuffer $ \buffer -> do
             existingPayout <- QSP.findByRideId ride.id.getId
             when (isNothing existingPayout) $ do
+              rcId <- getRcIdForRide ride.id
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
               commission <- FCV2.calculateCommission booking.fareParams mbFarePolicy
               let payoutAmountBase = maybe booking.estimatedFare (\c -> booking.estimatedFare - c) commission
@@ -248,6 +249,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                         rideId = ride.id.getId,
                         bookingId = booking.id.getId,
                         driverId = driverId.getId,
+                        rcId = rcId,
                         amount = Just payoutAmount,
                         status = payoutStatus,
                         retryCount = Nothing,

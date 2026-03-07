@@ -22,6 +22,7 @@ data ScheduledPayoutT f = ScheduledPayoutT
     id :: B.C f Kernel.Prelude.Text,
     markCashPaidBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    rcId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     retryCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideId :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.ScheduledPayout.ScheduledPayoutStatus,

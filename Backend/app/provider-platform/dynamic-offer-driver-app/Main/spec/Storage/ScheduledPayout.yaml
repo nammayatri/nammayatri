@@ -16,6 +16,7 @@ ScheduledPayout:
     rideId: Text
     bookingId: Text
     driverId: Text
+    rcId: Maybe Text
     amount: Maybe HighPrecMoney
     status: ScheduledPayoutStatus
     retryCount: Maybe Int
