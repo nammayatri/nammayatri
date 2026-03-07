@@ -18,6 +18,7 @@ import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.ScheduledPayout as DSP
+import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Payout.Types as PT
@@ -32,9 +33,10 @@ import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.Ride (getRcIdForRide)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverRidePayoutBankAccount as QDRPB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.ScheduledPayout as QSP
@@ -126,8 +128,7 @@ executeSpecialZonePayout scheduledPayout = do
   -- 1. Mark as PROCESSING
   QSPE.updateStatusWithHistoryById DSP.PROCESSING (Just "Payment in progress") scheduledPayout
 
-  -- 2. Fetch driver info
-  driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  -- 2. Fetch person (driver)
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbRide <- QRide.findById (Id scheduledPayout.rideId)
 
@@ -148,12 +149,33 @@ executeSpecialZonePayout scheduledPayout = do
         void $ RideEnd.driverEndRide shandle ride.id driverReq
     _ -> pure ()
 
-  -- 3. Check if driver has VPA for payout
-  case driverInfo.payoutVpa of
+  -- 3. Get payout VPA from ScheduledPayout.rcId (with fallback to RideDetails/vehicleNumber) -> DriverRidePayoutBankAccount
+  mbRcId <-
+    case scheduledPayout.rcId of
+      Just t -> pure (Just t)
+      Nothing -> do
+        logWarning $ "No rcId for scheduled payout, falling back to ride details (ride: " <> scheduledPayout.rideId <> ")"
+        getRcIdForRide (Id scheduledPayout.rideId)
+  mbVpa <-
+    case mbRcId of
+      Nothing -> do
+        logWarning $ "No rcId for payout: scheduled_payout.rc_id is empty and fallback (ride_details.rc_id or vehicle_number -> vehicle_registration_certificate) returned nothing for ride: " <> scheduledPayout.rideId
+        pure Nothing
+      Just rcIdText -> do
+        mbBankAccount <- QDRPB.findByRcId (Id rcIdText :: Id DVRC.VehicleRegistrationCertificate)
+        case mbBankAccount of
+          Nothing -> do
+            logWarning $ "No driver ride payout bank account for rcId: " <> rcIdText
+            pure Nothing
+          Just rcAccount -> do
+            accountNumber <- decrypt `mapM` rcAccount.bankAccountNumber
+            ifscCode <- decrypt `mapM` rcAccount.bankIfscCode
+            pure $ (\a i -> a <> "@" <> i <> ".ifsc.npci") <$> accountNumber <*> ifscCode
+
+  case mbVpa of
     Nothing -> do
-      -- No VPA configured, mark as failed
-      logWarning $ "Driver " <> driverId.getId <> " has no payout VPA configured"
-      QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Driver has no payout VPA configured") scheduledPayout
+      logWarning $ "No payout bank account for ride (scheduled_payout.rc_id / driver_ride_payout_bank_account): " <> scheduledPayout.rideId
+      QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "No payout bank account for this ride (check ride_details.rc_id and driver_ride_payout_bank_account)") scheduledPayout
       pure Complete
     Just vpa -> do
       case merchantOpCityId of
@@ -170,7 +192,7 @@ executeSpecialZonePayout scheduledPayout = do
               QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Invalid payout amount") scheduledPayout
               pure Complete
             else do
-              -- 7. Create payout order
+              -- 7. Create payout order using VPA from driver_ride_payout_bank_account
               uid <- generateGUID
               phoneNo <- mapM decrypt person.mobileNumber
               merchantOperatingCity <- CQMOC.findById opCityId >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)

@@ -22,6 +22,7 @@ data ScheduledPayout = ScheduledPayout
     id :: Kernel.Types.Id.Id Domain.Types.ScheduledPayout.ScheduledPayout,
     markCashPaidBy :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     payoutTransactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rcId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideId :: Kernel.Prelude.Text,
     status :: Domain.Types.ScheduledPayout.ScheduledPayoutStatus,

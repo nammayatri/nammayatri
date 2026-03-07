@@ -194,6 +194,19 @@ releaseLien booking ride = do
 makeSubscriptionRunningBalanceLockKey :: Text -> Text
 makeSubscriptionRunningBalanceLockKey personId = "SubscriptionRunningBalanceLockKey:" <> personId
 
+-- | Get rcId for a ride: from RideDetails.rcId, or by looking up RC via vehicleNumber if rcId is Nothing.
+getRcIdForRide ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
+  Id DRide.Ride ->
+  m (Maybe Text)
+getRcIdForRide rideId = do
+  mbRideDetails <- QRideD.findById rideId
+  case mbRideDetails of
+    Nothing -> pure Nothing
+    Just rideDetails -> case rideDetails.rcId of
+      Just t -> pure (Just t)
+      Nothing -> fmap (fmap (.id.getId)) (QVRC.findLastVehicleRCWrapper rideDetails.vehicleNumber)
+
 buildRideDetails ::
   DBooking.Booking ->
   DRide.Ride ->
