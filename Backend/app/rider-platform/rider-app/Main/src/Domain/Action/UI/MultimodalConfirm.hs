@@ -75,8 +75,8 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEst
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSRouteDetails
-import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVST
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVST
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
@@ -92,8 +92,8 @@ import Domain.Types.RouteStopTimeTable (SourceType (..))
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Station as DStation
 import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
-import qualified EulerHS.Language as L
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, groupBy, id, length, map, mapM_, null, readMaybe, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import qualified ExternalBPP.ExternalAPI.CallAPI as DirectExternalBPP
@@ -1784,11 +1784,16 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                   merchantOperatingCityId = person.merchantOperatingCityId,
                   merchantId = person.merchantId
                 }
-        (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
-        directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
-        if null directRouteCodes
-          then JMU.measureLatency (handleOtpRoute routeServiceabilityContext srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
-          else JMU.measureLatency (handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
+        case req.vehicleNumber of
+          Just vno -> do
+            routeId <- extractRouteCode req.routeCodes
+            JMU.measureLatency (handleSingleVehicleRoute routeServiceabilityContext vno routeId) ("handleSingleVehicleRoute vno=" <> vno <> " routeId=" <> routeId)
+          Nothing -> do
+            (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
+            directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
+            if null directRouteCodes
+              then JMU.measureLatency (handleOtpRoute routeServiceabilityContext srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
+              else JMU.measureLatency (handleDirectRoute routeServiceabilityContext srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
     )
     ("FULL_API postMultimodalRouteServiceability req=" <> show req)
   where
@@ -1838,6 +1843,64 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             . (listToMaybe >=> listToMaybe . (.routeCodes))
         )
 
+    handleSingleVehicleRoute ::
+      RouteServiceabilityContext ->
+      Text ->
+      Text ->
+      Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    handleSingleVehicleRoute ctx vno routeId = do
+      route <-
+        OTPRest.getRouteByRouteId ctx.integratedBPPConfig routeId
+          >>= fromMaybeM (InvalidRequest $ "Route not found with id: " <> routeId)
+      routeWithBuses <- CQMMB.getRoutesBuses routeId ctx.integratedBPPConfig
+      let maybeBus = find (\b -> b.vehicleNumber == vno) routeWithBuses.buses
+      case maybeBus of
+        Nothing -> do
+          logDebug $ "handleSingleVehicleRoute: no live data for vehicle=" <> vno <> " routeId=" <> routeId
+          pure $ ApiTypes.RouteServiceabilityResp Nothing []
+        Just singleBus -> do
+          mbServiceTier <- JLU.getVehicleServiceTypeFromInMem [ctx.integratedBPPConfig] vno
+          case mbServiceTier of
+            Nothing -> do
+              logError $ "handleSingleVehicleRoute: vehicle service type not found for vehicle=" <> vno
+              pure $ ApiTypes.RouteServiceabilityResp Nothing []
+            Just serviceTier -> do
+              frfsServiceTier <-
+                CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
+                  serviceTier
+                  ctx.merchantOperatingCityId
+                  ctx.integratedBPPConfig.id
+              mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [ctx.integratedBPPConfig] vno
+              enrichedEta <-
+                mapConcurrently
+                  (enrichBusStopETA ctx.integratedBPPConfig)
+                  (fromMaybe [] singleBus.busData.eta_data)
+              let vehicleInfo =
+                    API.Types.UI.MultimodalConfirm.LiveVehicleInfo
+                      { eta = Just enrichedEta,
+                        number = vno,
+                        position = LatLong singleBus.busData.latitude singleBus.busData.longitude,
+                        locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral singleBus.busData.timestamp,
+                        serviceTierType = serviceTier,
+                        serviceTierName = (.shortName) <$> frfsServiceTier,
+                        serviceSubTypes = mbServiceSubTypes
+                      }
+              pure $
+                ApiTypes.RouteServiceabilityResp
+                  Nothing
+                  [ ApiTypes.LegRouteWithLiveVehicle
+                      { legOrder = 0,
+                        routeWithLiveVehicles =
+                          [ API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+                              { routeCode = routeId,
+                                routeShortName = route.shortName,
+                                liveVehicles = [vehicleInfo],
+                                schedules = []
+                              }
+                          ]
+                      }
+                  ]
+
     extractSourceDestLatLng :: Text -> Text -> RouteServiceabilityContext -> Environment.Flow (LatLngV2, LatLngV2)
     extractSourceDestLatLng srcCode destCode routeServiceabilityContext = do
       sourceStationData <-
@@ -1874,22 +1937,27 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
         let uniqueTiers = nub (catMaybes tierLookups)
         mapM
           ( \t ->
-              (t,) <$> CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
-                t
-                routeServiceabilityContext.merchantOperatingCityId
-                routeServiceabilityContext.integratedBPPConfig.id
+              (t,)
+                <$> CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
+                  t
+                  routeServiceabilityContext.merchantOperatingCityId
+                  routeServiceabilityContext.integratedBPPConfig.id
           )
           uniqueTiers
-      schedulesFork <- awaitableFork "getBusScheduleInfo" $
-        getBusScheduleInfo busScheduleDetails routeServiceabilityContext routeInfo.routeId fromStopCode toStopCode frfsTierMap
-      liveVehiclesFork <- awaitableFork "getLiveVehicles" $
-        getLiveVehicles routeInfo.buses routeServiceabilityContext frfsTierMap
-      schedules <- L.await Nothing schedulesFork >>= \case
-        Left err -> throwError $ InternalError $ "getBusScheduleInfo fork failed: " <> show err
-        Right result -> pure result
-      liveVehicles <- L.await Nothing liveVehiclesFork >>= \case
-        Left err -> throwError $ InternalError $ "getLiveVehicles fork failed: " <> show err
-        Right result -> pure result
+      schedulesFork <-
+        awaitableFork "getBusScheduleInfo" $
+          getBusScheduleInfo busScheduleDetails routeServiceabilityContext routeInfo.routeId fromStopCode toStopCode frfsTierMap
+      liveVehiclesFork <-
+        awaitableFork "getLiveVehicles" $
+          getLiveVehicles routeInfo.buses routeServiceabilityContext frfsTierMap
+      schedules <-
+        L.await Nothing schedulesFork >>= \case
+          Left err -> throwError $ InternalError $ "getBusScheduleInfo fork failed: " <> show err
+          Right result -> pure result
+      liveVehicles <-
+        L.await Nothing liveVehiclesFork >>= \case
+          Left err -> throwError $ InternalError $ "getLiveVehicles fork failed: " <> show err
+          Right result -> pure result
       logDebug $
         "AlternateRoute getRouteBusSchedule routeId="
           <> routeInfo.routeId
