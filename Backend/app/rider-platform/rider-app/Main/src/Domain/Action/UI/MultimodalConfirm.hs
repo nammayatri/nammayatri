@@ -782,7 +782,11 @@ getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber
     BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers
     _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
-type CacheKey = (Text, Maybe Text, Maybe Bool, Maybe Text, Maybe Text, Bool)
+type CacheKey = (Text, Maybe Text, Maybe Bool, Maybe Text, Maybe Text, Bool, Maybe [ServiceTierType])
+
+-- ServiceTierType enum has no Hashable instance, so derive via Show.
+instance Hashable ServiceTierType where
+  hashWithSalt salt st = hashWithSalt salt (show st :: String)
 
 type CacheValue = (Text, ApiTypes.PublicTransportData)
 
@@ -799,14 +803,16 @@ computeCacheKey ::
   Maybe Text ->
   Maybe VehicleCategory ->
   Bool ->
+  Maybe [ServiceTierType] ->
   CacheKey
-computeCacheKey merchantOperatingCityId mbCity mbEnableSwitchRoute mbVehicleNumber mbVehicleType isPublicVehicleData =
+computeCacheKey merchantOperatingCityId mbCity mbEnableSwitchRoute mbVehicleNumber mbVehicleType isPublicVehicleData mbNewServiceTiers =
   ( merchantOperatingCityId.getId,
     show <$> mbCity,
     mbEnableSwitchRoute,
     mbVehicleNumber,
     show <$> mbVehicleType,
-    isPublicVehicleData
+    isPublicVehicleData,
+    mbNewServiceTiers
   )
 
 computeVersionFromConfigs ::
@@ -884,7 +890,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute mbNew
   currentVersion <- computeVersionFromConfigs integratedBPPConfigs riderConfig
 
   -- Compute cache key
-  let cacheKey = computeCacheKey merchantOperatingCityId mbCity mbEnableSwitchRoute mbVehicleNumber mbVehicleType False
+  let cacheKey = computeCacheKey merchantOperatingCityId mbCity mbEnableSwitchRoute mbVehicleNumber mbVehicleType False mbNewServiceTiers
 
   -- Get from cache or compute and store
   getCachedPublicTransportData cacheKey currentVersion $
