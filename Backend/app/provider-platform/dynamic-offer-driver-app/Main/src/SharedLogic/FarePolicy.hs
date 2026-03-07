@@ -70,7 +70,8 @@ data FarePoliciesProduct = FarePoliciesProduct
   { farePolicies :: [FarePolicyD.FullFarePolicy],
     area :: SL.Area,
     specialLocationTag :: Maybe Text,
-    specialLocationName :: Maybe Text
+    specialLocationName :: Maybe Text,
+    mbPickupDropArea :: Maybe SL.Area
   }
 
 makeFarePolicyByEstOrQuoteIdKey :: Text -> Text
@@ -182,7 +183,8 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
       { farePolicies,
         area = allFareProducts.area,
         specialLocationTag = allFareProducts.specialLocationTag,
-        specialLocationName = allFareProducts.specialLocationName
+        specialLocationName = allFareProducts.specialLocationName,
+        mbPickupDropArea = allFareProducts.mbPickupDropArea
       }
 
 getBaseVariantFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Id DMOC.MerchantOperatingCity -> Maybe FareProduct.FareProduct -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> [LYT.ConfigVersionMap] -> Maybe Text -> m (Maybe HighPrecMoney)
