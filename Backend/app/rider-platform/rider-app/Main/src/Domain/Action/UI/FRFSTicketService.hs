@@ -1204,6 +1204,9 @@ getFrfsTripRouteSeats ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow SeatLayoutResp
 getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mbToStopCode vehicleNumber = do
+  shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" 120 ("1" :: Text)
+  when shouldRun $
+    fork "frfs-seat-hold-reaper" SeatHold.seatHoldReaperImpl
   logInfo $ "FRFSTicketService:getFrfsTripRouteSeats routeId=" <> routeId <> " tripId=" <> tripId <> " vehicleNumber=" <> show vehicleNumber <> " from=" <> show mbFromStopCode <> " to=" <> show mbToStopCode
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -1293,9 +1296,6 @@ getFrfsTripRouteManifest ::
   Text ->
   Environment.Flow FRFSTripPassengerManifestResp
 getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
-  shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" 120 ("1" :: Text)
-  when shouldRun $
-    fork "frfs-seat-hold-reaper" SeatHold.seatHoldReaperImpl
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let cityId = personCityInfo.merchantOperatingCityId
