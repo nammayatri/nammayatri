@@ -23,7 +23,6 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
-import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 import qualified UrlShortner.Common as UrlShortner
@@ -53,7 +52,7 @@ confirm ::
   DBooking.FRFSTicketBooking ->
   [DFRFSQuoteCategory.FRFSQuoteCategory] ->
   Maybe Bool ->
-  m ()
+  m (Either Text ())
 confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode = do
   Metrics.startMetrics Metrics.CONFIRM_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
@@ -73,32 +72,37 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
         bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) booking bapConfig booking.searchId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} requestCity filteredDCategories
         logDebug $ "FRFS ConfirmReq " <> encodeToText bknConfirmReq
         void $ CallFRFSBPP.confirm providerUrl bknConfirmReq merchant.id
+      return $ Right ()
     _ -> do
-      fork "FRFS External Confirm Req" $ do
-        let ptMode = CB.vehicleCategoryToPTMode booking.vehicleType
-        mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing
-        let circuitOpen = CB.isCircuitOpen ptMode CB.BookingAPI mRiderConfig
-        let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
+      let ptMode = CB.vehicleCategoryToPTMode booking.vehicleType
+      mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing
+      let circuitOpen = CB.isCircuitOpen ptMode CB.BookingAPI mRiderConfig
+      let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
 
-        result <- withTryCatch "callExternalBPP:confirmFlow" $ do
-          frfsConfig <-
-            CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
-              >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
-          onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode
-          processOnConfirm onConfirmReq
-        case result of
-          Left err -> do
-            CB.recordFailure ptMode CB.BookingAPI merchantOperatingCity.id
-            CB.checkAndDisableIfNeeded ptMode CB.BookingAPI merchantOperatingCity.id cbConfig
-            case fromException err :: Maybe CRISError of
-              Just crisError -> void $ QFRFSTicketBooking.updateFailureReasonById (Just crisError.errorMessage) booking.id
-              Nothing -> logError $ "FRFS External Confirm failed with error: " <> show err
-            throwM err
-          Right _ -> do
-            when circuitOpen $ CB.reEnableCircuit ptMode CB.BookingAPI merchantOperatingCity.id
-            CB.recordSuccess ptMode CB.BookingAPI merchantOperatingCity.id
-            return ()
+      result <- withTryCatch "callExternalBPP:confirmFlow" $ do
+        frfsConfig <-
+          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
+            >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
+        onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode
+        processOnConfirm onConfirmReq
+      case result of
+        Left err -> do
+          CB.recordFailure ptMode CB.BookingAPI merchantOperatingCity.id
+          CB.checkAndDisableIfNeeded ptMode CB.BookingAPI merchantOperatingCity.id cbConfig
+          let errorMessage = someExceptionToErrorMessage err
+          logError $ "FRFS External Confirm failed with error: " <> errorMessage
+          return $ Left errorMessage
+        Right _ -> do
+          when circuitOpen $ CB.reEnableCircuit ptMode CB.BookingAPI merchantOperatingCity.id
+          CB.recordSuccess ptMode CB.BookingAPI merchantOperatingCity.id
+          return $ Right ()
   where
+    someExceptionToErrorMessage exc
+      | Just (CRISError err) <- fromException exc = err
+      | Just (HTTPException err) <- fromException exc = show err
+      | Just (BaseException err) <- fromException exc = fromMaybe (show err) $ toMessage err
+      | otherwise = show exc
+
     processOnConfirm ::
       ( CacheFlow m r,
         EsqDBFlow m r,

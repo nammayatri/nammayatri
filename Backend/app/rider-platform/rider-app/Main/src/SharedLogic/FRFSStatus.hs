@@ -221,16 +221,15 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           -- Use payment categories if available, otherwise fall back to quote categories
                           paymentCategories <- QFRFSTicketBookingPaymentCategory.findAllByPaymentId paymentBooking.id
                           let categoriesToUse = if null paymentCategories then quoteCategories else map paymentCategoryToQuoteCategory paymentCategories
-                          result <- withTryCatch "frfsBookingStatus:confirm" $ do
-                            CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode
-                          case result of
-                            Left _ -> do
-                              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
-                              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-                              buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
-                            Right _ -> do
-                              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
-                              buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
+                          confirmResp <- CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode
+                          updatedBooking <-
+                            case confirmResp of
+                              Left err -> do
+                                void $ QFRFSTicketBooking.updateFailureReasonById (Just err) booking.id
+                                void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
+                                return $ makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+                              Right _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
+                          buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
                         else buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
                     else do
                       if paymentBookingStatus == FRFSTicketService.REFUNDED
