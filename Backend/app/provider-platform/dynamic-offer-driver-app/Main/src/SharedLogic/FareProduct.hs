@@ -31,7 +31,8 @@ data FareProducts = FareProducts
   { fareProducts :: [DFareProduct.FareProduct],
     area :: SL.Area,
     specialLocationName :: Maybe Text,
-    specialLocationTag :: Maybe Text
+    specialLocationTag :: Maybe Text,
+    mbPickupDropArea :: Maybe SL.Area
   }
 
 getPickupSpecialLocation ::
@@ -78,9 +79,11 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
           case mbPickupDropFareProducts of
             Just pickupDropFareProducts -> return pickupDropFareProducts
             Nothing -> do
+              let pickupDropArea = SL.PickupDrop pickupSpecialLocation.id dropSpecialLocation.id
+                  setPickupDropArea fp = fp {mbPickupDropArea = Just pickupDropArea}
               if pickupPriority > dropPriority
-                then getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "Drop"
-                else getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "Pickup"
+                then setPickupDropArea <$> getDropFareProductsAndSpecialLocationTag dropSpecialLocation (mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "Drop")
+                else setPickupDropArea <$> getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation (mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "Pickup")
         (Just (pickupSpecialLocation, _), Nothing) -> getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category "None" "Pickup"
         (Nothing, Just (dropSpecialLocation, _)) -> getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag "None" dropSpecialLocation.category "Drop"
         (Nothing, Nothing) -> getDefaultFareProducts
@@ -99,7 +102,8 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
                 { fareProducts,
                   area,
                   specialLocationName = Just pickupSpecialLocation.locationName,
-                  specialLocationTag = Just specialLocationTag
+                  specialLocationTag = Just specialLocationTag,
+                  mbPickupDropArea = Nothing
                 }
 
     getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation specialLocationTag = do
@@ -111,7 +115,8 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
           { fareProducts,
             area = area,
             specialLocationName = Just specialLocationName,
-            specialLocationTag = Just specialLocationTag
+            specialLocationTag = Just specialLocationTag,
+            mbPickupDropArea = Nothing
           }
     getDropFareProductsAndSpecialLocationTag dropSpecialLocation specialLocationTag = do
       let area = SL.Drop dropSpecialLocation.id
@@ -122,7 +127,8 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
           { fareProducts,
             area,
             specialLocationName = Just specialLocationName,
-            specialLocationTag = Just specialLocationTag
+            specialLocationTag = Just specialLocationTag,
+            mbPickupDropArea = Nothing
           }
 
     getDefaultFareProducts = do
@@ -133,7 +139,8 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
           { fareProducts,
             area = SL.Default,
             specialLocationName = Nothing,
-            specialLocationTag = Nothing
+            specialLocationTag = Nothing,
+            mbPickupDropArea = Nothing
           }
 
     mkSpecialLocationTag pickupSpecialLocationCategory dropSpecialLocationCategory priority = pickupSpecialLocationCategory <> "_" <> dropSpecialLocationCategory <> "_" <> "Priority" <> priority
