@@ -12,6 +12,7 @@ module Domain.Action.ProviderPlatform.Operator.Driver
 where
 
 import qualified API.Client.ProviderPlatform.Operator as Client
+import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as CommonFleet
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
@@ -77,11 +78,12 @@ getDriverOperatorList ::
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe CommonFleet.DriverMode ->
     Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
   )
-getDriverOperatorList merchantShortId opCity apiTokenInfo mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs = do
+getDriverOperatorList merchantShortId opCity apiTokenInfo mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs mbStatus = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorList) mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs apiTokenInfo.personId.getId
+  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorList) mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs mbStatus apiTokenInfo.personId.getId
 
 postDriverOperatorSendJoiningOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> Environment.Flow Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes)
 postDriverOperatorSendJoiningOtp merchantShortId opCity apiTokenInfo req = do

@@ -16,6 +16,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
+import qualified Domain.Types.Common as DC
 import qualified API.Types.UI.OperationHub as DomainT
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
@@ -57,7 +58,6 @@ import SharedLogic.Reminder.Helper (cancelRemindersForDriverByDocumentType, canc
 import Storage.Beam.SystemConfigs ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
@@ -276,30 +276,37 @@ getDriverOperatorList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe CommonFleet.DriverMode ->
   Kernel.Prelude.Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
-getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs requestorId = do
+getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString mbIncludeDocuments onlyMandatoryDocs mbStatus requestorId = do
   requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (requestor.role == DP.OPERATOR) $
     Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
   now <- getCurrentTime
+  let mbMode = castApiDriverMode <$> mbStatus
   driverOperatorInfoList <- case mbVehicleNo of
     Nothing -> do
-      driverOperatorAssociationAndPersonLs <- QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString Nothing
-      forM driverOperatorAssociationAndPersonLs \(drvOpAsn, person) -> do
+      driverOperatorAssociationAndPersonLs <- QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString Nothing mbMode
+      forM driverOperatorAssociationAndPersonLs \(drvOpAsn, person, driverMode) -> do
         let driverId = drvOpAsn.driverId
         (vehicleModel, registrationNo, isRcActive) <- fetchVehicleDetailsByDriverId now driverId
-        pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive)
+        pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive, driverMode)
     Just vehicleNo -> (maybeToList <$>) . runMaybeT $ do
       (vehicleModel, registrationNo, isRcActive, driverId) <- fetchVehicleDetailsByVehicleNo now vehicleNo
-      (drvOpAsn, person) <- MaybeT $ listToMaybe <$> QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString (Just driverId)
-      pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive)
+      (drvOpAsn, person, driverMode) <- MaybeT $ listToMaybe <$> QDOA.findAllByOperatorIdWithLimitOffsetSearch requestorId mbIsActive mbLimit mbOffset mbSearchString (Just driverId) mbMode
+      pure (drvOpAsn, person, vehicleModel, registrationNo, isRcActive, driverMode)
 
   listItem <- mapM (buildDriverInfo now mbIncludeDocuments) driverOperatorInfoList
   let count = length listItem
   let summary = Common.Summary {totalCount = 10000, count}
   pure API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp {..}
   where
+    castApiDriverMode :: CommonFleet.DriverMode -> DC.DriverMode
+    castApiDriverMode CommonFleet.ONLINE = DC.ONLINE
+    castApiDriverMode CommonFleet.OFFLINE = DC.OFFLINE
+    castApiDriverMode CommonFleet.SILENT = DC.SILENT
+
     fetchVehicleDetailsByDriverId now driverId = do
       mbVehicle <- QVehicle.findById driverId
       case mbVehicle of
@@ -324,8 +331,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
           assoc <- MaybeT $ QDRC.findLatestLinkedByRCId rc.id now
           pure (rc.vehicleModel, rc.unencryptedCertificateNumber, assoc.isRcActive, assoc.driverId)
 
-    buildDriverInfo now mbIncDocs (drvOpAsn, person, vehicleModel, registrationNo, isRcActive) = do
-      let driverId = drvOpAsn.driverId
+    buildDriverInfo now mbIncDocs (drvOpAsn, person, vehicleModel, registrationNo, isRcActive, driverMode) = do
       decryptedMobileNumber <-
         mapM decrypt person.mobileNumber
           >>= fromMaybeM
@@ -352,14 +358,13 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             Just . castStatusRes <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
           else pure Nothing
 
-      driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
       pure $
         API.Types.ProviderPlatform.Operator.Driver.DriverInfo
           { driverId = cast drvOpAsn.driverId,
             firstName = person.firstName,
             middleName = person.middleName,
             lastName = person.lastName,
-            status = Just $ DFDriver.castDriverStatus driverInfo.mode,
+            status = Just $ DFDriver.castDriverStatus driverMode,
             isActive = drvOpAsn.isActive,
             mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,
             mobileNumber = decryptedMobileNumber,
