@@ -19,23 +19,23 @@ import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified SharedLogic.External.Nandi.Types as NandiTypes
 
 -- | Shared function to build RouteWithLiveVehicle for a single route.
 --   Used by both FRFSTicketService and MultimodalConfirm.
 buildRouteWithLiveVehicle ::
   CQMMB.RouteWithBuses ->
+  NandiTypes.BusScheduleDetails ->
   DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id MerchantOperatingCity ->
   Text ->
   Text ->
   Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
-buildRouteWithLiveVehicle routeInfo integratedBPPConfig cityId fromStopCode toStopCode = do
+buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig cityId fromStopCode toStopCode = do
   route <-
     OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId
       >>= fromMaybeM
         (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
-  busScheduleDetails <-
-    OTPRest.getRouteBusSchedule routeInfo.routeId integratedBPPConfig
   -- Build a lookup list of distinct service tier types -> FRFS tier entity once
   frfsTierMap <- do
     let scheduleVehicleNos = map (.vehicle_no) busScheduleDetails
