@@ -1233,14 +1233,24 @@ getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mb
         Just (fromIdx, toIdx) -> pure (fromIdx, toIdx)
         _ -> throwError $ InvalidRequest "Invalid from/to stop code"
     _ -> return (0, maxBound :: Int)
-
   let (fromIdx, toIdx) = fromToStops
-
-  seatListWithStatus <- SeatBooking.getTripAvailability tripId fromIdx toIdx seats
+  rawSeatListWithStatus <- SeatBooking.getTripAvailability tripId fromIdx toIdx seats
   seatLayout <- QSeatLayout.findById seatLayoutId >>= fromMaybeM (InvalidRequest "SeatLayout not found")
+  let seatListWithStatus = map (applyQuotaLogic fromIdx toIdx) rawSeatListWithStatus
   let availCount = length $ filter (\s -> s.status == API.Types.UI.FRFSTicketService.AVAILABLE) seatListWithStatus
   logInfo $ "FRFSTicketService:getFrfsTripRouteSeats tripId=" <> tripId <> " totalSeats=" <> show (length seatListWithStatus) <> " available=" <> show availCount
   return $ SeatLayoutResp {seatLayout = seatLayout, seats = seatListWithStatus}
+  where
+    applyQuotaLogic :: Int -> Int -> SeatWithStatus -> SeatWithStatus
+    applyQuotaLogic fromIdx toIdx seatWithStatus =
+      let numStops = toIdx - fromIdx
+          seat = seatWithStatus.seat
+          meetsQuota = case seat.minStopsRequired of
+            Just minStopsRequired -> numStops >= minStopsRequired
+            Nothing -> True
+       in if meetsQuota
+            then seatWithStatus
+            else seatWithStatus {status = BLOCKED}
 
 getFrfsRouteSeatLayout ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

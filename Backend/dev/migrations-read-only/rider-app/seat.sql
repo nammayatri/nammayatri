@@ -19,3 +19,8 @@ ALTER TABLE atlas_app.seat ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.seat ADD COLUMN direction_degrees integer  default 0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.seat ADD COLUMN min_stops_required integer ;
