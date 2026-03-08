@@ -11,6 +11,8 @@ imports:
   FRFSQuoteConfirmReq: API.Types.UI.FRFSTicketService
   FRFSTicketBookingStatusAPIRes: API.Types.UI.FRFSTicketService
   SeatLayoutDetailsResp: API.Types.UI.FRFSTicketService
+  FRFSRouteServiceabilityReq: API.Types.UI.FRFSTicketService
+  RouteWithLiveVehicle: API.Types.UI.MultimodalConfirm
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
@@ -28,6 +30,7 @@ importPackageOverrides:
   Domain.Types.FRFSTicketBooking: "rider-app"
   Domain.Types.IntegratedBPPConfig: "rider-app"
   API.Types.UI.FRFSTicketService: "rider-app"
+  API.Types.UI.MultimodalConfirm: "rider-app"
 
 module: FRFSTicketService
 
@@ -178,7 +181,16 @@ apis:
         routeId: Text
       query:
         vehicleNumber: Text
-        fromStopIndex: Int
-        toStopIndex: Int
       response:
         type: SeatLayoutDetailsResp
+
+  - POST:
+      endpoint: /customer/{customerId}/frfs/route/{routeId}/serviceability
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        routeId: Text
+      request:
+        type: FRFSRouteServiceabilityReq
+      response:
+        type: "API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle"

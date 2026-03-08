@@ -206,6 +206,10 @@ data FRFSRouteAPI = FRFSRouteAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSRouteServiceabilityReq = FRFSRouteServiceabilityReq {endStopCode :: Data.Text.Text, startStopCode :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSRouteStationsAPI = FRFSRouteStationsAPI
   { code :: Data.Text.Text,
     color :: Data.Maybe.Maybe Data.Text.Text,
@@ -350,13 +354,7 @@ data PassengerStopManifest = PassengerStopManifest {alightingPassengers :: [Pass
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SeatLayoutDetailsResp = SeatLayoutDetailsResp
-  { availableSeatsCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
-    combinedTripId :: Data.Maybe.Maybe Data.Text.Text,
-    isAvailable :: Kernel.Prelude.Bool,
-    seatLayout :: Domain.Types.SeatLayout.SeatLayout,
-    seats :: [Domain.Types.Seat.Seat]
-  }
+data SeatLayoutDetailsResp = SeatLayoutDetailsResp {seatLayout :: Domain.Types.SeatLayout.SeatLayout, seats :: [Domain.Types.Seat.Seat]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
