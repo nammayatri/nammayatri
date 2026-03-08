@@ -2064,11 +2064,16 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           busesForRoutes <-
             CQMMB.getBusesForRoutes rlRouteCodes ctx.integratedBPPConfig
 
+          schedulesForRoutes <-
+            mapConcurrently
+              (\routeCode -> OTPRest.getRouteBusSchedule routeCode ctx.integratedBPPConfig)
+              rlRouteCodes
+
           routesWithLiveVehicles <-
             catMaybes
               <$> mapConcurrently
-                (\r -> JMRouteServiceability.buildRouteWithLiveVehicle r ctx.integratedBPPConfig ctx.merchantOperatingCityId rlFromStopCode rlToStopCode)
-                busesForRoutes
+                (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig ctx.merchantOperatingCityId rlFromStopCode rlToStopCode)
+                (zip busesForRoutes schedulesForRoutes)
 
           pure $
             ApiTypes.LegRouteWithLiveVehicle

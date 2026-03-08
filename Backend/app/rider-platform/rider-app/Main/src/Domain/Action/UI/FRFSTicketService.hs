@@ -1307,11 +1307,16 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
 
   busesForRoutes <- CQMMB.getBusesForRoutes [routeId] integratedBPPConfig
 
+  schedulesForRoutes <-
+    mapConcurrently
+      (\routeCode -> OTPRest.getRouteBusSchedule routeCode integratedBPPConfig)
+      [routeId]
+
   routesWithLiveVehicles <-
     catMaybes
       <$> mapConcurrently
-        (\r -> JMRouteServiceability.buildRouteWithLiveVehicle r integratedBPPConfig cityId req.startStopCode req.endStopCode)
-        busesForRoutes
+        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig cityId req.startStopCode req.endStopCode)
+        (zip busesForRoutes schedulesForRoutes)
 
   case routesWithLiveVehicles of
     (result : _) -> return result
