@@ -54,9 +54,9 @@ transitOperatorDeleteRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 transitOperatorDeleteRow merchantShortId opCity table vehicleCategory req =
   DTOp.transitOperatorDeleteRowUtil merchantShortId opCity vehicleCategory table req
 
-transitOperatorUpsertRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> Environment.Flow SharedLogic.External.Nandi.Types.NandiRow)
-transitOperatorUpsertRow merchantShortId opCity table vehicleCategory req =
-  DTOp.transitOperatorUpsertRowUtil merchantShortId opCity vehicleCategory table req
+transitOperatorUpsertRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> Environment.Flow SharedLogic.External.Nandi.Types.NandiRow)
+transitOperatorUpsertRow merchantShortId opCity toRegen table vehicleCategory req =
+  DTOp.transitOperatorUpsertRowUtil merchantShortId opCity vehicleCategory table toRegen req
 
 transitOperatorQueryRows :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.QueryBody -> Environment.Flow [SharedLogic.External.Nandi.Types.NandiRow])
 transitOperatorQueryRows merchantShortId opCity table vehicleCategory req =

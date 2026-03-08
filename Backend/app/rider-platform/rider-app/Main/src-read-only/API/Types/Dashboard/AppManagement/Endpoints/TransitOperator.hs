@@ -46,12 +46,14 @@ type TransitOperatorDeleteRow =
   )
 
 type TransitOperatorUpsertRow =
-  ( "row" :> MandatoryQueryParam "table" SharedLogic.External.Nandi.Types.NandiTable
+  ( "row" :> QueryParam "toRegen" Kernel.Prelude.Text :> MandatoryQueryParam "table" SharedLogic.External.Nandi.Types.NandiTable
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
       :> ReqBody '[JSON] Data.Aeson.Value
-      :> Post '[JSON] SharedLogic.External.Nandi.Types.NandiRow
+      :> Post
+           '[JSON]
+           SharedLogic.External.Nandi.Types.NandiRow
   )
 
 type TransitOperatorQueryRows =
@@ -158,7 +160,7 @@ data TransitOperatorAPIs = TransitOperatorAPIs
   { transitOperatorGetRow :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.NandiRow,
     transitOperatorGetAllRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRow],
     transitOperatorDeleteRow :: SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp,
-    transitOperatorUpsertRow :: SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.NandiRow,
+    transitOperatorUpsertRow :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.NandiRow,
     transitOperatorQueryRows :: SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.QueryBody -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRow],
     transitOperatorGetServiceTypes :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.ServiceType],
     transitOperatorGetRoutes :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRoute],
