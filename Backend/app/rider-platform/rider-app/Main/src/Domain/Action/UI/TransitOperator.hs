@@ -50,10 +50,10 @@ transitOperatorDeleteRowUtil merchantShortId city vehicleCategory table pkValue 
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorDeleteRow baseUrl gtfsId table pkValue
 
-transitOperatorUpsertRowUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> NandiTable -> Value -> Flow NandiRow
-transitOperatorUpsertRowUtil merchantShortId city vehicleCategory table body = do
+transitOperatorUpsertRowUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> NandiTable -> Maybe Text -> Value -> Flow NandiRow
+transitOperatorUpsertRowUtil merchantShortId city vehicleCategory table toRegen body = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
-  NandiFlow.operatorUpsertRow baseUrl gtfsId table body
+  NandiFlow.operatorUpsertRow baseUrl gtfsId table toRegen body
 
 transitOperatorGetServiceTypesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [ServiceType]
 transitOperatorGetServiceTypesUtil merchantShortId city vehicleCategory = do

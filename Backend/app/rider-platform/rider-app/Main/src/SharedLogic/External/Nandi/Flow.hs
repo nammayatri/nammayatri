@@ -1,6 +1,8 @@
 module SharedLogic.External.Nandi.Flow where
 
 import BecknV2.FRFS.Enums
+import Data.Aeson (Value (Object))
+import qualified Data.Aeson.KeyMap as KeyMap
 import Data.Aeson.Types (parseEither)
 import qualified Data.Text as T
 import Kernel.Prelude
@@ -185,9 +187,16 @@ operatorDeleteRow :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurat
 operatorDeleteRow baseUrl gtfsId table pkValue =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorDeleteRow gtfsId (nandiTableToText table) pkValue) "operatorDeleteRow" NandiAPI.operatorDeleteRowAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_DELETE_ROW_API") baseUrl)
 
-operatorUpsertRow :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> NandiTable -> Value -> m NandiRow
-operatorUpsertRow baseUrl gtfsId table body = do
-  val <- withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorUpsertRow gtfsId (nandiTableToText table) body) "operatorUpsertRow" NandiAPI.operatorUpsertRowAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_UPSERT_ROW_API") baseUrl)
+operatorUpsertRow :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> NandiTable -> Maybe Text -> Value -> m NandiRow
+operatorUpsertRow baseUrl gtfsId table toRegen body = do
+  -- Embed to_regen into request body if provided (comma-separated text -> JSON array)
+  let regenList = maybe [] (filter (not . T.null) . T.splitOn ",") toRegen
+      bodyWithRegen = case regenList of
+        [] -> body
+        _ -> case body of
+          Object obj -> Object (KeyMap.insert "to_regen" (toJSON regenList) obj)
+          _ -> body
+  val <- withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorUpsertRow gtfsId (nandiTableToText table) bodyWithRegen) "operatorUpsertRow" NandiAPI.operatorUpsertRowAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_UPSERT_ROW_API") baseUrl)
   either (throwError . InternalError . T.pack) pure (decodeNandiRow table val)
 
 operatorServiceTypes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [ServiceType]
@@ -271,3 +280,7 @@ operatorQueryRows :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurat
 operatorQueryRows baseUrl gtfsId table body = do
   vals <- withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorQueryRows gtfsId (nandiTableToText table) body) "operatorQueryRows" NandiAPI.operatorQueryRowsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_QUERY_ROWS_API") baseUrl)
   either (throwError . InternalError . T.pack) pure (mapM (decodeNandiRow table) vals)
+
+getRoutesServedToday :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> m [RoutesServedTodayItem]
+getRoutesServedToday baseUrl =
+  withShortRetry $ callAPI baseUrl NandiAPI.getNandiRoutesServedToday "getRoutesServedToday" NandiAPI.nandiRoutesServedTodayAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTES_SERVED_TODAY_API") baseUrl)

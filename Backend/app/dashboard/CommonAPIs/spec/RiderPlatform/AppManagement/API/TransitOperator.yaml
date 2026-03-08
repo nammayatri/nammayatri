@@ -75,6 +75,8 @@ apis:
       mandatoryQuery:
         vehicleCategory: VehicleCategory
         table: NandiTable
+      query:
+        toRegen: Text
       request:
         type: Value
       response:
