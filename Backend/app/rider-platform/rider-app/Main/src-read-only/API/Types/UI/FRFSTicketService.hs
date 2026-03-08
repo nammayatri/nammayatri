@@ -340,6 +340,43 @@ data FRFSVehicleServiceTierAPI = FRFSVehicleServiceTierAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FleetOperatorCurrentOperationReq = FleetOperatorCurrentOperationReq
+  { conductorToken :: Data.Maybe.Maybe Data.Text.Text,
+    driverToken :: Data.Maybe.Maybe Data.Text.Text,
+    vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOperatorCurrentOperationResp = FleetOperatorCurrentOperationResp
+  { conductorToken :: Data.Text.Text,
+    current :: Data.Maybe.Maybe OperatorTripInfo,
+    driverToken :: Data.Text.Text,
+    history :: [OperatorTripInfo],
+    upcoming :: [OperatorTripInfo],
+    vehicleNumber :: Data.Text.Text,
+    waybillNo :: Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOperatorTripActionReq = FleetOperatorTripActionReq
+  { action :: Data.Text.Text,
+    conductorToken :: Data.Maybe.Maybe Data.Text.Text,
+    driverToken :: Data.Maybe.Maybe Data.Text.Text,
+    vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOperatorTripActionResp = FleetOperatorTripActionResp {currentTripNumber :: Kernel.Prelude.Int, hasUpcomingTrips :: Kernel.Prelude.Bool}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OperatorTripInfo = OperatorTripInfo {isActiveTrip :: Kernel.Prelude.Bool, routeId :: Data.Text.Text, routeName :: Data.Text.Text, routeNumber :: Data.Text.Text, tripNumber :: Kernel.Prelude.Int}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassengerInfo = PassengerInfo
   { bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     checkedIn :: Kernel.Prelude.Bool,

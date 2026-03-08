@@ -330,6 +330,42 @@ types:
     manifest: "[PassengerStopManifest]"
     derive: "Show"
 
+  FleetOperatorTripActionReq:
+    action: Text
+    conductorToken: Maybe Text
+    driverToken: Maybe Text
+    vehicleNumber: Maybe Text
+    derive: "Show"
+
+  FleetOperatorTripActionResp:
+    currentTripNumber: Int
+    hasUpcomingTrips: Bool
+    derive: "Show"
+
+  FleetOperatorCurrentOperationReq:
+    conductorToken: Maybe Text
+    driverToken: Maybe Text
+    vehicleNumber: Maybe Text
+    derive: "Show"
+
+  OperatorTripInfo:
+    tripNumber: Int
+    routeId: Text
+    routeNumber: Text
+    routeName: Text
+    isActiveTrip: Bool
+    derive: "Show"
+
+  FleetOperatorCurrentOperationResp:
+    waybillNo: Text
+    vehicleNumber: Text
+    conductorToken: Text
+    driverToken: Text
+    history: "[OperatorTripInfo]"
+    current: Maybe OperatorTripInfo
+    upcoming: "[OperatorTripInfo]"
+    derive: "Show"
+
 apis:
   # Get FRFS Config
   - GET:
@@ -618,3 +654,19 @@ apis:
         routeId: Text
       response:
         type: FRFSTripPassengerManifestResp
+
+  - POST:
+      endpoint: /frfs/fleetOperator/tripAction
+      auth: TokenAuth
+      request:
+        type: FleetOperatorTripActionReq
+      response:
+        type: FleetOperatorTripActionResp
+
+  - POST:
+      endpoint: /frfs/fleetOperator/currentOperation
+      auth: TokenAuth
+      request:
+        type: FleetOperatorCurrentOperationReq
+      response:
+        type: FleetOperatorCurrentOperationResp

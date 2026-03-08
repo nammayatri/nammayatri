@@ -406,10 +406,30 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.FRFSTicketService.FRFSTripPassengerManifestResp
+      :<|> TokenAuth
+      :> "frfs"
+      :> "fleetOperator"
+      :> "tripAction"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp
+      :<|> TokenAuth
+      :> "frfs"
+      :> "fleetOperator"
+      :> "currentOperation"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest
+handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
 
 getFrfsConfig ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -679,3 +699,21 @@ getFrfsTripRouteManifest ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTripPassengerManifestResp
   )
 getFrfsTripRouteManifest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsTripRouteManifest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postFrfsFleetOperatorTripAction ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp
+  )
+postFrfsFleetOperatorTripAction a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsFleetOperatorTripAction (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postFrfsFleetOperatorCurrentOperation ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
+  )
+postFrfsFleetOperatorCurrentOperation a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsFleetOperatorCurrentOperation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

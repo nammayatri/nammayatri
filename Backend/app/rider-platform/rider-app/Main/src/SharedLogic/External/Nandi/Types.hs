@@ -1154,6 +1154,75 @@ data UpdateWaybillTabletReq = UpdateWaybillTabletReq
 instance HideSecrets UpdateWaybillTabletReq where
   hideSecrets = identity
 
+data GimsTripAction
+  = GimsTripActionStart
+  | GimsTripActionEnd
+  deriving (Show, Read, Eq, Ord, Generic, ToSchema)
+
+instance ToJSON GimsTripAction where
+  toJSON GimsTripActionStart = toJSON ("start" :: Text)
+  toJSON GimsTripActionEnd = toJSON ("end" :: Text)
+
+instance FromJSON GimsTripAction where
+  parseJSON = withText "GimsTripAction" $ \case
+    "start" -> pure GimsTripActionStart
+    "end" -> pure GimsTripActionEnd
+    v -> fail $ "Unknown GimsTripAction: " <> T.unpack v
+
+data GimsTripActionReq = GimsTripActionReq
+  { action :: GimsTripAction,
+    trip_number :: Int,
+    timestamp :: Int64,
+    conductor_token :: Maybe Text,
+    driver_token :: Maybe Text,
+    vehicle_number :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data GimsCurrentOperationResp = GimsCurrentOperationResp
+  { waybill_no :: Text,
+    number_of_trips :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data GimsCurrentTripDetailsReq = GimsCurrentTripDetailsReq
+  { previous_trip_number :: Int,
+    conductor_token :: Maybe Text,
+    driver_token :: Maybe Text,
+    vehicle_number :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data GimsTripInfo = GimsTripInfo
+  { trip_number :: Int,
+    route_id :: Text,
+    route_number :: Text,
+    route_name :: Text,
+    is_active_trip :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data GimsCurrentTripDetailsResp = GimsCurrentTripDetailsResp
+  { waybill_no :: Text,
+    vehicle_number :: Text,
+    conductor_token :: Text,
+    driver_token :: Text,
+    history :: [GimsTripInfo],
+    current :: Maybe GimsTripInfo,
+    upcoming :: [GimsTripInfo]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data GimsOperationAnchor = GimsOperationAnchor
+  { conductor_token :: Maybe Text,
+    driver_token :: Maybe Text,
+    vehicle_number :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets GimsOperationAnchor where
+  hideSecrets = identity
+
 -- Filter operators for query endpoint
 data FilterOperator = Eq | NotEq | Gt | Lt | Like
   deriving (Show, Eq, Ord, Generic, ToSchema)

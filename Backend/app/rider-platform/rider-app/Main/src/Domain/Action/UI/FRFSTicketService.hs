@@ -73,7 +73,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
-import SharedLogic.External.Nandi.Types (StopInfo (..), StopSchedule (..))
+import SharedLogic.External.Nandi.Types (GimsCurrentTripDetailsReq (..), GimsOperationAnchor (..), GimsTripAction (..), GimsTripActionReq (..), StopInfo (..), StopSchedule (..))
 import SharedLogic.FRFSConfirm
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSStatus
@@ -109,6 +109,7 @@ import qualified Tools.MultiModal as MM
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 import qualified UrlShortner.Common as UrlShortner
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 
 getFrfsRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
@@ -1399,4 +1400,97 @@ getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
   pure $
     FRFSTripPassengerManifestResp
       { manifest = stopManifests
+      }
+
+postFrfsFleetOperatorTripAction ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  FRFSTicketService.FleetOperatorTripActionReq ->
+  Environment.Flow FRFSTicketService.FleetOperatorTripActionResp
+postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
+  personCityInfo <- CQP.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
+  baseUrl <- MM.getOTPRestServiceReq merchantId personCityInfo.merchantOperatingCityId
+  bppConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig personCityInfo.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  let gtfsId = bppConfig.feedKey
+      anchor =
+        GimsOperationAnchor
+          { conductor_token = req.conductorToken,
+            driver_token = req.driverToken,
+            vehicle_number = req.vehicleNumber
+          }
+  gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
+  let redisKey = gimsOps.waybill_no <> ":tripnumber"
+  mbPrevTrip <- Hedis.get redisKey
+  let prevTrip = fromMaybe 0 (mbPrevTrip :: Maybe Int)
+  case req.action of
+    "start" -> do
+      when (prevTrip >= gimsOps.number_of_trips) $
+        throwError $ InvalidRequest "No more trips available for this waybill"
+      let nextTrip = prevTrip + 1
+      now <- getCurrentTime
+      let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
+      void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionStart, trip_number = nextTrip, timestamp = epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
+      Hedis.setExp redisKey nextTrip 172800 -- 2 days TTL for the trip number in Redis
+      pure
+        FRFSTicketService.FleetOperatorTripActionResp
+          { currentTripNumber = nextTrip,
+            hasUpcomingTrips = nextTrip < gimsOps.number_of_trips
+          }
+    "end" -> do
+      when (prevTrip == 0) $
+        throwError $ InvalidRequest "No active trip to end"
+      now <- getCurrentTime
+      let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
+      void $ NandiFlow.gimsTripAction baseUrl gtfsId GimsTripActionReq {action = GimsTripActionEnd, trip_number = prevTrip, timestamp = epochNow, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
+      pure
+        FRFSTicketService.FleetOperatorTripActionResp
+          { currentTripNumber = prevTrip,
+            hasUpcomingTrips = prevTrip < gimsOps.number_of_trips
+          }
+    other -> throwError $ InvalidRequest $ "Unknown trip action: " <> other
+
+postFrfsFleetOperatorCurrentOperation ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  FRFSTicketService.FleetOperatorCurrentOperationReq ->
+  Environment.Flow FRFSTicketService.FleetOperatorCurrentOperationResp
+postFrfsFleetOperatorCurrentOperation (mbPersonId, merchantId) req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
+  personCityInfo <- CQP.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
+  baseUrl <- MM.getOTPRestServiceReq merchantId personCityInfo.merchantOperatingCityId
+  bppConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig personCityInfo.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  let gtfsId = bppConfig.feedKey
+      anchor =
+        GimsOperationAnchor
+          { conductor_token = req.conductorToken,
+            driver_token = req.driverToken,
+            vehicle_number = req.vehicleNumber
+          }
+  gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
+  let redisKey = gimsOps.waybill_no <> ":tripnumber"
+  mbPrevTrip <- Hedis.get redisKey
+  logInfo $ "Current operation for waybill " <> gimsOps.waybill_no <> " is trip number " <> show mbPrevTrip
+  let prevTrip = fromMaybe 0 (mbPrevTrip :: Maybe Int)
+  resp <- NandiFlow.gimsCurrentTripDetails baseUrl gtfsId GimsCurrentTripDetailsReq {previous_trip_number = prevTrip, conductor_token = req.conductorToken, driver_token = req.driverToken, vehicle_number = req.vehicleNumber}
+
+  let toTripInfo t =
+        FRFSTicketService.OperatorTripInfo
+          { tripNumber = t.trip_number,
+            routeId = t.route_id,
+            routeNumber = t.route_number,
+            routeName = t.route_name,
+            isActiveTrip = t.is_active_trip
+          }
+  pure
+    FRFSTicketService.FleetOperatorCurrentOperationResp
+      { waybillNo = resp.waybill_no,
+        vehicleNumber = resp.vehicle_number,
+        conductorToken = resp.conductor_token,
+        driverToken = resp.driver_token,
+        history = map toTripInfo resp.history,
+        current = fmap toTripInfo resp.current,
+        upcoming = map toTripInfo resp.upcoming
       }
