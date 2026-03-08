@@ -1247,9 +1247,11 @@ getFrfsRouteSeatLayout ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Data.Text.Text ->
+  Kernel.Prelude.Maybe Int ->
+  Kernel.Prelude.Maybe Int ->
   Kernel.Prelude.Maybe Data.Text.Text ->
   Environment.Flow API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp
-getFrfsRouteSeatLayout (mbPersonId, _merchantId) routeId mbVehicleNumber = do
+getFrfsRouteSeatLayout (mbPersonId, _merchantId) routeId mbFromStopIndex mbToStopIndex mbVehicleNumber = do
   logInfo $ "FRFSTicketService:getFrfsRouteSeatLayout routeId=" <> routeId <> " vehicleNumber=" <> show mbVehicleNumber
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -1263,16 +1265,32 @@ getFrfsRouteSeatLayout (mbPersonId, _merchantId) routeId mbVehicleNumber = do
       (\vehicleNumber' -> JMU.getLiveRouteInfo integratedBPPConfig vehicleNumber' routeId)
       mbVehicleNumber
 
-  seatLayoutId <-
+  vehicleInfo <-
     vehicle
       & fromMaybeM (InvalidRequest "Vehicle not found")
-      <&> (.seatLayoutId)
-      >>= fromMaybeM (InvalidRequest "Seat layout ID not found for this service tier")
+
+  seatLayoutId <-
+    vehicleInfo.seatLayoutId
+      & fromMaybeM (InvalidRequest "Seat layout ID not found for this service tier")
+
+  (combinedTripId, isAvailable, availableSeatsCount) <- case (mbFromStopIndex, mbToStopIndex) of
+    (Just fromIdx, Just toIdx) -> do
+      let tripId = do
+            waybill <- vehicleInfo.waybillId
+            tNum <- vehicleInfo.tripNumber
+            return $ waybill <> "-" <> show tNum
+      case tripId of
+        Nothing -> return (Nothing, False, Nothing)
+        Just tid -> do
+          avail <- SeatBooking.getAvailableSeatCount seatLayoutId tid fromIdx toIdx
+          logInfo $ "FRFSTicketService:seatAvailability routeId=" <> routeId <> " tripId=" <> tid <> " available=" <> show avail
+          return (Just tid, avail > 0, Just avail)
+    _ -> return (Nothing, True, Nothing)
 
   seats <- CQSeat.findAllByLayoutId seatLayoutId
   seatLayout <- QSeatLayout.findById seatLayoutId >>= fromMaybeM (InvalidRequest "SeatLayout not found")
   logInfo $ "FRFSTicketService:getFrfsRouteSeatLayout routeId=" <> routeId <> " seatLayoutId=" <> seatLayoutId.getId <> " seatCount=" <> show (length seats)
-  return $ SeatLayoutDetailsResp {seatLayout = seatLayout, seats = seats}
+  return $ SeatLayoutDetailsResp {seatLayout = seatLayout, seats = seats, combinedTripId = combinedTripId, isAvailable = isAvailable, availableSeatsCount = availableSeatsCount}
 
 getFrfsActiveRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->

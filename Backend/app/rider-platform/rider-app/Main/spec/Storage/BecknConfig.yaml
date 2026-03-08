@@ -121,6 +121,7 @@ IntegratedBPPConfig:
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PlatformType>
+    - Custom Kernel.Utils.TH.mkToHttpInstanceForEnum <PlatformType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PlatformType>
 
   fromTType:

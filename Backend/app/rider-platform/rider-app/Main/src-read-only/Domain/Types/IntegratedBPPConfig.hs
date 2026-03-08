@@ -46,4 +46,6 @@ data ProviderConfig
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
 
+$(Kernel.Utils.TH.mkToHttpInstanceForEnum ''PlatformType)
+
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PlatformType)

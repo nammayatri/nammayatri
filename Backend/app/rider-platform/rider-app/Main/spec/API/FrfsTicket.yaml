@@ -303,6 +303,9 @@ types:
   SeatLayoutDetailsResp:
     seatLayout: SeatLayout
     seats: [Seat]
+    combinedTripId: Maybe Text
+    isAvailable: Bool
+    availableSeatsCount: Maybe Int
 
   ActiveRouteRes:
     routeId: Text
@@ -583,6 +586,8 @@ apis:
         routeId: Text
       query:
         vehicleNumber: Text
+        fromStopIndex: Int
+        toStopIndex: Int
       response:
         type: SeatLayoutDetailsResp
 

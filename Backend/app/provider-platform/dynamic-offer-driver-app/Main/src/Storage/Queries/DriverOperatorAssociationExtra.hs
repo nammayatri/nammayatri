@@ -3,8 +3,8 @@ module Storage.Queries.DriverOperatorAssociationExtra where
 import Control.Applicative (liftA2)
 import Data.Text (toLower)
 import qualified Database.Beam as B
-import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.Common as DC
+import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleCategory as DVeh

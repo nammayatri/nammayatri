@@ -4,19 +4,19 @@ module SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
   )
 where
 
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType
-import Kernel.External.Types (SchedulerFlow, ServiceFlow)
-import Kernel.Utils.Common
-import SharedLogic.JobScheduler
-import Storage.Beam.SchedulerJob ()
 import SharedLogic.FRFSSeatBooking
   ( ActiveSeatHold (..),
     releaseHold,
     timerKey,
   )
+import SharedLogic.JobScheduler
+import Storage.Beam.SchedulerJob ()
 
 frfsSeatHoldReaper ::
   ( MonadFlow m,

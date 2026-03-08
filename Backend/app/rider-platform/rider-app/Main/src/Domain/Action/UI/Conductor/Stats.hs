@@ -1,8 +1,8 @@
 module Domain.Action.UI.Conductor.Stats where
 
 import Data.List (partition)
-import Data.Time.Calendar (Day)
 import qualified Data.Time as Time
+import Data.Time.Calendar (Day)
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Common

@@ -16,7 +16,6 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
-import qualified Domain.Types.Common as DC
 import qualified API.Types.UI.OperationHub as DomainT
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
@@ -28,6 +27,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.OperationHub as Domain
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Types.Common as DC
 import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Merchant
