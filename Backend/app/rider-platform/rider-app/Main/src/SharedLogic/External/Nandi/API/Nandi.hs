@@ -425,3 +425,36 @@ getOperatorWaybills = ET.client operatorWaybillsAPI
 
 postOperatorQueryRows :: Text -> Text -> QueryBody -> ET.EulerClient [Value]
 postOperatorQueryRows = ET.client operatorQueryRowsAPI
+
+type OperatorCurrentOperationAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "currentOperation"
+    :> ReqBody '[JSON] GimsOperationAnchor
+    :> Post '[JSON] GimsCurrentOperationResp
+
+type OperatorTripActionAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "tripAction"
+    :> ReqBody '[JSON] GimsTripActionReq
+    :> Post '[JSON] Value
+
+type OperatorCurrentTripDetailsAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "currentTripDetails"
+    :> ReqBody '[JSON] GimsCurrentTripDetailsReq
+    :> Post '[JSON] GimsCurrentTripDetailsResp
+
+operatorCurrentOperationAPI :: Proxy OperatorCurrentOperationAPI
+operatorCurrentOperationAPI = Proxy
+
+operatorTripActionAPI :: Proxy OperatorTripActionAPI
+operatorTripActionAPI = Proxy
+
+operatorCurrentTripDetailsAPI :: Proxy OperatorCurrentTripDetailsAPI
+operatorCurrentTripDetailsAPI = Proxy
+
+postOperatorCurrentOperation :: Text -> GimsOperationAnchor -> ET.EulerClient GimsCurrentOperationResp
+postOperatorCurrentOperation = ET.client operatorCurrentOperationAPI
+
+postOperatorTripAction :: Text -> GimsTripActionReq -> ET.EulerClient Value
+postOperatorTripAction = ET.client operatorTripActionAPI
+
+postOperatorCurrentTripDetails :: Text -> GimsCurrentTripDetailsReq -> ET.EulerClient GimsCurrentTripDetailsResp
+postOperatorCurrentTripDetails = ET.client operatorCurrentTripDetailsAPI
