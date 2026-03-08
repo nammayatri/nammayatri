@@ -20,6 +20,7 @@ Seat:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     directionDegrees: Maybe Int
+    minStopsRequired: Maybe Int
 
   default:
     directionDegrees: "0"
@@ -39,6 +40,10 @@ Seat:
     findAllByLayoutId:
       kvFunction: findAllWithKV
       where: seatLayoutId
+    findAllByIds:
+      kvFunction: findAllWithKV
+      where:
+         in: [id]
 
 SeatLayout:
   tableName: seat_layout

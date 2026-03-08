@@ -19,6 +19,7 @@ data Seat = Seat
     isLadiesOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    minStopsRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rowNo :: Kernel.Prelude.Int,
     seatLabel :: Kernel.Prelude.Text,
     seatLayoutId :: Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout,

@@ -65,6 +65,7 @@ import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
+import qualified Domain.Types.Seat as Seat
 
 confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
 confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId = do
@@ -101,6 +102,13 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 Just (fromIdx, toIdx) -> do
                   holdId <- generateGUID
                   let ttl' = 300
+
+                  -- validate seat quota
+                  seats <- mapM QSeat.findById allSeatIds
+                  case mapM_ (validateQuota fromIdx toIdx) seats of
+                    Left err -> throwError err
+                    Right () -> pure ()
+
                   success <- SeatBooking.holdSeats tripId allSeatIds fromIdx toIdx holdId ttl'
                   unless success $
                     throwError (InvalidRequest "Selected seat is no longer available.")
@@ -169,6 +177,21 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
             pure (rider, updatedBooking)
         )
         (pure mbBooking)
+
+    validateQuota :: Int -> Int -> Maybe Seat.Seat -> Either GenericError ()
+    validateQuota fromIdx toIdx mbSeat =
+      let numStops = toIdx - fromIdx
+      in case mbSeat of
+           Just seat ->
+             case seat.minStopsRequired of
+               Just req ->
+                 if numStops >= req
+                   then Right ()
+                   else Left (InvalidRequest "One or more selected seats are reserved for longer journeys.")
+               Nothing -> Right ()
+
+           Nothing ->
+             Left (InvalidRequest "Selected seat not found.")
 
     buildAndCreateBooking :: CallExternalBPP.FRFSConfirmFlow m r c => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> Maybe Bool -> Maybe (Text, Int, Int) -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
     buildAndCreateBooking rider quote'@DFRFSQuote.FRFSQuote {..} fareParameters mbMockPayment mbHoldCtxForAll firstTripId = do

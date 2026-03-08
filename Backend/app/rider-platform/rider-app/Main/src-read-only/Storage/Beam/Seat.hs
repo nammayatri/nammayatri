@@ -19,6 +19,7 @@ data SeatT f = SeatT
     isLadiesOnly :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    minStopsRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rowNo :: B.C f Kernel.Prelude.Int,
     seatLabel :: B.C f Kernel.Prelude.Text,
     seatLayoutId :: B.C f Kernel.Prelude.Text,
