@@ -76,7 +76,6 @@ import qualified Domain.Types.EstimateStatus as DEst
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
-import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVST
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
@@ -93,7 +92,6 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Station as DStation
 import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
 import Environment
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, groupBy, id, length, map, mapM_, null, readMaybe, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import qualified ExternalBPP.ExternalAPI.CallAPI as DirectExternalBPP
@@ -113,7 +111,6 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH
-import qualified Lib.JourneyLeg.Common.FRFS as JLCF
 import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyModule.Base
@@ -121,6 +118,7 @@ import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.Types as JMTypes
+import qualified Lib.JourneyModule.RouteServiceability as JMRouteServiceability
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -130,7 +128,6 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.Cancel as SharedCancel
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
-import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
@@ -1879,7 +1876,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
               mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [ctx.integratedBPPConfig] vno
               enrichedEta <-
                 mapConcurrently
-                  (enrichBusStopETA ctx.integratedBPPConfig)
+                  (JMRouteServiceability.enrichBusStopETA ctx.integratedBPPConfig)
                   (fromMaybe [] singleBus.busData.eta_data)
               let vehicleInfo =
                     API.Types.UI.MultimodalConfirm.LiveVehicleInfo
@@ -1920,71 +1917,6 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
       destLat <- destStationData.lat & fromMaybeM (StationError.InvalidStationData "Destination station latitude not found")
       destLon <- destStationData.lon & fromMaybeM (StationError.InvalidStationData "Destination station longitude not found")
       pure (LatLngV2 sourceLat sourceLon, LatLngV2 destLat destLon)
-
-    buildRouteWithLiveVehicle ::
-      CQMMB.RouteWithBuses ->
-      RouteServiceabilityContext ->
-      Text ->
-      Text ->
-      Environment.Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
-    buildRouteWithLiveVehicle routeInfo routeServiceabilityContext fromStopCode toStopCode = do
-      route <-
-        OTPRest.getRouteByRouteId routeServiceabilityContext.integratedBPPConfig routeInfo.routeId
-          >>= fromMaybeM
-            (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
-      busScheduleDetails <-
-        OTPRest.getRouteBusSchedule routeInfo.routeId routeServiceabilityContext.integratedBPPConfig
-      -- Build a lookup list of distinct service tier types -> FRFS tier entity once
-      frfsTierMap <- do
-        let scheduleVehicleNos = map (.vehicle_no) busScheduleDetails
-            liveVehicleNos = map (.vehicleNumber) routeInfo.buses
-            allVehicleNos = nub (scheduleVehicleNos <> liveVehicleNos)
-        tierLookups <- mapM (JMU.getVehicleServiceTypeFromInMem [routeServiceabilityContext.integratedBPPConfig]) allVehicleNos
-        let uniqueTiers = nub (catMaybes tierLookups)
-        mapM
-          ( \t ->
-              (t,)
-                <$> CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
-                  t
-                  routeServiceabilityContext.merchantOperatingCityId
-                  routeServiceabilityContext.integratedBPPConfig.id
-          )
-          uniqueTiers
-      schedulesFork <-
-        awaitableFork "getBusScheduleInfo" $
-          getBusScheduleInfo busScheduleDetails routeServiceabilityContext routeInfo.routeId fromStopCode toStopCode frfsTierMap
-      liveVehiclesFork <-
-        awaitableFork "getLiveVehicles" $
-          getLiveVehicles routeInfo.buses routeServiceabilityContext frfsTierMap
-      schedules <-
-        L.await Nothing schedulesFork >>= \case
-          Left err -> throwError $ InternalError $ "getBusScheduleInfo fork failed: " <> show err
-          Right result -> pure result
-      liveVehicles <-
-        L.await Nothing liveVehiclesFork >>= \case
-          Left err -> throwError $ InternalError $ "getLiveVehicles fork failed: " <> show err
-          Right result -> pure result
-      logDebug $
-        "AlternateRoute getRouteBusSchedule routeId="
-          <> routeInfo.routeId
-          <> ", scheduleCount="
-          <> show (length schedules)
-      logDebug $
-        "AlternateRoute routeId="
-          <> routeInfo.routeId
-          <> ", shortName="
-          <> route.shortName
-      if null liveVehicles && null schedules
-        then pure Nothing
-        else
-          pure $
-            Just
-              API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
-                { liveVehicles,
-                  schedules,
-                  routeCode = routeInfo.routeId,
-                  routeShortName = route.shortName
-                }
 
     getValidSingleModeRoute :: RouteServiceabilityContext -> Text -> Text -> Environment.Flow MultiModalTypes.MultiModalRoute
     getValidSingleModeRoute routeServiceabilityContext srcCode' destCode' = do
@@ -2049,117 +1981,6 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             pure []
 
       pure $ nub (routeCodeFromLeg <> stopToStopRouteCodes)
-
-    getBusScheduleInfo :: NandiTypes.BusScheduleDetails -> RouteServiceabilityContext -> Text -> Text -> Text -> [(ServiceTierType, Maybe DFRFSVST.FRFSVehicleServiceTier)] -> Environment.Flow [API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo]
-    getBusScheduleInfo busScheduleDetails routeServiceabilityContext routeId fromStopCode toStopCode frfsTierMap = do
-      -- Batch-fetch all live info in one Redis HMGET instead of N individual calls
-      let vehicleNos = map (.vehicle_no) busScheduleDetails
-      liveInfoResults <- JLCF.getVehicleMetadata vehicleNos routeServiceabilityContext.integratedBPPConfig
-      let busLiveInfoMap = zip vehicleNos liveInfoResults
-      -- Hoist stop index lookup once (same cache key for all vehicles)
-      mStopIndices <- JLU.getRouteStopIndices routeId fromStopCode toStopCode routeServiceabilityContext.integratedBPPConfig
-      catMaybes
-        <$> mapM
-          ( \detail -> do
-              let busLiveInfo = join $ lookup detail.vehicle_no busLiveInfoMap
-              logDebug $ "getBusScheduleInfo: getBusLiveInfo vehicle=" <> detail.vehicle_no <> ", found=" <> show (isJust busLiveInfo) <> ", details=" <> show (fmap (\v -> (v.vehicle_number, v.latitude, v.longitude, v.timestamp, v.routes_info, v.bearing)) busLiveInfo)
-              mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [routeServiceabilityContext.integratedBPPConfig] detail.vehicle_no
-              case mbServiceTier of
-                Just serviceTier -> do
-                  let frfsServiceTier = join $ lookup serviceTier frfsTierMap
-                  -- Get service subtypes from in-memory cache
-                  mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [routeServiceabilityContext.integratedBPPConfig] detail.vehicle_no
-
-                  let combinedTripId = do
-                        waybill <- detail.waybill_no
-                        tNum <- detail.trip_number
-                        return $ waybill <> "-" <> show tNum
-                  seatLayoutId <-
-                    JMU.getLiveRouteInfo
-                      routeServiceabilityContext.integratedBPPConfig
-                      detail.vehicle_no
-                      routeId
-                      <&> (>>= (.seatLayoutId))
-                  (isAvailable, availableSeatsCount) <- case seatLayoutId of
-                    Just layoutId -> case combinedTripId of
-                      Nothing -> return (False, Nothing)
-                      Just tripId -> do
-                        case mStopIndices of
-                          Just (fromIdx, toIdx) -> do
-                            avail <- SeatBooking.getAvailableSeatCount layoutId tripId fromIdx toIdx
-                            logInfo $ "MultimodalConfirm:seatAvailability routeId=" <> routeId <> " tripId=" <> tripId <> " vehicle=" <> detail.vehicle_no <> " available=" <> show avail
-                            return (avail > 0, Just avail)
-                          _ -> return (True, Nothing)
-                    Nothing -> return (True, Nothing)
-
-                  if not isAvailable
-                    then return Nothing
-                    else do
-                      logDebug $ "getBusScheduleInfo: vehicle=" <> detail.vehicle_no <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", hasLiveInfo=" <> show (isJust busLiveInfo) <> ", eta=" <> show detail.eta <> ", position=" <> show ((\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo) <> ", timestamp=" <> show ((.timestamp) <$> busLiveInfo)
-                      return . Just $
-                        API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo
-                          { eta = Just detail.eta,
-                            position = (\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo,
-                            locationUTCTimestamp = posixSecondsToUTCTime . fromIntegral . (.timestamp) <$> busLiveInfo,
-                            serviceTierType = serviceTier,
-                            serviceTierName = (.shortName) <$> frfsServiceTier,
-                            vehicleNumber = detail.vehicle_no,
-                            tripId = combinedTripId,
-                            serviceSubTypes = mbServiceSubTypes,
-                            availableSeats = availableSeatsCount
-                          }
-                Nothing -> do
-                  logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
-                  return Nothing
-          )
-          busScheduleDetails
-
-    getLiveVehicles :: [CQMMB.FullBusData] -> RouteServiceabilityContext -> [(ServiceTierType, Maybe DFRFSVST.FRFSVehicleServiceTier)] -> Environment.Flow [API.Types.UI.MultimodalConfirm.LiveVehicleInfo]
-    getLiveVehicles busesData routeServiceabilityContext frfsTierMap =
-      catMaybes
-        <$> mapM
-          ( \bus -> do
-              mbServiceTier <- JLU.getVehicleServiceTypeFromInMem [routeServiceabilityContext.integratedBPPConfig] bus.vehicleNumber
-              case mbServiceTier of
-                Just serviceTier -> do
-                  let frfsServiceTier = join $ lookup serviceTier frfsTierMap
-                  -- Get service subtypes from in-memory cache
-                  mbServiceSubTypes <- JMU.getVehicleServiceSubTypesFromInMem [routeServiceabilityContext.integratedBPPConfig] bus.vehicleNumber
-
-                  logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
-                  enrichedEta <-
-                    mapM
-                      (enrichBusStopETA routeServiceabilityContext.integratedBPPConfig)
-                      (fromMaybe [] bus.busData.eta_data)
-                  return . Just $
-                    API.Types.UI.MultimodalConfirm.LiveVehicleInfo
-                      { eta = Just enrichedEta,
-                        number = bus.vehicleNumber,
-                        position = LatLong bus.busData.latitude bus.busData.longitude,
-                        locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,
-                        serviceTierType = serviceTier,
-                        serviceTierName = (.shortName) <$> frfsServiceTier,
-                        serviceSubTypes = mbServiceSubTypes
-                      }
-                Nothing -> do
-                  logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber
-                  return Nothing
-          )
-          busesData
-
-    enrichBusStopETA :: DIBC.IntegratedBPPConfig -> CQMMB.BusStopETA -> Environment.Flow CQMMB.BusStopETA
-    enrichBusStopETA integratedBPPConfig' eta =
-      case eta.stopName of
-        Just _ ->
-          pure eta
-        Nothing -> do
-          mbStation <-
-            OTPRest.getStationByGtfsIdAndStopCode
-              eta.stopCode
-              integratedBPPConfig'
-          let fetchedName = fmap (.name) mbStation
-          pure $
-            eta{CQMMB.stopName = fetchedName <|> eta.stopName}
 
     getRouteNotFoundError :: GeneralVehicleType -> Text -> Text -> MultimodalError
     getRouteNotFoundError MultiModalTypes.MetroRail source dest = NoValidMetroRoute source dest
@@ -2246,7 +2067,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           routesWithLiveVehicles <-
             catMaybes
               <$> mapConcurrently
-                (\r -> buildRouteWithLiveVehicle r ctx rlFromStopCode rlToStopCode)
+                (\r -> JMRouteServiceability.buildRouteWithLiveVehicle r ctx.integratedBPPConfig ctx.merchantOperatingCityId rlFromStopCode rlToStopCode)
                 busesForRoutes
 
           pure $

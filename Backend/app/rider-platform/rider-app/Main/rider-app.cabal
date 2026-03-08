@@ -417,6 +417,7 @@ library
       Lib.JourneyLeg.Walk
       Lib.JourneyModule.Base
       Lib.JourneyModule.Location
+      Lib.JourneyModule.RouteServiceability
       Lib.JourneyModule.State.Types
       Lib.JourneyModule.State.Utils
       Lib.JourneyModule.Types

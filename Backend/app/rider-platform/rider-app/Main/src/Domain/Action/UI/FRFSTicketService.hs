@@ -2,6 +2,7 @@ module Domain.Action.UI.FRFSTicketService where
 
 import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
+import qualified API.Types.UI.MultimodalConfirm
 import BecknV2.FRFS.Enums hiding (END, START)
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
@@ -32,6 +33,7 @@ import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Utils (mapConcurrently)
 import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
@@ -63,6 +65,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
+import qualified Lib.JourneyModule.RouteServiceability as JMRouteServiceability
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -84,6 +87,7 @@ import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
@@ -1247,11 +1251,9 @@ getFrfsRouteSeatLayout ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Data.Text.Text ->
-  Kernel.Prelude.Maybe Int ->
-  Kernel.Prelude.Maybe Int ->
   Kernel.Prelude.Maybe Data.Text.Text ->
   Environment.Flow API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp
-getFrfsRouteSeatLayout (mbPersonId, _merchantId) routeId mbFromStopIndex mbToStopIndex mbVehicleNumber = do
+getFrfsRouteSeatLayout (mbPersonId, _merchantId) routeId mbVehicleNumber = do
   logInfo $ "FRFSTicketService:getFrfsRouteSeatLayout routeId=" <> routeId <> " vehicleNumber=" <> show mbVehicleNumber
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -1273,24 +1275,44 @@ getFrfsRouteSeatLayout (mbPersonId, _merchantId) routeId mbFromStopIndex mbToSto
     vehicleInfo.seatLayoutId
       & fromMaybeM (InvalidRequest "Seat layout ID not found for this service tier")
 
-  (combinedTripId, isAvailable, availableSeatsCount) <- case (mbFromStopIndex, mbToStopIndex) of
-    (Just fromIdx, Just toIdx) -> do
-      let tripId = do
-            waybill <- vehicleInfo.waybillId
-            tNum <- vehicleInfo.tripNumber
-            return $ waybill <> "-" <> show tNum
-      case tripId of
-        Nothing -> return (Nothing, False, Nothing)
-        Just tid -> do
-          avail <- SeatBooking.getAvailableSeatCount seatLayoutId tid fromIdx toIdx
-          logInfo $ "FRFSTicketService:seatAvailability routeId=" <> routeId <> " tripId=" <> tid <> " available=" <> show avail
-          return (Just tid, avail > 0, Just avail)
-    _ -> return (Nothing, True, Nothing)
-
   seats <- CQSeat.findAllByLayoutId seatLayoutId
   seatLayout <- QSeatLayout.findById seatLayoutId >>= fromMaybeM (InvalidRequest "SeatLayout not found")
   logInfo $ "FRFSTicketService:getFrfsRouteSeatLayout routeId=" <> routeId <> " seatLayoutId=" <> seatLayoutId.getId <> " seatCount=" <> show (length seats)
-  return $ SeatLayoutDetailsResp {seatLayout = seatLayout, seats = seats, combinedTripId = combinedTripId, isAvailable = isAvailable, availableSeatsCount = availableSeatsCount}
+  return $ SeatLayoutDetailsResp {seatLayout = seatLayout, seats = seats}
+
+postFrfsRouteServiceability ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Data.Text.Text ->
+  FRFSTicketService.FRFSRouteServiceabilityReq ->
+  Environment.Flow API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
+  logInfo $ "FRFSTicketService:postFrfsRouteServiceability routeId=" <> routeId
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+
+  let cityId = person.merchantOperatingCityId
+  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
+
+  busesForRoutes <- CQMMB.getBusesForRoutes [routeId] integratedBPPConfig
+
+  routesWithLiveVehicles <-
+    catMaybes
+      <$> mapConcurrently
+        (\r -> JMRouteServiceability.buildRouteWithLiveVehicle r integratedBPPConfig cityId req.startStopCode req.endStopCode)
+        busesForRoutes
+
+  case routesWithLiveVehicles of
+    (result : _) -> return result
+    [] ->
+      return $
+        API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+          { liveVehicles = [],
+            schedules = [],
+            routeCode = routeId,
+            routeShortName = ""
+          }
 
 getFrfsActiveRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->

@@ -1833,3 +1833,4 @@ getWaybillNoAndTripNoFromTripId tripId =
 makeTripIdFromWaybillNoAndTripNo :: T.Text -> Int -> T.Text
 makeTripIdFromWaybillNoAndTripNo waybillNo tripNo =
   waybillNo <> "-" <> T.pack (show tripNo)
+

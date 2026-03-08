@@ -8,6 +8,7 @@ module API.Action.UI.FRFSTicketService
 where
 
 import qualified API.Types.UI.FRFSTicketService
+import qualified API.Types.UI.MultimodalConfirm
 import qualified BecknV2.FRFS.Enums
 import qualified Control.Lens
 import qualified Data.Text
@@ -364,17 +365,24 @@ type API =
            Data.Text.Text
       :> "seatLayout"
       :> QueryParam
-           "fromStopIndex"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "toStopIndex"
-           Kernel.Prelude.Int
-      :> QueryParam
            "vehicleNumber"
            Data.Text.Text
       :> Get
            '[JSON]
            API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp
+      :<|> TokenAuth
+      :> "frfs"
+      :> "route"
+      :> Capture
+           "routeId"
+           Data.Text.Text
+      :> "serviceability"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq
+      :> Post
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
       :<|> TokenAuth
       :> "frfs"
       :> "activeRoutes"
@@ -401,7 +409,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest
+handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest
 
 getFrfsConfig ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -638,12 +646,20 @@ getFrfsRouteSeatLayout ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Data.Text.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp
   )
-getFrfsRouteSeatLayout a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsRouteSeatLayout (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getFrfsRouteSeatLayout a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsRouteSeatLayout (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postFrfsRouteServiceability ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Data.Text.Text ->
+    API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq ->
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+  )
+postFrfsRouteServiceability a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsRouteServiceability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getFrfsActiveRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

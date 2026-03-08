@@ -31,6 +31,7 @@ imports:
   QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
   BusLocation: API.Types.UI.RiderLocation
   CrisSdkResponse: API.Types.UI.MultimodalConfirm
+  RouteWithLiveVehicle: API.Types.UI.MultimodalConfirm
   Seat: Domain.Types.Seat
   SeatLayout: Domain.Types.SeatLayout
   SeatType: Domain.Types.Seat
@@ -303,9 +304,10 @@ types:
   SeatLayoutDetailsResp:
     seatLayout: SeatLayout
     seats: [Seat]
-    combinedTripId: Maybe Text
-    isAvailable: Bool
-    availableSeatsCount: Maybe Int
+
+  FRFSRouteServiceabilityReq:
+    startStopCode: Text
+    endStopCode: Text
 
   ActiveRouteRes:
     routeId: Text
@@ -586,10 +588,18 @@ apis:
         routeId: Text
       query:
         vehicleNumber: Text
-        fromStopIndex: Int
-        toStopIndex: Int
       response:
         type: SeatLayoutDetailsResp
+
+  - POST:
+      endpoint: /frfs/route/{routeId}/serviceability
+      auth: TokenAuth
+      params:
+        routeId: Text
+      request:
+        type: FRFSRouteServiceabilityReq
+      response:
+        type: "API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle"
 
   # GET active routes served today
   - GET:
