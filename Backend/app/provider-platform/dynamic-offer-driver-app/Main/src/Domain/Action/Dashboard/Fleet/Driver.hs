@@ -1709,25 +1709,28 @@ getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbF
   (driverIdObjs, fleetOwnerId) <-
     case (mbRole, mbFleetOwnerId) of
       (Just DP.OPERATOR, Nothing) -> do
-        ids <- if useDBForAnalytics
-          then QDOAExtra.getActiveDriverIdsByOperatorId requestorId
-          else CDOA.getDriverIdsByOperatorId requestorId
+        ids <-
+          if useDBForAnalytics
+            then QDOAExtra.getActiveDriverIdsByOperatorId requestorId
+            else CDOA.getDriverIdsByOperatorId requestorId
         pure (ids, requestorId)
       (_, Just foId) -> do
         void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) foId
-        ids <- if useDBForAnalytics
-          then QFDAExtra.getActiveDriverIdsByFleetOwnerId foId
-          else do
-            maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId foId
-            pure $ fromMaybe [] maybeDriverIds
+        ids <-
+          if useDBForAnalytics
+            then QFDAExtra.getActiveDriverIdsByFleetOwnerId foId
+            else do
+              maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId foId
+              pure $ fromMaybe [] maybeDriverIds
         pure (ids, foId)
       (_, Nothing) -> do
         void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) requestorId
-        ids <- if useDBForAnalytics
-          then QFDAExtra.getActiveDriverIdsByFleetOwnerId requestorId
-          else do
-            maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId requestorId
-            pure $ fromMaybe [] maybeDriverIds
+        ids <-
+          if useDBForAnalytics
+            then QFDAExtra.getActiveDriverIdsByFleetOwnerId requestorId
+            else do
+              maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId requestorId
+              pure $ fromMaybe [] maybeDriverIds
         pure (ids, requestorId)
   let driverIdTexts = map (.getId) driverIdObjs
       mbSearchTerm = do

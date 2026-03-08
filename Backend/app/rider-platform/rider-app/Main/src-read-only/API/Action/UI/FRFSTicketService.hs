@@ -364,6 +364,12 @@ type API =
            Data.Text.Text
       :> "seatLayout"
       :> QueryParam
+           "fromStopIndex"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "toStopIndex"
+           Kernel.Prelude.Int
+      :> QueryParam
            "vehicleNumber"
            Data.Text.Text
       :> Get
@@ -632,10 +638,12 @@ getFrfsRouteSeatLayout ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Data.Text.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp
   )
-getFrfsRouteSeatLayout a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsRouteSeatLayout (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getFrfsRouteSeatLayout a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsRouteSeatLayout (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getFrfsActiveRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
