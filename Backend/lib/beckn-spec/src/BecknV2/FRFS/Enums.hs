@@ -108,6 +108,7 @@ instance FromJSON ServiceTierType where
     (String "ELECTRIC_V_PMI") -> pure ELECTRIC_V_PMI
     (String "AC_EMU_FIRST_CLASS") -> pure AC_EMU_FIRST_CLASS
     (String "PREMIUM") -> pure PREMIUM
+    (String "Premium") -> pure PREMIUM
     _ -> parseFail "Invalid Service Tier Type"
 
 instance ToSchema ServiceTierType where
