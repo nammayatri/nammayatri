@@ -33,7 +33,6 @@ import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
-import Domain.Utils (mapConcurrently)
 import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
@@ -41,6 +40,7 @@ import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import Domain.Types.Station
 import Domain.Types.StationType
+import Domain.Utils (mapConcurrently)
 import qualified Environment
 import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, null, readMaybe, toList, whenJust)
 import qualified ExternalBPP.CallAPI.Cancel as CallExternalBPP

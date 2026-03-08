@@ -10,6 +10,7 @@ module Domain.Action.Dashboard.AppManagement.FRFSTicketService
     postFRFSTicketServiceCustomerFrfsQuoteV2Confirm,
     getFRFSTicketServiceCustomerFrfsBookingStatus,
     getFRFSTicketServiceCustomerFrfsRouteSeatLayout,
+    getFRFSTicketServiceCustomerFrfsTripRouteSeats,
     postFRFSTicketServiceCustomerFrfsRouteServiceability,
   )
 where
@@ -88,6 +89,11 @@ getFRFSTicketServiceCustomerFrfsRouteSeatLayout :: (Kernel.Types.Id.ShortId Doma
 getFRFSTicketServiceCustomerFrfsRouteSeatLayout merchantShortId _opCity customerId routeId vehicleNumber = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   DFrfs.getFrfsRouteSeatLayout (Just customerId, merchant.id) routeId vehicleNumber
+
+getFRFSTicketServiceCustomerFrfsTripRouteSeats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.UI.FRFSTicketService.SeatLayoutResp)
+getFRFSTicketServiceCustomerFrfsTripRouteSeats merchantShortId _opCity customerId tripId routeId fromStopCode toStopCode vehicleNumber = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  DFrfs.getFrfsTripRouteSeats (Just customerId, merchant.id) tripId routeId fromStopCode toStopCode vehicleNumber
 
 postFRFSTicketServiceCustomerFrfsRouteServiceability :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq -> Environment.Flow API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
 postFRFSTicketServiceCustomerFrfsRouteServiceability merchantShortId _opCity customerId routeId req = do

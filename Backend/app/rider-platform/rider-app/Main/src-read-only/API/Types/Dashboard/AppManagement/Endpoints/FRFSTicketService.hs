@@ -23,7 +23,7 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-type API = ("fRFSTicketService" :> (GetFRFSTicketServiceCustomerFrfsConfig :<|> GetFRFSTicketServiceCustomerFrfsAutocomplete :<|> GetFRFSTicketServiceCustomerFrfsRoutes :<|> GetFRFSTicketServiceCustomerFrfsStations :<|> PostFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> GetFRFSTicketServiceCustomerFrfsRoute :<|> PostFRFSTicketServiceCustomerFrfsSearch :<|> GetFRFSTicketServiceCustomerFrfsSearchQuote :<|> PostFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> GetFRFSTicketServiceCustomerFrfsBookingStatus :<|> GetFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> PostFRFSTicketServiceCustomerFrfsRouteServiceability))
+type API = ("fRFSTicketService" :> (GetFRFSTicketServiceCustomerFrfsConfig :<|> GetFRFSTicketServiceCustomerFrfsAutocomplete :<|> GetFRFSTicketServiceCustomerFrfsRoutes :<|> GetFRFSTicketServiceCustomerFrfsStations :<|> PostFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> GetFRFSTicketServiceCustomerFrfsRoute :<|> PostFRFSTicketServiceCustomerFrfsSearch :<|> GetFRFSTicketServiceCustomerFrfsSearchQuote :<|> PostFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> GetFRFSTicketServiceCustomerFrfsBookingStatus :<|> GetFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> GetFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> PostFRFSTicketServiceCustomerFrfsRouteServiceability))
 
 type GetFRFSTicketServiceCustomerFrfsConfig =
   ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "frfs" :> "config"
@@ -223,6 +223,28 @@ type GetFRFSTicketServiceCustomerFrfsRouteSeatLayout =
            API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp
   )
 
+type GetFRFSTicketServiceCustomerFrfsTripRouteSeats =
+  ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "frfs" :> "trip"
+      :> Capture
+           "tripId"
+           Kernel.Prelude.Text
+      :> "route"
+      :> Capture "routeId" Kernel.Prelude.Text
+      :> "seats"
+      :> QueryParam
+           "fromStopCode"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "toStopCode"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "vehicleNumber"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           API.Types.UI.FRFSTicketService.SeatLayoutResp
+  )
+
 type PostFRFSTicketServiceCustomerFrfsRouteServiceability =
   ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "frfs" :> "route"
       :> Capture
@@ -249,13 +271,14 @@ data FRFSTicketServiceAPIs = FRFSTicketServiceAPIs
     postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes,
     getFRFSTicketServiceCustomerFrfsBookingStatus :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes,
     getFRFSTicketServiceCustomerFrfsRouteSeatLayout :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp,
+    getFRFSTicketServiceCustomerFrfsTripRouteSeats :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.SeatLayoutResp,
     postFRFSTicketServiceCustomerFrfsRouteServiceability :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq -> EulerHS.Types.EulerClient API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
   }
 
 mkFRFSTicketServiceAPIs :: (Client EulerHS.Types.EulerClient API -> FRFSTicketServiceAPIs)
 mkFRFSTicketServiceAPIs fRFSTicketServiceClient = (FRFSTicketServiceAPIs {..})
   where
-    getFRFSTicketServiceCustomerFrfsConfig :<|> getFRFSTicketServiceCustomerFrfsAutocomplete :<|> getFRFSTicketServiceCustomerFrfsRoutes :<|> getFRFSTicketServiceCustomerFrfsStations :<|> postFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> getFRFSTicketServiceCustomerFrfsRoute :<|> postFRFSTicketServiceCustomerFrfsSearch :<|> getFRFSTicketServiceCustomerFrfsSearchQuote :<|> postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> getFRFSTicketServiceCustomerFrfsBookingStatus :<|> getFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> postFRFSTicketServiceCustomerFrfsRouteServiceability = fRFSTicketServiceClient
+    getFRFSTicketServiceCustomerFrfsConfig :<|> getFRFSTicketServiceCustomerFrfsAutocomplete :<|> getFRFSTicketServiceCustomerFrfsRoutes :<|> getFRFSTicketServiceCustomerFrfsStations :<|> postFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> getFRFSTicketServiceCustomerFrfsRoute :<|> postFRFSTicketServiceCustomerFrfsSearch :<|> getFRFSTicketServiceCustomerFrfsSearchQuote :<|> postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> getFRFSTicketServiceCustomerFrfsBookingStatus :<|> getFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> getFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> postFRFSTicketServiceCustomerFrfsRouteServiceability = fRFSTicketServiceClient
 
 data FRFSTicketServiceUserActionType
   = GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_CONFIG
@@ -269,6 +292,7 @@ data FRFSTicketServiceUserActionType
   | POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_QUOTE_V2_CONFIRM
   | GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_BOOKING_STATUS
   | GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_ROUTE_SEAT_LAYOUT
+  | GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_TRIP_ROUTE_SEATS
   | POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_ROUTE_SERVICEABILITY
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

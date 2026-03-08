@@ -11,6 +11,7 @@ imports:
   FRFSQuoteConfirmReq: API.Types.UI.FRFSTicketService
   FRFSTicketBookingStatusAPIRes: API.Types.UI.FRFSTicketService
   SeatLayoutDetailsResp: API.Types.UI.FRFSTicketService
+  SeatLayoutResp: API.Types.UI.FRFSTicketService
   FRFSRouteServiceabilityReq: API.Types.UI.FRFSTicketService
   RouteWithLiveVehicle: API.Types.UI.MultimodalConfirm
   FRFSSearch: Domain.Types.FRFSSearch
@@ -183,6 +184,20 @@ apis:
         vehicleNumber: Text
       response:
         type: SeatLayoutDetailsResp
+
+  - GET:
+      endpoint: /customer/{customerId}/frfs/trip/{tripId}/route/{routeId}/seats
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        tripId: Text
+        routeId: Text
+      query:
+        vehicleNumber: Text
+        fromStopCode: Text
+        toStopCode: Text
+      response:
+        type: SeatLayoutResp
 
   - POST:
       endpoint: /customer/{customerId}/frfs/route/{routeId}/serviceability

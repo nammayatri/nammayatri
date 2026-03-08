@@ -116,9 +116,9 @@ import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
+import qualified Lib.JourneyModule.RouteServiceability as JMRouteServiceability
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.Types as JMTypes
-import qualified Lib.JourneyModule.RouteServiceability as JMRouteServiceability
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment

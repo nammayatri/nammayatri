@@ -30,10 +30,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("fRFSTicketService" :> (GetFRFSTicketServiceCustomerFrfsConfig :<|> GetFRFSTicketServiceCustomerFrfsAutocomplete :<|> GetFRFSTicketServiceCustomerFrfsRoutes :<|> GetFRFSTicketServiceCustomerFrfsStations :<|> PostFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> GetFRFSTicketServiceCustomerFrfsRoute :<|> PostFRFSTicketServiceCustomerFrfsSearch :<|> GetFRFSTicketServiceCustomerFrfsSearchQuote :<|> PostFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> GetFRFSTicketServiceCustomerFrfsBookingStatus :<|> GetFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> PostFRFSTicketServiceCustomerFrfsRouteServiceability))
+type API = ("fRFSTicketService" :> (GetFRFSTicketServiceCustomerFrfsConfig :<|> GetFRFSTicketServiceCustomerFrfsAutocomplete :<|> GetFRFSTicketServiceCustomerFrfsRoutes :<|> GetFRFSTicketServiceCustomerFrfsStations :<|> PostFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> GetFRFSTicketServiceCustomerFrfsRoute :<|> PostFRFSTicketServiceCustomerFrfsSearch :<|> GetFRFSTicketServiceCustomerFrfsSearchQuote :<|> PostFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> GetFRFSTicketServiceCustomerFrfsBookingStatus :<|> GetFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> GetFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> PostFRFSTicketServiceCustomerFrfsRouteServiceability))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getFRFSTicketServiceCustomerFrfsConfig merchantId city :<|> getFRFSTicketServiceCustomerFrfsAutocomplete merchantId city :<|> getFRFSTicketServiceCustomerFrfsRoutes merchantId city :<|> getFRFSTicketServiceCustomerFrfsStations merchantId city :<|> postFRFSTicketServiceCustomerFrfsStationsPossibleStops merchantId city :<|> getFRFSTicketServiceCustomerFrfsRoute merchantId city :<|> postFRFSTicketServiceCustomerFrfsSearch merchantId city :<|> getFRFSTicketServiceCustomerFrfsSearchQuote merchantId city :<|> postFRFSTicketServiceCustomerFrfsQuoteV2Confirm merchantId city :<|> getFRFSTicketServiceCustomerFrfsBookingStatus merchantId city :<|> getFRFSTicketServiceCustomerFrfsRouteSeatLayout merchantId city :<|> postFRFSTicketServiceCustomerFrfsRouteServiceability merchantId city
+handler merchantId city = getFRFSTicketServiceCustomerFrfsConfig merchantId city :<|> getFRFSTicketServiceCustomerFrfsAutocomplete merchantId city :<|> getFRFSTicketServiceCustomerFrfsRoutes merchantId city :<|> getFRFSTicketServiceCustomerFrfsStations merchantId city :<|> postFRFSTicketServiceCustomerFrfsStationsPossibleStops merchantId city :<|> getFRFSTicketServiceCustomerFrfsRoute merchantId city :<|> postFRFSTicketServiceCustomerFrfsSearch merchantId city :<|> getFRFSTicketServiceCustomerFrfsSearchQuote merchantId city :<|> postFRFSTicketServiceCustomerFrfsQuoteV2Confirm merchantId city :<|> getFRFSTicketServiceCustomerFrfsBookingStatus merchantId city :<|> getFRFSTicketServiceCustomerFrfsRouteSeatLayout merchantId city :<|> getFRFSTicketServiceCustomerFrfsTripRouteSeats merchantId city :<|> postFRFSTicketServiceCustomerFrfsRouteServiceability merchantId city
 
 type GetFRFSTicketServiceCustomerFrfsConfig =
   ( ApiAuth
@@ -123,6 +123,14 @@ type GetFRFSTicketServiceCustomerFrfsRouteSeatLayout =
       :> API.Types.Dashboard.AppManagement.FRFSTicketService.GetFRFSTicketServiceCustomerFrfsRouteSeatLayout
   )
 
+type GetFRFSTicketServiceCustomerFrfsTripRouteSeats =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.FRFS_TICKET_SERVICE / 'API.Types.Dashboard.AppManagement.FRFSTicketService.GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_TRIP_ROUTE_SEATS)
+      :> API.Types.Dashboard.AppManagement.FRFSTicketService.GetFRFSTicketServiceCustomerFrfsTripRouteSeats
+  )
+
 type PostFRFSTicketServiceCustomerFrfsRouteServiceability =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
@@ -163,6 +171,9 @@ getFRFSTicketServiceCustomerFrfsBookingStatus merchantShortId opCity apiTokenInf
 
 getFRFSTicketServiceCustomerFrfsRouteSeatLayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp)
 getFRFSTicketServiceCustomerFrfsRouteSeatLayout merchantShortId opCity apiTokenInfo customerId routeId vehicleNumber = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.FRFSTicketService.getFRFSTicketServiceCustomerFrfsRouteSeatLayout merchantShortId opCity apiTokenInfo customerId routeId vehicleNumber
+
+getFRFSTicketServiceCustomerFrfsTripRouteSeats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.FRFSTicketService.SeatLayoutResp)
+getFRFSTicketServiceCustomerFrfsTripRouteSeats merchantShortId opCity apiTokenInfo customerId tripId routeId fromStopCode toStopCode vehicleNumber = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.FRFSTicketService.getFRFSTicketServiceCustomerFrfsTripRouteSeats merchantShortId opCity apiTokenInfo customerId tripId routeId fromStopCode toStopCode vehicleNumber
 
 postFRFSTicketServiceCustomerFrfsRouteServiceability :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq -> Environment.FlowHandler API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
 postFRFSTicketServiceCustomerFrfsRouteServiceability merchantShortId opCity apiTokenInfo customerId routeId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.FRFSTicketService.postFRFSTicketServiceCustomerFrfsRouteServiceability merchantShortId opCity apiTokenInfo customerId routeId req

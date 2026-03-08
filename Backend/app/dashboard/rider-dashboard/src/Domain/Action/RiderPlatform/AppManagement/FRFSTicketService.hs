@@ -12,7 +12,8 @@ module Domain.Action.RiderPlatform.AppManagement.FRFSTicketService
     postFRFSTicketServiceCustomerFrfsQuoteV2Confirm,
     getFRFSTicketServiceCustomerFrfsBookingStatus,
     getFRFSTicketServiceCustomerFrfsRouteSeatLayout,
-    postFRFSTicketServiceCustomerFrfsRouteServiceability
+    getFRFSTicketServiceCustomerFrfsTripRouteSeats,
+    postFRFSTicketServiceCustomerFrfsRouteServiceability,
   )
 where
 
@@ -100,3 +101,8 @@ postFRFSTicketServiceCustomerFrfsRouteServiceability :: (Kernel.Types.Id.ShortId
 postFRFSTicketServiceCustomerFrfsRouteServiceability merchantShortId opCity apiTokenInfo customerId routeId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.postFRFSTicketServiceCustomerFrfsRouteServiceability) customerId routeId req
+
+getFRFSTicketServiceCustomerFrfsTripRouteSeats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.UI.FRFSTicketService.SeatLayoutResp)
+getFRFSTicketServiceCustomerFrfsTripRouteSeats merchantShortId opCity apiTokenInfo customerId tripId routeId fromStopCode toStopCode vehicleNumber = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.getFRFSTicketServiceCustomerFrfsTripRouteSeats) customerId tripId routeId fromStopCode toStopCode vehicleNumber
