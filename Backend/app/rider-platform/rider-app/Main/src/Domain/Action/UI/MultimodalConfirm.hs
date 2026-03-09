@@ -2389,7 +2389,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
           _ -> Spec.BUS
   forM_ qrDataList $ \qrData -> do
     let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
-    void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) Nothing merchantOperatingCity.city frfsVehicleCategory verifyReq
+    void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
 
   QJourneyLeg.updateByPrimaryKey $
     journeyLeg
