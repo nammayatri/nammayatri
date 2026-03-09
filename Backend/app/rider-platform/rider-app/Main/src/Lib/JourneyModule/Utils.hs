@@ -85,6 +85,7 @@ import Tools.Error
 import Tools.Maps (LatLong (..))
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.BAPMetrics as Metrics
+import qualified Domain.Types.Seat as Seat
 import qualified Tools.Payment as TPayment
 
 mapWithIndex :: (MonadFlow m) => (Int -> a -> m b) -> [a] -> m [b]
@@ -1833,3 +1834,10 @@ getWaybillNoAndTripNoFromTripId tripId =
 makeTripIdFromWaybillNoAndTripNo :: T.Text -> Int -> T.Text
 makeTripIdFromWaybillNoAndTripNo waybillNo tripNo =
   waybillNo <> "-" <> T.pack (show tripNo)
+
+meetsSeatQuota :: Int -> Int -> Seat.Seat -> Bool
+meetsSeatQuota fromIdx toIdx seat =
+  let numStops = toIdx - fromIdx
+   in case seat.minStopsRequired of
+        Just req -> numStops >= req
+        Nothing -> True

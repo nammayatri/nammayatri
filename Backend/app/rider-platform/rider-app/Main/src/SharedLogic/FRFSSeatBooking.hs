@@ -15,6 +15,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logInfo, logWarning)
 import qualified SharedLogic.FRFSSeatBooking.Lua as Lua
 import qualified Storage.Queries.Seat as QSeat
+import qualified Lib.JourneyModule.Utils as JMU
 
 data SeatHoldMeta = SeatHoldMeta
   { tripId :: Text,
@@ -228,7 +229,11 @@ getAvailableSeatCount :: (MonadFlow m, Redis.HedisFlow m r, EsqDBFlow m r, Cache
 getAvailableSeatCount seatLayoutId tripId fromIdx toIdx = do
   seats <- QSeat.findAllByLayoutId seatLayoutId
   seatsWithStatus <- getTripAvailability tripId fromIdx toIdx seats
-  return $ length $ filter (\s -> s.status == AVAILABLE) seatsWithStatus
+  let validSeats =
+        filter
+          (\s -> s.status == AVAILABLE && JMU.meetsSeatQuota fromIdx toIdx s.seat)
+          seatsWithStatus
+  return $ length validSeats
 
 toBS :: Show a => a -> BS.ByteString
 toBS = TE.encodeUtf8 . T.pack . show

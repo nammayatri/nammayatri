@@ -1248,14 +1248,9 @@ getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mb
   where
     applyQuotaLogic :: Int -> Int -> SeatWithStatus -> SeatWithStatus
     applyQuotaLogic fromIdx toIdx seatWithStatus =
-      let numStops = toIdx - fromIdx
-          seat = seatWithStatus.seat
-          meetsQuota = case seat.minStopsRequired of
-            Just minStopsRequired -> numStops >= minStopsRequired
-            Nothing -> True
-       in if meetsQuota
-            then seatWithStatus
-            else seatWithStatus {status = BLOCKED}
+      if JMU.meetsSeatQuota fromIdx toIdx seatWithStatus.seat
+        then seatWithStatus
+        else seatWithStatus { status = BLOCKED }
 
 getFrfsRouteSeatLayout ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
