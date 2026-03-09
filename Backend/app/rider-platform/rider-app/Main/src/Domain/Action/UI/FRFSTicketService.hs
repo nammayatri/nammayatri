@@ -269,9 +269,6 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
         integratedBppConfigId = integratedBPPConfig.id
       }
   where
-    -- utcToTimeOfDay :: UTCTime -> TimeOfDay
-    -- utcToTimeOfDay = Time.timeToTimeOfDay . Time.utctDayTime
-
     secondsToTimeOfDay' :: Int -> TimeOfDay
     secondsToTimeOfDay' seconds =
       let totalSeconds = seconds `mod` 86400
@@ -893,7 +890,6 @@ getFrfsConfig (pId, mId) opCity = do
       ticketsBookedInEvent = fromMaybe 0 ((.ticketsBookedInEvent) =<< stats)
   return FRFSTicketService.FRFSConfigAPIRes {isEventOngoing = isEventOngoing', ..}
 
--- TODO :: Filter the Stops which are always the END stop for all the routes as it can never be a possible START or INTERMEDIATE stop.
 getFrfsAutocomplete ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -1009,7 +1005,6 @@ postFrfsBookingFeedback ::
     Environment.Flow APISuccess.APISuccess
   )
 postFrfsBookingFeedback (_mbPersonId, merchantId) bookingId req = do
-  -- Validate merchant exists
   void $ CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
 

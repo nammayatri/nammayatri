@@ -53,7 +53,6 @@ in
         "rider-app-drainer-exe"
         "rider-app-scheduler-exe"
         "image-api-helper-exe"
-        "kafka-consumers-exe"
         "mock-fcm-exe"
         "mock-google-exe"
         "mock-idfy-exe"
@@ -65,6 +64,7 @@ in
         "rider-app-exe"
         "rider-dashboard-exe"
         "search-result-aggregator-exe"
+        "kafka-consumers-exe"
         "special-zone-exe"
         "safety-dashboard-exe"
         "unified-dashboard-exe"
@@ -77,7 +77,7 @@ in
           environment.CABAL_TARGET = cabalTargetForExe.${name};
         }
         else {
-          command = "set -x; pwd; ${ny.config.apps.${name}.program}";
+          command = "set -x; pwd; ${ny.config.haskellProjects.default.outputs.apps.${name}.program}";
         };
 
       haskellProcesses.processes =
