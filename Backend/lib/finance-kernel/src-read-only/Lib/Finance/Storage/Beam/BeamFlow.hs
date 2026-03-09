@@ -18,6 +18,8 @@ import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirect
 import qualified Lib.Finance.Storage.Beam.Invoice as BeamInvoice
 import qualified Lib.Finance.Storage.Beam.InvoiceLedgerLink as BeamInvoiceLedger
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLedger
+import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgPayment
+import qualified Lib.Finance.Storage.Beam.PgPayoutSettlementReport as BeamPgPayout
 import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as BeamReconciliationEntry
 import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as BeamReconciliationSummary
 import qualified Lib.Finance.Storage.Beam.StateTransition as BeamStateTransition
@@ -38,5 +40,7 @@ type BeamFlow m r =
     HasSchemaName BeamIndirectTax.IndirectTaxTransactionT,
     HasSchemaName BeamDirectTax.DirectTaxTransactionT,
     HasSchemaName BeamReconciliationEntry.ReconciliationEntryT,
-    HasSchemaName BeamReconciliationSummary.ReconciliationSummaryT
+    HasSchemaName BeamReconciliationSummary.ReconciliationSummaryT,
+    HasSchemaName BeamPgPayment.PgPaymentSettlementReportT,
+    HasSchemaName BeamPgPayout.PgPayoutSettlementReportT
   )

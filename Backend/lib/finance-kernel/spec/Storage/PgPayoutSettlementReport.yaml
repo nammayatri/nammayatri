@@ -1,0 +1,150 @@
+# Finance Kernel - PG Payout Settlement Report Table
+# Namma-DSL YAML specification
+#
+# Purpose:
+#   One row per line in the Payment Gateway's payout settlement file.
+#   Covers outgoing payout transactions to drivers / fleet owners / vendors.
+#   Each row carries the fulfillment details (instrument, method, status)
+#   returned by the PG, so reconciliation jobs can match against
+#   internal payout_request records.
+
+imports:
+  UTCTime: Kernel.Prelude
+  Currency: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Value: Data.Aeson
+  ReconStatus: Lib.Finance.Domain.Types.PgPaymentSettlementReport
+
+PgPayoutSettlementReport:
+  tableName: pg_payout_settlement_report
+  derives: "Generic"
+
+  # ---------------------------------------------------------------------------
+  # Enums
+  # ---------------------------------------------------------------------------
+  types:
+
+    TxnStatus:
+      enum: "SUCCESS,FAILED"
+      derive: "ToParamSchema"
+
+    SettlementType:
+      enum: "CREDIT,DEBIT"
+      derive: "ToParamSchema"
+
+    SettlementMode:
+      enum: "GROSS,NET,NETTING"
+      derive: "ToParamSchema"
+
+    FulfillmentInstrument:
+      enum: "IMPS,NEFT,RTGS,UPI,OTHER"
+      derive: "ToParamSchema"
+
+  # ---------------------------------------------------------------------------
+  # Fields
+  # ---------------------------------------------------------------------------
+  fields:
+    id: Id PgPayoutSettlementReport
+
+    # --- Transaction identity ---
+    orderId: Text                                  # PG payout order ID (Juspay orderId)
+    txnId: Maybe Text                              # PG transaction ID
+    rrn: Maybe Text                                # Bank Reference Number
+    utr: Maybe Text                                # Unique Transaction Reference from bank
+
+    # --- Transaction classification ---
+    txnStatus: TxnStatus                           # SUCCESS | FAILED | PENDING | REVERSED
+    txnDate: Maybe UTCTime                         # When the payout transaction occurred at PG
+
+    # --- Amounts ---
+    txnAmount: HighPrecMoney                       # Gross payout amount
+    settlementAmount: HighPrecMoney                # Amount actually settled (after any fees)
+    currency: Currency
+
+    # --- Payout recipient ---
+    payoutCustomerId: Text                         # Driver / fleet owner / vendor internal ID
+    paymentGateway: Maybe Text                     # e.g. JUSPAY, RAZORPAY
+
+    # --- Beneficiary / Bank details ---
+    beneficiaryIfsc: Maybe Text
+    beneficiaryAccountNumber: Maybe Text
+    beneficiaryType: Maybe Text                    # VPA | SAVINGS | CURRENT
+    bankName: Maybe Text
+
+    # --- Settlement details ---
+    settlementType: Maybe SettlementType           # CREDIT | DEBIT
+    settlementMode: Maybe SettlementMode           # GROSS | NET | NETTING
+    settlementId: Maybe Text                       # PG settlement batch ID
+    settlementDate: Maybe UTCTime
+
+    # --- Internal reference ---
+    payoutRequestId: Maybe Text                    # Links to payout_request.id
+    referenceType: Maybe Text                      # SPECIAL_ZONE_PAYOUT | DAILY_INCENTIVE | REGISTRATION_REFUND | etc.
+
+    # --- Fulfillment details (from PG payout response) ---
+    fulfillmentId: Maybe Text                      # Juspay fulfillment ID
+    fulfillmentInstrumentType: Maybe FulfillmentInstrument   # IMPS | NEFT | RTGS | UPI
+    fulfillmentMethod: Maybe Text                  # e.g. JUSPAY_VPA | ACCOUNT_IFSC
+    fulfillmentStatus: Maybe Text                  # Juspay fulfillment status text
+    fulfillmentResponseCode: Maybe Text
+    fulfillmentResponseMessage: Maybe Text
+    fulfillmentDate: Maybe UTCTime
+    fulfillmentAmount: Maybe HighPrecMoney
+
+    # --- Reconciliation result ---
+    reconStatus: ReconStatus                       # Set to UNMATCHED on ingest; updated by recon job
+    reconMessage: Maybe Text                       # Mismatch notes / error details
+
+    # --- Raw PG report row ---
+    rawData: Maybe Value                           # Full PG row as JSON for audit/debugging
+
+    # --- Multi-tenancy ---
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  # ---------------------------------------------------------------------------
+  # Default values
+  # ---------------------------------------------------------------------------
+  default:
+    reconStatus: "'PENDING'"
+
+  # ---------------------------------------------------------------------------
+  # Constraints / indexes
+  # ---------------------------------------------------------------------------
+  constraints:
+    id: PrimaryKey
+    orderId: "!SecondaryKey"
+    rrn: "!SecondaryKey"
+    payoutRequestId: "!SecondaryKey"
+    settlementId: "!SecondaryKey"
+    payoutCustomerId: "!SecondaryKey"
+
+  # ---------------------------------------------------------------------------
+  # Generated queries
+  # ---------------------------------------------------------------------------
+  queries:
+
+    updateReconStatus:
+      kvFunction: updateOneWithKV
+      params: [reconStatus, reconMessage, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  # ---------------------------------------------------------------------------
+  # Finance kernel boilerplate
+  # ---------------------------------------------------------------------------
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TxnStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TxnStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SettlementType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SettlementType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SettlementMode>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SettlementMode>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <FulfillmentInstrument>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <FulfillmentInstrument>
