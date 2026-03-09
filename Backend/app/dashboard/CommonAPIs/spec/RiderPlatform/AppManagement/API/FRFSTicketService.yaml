@@ -14,6 +14,10 @@ imports:
   SeatLayoutResp: API.Types.UI.FRFSTicketService
   FRFSRouteServiceabilityReq: API.Types.UI.FRFSTicketService
   RouteWithLiveVehicle: API.Types.UI.MultimodalConfirm
+  FleetOperatorTripActionReq: API.Types.UI.FRFSTicketService
+  FleetOperatorTripActionResp: API.Types.UI.FRFSTicketService
+  FleetOperatorCurrentOperationReq: API.Types.UI.FRFSTicketService
+  FleetOperatorCurrentOperationResp: API.Types.UI.FRFSTicketService
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
@@ -209,3 +213,23 @@ apis:
         type: FRFSRouteServiceabilityReq
       response:
         type: "API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle"
+
+  - POST:
+      endpoint: /customer/{customerId}/frfs/fleetOperator/tripAction
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: FleetOperatorTripActionReq
+      response:
+        type: FleetOperatorTripActionResp
+
+  - POST:
+      endpoint: /customer/{customerId}/frfs/fleetOperator/currentOperation
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: FleetOperatorCurrentOperationReq
+      response:
+        type: FleetOperatorCurrentOperationResp
