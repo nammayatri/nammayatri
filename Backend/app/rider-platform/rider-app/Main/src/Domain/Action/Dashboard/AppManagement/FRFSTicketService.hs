@@ -12,6 +12,8 @@ module Domain.Action.Dashboard.AppManagement.FRFSTicketService
     getFRFSTicketServiceCustomerFrfsRouteSeatLayout,
     getFRFSTicketServiceCustomerFrfsTripRouteSeats,
     postFRFSTicketServiceCustomerFrfsRouteServiceability,
+    postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction,
+    postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation,
   )
 where
 
@@ -99,3 +101,13 @@ postFRFSTicketServiceCustomerFrfsRouteServiceability :: (Kernel.Types.Id.ShortId
 postFRFSTicketServiceCustomerFrfsRouteServiceability merchantShortId _opCity customerId routeId req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   DFrfs.postFrfsRouteServiceability (Just customerId, merchant.id) routeId req
+
+postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq -> Environment.Flow API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp)
+postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction merchantShortId _opCity customerId req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  DFrfs.postFrfsFleetOperatorTripAction (Just customerId, merchant.id) req
+
+postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq -> Environment.Flow API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp)
+postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation merchantShortId _opCity customerId req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  DFrfs.postFrfsFleetOperatorCurrentOperation (Just customerId, merchant.id) req

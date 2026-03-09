@@ -23,7 +23,7 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-type API = ("fRFSTicketService" :> (GetFRFSTicketServiceCustomerFrfsConfig :<|> GetFRFSTicketServiceCustomerFrfsAutocomplete :<|> GetFRFSTicketServiceCustomerFrfsRoutes :<|> GetFRFSTicketServiceCustomerFrfsStations :<|> PostFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> GetFRFSTicketServiceCustomerFrfsRoute :<|> PostFRFSTicketServiceCustomerFrfsSearch :<|> GetFRFSTicketServiceCustomerFrfsSearchQuote :<|> PostFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> GetFRFSTicketServiceCustomerFrfsBookingStatus :<|> GetFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> GetFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> PostFRFSTicketServiceCustomerFrfsRouteServiceability))
+type API = ("fRFSTicketService" :> (GetFRFSTicketServiceCustomerFrfsConfig :<|> GetFRFSTicketServiceCustomerFrfsAutocomplete :<|> GetFRFSTicketServiceCustomerFrfsRoutes :<|> GetFRFSTicketServiceCustomerFrfsStations :<|> PostFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> GetFRFSTicketServiceCustomerFrfsRoute :<|> PostFRFSTicketServiceCustomerFrfsSearch :<|> GetFRFSTicketServiceCustomerFrfsSearchQuote :<|> PostFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> GetFRFSTicketServiceCustomerFrfsBookingStatus :<|> GetFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> GetFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> PostFRFSTicketServiceCustomerFrfsRouteServiceability :<|> PostFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :<|> PostFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation))
 
 type GetFRFSTicketServiceCustomerFrfsConfig =
   ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "frfs" :> "config"
@@ -259,6 +259,36 @@ type PostFRFSTicketServiceCustomerFrfsRouteServiceability =
            API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
   )
 
+type PostFRFSTicketServiceCustomerFrfsFleetOperatorTripAction =
+  ( "customer"
+      :> Capture
+           "customerId"
+           (Kernel.Types.Id.Id Domain.Types.Person.Person)
+      :> "frfs"
+      :> "fleetOperator"
+      :> "tripAction"
+      :> ReqBody '[JSON] API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp
+  )
+
+type PostFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation =
+  ( "customer"
+      :> Capture
+           "customerId"
+           (Kernel.Types.Id.Id Domain.Types.Person.Person)
+      :> "frfs"
+      :> "fleetOperator"
+      :> "currentOperation"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
+  )
+
 data FRFSTicketServiceAPIs = FRFSTicketServiceAPIs
   { getFRFSTicketServiceCustomerFrfsConfig :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Beckn.Context.City -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSConfigAPIRes,
     getFRFSTicketServiceCustomerFrfsAutocomplete :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType -> Kernel.Types.Beckn.Context.City -> Kernel.External.Maps.Types.LatLong -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.AutocompleteRes,
@@ -272,13 +302,15 @@ data FRFSTicketServiceAPIs = FRFSTicketServiceAPIs
     getFRFSTicketServiceCustomerFrfsBookingStatus :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes,
     getFRFSTicketServiceCustomerFrfsRouteSeatLayout :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp,
     getFRFSTicketServiceCustomerFrfsTripRouteSeats :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.SeatLayoutResp,
-    postFRFSTicketServiceCustomerFrfsRouteServiceability :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq -> EulerHS.Types.EulerClient API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+    postFRFSTicketServiceCustomerFrfsRouteServiceability :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq -> EulerHS.Types.EulerClient API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle,
+    postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp,
+    postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
   }
 
 mkFRFSTicketServiceAPIs :: (Client EulerHS.Types.EulerClient API -> FRFSTicketServiceAPIs)
 mkFRFSTicketServiceAPIs fRFSTicketServiceClient = (FRFSTicketServiceAPIs {..})
   where
-    getFRFSTicketServiceCustomerFrfsConfig :<|> getFRFSTicketServiceCustomerFrfsAutocomplete :<|> getFRFSTicketServiceCustomerFrfsRoutes :<|> getFRFSTicketServiceCustomerFrfsStations :<|> postFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> getFRFSTicketServiceCustomerFrfsRoute :<|> postFRFSTicketServiceCustomerFrfsSearch :<|> getFRFSTicketServiceCustomerFrfsSearchQuote :<|> postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> getFRFSTicketServiceCustomerFrfsBookingStatus :<|> getFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> getFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> postFRFSTicketServiceCustomerFrfsRouteServiceability = fRFSTicketServiceClient
+    getFRFSTicketServiceCustomerFrfsConfig :<|> getFRFSTicketServiceCustomerFrfsAutocomplete :<|> getFRFSTicketServiceCustomerFrfsRoutes :<|> getFRFSTicketServiceCustomerFrfsStations :<|> postFRFSTicketServiceCustomerFrfsStationsPossibleStops :<|> getFRFSTicketServiceCustomerFrfsRoute :<|> postFRFSTicketServiceCustomerFrfsSearch :<|> getFRFSTicketServiceCustomerFrfsSearchQuote :<|> postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :<|> getFRFSTicketServiceCustomerFrfsBookingStatus :<|> getFRFSTicketServiceCustomerFrfsRouteSeatLayout :<|> getFRFSTicketServiceCustomerFrfsTripRouteSeats :<|> postFRFSTicketServiceCustomerFrfsRouteServiceability :<|> postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :<|> postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation = fRFSTicketServiceClient
 
 data FRFSTicketServiceUserActionType
   = GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_CONFIG
@@ -294,6 +326,8 @@ data FRFSTicketServiceUserActionType
   | GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_ROUTE_SEAT_LAYOUT
   | GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_TRIP_ROUTE_SEATS
   | POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_ROUTE_SERVICEABILITY
+  | POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_FLEET_OPERATOR_TRIP_ACTION
+  | POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_FLEET_OPERATOR_CURRENT_OPERATION
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

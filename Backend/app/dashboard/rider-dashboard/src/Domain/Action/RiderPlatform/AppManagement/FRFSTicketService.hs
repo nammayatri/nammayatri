@@ -14,6 +14,8 @@ module Domain.Action.RiderPlatform.AppManagement.FRFSTicketService
     getFRFSTicketServiceCustomerFrfsRouteSeatLayout,
     getFRFSTicketServiceCustomerFrfsTripRouteSeats,
     postFRFSTicketServiceCustomerFrfsRouteServiceability,
+    postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction,
+    postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation,
   )
 where
 
@@ -106,3 +108,13 @@ getFRFSTicketServiceCustomerFrfsTripRouteSeats :: (Kernel.Types.Id.ShortId Domai
 getFRFSTicketServiceCustomerFrfsTripRouteSeats merchantShortId opCity apiTokenInfo customerId tripId routeId fromStopCode toStopCode vehicleNumber = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.getFRFSTicketServiceCustomerFrfsTripRouteSeats) customerId tripId routeId fromStopCode toStopCode vehicleNumber
+
+postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq -> Environment.Flow API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp)
+postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction merchantShortId opCity apiTokenInfo customerId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction) customerId req
+
+postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq -> Environment.Flow API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp)
+postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation merchantShortId opCity apiTokenInfo customerId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.fRFSTicketServiceDSL.postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation) customerId req
