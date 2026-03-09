@@ -180,17 +180,13 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
 
     validateQuota :: Int -> Int -> Maybe Seat.Seat -> Either GenericError ()
     validateQuota fromIdx toIdx mbSeat =
-      let numStops = toIdx - fromIdx
-       in case mbSeat of
-            Just seat ->
-              case seat.minStopsRequired of
-                Just req ->
-                  if numStops >= req
-                    then Right ()
-                    else Left (InvalidRequest "One or more selected seats are reserved for longer journeys.")
-                Nothing -> Right ()
-            Nothing ->
-              Left (InvalidRequest "Selected seat not found.")
+      case mbSeat of
+          Nothing ->
+            Left (InvalidRequest "Selected seat not found.")
+          Just seat ->
+            if JourneyUtils.meetsSeatQuota fromIdx toIdx seat
+              then Right ()
+              else Left (InvalidRequest "One or more selected seats are reserved for longer journeys.")
 
     buildAndCreateBooking :: CallExternalBPP.FRFSConfirmFlow m r c => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> Maybe Bool -> Maybe (Text, Int, Int) -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
     buildAndCreateBooking rider quote'@DFRFSQuote.FRFSQuote {..} fareParameters mbMockPayment mbHoldCtxForAll firstTripId = do
