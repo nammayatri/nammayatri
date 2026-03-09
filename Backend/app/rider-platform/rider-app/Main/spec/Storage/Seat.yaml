@@ -65,3 +65,51 @@ SeatLayout:
     findById:
       kvFunction: findOneWithKV
       where: id
+
+VehicleSeatLayoutMapping:
+  tableName: vehicle_seat_layout_mapping
+
+  derives: "Show, Generic, ToJSON, FromJSON, Eq, ToSchema"
+
+  fields:
+    id: Id VehicleSeatLayoutMapping
+    vehicleNo: Text
+    gtfsId: Text
+    seatLayoutId: Id SeatLayout
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
+
+  extraIndexes:
+    - columns: [vehicleNo, gtfsId]
+      unique: true
+
+  queries:
+    findAllBySeatLayoutId:
+      kvFunction: findAllWithKV
+      where: seatLayoutId
+
+    findByVehicleNoAndGtfsId:
+      kvFunction: findOneWithKV
+      where:
+        and: [vehicleNo, gtfsId]
+
+    updateSeatLayoutIdByVehicleNoAndGtfsId:
+      kvFunction: updateOneWithKV
+      params: [seatLayoutId]
+      where:
+        and: [vehicleNo, gtfsId]
+
+    deleteByVehicleNoAndGtfsId:
+      kvFunction: deleteWithKV
+      where:
+        and: [vehicleNo, gtfsId]
+
+    findAllByGtfsId:
+      kvFunction: findAllWithKV
+      where: gtfsId
+
+  extraOperations:
+    - GENERATE_INDEXES
