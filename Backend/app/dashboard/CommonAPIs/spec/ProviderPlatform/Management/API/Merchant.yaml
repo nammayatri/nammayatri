@@ -922,7 +922,6 @@ types:
     - allowedTripDistanceBounds: Maybe AllowedTripDistanceBoundsAPIEntity
     - govtCharges: Maybe Double
     - perMinuteRideExtraTimeCharge: Maybe HighPrecMoney
-    - tollCharges: Maybe HighPrecMoney
     - priorityCharges: Maybe HighPrecMoney
     - pickupBufferInSecsForNightShiftCal: Maybe Seconds
     - perMinuteRideExtraTimeChargeWithCurrency: Maybe PriceAPIEntity

@@ -142,7 +142,7 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
   - Fetch that state’s geom(s) once (by geom_id from SEPC rows); load polygon(s) in memory.  
   - For each consecutive pair (p1, p2) of route:  
     - areaFirst = which state(s) contain p1 (point-in-polygon on fetched geoms).  
-    - areaSecond = which state(s) contain p2.  
+    - areaSecond = which state(s) contain p2.
   - **Charge rule:** If areaSecond is in SEPC and areaSecond ≠ areaFirst, add areaSecond’s charge and record name/id – but only if this is the **first time** we are entering that SEPC state on this ride. Maintain a per-ride set of “already charged” SEPC state IDs and skip charges for subsequent zig-zag re-entries into the same state. In overlap cases where a point lies in more than one geom (e.g. shared boundary), pick the **second point’s** state that is different from the first point’s state (areaSecond \ areaFirst) rather than skipping the segment entirely.  
     - **Unknown:** If areaSecond is “unknown” (no geom contains p2), do not charge. If areaFirst unknown and areaSecond in SEPC, charge (entry into permit state).
 8. **Return type:** `Maybe (HighPrecMoney, [Text], [Text])` (charges, names, ids) – same shape as toll for easy reuse in fare params and ride.
@@ -257,17 +257,17 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
   - Snap-to-road: `response.snappedPoints = snappedPoints`.  
   - Toll: `mbTollInfo <- getTollInfoOnTheRoute (Just driverId) snappedPoints`.
 3. For SEPC stitching:
-   - `mbPrevLastSnapped <- Redis.safeGet (LastSnappedPointOnRide:<driverId>)`.  
+  - `mbPrevLastSnapped <- Redis.safeGet (LastSnappedPointOnRide:<driverId>)`.  
   - `sepcRoute = maybe snappedPoints (: snappedPoints) mbPrevLastSnapped`.  
   - `mbSepcInfo <- getStateEntryPermitInfoOnRoute (Just driverId) sepcRoute`.
 4. Accumulate results:
   - Toll: update `OnRideToll`* keys as today.  
-  - SEPC: update `OnRideStateEntryPermit*` keys if `mbSepcInfo` is `Just`.
+  - SEPC: update `OnRideStateEntryPermit`* keys if `mbSepcInfo` is `Just`.
 5. Persist to Ride:
-  - Read accumulated toll from `OnRideToll*` and call `updateTollChargesAndNamesAndIds`.  
-  - Read accumulated SEPC from `OnRideStateEntryPermit*` and call `updateStateEntryPermitChargesAndNamesAndIds`.
+  - Read accumulated toll from `OnRideToll`* and call `updateTollChargesAndNamesAndIds`.  
+  - Read accumulated SEPC from `OnRideStateEntryPermit`* and call `updateStateEntryPermitChargesAndNamesAndIds`.
 6. Maintain continuity:
-   - If `snappedPoints` non-empty, store `last snappedPoints` into `LastSnappedPointOnRide:<driverId>`.  
+  - If `snappedPoints` non-empty, store `last snappedPoints` into `LastSnappedPointOnRide:<driverId>`.
 7. Advance raw waypoint window:
   - `deleteFirstNwaypoints driverId maxSnapToRoadReqPoints` (keep one raw overlap).
 
@@ -314,13 +314,11 @@ This way SEPC runs on the **same snapped batches** as toll (≈99 raw points per
 ## Phase 6: FAQ / design clarifications (short)
 
 - **Are SEPC and toll using the same snapToRoad calls?**  
-  Yes. For each batch we call snapToRoad **once**, get `response.snappedPoints`, then run **toll** on `snappedPoints` and **SEPC** on a stitched route `sepcRoute` that prepends `LastSnappedPointOnRide` when present. No extra snap API calls for SEPC.
-
+Yes. For each batch we call snapToRoad **once**, get `response.snappedPoints`, then run **toll** on `snappedPoints` and **SEPC** on a stitched route `sepcRoute` that prepends `LastSnappedPointOnRide` when present. No extra snap API calls for SEPC.
 - **Who deletes waypoints between batches?**  
-  The existing location-updates logic already calls `deleteFirstNwaypoints driverId maxSnapToRoadReqPoints` after each batch, keeping a one-point raw overlap. SEPC does **not** add any extra deletes; it reuses exactly the same batching behavior as toll.
-
+The existing location-updates logic already calls `deleteFirstNwaypoints driverId maxSnapToRoadReqPoints` after each batch, keeping a one-point raw overlap. SEPC does **not** add any extra deletes; it reuses exactly the same batching behavior as toll.
 - **Is the on-ride SEPC flow the same as toll?**  
-  It shares the same pipeline (`processWaypoints` → `recalcDistanceBatches` → `recalcDistanceBatchStep` → snapToRoad) and Redis accumulation pattern, but adds SEPC-specific pieces: an extra detector (`getStateEntryPermitInfoOnRoute`), SEPC OnRide keys, a generic `LastSnappedPointOnRide` for stitched snapped routes, and SEPC-specific end-ride confidence rules.
+It shares the same pipeline (`processWaypoints` → `recalcDistanceBatches` → `recalcDistanceBatchStep` → snapToRoad) and Redis accumulation pattern, but adds SEPC-specific pieces: an extra detector (`getStateEntryPermitInfoOnRoute`), SEPC OnRide keys, a generic `LastSnappedPointOnRide` for stitched snapped routes, and SEPC-specific end-ride confidence rules.
 
 ---
 

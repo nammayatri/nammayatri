@@ -402,9 +402,9 @@ type PostMerchantConfigVehicleServiceTierCreate =
 
 type PostMerchantConfigDebugLogUpdate =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_DEBUG_LOG_UPDATE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MERCHANT) / ('API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_DEBUG_LOG_UPDATE))
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigDebugLogUpdate
   )
 

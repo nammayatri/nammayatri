@@ -476,7 +476,7 @@ calculateFareParameters params = do
                   params.currency
                   fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
-            tollCharges = addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing),
+            tollCharges = if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing, -- TODO: @Himanshu add SEPC charges below it, we have removed addition of static charges here.
             govtCharges = govtCharges,
             insuranceCharge = insuranceChargeResult,
             luggageCharge = luggageCharge,
@@ -776,11 +776,6 @@ countFullFareOfParamsDetails = \case
   DFParams.RentalDetails det -> (0.0, det.distBasedFare + det.timeBasedFare + det.deadKmFare, 0.0)
   DFParams.InterCityDetails det -> (0.0, det.pickupCharge + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare + fromMaybe 0.0 det.stateEntryPermitCharges, 0.0)
   DFParams.AmbulanceDetails det -> (det.distBasedFare, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
-
-addMaybes :: Num a => Maybe a -> Maybe a -> Maybe a
-addMaybes Nothing y = y
-addMaybes x Nothing = x
-addMaybes (Just x) (Just y) = Just (x + y)
 
 calNightShiftCharge :: Maybe HighPrecMoney -> UTCTime -> Maybe NightShiftBounds -> Seconds -> Maybe HighPrecMoney
 calNightShiftCharge resultFullNightShiftCharge rideTime (Just nightShiftBounds) duration = do
