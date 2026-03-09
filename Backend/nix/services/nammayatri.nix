@@ -64,6 +64,7 @@ in
         "rider-app-exe"
         "rider-dashboard-exe"
         "search-result-aggregator-exe"
+        "kafka-consumers-exe"
         "special-zone-exe"
         "safety-dashboard-exe"
         "unified-dashboard-exe"
