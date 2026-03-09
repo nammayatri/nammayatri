@@ -12,7 +12,7 @@ CrisRdsBalanceHistory:
     integratedBppConfigId: Id IntegratedBPPConfig
     balance: HighPrecMoney
     executionTime: UTCTime
-    dateIst: Maybe Text
+    dateIst: Maybe Day
     createdAt: UTCTime
     updatedAt: UTCTime
 
