@@ -78,6 +78,9 @@ Booking:
     tollCharges: Maybe HighPrecMoney
     tollNames: Maybe [Text]
     tollIds: Maybe [Text]
+    stateEntryPermitCharges: Maybe HighPrecMoney
+    stateEntryPermitNames: Maybe [Text]
+    stateEntryPermitIds: Maybe [Text]
     createdAt: UTCTime
     updatedAt: UTCTime
     paymentUrl: Maybe Text
@@ -237,6 +240,8 @@ Booking:
     currency: character varying(255)
     tollNames: "text[]"
     tollIds: "text[]"
+    stateEntryPermitNames: "text[]"
+    stateEntryPermitIds: "text[]"
     estimateId: character varying(255)
     configInExperimentVersions: "json"
     displayBookingId: character varying(25)

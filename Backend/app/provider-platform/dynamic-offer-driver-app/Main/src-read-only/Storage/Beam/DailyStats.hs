@@ -16,35 +16,36 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data DailyStatsT f = DailyStatsT
-  { activatedValidRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    bonusEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    cancellationCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
-    d2dReferralCounts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    d2dReferralEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
-    driverId :: B.C f Data.Text.Text,
-    id :: B.C f Data.Text.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    merchantLocalDate :: B.C f Data.Time.Calendar.Day,
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    numDriversOnboarded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    numFleetsOnboarded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    numRides :: B.C f Kernel.Prelude.Int,
-    onlineDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
-    payoutOrderId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    payoutOrderStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus),
-    payoutStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DailyStats.PayoutStatus),
-    referralCounts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    referralEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    tipAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    totalDistance :: B.C f Kernel.Types.Common.Meters,
-    totalEarnings :: B.C f Kernel.Types.Common.Money,
-    totalEarningsAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    totalRideTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { activatedValidRides :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    bonusEarnings :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    cancellationCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
+    d2dReferralCounts :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    d2dReferralEarnings :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    distanceUnit :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit)),
+    driverId :: (B.C f Data.Text.Text),
+    id :: (B.C f Data.Text.Text),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
+    merchantLocalDate :: (B.C f Data.Time.Calendar.Day),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
+    numDriversOnboarded :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    numFleetsOnboarded :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    numRides :: (B.C f Kernel.Prelude.Int),
+    onlineDuration :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds)),
+    payoutOrderId :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    payoutOrderStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus)),
+    payoutStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.DailyStats.PayoutStatus)),
+    referralCounts :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    referralEarnings :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    stateEntryPermitCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    tipAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    tollCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    totalDistance :: (B.C f Kernel.Types.Common.Meters),
+    totalEarnings :: (B.C f Kernel.Types.Common.Money),
+    totalEarningsAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    totalRideTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -54,6 +55,6 @@ instance B.Table DailyStatsT where
 
 type DailyStats = DailyStatsT Identity
 
-$(enableKVPG ''DailyStatsT ['id] [['driverId]])
+$(enableKVPG (''DailyStatsT) [('id)] [[('driverId)]])
 
-$(mkTableInstances ''DailyStatsT "daily_stats")
+$(mkTableInstances (''DailyStatsT) "daily_stats")

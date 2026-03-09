@@ -477,6 +477,7 @@ calculateFareParameters params = do
                   fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
             tollCharges = if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing, -- TODO: @Himanshu add SEPC charges below it, we have removed addition of static charges here.
+            stateEntryPermitCharges = Nothing, -- TODO: @Himanshu wire SEPC into FareParameters (Phase 4)
             govtCharges = govtCharges,
             insuranceCharge = insuranceChargeResult,
             luggageCharge = luggageCharge,

@@ -55,6 +55,7 @@ import Storage.Beam.Ride
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
 import Storage.Beam.Route
+import Storage.Beam.StateEntryPermitCharges
 import Storage.Beam.TripTransaction
 import Storage.Beam.Vehicle
 import Storage.Beam.VehicleRegistrationCertificate
@@ -96,6 +97,7 @@ atlasDB =
         fleetOperatorDailyStats = fleetOperatorDailyStatsTable,
         driverOperatorAssociation = driverOperatorAssociationTable,
         route = routeTable,
+        stateEntryPermitCharges = stateEntryPermitChargesTable,
         operationHub = operationHubTable,
         operationHubRequests = operationHubRequestsTable,
         fleetBadge = fleetBadgeTable,
@@ -141,6 +143,7 @@ data AtlasDB f = AtlasDB
     fleetOperatorDailyStats :: f (B.TableEntity FleetOperatorDailyStatsT),
     driverOperatorAssociation :: f (B.TableEntity DriverOperatorAssociationT),
     route :: f (B.TableEntity RouteT),
+    stateEntryPermitCharges :: f (B.TableEntity StateEntryPermitChargesT),
     operationHub :: f (B.TableEntity OperationHubT),
     operationHubRequests :: f (B.TableEntity OperationHubRequestsT),
     fleetBadge :: f (B.TableEntity FleetBadgeT),

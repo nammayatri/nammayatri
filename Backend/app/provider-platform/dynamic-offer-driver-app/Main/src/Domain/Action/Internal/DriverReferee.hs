@@ -219,6 +219,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
                       numRides = 0,
                       totalDistance = 0,
                       tollCharges = 0.0,
+                      stateEntryPermitCharges = 0.0,
                       bonusEarnings = 0.0,
                       merchantLocalDate = utctDay localTime,
                       currency = merchantOperatingCity.currency,

@@ -1137,6 +1137,7 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.StateEntryPermitCharges
       Domain.Types.Station
       Domain.Types.StclMembership
       Domain.Types.StopInformation
@@ -1308,6 +1309,7 @@ library
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
+      Storage.Beam.StateEntryPermitCharges
       Storage.Beam.Station
       Storage.Beam.StclMembership
       Storage.Beam.StopInformation
@@ -1576,6 +1578,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
+      Storage.Queries.StateEntryPermitCharges
       Storage.Queries.Station
       Storage.Queries.StclMembership
       Storage.Queries.StopInformation

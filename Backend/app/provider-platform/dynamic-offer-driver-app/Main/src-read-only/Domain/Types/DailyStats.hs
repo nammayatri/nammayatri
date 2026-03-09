@@ -37,6 +37,7 @@ data DailyStats = DailyStats
     payoutStatus :: Domain.Types.DailyStats.PayoutStatus,
     referralCounts :: Kernel.Prelude.Int,
     referralEarnings :: Kernel.Types.Common.HighPrecMoney,
+    stateEntryPermitCharges :: Kernel.Types.Common.HighPrecMoney,
     tipAmount :: Kernel.Types.Common.HighPrecMoney,
     tollCharges :: Kernel.Types.Common.HighPrecMoney,
     totalDistance :: Kernel.Types.Common.Meters,
@@ -49,4 +50,4 @@ data DailyStats = DailyStats
 
 data PayoutStatus = Verifying | Processing | Success | Failed | ManualReview | PendingForVpa | Initialized deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutStatus))

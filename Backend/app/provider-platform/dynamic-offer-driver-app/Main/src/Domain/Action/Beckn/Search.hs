@@ -624,6 +624,10 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
         parcelQuantity = Nothing,
         preferSafetyPlus = False,
         numberOfLuggages = numberOfLuggages,
+        -- TODO: @Himanshu State entry permit: set from params when BAP/route provides them (cf. tollCharges/tollNames/tollIds filled via ..)
+        stateEntryPermitCharges = Nothing,
+        stateEntryPermitIds = Nothing,
+        stateEntryPermitNames = Nothing,
         cloudType = cloudType,
         specialLocationName = mbSpecialLocName,
         ..

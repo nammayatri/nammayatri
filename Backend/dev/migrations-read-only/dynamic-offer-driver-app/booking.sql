@@ -219,3 +219,11 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN dq_duration_to_pickup bigi
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN reconciliation_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN state_entry_permit_names text[] ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN state_entry_permit_ids text[] ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN state_entry_permit_charges double precision ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN email_domain text ;

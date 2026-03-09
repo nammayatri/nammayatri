@@ -265,3 +265,14 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cloud_type text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN subscription_purchase_ids text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN state_entry_permit_names text[] ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN state_entry_permit_ids text[] ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN state_entry_permit_confidence text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN state_entry_permit_charges double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_state_entry_permit_names text[] ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_state_entry_permit_ids text[] ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_state_entry_permit_charges double precision ;

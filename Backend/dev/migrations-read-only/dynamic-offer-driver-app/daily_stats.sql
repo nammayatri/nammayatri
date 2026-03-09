@@ -98,3 +98,9 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN d2d_referral_counts in
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN state_entry_permit_charges double precision ;

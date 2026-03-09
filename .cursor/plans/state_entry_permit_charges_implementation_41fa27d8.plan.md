@@ -333,6 +333,8 @@ It shares the same pipeline (`processWaypoints` → `recalcDistanceBatches` → 
 
 **Where to add the new fields:** Every response type that currently exposes tollCharges must also expose stateEntryPermitCharges (and names/IDs if exposed for toll). Examples: ride info, booking info, estimate, quote, trip quote detail (Select, Confirm, Cancel, SendSearchRequestToDrivers, Driver APIs), fare breakup, end-ride response, and any BAP/rider payloads that include toll. Frontend receives both fields separately and displays them separately; no single combined tollCharges that sums toll + SEPC.
 
+**Rider app (BAP) note:** The rider app does **not** compute SEPC on its own. It receives both toll and SEPC via the **provider’s rate card / Beckn tags** (as part of the quote/rate-card payload) once Phases 3–5 are wired. When updating rider/BAP payloads in this phase, extend the existing toll fields to also include `stateEntryPermitCharges` (and names/IDs where product wants to show them), **exactly the same way we already do for toll** – SEPC remains provider-driven and is never recomputed on the rider side.
+
 (Redundant bullets removed; see above.)
 
 - Backend keeps **two separate fields**: `tollCharges` and `stateEntryPermitCharges` (and their names/IDs where applicable).  
