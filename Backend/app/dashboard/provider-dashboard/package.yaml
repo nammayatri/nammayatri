@@ -82,6 +82,8 @@ dependencies:
   - http-client-tls
   - servant-client
   - openapi3
+  - http-types
+  - wai
   - servant-openapi3
   - unordered-containers
   - beckn-services

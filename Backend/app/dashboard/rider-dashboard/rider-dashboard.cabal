@@ -161,6 +161,7 @@ library
     , dashboard-helper-api
     , esqueleto
     , euler-hs
+    , http-types
     , lib-dashboard
     , mobility-core
     , openapi3
@@ -239,6 +240,7 @@ executable rider-dashboard-exe
     , dashboard-helper-api
     , esqueleto
     , euler-hs
+    , http-types
     , mobility-core
     , openapi3
     , persistent
