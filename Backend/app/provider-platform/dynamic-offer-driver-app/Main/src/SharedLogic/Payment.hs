@@ -25,6 +25,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as DP
+import Domain.Types.SubscriptionConfig (VendorMigrationMapping (..))
 import qualified Domain.Types.VendorFee as VF
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
@@ -182,6 +183,27 @@ roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
 
 roundVendorFee :: VF.VendorFee -> VF.VendorFee
 roundVendorFee vf = vf {VF.amount = roundToTwoDecimalPlaces (VF.amount vf)}
+
+-- | Applies configured vendor ID migrations in memory.
+-- Expects vendorFees to be already rounded (callers should pass rounded fees).
+-- Returns (updated vendor fees, hasMigrations).
+applyVendorMigrations ::
+  Maybe [VendorMigrationMapping] ->
+  [VF.VendorFee] ->
+  ([VF.VendorFee], Bool)
+applyVendorMigrations mbMappings vendorFees' =
+  case mbMappings of
+    Nothing -> (vendorFees', False)
+    Just mappings ->
+      let vendorFeesToMigrate = filter (\vf -> any (\m -> vf.vendorId == m.oldVendorId) mappings) vendorFees'
+          updatedVendorFees = map (applyMigrationToVendorFee mappings) vendorFees'
+          hasMigrations = not (null vendorFeesToMigrate)
+       in (updatedVendorFees, hasMigrations)
+  where
+    applyMigrationToVendorFee mappings vf =
+      case find (\m -> m.oldVendorId == vf.vendorId) mappings of
+        Just mapping -> vf {VF.vendorId = mapping.newVendorId}
+        Nothing -> vf
 
 mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> Maybe HighPrecMoney -> INV.InvoicePaymentMode -> DriverFee -> INV.Invoice
 mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee =
