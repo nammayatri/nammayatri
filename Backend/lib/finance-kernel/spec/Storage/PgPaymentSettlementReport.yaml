@@ -1,0 +1,181 @@
+# Finance Kernel - PG Payment Settlement Report Table
+# Namma-DSL YAML specification
+#
+# Purpose:
+#   One row per line in the Payment Gateway's payment settlement file.
+#   Covers incoming payment transactions (ORDER rows) and their associated
+#   REFUND rows, disputes, and split-settlement legs.
+#   Reconciliation jobs match each row against internal finance_ledger_entry
+#   records (subscription purchases, ride debits, etc.).
+
+imports:
+  UTCTime: Kernel.Prelude
+  Currency: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Value: Data.Aeson
+
+PgPaymentSettlementReport:
+  tableName: pg_payment_settlement_report
+  derives: "Generic"
+
+  # ---------------------------------------------------------------------------
+  # Enums
+  # ---------------------------------------------------------------------------
+  types:
+
+    TxnType:
+      enum: "ORDER,REFUND"
+      derive: "ToParamSchema"
+
+    TxnStatus:
+      enum: "SUCCESS,FAILED"
+      derive: "ToParamSchema"
+
+    SettlementType:
+      enum: "CREDIT,DEBIT"
+      derive: "ToParamSchema"
+
+    SettlementMode:
+      enum: "GROSS,NET,NETTING"
+      derive: "ToParamSchema"
+
+    PaymentMethod:
+      enum: "UPI,CREDIT_CARD,DEBIT_CARD,NETBANKING,WALLET"
+      derive: "ToParamSchema"
+
+
+    DisputeType:
+      enum: "FRAUD,CONSUMER,PROCESSING_ERROR,OTHER"
+      derive: "ToParamSchema"
+
+    ReconStatus:
+      enum: "PENDING,MATCHED,MISMATCHED,MANUAL_REVIEW,IGNORED,SETTLED"
+      derive: "ToParamSchema"
+
+  # ---------------------------------------------------------------------------
+  # Fields
+  # ---------------------------------------------------------------------------
+  fields:
+    id: Id PgPaymentSettlementReport
+
+    # --- Transaction identity ---
+    orderId: Text                                  # PG order ID (Juspay orderId / shortId)
+    txnId: Maybe Text                              # PG transaction ID
+    rrn: Maybe Text                                # Bank Reference Number
+    utr: Maybe Text                                # Unique Transaction Reference from bank
+
+    # --- Transaction classification ---
+    txnType: TxnType                               # ORDER | REFUND
+    txnStatus: TxnStatus                           # SUCCESS | FAILED | PENDING
+    txnDate: Maybe UTCTime                         # When the transaction occurred at PG
+
+    # --- Amounts ---
+    txnAmount: HighPrecMoney                       # Gross amount in PG report
+    pgBaseFee: HighPrecMoney                       # PG processing fee (MDR)
+    pgTax: HighPrecMoney                           # GST on PG fee
+    settlementAmount: HighPrecMoney                # txnAmount - pgBaseFee - pgTax
+    currency: Currency
+
+    # --- Vendor / merchant split ---
+    vendorId: Maybe Text                           # Sub-merchant / vendor ID (split settlement)
+    uniqueSplitId: Maybe Text                      # Split leg identifier within an order
+
+    # --- Payment method details ---
+    paymentGateway: Maybe Text                     # e.g. JUSPAY, RAZORPAY
+    paymentMethod: Maybe PaymentMethod             # UPI | CREDIT_CARD | ...
+    paymentMethodSubType: Maybe Text               # e.g. "UPI-Bank Account", "VISA Debit"
+
+    # --- Settlement details ---
+    settlementType: Maybe SettlementType           # CREDIT | DEBIT
+    settlementMode: Maybe SettlementMode           # GROSS | NET | NETTING
+    settlementId: Maybe Text                       # PG settlement batch ID
+    settlementDate: Maybe UTCTime
+
+    # --- Internal reference ---
+    referenceId: Maybe Text                        # Internal entity ID (subscriptionPurchaseId, driverFeeId, etc.)
+    referenceType: Maybe Text                      # SUBSCRIPTION_PURCHASE | RIDE_DEBIT | CANCELLATION_FEE | etc.
+
+    # --- Refund fields (populated when txnType = REFUND) ---
+    refundId: Maybe Text                           # PG refund ID
+    refundArn: Maybe Text                          # Acquirer Reference Number for refund
+    refundDate: Maybe UTCTime
+    refundAmount: Maybe HighPrecMoney
+    refundBaseFee: Maybe HighPrecMoney             # PG fee on refund
+    refundTax: Maybe HighPrecMoney                 # GST on refund fee
+
+    # --- Dispute fields ---
+    disputeId: Maybe Text                          # PG dispute / chargeback ID
+    disputeType: Maybe DisputeType                 # FRAUD | CONSUMER | PROCESSING_ERROR | OTHER
+
+    # --- Reconciliation result ---
+    reconStatus: ReconStatus                       # Set to UNMATCHED on ingest; updated by recon job
+    reconMessage: Maybe Text                       # Mismatch notes / error details
+
+    # --- Raw PG report row ---
+    rawData: Maybe Value                           # Full PG row stored as JSON for audit/debugging
+
+    # --- Multi-tenancy ---
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  # ---------------------------------------------------------------------------
+  # DB-level type overrides
+  # ---------------------------------------------------------------------------
+
+  # ---------------------------------------------------------------------------
+  # Default values
+  # ---------------------------------------------------------------------------
+  default:
+    reconStatus: "'PENDING'"
+    pgBaseFee: "0"
+    pgTax: "0"
+
+  # ---------------------------------------------------------------------------
+  # Constraints / indexes
+  # ---------------------------------------------------------------------------
+  constraints:
+    id: PrimaryKey
+    orderId: "!SecondaryKey"
+    rrn: "!SecondaryKey"
+    referenceId: "!SecondaryKey"
+    settlementId: "!SecondaryKey"
+
+  # ---------------------------------------------------------------------------
+  # Generated queries
+  # ---------------------------------------------------------------------------
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    updateReconStatus:
+      kvFunction: updateOneWithKV
+      params: [reconStatus, reconMessage, updatedAt]
+      where: id
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  # ---------------------------------------------------------------------------
+  # Finance kernel boilerplate
+  # ---------------------------------------------------------------------------
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TxnType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TxnType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TxnStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TxnStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SettlementType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SettlementType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SettlementMode>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SettlementMode>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMethod>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PaymentMethod>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <DisputeType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <DisputeType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ReconStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ReconStatus>
