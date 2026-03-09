@@ -166,6 +166,7 @@ library
     , text
     , time
     , unordered-containers
+    , wai
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -250,6 +251,7 @@ executable safety-dashboard-exe
     , text
     , time
     , unordered-containers
+    , wai
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

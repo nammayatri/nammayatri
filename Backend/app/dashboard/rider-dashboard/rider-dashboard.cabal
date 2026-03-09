@@ -157,6 +157,7 @@ library
     , dashboard-helper-api
     , esqueleto
     , euler-hs
+    , http-types
     , lib-dashboard
     , mobility-core
     , openapi3
@@ -176,6 +177,7 @@ library
     , text
     , time
     , unordered-containers
+    , wai
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)
@@ -234,6 +236,7 @@ executable rider-dashboard-exe
     , dashboard-helper-api
     , esqueleto
     , euler-hs
+    , http-types
     , mobility-core
     , openapi3
     , persistent
@@ -249,6 +252,7 @@ executable rider-dashboard-exe
     , text
     , time
     , unordered-containers
+    , wai
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)
