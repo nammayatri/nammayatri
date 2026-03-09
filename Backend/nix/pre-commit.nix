@@ -40,7 +40,7 @@
       description = "Validate prodHotPush branch changes don't cross BAP/BPP boundaries";
       types = [ "file" ];
       pass_filenames = true;
-      always_run = true;
+      files = "Backend/.*$";
       entry = lib.getExe (pkgs.writeShellApplication {
         name = "hotfix-branch-validation";
         runtimeInputs = [ pkgs.git ];
