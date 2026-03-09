@@ -97,7 +97,7 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
     runServerGeneric
       schedulerEnv
       (Proxy @HealthCheckAPI)
-      healthCheck
+      (pure "App is up")
       identity
       identity
       EmptyContext

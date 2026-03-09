@@ -22,7 +22,8 @@ import qualified Product.Idfy as P
 import Servant hiding (throwError)
 
 type MockIdfyAPI =
-  VerifyDLAPI
+  Get '[JSON] Text
+    :<|> VerifyDLAPI
     :<|> VerifyRCAPI
     :<|> ValidateImage
     :<|> ExtractDLImage
@@ -33,7 +34,8 @@ mockIdfyAPI = Proxy
 
 mockIdfyServer :: FlowServerR AppEnv MockIdfyAPI
 mockIdfyServer =
-  P.verifyDL
+  pure "MockIdfy is UP"
+    :<|> P.verifyDL
     :<|> P.verifyRC
     :<|> P.validateImage
     :<|> P.extractDLImage

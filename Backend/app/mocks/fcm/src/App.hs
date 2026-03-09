@@ -21,13 +21,13 @@ import App.Routes (mockFcmAPI, mockFcmServer)
 import App.Types
 import Kernel.Prelude
 import Kernel.Types.Logging
-import Kernel.Utils.Servant.Server
+import Kernel.Utils.Servant.Server (runServer)
 import Servant (Context (..))
 
 runMockFcm :: (AppCfg -> AppCfg) -> IO ()
 runMockFcm configModifier = do
   appEnv <- buildAppEnv $ configModifier defaultConfig
-  runServerWithHealthCheck appEnv mockFcmAPI mockFcmServer identity identity EmptyContext releaseAppEnv pure
+  runServer appEnv mockFcmAPI mockFcmServer identity identity EmptyContext (const identity) releaseAppEnv pure
 
 defaultConfig :: AppCfg
 defaultConfig =

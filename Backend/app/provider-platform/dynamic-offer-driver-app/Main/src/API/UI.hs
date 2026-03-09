@@ -79,6 +79,7 @@ import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Whatsapp as Whatsapp
 import Environment
 import Kernel.Prelude
+import Kernel.Utils.Servant.Server (healthCheck)
 import Servant
 
 type HealthCheckAPI = Get '[JSON] Text
@@ -149,7 +150,7 @@ type API =
 
 handler :: FlowServer API
 handler =
-  pure "App is UP"
+  healthCheck
     :<|> Merchant.handler
     :<|> Registration.handler
     :<|> DemandHotspots.handler
