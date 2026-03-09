@@ -66,7 +66,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import qualified SharedLogic.FarePolicy as SFP
-import SharedLogic.Ride (calculateEstimatedEndTimeRange)
+import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutVpaForRide)
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
@@ -243,9 +243,10 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                       (roundToIntegral (getHighPrecMoney payoutAmountBase) :: Integer)
               payoutRequestId <- Id <$> generateGUID
               let scheduledTime = addUTCTime (secondsToNominalDiffTime buffer) now
+              payoutVpa <- getPayoutVpaForRide ride.id
               let payoutStatus =
                     if ( paymentInstrument `elem` (fromMaybe [] transporterConfig.allowedPaymentInstrumentForPayout)
-                           && isJust driverInfo.payoutVpa
+                           && isJust payoutVpa
                        )
                       then DPR.INITIATED
                       else DPR.CASH_PENDING
@@ -269,7 +270,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                         cashMarkedAt = Nothing,
                         expectedCreditTime = if payoutStatus == DPR.INITIATED then Just scheduledTime else Nothing,
                         scheduledAt = if payoutStatus == DPR.INITIATED then Just scheduledTime else Nothing,
-                        customerVpa = driverInfo.payoutVpa,
+                        customerVpa = payoutVpa,
                         customerPhone = phoneNo,
                         customerEmail = person.email,
                         customerName = Just person.firstName,
