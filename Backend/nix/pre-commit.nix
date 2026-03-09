@@ -33,5 +33,49 @@
         '';
       });
     };
+
+    hotfix-branch-validation = {
+      enable = true;
+      name = "hotfix-branch-validation";
+      description = "Validate prodHotPush branch changes don't cross BAP/BPP boundaries";
+      types = [ "file" ];
+      pass_filenames = true;
+      files = "Backend/.*$";
+      entry = lib.getExe (pkgs.writeShellApplication {
+        name = "hotfix-branch-validation";
+        runtimeInputs = [ pkgs.git ];
+        text = ''
+          BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+          if [[ "$BRANCH" == "prodHotPush-BAP" ]]; then
+            FORBIDDEN=""
+            for file in "''$@"; do
+              if [[ "$file" == Backend/app/provider-platform/* ]]; then
+                FORBIDDEN="''${FORBIDDEN}"$'\n'"  $file"
+              fi
+            done
+            if [[ -n "$FORBIDDEN" ]]; then
+              echo "ERROR: prodHotPush-BAP branch must NOT contain changes in Backend/app/provider-platform/."
+              echo "The following files are not allowed:''${FORBIDDEN}"
+              exit 1
+            fi
+          fi
+
+          if [[ "$BRANCH" == "prodHotPush-BPP" ]]; then
+            FORBIDDEN=""
+            for file in "''$@"; do
+              if [[ "$file" == Backend/app/rider-platform/* ]]; then
+                FORBIDDEN="''${FORBIDDEN}"$'\n'"  $file"
+              fi
+            done
+            if [[ -n "$FORBIDDEN" ]]; then
+              echo "ERROR: prodHotPush-BPP branch must NOT contain changes in Backend/app/rider-platform/."
+              echo "The following files are not allowed:''${FORBIDDEN}"
+              exit 1
+            fi
+          fi
+        '';
+      });
+    };
   };
 }
