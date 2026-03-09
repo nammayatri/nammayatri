@@ -146,4 +146,6 @@ in  { esqDBCfg
     , passwordExpiryDays = None Integer
     , enforceStrongPasswordPolicy = False
     , inMemConfig
+    , metricsPort = +9993
+    , incomingAPIResponseTimeout = +15
     }
