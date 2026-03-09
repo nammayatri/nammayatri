@@ -80,7 +80,9 @@ data AppCfg = AppCfg
     kvConfigUpdateFrequency :: Int,
     passwordExpiryDays :: Maybe Int,
     enforceStrongPasswordPolicy :: Bool,
-    inMemConfig :: InMemConfig
+    inMemConfig :: InMemConfig,
+    metricsPort :: Int,
+    incomingAPIResponseTimeout :: Int
   }
   deriving (Generic, FromDhall)
 

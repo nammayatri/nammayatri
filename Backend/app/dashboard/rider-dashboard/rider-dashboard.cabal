@@ -163,6 +163,7 @@ library
     , payment
     , persistent
     , persistent-postgresql
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
@@ -237,6 +238,7 @@ executable rider-dashboard-exe
     , openapi3
     , persistent
     , persistent-postgresql
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
     , rider-dashboard
