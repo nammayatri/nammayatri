@@ -4,6 +4,7 @@
 
 module Storage.Queries.CrisRdsBalanceHistory where
 
+import qualified Data.Time.Calendar
 import qualified Domain.Types.CrisRdsBalanceHistory
 import qualified Domain.Types.IntegratedBPPConfig
 import Kernel.Beam.Functions
@@ -24,12 +25,12 @@ findAllByIntegratedBppConfigId ::
   (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.CrisRdsBalanceHistory.CrisRdsBalanceHistory])
 findAllByIntegratedBppConfigId integratedBppConfigId = do findAllWithKV [Se.And [Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
 
-findByDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.CrisRdsBalanceHistory.CrisRdsBalanceHistory])
+findByDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m [Domain.Types.CrisRdsBalanceHistory.CrisRdsBalanceHistory])
 findByDate dateIst = do findAllWithKV [Se.And [Se.Is Beam.dateIst $ Se.Eq dateIst]]
 
 findByDateAndConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.CrisRdsBalanceHistory.CrisRdsBalanceHistory))
+  (Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.CrisRdsBalanceHistory.CrisRdsBalanceHistory))
 findByDateAndConfig dateIst integratedBppConfigId = do
   findOneWithKV
     [ Se.And
