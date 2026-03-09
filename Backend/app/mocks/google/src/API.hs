@@ -23,19 +23,22 @@ import qualified API.DistanceMatrix as DistanceMatrix
 import qualified API.PlaceName as PlaceName
 import qualified API.SnapToRoad as SnapToRoad
 import Environment
+import Kernel.Prelude (Text, pure)
 import qualified Kernel.External.Maps.Google.MapsClient as Maps
 import qualified Kernel.External.Maps.Google.RoadsClient as Roads
 import Servant
 
 type API =
-  Maps.DistanceMatrixAPI
+  Get '[JSON] Text
+    :<|> Maps.DistanceMatrixAPI
     :<|> Maps.DirectionsAPI
     :<|> Maps.PlaceNameAPI
     :<|> Roads.SnapToRoadAPI
 
 handler :: FlowServer API
 handler =
-  DistanceMatrix.handler
+  pure "MockGoogle is UP"
+    :<|> DistanceMatrix.handler
     :<|> Directions.handler
     :<|> PlaceName.handler
     :<|> SnapToRoad.handler

@@ -22,13 +22,13 @@ import App.Routes (mockSmsAPI, mockSmsServer)
 import App.Types
 import Kernel.Prelude
 import Kernel.Types.Logging
-import Kernel.Utils.Servant.Server
+import Kernel.Utils.Servant.Server (runServer)
 import Servant
 
 runMockSms :: (AppCfg -> AppCfg) -> IO ()
 runMockSms configModifier = do
   appEnv <- buildAppEnv $ configModifier defaultConfig
-  runServerWithHealthCheck appEnv mockSmsAPI mockSmsServer identity identity EmptyContext releaseAppEnv pure
+  runServer appEnv mockSmsAPI mockSmsServer identity identity EmptyContext (const identity) releaseAppEnv pure
 
 defaultConfig :: AppCfg
 defaultConfig =
