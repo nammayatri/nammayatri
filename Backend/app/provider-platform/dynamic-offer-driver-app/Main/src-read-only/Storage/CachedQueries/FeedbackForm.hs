@@ -5,6 +5,7 @@
 module Storage.CachedQueries.FeedbackForm where
 
 import qualified Domain.Types.FeedbackForm
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -13,7 +14,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.FeedbackForm as Queries
 
-findAllFeedback :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => m ([Domain.Types.FeedbackForm.FeedbackForm])
+findAllFeedback :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => m [Domain.Types.FeedbackForm.FeedbackForm]
 findAllFeedback = do
   (Hedis.safeGet $ "driverOfferCachedQueries:FeedbackForm")
     >>= ( \case
@@ -21,14 +22,44 @@ findAllFeedback = do
             Nothing ->
               ( \dataToBeCached -> do
                   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-                  Hedis.setExp ("driverOfferCachedQueries:FeedbackForm") dataToBeCached expTime
+                  Hedis.setExp "driverOfferCachedQueries:FeedbackForm" dataToBeCached expTime
               )
                 /=<< Queries.findAllFeedback
         )
 
+findAllFeedbackByMerchantIdAndMerchantOperatingCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FeedbackForm.FeedbackForm])
+findAllFeedbackByMerchantIdAndMerchantOperatingCityId merchantId merchantOperatingCityId = do
+  (Hedis.safeGet $ "driverOfferCachedQueries:FeedbackForm:" <> ":MerchantId-" <> Kernel.Types.Id.getId merchantId <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId)
+    >>= ( \case
+            Just a -> pure a
+            Nothing ->
+              ( \dataToBeCached -> do
+                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  Hedis.setExp ("driverOfferCachedQueries:FeedbackForm:" <> ":MerchantId-" <> Kernel.Types.Id.getId merchantId <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId) dataToBeCached expTime
+              )
+                /=<< Queries.findAllFeedbackByMerchantIdAndMerchantOperatingCityId (Kernel.Prelude.Just merchantId) (Kernel.Prelude.Just merchantOperatingCityId)
+        )
+
+findAllFeedbackByMerchantIdAndMerchantOperatingCityIdAndRating ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Int -> m [Domain.Types.FeedbackForm.FeedbackForm])
+findAllFeedbackByMerchantIdAndMerchantOperatingCityIdAndRating merchantId merchantOperatingCityId rating = do
+  (Hedis.safeGet $ "driverOfferCachedQueries:FeedbackForm:" <> ":MerchantId-" <> Kernel.Types.Id.getId merchantId <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":Rating-" <> show rating)
+    >>= ( \case
+            Just a -> pure a
+            Nothing ->
+              ( \dataToBeCached -> do
+                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  Hedis.setExp ("driverOfferCachedQueries:FeedbackForm:" <> ":MerchantId-" <> Kernel.Types.Id.getId merchantId <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":Rating-" <> show rating) dataToBeCached expTime
+              )
+                /=<< Queries.findAllFeedbackByMerchantIdAndMerchantOperatingCityIdAndRating (Kernel.Prelude.Just merchantId) (Kernel.Prelude.Just merchantOperatingCityId) (Kernel.Prelude.Just rating)
+        )
+
 findAllFeedbackByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FeedbackForm.FeedbackForm]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FeedbackForm.FeedbackForm])
 findAllFeedbackByMerchantOpCityId merchantOperatingCityId = do
   (Hedis.safeGet $ "driverOfferCachedQueries:FeedbackForm:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId)
     >>= ( \case
@@ -43,7 +74,7 @@ findAllFeedbackByMerchantOpCityId merchantOperatingCityId = do
 
 findAllFeedbackByMerchantOpCityIdAndRating ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Int -> m ([Domain.Types.FeedbackForm.FeedbackForm]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Int -> m [Domain.Types.FeedbackForm.FeedbackForm])
 findAllFeedbackByMerchantOpCityIdAndRating merchantOperatingCityId rating = do
   (Hedis.safeGet $ "driverOfferCachedQueries:FeedbackForm:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":Rating-" <> show rating)
     >>= ( \case
@@ -56,7 +87,7 @@ findAllFeedbackByMerchantOpCityIdAndRating merchantOperatingCityId rating = do
                 /=<< Queries.findAllFeedbackByMerchantOpCityIdAndRating (Kernel.Prelude.Just merchantOperatingCityId) (Kernel.Prelude.Just rating)
         )
 
-findAllFeedbackByRating :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> m ([Domain.Types.FeedbackForm.FeedbackForm]))
+findAllFeedbackByRating :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> m [Domain.Types.FeedbackForm.FeedbackForm])
 findAllFeedbackByRating rating = do
   (Hedis.safeGet $ "driverOfferCachedQueries:FeedbackForm:" <> ":Rating-" <> show rating)
     >>= ( \case

@@ -54,7 +54,8 @@ handler =
     :<|> rateRide
 
 getFeedbackForm :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Language -> Maybe Int -> FlowHandler FeedbackFormList
-getFeedbackForm (_, _, merchantOpCityId) language mbRating = withFlowHandlerAPI $ DFeedbackForm.feedbackForm merchantOpCityId language mbRating
+getFeedbackForm (_, merchantId, merchantOpCityId) language mbRating =
+  withFlowHandlerAPI $ DFeedbackForm.feedbackForm merchantId merchantOpCityId language mbRating
 
 rateRide :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> CallBAPInternal.FeedbackReq -> FlowHandler APISuccess
 rateRide (_, _, _) req = withFlowHandlerAPI $ Domain.rating req
