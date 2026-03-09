@@ -53,7 +53,6 @@ in
         "rider-app-drainer-exe"
         "rider-app-scheduler-exe"
         "image-api-helper-exe"
-        "kafka-consumers-exe"
         "mock-fcm-exe"
         "mock-google-exe"
         "mock-idfy-exe"
