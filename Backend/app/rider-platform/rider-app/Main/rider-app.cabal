@@ -565,6 +565,7 @@ library
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleConfig
+      Storage.CachedQueries.VehicleSeatLayoutMappingExtra
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.AlertIncident
       Storage.Clickhouse.Booking
@@ -1035,6 +1036,7 @@ library
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
       Domain.Types.VehicleRouteMapping
+      Domain.Types.VehicleSeatLayoutMapping
       Domain.Types.VendorSplitDetails
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
@@ -1196,6 +1198,7 @@ library
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
       Storage.Beam.VehicleRouteMapping
+      Storage.Beam.VehicleSeatLayoutMapping
       Storage.Beam.VendorSplitDetails
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.DeviceVehicleMapping
@@ -1203,6 +1206,7 @@ library
       Storage.CachedQueries.FRFSVehicleServiceTier
       Storage.CachedQueries.InsuranceConfig
       Storage.CachedQueries.SavedReqLocation
+      Storage.CachedQueries.VehicleSeatLayoutMapping
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
       Storage.Queries.AadhaarVerification
@@ -1429,6 +1433,7 @@ library
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig
       Storage.Queries.VehicleRouteMapping
+      Storage.Queries.VehicleSeatLayoutMapping
       Storage.Queries.VendorSplitDetails
       Storage.Queries.WhiteListOrg
   other-modules:
