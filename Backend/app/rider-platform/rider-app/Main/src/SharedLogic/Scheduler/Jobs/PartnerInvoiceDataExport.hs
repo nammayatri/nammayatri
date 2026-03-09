@@ -176,7 +176,6 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
       let host = T.unpack sftpCfg.host
           port = show sftpCfg.port
           username = T.unpack sftpCfg.username
-          privateKeyPath = T.unpack sftpCfg.privateKeyPath
           remotePath = T.unpack sftpCfg.remotePath
           remoteFilePath = remotePath <> "/" <> T.unpack fileName
 
@@ -186,25 +185,47 @@ uploadToSFTP rawFileName content = withLogTag "SFTP" $ do
       liftIO $ hPutStr hBatch batchContent >> hClose hBatch
       logDebug $ "Created SFTP batch file: " <> T.pack tmpBatchPath
 
-      -- Build SFTP argument list (no shell interpolation)
-      let sftpArgs =
-            [ "-i",
-              privateKeyPath,
-              "-P",
-              port,
-              "-o",
-              "StrictHostKeyChecking=yes",
-              "-b",
-              tmpBatchPath,
-              username <> "@" <> host
-            ]
+      -- Build command and argument list based on auth method
+      let (cmd, sftpArgs) = case (sftpCfg.password, sftpCfg.privateKeyPath) of
+            (Just pwd, _) ->
+              -- Password-based auth using sshpass
+              ( "sshpass",
+                [ "-p",
+                  T.unpack pwd,
+                  "sftp",
+                  "-P",
+                  port,
+                  "-o",
+                  "StrictHostKeyChecking=no",
+                  "-b",
+                  tmpBatchPath,
+                  username <> "@" <> host
+                ]
+              )
+            (Nothing, Just keyPath) ->
+              -- Key-based auth
+              ( "sftp",
+                [ "-i",
+                  T.unpack keyPath,
+                  "-P",
+                  port,
+                  "-o",
+                  "StrictHostKeyChecking=yes",
+                  "-b",
+                  tmpBatchPath,
+                  username <> "@" <> host
+                ]
+              )
+            (Nothing, Nothing) ->
+              -- No auth configured, will fail
+              ("sftp", ["-P", port, "-o", "StrictHostKeyChecking=no", "-b", tmpBatchPath, username <> "@" <> host])
 
       logInfo $ "Uploading file " <> fileName <> " to SFTP server " <> sftpCfg.host <> ":" <> sftpCfg.remotePath
-      logDebug $ "SFTP arguments: " <> T.pack (show sftpArgs)
+      logDebug $ "SFTP command: " <> T.pack cmd <> " with arguments: " <> T.pack (show sftpArgs)
 
       -- Execute SFTP upload with 240-second timeout
       let sftpTimeoutMicros = 240 * 1000000 -- 240 seconds
-      mbResult <- liftIO $ timeout sftpTimeoutMicros (Control.Exception.try $ callProcess "sftp" sftpArgs :: IO (Either SomeException ()))
+      mbResult <- liftIO $ timeout sftpTimeoutMicros (Control.Exception.try $ callProcess cmd sftpArgs :: IO (Either SomeException ()))
 
       -- Clean up temp files
       liftIO $ removeFile tmpContentPath `catch` \(_ :: SomeException) -> pure ()

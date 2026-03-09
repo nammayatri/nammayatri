@@ -503,7 +503,8 @@ in  { esqDBCfg
       { host = "localhost"
       , port = +22
       , username = "dev"
-      , privateKeyPath = "/tmp/private_key"
+      , privateKeyPath = None Text
+      , password = Some "dev_password"
       , remotePath = "/tmp/remote_path"
       }
     , blackListedJobs = [] : List Text

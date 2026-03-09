@@ -248,6 +248,7 @@
         packages = with pkgs; [
           redis # redis-cli is used in scripts.nix
           openssh # sftp binary for SFTP upload support
+          sshpass # For password-based SFTP authentication
           jq
           gdal
           postgis
