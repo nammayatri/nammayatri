@@ -3614,11 +3614,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1773149096,
-        "narHash": "sha256-S0yatTRV4hIzhkt0gy1qhPlS6JDc+8Yn+0UnRAdYXFA=",
+        "lastModified": 1773151088,
+        "narHash": "sha256-9uu3BLZpOOi/PF79NQG7D/BykpPkgBYVhK/eEVt35rw=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "6b1801069ae28ec3def16920a0e669a2cbd4e605",
+        "rev": "6a3170252008246ff92bc14e865980c3a3dc6710",
         "type": "github"
       },
       "original": {
