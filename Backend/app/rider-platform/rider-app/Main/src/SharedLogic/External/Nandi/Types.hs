@@ -1077,6 +1077,7 @@ data ServiceType = ServiceType
 data NandiRoute = NandiRoute
   { route_id :: Int64,
     route_number :: Maybe Text,
+    route_name :: Maybe Text,
     route_direction :: Maybe Text,
     start_point_id :: Int64,
     end_point_id :: Int64
