@@ -17,3 +17,10 @@ ALTER TABLE atlas_driver_offer_bpp.payout_transaction ADD PRIMARY KEY ( id, tran
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.payout_transaction ADD COLUMN merchant_operating_city_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_transaction ADD COLUMN beneficiary_name text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_transaction ADD COLUMN beneficiary_ifsc text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_transaction ADD COLUMN beneficiary_account text ;

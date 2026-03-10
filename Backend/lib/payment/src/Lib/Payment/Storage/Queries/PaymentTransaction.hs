@@ -53,6 +53,19 @@ updateMultiple transaction = do
       Se.Set BeamPT.mandateMaxAmount transaction.mandateMaxAmount,
       Se.Set BeamPT.splitSettlementResponse (toJSON <$> transaction.splitSettlementResponse),
       Se.Set BeamPT.txnId transaction.txnId,
+      Se.Set BeamPT.customerName transaction.customerName,
+      Se.Set BeamPT.gatewayName transaction.gatewayName,
+      Se.Set BeamPT.cardType transaction.cardType,
+      Se.Set BeamPT.cardBrand transaction.cardBrand,
+      Se.Set BeamPT.cardIsin transaction.cardIsin,
+      Se.Set BeamPT.cardLastFourDigits transaction.cardLastFourDigits,
+      Se.Set BeamPT.cardIssuer transaction.cardIssuer,
+      Se.Set BeamPT.surchargeAmount transaction.surchargeAmount,
+      Se.Set BeamPT.taxAmount transaction.taxAmount,
+      Se.Set BeamPT.netAmount transaction.netAmount,
+      Se.Set BeamPT.epgTxnId transaction.epgTxnId,
+      Se.Set BeamPT.authorizationDateTime transaction.authorizationDateTime,
+      Se.Set BeamPT.captureDateTime transaction.captureDateTime,
       Se.Set BeamPT.updatedAt now
     ]
     [Se.Is BeamPT.id $ Se.Eq $ getId transaction.id]

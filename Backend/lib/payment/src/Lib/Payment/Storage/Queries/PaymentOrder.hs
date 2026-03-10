@@ -54,8 +54,8 @@ findByDomainEntityId domainEntityId =
 create :: BeamFlow m r => DOrder.PaymentOrder -> m ()
 create = createWithKV
 
-updateStatusAndError :: BeamFlow m r => DOrder.PaymentOrder -> Maybe Text -> Maybe Text -> m ()
-updateStatusAndError order bankErrorMessage bankErrorCode = do
+updateStatusAndErrorAndVpa :: BeamFlow m r => DOrder.PaymentOrder -> Maybe Text -> Maybe Text -> Maybe Text -> m ()
+updateStatusAndErrorAndVpa order bankErrorMessage bankErrorCode vpa = do
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set BeamPO.status order.status,
@@ -66,8 +66,12 @@ updateStatusAndError order bankErrorMessage bankErrorCode = do
         Se.Set BeamPO.updatedAt now
       ]
         <> [Se.Set BeamPO.retargetLink order.retargetLink | isJust order.retargetLink]
+        <> [Se.Set BeamPO.vpa vpa | isJust vpa]
     )
     [Se.Is BeamPO.id $ Se.Eq $ getId order.id]
+
+updateStatusAndError :: BeamFlow m r => DOrder.PaymentOrder -> Maybe Text -> Maybe Text -> m ()
+updateStatusAndError order bankErrorMessage bankErrorCode = updateStatusAndErrorAndVpa order bankErrorMessage bankErrorCode Nothing
 
 updateStatusToExpired :: BeamFlow m r => Id DOrder.PaymentOrder -> m ()
 updateStatusToExpired orderId = do

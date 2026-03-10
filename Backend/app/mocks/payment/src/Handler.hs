@@ -312,7 +312,8 @@ buildJuspayWebhookPayload
                         fmap
                           (realToFrac . getHighPrecMoney)
                           effectAmount,
-                      offers = offers
+                      offers = offers,
+                      txn_detail = Nothing
                     },
               mandate = Nothing,
               notification = Nothing,
@@ -400,7 +401,8 @@ buildJuspayOrderData order mTxn refunds offers = do
         split_settlement_response = mTxn >>= DTxn.splitSettlementResponse >>= toJuspaySplitSettlementResponse,
         effective_amount =
           fmap (realToFrac . getHighPrecMoney) orderEffectAmount,
-        offers = Just $ map domainOfferToJuspay offers
+        offers = Just $ map domainOfferToJuspay offers,
+        txn_detail = Nothing
       }
   where
     totalRefundedAmount =
@@ -487,7 +489,11 @@ toJuspayCardInfo :: Payment.CardInfo -> Juspay.CardInfo
 toJuspayCardInfo Payment.CardInfo {..} =
   Juspay.CardInfo
     { card_type = cardType,
-      last_four_digits = lastFourDigits
+      last_four_digits = lastFourDigits,
+      name_on_card = nameOnCard,
+      card_brand = cardBrand,
+      card_isin = cardIsin,
+      card_issuer = cardIssuer
     }
 
 toJuspayOffer :: Payment.Offer -> Juspay.Offer

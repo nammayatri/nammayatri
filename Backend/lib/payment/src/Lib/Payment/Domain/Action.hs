@@ -379,6 +379,19 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId mbExistingOrde
             mandateFrequency = Nothing,
             mandateMaxAmount = Nothing,
             splitSettlementResponse = Nothing,
+            customerName = Nothing,
+            gatewayName = Nothing,
+            cardType = Nothing,
+            surchargeAmount = Nothing,
+            taxAmount = Nothing,
+            netAmount = Nothing,
+            epgTxnId = Nothing,
+            cardBrand = Nothing,
+            cardIsin = Nothing,
+            cardLastFourDigits = Nothing,
+            cardIssuer = Nothing,
+            authorizationDateTime = Nothing,
+            captureDateTime = Nothing,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = order.merchantOperatingCityId
@@ -840,6 +853,20 @@ orderStatusService personId orderId orderStatusCall mbWalletPostingCall = do
                 splitSettlementResponse = Nothing,
                 retargetLink = Nothing,
                 applicationFeeAmount = Nothing,
+                customerName = Nothing,
+                gatewayName = Nothing,
+                cardType = Nothing,
+                surchargeAmount = Nothing,
+                taxAmount = Nothing,
+                netAmount = Nothing,
+                epgTxnId = Nothing,
+                cardBrand = Nothing,
+                cardIsin = Nothing,
+                cardLastFourDigits = Nothing,
+                cardIssuer = Nothing,
+                authorizationDateTime = Nothing,
+                captureDateTime = Nothing,
+                vpa = payerVpa,
                 ..
               }
       maybe
@@ -869,6 +896,20 @@ orderStatusService personId orderId orderStatusCall mbWalletPostingCall = do
                 isRetargeted = isRetargetedOrder,
                 retargetLink = retargetPaymentLink,
                 applicationFeeAmount = Nothing,
+                customerName = (.nameOnCard) =<< card,
+                gatewayName = (.gateway) =<< txnDetail,
+                cardType = (.cardType) =<< card,
+                surchargeAmount = (.surchargeAmount) =<< txnDetail,
+                taxAmount = (.taxAmount) =<< txnDetail,
+                netAmount = (.netAmount) =<< txnDetail,
+                epgTxnId = (.epgTxnId) =<< paymentGatewayResponse,
+                cardBrand = (.cardBrand) =<< card,
+                cardIsin = (.cardIsin) =<< card,
+                cardLastFourDigits = (.lastFourDigits) =<< card,
+                cardIssuer = (.cardIssuer) =<< card,
+                authorizationDateTime = (.created) =<< paymentGatewayResponse,
+                captureDateTime = dateCreated,
+                vpa = payerVpa,
                 ..
               }
       maybe
@@ -953,7 +994,21 @@ data OrderTxn = OrderTxn
     isRetried :: Maybe Bool,
     isRetargeted :: Maybe Bool,
     retargetLink :: Maybe Text,
-    splitSettlementResponse :: Maybe PInterface.SplitSettlementResponse
+    splitSettlementResponse :: Maybe PInterface.SplitSettlementResponse,
+    customerName :: Maybe Text,
+    gatewayName :: Maybe Text,
+    cardType :: Maybe Text,
+    surchargeAmount :: Maybe HighPrecMoney,
+    taxAmount :: Maybe HighPrecMoney,
+    netAmount :: Maybe HighPrecMoney,
+    epgTxnId :: Maybe Text,
+    cardBrand :: Maybe Text,
+    cardIsin :: Maybe Text,
+    cardLastFourDigits :: Maybe Text,
+    cardIssuer :: Maybe Text,
+    authorizationDateTime :: Maybe UTCTime,
+    captureDateTime :: Maybe UTCTime,
+    vpa :: Maybe Text
   }
 
 updateOrderTransaction ::
@@ -965,6 +1020,7 @@ updateOrderTransaction ::
 updateOrderTransaction order resp respDump = do
   let errorMessage = resp.bankErrorMessage
       errorCode = resp.bankErrorCode
+      vpa = resp.vpa
   mbTransaction <- do
     case resp.transactionUUID of
       -- Just transactionUUID -> runInReplica $ QTransaction.findByTxnUUID transactionUUID
@@ -977,7 +1033,7 @@ updateOrderTransaction order resp respDump = do
       Nothing -> QTransaction.findNewTransactionByOrderId order.id
   let updOrder = order{status = resp.transactionStatus, isRetargeted = fromMaybe order.isRetargeted resp.isRetargeted, isRetried = fromMaybe order.isRetried resp.isRetried, retargetLink = resp.retargetLink}
   case mbTransaction of
-    Nothing -> when (order.status /= updOrder.status && order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QOrder.updateStatusAndError updOrder errorMessage errorCode
+    Nothing -> when (order.status /= updOrder.status && order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QOrder.updateStatusAndErrorAndVpa updOrder errorMessage errorCode vpa
     -- Nothing -> runInReplica $ QTransaction.findNewTransactionByOrderId order.id
     Just transaction -> do
       let updTransaction =
@@ -999,12 +1055,25 @@ updateOrderTransaction order resp respDump = do
                         mandateMaxAmount = resp.mandateMaxAmount,
                         juspayResponse = respDump,
                         txnId = resp.txnId,
-                        splitSettlementResponse = resp.splitSettlementResponse
+                        splitSettlementResponse = resp.splitSettlementResponse,
+                        customerName = resp.customerName,
+                        gatewayName = resp.gatewayName,
+                        cardType = resp.cardType,
+                        surchargeAmount = resp.surchargeAmount,
+                        taxAmount = resp.taxAmount,
+                        netAmount = resp.netAmount,
+                        epgTxnId = resp.epgTxnId,
+                        cardBrand = resp.cardBrand,
+                        cardIsin = resp.cardIsin,
+                        cardLastFourDigits = resp.cardLastFourDigits,
+                        cardIssuer = resp.cardIssuer,
+                        authorizationDateTime = resp.authorizationDateTime,
+                        captureDateTime = resp.captureDateTime
                        }
 
       -- Avoid updating status if already in CHARGED state to handle race conditions
       when (transaction.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QTransaction.updateMultiple updTransaction
-      when (order.status /= updOrder.status && order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QOrder.updateStatusAndError updOrder errorMessage errorCode
+      when (order.status /= updOrder.status && order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QOrder.updateStatusAndErrorAndVpa updOrder errorMessage errorCode vpa
 
 buildPaymentTransaction :: MonadFlow m => DOrder.PaymentOrder -> OrderTxn -> Maybe Text -> m DTransaction.PaymentTransaction
 buildPaymentTransaction order OrderTxn {..} respDump = do
@@ -1055,6 +1124,20 @@ juspayWebhookService resp respDump = do
                 retargetLink = Nothing,
                 splitSettlementResponse = Nothing,
                 applicationFeeAmount = Nothing,
+                customerName = Nothing,
+                gatewayName = Nothing,
+                cardType = Nothing,
+                surchargeAmount = Nothing,
+                taxAmount = Nothing,
+                netAmount = Nothing,
+                epgTxnId = Nothing,
+                cardBrand = Nothing,
+                cardIsin = Nothing,
+                cardLastFourDigits = Nothing,
+                cardIssuer = Nothing,
+                authorizationDateTime = Nothing,
+                captureDateTime = Nothing,
+                vpa = payerVpa,
                 ..
               }
       maybe
@@ -1077,6 +1160,20 @@ juspayWebhookService resp respDump = do
                 isRetargeted = isRetargetedOrder,
                 retargetLink = retargetPaymentLink,
                 applicationFeeAmount = Nothing,
+                customerName = (.nameOnCard) =<< card,
+                gatewayName = (.gateway) =<< txnDetail,
+                cardType = (.cardType) =<< card,
+                surchargeAmount = (.surchargeAmount) =<< txnDetail,
+                taxAmount = (.taxAmount) =<< txnDetail,
+                netAmount = (.netAmount) =<< txnDetail,
+                epgTxnId = (.epgTxnId) =<< paymentGatewayResponse,
+                cardBrand = (.cardBrand) =<< card,
+                cardIsin = (.cardIsin) =<< card,
+                cardLastFourDigits = (.lastFourDigits) =<< card,
+                cardIssuer = (.cardIssuer) =<< card,
+                authorizationDateTime = (.created) =<< paymentGatewayResponse,
+                captureDateTime = dateCreated,
+                vpa = payerVpa,
                 ..
               }
       maybe
@@ -1184,6 +1281,20 @@ mkDefaultStripeOrderTxn transactionStatus amount currency =
       isRetargeted = Nothing,
       retargetLink = Nothing,
       splitSettlementResponse = Nothing,
+      customerName = Nothing,
+      gatewayName = Nothing,
+      cardType = Nothing,
+      surchargeAmount = Nothing,
+      taxAmount = Nothing,
+      netAmount = Nothing,
+      epgTxnId = Nothing,
+      cardBrand = Nothing,
+      cardIsin = Nothing,
+      cardLastFourDigits = Nothing,
+      cardIssuer = Nothing,
+      authorizationDateTime = Nothing,
+      captureDateTime = Nothing,
+      vpa = Nothing,
       ..
     }
 
@@ -1697,12 +1808,15 @@ payoutStatusUpdates status_ orderId statusResp = do
   logDebug $ "Payout order Status: " <> show statusResp
   case statusResp of
     Just Payout.CreatePayoutOrderResp {orderId = _orderPayoutId, status = _status, ..} -> do
-      let txns = (.transactions) =<< listToMaybe =<< fulfillments
+      let mbFulfillment = listToMaybe =<< fulfillments
+          txns = (.transactions) =<< mbFulfillment
           mbTxn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< txns
       QPayoutOrder.updatePayoutOrderTxnRespInfo ((.responseCode) =<< mbTxn) ((.responseMessage) =<< mbTxn) orderId
       case mbTxn of
         Just Payout.Transaction {amount = amount_txn, ..} -> do
           findTransaction <- QPayoutTransaction.findByTransactionRef transactionRef
+          let mbBeneficiaryDetails = (.beneficiaryDetails) =<< mbFulfillment
+              mbDetails = (.details) =<< mbBeneficiaryDetails
           case findTransaction of
             Just _ -> QPayoutTransaction.updatePayoutTransactionStatus status transactionRef
             Nothing -> do
@@ -1719,6 +1833,9 @@ payoutStatusUpdates status_ orderId statusResp = do
                         fulfillmentMethod = fulfillmentMethod,
                         amount = mkPrice Nothing (realToFrac amount_txn),
                         status = status,
+                        beneficiaryName = (.name) <$> mbDetails,
+                        beneficiaryAccount = (.account) =<< mbDetails,
+                        beneficiaryIfsc = (.ifsc) =<< mbDetails,
                         createdAt = now,
                         updatedAt = now
                       }
