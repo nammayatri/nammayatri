@@ -37,10 +37,6 @@ vstAreasCacheKey :: Id VehicleServiceTier -> Id MerchantOperatingCity -> Text
 vstAreasCacheKey vstId cityId =
   "vst:allowed_areas:hash:" <> vstId.getId <> ":" <> cityId.getId
 
-vstAreasPopulatedKey :: Id VehicleServiceTier -> Id MerchantOperatingCity -> Text
-vstAreasPopulatedKey vstId cityId =
-  "vst:allowed_areas:populated:" <> vstId.getId <> ":" <> cityId.getId
-
 populateVSTAreasCache ::
   (Redis.HedisFlow m r, CacheFlow m r, MonadFlow m) =>
   VehicleServiceTier ->
@@ -56,11 +52,9 @@ populateVSTAreasCache vst =
     Just areasList -> do
       let hashKey = vstAreasCacheKey vst.id vst.merchantOperatingCityId
           thirtyDaysInSeconds = 30 * 24 * 60 * 60 :: Int
-      let populatedKey = vstAreasPopulatedKey vst.id vst.merchantOperatingCityId
       logInfo $ "VST area cache: writing to Redis key=" <> hashKey <> " areasCount=" <> show (length areasList)
       forM_ areasList $ \area ->
         Redis.hSetExp hashKey (SL.areaToText area) ("1" :: Text) thirtyDaysInSeconds
-      void $ Redis.setExp populatedKey ("1" :: Text) thirtyDaysInSeconds
       logDebug $ "VST area cache: populated Redis for vstId=" <> vst.id.getId
 
 isAreaAllowedForVSTMaybe ::
@@ -98,8 +92,8 @@ checkAreaInCache vst areaText = do
       logDebug $ "VST area check: cache HIT vstId=" <> vst.id.getId <> " areaText=" <> areaText
       return True
     Nothing -> do
-      mbPopulated <- Redis.get @Text (vstAreasPopulatedKey vst.id vst.merchantOperatingCityId)
-      if isNothing mbPopulated
+      hashLen <- Redis.hLen hashKey
+      if hashLen == 0
         then do
           logInfo $ "VST area check: cache MISS (empty) vstId=" <> vst.id.getId <> " areaText=" <> areaText <> " key=" <> hashKey <> " (warming from passed-in VST)"
           populateVSTAreasCache vst
@@ -109,6 +103,4 @@ checkAreaInCache vst areaText = do
           return False
 
 clearVSTAreasCache :: (Redis.HedisFlow m r) => VehicleServiceTier -> m ()
-clearVSTAreasCache vst = do
-  void $ Redis.del $ vstAreasCacheKey vst.id vst.merchantOperatingCityId
-  void $ Redis.del $ vstAreasPopulatedKey vst.id vst.merchantOperatingCityId
+clearVSTAreasCache vst = void $ Redis.del $ vstAreasCacheKey vst.id vst.merchantOperatingCityId
