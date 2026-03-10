@@ -180,6 +180,7 @@ import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
 import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
+import qualified Domain.Types.VendorFee as VF
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (decodeUtf8, id, state)
@@ -308,7 +309,6 @@ import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
-import qualified Domain.Types.VendorFee as VF
 import qualified Storage.Queries.VendorFee as QVF
 import qualified Tools.Auth as Auth
 import Tools.Error
