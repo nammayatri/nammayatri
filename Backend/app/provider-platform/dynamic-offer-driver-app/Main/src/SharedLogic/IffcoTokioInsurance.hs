@@ -72,7 +72,7 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
       decPerson <- decrypt person
       mobileNumber <- decPerson.mobileNumber & fromMaybeM (InvalidRequest "Driver mobile number not found for IffcoTokio insurance")
       insId <- generateGUID
-      invoiceReqNum <- generateGUID
+      invoiceReqNum <- generateAplhaNumbericCode 30
       -- Format invoice date as MM/DD/YYYY expected by IffcoTokio
       let (yr, mon, day) = Cal.toGregorian (utctDay now)
           invoiceDateStr =
