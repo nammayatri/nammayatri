@@ -50,6 +50,7 @@ imports:
   Role: Domain.Types.Person
   Base64: Kernel.Types.Base64
 
+
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -1131,6 +1132,7 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: "Maybe [VehicleCategory]"
     linkFleetToUnVerifiedExistingRC: Maybe Bool
     enableCoinsToDirectPayout: Maybe Bool
+    maxNumberOfLuggages: Maybe Int
 
   beamType:
     currency: Maybe Currency
