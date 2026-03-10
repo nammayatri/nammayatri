@@ -974,14 +974,6 @@ FRFSRouteFareProduct:
       kvFunction: findOneWithKV
       where:
         and: [routeCode, vehicleServiceTierId]
-    findAllByIntegratedBPPConfigId:
-      kvFunction: findAllWithKV
-      where:
-        and: [integratedBppConfigId]
-    findAllByFarePoliyIdAndIntegratedBPPConfigId:
-      kvFunction: findAllWithKV
-      where:
-        and: [farePolicyId, integratedBppConfigId]
 
 FRFSFarePolicy:
   tableName: frfs_fare_policy

@@ -130,8 +130,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                               routeServiceTier = Just $ mkDVehicleServiceTier vehicleServiceTier,
                               routePrice = adultPrice,
                               routeSequenceNum = Nothing,
-                              routeColor = Nothing,
-                              routeFarePolicyId = farePolicyId
+                              routeColor = Nothing
                             }
                       )
                       routesInfo

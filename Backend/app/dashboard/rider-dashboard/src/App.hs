@@ -18,9 +18,6 @@ module App
 where
 
 import API
-import Data.Aeson (object, (.=))
-import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.HashMap.Strict as HMS
 import "lib-dashboard" Environment
 import EulerHS.Language as L
@@ -33,7 +30,6 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Flow
-import Kernel.Types.Time (getCurrentTime)
 import Kernel.Types.Logging (LogLevel (..))
 import Kernel.Utils.App
 import qualified Kernel.Utils.Common as KUC
@@ -48,22 +44,6 @@ import qualified Prometheus as P
 import Servant (Context (..))
 import System.Timeout (timeout)
 import qualified "lib-dashboard" Tools.Auth as Auth
-
-requestArrivalLoggingMiddleware :: Wai.Middleware
-requestArrivalLoggingMiddleware nextApp req respond = do
-  arrivalTime <- getCurrentTime
-  let requestIdText = (maybe "NO-REQUEST-ID" decodeUtf8 $ lookup "x-request-id" (Wai.requestHeaders req)) :: Text
-      path = decodeUtf8 (Wai.rawPathInfo req) :: Text
-      method = decodeUtf8 (Wai.requestMethod req) :: Text
-      logMessage = ("[REQUEST-ARRIVAL] method=" <> method <> " path=" <> path <> " event=request_received_from_sidecar") :: Text
-      logJson =
-        object
-          [ "timestamp" .= (show arrivalTime :: String),
-            "requestId" .= requestIdText,
-            "log" .= logMessage
-          ]
-  LBS.putStrLn $ A.encode logJson
-  nextApp req respond
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
