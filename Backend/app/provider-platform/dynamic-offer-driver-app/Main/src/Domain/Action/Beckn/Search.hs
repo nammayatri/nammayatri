@@ -304,9 +304,7 @@ handler ValidatedDSearchReq {..} sReq = do
   allFarePoliciesProduct <- combineFarePoliciesProducts <$> (mapM (\tripCategory -> getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap) possibleTripOption.tripCategories)
   let mbAreaForVST =
         allFarePoliciesProduct.mbPickupDropArea
-          <|> case allFarePoliciesProduct.area of
-            a@(SL.PickupDrop _ _) -> Just a
-            _ -> Nothing
+          <|> Just allFarePoliciesProduct.area
   mbVehicleServiceTier <- getVehicleServiceTierForMeterRideSearch isMeterRideSearch driverIdForSearch configVersionMap
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
