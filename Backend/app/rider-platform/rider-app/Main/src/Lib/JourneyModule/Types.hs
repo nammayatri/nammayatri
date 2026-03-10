@@ -941,10 +941,10 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
           quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
           let mbSelectedServiceTier = getServiceTierFromQuote quoteCategories =<< mbQuote
 
-          (mTripStartTime, mBookedStopETA) <- case booking.tripId of
-            Just tripId -> do
+          (mTripStartTime, mBookedStopETA) <- case (booking.tripId, booking.routeCode) of
+            (Just tripId, Just routeCode') -> do
               let (waybillNo, tripNo) = getWaybillNoAndTripNoFromTripId tripId
-              mbSchedule <- withTryCatch "getBusTripSchedule_mkLegInfo" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
+              mbSchedule <- withTryCatch "getBusTripSchedule_mkLegInfo" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode' integratedBPPConfig)
               case mbSchedule of
                 Right (firstSchedule : _) -> do
                   let allEtas = firstSchedule.eta
