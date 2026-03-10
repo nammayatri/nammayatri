@@ -80,7 +80,9 @@ verifyDashboard ::
   RegToken ->
   m TokenInfo
 verifyDashboard requiredAccessType token = do
+  logInfo "[Auth.verifyDashboard] START - Servant parsed request, beginning auth"
   (personId, merchantId, city) <- Common.verifyPerson token
+  logInfo "[Auth.verifyDashboard] verifyPerson done"
   void $ verifyDashboardAccess requiredAccessType personId
   pure TokenInfo {personId, merchantId, city}
 
