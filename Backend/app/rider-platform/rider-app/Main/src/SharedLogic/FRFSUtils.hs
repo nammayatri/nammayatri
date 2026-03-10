@@ -1258,3 +1258,6 @@ getPaymentType isMultiModalBooking = \case
   Spec.METRO -> if isMultiModalBooking then PaymentOrder.FRFSMultiModalBooking else PaymentOrder.FRFSBooking
   Spec.SUBWAY -> if isMultiModalBooking then PaymentOrder.FRFSMultiModalBooking else PaymentOrder.FRFSBooking
   Spec.BUS -> if isMultiModalBooking then PaymentOrder.FRFSMultiModalBooking else PaymentOrder.FRFSBusBooking
+
+unixToUTC :: Integer -> UTCTime
+unixToUTC = posixSecondsToUTCTime . fromIntegral
