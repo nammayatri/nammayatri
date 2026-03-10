@@ -29,10 +29,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("issue" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdate :<|> PostIssueComment :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert))
+type API = ("issue" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdate :<|> PostIssueComment :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> PostIGMIssueResolve :<|> PostIGMIssueRaise :<|> GetIGMIssueTrail :<|> PostIGMIssueTriggerAction))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getIssueCategoryList merchantId city :<|> getIssueList merchantId city :<|> getIssueInfo merchantId city :<|> getIssueInfoV2 merchantId city :<|> putIssueUpdate merchantId city :<|> postIssueComment merchantId city :<|> getIssueMedia merchantId city :<|> postIssueTicketStatusCallBack merchantId city :<|> postIssueCategoryCreate merchantId city :<|> postIssueCategoryUpdate merchantId city :<|> postIssueOptionCreate merchantId city :<|> postIssueOptionUpdate merchantId city :<|> postIssueMessageUpsert merchantId city
+handler merchantId city = getIssueCategoryList merchantId city :<|> getIssueList merchantId city :<|> getIssueInfo merchantId city :<|> getIssueInfoV2 merchantId city :<|> putIssueUpdate merchantId city :<|> postIssueComment merchantId city :<|> getIssueMedia merchantId city :<|> postIssueTicketStatusCallBack merchantId city :<|> postIssueCategoryCreate merchantId city :<|> postIssueCategoryUpdate merchantId city :<|> postIssueOptionCreate merchantId city :<|> postIssueOptionUpdate merchantId city :<|> postIssueMessageUpsert merchantId city :<|> postIGMIssueResolve merchantId city :<|> postIGMIssueRaise merchantId city :<|> getIGMIssueTrail merchantId city :<|> postIGMIssueTriggerAction merchantId city
 
 type GetIssueCategoryList =
   ( ApiAuth
@@ -138,11 +138,43 @@ type PostIssueMessageUpsert =
       :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueMessageUpsert
   )
 
+type PostIGMIssueResolve =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_IGM_ISSUE_RESOLVE)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIGMIssueResolve
+  )
+
+type PostIGMIssueRaise =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_IGM_ISSUE_RAISE)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIGMIssueRaise
+  )
+
+type GetIGMIssueTrail =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_IGM_ISSUE_TRAIL)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIGMIssueTrail
+  )
+
+type PostIGMIssueTriggerAction =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_IGM_ISSUE_TRIGGER_ACTION)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIGMIssueTriggerAction
+  )
+
 getIssueCategoryList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes)
 getIssueCategoryList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueCategoryList merchantShortId opCity apiTokenInfo
 
-getIssueList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe IssueManagement.Common.IssueStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueReportListResponse)
-getIssueList merchantShortId opCity apiTokenInfo limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch fromDate toDate = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueList merchantShortId opCity apiTokenInfo limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch fromDate toDate
+getIssueList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe IssueManagement.Common.IssueStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueReportListResponse)
+getIssueList merchantShortId opCity apiTokenInfo limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch fromDate toDate source = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueList merchantShortId opCity apiTokenInfo limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch fromDate toDate source
 
 getIssueInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueInfoDRes)
 getIssueInfo merchantShortId opCity apiTokenInfo issueId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueInfo merchantShortId opCity apiTokenInfo issueId
@@ -176,3 +208,15 @@ postIssueOptionUpdate merchantShortId opCity apiTokenInfo issueOptionid req = wi
 
 postIssueMessageUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageReq -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes)
 postIssueMessageUpsert merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIssueMessageUpsert merchantShortId opCity apiTokenInfo req
+
+postIGMIssueResolve :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IGMIssueDashboardResolveReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postIGMIssueResolve merchantShortId opCity apiTokenInfo issueReportId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIGMIssueResolve merchantShortId opCity apiTokenInfo issueReportId req
+
+postIGMIssueRaise :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.RaiseIssuePayload -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postIGMIssueRaise merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIGMIssueRaise merchantShortId opCity apiTokenInfo req
+
+getIGMIssueTrail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IgmIssueData)
+getIGMIssueTrail merchantShortId opCity apiTokenInfo issueReportId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIGMIssueTrail merchantShortId opCity apiTokenInfo issueReportId
+
+postIGMIssueTriggerAction :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IgmRespondentActionPayload -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postIGMIssueTriggerAction merchantShortId opCity apiTokenInfo issueReportId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIGMIssueTriggerAction merchantShortId opCity apiTokenInfo issueReportId req

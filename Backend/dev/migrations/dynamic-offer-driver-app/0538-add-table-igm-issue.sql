@@ -23,3 +23,7 @@ ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN respondent_action text ;
 ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD PRIMARY KEY ( id);
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN resolution_short_desc text;
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN resolution_long_desc text;
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN resolution_action_triggered text;
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN resolution_refund_amount text;

@@ -6,6 +6,7 @@ import qualified IGM.Types as Spec
 import IGM.Utils (mkOrgName)
 import qualified IGM.Utils as Utils
 import qualified IssueManagement.Beckn.ACL.IGM.Utils as Utils
+import qualified IssueManagement.Domain.Action.Beckn.Issue as DIssue
 import qualified IssueManagement.Domain.Action.Beckn.IssueStatus as DIssueStatus
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -37,7 +38,7 @@ buildOnIssueStatusReq ::
   DIssueStatus.IssueStatusRes ->
   m Spec.OnIssueStatusReq
 buildOnIssueStatusReq txnId msgId bapId bapUri res = do
-  context <- Utils.buildContext Spec.ON_ISSUE_STATUS Spec.PUBLIC_TRANSPORT res.merchant.subscriberId.getShortId res.merchant txnId msgId res.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Utils.buildTTL 30 (convertRFC3339ToUTC res.updatedAt))
+  context <- Utils.buildContext Spec.ON_ISSUE_STATUS res.domain res.merchant.subscriberId.getShortId res.merchant txnId msgId res.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Utils.buildTTL 30 (convertRFC3339ToUTC res.updatedAt))
   let message = tfOnIssueStatusMessage res
   pure $
     Spec.OnIssueStatusReq
@@ -69,7 +70,7 @@ tfIssue res =
       issueResolution = tfIssueResolution res,
       issueResolutionProvider = tfResolutionProvider res,
       issueSource = Nothing,
-      issueStatus = Nothing,
+      issueStatus = DIssue.mapDomainStatusToSpecStatus res.issueStatus,
       issueSubCategory = Nothing,
       issueUpdatedAt = res.updatedAt,
       issueRating = Nothing
@@ -115,7 +116,7 @@ tfOrganzationOrg :: DIssueStatus.IssueStatusRes -> Maybe Spec.OrganizationOrg
 tfOrganzationOrg res =
   Just $
     Spec.OrganizationOrg
-      { organizationOrgName = mkOrgName res.merchant.subscriberId.getShortId Spec.PUBLIC_TRANSPORT
+      { organizationOrgName = mkOrgName res.merchant.subscriberId.getShortId res.domain
       }
 
 tfOrganizationPerson :: DIssueStatus.IssueStatusRes -> Maybe Spec.ComplainantPerson
@@ -126,15 +127,26 @@ tfOrganizationPerson res =
       }
 
 tfIssueResolution :: DIssueStatus.IssueStatusRes -> Maybe Spec.IssueResolution
-tfIssueResolution _res =
-  Just $
-    Spec.IssueResolution
-      { issueResolutionAction = Nothing,
-        issueResolutionActionTriggered = show Spec.REFUND,
-        issueResolutionGroRemarks = Nothing,
-        issueResolutionLongDesc = Nothing,
-        issueResolutionShortDesc = show Spec.REFUND
-      }
+tfIssueResolution res =
+  case res.resolutionShortDesc of
+    Just shortDesc ->
+      Just $
+        Spec.IssueResolution
+          { issueResolutionAction = Nothing,
+            issueResolutionActionTriggered = fromMaybe (show Spec.REFUND) res.resolutionActionTriggered,
+            issueResolutionGroRemarks = Nothing,
+            issueResolutionLongDesc = res.resolutionLongDesc,
+            issueResolutionShortDesc = shortDesc
+          }
+    Nothing ->
+      Just $
+        Spec.IssueResolution
+          { issueResolutionAction = Nothing,
+            issueResolutionActionTriggered = show Spec.REFUND,
+            issueResolutionGroRemarks = Nothing,
+            issueResolutionLongDesc = Nothing,
+            issueResolutionShortDesc = show Spec.REFUND
+          }
 
 tfResolutionProvider :: DIssueStatus.IssueStatusRes -> Maybe Spec.ResolutionProvider
 tfResolutionProvider res =

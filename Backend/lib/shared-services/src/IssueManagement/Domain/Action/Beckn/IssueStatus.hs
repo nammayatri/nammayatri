@@ -56,7 +56,12 @@ data IssueStatusRes = IssueStatusRes
     merchantOperatingCity :: MerchantOperatingCity,
     createdAt :: UTCTimeRFC3339,
     updatedAt :: UTCTimeRFC3339,
-    bapId :: Text
+    bapId :: Text,
+    domain :: Spec.Domain,
+    resolutionShortDesc :: Maybe Text,
+    resolutionLongDesc :: Maybe Text,
+    resolutionActionTriggered :: Maybe Text,
+    resolutionRefundAmount :: Maybe Text
   }
   deriving (Show, Generic)
 
@@ -94,4 +99,9 @@ handler ValidatedDIssueStatus {..} = do
       groEmail = igmConfig.groEmail
       createdAt = UTCTimeRFC3339 issue.createdAt
       updatedAt = UTCTimeRFC3339 now
+      domain = issue.domain
+      resolutionShortDesc = issue.resolutionShortDesc
+      resolutionLongDesc = issue.resolutionLongDesc
+      resolutionActionTriggered = issue.resolutionActionTriggered
+      resolutionRefundAmount = issue.resolutionRefundAmount
   pure IssueStatusRes {..}

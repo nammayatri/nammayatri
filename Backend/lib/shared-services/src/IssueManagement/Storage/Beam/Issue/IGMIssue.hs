@@ -29,6 +29,10 @@ data IGMIssueT f = IGMIssueT
     respondentEmail :: B.C f (Maybe Text),
     respondentPhone :: B.C f (Maybe Text),
     respondentAction :: B.C f (Maybe Text),
+    resolutionShortDesc :: B.C f (Maybe Text),
+    resolutionLongDesc :: B.C f (Maybe Text),
+    resolutionActionTriggered :: B.C f (Maybe Text),
+    resolutionRefundAmount :: B.C f (Maybe Text),
     updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)

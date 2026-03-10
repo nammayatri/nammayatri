@@ -23,4 +23,8 @@ ALTER TABLE atlas_app.igm_issue ADD COLUMN merchant_id character varying(36);
 ALTER TABLE atlas_app.igm_issue ADD COLUMN resolution_action character varying(36);
 ALTER TABLE atlas_app.igm_issue ADD COLUMN domain character varying(36) not null;
 ALTER TABLE atlas_app.igm_issue ADD PRIMARY KEY ( id);
+ALTER TABLE atlas_app.igm_issue ADD COLUMN resolution_short_desc text;
+ALTER TABLE atlas_app.igm_issue ADD COLUMN resolution_long_desc text;
+ALTER TABLE atlas_app.igm_issue ADD COLUMN resolution_action_triggered text;
+ALTER TABLE atlas_app.igm_issue ADD COLUMN resolution_refund_amount text;
 

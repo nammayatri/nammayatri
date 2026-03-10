@@ -55,6 +55,8 @@ data Ride = Ride
 
 data Booking = Booking
   { id :: Id Booking,
+    personId :: Id Person,
+    transactionId :: Text,
     bapId :: Maybe Text,
     bapUri :: Maybe BaseUrl,
     bppId :: Maybe Text,
@@ -84,7 +86,7 @@ data FRFSTicketBooking = FRFSTicketBooking
   { id :: Id FRFSTicketBooking,
     merchantOperatingCityId :: Id MerchantOperatingCity,
     merchantId :: Id Merchant,
-    riderId :: Id Person,
+    personId :: Id Person,
     fromStationCode :: Text,
     toStationCode :: Text,
     vehicleType :: VehicleCategory,
@@ -93,6 +95,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     status :: FRFSTicketBookingStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
+    searchId :: Text,
     stationsJson :: Text
   }
 

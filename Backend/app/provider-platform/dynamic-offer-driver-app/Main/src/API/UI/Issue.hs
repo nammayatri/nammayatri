@@ -159,6 +159,8 @@ castBookingById bookingId =
     castBooking booking bapUri =
       Common.Booking
         { id = cast booking.id,
+          personId = maybe (cast booking.providerId) cast booking.riderId, -- BPP side booking has riderId mapped to driver
+          transactionId = booking.transactionId,
           bapId = Just booking.bapId,
           bapUri = Just bapUri,
           bppId = Nothing,
