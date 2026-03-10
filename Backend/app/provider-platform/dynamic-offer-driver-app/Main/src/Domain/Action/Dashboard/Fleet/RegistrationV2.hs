@@ -327,7 +327,8 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             fleetDob = Nothing,
             stripeAddress = Nothing,
             merchantOperatingCityId = mbMerchantOperatingCityId,
-            isBlockedForScheduledPayout = Nothing
+            isBlockedForScheduledPayout = Nothing,
+            reasonCodeDifferentialDeduction = Nothing
           }
   QFOI.create fleetOwnerInfo
 

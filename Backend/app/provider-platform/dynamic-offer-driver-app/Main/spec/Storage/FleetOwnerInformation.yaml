@@ -22,6 +22,7 @@ FleetOwnerInformation:
     panNumber: Maybe (EncryptedHashedField e Text)
     panNumberDec: Maybe Text # for backward compatibilty
     tdsRate: Maybe Double
+    reasonCodeDifferentialDeduction: Maybe Text
     fleetType: FleetType
     gstImageId : Maybe Text
     panImageId: Maybe Text
@@ -130,6 +131,10 @@ FleetOwnerInformation:
     updateTdsRate:
       kvFunction: updateOneWithKV
       params: [tdsRate]
+      where: fleetOwnerPersonId
+    updateReasonCodeDifferentialDeduction:
+      kvFunction: updateOneWithKV
+      params: [reasonCodeDifferentialDeduction]
       where: fleetOwnerPersonId
     deleteByFleetOwnerPersonId:
       kvFunction: deleteWithKV

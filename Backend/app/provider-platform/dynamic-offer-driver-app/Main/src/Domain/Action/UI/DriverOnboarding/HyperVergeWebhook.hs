@@ -3,11 +3,13 @@ module Domain.Action.UI.DriverOnboarding.HyperVergeWebhook where
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DRC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification as KEV
@@ -19,9 +21,12 @@ import qualified SharedLogic.DriverOnboarding as SLogicOnboarding
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QDPC
+import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.HyperVergeVerification as QHVVerification
 import qualified Storage.Queries.Image as QImage
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Verification as Verification
@@ -57,6 +62,26 @@ hyperVergeResultWebhookHandler payload = do
     DVC.PanCard -> do
       QDPC.updateVerificationStatus vstatus imageEntity.personId
       logInfo $ "PAN Card Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus
+      -- Update cached reason code based on PAN status for both drivers and fleets.
+      person <- QPerson.findById imageEntity.personId >>= fromMaybeM (PersonNotFound imageEntity.personId.getId)
+      case person.role of
+        DP.DRIVER -> do
+          -- Skip fleet-linked drivers and never override code "A" (approved LDC) or explicit tdsRate-based settings.
+          isFleetLinked <- isJust <$> QFleetDriver.findByDriverId imageEntity.personId True
+          unless isFleetLinked $ do
+            mbDriverInfo <- QDI.findById imageEntity.personId
+            whenJust mbDriverInfo $ \driverInfo ->
+              unless (isJust driverInfo.tdsRate || driverInfo.reasonCodeDifferentialDeduction == Just "A") $ do
+                let newReasonCode = if vstatus /= Documents.VALID then Just "C" else Nothing
+                QDI.updateReasonCodeDifferentialDeduction newReasonCode imageEntity.personId
+        role
+          | DCommon.checkFleetOwnerRole role -> do
+              mbFleetOwnerInfo <- QFOI.findByPrimaryKey imageEntity.personId
+              whenJust mbFleetOwnerInfo $ \fleetOwnerInfo ->
+                unless (isJust fleetOwnerInfo.tdsRate || fleetOwnerInfo.reasonCodeDifferentialDeduction == Just "A") $ do
+                  let newReasonCode = if vstatus /= Documents.VALID then Just "C" else Nothing
+                  QFOI.updateReasonCodeDifferentialDeduction newReasonCode imageEntity.personId
+        _ -> pure ()
     DVC.AadhaarCard -> do
       QAadhaarCard.updateVerificationStatus vstatus imageEntity.personId
       logInfo $ "Aadhaar Card Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus

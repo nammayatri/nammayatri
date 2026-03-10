@@ -347,6 +347,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             onlineDurationRefreshedAt = Just now,
             panNumber = Nothing,
             tdsRate = transporterConfig.taxConfig.defaultTdsRate,
+            reasonCodeDifferentialDeduction = Nothing,
             aadhaarNumber = Nothing,
             dlNumber = Nothing,
             maxPickupRadius = Nothing,
