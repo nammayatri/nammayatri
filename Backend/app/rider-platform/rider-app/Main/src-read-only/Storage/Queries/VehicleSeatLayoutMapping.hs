@@ -25,11 +25,13 @@ createMany = traverse_ create
 deleteByVehicleNoAndGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
 deleteByVehicleNoAndGtfsId vehicleNo gtfsId = do deleteWithKV [Se.And [Se.Is Beam.vehicleNo $ Se.Eq vehicleNo, Se.Is Beam.gtfsId $ Se.Eq gtfsId]]
 
-findAllByGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping]))
-findAllByGtfsId gtfsId = do findAllWithKV [Se.Is Beam.gtfsId $ Se.Eq gtfsId]
+findAllByGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> m ([Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping]))
+findAllByGtfsId limit offset gtfsId = do findAllWithOptionsKV [Se.Is Beam.gtfsId $ Se.Eq gtfsId] (Se.Desc Beam.createdAt) limit offset
 
-findAllBySeatLayoutId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> m ([Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping]))
-findAllBySeatLayoutId seatLayoutId = do findAllWithKV [Se.Is Beam.seatLayoutId $ Se.Eq (Kernel.Types.Id.getId seatLayoutId)]
+findAllBySeatLayoutId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> m ([Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping]))
+findAllBySeatLayoutId limit offset seatLayoutId = do findAllWithOptionsKV [Se.Is Beam.seatLayoutId $ Se.Eq (Kernel.Types.Id.getId seatLayoutId)] (Se.Desc Beam.createdAt) limit offset
 
 findByVehicleNoAndGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping))
 findByVehicleNoAndGtfsId vehicleNo gtfsId = do findOneWithKV [Se.And [Se.Is Beam.vehicleNo $ Se.Eq vehicleNo, Se.Is Beam.gtfsId $ Se.Eq gtfsId]]

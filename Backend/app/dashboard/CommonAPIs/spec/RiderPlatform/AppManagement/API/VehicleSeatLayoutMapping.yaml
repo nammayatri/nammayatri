@@ -1,0 +1,57 @@
+imports:
+  Text: Data.Text
+  APISuccess: Kernel.Types.APISuccess
+  SeatLayout: Domain.Types.SeatLayout
+  VehicleSeatLayoutMapping: Domain.Types.VehicleSeatLayoutMapping
+
+importPackageOverrides:
+  Domain.Types.SeatLayout: "rider-app"
+  Domain.Types.VehicleSeatLayoutMapping: "rider-app"
+
+module: VehicleSeatLayoutMapping
+apiPrefix: vehicleSeatLayoutMapping
+
+types:
+  VehicleSeatLayoutMappingUpsertReq:
+    vehicleNo: Text
+    gtfsId: Text
+    seatLayoutId: Id SeatLayout
+    derive: "'HideSecrets"
+
+  VehicleSeatLayoutMappingItem:
+    id: Id VehicleSeatLayoutMapping
+    vehicleNo: Text
+    gtfsId: Text
+    seatLayoutId: Id SeatLayout
+
+apis:
+  - GET:
+      endpoint: /list
+      name: ListVehicleSeatLayoutMapping
+      auth: ApiAuthV2
+      mandatoryQuery:
+        gtfsId: Text
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[VehicleSeatLayoutMappingItem]"
+
+  - POST:
+      endpoint: /upsert
+      name: UpsertVehicleSeatLayoutMapping
+      auth: ApiAuthV2
+      request:
+        type: VehicleSeatLayoutMappingUpsertReq
+      response:
+        type: APISuccess
+
+  - DELETE:
+      endpoint: /{vehicleNo}/{gtfsId}/delete
+      name: DeleteVehicleSeatLayoutMapping
+      auth: ApiAuthV2
+      params:
+        vehicleNo: Text
+        gtfsId: Text
+      response:
+        type: APISuccess

@@ -23,13 +23,13 @@ findByVehicleNoAndGtfsIdCached ::
   m (Maybe VehicleSeatLayoutMapping)
 findByVehicleNoAndGtfsIdCached vehicleNo gtfsId =
   let key = makeKey vehicleNo gtfsId
-  in Hedis.safeGet key >>= \case
-    Just val -> return val
-    Nothing -> do
-      val <- Queries.findByVehicleNoAndGtfsId vehicleNo gtfsId
-      whenJust val $ \v ->
-        Hedis.setExp key v fiveDaysTTL
-      return val
+   in Hedis.safeGet key >>= \case
+        Just val -> return val
+        Nothing -> do
+          val <- Queries.findByVehicleNoAndGtfsId vehicleNo gtfsId
+          whenJust val $ \v ->
+            Hedis.setExp key v fiveDaysTTL
+          return val
 
 invalidateCache :: (CacheFlow m r) => Text -> Text -> m ()
 invalidateCache vehicleNo gtfsId =

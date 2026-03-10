@@ -12,6 +12,7 @@ import qualified API.Types.Dashboard.AppManagement.Payment
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified API.Types.Dashboard.AppManagement.TransitOperator
+import qualified API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -29,6 +30,7 @@ data AppManagementUserActionType
   | TICKET_DASHBOARD API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardUserActionType
   | TICKETS API.Types.Dashboard.AppManagement.Tickets.TicketsUserActionType
   | TRANSIT_OPERATOR API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUserActionType
+  | VEHICLE_SEAT_LAYOUT_MAPPING API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.VehicleSeatLayoutMappingUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -43,6 +45,7 @@ instance Text.Show.Show AppManagementUserActionType where
     TICKET_DASHBOARD e -> "TICKET_DASHBOARD/" <> show e
     TICKETS e -> "TICKETS/" <> show e
     TRANSIT_OPERATOR e -> "TRANSIT_OPERATOR/" <> show e
+    VEHICLE_SEAT_LAYOUT_MAPPING e -> "VEHICLE_SEAT_LAYOUT_MAPPING/" <> show e
 
 instance Text.Read.Read AppManagementUserActionType where
   readsPrec d' =
@@ -119,9 +122,18 @@ instance Text.Read.Read AppManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ ( VEHICLE_SEAT_LAYOUT_MAPPING v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "VEHICLE_SEAT_LAYOUT_MAPPING/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''AppManagementUserActionType])
+$(Data.Singletons.TH.genSingletons [(''AppManagementUserActionType)])
