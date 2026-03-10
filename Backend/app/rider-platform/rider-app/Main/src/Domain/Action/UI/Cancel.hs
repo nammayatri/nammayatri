@@ -19,6 +19,9 @@ module Domain.Action.UI.Cancel
     CancelRes (..),
     CancelSearch (..),
     CancellationDuesDetailsRes (..),
+    CancellationReasonEntity (..),
+    CancellationReasonInput (..),
+    computeCancellationReasons,
     mkDomainCancelSearch,
     cancelSearch,
     getCancellationDuesDetails,
@@ -70,6 +73,11 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
 import qualified Tools.Maps as Maps
+import Domain.Action.UI.CancelLogic
+  ( CancellationReasonEntity (..),
+    CancellationReasonInput (..),
+    computeCancellationReasons,
+  )
 
 data CancelReq = CancelReq
   { reasonCode :: SCR.CancellationReasonCode,

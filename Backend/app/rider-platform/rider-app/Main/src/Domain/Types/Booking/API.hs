@@ -23,6 +23,7 @@ import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
 import Domain.Types
 import Domain.Types.Booking
+import qualified Domain.Action.UI.CancelLogic as DCancel
 import Domain.Types.BookingCancellationReason
 import Domain.Types.BookingStatus
 import qualified Domain.Types.BppDetails as DBppDetails
@@ -136,7 +137,8 @@ data BookingAPIEntity = BookingAPIEntity
     insuredAmount :: Maybe Text,
     mbJourneyId :: Maybe (Id DJourney.Journey),
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    displayBookingId :: Maybe Text
+    displayBookingId :: Maybe Text,
+    cancellationReasons :: Maybe [DCancel.CancellationReasonEntity]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -278,8 +280,9 @@ makeBookingAPIEntity ::
   Bool ->
   Bool ->
   Maybe BookingCancellationReasonAPIEntity ->
+  Maybe [DCancel.CancellationReasonEntity] ->
   m BookingAPIEntity
-makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
+makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason mbCancellationReasons = do
   bookingDetails <- mkBookingAPIDetails booking requesterId
   rides <- mapM buildRideAPIEntity allRides
   person <- QP.findById requesterId >>= fromMaybeM (PersonNotFound requesterId.getId)
@@ -351,7 +354,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         billingCategory = booking.billingCategory,
         vehicleCategory = booking.vehicleCategory,
         mbJourneyId = mbJourneyLeg <&> (.journeyId),
-        displayBookingId = booking.displayBookingId
+        displayBookingId = booking.displayBookingId,
+        cancellationReasons = mbCancellationReasons
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -491,7 +495,15 @@ buildBookingAPIEntity booking personId = do
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason)
+  mbCancellationReasons <-
+    if booking.status `elem` [NEW, CONFIRMED, TRIP_ASSIGNED]
+      then do
+        let hasRideAssigned = isJust mbActiveRide
+            isAC = fromMaybe False booking.isAirConditioned
+        reasons <- DCancel.computeCancellationReasons (cast booking.merchantOperatingCityId) hasRideAssigned isAC
+        return $ if null reasons then Nothing else Just reasons
+      else return Nothing
+  makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason) mbCancellationReasons
   where
     makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
     makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
