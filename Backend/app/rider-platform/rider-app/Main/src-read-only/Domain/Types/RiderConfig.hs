@@ -100,6 +100,7 @@ data RiderConfig = RiderConfig
     makeMultiModalSearch :: Kernel.Prelude.Bool,
     maxAllowedPublicTransportLegs :: Kernel.Prelude.Int,
     maxNearbyBuses :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxNumberOfLuggages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maximumWalkDistance :: Kernel.Types.Common.Meters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     metricsBlacklistPatterns :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],

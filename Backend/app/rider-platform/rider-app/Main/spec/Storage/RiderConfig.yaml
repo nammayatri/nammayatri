@@ -214,6 +214,7 @@ RiderConfig:
     kafkaTopicName: Text
     staticCustomerIdThresholdDay: Maybe Day
     invoiceLogoUrl: Maybe Text
+    maxNumberOfLuggages: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
