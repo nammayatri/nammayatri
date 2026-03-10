@@ -16,6 +16,9 @@ module Lib.LocationUpdates.Internal
   ( RideInterpolationHandler (..),
     SnapToRoadState (..),
     onRideSnapToRoadStateKey,
+    onRideStateEntryPermitChargesKey,
+    onRideStateEntryPermitNamesKey,
+    onRideStateEntryPermitIdsKey,
     recalcDistanceBatches,
     addPointsImplementation,
     getWaypointsNumberImplementation,
@@ -156,6 +159,16 @@ onRideTollNamesKey driverId = "OnRideTollNames:" <> driverId.getId
 
 onRideTollIdsKey :: Id person -> Text
 onRideTollIdsKey driverId = "OnRideTollIds:" <> driverId.getId
+
+-- | SEPC on-ride Redis keys (Phase 3: defined here; populated by SEPC detector wiring in Phase 4).
+onRideStateEntryPermitChargesKey :: Id person -> Text
+onRideStateEntryPermitChargesKey driverId = "OnRideStateEntryPermitCharges:" <> driverId.getId
+
+onRideStateEntryPermitNamesKey :: Id person -> Text
+onRideStateEntryPermitNamesKey driverId = "OnRideStateEntryPermitNames:" <> driverId.getId
+
+onRideStateEntryPermitIdsKey :: Id person -> Text
+onRideStateEntryPermitIdsKey driverId = "OnRideStateEntryPermitIds:" <> driverId.getId
 
 takeLastTwo :: [a] -> [a]
 takeLastTwo xs = drop (max 0 (length xs - 2)) xs
@@ -313,6 +326,10 @@ redisOnRideKeysCleanup driverId = do
   Redis.del (onRideTollChargesKey driverId)
   Redis.del (onRideTollNamesKey driverId)
   Redis.del (onRideTollIdsKey driverId)
+  -- SEPC on-ride keys (added in Phase 3; populated once SEPC detector is wired).
+  Redis.del (onRideStateEntryPermitChargesKey driverId)
+  Redis.del (onRideStateEntryPermitNamesKey driverId)
+  Redis.del (onRideStateEntryPermitIdsKey driverId)
 
 -------------------------------------------------------------------------
 mkRideInterpolationHandler ::

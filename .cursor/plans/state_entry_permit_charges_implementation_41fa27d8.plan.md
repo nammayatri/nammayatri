@@ -217,10 +217,11 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
   - **Batch size and snap-to-road:** Keep the **same** batching as toll:
     - Raw batch: `batchWaypoints <- getFirstNwaypoints driverId (maxSnapToRoadReqPoints + 1)` (≈99 raw points).
     - One snap call per batch: `snapToRoad` on `batchWaypoints` gives `snappedPoints`.
-  - **Cross-batch continuity for SEPC:** Introduce a new Redis key per driver:
-    - `LastSnappedPointOnRide:<driverId>` – stores the **last snapped point** of the **previous snap batch**.
+  - **Cross-batch continuity for SEPC:** Reuse the existing last-two-points key:
+    - `Driver-Location-Last-Two-OnRide-Points:DriverId-<driverId>` – already stores the **last two raw points** of the previous batch.
     - After each successful snap:
-      - Read `mbPrevLastSnapped <- Redis.safeGet (LastSnappedPointOnRide:<driverId>)`.
+      - Read `mbPrevLastTwo <- Redis.safeGet (Driver-Location-Last-Two-OnRide-Points:DriverId-<driverId>)`.
+      - Derive the previous stitched point for SEPC as the **last element** of that list (if present): `mbPrevLastSnapped = last <$> mbPrevLastTwo`.
       - Build the SEPC route for this batch:
         - If `mbPrevLastSnapped` is `Nothing` (first batch in ride): `sepcRoute = snappedPoints`.
         - If `Just prevLast`: `sepcRoute = prevLast : snappedPoints`.
@@ -245,10 +246,9 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
       - When `mbSepcCharges` is `Just sepcCharges`, call:  
       `updateStateEntryPermitChargesAndNamesAndIds driverId sepcCharges sepcNames sepcIds`  
       so the Ride row always has the latest detected SEPC alongside toll.
-  - **Cleanup:** On ride end (in provider end-ride flow and `redisOnRideKeysCleanup`-like logic), clear:
+  - **Cleanup:** On ride end (in provider end-ride flow and `redisOnRideKeysCleanup` logic), clear:
     - `OnRideStateEntryPermitCharges:<driverId>`, `OnRideStateEntryPermitNames:<driverId>`, `OnRideStateEntryPermitIds:<driverId>` (SEPC OnRide keys).
-    - `LastSnappedPointOnRide:<driverId>` (no need to carry stitching across rides).  
-    Toll keys continue to be cleared as today. TTLs (e.g. 6h) remain as a safety net only – the explicit ride-end delete is the primary cleanup.
+    - Raw waypoint + toll keys (`Driver-Location-Last-Two-OnRide-Points:DriverId-<driverId>`, `OnRideToll*`, `Driver-Location-OnRide-SnapToRoad:DriverId-<driverId>`) continue to be cleared as today. TTLs (e.g. 6h) remain as a safety net only – the explicit ride-end delete is the primary cleanup.
 
 **Exact logic (per snap batch):**  
 
@@ -257,7 +257,8 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
   - Snap-to-road: `response.snappedPoints = snappedPoints`.  
   - Toll: `mbTollInfo <- getTollInfoOnTheRoute (Just driverId) snappedPoints`.
 3. For SEPC stitching:
-  - `mbPrevLastSnapped <- Redis.safeGet (LastSnappedPointOnRide:<driverId>)`.  
+  - `mbPrevLastTwo <- Redis.safeGet (Driver-Location-Last-Two-OnRide-Points:DriverId-<driverId>)`.  
+  - `mbPrevLastSnapped = last <$> mbPrevLastTwo`.  
   - `sepcRoute = maybe snappedPoints (: snappedPoints) mbPrevLastSnapped`.  
   - `mbSepcInfo <- getStateEntryPermitInfoOnRoute (Just driverId) sepcRoute`.
 4. Accumulate results:
@@ -267,7 +268,7 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
   - Read accumulated toll from `OnRideToll`* and call `updateTollChargesAndNamesAndIds`.  
   - Read accumulated SEPC from `OnRideStateEntryPermit`* and call `updateStateEntryPermitChargesAndNamesAndIds`.
 6. Maintain continuity:
-  - If `snappedPoints` non-empty, store `last snappedPoints` into `LastSnappedPointOnRide:<driverId>`.
+  - Raw waypoints continuity remains handled by `Driver-Location-Last-Two-OnRide-Points:DriverId-<driverId>`; SEPC uses only the last element of that list as the previous stitched point.
 7. Advance raw waypoint window:
   - `deleteFirstNwaypoints driverId maxSnapToRoadReqPoints` (keep one raw overlap).
 
