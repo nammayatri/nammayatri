@@ -99,6 +99,9 @@ PayoutTransaction:
     status : Text
     merchantId: Text
     merchantOperatingCityId : Maybe Text
+    beneficiaryName : Maybe Text
+    beneficiaryAccount : Maybe Text
+    beneficiaryIfsc : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
   sqlType:

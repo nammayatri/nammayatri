@@ -2,6 +2,7 @@ module Domain.Action.UI.Insurance (getInsurance, getDriverInsurance, todayUTCWin
 
 import Data.Time (UTCTime (..), utctDay)
 import Data.Time.Calendar (addDays)
+import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -14,7 +15,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBAPInternal
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Storage.Queries.IffcoTokioInsurance as QIffco
 import qualified Storage.Queries.Ride as QRide
 
@@ -51,15 +51,16 @@ getDriverInsurance (personId, _merchantId, merchantOpCityId) = do
   (startOfToday, startOfTomorrow) <- todayUTCWindow
   mbInsurance <- QIffco.findLatestByDriverId personId
   case mbInsurance of
-    Just ins | ins.createdAt >= startOfToday && ins.createdAt < startOfTomorrow ->
-      pure $
-        SharedLogic.CallBAPInternal.InsuranceAPIEntity
-          { certificateUrl = Nothing,
-            message = "IffcoTokio insurance: " <> show ins.insuranceStatus,
-            plan = Just "IffcoTokio",
-            policyId = ins.declarationId,
-            policyNumber = ins.certificateNumber
-          }
+    Just ins
+      | ins.createdAt >= startOfToday && ins.createdAt < startOfTomorrow ->
+        pure $
+          SharedLogic.CallBAPInternal.InsuranceAPIEntity
+            { certificateUrl = Nothing,
+              message = "IffcoTokio insurance: " <> show ins.insuranceStatus,
+              plan = Just "IffcoTokio",
+              policyId = ins.declarationId,
+              policyNumber = ins.certificateNumber
+            }
     _ -> throwError $ InvalidRequest "No active insurance found for today"
 
 -- | Returns (startOfToday, startOfTomorrow) as UTC midnight boundaries.

@@ -11,6 +11,9 @@ import qualified Lib.Payment.Domain.Types.PayoutOrder
 
 data PayoutTransaction = PayoutTransaction
   { amount :: Kernel.Types.Common.Price,
+    beneficiaryAccount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    beneficiaryIfsc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    beneficiaryName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     fulfillmentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gateWayRefId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

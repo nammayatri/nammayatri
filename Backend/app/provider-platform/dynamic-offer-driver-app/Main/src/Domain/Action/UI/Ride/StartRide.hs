@@ -66,6 +66,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutVpaForRide)
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Payment ()
@@ -76,7 +77,6 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants

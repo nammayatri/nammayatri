@@ -15,6 +15,7 @@ import Data.List.Split (chunksOf)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text
 import qualified Data.Time as Time
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.FRFSConfig
@@ -110,7 +111,6 @@ import qualified Tools.MultiModal as MM
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 import qualified UrlShortner.Common as UrlShortner
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 
 getFrfsRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->

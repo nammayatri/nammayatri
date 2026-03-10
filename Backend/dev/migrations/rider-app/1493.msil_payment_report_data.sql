@@ -1,0 +1,13 @@
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN customer_name text;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN gateway_name text;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN card_type text;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN card_brand text;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN card_isin text;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN card_last_four_digits text;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN card_issuer text;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN surcharge_amount double precision;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN tax_amount double precision;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN net_amount double precision;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN epg_txn_id text;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN authorization_date_time timestamp with time zone;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN capture_date_time timestamp with time zone;

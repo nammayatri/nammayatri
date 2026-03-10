@@ -17,3 +17,10 @@ ALTER TABLE atlas_app.payout_transaction ADD PRIMARY KEY ( id, transaction_ref);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.payout_transaction ADD COLUMN merchant_operating_city_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_transaction ADD COLUMN beneficiary_name text ;
+ALTER TABLE atlas_app.payout_transaction ADD COLUMN beneficiary_ifsc text ;
+ALTER TABLE atlas_app.payout_transaction ADD COLUMN beneficiary_account text ;

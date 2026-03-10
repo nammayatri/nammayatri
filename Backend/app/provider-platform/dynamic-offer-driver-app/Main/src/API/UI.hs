@@ -30,7 +30,6 @@ import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
 import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
-import qualified API.UI.DriverInsurance as DriverInsurance
 import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Merchant as Merchant
 import qualified API.Action.UI.MeterRide as MeterRide
@@ -56,6 +55,7 @@ import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.City as City
 import qualified API.UI.Driver as Driver
 import qualified API.UI.DriverCoins as DriverCoins
+import qualified API.UI.DriverInsurance as DriverInsurance
 import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverProfileSummary as DriverProfileSummary
 import qualified API.UI.DriverReferral as DriverReferral

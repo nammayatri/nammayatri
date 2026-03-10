@@ -45,8 +45,11 @@ updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.P
 updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) amount),
+    [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
       Se.Set Beam.price ((.amount) amount),
+      Se.Set Beam.beneficiaryAccount beneficiaryAccount,
+      Se.Set Beam.beneficiaryIfsc beneficiaryIfsc,
+      Se.Set Beam.beneficiaryName beneficiaryName,
       Se.Set Beam.fulfillmentMethod fulfillmentMethod,
       Se.Set Beam.gateWayRefId gateWayRefId,
       Se.Set Beam.merchantId merchantId,
@@ -63,6 +66,9 @@ instance FromTType' Beam.PayoutTransaction Lib.Payment.Domain.Types.PayoutTransa
       Just
         Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction
           { amount = Kernel.Types.Common.mkPrice currency price,
+            beneficiaryAccount = beneficiaryAccount,
+            beneficiaryIfsc = beneficiaryIfsc,
+            beneficiaryName = beneficiaryName,
             createdAt = createdAt,
             fulfillmentMethod = fulfillmentMethod,
             gateWayRefId = gateWayRefId,
@@ -78,8 +84,11 @@ instance FromTType' Beam.PayoutTransaction Lib.Payment.Domain.Types.PayoutTransa
 instance ToTType' Beam.PayoutTransaction Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction where
   toTType' (Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction {..}) = do
     Beam.PayoutTransactionT
-      { Beam.currency = ((Kernel.Prelude.Just . (.currency))) amount,
+      { Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
         Beam.price = (.amount) amount,
+        Beam.beneficiaryAccount = beneficiaryAccount,
+        Beam.beneficiaryIfsc = beneficiaryIfsc,
+        Beam.beneficiaryName = beneficiaryName,
         Beam.createdAt = createdAt,
         Beam.fulfillmentMethod = fulfillmentMethod,
         Beam.gateWayRefId = gateWayRefId,
