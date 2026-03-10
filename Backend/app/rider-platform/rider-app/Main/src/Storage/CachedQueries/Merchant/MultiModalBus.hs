@@ -58,7 +58,7 @@ instance FromJSON BusStopETA where
     arrivalTimestamp <- v .: "arrival_time" :: Parser Integer
     etaSeconds <- v .:? "eta_seconds"
     stopName <- v .:? "stop_name"
-    let arrivalTime = utcToIST $ posixSecondsToUTCTime $ realToFrac arrivalTimestamp
+    let arrivalTime = posixSecondsToUTCTime $ realToFrac arrivalTimestamp
     return $ BusStopETA {..}
 
 instance ToJSON BusStopETA where
