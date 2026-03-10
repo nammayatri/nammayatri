@@ -1987,6 +1987,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
     getRouteNotFoundError MultiModalTypes.Subway source dest = NoValidSubwayRoute source dest
     getRouteNotFoundError MultiModalTypes.Bus source dest = NoValidBusRoute source dest
     getRouteNotFoundError _ source dest = NoValidMetroRoute source dest -- fallback
+
     getRouteServiceability ::
       Maybe ApiTypes.EffectiveStops ->
       RouteServiceabilityContext ->

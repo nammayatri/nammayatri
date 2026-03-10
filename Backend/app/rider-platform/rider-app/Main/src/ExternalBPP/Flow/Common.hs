@@ -207,7 +207,12 @@ confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfi
           case find (\eta -> eta.stopCode == booking.fromStationCode) firstSchedule.eta of
             Just boardingStopEta -> do
               currentTime <- getCurrentTime
-              let extraTtlSeconds = (nominalDiffTimeToSeconds $ diffUTCTime boardingStopEta.arrivalTime currentTime).getSeconds
+              let extraTtlSeconds =
+                    (nominalDiffTimeToSeconds $
+                      diffUTCTime
+                        (unixToUTC boardingStopEta.arrivalTimeUnix)
+                        currentTime
+                    ).getSeconds
               let addedTtl = max extraTtlSeconds 0
               return $ Seconds (baseQrTtl.getSeconds + addedTtl)
             Nothing -> return baseQrTtl
