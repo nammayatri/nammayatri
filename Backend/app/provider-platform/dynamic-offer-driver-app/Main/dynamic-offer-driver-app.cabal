@@ -334,6 +334,7 @@ library
       Domain.Action.UnifiedDashboard.Operator.HealthCheck
       Domain.Action.UnifiedDashboard.RideBooking.HealthCheck
       Domain.Types.Beckn.Status
+      Domain.Types.BoundingBoxPoints
       Domain.Types.Cac
       Domain.Types.CacType
       Domain.Types.City

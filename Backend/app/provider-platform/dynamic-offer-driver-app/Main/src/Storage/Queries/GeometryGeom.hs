@@ -74,7 +74,8 @@ instance FromTType' (Text, Context.City, Context.IndianState, Text, Maybe Text) 
             city = gCity,
             state = gState,
             region = gRegion,
-            geom = gGeom
+            geom = gGeom,
+            bbox = Nothing -- TODO: @Himanshu extend raw query to select bbox jsonb and parse into BoundingBoxPoints
           }
 
 -- | Find all geometries across all cities for a merchant (for allCities=true).
@@ -130,5 +131,6 @@ instance ToTType' BeamGeomG.GeometryGeom Geometry where
         BeamGeomG.region = region,
         BeamGeomG.state = state,
         BeamGeomG.city = city,
-        BeamGeomG.geom = geom
+        BeamGeomG.geom = geom,
+        BeamGeomG.bbox = bbox
       }

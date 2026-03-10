@@ -3172,7 +3172,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             region = show req.city,
             state = req.state,
             city = req.city,
-            geom = Just req.geom
+            geom = Just req.geom,
+            bbox = Nothing -- TODO: @Himanshu compute and persist bbox for this geometry (Phase: geometry bbox backfill)
           }
 
     buildMerchant merchantId merchantData currentTime DM.Merchant {city = _city, ..} =

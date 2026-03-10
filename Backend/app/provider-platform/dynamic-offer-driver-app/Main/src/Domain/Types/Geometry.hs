@@ -14,6 +14,7 @@
 
 module Domain.Types.Geometry where
 
+import Domain.Types.BoundingBoxPoints (BoundingBoxPoints)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (Id)
@@ -23,6 +24,7 @@ data Geometry = Geometry
     city :: Context.City,
     state :: Context.IndianState,
     region :: Text,
-    geom :: Maybe Text
+    geom :: Maybe Text,
+    bbox :: Maybe BoundingBoxPoints
   }
   deriving (Generic, Show, FromJSON, ToJSON)

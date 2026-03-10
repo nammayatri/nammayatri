@@ -75,6 +75,7 @@ instance FromTType' BeamG.Geometry Geometry where
         Geometry
           { id = Id id,
             geom = Nothing,
+            bbox = Nothing, -- TODO: @Himanshu load bbox from Beam geometry row once bbox is populated in DB
             ..
           }
 

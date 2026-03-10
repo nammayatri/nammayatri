@@ -15,6 +15,7 @@
 module Storage.Beam.Geometry.GeometryGeom where
 
 import qualified Database.Beam as B
+import Domain.Types.BoundingBoxPoints (BoundingBoxPoints)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Tools.Beam.UtilsTH
@@ -24,7 +25,8 @@ data GeometryGeomT f = GeometryGeomT
     city :: B.C f Context.City,
     state :: B.C f Context.IndianState,
     region :: B.C f Text,
-    geom :: B.C f (Maybe Text)
+    geom :: B.C f (Maybe Text),
+    bbox :: B.C f (Maybe BoundingBoxPoints)
   }
   deriving (Generic, B.Beamable)
 

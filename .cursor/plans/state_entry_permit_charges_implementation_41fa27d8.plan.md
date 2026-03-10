@@ -378,6 +378,32 @@ flowchart LR
 
 ---
 
+## Manual TODOs (@Himanshu) to fold into phases
+
+- **Search request SEPC fields (Phase 2 → 5)**  
+  - `Domain.Action.Beckn.Search`:  
+    - `-- TODO: @Himanshu State entry permit: set from params when BAP/route provides them (cf. tollCharges/tollNames/tollIds filled via ..)`  
+    - **Action**: once route/BAP sends SEPC data, wire them into `DSR.SearchRequest.stateEntryPermitCharges/stateEntryPermitIds/stateEntryPermitNames` similarly to toll.
+- **SearchTry fallback + SEPC (Phase 3–4)**  
+  - `SharedLogic.SearchTry`:  
+    - `Nothing, -- TODO: @Himanshu Fallback to searchReq.tollCharges (and SEPC when added) once Step 2+ of plan.`  
+    - **Action**: after SEPC is in `SearchRequest` and Redis, implement toll + SEPC fallback from search request when Redis is empty.
+- **FareParameters SEPC wiring (Phase 4)**  
+  - `SharedLogic.FareCalculator`:  
+    - `tollCharges = ... -- TODO: @Himanshu add SEPC charges below it, we have removed addition of static charges here.`  
+    - `stateEntryPermitCharges = Nothing, -- TODO: @Himanshu wire SEPC into FareParameters (Phase 4)`  
+    - **Action**: include dynamic SEPC in `FareParameters` alongside toll, using detector output and Redis keys as defined in Phase 3–4.
+- **Geometry bbox: DB load + backfill (Phase 2.1 / geometry bbox)**  
+  - `Storage.Queries.GeometryGeom`:  
+    - `bbox = Nothing -- TODO: @Himanshu extend raw query to select bbox jsonb and parse into BoundingBoxPoints`
+  - `Storage.Queries.Geometry`:  
+    - `bbox = Nothing, -- TODO: @Himanshu load bbox from Beam geometry row once bbox is populated in DB`
+  - `Domain.Action.Dashboard.Management.Merchant`:  
+    - `bbox = Nothing -- TODO: @Himanshu compute and persist bbox for this geometry (Phase: geometry bbox backfill)`
+  - **Action**: once bbox backfill is done and Kernel bbox helpers are wired, (a) compute bbox at geometry creation time, and (b) make all geometry queries load `bbox` as `BoundingBoxPoints` for SEPC/toll pre-filtering.
+
+---
+
 ## Order of implementation (recommended)
 
 1. Phase 1 – Remove FarePolicy.tollCharges and all static toll usage.
