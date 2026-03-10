@@ -53,10 +53,10 @@ After Phase 1: No static toll anywhere; dynamic toll is the only toll source in 
   - **Table:** `state_entry_permit_charges`
   - **Fields:**  
     - `id` (PK), `amount` (e.g. HighPrecMoney or Price), `geom_id` (FK), optional `name` / description, and any SEPC-specific flags (e.g. vehicle applicability).  
-    - No `merchant_operating_city_id`, `city`, or `state` columns – state/city live in the referenced geometry row.
-  - **Queries:** Fetch SEPC by joining through geometry, e.g. “all SEPC whose geometry.state is in allowedDestinationStates for this ride’s source state”; filter by state (and city if needed) via the Geometry table, not via fields on SEPC.
+    - **No merchantId or merchantOperatingCityId** – state/city live only in the referenced Geometry row; matching is purely via Geometry (geom_id → state/city). No per-operator SEPC config.
+  - **Queries:** Fetch SEPC by joining through geometry, e.g. “all SEPC whose geometry.state is in allowedDestinationStates for this ride’s source state”; filter by state (and city if needed) via the Geometry table only.
 - **Geometry link and bounding box:** Geometry table holds the shapes per state (and “anycity” where applicable) and will also store a cached bounding box for each geometry. Columns: `id`, `state`, `city` (or `ANYCITY`), `region`, `geom`, and a **bounding_box** field derived from `geom` (used with helpers like `lineSegmentWithinBoundingBox`, `doIntersect`, etc.). `StateEntryPermitCharges.geom_id` → `Geometry.id`. Merchant_state / allowed_states: use [Domain.Types.MerchantState](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only/Domain/Types/MerchantState.hs) (`state`, `allowedDestinationStates`); filter SEPC rows by joining via `geom_id` to Geometry and then applying `state ∈ allowedDestinationStates` (and any city = ANYCITY rule, if used).
-- **Migration:** Add SEPC table and FK to Geometry; add appropriate indexes (e.g. on `geom_id`, and on `Geometry(state, city)` for SEPC lookups).
+- **Migration:** Add SEPC table and FK to Geometry; add appropriate indexes (e.g. on `geom_id`, and on `Geometry(state, city)` for SEPC lookups). A later migration (e.g. `0766-state-entry-permit-charges-drop-merchant-columns.sql`) drops `merchant_id` and `merchant_operating_city_id` if they were ever added; SEPC has no merchant scoping.
 
 **Bounding-box representation and testing:**  
 
@@ -131,7 +131,7 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
 2. **Step 1 – Allowed states of source:**
   Resolve source state (e.g. from pickup lat/lon: which state contains it, or from MerchantState). Get MerchantState row(s) where `state` = source state; read `allowedDestinationStates`. (If product uses “source” as city/region, filter accordingly.)
 3. **Step 2 – Candidate SEPC rows:**
-  Fetch all StateEntryPermitCharges for the merchant operating city whose `state` is in the set from Step 1.
+  Fetch all StateEntryPermitCharges whose **Geometry.state** is in the set from Step 1 (join via `geom_id` to Geometry; no merchant scoping). E.g. load all SEPC rows, then filter to those whose Geometry (by geom_id) has state ∈ allowedDestinationStates.
 4. **Step 3 – SBB:**
   For each candidate SEPC row, get bounding box (from stored bbox or from Geometry by geom_id). Build one SBB per state or union; same as toll “eligible that maybe present” filter.
 5. **Step 4 – RBB:**
@@ -248,7 +248,7 @@ There is **no** Redis key for "pending SEPC crossing" (unlike toll's `TollGateTr
       so the Ride row always has the latest detected SEPC alongside toll.
   - **Cleanup:** On ride end (in provider end-ride flow and `redisOnRideKeysCleanup` logic), clear:
     - `OnRideStateEntryPermitCharges:<driverId>`, `OnRideStateEntryPermitNames:<driverId>`, `OnRideStateEntryPermitIds:<driverId>` (SEPC OnRide keys).
-    - Raw waypoint + toll keys (`Driver-Location-Last-Two-OnRide-Points:DriverId-<driverId>`, `OnRideToll*`, `Driver-Location-OnRide-SnapToRoad:DriverId-<driverId>`) continue to be cleared as today. TTLs (e.g. 6h) remain as a safety net only – the explicit ride-end delete is the primary cleanup.
+    - Raw waypoint + toll keys (`Driver-Location-Last-Two-OnRide-Points:DriverId-<driverId>`, `OnRideToll`*, `Driver-Location-OnRide-SnapToRoad:DriverId-<driverId>`) continue to be cleared as today. TTLs (e.g. 6h) remain as a safety net only – the explicit ride-end delete is the primary cleanup.
 
 **Exact logic (per snap batch):**  
 
@@ -413,5 +413,6 @@ flowchart LR
 4. Phase 4 – Implement StateEntryPermitDetector (Steps 1–6 + pending + checkAndValidatePendingStateEntryPermits).
 5. Phase 5 – Wire SEPC into Search → Init → Confirm → Update → On-ride → End ride and fare/breakup/APIs.
 6. Phase 6 – Confirm API contract (two separate fields) and any rider/BAP payload updates.
+7. **Logging (at the end)** – Add info, debug and error logs across SEPC flows (detector, location-updates, Search/Init/Confirm/Update/EndRide, validation) so production behaviour and failures can be observed and debugged.
 
 Where behaviour is ambiguous (e.g. “allowed states of source” exact semantics, or which state to use for pickup), mirror toll behaviour for that flow or call out for product decision.

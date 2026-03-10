@@ -499,6 +499,7 @@ library
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SpecialLocationUpsert
+      SharedLogic.StateEntryPermitDetector
       SharedLogic.SyncRide
       SharedLogic.TollsDetector
       SharedLogic.Type
@@ -743,6 +744,7 @@ library
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
+      Storage.Queries.StateEntryPermitChargesExtra
       Storage.Queries.StationExtra
       Storage.Queries.Status
       Storage.Queries.StclMembershipExtra
@@ -1534,6 +1536,7 @@ library
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.SearchTry
+      Storage.Queries.OrphanInstances.StateEntryPermitCharges
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.StclMembership
       Storage.Queries.OrphanInstances.SubscriptionPurchase

@@ -34,6 +34,9 @@ import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Geometry -> m ()
 create = createWithKV
 
+findGeometryById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Geometry -> m (Maybe Geometry)
+findGeometryById (Id geomId) = findOneWithKV [Se.Is BeamG.id (Se.Eq geomId)]
+
 findGeometryByStateAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Context.IndianState -> m (Maybe Geometry)
 findGeometryByStateAndCity cityParam stateParam = do
   findOneWithKV

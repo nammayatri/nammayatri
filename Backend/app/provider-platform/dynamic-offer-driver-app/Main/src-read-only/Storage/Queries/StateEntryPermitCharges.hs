@@ -2,8 +2,9 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.StateEntryPermitCharges where
+module Storage.Queries.StateEntryPermitCharges (module Storage.Queries.StateEntryPermitCharges, module ReExport) where
 
+import qualified Domain.Types.Geometry
 import qualified Domain.Types.StateEntryPermitCharges
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -13,12 +14,16 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.StateEntryPermitCharges as Beam
+import Storage.Queries.StateEntryPermitChargesExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.StateEntryPermitCharges.StateEntryPermitCharges -> m ())
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.StateEntryPermitCharges.StateEntryPermitCharges] -> m ())
 createMany = traverse_ create
+
+findAllByGeomId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Geometry.Geometry -> m ([Domain.Types.StateEntryPermitCharges.StateEntryPermitCharges]))
+findAllByGeomId geomId = do findAllWithKV [Se.Is Beam.geomId $ Se.Eq (Kernel.Types.Id.getId geomId)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -37,31 +42,3 @@ updateByPrimaryKey (Domain.Types.StateEntryPermitCharges.StateEntryPermitCharges
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.StateEntryPermitCharges Domain.Types.StateEntryPermitCharges.StateEntryPermitCharges where
-  fromTType' (Beam.StateEntryPermitChargesT {..}) = do
-    pure $
-      Just
-        Domain.Types.StateEntryPermitCharges.StateEntryPermitCharges
-          { amount = amount,
-            createdAt = createdAt,
-            geomId = Kernel.Types.Id.Id geomId,
-            id = Kernel.Types.Id.Id id,
-            name = name,
-            updatedAt = updatedAt,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
-          }
-
-instance ToTType' Beam.StateEntryPermitCharges Domain.Types.StateEntryPermitCharges.StateEntryPermitCharges where
-  toTType' (Domain.Types.StateEntryPermitCharges.StateEntryPermitCharges {..}) = do
-    Beam.StateEntryPermitChargesT
-      { Beam.amount = amount,
-        Beam.createdAt = createdAt,
-        Beam.geomId = Kernel.Types.Id.getId geomId,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.name = name,
-        Beam.updatedAt = updatedAt,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
-      }

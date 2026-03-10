@@ -21,3 +21,10 @@ StateEntryPermitCharges:
 
   sqlType:
     geomId: character varying(36)
+
+  queries:
+    findAllByGeomId:
+      kvFunction: findAllWithKV
+      where: geomId
+  extraOperations:
+    - EXTRA_QUERY_FILE
