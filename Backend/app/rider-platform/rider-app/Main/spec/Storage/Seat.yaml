@@ -87,9 +87,6 @@ VehicleSeatLayoutMapping:
       unique: true
 
   queries:
-    findAllBySeatLayoutId:
-      kvFunction: findAllWithKV
-      where: seatLayoutId
 
     findByVehicleNoAndGtfsId:
       kvFunction: findOneWithKV
@@ -108,8 +105,17 @@ VehicleSeatLayoutMapping:
         and: [vehicleNo, gtfsId]
 
     findAllByGtfsId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: gtfsId
+      limit: limit
+      offset: offset
+
+    findAllBySeatLayoutId:
+      kvFunction: findAllWithOptionsKV
+      where: seatLayoutId
+      limit: limit
+      offset: offset
 
   extraOperations:
     - GENERATE_INDEXES
+    - EXTRA_CACHED_QUERY_FILE
