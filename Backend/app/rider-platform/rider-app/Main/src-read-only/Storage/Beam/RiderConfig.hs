@@ -100,6 +100,7 @@ data RiderConfigT f = RiderConfigT
     makeMultiModalSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxAllowedPublicTransportLegs :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxNearbyBuses :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    maxNumberOfLuggages :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maximumWalkDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     metricsBlacklistPatterns :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

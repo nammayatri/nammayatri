@@ -737,3 +737,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN send_sms_on_ena
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_number_of_luggages integer ;

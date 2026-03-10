@@ -228,6 +228,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: Maybe Day
     invoiceLogoUrl: Maybe Text
     externalSOSConfig: Maybe ExternalSOSConfig
+    maxNumberOfLuggages: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
