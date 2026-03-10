@@ -948,8 +948,12 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
               case mbSchedule of
                 Right (firstSchedule : _) -> do
                   let allEtas = firstSchedule.eta
-                      mbBookedStopEta = find (\etaObj -> etaObj.stopCode == booking.fromStationCode) allEtas <&> (.arrivalTimeUnix)
-                      mbTripStartEta = listToMaybe allEtas <&> (.arrivalTimeUnix)
+                      mbBookedStopEta =
+                        unixToUTC . (.arrivalTimeUnix)
+                          <$> find (\etaObj -> etaObj.stopCode == booking.fromStationCode) allEtas
+                      mbTripStartEta =
+                        unixToUTC . (.arrivalTimeUnix)
+                          <$> listToMaybe allEtas
                   return (mbTripStartEta, mbBookedStopEta)
                 _ -> return (Nothing, Nothing)
             _ -> return (Nothing, Nothing)
