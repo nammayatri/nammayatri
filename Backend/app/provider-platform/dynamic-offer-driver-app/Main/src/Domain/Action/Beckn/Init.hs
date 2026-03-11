@@ -191,6 +191,7 @@ handler merchantId req validatedReq = do
           toLocation = searchRequest.toLocation
           stops = searchRequest.stops
           isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
+          isStateEntryPermitApplicable = isStateEntryPermitApplicableForTrip driverQuote.vehicleServiceTier tripCategory
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
@@ -249,9 +250,9 @@ handler merchantId req validatedReq = do
             tollCharges = if isTollApplicable then searchRequest.tollCharges else Nothing,
             tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,
             tollIds = if isTollApplicable then searchRequest.tollIds else Nothing,
-            stateEntryPermitCharges = searchRequest.stateEntryPermitCharges,
-            stateEntryPermitIds = searchRequest.stateEntryPermitIds,
-            stateEntryPermitNames = searchRequest.stateEntryPermitNames,
+            stateEntryPermitCharges = if isStateEntryPermitApplicable then searchRequest.stateEntryPermitCharges else Nothing,
+            stateEntryPermitIds = if isStateEntryPermitApplicable then searchRequest.stateEntryPermitIds else Nothing,
+            stateEntryPermitNames = if isStateEntryPermitApplicable then searchRequest.stateEntryPermitNames else Nothing,
             estimateId = Just $ Id req.estimateId,
             paymentId = Nothing,
             isDashboardRequest = searchRequest.isDashboardRequest,

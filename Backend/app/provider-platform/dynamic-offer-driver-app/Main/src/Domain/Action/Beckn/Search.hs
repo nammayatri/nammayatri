@@ -93,6 +93,7 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
+import SharedLogic.StateEntryPermitDetector (getStateEntryPermitInfoOnRoute)
 import SharedLogic.TollsDetector
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Yudhishthira ()
@@ -262,7 +263,21 @@ handler ValidatedDSearchReq {..} sReq = do
   let toLocGeohash = join $ fmap (\(LatLong lat lng) -> T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (lat, lng)) sReq.dropLocation
   fromLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
   stops <- mapM (\stop -> buildSearchReqLocation merchant.id merchantOpCityId sessiontoken stop.address sReq.customerLanguage stop.gps) sReq.stops
-  (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbIsCustomerPrefferedSearchRoute, mbIsBlockedRoute, mbTollCharges, mbTollNames, mbTollIds, mbIsAutoRickshawAllowed, mbIsTwoWheelerAllowed) <-
+  ( mbSetRouteInfo,
+    mbToLocation,
+    mbDistance,
+    mbDuration,
+    mbIsCustomerPrefferedSearchRoute,
+    mbIsBlockedRoute,
+    mbTollCharges,
+    mbTollNames,
+    mbTollIds,
+    mbStateEntryPermitCharges,
+    mbStateEntryPermitNames,
+    mbStateEntryPermitIds,
+    mbIsAutoRickshawAllowed,
+    mbIsTwoWheelerAllowed
+    ) <-
     case (sReq.dropLocation, sReq.fromSpecialLocationId, sReq.toSpecialLocationId) of
       (Just dropLoc, Nothing, Nothing) -> do
         serviceableRoute <- getRouteServiceability merchant.id merchantOpCityId cityDistanceUnit sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes sReq.transactionId
@@ -279,6 +294,7 @@ handler ValidatedDSearchReq {..} sReq = do
               )
         logDebug $ "Route serviceability: " <> show serviceableRoute.multipleRoutes
         mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
+        mbStateEntryPermitInfo <- getStateEntryPermitInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
         return
           ( Just setRouteInfo,
             Just toLocation,
@@ -289,13 +305,16 @@ handler ValidatedDSearchReq {..} sReq = do
             (\(charges, _, _, _, _) -> charges) <$> mbTollChargesAndNames,
             (\(_, names, _, _, _) -> names) <$> mbTollChargesAndNames,
             (\(_, _, ids, _, _) -> ids) <$> mbTollChargesAndNames,
+            (\(charges, _, _) -> charges) <$> mbStateEntryPermitInfo,
+            (\(_, names, _) -> names) <$> mbStateEntryPermitInfo,
+            (\(_, _, ids) -> ids) <$> mbStateEntryPermitInfo,
             (\(_, _, _, isAutoRickshawAllowed, _) -> isAutoRickshawAllowed) <$> mbTollChargesAndNames,
             join ((\(_, _, _, _, isTwoWheelerAllowed) -> isTwoWheelerAllowed) <$> mbTollChargesAndNames)
           )
       (Just dropLoc, Just _, Just _) -> do
         toLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
-        return (Nothing, Just toLocation, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
-      _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
+        return (Nothing, Just toLocation, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
   let localTimeZoneSeconds = transporterConfig.timeDiffFromUtc
   localTime <- getLocalCurrentTime localTimeZoneSeconds
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOpCityId)
@@ -322,7 +341,41 @@ handler ValidatedDSearchReq {..} sReq = do
             return 0
       else return 0
   let mbDriverInfo = driverIdForSearch
-  searchReq <- buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation mbToLocation mbDistance mbDuration spcllocationTag specialLocName allFarePoliciesProduct.area mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
+  searchReq <-
+    buildSearchRequest
+      sReq
+      bapCity
+      mbPickupGateId
+      mbSpecialZoneGateId
+      mbDefaultDriverExtra
+      possibleTripOption.schedule
+      possibleTripOption.isScheduled
+      merchantId'
+      merchantOpCityId
+      customerCancellationDue
+      fromLocation
+      mbToLocation
+      mbDistance
+      mbDuration
+      spcllocationTag
+      specialLocName
+      allFarePoliciesProduct.area
+      mbTollCharges
+      mbTollNames
+      mbTollIds
+      mbStateEntryPermitCharges
+      mbStateEntryPermitNames
+      mbStateEntryPermitIds
+      mbIsCustomerPrefferedSearchRoute
+      mbIsBlockedRoute
+      cityCurrency
+      cityDistanceUnit
+      fromLocGeohashh
+      toLocGeohash
+      mbVersion
+      stops
+      mbDriverInfo
+      configVersionMap
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
   void $ QSR.createDSReq searchReq
@@ -568,6 +621,9 @@ buildSearchRequest ::
   Maybe HighPrecMoney ->
   Maybe [Text] ->
   Maybe [Text] ->
+  Maybe HighPrecMoney ->
+  Maybe [Text] ->
+  Maybe [Text] ->
   Maybe Bool ->
   Maybe Bool ->
   Currency ->
@@ -579,7 +635,7 @@ buildSearchRequest ::
   Maybe (Id DP.Person) ->
   [ConfigVersionMap] ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId cancellationDues fromLocation mbToLocation mbDistance mbDuration specialLocationTag mbSpecialLocName area tollCharges tollNames tollIds isCustomerPrefferedSearchRoute isBlockedRoute currency distanceUnit fromLocGeohash toLocGeohash dynamicPricingLogicVersion stops' mbDriverInfo configVersionMap = do
+buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId cancellationDues fromLocation mbToLocation mbDistance mbDuration specialLocationTag mbSpecialLocName area tollCharges tollNames tollIds stateEntryPermitCharges stateEntryPermitNames stateEntryPermitIds isCustomerPrefferedSearchRoute isBlockedRoute currency distanceUnit fromLocGeohash toLocGeohash dynamicPricingLogicVersion stops' mbDriverInfo configVersionMap = do
   uuid <- generateGUID
   now <- getCurrentTime
   cloudType <- asks (.cloudType)
@@ -624,10 +680,9 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
         parcelQuantity = Nothing,
         preferSafetyPlus = False,
         numberOfLuggages = numberOfLuggages,
-        -- TODO: @Himanshu State entry permit: set from params when BAP/route provides them (cf. tollCharges/tollNames/tollIds filled via ..)
-        stateEntryPermitCharges = Nothing,
-        stateEntryPermitIds = Nothing,
-        stateEntryPermitNames = Nothing,
+        stateEntryPermitCharges = stateEntryPermitCharges,
+        stateEntryPermitIds = stateEntryPermitIds,
+        stateEntryPermitNames = stateEntryPermitNames,
         cloudType = cloudType,
         specialLocationName = mbSpecialLocName,
         ..
