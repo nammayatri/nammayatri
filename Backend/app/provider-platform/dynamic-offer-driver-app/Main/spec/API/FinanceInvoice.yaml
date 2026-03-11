@@ -1,0 +1,49 @@
+imports:
+  Id: Kernel.Types.Id
+  UTCTime: Data.Time
+  HighPrecMoney: Kernel.Types.Common
+  InvoiceType: Lib.Finance.Domain.Types.Invoice
+  Value: Data.Aeson
+
+module: FinanceInvoice
+types:
+  FinanceInvoiceItem:
+    invoiceNumber: Text
+    invoiceType: InvoiceType
+    invoiceDate: UTCTime
+    taxAmount: HighPrecMoney
+    taxableValue: HighPrecMoney
+    totalAmountPayable: HighPrecMoney
+    gstRate: Maybe Double
+    cgstRate: Maybe Double
+    sgstRate: Maybe Double
+    sgstAmount: Maybe HighPrecMoney
+    cgstAmount: Maybe HighPrecMoney
+    totalGstAmount: Maybe HighPrecMoney
+    paymentMethod: Maybe Text
+    issuedToName: Maybe Text
+    issuedToAddress: Maybe Text
+    issuedByName: Maybe Text
+    issuedByAddress: Maybe Text
+    supplierAddress: Maybe Text
+    supplierName: Maybe Text
+    supplierGSTIN: Maybe Text
+    gstinOfParty: Maybe Text
+    sacCode: Maybe Text
+    lineItems: Maybe Value
+    totalCredit: Maybe HighPrecMoney
+  FinanceInvoiceListRes:
+    invoices: "[FinanceInvoiceItem]"
+    totalItems: Int
+apis:
+  - GET:
+      endpoint: /subscription/invoices
+      query:
+        invoiceType: InvoiceType
+        fromDate: UTCTime
+        toDate: UTCTime
+        limit: Int
+        offset: Int
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: FinanceInvoiceListRes

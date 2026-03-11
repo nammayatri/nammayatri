@@ -47,6 +47,8 @@ IndirectTaxTransaction:
 
   constraints:
     id: PrimaryKey
+    invoiceNumber: "!SecondaryKey"
+    referenceId: "!SecondaryKey"
 
   queries:
     findById:

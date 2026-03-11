@@ -54,6 +54,7 @@ Invoice:
     invoiceNumber: "!SecondaryKey"
     issuedToId: "!SecondaryKey"
     paymentOrderId: "!SecondaryKey"
+    supplierId: "!SecondaryKey"
 
   queries:
     findById:

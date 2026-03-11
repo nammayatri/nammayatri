@@ -48,3 +48,49 @@ findByMerchantOpCityIdAndDateRange merchantOpCityId mbFrom mbTo mbInvoiceType mb
     (Se.Desc Beam.issuedAt)
     mbLimit
     mbOffset
+
+-- | Find invoices issued TO a specific person (driver/fleet) with optional type and date filters.
+-- Used for SubscriptionPurchase and RideCancellation where the driver is the issuedTo party.
+findByIssuedToAndType ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Prelude.Text -> -- issuedToId (driverId or fleetOwnerId)
+  Kernel.Prelude.Maybe DInvoice.InvoiceType ->
+  Kernel.Prelude.Maybe UTCTime ->
+  Kernel.Prelude.Maybe UTCTime ->
+  Kernel.Prelude.Maybe Int ->
+  Kernel.Prelude.Maybe Int ->
+  m [DInvoice.Invoice]
+findByIssuedToAndType issuedToId mbInvoiceType mbFrom mbTo mbLimit mbOffset = do
+  let conds =
+        [Se.Is Beam.issuedToId $ Se.Eq issuedToId]
+          <> [Se.Is Beam.invoiceType $ Se.Eq ty | Just ty <- [mbInvoiceType]]
+          <> [Se.Is Beam.issuedAt $ Se.GreaterThanOrEq from | Just from <- [mbFrom]]
+          <> [Se.Is Beam.issuedAt $ Se.LessThanOrEq to | Just to <- [mbTo]]
+  findAllWithOptionsKV
+    [Se.And conds]
+    (Se.Desc Beam.issuedAt)
+    mbLimit
+    mbOffset
+
+-- | Find invoices where a specific person is the supplier, with optional type and date filters.
+-- Used for Ride invoices where the driver is the supplier of the service.
+findBySupplierAndType ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Prelude.Text -> -- supplierId (driverId)
+  Kernel.Prelude.Maybe DInvoice.InvoiceType ->
+  Kernel.Prelude.Maybe UTCTime ->
+  Kernel.Prelude.Maybe UTCTime ->
+  Kernel.Prelude.Maybe Int ->
+  Kernel.Prelude.Maybe Int ->
+  m [DInvoice.Invoice]
+findBySupplierAndType supplierId mbInvoiceType mbFrom mbTo mbLimit mbOffset = do
+  let conds =
+        [Se.Is Beam.supplierId $ Se.Eq (Just supplierId)]
+          <> [Se.Is Beam.invoiceType $ Se.Eq ty | Just ty <- [mbInvoiceType]]
+          <> [Se.Is Beam.issuedAt $ Se.GreaterThanOrEq from | Just from <- [mbFrom]]
+          <> [Se.Is Beam.issuedAt $ Se.LessThanOrEq to | Just to <- [mbTo]]
+  findAllWithOptionsKV
+    [Se.And conds]
+    (Se.Desc Beam.issuedAt)
+    mbLimit
+    mbOffset

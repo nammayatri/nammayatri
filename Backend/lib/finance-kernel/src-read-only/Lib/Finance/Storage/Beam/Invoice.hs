@@ -50,6 +50,6 @@ instance B.Table InvoiceT where
 
 type Invoice = InvoiceT Identity
 
-$(enableKVPG (''InvoiceT) [('id)] [[('invoiceNumber)], [('issuedToId)], [('paymentOrderId)]])
+$(enableKVPG (''InvoiceT) [('id)] [[('invoiceNumber)], [('issuedToId)], [('paymentOrderId)], [('supplierId)]])
 
 $(mkTableInstancesGenericSchema (''InvoiceT) "finance_invoice")

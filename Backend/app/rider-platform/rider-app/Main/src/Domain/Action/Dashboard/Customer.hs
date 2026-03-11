@@ -51,8 +51,8 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import qualified SharedLogic.Person as SLP
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.MerchantConfig as CMC

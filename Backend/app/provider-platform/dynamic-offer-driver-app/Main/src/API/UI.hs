@@ -29,6 +29,7 @@ import qualified API.Action.UI.DriverSafetySettings as DriverSafetySettings
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
+import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
 import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
@@ -151,6 +152,7 @@ type API =
            :<|> DriverInsurance.API
            :<|> DriverWallet.API
            :<|> SubscriptionTransaction.API
+           :<|> FinanceInvoice.API
            :<|> Penalty.API
            :<|> FleetOwnerList.API
            :<|> PayoutDriverStatus.API
@@ -221,6 +223,7 @@ handler =
     :<|> DriverInsurance.handler
     :<|> DriverWallet.handler
     :<|> SubscriptionTransaction.handler
+    :<|> FinanceInvoice.handler
     :<|> Penalty.handler
     :<|> FleetOwnerList.handler
     :<|> PayoutDriverStatus.handler

@@ -113,7 +113,6 @@ import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 import qualified UrlShortner.Common as UrlShortner
 
-
 getFrfsRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Maybe Text ->

@@ -77,10 +77,10 @@ import qualified Lib.JourneyModule.Base as JM
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
-import qualified SharedLogic.Person as SLP
 import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Payment as SPayment
+import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as QCM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC

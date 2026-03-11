@@ -92,4 +92,3 @@ instance Kernel.Types.HideSecrets.HideSecrets API.Types.UI.DeletedPerson.Deleted
 
 instance Kernel.Types.HideSecrets.HideSecrets Customer.CreateSavedReqLocationReq where
   hideSecrets = Kernel.Prelude.identity
-

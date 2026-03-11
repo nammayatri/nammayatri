@@ -57,6 +57,7 @@ SubscriptionPurchase:
     id: PrimaryKey
     paymentOrderId: "!SecondaryKey"
     ownerId: "!SecondaryKey"
+    financeInvoiceId: "!SecondaryKey"
 
   default:
     enableServiceUsageCharge: "true"

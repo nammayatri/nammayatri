@@ -10,6 +10,7 @@ import Kernel.Prelude
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Lib.Finance.Domain.Types.Invoice
 import qualified Sequelize as Se
 import qualified Storage.Beam.SubscriptionPurchase as Beam
 import Storage.Queries.OrphanInstances.SubscriptionPurchase ()
@@ -189,3 +190,12 @@ updateExpiryDateById newExpiryDate purchaseId = do
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.id $ Se.Eq (getId purchaseId)]
+
+-- | Find a subscription purchase by its linked finance invoice ID.
+-- Used to look up totalCredit (planRideCredit) for a SubscriptionPurchase invoice.
+findByFinanceInvoiceId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice ->
+  m (Maybe SubscriptionPurchase)
+findByFinanceInvoiceId invoiceId =
+  findOneWithKV [Se.Is Beam.financeInvoiceId $ Se.Eq (Just (Kernel.Types.Id.getId invoiceId))]

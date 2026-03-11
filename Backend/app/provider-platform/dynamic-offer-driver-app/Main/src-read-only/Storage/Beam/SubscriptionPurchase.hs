@@ -51,6 +51,6 @@ instance B.Table SubscriptionPurchaseT where
 
 type SubscriptionPurchase = SubscriptionPurchaseT Identity
 
-$(enableKVPG ''SubscriptionPurchaseT ['id] [['ownerId], ['paymentOrderId]])
+$(enableKVPG ''SubscriptionPurchaseT ['id] [['financeInvoiceId], ['ownerId], ['paymentOrderId]])
 
 $(mkTableInstances ''SubscriptionPurchaseT "subscription_purchase")
