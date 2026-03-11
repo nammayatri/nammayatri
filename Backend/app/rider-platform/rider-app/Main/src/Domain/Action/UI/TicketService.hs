@@ -1374,7 +1374,7 @@ findOrCreatePersonForDirectBooking merchantId req = do
       -- Create new person using Registration.createPersonWithPhoneNumber pattern
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       let authReq = buildAuthReqForDirectBooking req countryCode merchant
-      person <- Registration.createPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant Nothing Nothing
+      person <- Registration.createPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant Nothing
       return person.id
 
 -- Build AuthReq for direct booking person creation
@@ -1405,11 +1405,7 @@ buildAuthReqForDirectBooking req countryCode merchant =
       enableOtpLessRide = Nothing,
       allowBlockedUserLogin = Nothing,
       isOperatorReq = Nothing,
-      reuseToken = Nothing,
-      operatorBadgeToken = Nothing,
-      deviceSerialNumber = Nothing,
-      cityShortId = Nothing,
-      vehicleType = Nothing
+      reuseToken = Nothing
     }
 
 -- Create a direct booking for cash payment, bypassing the normal payment flow
@@ -2178,11 +2174,7 @@ postTicketDashboardRegister merchant req = do
                 enableOtpLessRide = Nothing,
                 allowBlockedUserLogin = Nothing,
                 isOperatorReq = Nothing,
-                reuseToken = Nothing,
-                operatorBadgeToken = Nothing,
-                deviceSerialNumber = Nothing,
-                cityShortId = Nothing,
-                vehicleType = Nothing
+                reuseToken = Nothing
               }
       merchantOperatingCityId <-
         CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
@@ -2192,7 +2184,7 @@ postTicketDashboardRegister merchant req = do
                   "merchantId: " <> merchant.id.getId <> " ,city: " <> show merchant.defaultCity
               )
       cloudType <- asks (.cloudType)
-      person <- Registration.buildPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant merchant.defaultCity merchantOperatingCityId Nothing Nothing
+      person <- Registration.buildPerson authReq Domain.Types.Person.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant merchant.defaultCity merchantOperatingCityId Nothing
       QP.create (person {Domain.Types.Person.role = Domain.Types.Person.TICKET_DASHBOARD_USER})
       return $
         API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp

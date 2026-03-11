@@ -7,7 +7,6 @@ module Storage.Queries.Person (module Storage.Queries.Person, module ReExport) w
 import qualified BecknV2.OnDemand.Enums
 import qualified Data.Time
 import qualified Domain.Types.Extra.MerchantPaymentMethod
-import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
@@ -36,22 +35,11 @@ createMany = traverse_ create
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findAllByDeviceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.Person.Person]))
+findAllByDeviceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.Person.Person])
 findAllByDeviceId deviceId = do findAllWithKV [Se.Is Beam.deviceId $ Se.Eq deviceId]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-findByOperatorBadgeTokenAndMerchantId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Person.Person))
-findByOperatorBadgeTokenAndMerchantId operatorBadgeToken merchantId = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.operatorBadgeToken $ Se.Eq operatorBadgeToken,
-          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
-        ]
-    ]
 
 findByReferralCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Person.Person))
 findByReferralCode referralCode = do findOneWithKV [Se.Is Beam.referralCode $ Se.Eq referralCode]
@@ -162,11 +150,6 @@ updateLiveActivityToken liveActivityToken id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.liveActivityToken liveActivityToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateOperatorBadgeTokenAndDeviceSerialNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateOperatorBadgeTokenAndDeviceSerialNumber operatorBadgeToken id = do
-  _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.operatorBadgeToken operatorBadgeToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updatePaymentMode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePaymentMode paymentMode id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.paymentMode paymentMode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -214,19 +197,19 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.authBlocked authBlocked,
       Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.blocked blocked,
-      Se.Set Beam.blockedAt ((Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt)),
+      Se.Set Beam.blockedAt (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt),
       Se.Set Beam.blockedByRuleId (Kernel.Types.Id.getId <$> blockedByRuleId),
       Se.Set Beam.blockedCount blockedCount,
       Se.Set Beam.blockedUntil blockedUntil,
-      Se.Set Beam.businessEmailEncrypted (((businessEmail <&> unEncrypted . (.encrypted)))),
-      Se.Set Beam.businessEmailHash ((businessEmail <&> (.hash))),
+      Se.Set Beam.businessEmailEncrypted (businessEmail <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.businessEmailHash (businessEmail <&> (.hash)),
       Se.Set Beam.businessProfileVerified businessProfileVerified,
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
-      Se.Set Beam.clientManufacturer ((clientDevice >>= (.deviceManufacturer))),
-      Se.Set Beam.clientModelName ((clientDevice <&> (.deviceModel))),
-      Se.Set Beam.clientOsType ((clientDevice <&> (.deviceType))),
-      Se.Set Beam.clientOsVersion ((clientDevice <&> (.deviceVersion))),
+      Se.Set Beam.clientManufacturer (clientDevice >>= (.deviceManufacturer)),
+      Se.Set Beam.clientModelName (clientDevice <&> (.deviceModel)),
+      Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
+      Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
       Se.Set Beam.clientReactNativeVersion clientReactNativeVersion,
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.cloudType cloudType,
@@ -242,11 +225,11 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.description description,
       Se.Set Beam.deviceId deviceId,
       Se.Set Beam.deviceToken deviceToken,
-      Se.Set Beam.emailEncrypted (((email <&> unEncrypted . (.encrypted)))),
-      Se.Set Beam.emailHash ((email <&> (.hash))),
+      Se.Set Beam.emailEncrypted (email <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.emailHash (email <&> (.hash)),
       Se.Set Beam.enableOtpLessRide enableOtpLessRide,
       Se.Set Beam.enabled enabled,
-      Se.Set Beam.falseSafetyAlarmCount ((Just falseSafetyAlarmCount)),
+      Se.Set Beam.falseSafetyAlarmCount (Just falseSafetyAlarmCount),
       Se.Set Beam.firstName firstName,
       Se.Set Beam.followsRide followsRide,
       Se.Set Beam.frequentLocGeohashes frequentLocGeohashes,
@@ -257,8 +240,8 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.hasTakenValidRide hasTakenValidRide,
       Se.Set Beam.identifier identifier,
       Se.Set Beam.identifierType identifierType,
-      Se.Set Beam.imeiNumberEncrypted (((imeiNumber <&> unEncrypted . (.encrypted)))),
-      Se.Set Beam.imeiNumberHash ((imeiNumber <&> (.hash))),
+      Se.Set Beam.imeiNumberEncrypted (imeiNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.imeiNumberHash (imeiNumber <&> (.hash)),
       Se.Set Beam.informPoliceSos (Just informPoliceSos),
       Se.Set Beam.isNew isNew,
       Se.Set Beam.isValidRating isValidRating,
@@ -271,14 +254,13 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.latestLon latestLon,
       Se.Set Beam.liveActivityToken liveActivityToken,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.merchantOperatingCityId (((Kernel.Prelude.Just . Kernel.Types.Id.getId)) merchantOperatingCityId),
+      Se.Set Beam.merchantOperatingCityId ((Kernel.Prelude.Just . Kernel.Types.Id.getId) merchantOperatingCityId),
       Se.Set Beam.middleName middleName,
       Se.Set Beam.mobileCountryCode mobileCountryCode,
-      Se.Set Beam.mobileNumberEncrypted (((mobileNumber <&> unEncrypted . (.encrypted)))),
-      Se.Set Beam.mobileNumberHash ((mobileNumber <&> (.hash))),
+      Se.Set Beam.mobileNumberEncrypted (mobileNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.mobileNumberHash (mobileNumber <&> (.hash)),
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
       Se.Set Beam.notificationToken notificationToken,
-      Se.Set Beam.operatorBadgeToken operatorBadgeToken,
       Se.Set Beam.passwordHash passwordHash,
       Se.Set Beam.paymentMode paymentMode,
       Se.Set Beam.payoutVpa payoutVpa,

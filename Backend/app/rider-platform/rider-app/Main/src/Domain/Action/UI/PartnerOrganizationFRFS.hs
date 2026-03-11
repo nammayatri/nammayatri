@@ -289,7 +289,7 @@ createPersonViaPartner req merchant mbRegCoordinates partnerOrgId = do
       mbClientConfigVersion = Nothing
       mbDevice = Nothing
       authReq = buildPartnerAuthReq identifierType notificationToken
-  person <- DReg.createPerson authReq identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice Nothing merchant (Just partnerOrgId) Nothing
+  person <- DReg.createPerson authReq identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice Nothing merchant (Just partnerOrgId)
   return (person, True)
   where
     buildPartnerAuthReq identifierType notificationToken =
@@ -314,11 +314,7 @@ createPersonViaPartner req merchant mbRegCoordinates partnerOrgId = do
           enableOtpLessRide = Nothing,
           allowBlockedUserLogin = Nothing,
           isOperatorReq = Nothing,
-          reuseToken = Nothing,
-          operatorBadgeToken = Nothing,
-          deviceSerialNumber = Nothing,
-          cityShortId = Nothing,
-          vehicleType = Nothing
+          reuseToken = Nothing
         }
 
 makeSessionViaPartner ::
