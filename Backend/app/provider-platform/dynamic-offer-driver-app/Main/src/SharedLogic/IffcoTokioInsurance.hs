@@ -20,6 +20,7 @@ import Kernel.Prelude hiding (all, whenJust)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.Client.Core (Scheme (..))
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Storage.Queries.IffcoTokioInsurance as QIffco
@@ -30,8 +31,8 @@ import Data.Time (UTCTime (..), utctDay)
 import Data.Time.Calendar (addDays)
 
 -- | Trigger IffcoTokio insurance for a driver at ride start.
--- Skips if (1) config not set for the city, (2) driver already insured today (same calendar day).
--- "Today" means the entry was created on the same UTC date as now; expires at midnight (00:00 UTC next day).
+-- Skips if (1) config not set for the city, (2) driver already insured today (same local calendar day).
+-- "Today" uses the city's timezone (transporterConfig.timeDiffFromUtc).
 -- Creates a PENDING entry, then asynchronously updates it to INSURED or FAILED.
 triggerIffcoTokioInsurance ::
   ( EncFlow m r,
@@ -54,18 +55,19 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
           _ -> Nothing
         Nothing -> Nothing
   whenJust mbIffcoExtCfg $ \iffcoExtCfg -> do
-    -- Check same-day validity: skip if there's a PENDING or INSURED entry created today (UTC).
-    -- "Today" window: midnight at start of today → midnight at start of tomorrow.
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
     now <- getCurrentTime
-    let today = utctDay now
-        startOfToday = UTCTime today 0
-        startOfTomorrow = UTCTime (addDays 1 today) 0
+    let todayLocal = utctDay localTime
+        timeOffset = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+        startOfTodayUTC = addUTCTime (-timeOffset) (UTCTime todayLocal 0)
+        startOfTomorrowUTC = addUTCTime 86400 startOfTodayUTC
     mbExisting <- QIffco.findLatestByDriverId driverId
     let alreadyInsured = case mbExisting of
           Just entry ->
             (entry.insuranceStatus == DITI.PENDING || entry.insuranceStatus == DITI.INSURED)
-              && entry.createdAt >= startOfToday
-              && entry.createdAt < startOfTomorrow
+              && entry.createdAt >= startOfTodayUTC
+              && entry.createdAt < startOfTomorrowUTC
           Nothing -> False
     unless alreadyInsured $ do
       person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -74,7 +76,7 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
       insId <- generateGUID
       invoiceReqNum <- generateAplhaNumbericCode 30
       -- Format invoice date as MM/DD/YYYY expected by IffcoTokio
-      let (yr, mon, day) = Cal.toGregorian (utctDay now)
+      let (yr, mon, day) = Cal.toGregorian todayLocal
           invoiceDateStr =
             Text.pack (show mon)
               <> "/"
