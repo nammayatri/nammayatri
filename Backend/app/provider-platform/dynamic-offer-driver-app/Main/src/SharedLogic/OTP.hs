@@ -118,5 +118,5 @@ sendOTPByIdentifierType identifierType otpCode personId merchantId merchantOpCit
   let otpChannel = case identifierType of
         Person.MOBILENUMBER -> SMS
         Person.EMAIL -> EMAIL
-        Person.AADHAAR -> SMS -- Default to SMS, though this will fail anyway
+        _ -> SMS -- Default to SMS, though this will fail anyway
   sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mbMobileNumber mbEmail mbSenderHash
