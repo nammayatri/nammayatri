@@ -20,6 +20,7 @@ where
 
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CallFeedback as CallFeedback
+import qualified API.Action.UI.CancellationReasonLookup as CancellationReasonLookup
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfile as DriverProfile
@@ -148,6 +149,7 @@ type API =
            :<|> FleetOwnerList.API
            :<|> PayoutDriverStatus.API
            :<|> StclMembership.API
+           :<|> CancellationReasonLookup.API
        )
 
 handler :: FlowServer API
@@ -213,3 +215,4 @@ handler =
     :<|> FleetOwnerList.handler
     :<|> PayoutDriverStatus.handler
     :<|> StclMembership.handler
+    :<|> CancellationReasonLookup.handler

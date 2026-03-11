@@ -242,6 +242,7 @@ library
       Domain.Action.UI.CallFeedbackFCM
       Domain.Action.UI.CallStatus
       Domain.Action.UI.CancellationReason
+      Domain.Action.UI.CancellationReasonLookup
       Domain.Action.UI.City
       Domain.Action.UI.DemandHotspots
       Domain.Action.UI.Driver
@@ -887,6 +888,7 @@ library
       API.Action.Dashboard.RideBooking.Volunteer
       API.Action.UI.Cac
       API.Action.UI.CallFeedback
+      API.Action.UI.CancellationReasonLookup
       API.Action.UI.DemandHotspots
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfile
@@ -957,6 +959,7 @@ library
       API.Types.Dashboard.RideBooking.SearchRequest
       API.Types.Dashboard.RideBooking.Volunteer
       API.Types.UI.CallFeedback
+      API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfile
@@ -1106,6 +1109,7 @@ library
       Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
       Domain.Types.Message
+      Domain.Types.MessageDictionary
       Domain.Types.MessageReport
       Domain.Types.MessageTranslation
       Domain.Types.MetaData
@@ -1278,6 +1282,7 @@ library
       Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
       Storage.Beam.Message
+      Storage.Beam.MessageDictionary
       Storage.Beam.MessageReport
       Storage.Beam.MessageTranslation
       Storage.Beam.MetaData
@@ -1455,6 +1460,7 @@ library
       Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
       Storage.Queries.Message
+      Storage.Queries.MessageDictionary
       Storage.Queries.MessageReport
       Storage.Queries.MessageTranslation
       Storage.Queries.MetaData
