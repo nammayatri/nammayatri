@@ -17,7 +17,11 @@ instance FromTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPa
     pure $
       Just
         Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport
-          { createdAt = createdAt,
+          { bankId = bankId,
+            chargebackId = chargebackId,
+            chargebackReasonCode = chargebackReasonCode,
+            chargebackStatus = chargebackStatus,
+            createdAt = createdAt,
             currency = currency,
             disputeId = disputeId,
             disputeType = disputeType,
@@ -28,6 +32,7 @@ instance FromTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPa
             paymentGateway = paymentGateway,
             paymentMethod = paymentMethod,
             paymentMethodSubType = paymentMethodSubType,
+            pgApprovalCode = pgApprovalCode,
             pgBaseFee = pgBaseFee,
             pgTax = pgTax,
             rawData = rawData,
@@ -40,6 +45,8 @@ instance FromTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPa
             refundBaseFee = refundBaseFee,
             refundDate = refundDate,
             refundId = refundId,
+            refundMethod = refundMethod,
+            refundReasonCode = refundReasonCode,
             refundTax = refundTax,
             rrn = rrn,
             settlementAmount = settlementAmount,
@@ -61,7 +68,11 @@ instance FromTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPa
 instance ToTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport where
   toTType' (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport {..}) = do
     Beam.PgPaymentSettlementReportT
-      { Beam.createdAt = createdAt,
+      { Beam.bankId = bankId,
+        Beam.chargebackId = chargebackId,
+        Beam.chargebackReasonCode = chargebackReasonCode,
+        Beam.chargebackStatus = chargebackStatus,
+        Beam.createdAt = createdAt,
         Beam.currency = currency,
         Beam.disputeId = disputeId,
         Beam.disputeType = disputeType,
@@ -72,6 +83,7 @@ instance ToTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPaym
         Beam.paymentGateway = paymentGateway,
         Beam.paymentMethod = paymentMethod,
         Beam.paymentMethodSubType = paymentMethodSubType,
+        Beam.pgApprovalCode = pgApprovalCode,
         Beam.pgBaseFee = pgBaseFee,
         Beam.pgTax = pgTax,
         Beam.rawData = rawData,
@@ -84,6 +96,8 @@ instance ToTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPaym
         Beam.refundBaseFee = refundBaseFee,
         Beam.refundDate = refundDate,
         Beam.refundId = refundId,
+        Beam.refundMethod = refundMethod,
+        Beam.refundReasonCode = refundReasonCode,
         Beam.refundTax = refundTax,
         Beam.rrn = rrn,
         Beam.settlementAmount = settlementAmount,

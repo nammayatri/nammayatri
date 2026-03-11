@@ -63,3 +63,39 @@ ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD PRIMARY KEY 
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN refund_reason_code text ;
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN refund_method text ;
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN pg_approval_code text ;
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN chargeback_status text ;
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN chargeback_reason_code text ;
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN chargeback_id text ;
+ALTER TABLE atlas_driver_offer_bpp.pg_payment_settlement_report ADD COLUMN bank_id text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

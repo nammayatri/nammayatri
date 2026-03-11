@@ -44,7 +44,11 @@ updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.F
 updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.currency currency,
+    [ Se.Set Beam.bankId bankId,
+      Se.Set Beam.chargebackId chargebackId,
+      Se.Set Beam.chargebackReasonCode chargebackReasonCode,
+      Se.Set Beam.chargebackStatus chargebackStatus,
+      Se.Set Beam.currency currency,
       Se.Set Beam.disputeId disputeId,
       Se.Set Beam.disputeType disputeType,
       Se.Set Beam.merchantId merchantId,
@@ -53,6 +57,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPayment
       Se.Set Beam.paymentGateway paymentGateway,
       Se.Set Beam.paymentMethod paymentMethod,
       Se.Set Beam.paymentMethodSubType paymentMethodSubType,
+      Se.Set Beam.pgApprovalCode pgApprovalCode,
       Se.Set Beam.pgBaseFee pgBaseFee,
       Se.Set Beam.pgTax pgTax,
       Se.Set Beam.rawData rawData,
@@ -65,6 +70,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPayment
       Se.Set Beam.refundBaseFee refundBaseFee,
       Se.Set Beam.refundDate refundDate,
       Se.Set Beam.refundId refundId,
+      Se.Set Beam.refundMethod refundMethod,
+      Se.Set Beam.refundReasonCode refundReasonCode,
       Se.Set Beam.refundTax refundTax,
       Se.Set Beam.rrn rrn,
       Se.Set Beam.settlementAmount settlementAmount,

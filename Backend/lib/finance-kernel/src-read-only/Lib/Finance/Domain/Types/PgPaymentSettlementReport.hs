@@ -11,7 +11,11 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
 
 data PgPaymentSettlementReport = PgPaymentSettlementReport
-  { createdAt :: Kernel.Prelude.UTCTime,
+  { bankId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    chargebackId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    chargebackReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    chargebackStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     disputeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disputeType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.DisputeType,
@@ -22,6 +26,7 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
     paymentGateway :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMethod :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.PaymentMethod,
     paymentMethodSubType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pgApprovalCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pgBaseFee :: Kernel.Types.Common.HighPrecMoney,
     pgTax :: Kernel.Types.Common.HighPrecMoney,
     rawData :: Kernel.Prelude.Maybe Data.Aeson.Value,
@@ -34,6 +39,8 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
     refundBaseFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     refundDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     refundId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    refundMethod :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.PaymentMethod,
+    refundReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     refundTax :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     rrn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -67,7 +74,7 @@ data TxnStatus = SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON
 
 data TxnType = ORDER | REFUND deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TxnType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TxnType))
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum (''TxnType))
 

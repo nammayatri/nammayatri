@@ -13,7 +13,11 @@ import qualified Kernel.Types.Common
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport
 
 data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+  { bankId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    chargebackId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    chargebackReasonCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    chargebackStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
     currency :: (B.C f Kernel.Types.Common.Currency),
     disputeId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     disputeType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.DisputeType)),
@@ -24,6 +28,7 @@ data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
     paymentGateway :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     paymentMethod :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.PaymentMethod)),
     paymentMethodSubType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    pgApprovalCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     pgBaseFee :: (B.C f Kernel.Types.Common.HighPrecMoney),
     pgTax :: (B.C f Kernel.Types.Common.HighPrecMoney),
     rawData :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
@@ -36,6 +41,8 @@ data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
     refundBaseFee :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     refundDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     refundId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    refundMethod :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.PaymentMethod)),
+    refundReasonCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     refundTax :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     rrn :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     settlementAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),

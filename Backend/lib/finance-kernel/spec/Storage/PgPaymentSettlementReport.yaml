@@ -63,6 +63,7 @@ PgPaymentSettlementReport:
     txnId: Maybe Text                              # PG transaction ID
     rrn: Maybe Text                                # Bank Reference Number
     utr: Maybe Text                                # Unique Transaction Reference from bank
+    bankId : Maybe Text                            # Bank ID
 
     # --- Transaction classification ---
     txnType: TxnType                               # ORDER | REFUND
@@ -82,6 +83,7 @@ PgPaymentSettlementReport:
 
     # --- Payment method details ---
     paymentGateway: Maybe Text                     # e.g. JUSPAY, RAZORPAY
+    pgApprovalCode : Maybe Text                    # PG approval code
     paymentMethod: Maybe PaymentMethod             # UPI | CREDIT_CARD | ...
     paymentMethodSubType: Maybe Text               # e.g. "UPI-Bank Account", "VISA Debit"
 
@@ -102,6 +104,14 @@ PgPaymentSettlementReport:
     refundAmount: Maybe HighPrecMoney
     refundBaseFee: Maybe HighPrecMoney             # PG fee on refund
     refundTax: Maybe HighPrecMoney                 # GST on refund fee
+    refundReasonCode: Maybe Text                       # Reason for refund
+    refundMethod : Maybe PaymentMethod
+
+    # ----- Chargeback fields (populated when disputeType = FRAUD) -----
+    chargebackId: Maybe Text                       # PG chargeback ID
+    chargebackReasonCode: Maybe Text               # Reason for chargeback
+    chargebackStatus: Maybe Text                   # Chargeback status
+
 
     # --- Dispute fields ---
     disputeId: Maybe Text                          # PG dispute / chargeback ID
