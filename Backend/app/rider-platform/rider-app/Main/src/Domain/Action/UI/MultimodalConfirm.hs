@@ -1033,7 +1033,8 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                   )
                   routeStops,
               ptcv = gtfsVersion,
-              eligiblePassIds = Nothing
+              eligiblePassIds = Nothing,
+              vehicleServiceType = Nothing
             }
 
   let fetchData mbRouteCodeAndServiceType bppConfig = do
@@ -1102,13 +1103,15 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
   let (blacklistedServiceTiers, _) = JMU.getBlacklistedFilters Nothing mbNewServiceTiers
       allRoutes = concatMap (.rs) transportDataList
       filteredRoutes = filter (\r -> maybe True (\st -> st `Kernel.Prelude.notElem` blacklistedServiceTiers) r.st) allRoutes
+      mbVehicleServiceType = (snd <$> mbVehicleLiveRouteInfo) <&> (.serviceType)
       transportData =
         ApiTypes.PublicTransportData
           { ss = concatMap (.ss) transportDataList,
             rs = filteredRoutes,
             rsm = concatMap (.rsm) transportDataList,
             ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion))),
-            eligiblePassIds = mbEligiblePassIds
+            eligiblePassIds = mbEligiblePassIds,
+            vehicleServiceType = mbVehicleServiceType
           }
   return transportData
   where
@@ -1125,7 +1128,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           let vehicleNumber = (snd vehicleLiveRouteInfo).vehicleNumber
           fork "incrementFleetRouteMapMissingCounter" $
             Metrics.incrementFleetRouteMapMissingCounter merchant.shortId.getShortId merchantOperatingCityId.getId vehicleNumber
-          throwError (FleetRouteMapMissing $ "Route code not found for fleetId: " <> show vehicleNumber)
+          return Nothing
 
 getMultimodalOrderGetLegTierOptions ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -250,17 +250,17 @@ notifySoftBlocked person entity = do
     blockedSTiers = T.intercalate ", " $ map show entity.blockedSTiers
 
 sendFeedbackBadgeNotification ::
-  (ServiceFlow m r,
+  ( ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+  ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
   FeedbackBadgeEntityData ->
   m ()
 sendFeedbackBadgeNotification merchantOpCityId driver entityData = do
   notifyDriverWithProviders merchantOpCityId Notification.FEEDBACK_BADGE_PN "FEEDBACK_BADGE_PN" "FEEDBACK_BADGE_PN" driver driver.deviceToken entityData
-
 
 -- NEW_RIDE_AVAILABLE
 -- title = FCMNotificationTitle "New ride available for offering"
