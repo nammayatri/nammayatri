@@ -3,6 +3,7 @@ imports:
   TravelMode: Domain.Types.Common
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
+  CloudType: Kernel.Types.Version
   Price: Kernel.Types.Common
   Seconds: Kernel.Types.Time
   ShortId: Kernel.Types.Id
@@ -79,6 +80,7 @@ FRFSSearch:
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
     isSingleMode: Maybe Bool
+    cloudType : Maybe CloudType
 
   beamFields:
     fromStationCode:
@@ -96,6 +98,7 @@ FRFSSearch:
 
   beamType:
     busLocationData: Maybe Value
+    cloudType : Maybe CloudType
 
   toTType:
     fromStationLat: (.lat) <$> fromStationPoint|E
@@ -430,6 +433,7 @@ FRFSTicketBooking:
     toStopIdx: Maybe Int
     holdId: Maybe Text
     tripId: Maybe Text
+    cloudType : Maybe CloudType
 
   default:
     customerCancelled: "false"
@@ -451,6 +455,7 @@ FRFSTicketBooking:
 
   beamType:
     busLocationData: Maybe Value
+    cloudType : Maybe CloudType
 
   types:
     CashbackStatus:
@@ -615,6 +620,7 @@ FRFSTicket:
     isTicketFree: Maybe Bool
     commencingHours: Maybe Int
     isReturnTicket: Maybe Bool
+    cloudType : Maybe CloudType
 
   constraints:
     id: PrimaryKey

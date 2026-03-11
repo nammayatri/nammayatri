@@ -129,3 +129,9 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN is_single_mode boolean ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.frfs_search ADD COLUMN cloud_type text ;
+
+
+
+------- SQL updates -------
+
