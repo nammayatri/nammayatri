@@ -383,7 +383,7 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
   let estimatedTimeToPickup = secondsToNominalDiffTime driverQuote.durationToPickup
   mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
   let callAttemptByDriver = isJust mbCallStatus
-  let isArrivedAtPickup = case cancellationDisToPickup of
+  let _isArrivedAtPickup = case cancellationDisToPickup of
         Just disToPickup' -> disToPickup' < highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
         Nothing -> False
       timeOfCancellation = round $ diffUTCTime now ride.createdAt
@@ -405,7 +405,7 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
           { cancelledBy = cancellationType,
             timeOfDriverCancellation = timeOfCancellation,
             timeOfCustomerCancellation = timeOfCancellation,
-            isArrivedAtPickup = isArrivedAtPickup,
+            isArrivedAtPickup = isJust ride.driverArrivalTime,
             driverWaitingTime = driverWaitingTime,
             callAttemptByDriver = callAttemptByDriver,
             actualCoveredDistance = actualCoveredDistance,
