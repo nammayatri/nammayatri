@@ -72,7 +72,7 @@ data SettlementType = CREDIT | DEBIT deriving (Eq, Ord, Show, Read, Generic, ToJ
 
 data TxnStatus = SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TxnType = ORDER | REFUND deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TxnType = ORDER | REFUND | CHARGEBACK deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''TxnType))
 
