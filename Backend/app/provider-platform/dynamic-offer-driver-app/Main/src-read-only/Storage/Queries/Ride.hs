@@ -18,6 +18,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Yudhishthira.Tools.Utils
 import qualified Lib.Yudhishthira.Types
+import qualified Safety.Domain.Types.Sos
 import qualified Sequelize as Se
 import qualified Storage.Beam.Ride as Beam
 import Storage.Queries.RideExtra as ReExport
@@ -101,6 +102,9 @@ updateRideTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude
 updateRideTags rideTags id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.rideTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType rideTags), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateSosId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos) -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateSosId sosId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.sosId (Kernel.Types.Id.getId <$> sosId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateSubscriptionPurchaseIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

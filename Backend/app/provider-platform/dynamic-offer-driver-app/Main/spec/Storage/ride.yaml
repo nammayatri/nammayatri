@@ -27,6 +27,7 @@ imports:
   TagNameValue: Lib.Yudhishthira.Types
   BillingCategory: SharedLogic.Type
   FarePolicy: Domain.Types.FarePolicy
+  Sos: Safety.Domain.Types.Sos
 
 Ride:
   tableName: ride
@@ -138,6 +139,7 @@ Ride:
     driverGpsTurnedOff: Maybe Bool
     finalFarePolicyId: Maybe (Id FarePolicy)
     subscriptionPurchaseIds: Maybe [Id SubscriptionPurchase]
+    sosId: Maybe (Id Sos)
 
   sqlType:
     id: character(36)
@@ -341,6 +343,10 @@ Ride:
     updateSubscriptionPurchaseIds:
       kvFunction: updateOneWithKV
       params: [subscriptionPurchaseIds]
+      where: id
+    updateSosId:
+      kvFunction: updateOneWithKV
+      params: [sosId]
       where: id
 
   excludedDefaultQueries:

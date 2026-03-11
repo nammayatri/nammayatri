@@ -127,6 +127,8 @@ library:
   source-dirs:
     - src
     - src-read-only
+  other-modules:
+    - Tools.Beam.UtilsTH
   ghc-options:
     - -Wall
     - -Wcompat

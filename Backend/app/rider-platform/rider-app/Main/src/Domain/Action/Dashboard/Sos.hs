@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.Dashboard.Sos (getSosTracking, getSosDetails, callExternalSOS, postSosCallExternalSOS) where
+module Domain.Action.Dashboard.Sos where
 
 import qualified API.Types.RiderPlatform.Management.Sos
 import qualified API.Types.UI.Sos as UISos
@@ -14,8 +14,6 @@ import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderConfig as DRC
-import qualified Domain.Types.Sos
-import qualified Domain.Types.Sos as DSos
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
@@ -29,6 +27,9 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import qualified Safety.Domain.Types.Common as SafetyDCommon
+import qualified Safety.Domain.Types.Sos as SafetyDSos
+import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import Servant hiding (throwError)
 import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SosLocationTracking as SOSLocation
@@ -37,7 +38,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.Sos as QSos
 import Tools.Auth
 import Tools.Error
 
@@ -45,7 +45,7 @@ getSosTracking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Ker
 getSosTracking _merchantShortId _opCity sosId = do
   sosTrackingRateLimitOptions <- asks (.sosTrackingRateLimitOptions)
   checkSlidingWindowLimitWithOptions (sosDashboardHitsCountKey sosId) sosTrackingRateLimitOptions
-  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @Domain.Types.Sos.Sos sosId
+  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
   res <- Sos.getSosTracking sosId'
   pure $ convertToApiRes res
 
@@ -53,13 +53,13 @@ getSosDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kern
 getSosDetails merchantShortId opCity sosId = do
   sosTrackingRateLimitOptions <- asks (.sosTrackingRateLimitOptions)
   checkSlidingWindowLimitWithOptions (sosDashboardHitsCountKey sosId) sosTrackingRateLimitOptions
-  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @Domain.Types.Sos.Sos sosId
+  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
   mbMerchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
   mbRideConfig <- maybe (pure Nothing) (\moc -> QRC.findByMerchantOperatingCityId moc.id Nothing) mbMerchantOpCity
   let externalSOSConfig = mbRideConfig >>= \rc -> rc.externalSOSConfig
   let triggerSource = convertTriggerSource <$> (externalSOSConfig <&> (.triggerSource))
-  sos <- B.runInReplica $ QSos.findById sosId' >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId'.getId)
-  person <- B.runInReplica $ QP.findById sos.personId >>= fromMaybeM (PersonNotFound sos.personId.getId)
+  sos <- B.runInReplica $ SafetyQSos.findById sosId' >>= fromMaybeM (InvalidRequest $ "SOS not found: " <> sosId'.getId)
+  person <- B.runInReplica $ QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonNotFound sos.personId.getId)
   let riderDetails =
         API.Types.RiderPlatform.Management.Sos.RiderDetailsRes
           { firstName = person.firstName,
@@ -73,12 +73,12 @@ getSosDetails merchantShortId opCity sosId = do
         API.Types.RiderPlatform.Management.Sos.riderDetails = Just riderDetails
       }
 
-convertToSosDetailsRes :: DSos.Sos -> API.Types.RiderPlatform.Management.Sos.SosDetailsRes
+convertToSosDetailsRes :: SafetyDSos.Sos -> API.Types.RiderPlatform.Management.Sos.SosDetailsRes
 convertToSosDetailsRes s =
   API.Types.RiderPlatform.Management.Sos.SosDetailsRes
-    { id = Kernel.Types.Id.cast @Domain.Types.Sos.Sos @Dashboard.Common.Sos s.id,
-      personId = Kernel.Types.Id.cast @DPerson.Person @Dashboard.Common.Customer s.personId,
-      rideId = Kernel.Types.Id.cast @DRide.Ride @Dashboard.Common.Ride s.rideId,
+    { id = Kernel.Types.Id.cast @SafetyDSos.Sos @Dashboard.Common.Sos s.id,
+      personId = Kernel.Types.Id.cast @SafetyDCommon.Person @Dashboard.Common.Customer s.personId,
+      rideId = Kernel.Types.Id.cast @SafetyDCommon.Ride @Dashboard.Common.Ride <$> s.rideId,
       flow = convertSosType s.flow,
       status = convertSosStatus s.status,
       ticketId = s.ticketId,
@@ -89,24 +89,24 @@ convertToSosDetailsRes s =
       externalReferenceId = s.externalReferenceId,
       externalReferenceStatus = s.externalReferenceStatus,
       externalStatusHistory = s.externalStatusHistory,
-      merchantId = Kernel.Types.Id.cast @Domain.Types.Merchant.Merchant @Dashboard.Common.Merchant <$> s.merchantId,
-      merchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @Dashboard.Common.MerchantOperatingCity <$> s.merchantOperatingCityId,
+      merchantId = Kernel.Types.Id.cast @SafetyDCommon.Merchant @Dashboard.Common.Merchant <$> s.merchantId,
+      merchantOperatingCityId = Kernel.Types.Id.cast @SafetyDCommon.MerchantOperatingCity @Dashboard.Common.MerchantOperatingCity <$> s.merchantOperatingCityId,
       createdAt = s.createdAt,
       updatedAt = s.updatedAt
     }
 
-convertSosType :: Domain.Types.Sos.SosType -> API.Types.RiderPlatform.Management.Sos.SosType
-convertSosType Domain.Types.Sos.Police = API.Types.RiderPlatform.Management.Sos.Police
-convertSosType Domain.Types.Sos.CustomerCare = API.Types.RiderPlatform.Management.Sos.CustomerCare
-convertSosType (Domain.Types.Sos.EmergencyContact _) = API.Types.RiderPlatform.Management.Sos.SafetyFlow
-convertSosType Domain.Types.Sos.SafetyFlow = API.Types.RiderPlatform.Management.Sos.SafetyFlow
-convertSosType Domain.Types.Sos.CSAlertSosTicket = API.Types.RiderPlatform.Management.Sos.CSAlertSosTicket
-convertSosType Domain.Types.Sos.AudioRecording = API.Types.RiderPlatform.Management.Sos.AudioRecording
-convertSosType Domain.Types.Sos.KaptureDashboard = API.Types.RiderPlatform.Management.Sos.KaptureDashboard
+convertSosType :: SafetyDSos.SosType -> API.Types.RiderPlatform.Management.Sos.SosType
+convertSosType SafetyDSos.Police = API.Types.RiderPlatform.Management.Sos.Police
+convertSosType SafetyDSos.CustomerCare = API.Types.RiderPlatform.Management.Sos.CustomerCare
+convertSosType (SafetyDSos.EmergencyContact _) = API.Types.RiderPlatform.Management.Sos.SafetyFlow
+convertSosType SafetyDSos.SafetyFlow = API.Types.RiderPlatform.Management.Sos.SafetyFlow
+convertSosType SafetyDSos.CSAlertSosTicket = API.Types.RiderPlatform.Management.Sos.CSAlertSosTicket
+convertSosType SafetyDSos.AudioRecording = API.Types.RiderPlatform.Management.Sos.AudioRecording
+convertSosType SafetyDSos.KaptureDashboard = API.Types.RiderPlatform.Management.Sos.KaptureDashboard
 
-convertSosEntityType :: Domain.Types.Sos.SosEntityType -> API.Types.RiderPlatform.Management.Sos.SosEntityType
-convertSosEntityType Domain.Types.Sos.Ride = API.Types.RiderPlatform.Management.Sos.Ride
-convertSosEntityType Domain.Types.Sos.NonRide = API.Types.RiderPlatform.Management.Sos.NonRide
+convertSosEntityType :: SafetyDSos.SosEntityType -> API.Types.RiderPlatform.Management.Sos.SosEntityType
+convertSosEntityType SafetyDSos.Ride = API.Types.RiderPlatform.Management.Sos.Ride
+convertSosEntityType SafetyDSos.NonRide = API.Types.RiderPlatform.Management.Sos.NonRide
 
 convertTriggerSource :: DRC.ExternalSOSTriggerSource -> API.Types.RiderPlatform.Management.Sos.ExternalSOSTriggerSource
 convertTriggerSource DRC.FRONTEND = API.Types.RiderPlatform.Management.Sos.FRONTEND
@@ -129,25 +129,25 @@ convertLocation loc =
       accuracy = loc.accuracy
     }
 
-convertSosState :: Domain.Types.Sos.SosState -> API.Types.RiderPlatform.Management.Sos.SosState
-convertSosState Domain.Types.Sos.LiveTracking = API.Types.RiderPlatform.Management.Sos.LiveTracking
-convertSosState Domain.Types.Sos.SosActive = API.Types.RiderPlatform.Management.Sos.SosActive
+convertSosState :: SafetyDSos.SosState -> API.Types.RiderPlatform.Management.Sos.SosState
+convertSosState SafetyDSos.LiveTracking = API.Types.RiderPlatform.Management.Sos.LiveTracking
+convertSosState SafetyDSos.SosActive = API.Types.RiderPlatform.Management.Sos.SosActive
 
-convertSosStatus :: Domain.Types.Sos.SosStatus -> API.Types.RiderPlatform.Management.Sos.SosStatus
-convertSosStatus Domain.Types.Sos.Resolved = API.Types.RiderPlatform.Management.Sos.Resolved
-convertSosStatus Domain.Types.Sos.NotResolved = API.Types.RiderPlatform.Management.Sos.NotResolved
-convertSosStatus Domain.Types.Sos.Pending = API.Types.RiderPlatform.Management.Sos.Pending
-convertSosStatus Domain.Types.Sos.MockPending = API.Types.RiderPlatform.Management.Sos.MockPending
-convertSosStatus Domain.Types.Sos.MockResolved = API.Types.RiderPlatform.Management.Sos.MockResolved
+convertSosStatus :: SafetyDSos.SosStatus -> API.Types.RiderPlatform.Management.Sos.SosStatus
+convertSosStatus SafetyDSos.Resolved = API.Types.RiderPlatform.Management.Sos.Resolved
+convertSosStatus SafetyDSos.NotResolved = API.Types.RiderPlatform.Management.Sos.NotResolved
+convertSosStatus SafetyDSos.Pending = API.Types.RiderPlatform.Management.Sos.Pending
+convertSosStatus SafetyDSos.MockPending = API.Types.RiderPlatform.Management.Sos.MockPending
+convertSosStatus SafetyDSos.MockResolved = API.Types.RiderPlatform.Management.Sos.MockResolved
 
 -- | Called from the dashboard when triggerSource is DASHBOARD.
 --   Fetches the SOS record and dispatches the external SOS API call.
-callExternalSOS :: Kernel.Types.Id.Id DSos.Sos -> Environment.Flow ()
+callExternalSOS :: Kernel.Types.Id.Id SafetyDSos.Sos -> Environment.Flow ()
 callExternalSOS sosId = do
-  sos <- QSos.findById sosId >>= fromMaybeM (InvalidRequest "SOS record not found")
-  merchantOpCityId <- sos.merchantOperatingCityId & fromMaybeM (InvalidRequest "SOS record missing merchantOperatingCityId")
-  merchantId <- sos.merchantId & fromMaybeM (InvalidRequest "SOS record missing merchantId")
-  person <- QP.findById sos.personId >>= fromMaybeM (PersonDoesNotExist sos.personId.getId)
+  sos <- SafetyQSos.findById sosId >>= fromMaybeM (InvalidRequest "SOS record not found")
+  merchantOpCityId <- Kernel.Types.Id.cast @SafetyDCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity <$> sos.merchantOperatingCityId & fromMaybeM (InvalidRequest "SOS record missing merchantOperatingCityId")
+  merchantId <- Kernel.Types.Id.cast @SafetyDCommon.Merchant @Domain.Types.Merchant.Merchant <$> sos.merchantId & fromMaybeM (InvalidRequest "SOS record missing merchantId")
+  person <- QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonDoesNotExist sos.personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case riderConfig.externalSOSConfig of
     Nothing -> throwError $ InvalidRequest "External SOS config not configured for this city"
@@ -160,19 +160,21 @@ callExternalSOS sosId = do
           >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "SOS" (show sosServiceType))
       case merchantSvcCfg.serviceConfig of
         DMSC.SOSServiceConfig specificConfig -> do
-          mbRide <- QRide.findById sos.rideId
-          customerLocation <- getCustomerLocation sos.rideId mbRide
-          emergencyContacts <- DP.getDefaultEmergencyNumbers (sos.personId, merchantId)
+          mbRide <- maybe (pure Nothing) (\rid -> QRide.findById (Kernel.Types.Id.cast @SafetyDCommon.Ride @DRide.Ride rid)) sos.rideId
+          let rideIdForLoc = Kernel.Types.Id.cast @SafetyDCommon.Ride @DRide.Ride <$> sos.rideId
+          customerLocation <- getCustomerLocation rideIdForLoc mbRide
+          emergencyContacts <- DP.getDefaultEmergencyNumbers (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId, merchantId)
           merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
           externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig
           initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
           unless initialRes.success $
             throwError $ InternalError (fromMaybe "External SOS call failed" initialRes.errorMessage)
           whenJust initialRes.trackingId $ \trackingId -> do
-            QSos.updateExternalReferenceId (Just trackingId) sosId
+            SafetyQSos.updateExternalReferenceId (Just trackingId) sosId
             Redis.del (Sos.mkExternalSOSTraceKey sosId)
         _ -> throwError $ InternalError "Invalid SOS Service Config for provider"
   where
+    getCustomerLocation :: Maybe (Kernel.Types.Id.Id DRide.Ride) -> Maybe DRide.Ride -> Environment.Flow (Maybe LatLong)
     getCustomerLocation rideId mbRide = do
       mbSosLoc <- SOSLocation.getSosRiderLocation sosId
       case mbSosLoc of
@@ -181,18 +183,21 @@ callExternalSOS sosId = do
           pure $ Just $ LatLong sosLoc.lat sosLoc.lon
         Nothing -> do
           logInfo $ "SOS rider location not found, trying driver location for sosId: " <> sosId.getId
-          driverLocResp <- withTryCatch "getDriverLoc:callExternalSOS" $ SRide.getDriverLoc rideId
-          case driverLocResp of
-            Right driverLoc -> pure $ Just $ LatLong driverLoc.lat driverLoc.lon
-            Left err -> do
-              logError $ "Driver location fetch failed, falling back to ride fromLocation: " <> show err
-              pure $ (\ride -> LatLong ride.fromLocation.lat ride.fromLocation.lon) <$> mbRide
+          case rideId of
+            Just rid -> do
+              driverLocResp <- withTryCatch "getDriverLoc:callExternalSOS" $ SRide.getDriverLoc rid
+              case driverLocResp of
+                Right driverLoc -> pure $ Just $ LatLong driverLoc.lat driverLoc.lon
+                Left err -> do
+                  logError $ "Driver location fetch failed, falling back to ride fromLocation: " <> show err
+                  pure $ (\ride -> LatLong ride.fromLocation.lat ride.fromLocation.lon) <$> mbRide
+            Nothing -> pure $ (\ride -> LatLong ride.fromLocation.lat ride.fromLocation.lon) <$> mbRide
 
-    mkSosReq :: DSos.Sos -> Maybe LatLong -> UISos.SosReq
+    mkSosReq :: SafetyDSos.Sos -> Maybe LatLong -> UISos.SosReq
     mkSosReq sos customerLoc =
       UISos.SosReq
         { flow = sos.flow,
-          rideId = Just sos.rideId,
+          rideId = Kernel.Types.Id.cast @SafetyDCommon.Ride @DRide.Ride <$> sos.rideId,
           isRideEnded = Nothing,
           sendPNOnPostRideSOS = Nothing,
           notifyAllContacts = Nothing,
@@ -205,7 +210,7 @@ flowToSOSService DRC.GJ112 = SOS.GJ112
 
 postSosCallExternalSOS :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postSosCallExternalSOS _merchantShortId _opCity sosId = do
-  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @Domain.Types.Sos.Sos sosId
+  let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
   callExternalSOS sosId'
   pure Kernel.Types.APISuccess.Success
 

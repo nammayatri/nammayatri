@@ -265,3 +265,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cloud_type text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN subscription_purchase_ids text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN sos_id character varying(36) ;

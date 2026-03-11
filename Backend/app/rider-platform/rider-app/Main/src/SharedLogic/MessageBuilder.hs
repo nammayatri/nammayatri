@@ -155,7 +155,12 @@ data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
 
 buildSOSAlertMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m SmsReqBuilder
 buildSOSAlertMessage merchantOperatingCityId req = do
-  shortenedTrackingUrl <- shortenTrackingUrl req.rideLink
+  shortenedTrackingUrl <-
+    withTryCatch "shortenTrackingUrl" (shortenTrackingUrl req.rideLink) >>= \case
+      Right url -> return url
+      Left err -> do
+        logError $ "Failed to shorten tracking URL, using original URL. Error: " <> show err
+        return req.rideLink
   let messageKey = if req.isRideEnded then DMM.POST_RIDE_SOS else DMM.SEND_SOS_ALERT
       smsParams = if req.isRideEnded then [("userName", req.userName), ("rideEndTime", fromMaybe "" req.rideEndTime)] else [("userName", req.userName), ("rideLink", shortenedTrackingUrl)]
   merchantMessage <-
