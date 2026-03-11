@@ -7,6 +7,7 @@ module Storage.Queries.Person (module Storage.Queries.Person, module ReExport) w
 import qualified BecknV2.OnDemand.Enums
 import qualified Data.Time
 import qualified Domain.Types.Extra.MerchantPaymentMethod
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
@@ -40,6 +41,17 @@ findAllByDeviceId deviceId = do findAllWithKV [Se.Is Beam.deviceId $ Se.Eq devic
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+findByOperatorBadgeTokenAndMerchantId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.Person.Person))
+findByOperatorBadgeTokenAndMerchantId operatorBadgeToken merchantId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.operatorBadgeToken $ Se.Eq operatorBadgeToken,
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
+        ]
+    ]
 
 findByReferralCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Person.Person))
 findByReferralCode referralCode = do findOneWithKV [Se.Is Beam.referralCode $ Se.Eq referralCode]
@@ -261,6 +273,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.mobileNumberHash (mobileNumber <&> (.hash)),
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
       Se.Set Beam.notificationToken notificationToken,
+      Se.Set Beam.operatorBadgeToken operatorBadgeToken,
       Se.Set Beam.passwordHash passwordHash,
       Se.Set Beam.paymentMode paymentMode,
       Se.Set Beam.payoutVpa payoutVpa,
