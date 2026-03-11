@@ -16,7 +16,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id)
 import Lib.Finance.Domain.Types.Account (Account)
-import Lib.Finance.Domain.Types.LedgerEntry (EntryStatus, EntryType)
+import Lib.Finance.Domain.Types.LedgerEntry (EntryStatus, EntryType, SettlementStatus)
 
 -- | Input for creating a ledger entry
 data LedgerEntryInput = LedgerEntryInput
@@ -30,6 +30,7 @@ data LedgerEntryInput = LedgerEntryInput
     referenceId :: Text,
     metadata :: Maybe Value,
     merchantId :: Text,
-    merchantOperatingCityId :: Text
+    merchantOperatingCityId :: Text,
+    settlementStatus :: Maybe SettlementStatus
   }
   deriving (Eq, Show, Generic)

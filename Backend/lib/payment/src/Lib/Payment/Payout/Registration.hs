@@ -235,7 +235,10 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city = d
                 customerEmail = Nothing,
                 remark = remark,
                 orderType = orderType,
-                scheduledAt = Nothing
+                scheduledAt = Nothing,
+                payoutType = Nothing,
+                coverageFrom = Nothing,
+                coverageTo = Nothing
               }
 
       logInfo $ "Initiating registration refund for order " <> orderId.getId <> " | amount: " <> show order.amount <> " | vpa: " <> vpa

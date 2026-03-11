@@ -363,7 +363,8 @@ transfer fromRole toRole amount refType = do
                 referenceId = ctx.referenceId,
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
-                merchantOperatingCityId = ctx.merchantOpCityId
+                merchantOperatingCityId = ctx.merchantOpCityId,
+                settlementStatus = Nothing
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectEntryId result.id
@@ -396,7 +397,8 @@ transfer_ fromRole toRole amount refType = do
               referenceId = ctx.referenceId,
               metadata = Nothing,
               merchantId = ctx.merchantId,
-              merchantOperatingCityId = ctx.merchantOpCityId
+              merchantOperatingCityId = ctx.merchantOpCityId,
+              settlementStatus = Nothing
             }
     _ <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
     pure ()
@@ -429,7 +431,8 @@ transferAllowZero fromRole toRole amount refType = do
                 referenceId = ctx.referenceId,
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
-                merchantOperatingCityId = ctx.merchantOpCityId
+                merchantOperatingCityId = ctx.merchantOpCityId,
+                settlementStatus = Nothing
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectEntryId result.id

@@ -21,6 +21,10 @@ LedgerEntry:
       enum: "PENDING,DUE,SETTLED,VOIDED"
       derive: "ToParamSchema"
 
+    SettlementStatus:
+      enum: "UNSETTLED,PAID_OUT"
+      derive: "ToParamSchema"
+
   fields:
     id: Id LedgerEntry
     timestamp: UTCTime
@@ -42,6 +46,9 @@ LedgerEntry:
     toEndingBalance: Maybe HighPrecMoney
     merchantId: Text
     merchantOperatingCityId: Text
+    settlementStatus: Maybe SettlementStatus
+    settlementId: Maybe Text
+    settlementTimestamp: Maybe UTCTime
     createdAt: UTCTime
     reconciliationStatus: Maybe Value
 
@@ -51,6 +58,7 @@ LedgerEntry:
     toAccountId: SecondaryKey
     referenceId: "!SecondaryKey"
     ownerId: "!SecondaryKey"
+    settlementId: "!SecondaryKey"
 
   queries:
     findById:
@@ -93,10 +101,17 @@ LedgerEntry:
       params: [status, voidReason]
       where: id
 
+    updateSettlementStatus:
+      kvFunction: updateWithKV
+      params: [settlementStatus, settlementId, settlementTimestamp]
+      where: id
+
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EntryType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EntryStatus>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <EntryStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SettlementStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SettlementStatus>
 

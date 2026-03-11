@@ -13,6 +13,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceDriverCancellationCharges,
     walletReferenceCustomerCancellationCharges,
     walletReferenceCustomerCancellationGST,
+    walletCreditRefs,
     getWalletAccountByOwner,
     getWalletBalanceByOwner,
     createWalletEntryDelta,
@@ -24,6 +25,9 @@ module SharedLogic.Finance.Wallet
     financeCtxFromRide,
     buildFinanceCtx,
     walletReferenceD2DReferral,
+    getRedeemableEntryIds,
+    settleWalletEntries,
+    getPayoutEligibilityData,
   )
 where
 
@@ -84,6 +88,26 @@ walletReferenceCustomerCancellationGST = "CustomerCancellationGST"
 walletReferenceD2DReferral :: Text
 walletReferenceD2DReferral = "D2DReferral"
 
+-- | Single source of truth: all wallet reference types that represent
+--   redeemable credit entries (i.e. entries that increase driver wallet balance
+--   and should be tracked for settlement/payout).
+--   Used by: getNonRedeemableBalance, getRedeemableEntryIds, classifyEntries.
+walletCreditRefs :: [Text]
+walletCreditRefs =
+  [ walletReferenceBaseRide,
+    walletReferenceGSTOnline,
+    walletReferenceGSTCash,
+    walletReferenceTollCharges,
+    walletReferenceParkingCharges,
+    walletReferenceTDSDeductionOnline,
+    walletReferenceTDSDeductionCash,
+    walletReferenceTopup,
+    walletReferenceD2DReferral,
+    walletReferenceCustomerCancellationCharges,
+    walletReferenceDriverCancellationCharges,
+    walletReferenceCustomerCancellationGST
+  ]
+
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)
 
 -- | Convert a UTC time to a local Day given a timezone offset (seconds from UTC)
@@ -107,7 +131,8 @@ todayRangeUTC timeDiff now =
       end = Time.addUTCTime (negate timeDiff) (Time.UTCTime localDay 86399)
    in (start, end)
 
--- | Calculate non-redeemable balance: sum of recent ride earnings after payout cutoff.
+-- | Calculate non-redeemable balance: sum of recent credit entries after payout cutoff.
+--   Uses DB-level filtering to only fetch credits in the cutoff→now window.
 getNonRedeemableBalance ::
   (BeamFlow m r) =>
   Id Account ->
@@ -117,8 +142,8 @@ getNonRedeemableBalance ::
   m HighPrecMoney
 getNonRedeemableBalance accountId timeDiff cutOffDays now = do
   let cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-  entries <- findByAccountWithFilters accountId (Just cutoff) (Just now) Nothing Nothing Nothing (Just [walletReferenceBaseRide])
-  pure $ sum $ map (.amount) entries
+  credits <- findCreditsByAccountAfterTime accountId cutoff now
+  pure $ sum $ map (.amount) credits
 
 -- Account helpers (these are still needed for non-FinanceM callers like balance queries)
 
@@ -276,7 +301,8 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
                     referenceId = referenceId,
                     metadata = metadata,
                     merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId
+                    merchantOperatingCityId = merchantOperatingCityId,
+                    settlementStatus = if delta > 0 && referenceType `elem` walletCreditRefs then Just UNSETTLED else Nothing
                   }
           entryRes <- createEntryWithBalanceUpdate entryInput
           case entryRes of
@@ -305,3 +331,43 @@ computeGstBreakdown gstBreakup totalGst
     sgstPct = fromMaybe 0 gstBreakup.sgstPercentage
     igstPct = fromMaybe 0 gstBreakup.igstPercentage
     totalPct = cgstPct + sgstPct + igstPct
+
+-- | Get all unsettled redeemable wallet entry IDs (credits + debits before cutoff).
+--   Uses DB-level filtering for efficiency.
+getRedeemableEntryIds ::
+  (BeamFlow m r) =>
+  Id Account ->
+  UTCTime -> -- payout cutoff time
+  m [Id LedgerEntry]
+getRedeemableEntryIds accountId cutoff = do
+  entries <- findUnsettledByAccountBeforeTime accountId cutoff
+  pure $ map (.id) entries
+
+-- | Fetch payout eligibility data using two efficient DB-level queries:
+--   (1) non-redeemable balance: sum of credits after cutoff (DB-filtered)
+--   (2) redeemable entry IDs: unsettled credits + debits before cutoff (DB-filtered)
+--   This avoids fetching all entries into Haskell memory.
+getPayoutEligibilityData ::
+  (BeamFlow m r) =>
+  Id Account ->
+  UTCTime -> -- payout cutoff time
+  UTCTime -> -- current time (upper bound)
+  m (HighPrecMoney, [Id LedgerEntry])
+getPayoutEligibilityData accountId cutoff now = do
+  -- Query 1: credits after cutoff (for non-redeemable balance)
+  creditsAfterCutoff <- findCreditsByAccountAfterTime accountId cutoff now
+  let nonRedeemableBalance = sum $ map (.amount) creditsAfterCutoff
+  -- Query 2: unsettled entries before cutoff (for redeemable IDs)
+  unsettledBeforeCutoff <- findUnsettledByAccountBeforeTime accountId cutoff
+  let redeemableIds = map (.id) unsettledBeforeCutoff
+  pure (nonRedeemableBalance, redeemableIds)
+
+-- | Mark a list of wallet ledger entries as paid out.
+--   Called by the payout webhook handler after successful disbursement.
+settleWalletEntries ::
+  (BeamFlow m r) =>
+  [Id LedgerEntry] -> -- entry IDs to settle
+  Text -> -- PayoutRequest ID
+  m ()
+settleWalletEntries entryIds payoutRequestId =
+  markEntriesAsPaidOut entryIds payoutRequestId

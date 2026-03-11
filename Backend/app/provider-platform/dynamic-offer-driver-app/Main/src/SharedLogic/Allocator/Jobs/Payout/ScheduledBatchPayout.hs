@@ -18,7 +18,6 @@ import qualified Data.Time as Time
 import qualified Data.Time.Calendar.WeekDate as Time
 import Domain.Action.UI.DriverWallet
   ( PayoutContext (..),
-    computePayoutableBalance,
     counterpartyFromRole,
     initiateWalletPayout,
     resolvePayoutVpa,
@@ -39,6 +38,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.Finance.Wallet
@@ -208,13 +208,20 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId driv
       mbAccount <- getWalletAccountByOwner counterparty driverId.getId
       let mbAccountId = (.id) <$> mbAccount
       walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty driverId.getId
-      payoutableBalance <- computePayoutableBalance ctx mbAccountId walletBalance now
+      -- Single query: get both non-redeemable balance and redeemable entry IDs
+      let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+          cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
+          cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
+      (nonRedeemable, redeemableIds) <- case mbAccountId of
+        Nothing -> pure (0, [])
+        Just accountId -> getPayoutEligibilityData accountId cutoff now
+      let payoutableBalance = walletBalance - nonRedeemable
 
       when (payoutableBalance >= config.minimumPayoutAmount) $ do
         vpa <- resolvePayoutVpa ctx
         -- Skip manually-added VPAs
         when (driverInfo.payoutVpaStatus /= Just DI.MANUALLY_ADDED) $ do
-          initiateWalletPayout ctx vpa payoutableBalance
+          initiateWalletPayout ctx vpa payoutableBalance PR.SCHEDULED Nothing (Just cutoff) (map (.getId) redeemableIds)
   case result of
     Left (e :: SomeException) -> logError $ "ScheduledWalletPayout error for driver " <> driverId.getId <> ": " <> show e
     Right _ -> pure ()

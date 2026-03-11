@@ -28,6 +28,9 @@ data LedgerEntry = LedgerEntry
     referenceType :: Kernel.Prelude.Text,
     reversalOf :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry),
     settledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    settlementId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    settlementStatus :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.SettlementStatus,
+    settlementTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Lib.Finance.Domain.Types.LedgerEntry.EntryStatus,
     timestamp :: Kernel.Prelude.UTCTime,
     toAccountId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account,
@@ -42,8 +45,14 @@ data EntryStatus = PENDING | DUE | SETTLED | VOIDED deriving (Eq, Ord, Show, Rea
 
 data EntryType = Expense | Revenue | LiabilityCreated | LiabilitySettled | Reversal deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data SettlementStatus = UNSETTLED | PAID_OUT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EntryStatus))
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EntryType))
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum (''EntryStatus))
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementStatus))
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''SettlementStatus))

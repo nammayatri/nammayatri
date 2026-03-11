@@ -25,6 +25,7 @@ module Lib.Finance.Ledger.Service
     settleEntry,
     settleEntryWithBalances,
     voidEntry,
+    markEntriesAsPaidOut,
 
     -- * Query by ID/reference
     getEntry,
@@ -40,12 +41,17 @@ module Lib.Finance.Ledger.Service
     sumByAccountAndStatus,
     countByAccountAndStatus,
 
+    -- * Payout-specific queries (efficient DB-level filtering)
+    findCreditsByAccountAfterTime,
+    findUnsettledByAccountBeforeTime,
+
     -- * Input types (re-export from Interface)
     module Lib.Finance.Ledger.Interface,
   )
 where
 
 import qualified Data.Aeson as Aeson
+import Kernel.Beam.Functions (findAllWithKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
@@ -57,8 +63,10 @@ import Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Error.Types
 import Lib.Finance.Ledger.Interface
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
+import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLE
 import qualified Lib.Finance.Storage.Queries.Account as QAccount
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
+import qualified Sequelize as Se
 
 --------------------------------------------------------------------------------
 -- CREATE OPERATIONS
@@ -93,6 +101,9 @@ createEntry input = do
             fromEndingBalance = Nothing,
             toStartingBalance = Nothing,
             toEndingBalance = Nothing,
+            settlementStatus = input.settlementStatus,
+            settlementId = Nothing,
+            settlementTimestamp = Nothing,
             timestamp = now,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
@@ -151,6 +162,9 @@ createEntryWithBalanceUpdate input = do
                 fromEndingBalance = Just fromEndBal,
                 toStartingBalance = Just toStartBal,
                 toEndingBalance = Just toEndBal,
+                settlementStatus = input.settlementStatus,
+                settlementId = Nothing,
+                settlementTimestamp = Nothing,
                 timestamp = now,
                 merchantId = input.merchantId,
                 merchantOperatingCityId = input.merchantOperatingCityId,
@@ -198,6 +212,9 @@ createReversal originalId reason = do
                 fromEndingBalance = Nothing,
                 toStartingBalance = Nothing,
                 toEndingBalance = Nothing,
+                settlementStatus = Nothing,
+                settlementId = Nothing,
+                settlementTimestamp = Nothing,
                 timestamp = now,
                 merchantId = original.merchantId,
                 merchantOperatingCityId = original.merchantOperatingCityId,
@@ -379,3 +396,70 @@ countByAccountAndStatus ::
 countByAccountAndStatus accountId status = do
   entries <- findByAccountAndStatus accountId status
   pure $ length entries
+
+--------------------------------------------------------------------------------
+-- PAYOUT-SPECIFIC QUERIES (efficient DB-level filtering)
+--------------------------------------------------------------------------------
+
+-- | Find credit entries (toAccountId = accountId) after a given time.
+--   Used for computing non-redeemable balance (recent credits that can't be paid out yet).
+findCreditsByAccountAfterTime ::
+  (BeamFlow.BeamFlow m r) =>
+  Id Account ->
+  UTCTime -> -- from (cutoff)
+  UTCTime -> -- to (now)
+  m [LedgerEntry]
+findCreditsByAccountAfterTime accountId from to =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
+          Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
+          Se.Is BeamLE.timestamp $ Se.LessThanOrEq to
+        ]
+    ]
+
+-- | Find unsettled entries (both credits and debits) for an account before a given time.
+--   Returns entries where settlementStatus = UNSETTLED OR settlementStatus IS NULL.
+--   Used for collecting redeemable entry IDs for payout settlement.
+findUnsettledByAccountBeforeTime ::
+  (BeamFlow.BeamFlow m r) =>
+  Id Account ->
+  UTCTime -> -- before (cutoff)
+  m [LedgerEntry]
+findUnsettledByAccountBeforeTime accountId before =
+  findAllWithKV
+    [ Se.And
+        [ Se.Or
+            [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
+              Se.Is BeamLE.fromAccountId $ Se.Eq (getId accountId)
+            ],
+          Se.Is BeamLE.timestamp $ Se.LessThan before,
+          Se.Or
+            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
+              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+            ]
+        ]
+    ]
+
+--------------------------------------------------------------------------------
+-- SETTLEMENT (Mark entries as paid out)
+--------------------------------------------------------------------------------
+
+-- | Mark a batch of ledger entries as paid out.
+-- Uses a single batch UPDATE query for performance.
+-- Used by the wallet payout webhook handler after a successful disbursement.
+markEntriesAsPaidOut ::
+  (BeamFlow.BeamFlow m r) =>
+  [Id LedgerEntry] -> -- Entry IDs to mark
+  Text -> -- Settlement ID (PayoutRequest ID)
+  m ()
+markEntriesAsPaidOut [] _ = pure ()
+markEntriesAsPaidOut entryIds payoutRequestId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamLE.settlementStatus (Just PAID_OUT),
+      Se.Set BeamLE.settlementId (Just payoutRequestId),
+      Se.Set BeamLE.settlementTimestamp (Just now),
+      Se.Set BeamLE.updatedAt now
+    ]
+    [Se.Is BeamLE.id $ Se.In (map (.getId) entryIds)]

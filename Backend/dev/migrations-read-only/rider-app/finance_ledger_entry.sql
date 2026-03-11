@@ -29,3 +29,10 @@ ALTER TABLE atlas_app.finance_ledger_entry ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN reconciliation_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN settlement_timestamp timestamp with time zone ;
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN settlement_status text ;
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN settlement_id text ;
